@@ -38,7 +38,7 @@ def get_latest_deployed_at(env: ModuleEnvironment) -> Optional[datetime]:
     return None
 
 
-def get_app_secret_in_instance(ins_list: List['Instance']) -> Optional[str]:
+def get_app_secret_in_instance(ins_list: List["Instance"]) -> Optional[str]:
     """获取进程实例中环境变量中的应用密钥(BKPAAS_APP_SECRET)的值"""
     if not ins_list:
         return None

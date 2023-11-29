@@ -61,31 +61,31 @@ class TestLegacyAppIngressMgr:
 class TestAppDefaultIngresses:
     def test_integrated(self, bk_stag_wl_app):
         app_default_ingresses = AppDefaultIngresses(bk_stag_wl_app)
-        app_default_ingresses.sync_ignore_empty(default_service_name='foo')
+        app_default_ingresses.sync_ignore_empty(default_service_name="foo")
         assert len(ingress_kmodel.list_by_app(bk_stag_wl_app)) == 1
 
         AppDomain.objects.create(
-            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN
+            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host="bar-2.com", source=AppDomainSource.AUTO_GEN
         )
 
-        app_default_ingresses.sync_ignore_empty(default_service_name='foo')
+        app_default_ingresses.sync_ignore_empty(default_service_name="foo")
         assert len(ingress_kmodel.list_by_app(bk_stag_wl_app)) == 2
 
-        ret = app_default_ingresses.safe_update_target(service_name='foo-copy', service_port_name='foo-port-copy')
+        ret = app_default_ingresses.safe_update_target(service_name="foo-copy", service_port_name="foo-port-copy")
         assert ret.num_of_successful > 0
         for ingress in ingress_kmodel.list_by_app(bk_stag_wl_app):
-            assert ingress.service_name == 'foo-copy'
-            assert ingress.service_port_name == 'foo-port-copy'
+            assert ingress.service_name == "foo-copy"
+            assert ingress.service_port_name == "foo-port-copy"
 
-        app_default_ingresses.delete_if_service_matches(service_name='not-matched')
+        app_default_ingresses.delete_if_service_matches(service_name="not-matched")
         assert len(ingress_kmodel.list_by_app(bk_stag_wl_app)) == 2
 
-        app_default_ingresses.delete_if_service_matches(service_name='foo-copy')
+        app_default_ingresses.delete_if_service_matches(service_name="foo-copy")
         assert len(ingress_kmodel.list_by_app(bk_stag_wl_app)) == 0
 
     def test_set_header_x_script_name(self, bk_stag_wl_app):
         AppDomain.objects.create(
-            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN
+            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host="bar-2.com", source=AppDomainSource.AUTO_GEN
         )
         ingress_mgr = AppDefaultIngresses(bk_stag_wl_app)
         ingress_mgr.sync_ignore_empty(default_service_name="foo")
@@ -105,12 +105,12 @@ class TestAppDefaultIngresses:
 
     def test_restore_default_service(self, bk_stag_wl_app):
         mgr = AppDefaultIngresses(bk_stag_wl_app)
-        svc_name_default = make_service_name(bk_stag_wl_app, 'web')
+        svc_name_default = make_service_name(bk_stag_wl_app, "web")
         mgr.sync_ignore_empty(default_service_name=svc_name_default)
 
         # Update service name to "worker" and check
-        svc_name_worker = make_service_name(bk_stag_wl_app, 'worker')
-        mgr.safe_update_target(svc_name_worker, 'http')
+        svc_name_worker = make_service_name(bk_stag_wl_app, "worker")
+        mgr.safe_update_target(svc_name_worker, "http")
         assert ingress_kmodel.list_by_app(bk_stag_wl_app)[0].service_name == svc_name_worker
 
         # Set the app's process, add a process called "worker", sync ingresses, service name field

@@ -45,14 +45,14 @@ class DocumentaryLinkSLZ(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['location'] = instance.format_location
-        data['link'] = instance.format_location
+        data["location"] = instance.format_location
+        data["link"] = instance.format_location
         # 兼容部署阶段帮助文档、部署出错帮助文档、webconsole 启用帮助文档字段
-        data['name'] = data['title']
-        data['text'] = data['title']
-        data['description'] = data['short_description']
+        data["name"] = data["title"]
+        data["text"] = data["title"]
+        data["description"] = data["short_description"]
         return data
 
     class Meta:
         model = DocumentaryLink
-        fields = ['title', 'location', 'short_description']
+        fields = ["title", "location", "short_description"]

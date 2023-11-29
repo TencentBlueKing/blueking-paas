@@ -21,5 +21,5 @@ from django.urls import path
 from .views import ChangelogViewSet
 
 urlpatterns = [
-    path('api/changelogs/', ChangelogViewSet.as_view({'get': 'list'})),
+    path("api/changelogs/", ChangelogViewSet.as_view({"get": "list"})),
 ]

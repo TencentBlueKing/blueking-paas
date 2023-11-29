@@ -35,11 +35,11 @@ from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
-from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.sourcectl.models import VersionInfo
 
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ['bash', '/runner/init']
+DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
 
 def get_app_docker_registry_client() -> DockerRegistryV2Client:
@@ -61,16 +61,17 @@ def mark_as_latest_artifact(build: "Build"):
 
 
 class Build(UuidAuditedModel):
-    application_id = models.UUIDField(verbose_name=_('所属应用'), null=True)
-    module_id = models.UUIDField(verbose_name=_('所属模块'), null=True)
+    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
 
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
+    app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
 
     # Slug path
     slug_path = models.TextField(help_text="slug path 形如 {region}/home/{name}:{branch}:{revision}/push", null=True)
     image = models.TextField(
-        help_text="运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物; 如果构建产物是 Slug, 则返回 SlugRunner 的镜像", null=True
+        help_text="运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物; 如果构建产物是 Slug, 则返回 SlugRunner 的镜像",
+        null=True,
     )
 
     # 源码信息
@@ -86,11 +87,13 @@ class Build(UuidAuditedModel):
     artifact_type = models.CharField(help_text="构件类型", default=ArtifactType.SLUG, max_length=16)
     artifact_detail = models.JSONField(default={}, help_text="构件详情(展示信息)")
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
-    artifact_metadata = models.JSONField(default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile 等信息")
+    artifact_metadata = models.JSONField(
+        default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile 等信息"
+    )
 
     class Meta:
-        get_latest_by = 'created'
-        ordering = ['-created']
+        get_latest_by = "created"
+        ordering = ["-created"]
 
     def get_image(self) -> str:
         """运行 Build 的镜像地址"""
@@ -189,10 +192,10 @@ class Build(UuidAuditedModel):
 
     @property
     def version(self):
-        return '%s:%s/%s' % (self.source_type, self.branch, self.revision)
+        return "%s:%s/%s" % (self.source_type, self.branch, self.revision)
 
     def __str__(self):
-        return '%s-%s(%s)' % (self.uuid, self.app.name, self.app.region)
+        return "%s-%s(%s)" % (self.uuid, self.app.name, self.app.region)
 
 
 class BuildProcessManager(models.Manager):
@@ -224,7 +227,7 @@ class BuildProcessManager(models.Manager):
         application_id = env.application_id
         module_id = env.module_id
         wl_app = env.wl_app
-        latest_bp = self.filter(module_id=module_id).order_by('-generation').first()  # type: BuildProcess
+        latest_bp = self.filter(module_id=module_id).order_by("-generation").first()  # type: BuildProcess
         if latest_bp:
             next_generation = latest_bp.generation + 1
 
@@ -251,11 +254,11 @@ class BuildProcessManager(models.Manager):
 class BuildProcess(UuidAuditedModel):
     """This Build Process was invoked via a source tarball or anything similar"""
 
-    application_id = models.UUIDField(verbose_name=_('所属应用'), null=True)
-    module_id = models.UUIDField(verbose_name=_('所属模块'), null=True)
+    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
 
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
+    app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
     image = models.CharField(max_length=512, null=True, help_text="builder image")
     buildpacks = JSONCharField(max_length=4096, null=True)
 
@@ -264,28 +267,30 @@ class BuildProcess(UuidAuditedModel):
     source_tar_path = models.CharField(max_length=2048)
     branch = models.CharField(max_length=128, null=True)
     revision = models.CharField(max_length=128, null=True)
-    logs_was_ready_at = models.DateTimeField(null=True, help_text='Pod 状态就绪允许读取日志的时间')
-    int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断的时间')
-    completed_at = models.DateTimeField(verbose_name="完成时间", help_text="failed/successful/interrupted 都是完成", null=True)
+    logs_was_ready_at = models.DateTimeField(null=True, help_text="Pod 状态就绪允许读取日志的时间")
+    int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断的时间")
+    completed_at = models.DateTimeField(
+        verbose_name="完成时间", help_text="failed/successful/interrupted 都是完成", null=True
+    )
 
     status = models.CharField(choices=make_enum_choices(BuildStatus), max_length=12, default=BuildStatus.PENDING.value)
-    output_stream = models.OneToOneField('OutputStream', null=True, on_delete=models.CASCADE)
+    output_stream = models.OneToOneField("OutputStream", null=True, on_delete=models.CASCADE)
 
     # A BuildProcess will result in a build and release, if succeeded
-    build = models.OneToOneField('Build', null=True, related_name="build_process", on_delete=models.CASCADE)
+    build = models.OneToOneField("Build", null=True, related_name="build_process", on_delete=models.CASCADE)
     objects = BuildProcessManager()
 
     class Meta:
-        get_latest_by = 'created'
-        ordering = ['-created']
+        get_latest_by = "created"
+        ordering = ["-created"]
 
     def __str__(self):
-        return '%s-%s(%s)-%s' % (self.uuid, self.app.name, self.app.region, self.status)
+        return "%s-%s(%s)-%s" % (self.uuid, self.app.name, self.app.region, self.status)
 
     def set_int_requested_at(self):
         """Set `int_requested_at` field"""
         self.int_requested_at = timezone.now()
-        self.save(update_fields=['int_requested_at', 'completed_at', 'updated'])
+        self.save(update_fields=["int_requested_at", "completed_at", "updated"])
 
     def check_interruption_allowed(self) -> bool:
         """Check if current build process allows interruptions"""
@@ -298,14 +303,14 @@ class BuildProcess(UuidAuditedModel):
     def set_logs_was_ready(self):
         """Mark current build was ready for reading logs from"""
         self.logs_was_ready_at = timezone.now()
-        self.save(update_fields=['logs_was_ready_at', 'updated'])
+        self.save(update_fields=["logs_was_ready_at", "updated"])
 
     def update_status(self, status):
         """Update status and save"""
         self.status = status
         if status in [BuildStatus.FAILED, BuildStatus.SUCCESSFUL, BuildStatus.INTERRUPTED]:
             self.completed_at = timezone.now()
-        self.save(update_fields=['status', 'completed_at', 'updated'])
+        self.save(update_fields=["status", "completed_at", "updated"])
 
     def buildpacks_as_build_env(self) -> str:
         """buildpacks to slugbuilder REQUIRED_BUILDPACKS env"""
@@ -329,9 +334,9 @@ def _generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:
     store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
     object_key = os.path.join(slug_path, "slug.tgz")
     return {
-        'SLUG_URL': os.path.join(settings.BLOBSTORE_BUCKET_APP_SOURCE, object_key),
+        "SLUG_URL": os.path.join(settings.BLOBSTORE_BUCKET_APP_SOURCE, object_key),
         # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
-        'SLUG_GET_URL': store.generate_presigned_url(
+        "SLUG_GET_URL": store.generate_presigned_url(
             # slug get url 签发尽可能长的时间, 避免应用长期不部署, 重新调度后无法运行。
             key=object_key,
             expires_in=60 * 60 * 24 * 365 * 20,

@@ -39,7 +39,7 @@ class AppModuleTagManager(models.Manager):
         """Tag tags on given module"""
         get_default_tagset().validate_tags(tags)
         for tag in tags:
-            self.get_queryset().update_or_create(module=app_module, tag_str=str(tag), defaults={'source': source})
+            self.get_queryset().update_or_create(module=app_module, tag_str=str(tag), defaults={"source": source})
 
     def cleanup_module(self, app_module):
         """Clean up all tags on given module"""
@@ -50,7 +50,7 @@ class AppModuleTagRel(models.Model):
     """A M2M relationship table for storing the relationship between application module and AppTag"""
 
     module = models.ForeignKey(
-        'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name='tag_rels'
+        "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="tag_rels"
     )
     tag_str = models.CharField(max_length=128, blank=False)
     source = models.CharField(max_length=32, blank=False)

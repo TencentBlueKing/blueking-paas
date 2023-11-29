@@ -22,11 +22,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.serializers import OperationSLZ as BaseModuleEnvironmentOperationsSLZ
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
 
@@ -37,14 +37,14 @@ class ModuleEnvironmentOperationsSLZ(BaseModuleEnvironmentOperationsSLZ):
     class Meta:
         model = ModuleEnvironmentOperations
         fields = [
-            'id',
-            'status',
-            'operator',
-            'created',
-            'operation_type',
-            'offline_operation',
-            'deployment',
-            'created_humanized',
+            "id",
+            "status",
+            "operator",
+            "created",
+            "operation_type",
+            "offline_operation",
+            "deployment",
+            "created_humanized",
         ]
 
 
@@ -78,7 +78,7 @@ class EnvironmentSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = ModuleEnvironment
-        fields = '__all__'
+        fields = "__all__"
 
 
 class DeploymentForListSLZ(serializers.ModelSerializer):
@@ -89,4 +89,4 @@ class DeploymentForListSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Deployment
-        exclude = ('procfile', 'processes', 'hooks')
+        exclude = ("procfile", "processes", "hooks")

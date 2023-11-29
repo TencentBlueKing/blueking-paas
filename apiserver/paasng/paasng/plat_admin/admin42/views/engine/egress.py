@@ -25,10 +25,10 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.workloads.networking.egress.models import EgressRule, EgressSpec
 from paas_wl.infras.resources.base.crd import Egress
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.workloads.networking.egress.models import EgressRule, EgressSpec
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ
@@ -74,49 +74,49 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         cluster = get_cluster_by_app(wl_app)
 
         if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BCS_EGRESS):
-            raise error_codes.FEATURE_FLAG_DISABLED.f(_('当前环境所部署的集群不支持 BCS Egress'))
+            raise error_codes.FEATURE_FLAG_DISABLED.f(_("当前环境所部署的集群不支持 BCS Egress"))
 
         # 2. 检查是否有现存的配置，如果有则对比并更新，否则全部新建
         spec = EgressSpec.objects.filter(wl_app=wl_app).first()
         if spec:
             # 更新 EgressSpec
-            spec.replicas = slz.data['replicas']
-            spec.cpu_limit = slz.data['cpu_limit']
-            spec.memory_limit = slz.data['memory_limit']
+            spec.replicas = slz.data["replicas"]
+            spec.cpu_limit = slz.data["cpu_limit"]
+            spec.memory_limit = slz.data["memory_limit"]
             spec.save()
             # 现存的 EgressRule 都删光光，重新创建
             EgressRule.objects.filter(spec=spec).delete()
         else:
             spec = EgressSpec.objects.create(
                 wl_app=wl_app,
-                replicas=slz.data['replicas'],
-                cpu_limit=slz.data['cpu_limit'],
-                memory_limit=slz.data['memory_limit'],
+                replicas=slz.data["replicas"],
+                cpu_limit=slz.data["cpu_limit"],
+                memory_limit=slz.data["memory_limit"],
             )
 
         # 批量创建规则，src/dst 的 host/port 保持一致
         rules = [
             EgressRule(
                 spec=spec,
-                dst_port=r['port'],
-                host=r['host'],
-                protocol=r['protocol'],
-                src_port=r['port'],
-                service=r['host'],
+                dst_port=r["port"],
+                host=r["host"],
+                protocol=r["protocol"],
+                src_port=r["port"],
+                service=r["host"],
             )
-            for r in slz.data['rules']
+            for r in slz.data["rules"]
         ]
         EgressRule.objects.bulk_create(rules)
 
         # 3. 下发 Egress 到 k8s 集群，支持更新或者创建
         manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
-            Egress(client, api_version=manifest['apiVersion']).create_or_update(
-                name=manifest['metadata']['name'],
-                namespace=manifest['metadata']['namespace'],
+            Egress(client, api_version=manifest["apiVersion"]).create_or_update(
+                name=manifest["metadata"]["name"],
+                namespace=manifest["metadata"]["namespace"],
                 body=manifest,
-                update_method='patch',
-                content_type='application/merge-patch+json',
+                update_method="patch",
+                content_type="application/merge-patch+json",
             )
 
         return Response(status=status.HTTP_201_CREATED)
@@ -130,9 +130,9 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         # 从集群中删除 egress 资源
         manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
-            Egress(client, api_version=manifest['apiVersion']).delete(
-                name=manifest['metadata']['name'],
-                namespace=manifest['metadata']['namespace'],
+            Egress(client, api_version=manifest["apiVersion"]).delete(
+                name=manifest["metadata"]["name"],
+                namespace=manifest["metadata"]["namespace"],
             )
 
         # 删除 EgressSpec
@@ -148,13 +148,13 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
             pods = KPod(client).ops_label.list(
-                namespace=manifest['metadata']['namespace'],
+                namespace=manifest["metadata"]["namespace"],
                 labels={
-                    'app': 'gate',
-                    'bcs-egress-operator': 'egress',
-                    'bcs-egress-operator-controller': manifest['metadata']['name'],
+                    "app": "gate",
+                    "bcs-egress-operator": "egress",
+                    "bcs-egress-operator-controller": manifest["metadata"]["name"],
                 },
             )
 
         pod_ips = [p.status.podIP for p in pods.items if p.status]
-        return Response(data={'ips': pod_ips})
+        return Response(data={"ips": pod_ips})

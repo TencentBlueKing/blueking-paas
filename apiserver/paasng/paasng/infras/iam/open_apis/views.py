@@ -44,6 +44,6 @@ class ResourceAPIView(APIView):
         validated_data = serializer.validated_data
         provider = BKPaaSResourceProvider(resource_type=validated_data["type"])
         resp_data = provider.provide(
-            method=validated_data['method'], data=validated_data, **self._get_options(request)
+            method=validated_data["method"], data=validated_data, **self._get_options(request)
         )
-        return Response({'code': 0, 'message': 'OK', 'data': resp_data})
+        return Response({"code": 0, "message": "OK", "data": resp_data})

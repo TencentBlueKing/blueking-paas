@@ -85,19 +85,19 @@ def test_find_innermost_exception(trigger, expected):
 
 
 def test_wrap_validation_error_dict():
-    wrapped_ext = wrap_validation_error(ValidationError(detail={'foo': 'required'}, code='bar'), 'parent')
-    assert 'parent' in wrapped_ext.detail
-    assert wrapped_ext.detail['parent']['foo'] == 'required'
-    assert wrapped_ext.detail['parent']['foo'].code == 'bar'
+    wrapped_ext = wrap_validation_error(ValidationError(detail={"foo": "required"}, code="bar"), "parent")
+    assert "parent" in wrapped_ext.detail
+    assert wrapped_ext.detail["parent"]["foo"] == "required"
+    assert wrapped_ext.detail["parent"]["foo"].code == "bar"
 
 
 def test_wrap_validation_error_list():
-    wrapped_ext = wrap_validation_error(ValidationError(detail=['foo: required'], code='bar'), 'parent')
-    assert wrapped_ext.detail[0] == '[parent] foo: required'
-    assert wrapped_ext.detail[0].code == 'bar'
+    wrapped_ext = wrap_validation_error(ValidationError(detail=["foo: required"], code="bar"), "parent")
+    assert wrapped_ext.detail[0] == "[parent] foo: required"
+    assert wrapped_ext.detail[0].code == "bar"
 
 
 def test_wrap_validation_error_str():
-    wrapped_ext = wrap_validation_error(ValidationError(detail='foo: required', code='bar'), 'parent')
-    assert wrapped_ext.detail[0] == '[parent] foo: required'
-    assert wrapped_ext.detail[0].code == 'bar'
+    wrapped_ext = wrap_validation_error(ValidationError(detail="foo: required", code="bar"), "parent")
+    assert wrapped_ext.detail[0] == "[parent] foo: required"
+    assert wrapped_ext.detail[0].code == "bar"

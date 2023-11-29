@@ -25,8 +25,8 @@ class ProcessSpecSLZ(serializers.Serializer):
     name = serializers.CharField()
     target_replicas = serializers.IntegerField()
     target_status = serializers.CharField()
-    max_replicas = serializers.IntegerField(source='plan.max_replicas')
-    resource_limit = serializers.JSONField(source='plan.limits')
+    max_replicas = serializers.IntegerField(source="plan.max_replicas")
+    resource_limit = serializers.JSONField(source="plan.limits")
 
 
 class WebConsoleOpenSLZ(serializers.Serializer):

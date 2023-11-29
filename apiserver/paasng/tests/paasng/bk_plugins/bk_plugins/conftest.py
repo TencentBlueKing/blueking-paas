@@ -33,16 +33,16 @@ def mock_apigw_api_client():
     """Replace the default API Gateway client with a fake client which produce successful result"""
     fake_client = mock.MagicMock()
     fake_client.sync_api.return_value = {
-        'data': {'id': 1, 'name': 'foo'},
-        'code': 0,
-        'result': True,
-        'message': 'OK',
+        "data": {"id": 1, "name": "foo"},
+        "code": 0,
+        "result": True,
+        "message": "OK",
     }
     fake_client.grant_permissions.return_value = {
-        'data': None,
-        'code': 0,
-        'result': True,
-        'message': '',
+        "data": None,
+        "code": 0,
+        "result": True,
+        "message": "",
     }
     with mock.patch(
         "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",

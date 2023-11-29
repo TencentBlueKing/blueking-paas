@@ -46,7 +46,7 @@ def register_builtin_user_groups_and_grade_manager(application: Application):
     user_groups = cli.create_builtin_user_groups(grade_manager_id, application.code)
     ApplicationUserGroup.objects.bulk_create(
         [
-            ApplicationUserGroup(app_code=application.code, role=group['role'], user_group_id=group['id'])
+            ApplicationUserGroup(app_code=application.code, role=group["role"], user_group_id=group["id"])
             for group in user_groups
         ]
     )
@@ -55,4 +55,4 @@ def register_builtin_user_groups_and_grade_manager(application: Application):
     cli.grant_user_group_policies(application.code, application.name, user_groups)
 
     # 5. 将创建者添加到管理者用户组，返回数据中第一个即为管理者用户组信息
-    cli.add_user_group_members(user_groups[0]['id'], [creator], NEVER_EXPIRE_DAYS)
+    cli.add_user_group_members(user_groups[0]["id"], [creator], NEVER_EXPIRE_DAYS)

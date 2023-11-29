@@ -67,7 +67,7 @@ class TestApplicationPreReleaseExecutor:
         with mock.patch(
             "paasng.platform.engine.deploy.bg_command.pre_release.ApplicationReleaseMgr"
         ) as ApplicationReleaseMgr, mock.patch(
-            'paasng.platform.engine.utils.output.RedisChannelStream'
+            "paasng.platform.engine.utils.output.RedisChannelStream"
         ) as mocked_stream:
             attach_all_phases(sender=deployment.app_environment, deployment=deployment)
             ApplicationPreReleaseExecutor.from_deployment_id(deployment.pk).start()

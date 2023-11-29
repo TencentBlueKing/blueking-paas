@@ -35,7 +35,7 @@ class LazyDiscoverer(_LazyDiscoverer):
 
     def __search(self, parts, resources, reqParams):  # noqa: C901
         part = parts[0]
-        if part != '*':
+        if part != "*":
             resourcePart = resources.get(part)
             if not resourcePart:
                 return []
@@ -56,7 +56,7 @@ class LazyDiscoverer(_LazyDiscoverer):
                     # kubernetes python sdk will always update cache even if the resourcePart is not updated
                     # in order to avoid unnecessary disk writing, only update cache when resourcePart.resources is set
                     if resourcePart.resources:
-                        self._cache['resources'][prefix][group][version] = resourcePart
+                        self._cache["resources"][prefix][group][version] = resourcePart
                         self.__update_cache = True
                 return self.__search(parts[1:], resourcePart.resources, reqParams)
             elif isinstance(resourcePart, dict):
@@ -64,7 +64,7 @@ class LazyDiscoverer(_LazyDiscoverer):
                 # as we recurse
                 return self.__search(parts[1:], resourcePart, reqParams + [part])
             else:
-                if parts[1] != '*' and isinstance(parts[1], dict):
+                if parts[1] != "*" and isinstance(parts[1], dict):
                     for _resource in resourcePart:
                         for term, value in parts[1].items():
                             if getattr(_resource, term) == value:
@@ -92,11 +92,11 @@ class CoreDynamicClient(DynamicClient):
         - 把 ResourceInstance 对象转换为字典
         """
         # OpenAPI model object
-        if getattr(body, 'openapi_types', None):
+        if getattr(body, "openapi_types", None):
             return self.client.sanitize_for_serialization(body) or {}
 
         # dynamic ResourceInstance object
-        if callable(getattr(body, 'to_dict', None)):
+        if callable(getattr(body, "to_dict", None)):
             return body.to_dict()
         return body or {}
 
@@ -121,7 +121,7 @@ class CoreDynamicClient(DynamicClient):
         """
         path = resource.path(name=name, namespace=namespace)
         return self.request(
-            'delete', path, body=body, label_selector=label_selector, field_selector=field_selector, **kwargs
+            "delete", path, body=body, label_selector=label_selector, field_selector=field_selector, **kwargs
         )
 
     def request(self, method, path, body=None, **params):

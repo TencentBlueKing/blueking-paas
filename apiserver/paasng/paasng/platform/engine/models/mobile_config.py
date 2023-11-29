@@ -20,8 +20,8 @@ from django.conf import settings
 from django.db import models
 from rest_framework.serializers import SkipField
 
-from paasng.platform.engine.constants import LBPlans
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import LBPlans
 from paasng.utils.models import TimestampedModel
 
 
@@ -29,20 +29,20 @@ class MobileConfig(TimestampedModel):
     """Mobile config switcher for application"""
 
     environment = models.OneToOneField(
-        'applications.ApplicationEnvironment',
+        "applications.ApplicationEnvironment",
         on_delete=models.CASCADE,
-        related_name='mobile_config',
+        related_name="mobile_config",
         db_constraint=False,
     )
-    is_enabled = models.BooleanField(u'移动端配置是否生效', default=False)
+    is_enabled = models.BooleanField("移动端配置是否生效", default=False)
     lb_plan = models.CharField(
         "load balancer plan",
         choices=LBPlans.get_choices(),
         max_length=64,
         default=LBPlans.LBDefaultPlan.value,
-        help_text=u"which one-level load balancer plan the domain use",
+        help_text="which one-level load balancer plan the domain use",
     )
-    access_url = models.URLField("移动端访问地址", blank=True, null=True, default='')
+    access_url = models.URLField("移动端访问地址", blank=True, null=True, default="")
 
     def __str__(self):
         if self.is_enabled:
@@ -58,13 +58,13 @@ class MobileConfig(TimestampedModel):
                 return self.access_url
 
             # 没有填写移动端地址，则由平台按规则拼接
-            return '{domain}/{region}-bkapp-{app_code}-{environment}/weixin/'.format(
+            return "{domain}/{region}-bkapp-{app_code}-{environment}/weixin/".format(
                 domain=settings.BKPAAS_WEIXIN_URL_MAP[self.environment.environment],
                 region=self.environment.application.region,
                 app_code=self.environment.application.code,
                 environment=self.environment.environment,
             )
-        raise SkipField(u"功能未开启")
+        raise SkipField("功能未开启")
 
 
 def get_mobile_config(env: ModuleEnvironment) -> MobileConfig:

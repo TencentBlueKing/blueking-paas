@@ -20,7 +20,6 @@ to the current version of the project delivered to anyone in the future.
 
 class BKAppOauthError(Exception):
     def __init__(self, error_message="", response_code=None, raw_response=None):
-
         super().__init__(self, error_message)
         # Http status code
         self.response_code = response_code

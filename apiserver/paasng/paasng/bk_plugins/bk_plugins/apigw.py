@@ -25,8 +25,8 @@ from bkapi_client_core.exceptions import BKAPIError, RequestException
 from django.conf import settings
 from typing_extensions import Protocol
 
-from paasng.platform.applications.models import Application
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.platform.applications.models import Application
 
 from .exceptions import PluginApiGatewayServiceError
 from .models import BkPluginDistributor
@@ -46,10 +46,10 @@ def safe_sync_apigw(plugin_app: Application):
         if pre_distributors := plugin_app.bk_plugin_profile.pre_distributors:
             for distributor in pre_distributors:
                 try:
-                    logger.info('Granting permissions on distributer: %s, plugin: %s', distributor, plugin_app)
+                    logger.info("Granting permissions on distributer: %s, plugin: %s", distributor, plugin_app)
                     gw_service.grant(distributor)
                 except PluginApiGatewayServiceError as e:
-                    logger.exception('grant permissions error on %s, detail: %s', distributor, e)
+                    logger.exception("grant permissions error on %s, detail: %s", distributor, e)
 
         # After marking a gateway as synchronised, gateway creation and pre-authorisation will no longer be performed
         plugin_app.bk_plugin_profile.mark_synced(id_, gw_service.gw_name)
@@ -74,14 +74,14 @@ def set_distributors(plugin_app: Application, distributors: Collection[BkPluginD
 
     # Sync API Gateway resource on demand
     if not profile.is_synced:
-        logger.info('Syncing api-gw resource for %s, triggered by setting distributor.', plugin_app)
+        logger.info("Syncing api-gw resource for %s, triggered by setting distributor.", plugin_app)
         safe_sync_apigw(plugin_app)
 
     if not profile.api_gw_id:
         logger.error(
             'Unable to set distributor for "%s", no related API Gateway resource can be found', plugin_app.code
         )
-        raise RuntimeError('no related API Gateway resource')
+        raise RuntimeError("no related API Gateway resource")
 
     old_distributors = set(plugin_app.distributors.all())
     distributors_set = set(distributors)
@@ -91,18 +91,18 @@ def set_distributors(plugin_app: Application, distributors: Collection[BkPluginD
     gw_service = PluginDefaultAPIGateway(plugin_app)
     for distributor in to_added:
         try:
-            logger.info('Granting permissions on distributer: %s, plugin: %s', distributor, plugin_app)
+            logger.info("Granting permissions on distributer: %s, plugin: %s", distributor, plugin_app)
             gw_service.grant(distributor)
         except PluginApiGatewayServiceError as e:
-            raise RuntimeError(f'grant permissions error on {distributor}, detail: {e}')
+            raise RuntimeError(f"grant permissions error on {distributor}, detail: {e}")
 
     # Perform grant, handle removed distributors
     for distributor in to_removed:
         try:
-            logger.info('Revoking permissions on distributer: %s, plugin: %s', distributor, plugin_app)
+            logger.info("Revoking permissions on distributer: %s, plugin: %s", distributor, plugin_app)
             gw_service.revoke(distributor)
         except PluginApiGatewayServiceError as e:
-            raise RuntimeError(f'revoke permissions error on {distributor}, detail: {e}')
+            raise RuntimeError(f"revoke permissions error on {distributor}, detail: {e}")
 
     # Modify records in database only when all previous actions finished
     plugin_app.distributors.set(distributors)
@@ -133,13 +133,13 @@ class PluginDefaultAPIGateway:
         generate a default one.
     """
 
-    description_tmp = 'This gateway is related with bluking plugin: {plugin_code}, do not modify.'
-    grant_dimension = 'api'
+    description_tmp = "This gateway is related with bluking plugin: {plugin_code}, do not modify."
+    grant_dimension = "api"
 
     def __init__(self, plugin_app: Application, client: Optional[PluginApiGWClient] = None):
         self.plugin_app = plugin_app
         self.client = client or self._make_api_client()
-        self._user_auth_type = getattr(settings, 'BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE', 'default')
+        self._user_auth_type = getattr(settings, "BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE", "default")
         self.set_gw_name()
 
     def set_gw_name(self):
@@ -147,7 +147,7 @@ class PluginDefaultAPIGateway:
         profile = self.plugin_app.bk_plugin_profile
         # When name is absent in plugin profile, generate a new name
         # WARN: The default value for gateway name should not exceeds 20 characters long.
-        self.gw_name = profile.api_gw_name or f'bk-{self.plugin_app.code}'
+        self.gw_name = profile.api_gw_name or f"bk-{self.plugin_app.code}"
 
     def sync(self) -> int:
         """Sync API gateway resource, if the gateway resource doesn't exist yet, create it.
@@ -162,20 +162,20 @@ class PluginDefaultAPIGateway:
         description = self.description_tmp.format(plugin_code=self.plugin_app.code)
         try:
             ret = self.client.sync_api(
-                path_params={'api_name': self.gw_name},
+                path_params={"api_name": self.gw_name},
                 data={
                     "name": self.gw_name,
-                    'description': description,
-                    'maintainers': self._get_maintainers(),
-                    'user_auth_type': self._user_auth_type,
+                    "description": description,
+                    "maintainers": self._get_maintainers(),
+                    "user_auth_type": self._user_auth_type,
                     # Make it public and available by setting "status" and "is_public"
-                    'status': 1,
-                    'is_public': True,
+                    "status": 1,
+                    "is_public": True,
                 },
             )
         except (RequestException, BKAPIError) as e:
-            raise PluginApiGatewayServiceError(f'sync gateway resource error, detail: {e}')
-        return ret['data']['id']
+            raise PluginApiGatewayServiceError(f"sync gateway resource error, detail: {e}")
+        return ret["data"]["id"]
 
     def grant(self, distributor: BkPluginDistributor):
         """Grant permissions on given distributor
@@ -184,11 +184,11 @@ class PluginDefaultAPIGateway:
         """
         try:
             self.client.grant_permissions(
-                path_params={'api_name': self.gw_name},
-                data={"target_app_code": distributor.bk_app_code, 'grant_dimension': self.grant_dimension},
+                path_params={"api_name": self.gw_name},
+                data={"target_app_code": distributor.bk_app_code, "grant_dimension": self.grant_dimension},
             )
         except (RequestException, BKAPIError) as e:
-            raise PluginApiGatewayServiceError(f'grant permissions error, detail: {e}')
+            raise PluginApiGatewayServiceError(f"grant permissions error, detail: {e}")
 
     def revoke(self, distributor: BkPluginDistributor):
         """Revoke permissions on given distributor
@@ -197,13 +197,13 @@ class PluginDefaultAPIGateway:
         """
         try:
             self.client.revoke_permissions(
-                path_params={'api_name': self.gw_name},
+                path_params={"api_name": self.gw_name},
                 # INFO: "revoke" supports plural form: "target_app_codes" while "grant" only allows a single
                 # "target_app_code"
-                data={"target_app_codes": [distributor.bk_app_code], 'grant_dimension': self.grant_dimension},
+                data={"target_app_codes": [distributor.bk_app_code], "grant_dimension": self.grant_dimension},
             )
         except (RequestException, BKAPIError) as e:
-            raise PluginApiGatewayServiceError(f'revoke permissions error, detail: {e}')
+            raise PluginApiGatewayServiceError(f"revoke permissions error, detail: {e}")
 
     def update_gateway_status(self, enabled: bool):
         """Update gateway status to enabled or not
@@ -212,7 +212,7 @@ class PluginDefaultAPIGateway:
         """
         try:
             self.client.update_gateway_status(
-                path_params={'api_name': self.gw_name}, data={"status": 1 if enabled else 0}
+                path_params={"api_name": self.gw_name}, data={"status": 1 if enabled else 0}
             )
         except (RequestException, BKAPIError) as e:
             raise PluginApiGatewayServiceError(f"update gateway status error, detail: {e}")

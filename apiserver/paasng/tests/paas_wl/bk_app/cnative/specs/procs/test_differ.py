@@ -29,11 +29,11 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestDiffReplicas:
     def test_same(self, bk_stag_wl_app):
-        res = create_app_resource(bk_stag_wl_app.name, 'busybox')
+        res = create_app_resource(bk_stag_wl_app.name, "busybox")
         assert diff_replicas(res, res, AppEnvName.STAG) == []
 
     def test_changed(self, bk_stag_wl_app):
-        res = create_app_resource(bk_stag_wl_app.name, 'busybox')
+        res = create_app_resource(bk_stag_wl_app.name, "busybox")
         res_new = copy.deepcopy(res)
         res_new.spec.processes[0].replicas = 3
-        assert diff_replicas(res, res_new, AppEnvName.STAG) == [ProcReplicasChange('web', 1, 3)]
+        assert diff_replicas(res, res_new, AppEnvName.STAG) == [ProcReplicasChange("web", 1, 3)]

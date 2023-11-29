@@ -132,6 +132,6 @@ class TestSmartTimeRange:
         start_time_stamp, end_time_stamp = smart_time_range.get_head_and_tail()
         assert start_time_stamp == expected_start
         assert end_time_stamp == expected_end
-        assert smart_time_range.get_time_range_filter('@timestamp') == {
+        assert smart_time_range.get_time_range_filter("@timestamp") == {
             "@timestamp": {"gte": expected_start, "lte": expected_end, "format": "epoch_millis"}
         }

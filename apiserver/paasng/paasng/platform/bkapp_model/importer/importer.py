@@ -46,7 +46,7 @@ def import_manifest(module: Module, input_data: Dict):
     :raises ManifestImportError: When unexpected error happened.
     """
     # TODO: Standardize input_data which is using apiVersion other than "v1alpha2".
-    spec_slz = BkAppSpecInputSLZ(data=input_data['spec'])
+    spec_slz = BkAppSpecInputSLZ(data=input_data["spec"])
     try:
         spec_slz.is_valid(raise_exception=True)
     except ValidationError as e:
@@ -55,17 +55,17 @@ def import_manifest(module: Module, input_data: Dict):
     validated_data = spec_slz.validated_data
 
     env_vars, overlay_env_vars = [], []
-    mounts = validated_data.get('mounts', [])
-    if configuration := validated_data.get('configuration', {}):
-        env_vars = configuration.get('env', [])
+    mounts = validated_data.get("mounts", [])
+    if configuration := validated_data.get("configuration", {}):
+        env_vars = configuration.get("env", [])
 
     overlay_replicas, overlay_res_quotas, overlay_autoscaling, overlay_mounts = [], [], [], []
-    if env_overlay := validated_data.get('envOverlay', {}):
-        overlay_replicas = env_overlay.get('replicas', [])
-        overlay_res_quotas = env_overlay.get('resQuotas', [])
-        overlay_env_vars = env_overlay.get('envVariables', [])
-        overlay_autoscaling = env_overlay.get('autoscaling', [])
-        overlay_mounts = env_overlay.get('mounts', [])
+    if env_overlay := validated_data.get("envOverlay", {}):
+        overlay_replicas = env_overlay.get("replicas", [])
+        overlay_res_quotas = env_overlay.get("resQuotas", [])
+        overlay_env_vars = env_overlay.get("envVariables", [])
+        overlay_autoscaling = env_overlay.get("autoscaling", [])
+        overlay_mounts = env_overlay.get("mounts", [])
 
     # Run importer functions
     import_processes(module, processes=validated_data["processes"])

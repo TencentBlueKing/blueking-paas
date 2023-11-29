@@ -25,9 +25,6 @@ import pytest
 from django.conf import settings
 
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
-from paasng.platform.engine.constants import JobStatus
-from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.entrance.exposer import (
     get_exposed_url,
     get_module_exposed_links,
@@ -38,6 +35,9 @@ from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.accessories.publish.sync_market.handlers import register_application_with_default
 from paasng.accessories.publish.sync_market.managers import AppManger
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.platform.engine.constants import JobStatus
+from paasng.platform.modules.constants import ExposedURLType
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils.mocks.engine import mock_cluster_service
 
@@ -49,8 +49,8 @@ def setup_cluster():
     """Replace cluster info in module level"""
     with mock_cluster_service(
         ingress_config={
-            'sub_path_domains': [{"name": 'sub.example.com'}, {"name": 'sub.example.cn'}],
-            'app_root_domains': [{"name": 'bkapps.example.com'}],
+            "sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}],
+            "app_root_domains": [{"name": "bkapps.example.com"}],
         }
     ):
         yield
@@ -58,7 +58,7 @@ def setup_cluster():
 
 @pytest.fixture()
 def bk_app(bk_app):
-    bk_app.code = 'some-app-o'
+    bk_app.code = "some-app-o"
     bk_app.name = "some-app-o"
     bk_app.save()
     return bk_app
@@ -71,8 +71,8 @@ class TestIntegratedNotDeployed:
 
         urls = get_module_exposed_links(bk_module)
         assert urls == {
-            'stag': {'deployed': False, 'url': None},
-            'prod': {'deployed': False, 'url': None},
+            "stag": {"deployed": False, "url": None},
+            "prod": {"deployed": False, "url": None},
         }
 
 
@@ -88,21 +88,21 @@ def test_get_module_exposed_links(
 
     urls = get_module_exposed_links(bk_module)
     assert urls == {
-        'stag': {'deployed': True, 'url': 'http://foo-stag.example.com'},
-        'prod': {'deployed': True, 'url': 'http://foo-prod.example.com'},
+        "stag": {"deployed": True, "url": "http://foo-stag.example.com"},
+        "prod": {"deployed": True, "url": "http://foo-prod.example.com"},
     }
 
 
 class TestUpdateExposedURLType:
     @pytest.fixture(autouse=True)
     def setUp(self, bk_module):
-        create_fake_deployment(bk_module, 'stag', status=JobStatus.SUCCESSFUL.value)
-        create_fake_deployment(bk_module, 'prod', status=JobStatus.SUCCESSFUL.value)
+        create_fake_deployment(bk_module, "stag", status=JobStatus.SUCCESSFUL.value)
+        create_fake_deployment(bk_module, "prod", status=JobStatus.SUCCESSFUL.value)
 
     def test_normal(self, bk_module):
         bk_module.exposed_url_type = ExposedURLType.SUBPATH
         bk_module.save()
-        with mock.patch('paasng.accessories.publish.entrance.exposer.refresh_module_domains') as mocker:
+        with mock.patch("paasng.accessories.publish.entrance.exposer.refresh_module_domains") as mocker:
             update_exposed_url_type_to_subdomain(bk_module)
 
         assert bk_module.exposed_url_type == ExposedURLType.SUBDOMAIN
@@ -142,7 +142,7 @@ class TestUpdateExposedURLType:
 
             bk_module.exposed_url_type = ExposedURLType.SUBPATH
             bk_module.save()
-            with mock.patch('paasng.accessories.publish.entrance.exposer.refresh_module_domains') as mocker:
+            with mock.patch("paasng.accessories.publish.entrance.exposer.refresh_module_domains") as mocker:
                 update_exposed_url_type_to_subdomain(bk_module)
 
             assert bk_module.exposed_url_type == ExposedURLType.SUBDOMAIN

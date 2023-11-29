@@ -46,10 +46,10 @@ class TestElasticSearchFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"plugin_id": "{{ plugin_id }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'plugin_id': 'foo'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"plugin_id": "foo"}},
                             ]
                         }
                     }
@@ -58,10 +58,10 @@ class TestElasticSearchFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"engine_app_name": "bkapp-{{ plugin_id }}-prod"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'engine_app_name': 'bkapp-foo-prod'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"engine_app_name": "bkapp-foo-prod"}},
                             ]
                         }
                     }
@@ -71,7 +71,7 @@ class TestElasticSearchFilter:
                 ElasticSearchParams(
                     indexPattern="", termTemplate={"foo": "{{ plugin_id }}", "FOO": "{{ plugin_id | upper }}"}
                 ),
-                {'query': {'bool': {'filter': [{'term': {'foo': 'foo'}}, {'term': {'FOO': 'FOO'}}]}}},
+                {"query": {"bool": {"filter": [{"term": {"foo": "foo"}}, {"term": {"FOO": "FOO"}}]}}},
             ),
         ],
     )
@@ -84,11 +84,11 @@ class TestElasticSearchFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinFilters={"a": "a", "b": "b"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'a': 'a'}},
-                                {'term': {'b': 'b'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"a": "a"}},
+                                {"term": {"b": "b"}},
                             ]
                         }
                     }
@@ -97,11 +97,11 @@ class TestElasticSearchFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinFilters={"a": "a", "b": ["b", "B"]}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'a': 'a'}},
-                                {'terms': {'b': ["b", "B"]}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"a": "a"}},
+                                {"terms": {"b": ["b", "B"]}},
                             ]
                         }
                     }
@@ -118,20 +118,20 @@ class TestElasticSearchFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinExcludes={"a": "a", "b": "b"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
+                    "query": {
+                        "bool": {
+                            "filter": [
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'a': 'a'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"a": "a"}},
                                         ]
                                     }
                                 },
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'b': 'b'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"b": "b"}},
                                         ]
                                     }
                                 },
@@ -143,20 +143,20 @@ class TestElasticSearchFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinExcludes={"a": "a", "b": ["b", "B"]}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
+                    "query": {
+                        "bool": {
+                            "filter": [
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'a': 'a'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"a": "a"}},
                                         ]
                                     }
                                 },
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'terms': {'b': ['b', 'B']}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"terms": {"b": ["b", "B"]}},
                                         ]
                                     }
                                 },

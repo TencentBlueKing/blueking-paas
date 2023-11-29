@@ -115,7 +115,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         )
         noti_backend = get_notification_backend()
 
-        result = noti_backend.wecom.send([user.username], message, _('蓝鲸平台'))
+        result = noti_backend.wecom.send([user.username], message, _("蓝鲸平台"))
 
         if not result:
             raise error_codes.ERROR_SENDING_NOTIFICATION
@@ -134,7 +134,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
 
     def get_create_serializer(self, *args, **kwargs):
         serializer_class = slzs.SvnAccountCreateSLZ
-        kwargs['context'] = self.get_serializer_context()
+        kwargs["context"] = self.get_serializer_context()
         return serializer_class(*args, **kwargs)
 
     @swagger_auto_schema(response_serializer=slzs.SVNAccountResponseSLZ)
@@ -143,14 +143,14 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        account_info = SvnAccount.objects.create_account(user=request.user, region=validated_data['region'])
+        account_info = SvnAccount.objects.create_account(user=request.user, region=validated_data["region"])
 
         self.notify_svn_account_changed(
             username=request.user.username,
-            account=account_info['account'],
-            password=account_info['password'],
+            account=account_info["account"],
+            password=account_info["password"],
             created=True,
-            region=validated_data['region'],
+            region=validated_data["region"],
         )
 
         result = self.process_password(
@@ -163,7 +163,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
 
     @swagger_auto_schema(response_serializer=slzs.SVNAccountResponseSLZ)
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = slzs.SvnAccountSLZ(
             instance, data=request.data, partial=partial, context=self.get_serializer_context()
@@ -177,14 +177,14 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
             if not verifier.validate_and_clean(code):
                 raise ValidationError({"verification_code": [_("验证码错误")]})
 
-        account_info = SvnAccount.objects.reset_account(instance=instance, user=request.user, region=data['region'])
+        account_info = SvnAccount.objects.reset_account(instance=instance, user=request.user, region=data["region"])
 
         self.notify_svn_account_changed(
             username=request.user.username,
-            account=account_info['account'],
-            password=account_info['password'],
+            account=account_info["account"],
+            password=account_info["password"],
             created=False,
-            region=data['region'],
+            region=data["region"],
         )
 
         result = self.process_password(
@@ -203,10 +203,10 @@ class GitRepoViewSet(viewsets.ViewSet):
         if isinstance(exc, OauthAuthorizationRequired):
             return Response(
                 {
-                    'message': _('用户未关联 oauth 授权'),
-                    'address': exc.authorization_url,
-                    'auth_docs': exc.auth_docs,
-                    'result': True,
+                    "message": _("用户未关联 oauth 授权"),
+                    "address": exc.authorization_url,
+                    "auth_docs": exc.auth_docs,
+                    "result": True,
                 },
                 403,
             )
@@ -230,7 +230,7 @@ class GitRepoViewSet(viewsets.ViewSet):
                 )
             raise PermissionDenied
         except AccessTokenForbidden as e:
-            raise error_codes.CANNOT_GET_REPO.f(_('当前 AccessToken 无法获取到仓库列表，请检查后重试')) from e
+            raise error_codes.CANNOT_GET_REPO.f(_("当前 AccessToken 无法获取到仓库列表，请检查后重试")) from e
         except Exception as e:
             raise error_codes.CANNOT_GET_REPO.f(_("访问源码仓库失败，请联系项目管理员")) from e
 
@@ -255,7 +255,7 @@ class ModuleSourceProvidersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         module = self.get_module_via_path()
         provider_types = set(UserSourceProviders(request.user).list_module_available(module))
         results = render_providers(sorted(provider_types))
-        return Response(data={'results': results})
+        return Response(data={"results": results})
 
 
 @method_decorator(name="list", decorator=swagger_auto_schema(tags=["源码包管理"]))
@@ -265,9 +265,9 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
     serializer_class = slzs.SourcePackageSLZ
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['version', 'package_name', 'package_size']
-    ordering = ('-created',)
-    ordering_fields = ('version', 'package_name', 'package_size', 'updated')
+    search_fields = ["version", "package_name", "package_size"]
+    ordering = ("-created",)
+    ordering_fields = ("version", "package_name", "package_size", "updated")
     parser_classes = [MultiPartParser, JSONParser]
 
     def get_module(self):
@@ -368,8 +368,8 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 repo_url, repo_auth_info=data["source_repo_auth_info"], source_dir=data["source_dir"]
             )
         except Exception as e:
-            logger.exception('Fail to bind repo: %s', e)
-            raise error_codes.CANNOT_BIND_REPO.f(_('请稍候再试'))
+            logger.exception("Fail to bind repo: %s", e)
+            raise error_codes.CANNOT_BIND_REPO.f(_("请稍候再试"))
 
         repo_updated.send(sender=self, module_id=module.id, operator=request.user.username)
         return Response(data={"message": f"仓库成功更改为 {repo_url}", "repo_type": repo_type, "repo_url": repo_url})
@@ -387,7 +387,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             source_dir=data["source_dir"],
             repo_auth_info=data["source_repo_auth_info"],
         )
-        return Response(data={"message": f"仓库成功更改为 {repo_url}", "repo_type": '', "repo_url": repo_url})
+        return Response(data={"message": f"仓库成功更改为 {repo_url}", "repo_type": "", "repo_url": repo_url})
 
 
 class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -412,7 +412,7 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
             raise error_codes.CANNOT_GET_REPO.f(_("%s的仓库信息查询异常") % code)
         else:
-            return Response({'results': alternative_versions})
+            return Response({"results": alternative_versions})
 
     def get_diff_commit_logs(self, request, code, module_name, from_revision, to_revision):
         """获取蓝鲸应用2个代码版本之间的提交记录(大于from_revision, 小于等于to_revision之间的提交纪录)
@@ -467,7 +467,7 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         commit_logs = [_log for _log in commit_logs if _log.revision != from_revision]
         # 对日期逆序排序
         commit_logs = sorted(commit_logs, key=lambda x: x.date, reverse=True)
-        return Response({'results': slzs.CommitLogSLZ(commit_logs, many=True).data})
+        return Response({"results": slzs.CommitLogSLZ(commit_logs, many=True).data})
 
     def get_compare_url(self, request, code, module_name, from_revision, to_revision):
         """获取外部 Git 系统提供的 compare url"""

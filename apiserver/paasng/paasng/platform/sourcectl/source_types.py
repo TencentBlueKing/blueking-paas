@@ -66,19 +66,19 @@ class SourceTypeSpec:
     """Source type specifications"""
 
     # connector 是用于“连接”新应用模块与源码系统的类型，它最大的职责有两个：完成绑定与同步模板代码
-    connector_class: Type['ModuleRepoConnector']
+    connector_class: Type["ModuleRepoConnector"]
 
     # 用来操作源码系统的功能类型，提供了导出项目源码、查看 diff 日志等能力
-    repo_controller_class: Type['RepoController']
+    repo_controller_class: Type["RepoController"]
 
     # 处理用户通过 OAuth 协议连接到外部 VCS 系统的后端类，部分源码系统（比如 GitHub、GitLab）适用，
     # 为空时表示当前源码系统不支持 OAuth 功能
-    oauth_backend_class: Optional[Type['OAuth2Backend']]
+    oauth_backend_class: Optional[Type["OAuth2Backend"]]
 
     diff_feature: DiffFeature = DiffFeature(method=DiffFeatureType.EXTERNAL, enabled=True)
-    basic_type: str = ''
+    basic_type: str = ""
 
-    _default_label: str = ''
+    _default_label: str = ""
     _default_display_info: Dict = {}
 
     def __init__(
@@ -118,7 +118,7 @@ class SourceTypeSpec:
         """Check if current source type supports oauth backend"""
         return bool(self.oauth_backend_class)
 
-    def make_oauth_backend(self) -> 'OAuth2Backend':
+    def make_oauth_backend(self) -> "OAuth2Backend":
         if self.oauth_backend_class:
             return cattr.structure(self.oauth_backend_config, self.oauth_backend_class)
         raise NotImplementedError
@@ -141,8 +141,8 @@ class SourceTypeSpec:
         return self.get_server_config(region)
 
     def make_feature_flag_field(self) -> FeatureFlagField:
-        feature = f'ENABLE_{self.upper_name}'
-        return FeatureFlagField(name=feature, label=f'使用 {self.label} 源码服务', default=self.enabled)
+        feature = f"ENABLE_{self.upper_name}"
+        return FeatureFlagField(name=feature, label=f"使用 {self.label} 源码服务", default=self.enabled)
 
 
 class ServerConfig:
@@ -164,7 +164,7 @@ class ServerConfig:
         :raises TypeError: when current config must be looked up by region
         """
         if self._config.lookup_with_region:
-            raise TypeError('Can not get region agnostic config, must lookup by region')
+            raise TypeError("Can not get region agnostic config, must lookup by region")
         return self._config.data
 
 
@@ -200,7 +200,7 @@ class SourceTypes:
         for key, type_spec in self.data.items():
             if key.upper() == name.upper():
                 return type_spec
-        raise KeyError(f'{name} is not a valid source type value')
+        raise KeyError(f"{name} is not a valid source type value")
 
     def search(self, key: str) -> SourceTypeSpec:
         """Call `self.names.get` API to search sourcectl type"""
@@ -212,7 +212,7 @@ class SourceTypes:
         for spec in self.data.values():
             if isinstance(spec, spec_type):
                 return spec
-        raise ValueError(f'{spec_type} not exists in source_types')
+        raise ValueError(f"{spec_type} not exists in source_types")
 
     def clear(self):
         """Remove all sourcectl type specs"""
@@ -224,8 +224,8 @@ class SourceTypes:
 
         for conf in configs:
             # Make source type specs and store it into current source types
-            cls = import_string(conf['spec_cls'])
-            type_specs = cls(**conf['attrs'])
+            cls = import_string(conf["spec_cls"])
+            type_specs = cls(**conf["attrs"])
             self.data[type_specs.name] = type_specs
 
             register_new_sourcectl_type(type_specs.name, type_specs.make_feature_flag_field())
@@ -236,7 +236,7 @@ class SourceTypes:
 class SourcectlTypeNames:
     """Source type "NAME" helper class"""
 
-    common_spec_type_suffix = 'SourceTypeSpec'
+    common_spec_type_suffix = "SourceTypeSpec"
 
     def __init__(self, source_types: SourceTypes):
         self.types = source_types
@@ -270,14 +270,14 @@ class SourcectlTypeNames:
                 continue
 
         if not results:
-            raise KeyError(f'No sourcectl type name can be found by {key}')
+            raise KeyError(f"No sourcectl type name can be found by {key}")
         if len(results) > 1:
-            raise KeyError(f'Multiple names were found by {key}')
+            raise KeyError(f"Multiple names were found by {key}")
         return results[0]
 
     def get_default(self) -> str:
         """Return the default sourcectl type name"""
-        return next(iter(self.types.data.keys()), '')
+        return next(iter(self.types.data.keys()), "")
 
     def filter_by_basic_type(self, basic_type: str) -> Sequence[str]:
         """Filter names by basic_type attr"""
@@ -350,7 +350,7 @@ def get_sourcectl_types() -> SourceTypes:
     # 不存在的语言版本，则进行初始化，并存储到内存缓存中
     configs = SourceTypeSpecConfig.objects.build_configs()
     if not configs:
-        raise ImproperlyConfigured('You have to configure at least one source control system')
+        raise ImproperlyConfigured("You have to configure at least one source control system")
 
     source_types.load_from_configs(configs)
     _current_source_types_map[lang] = source_types

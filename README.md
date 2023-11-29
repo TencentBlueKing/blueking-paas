@@ -10,7 +10,7 @@
 > 请通过 [releases](https://github.com/TencentBlueKing/blueking-paas/releases) 而非 main 分支去获取稳定版本代码。
 
 蓝鲸智云 PaaS 平台是一个开放式的开发平台，让开发者可以方便快捷地创建、开发、部署和管理 SaaS 应用。它提供的核心服务有：开发者中心、API
-网关、统一登录、蓝鲸桌面、可视化开发平台等，旨在帮助用户快速、低成本的构建免运维运营系统与支撑工具。
+网关、统一登录、蓝鲸桌面等，旨在帮助用户快速、低成本的构建免运维运营系统与支撑工具。
 
 本项目是 `PaaS平台 - 开发者中心`。
 
@@ -20,7 +20,6 @@
 - PaaS 平台 - [蓝鲸 API 网关](https://github.com/TencentBlueKing/blueking-apigateway)
 - PaaS 平台 - [统一登录](https://github.com/TencentBlueKing/bk-user)
 - PaaS 平台 - [蓝鲸桌面](https://github.com/TencentBlueKing/blueking-console)
-- 低代码开发 - [可视化开发平台](https://github.com/TencentBlueKing/bk-lesscode)
 
 ## 架构设计
 
@@ -36,7 +35,7 @@
 - 提供 MySQL、RabbitMQ、对象存储（[bk-repo](https://github.com/TencentBlueKing/bk-repo)） 等增强服务
 - 通过容器镜像部署，开发蓝鲸 SaaS 变得更简单
 - 全面升级 Python 开发框架，紧跟 Django 官方最新技术方案
-- 新增 Node.js 开发框架，即刻享受蓝鲸可视化平台的低代码研发模式
+- 新增 Node.js 开发框架
 
 ## 代码目录说明
 

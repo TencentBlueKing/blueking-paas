@@ -21,7 +21,7 @@ to the current version of the project delivered to anyone in the future.
 # 消息模板 #
 ###########
 TITLE = "【蓝鲸PaaS】应用 {{ app_code }} 内 {{ proc_name }} 进程运行异常通知"
-BASE_MESSAGE_TEMPLATE = u"""
+BASE_MESSAGE_TEMPLATE = """
 {% if mail -%}<pre>{% endif %}
 应用名称:   {{app_name}}
 应用ID:   {{app_code}}

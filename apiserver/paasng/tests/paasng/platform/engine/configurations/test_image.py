@@ -37,7 +37,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.fixture
 def version():
-    return VersionInfo(revision='foo', version_type='tag', version_name='foo')
+    return VersionInfo(revision="foo", version_type="tag", version_name="foo")
 
 
 class TestRuntimeInfo:

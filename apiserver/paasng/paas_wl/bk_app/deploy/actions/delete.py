@@ -20,19 +20,19 @@ import logging
 
 from django.db import models, transaction
 
-from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
-from paas_wl.core.env import env_is_running
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
-from paas_wl.workloads.networking.ingress.models import Domain
 from paas_wl.bk_app.applications.models import BuildProcess, WlApp
+from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
+from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.core.env import env_is_running
+from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
-def delete_env_resources(env: 'ModuleEnvironment'):
+def delete_env_resources(env: "ModuleEnvironment"):
     """Delete app's resources in cluster"""
     if not env_is_running(env):
         return
@@ -43,7 +43,7 @@ def delete_env_resources(env: 'ModuleEnvironment'):
     return
 
 
-def delete_module_related_res(module: 'Module'):
+def delete_module_related_res(module: "Module"):
     """Delete module's related resources"""
     with transaction.atomic(using="default"), transaction.atomic(using="workloads"):
         _delete_module_related_res(module)
@@ -78,7 +78,7 @@ def _delete_module_related_res(module: Module) -> None:
         try:
             delete_env_resources(env)
         except Exception as e:
-            logger.warning('Error deleting app cluster resources, app: %s, error: %s', wl_app, e)
+            logger.warning("Error deleting app cluster resources, app: %s, error: %s", wl_app, e)
 
         # This will also remove cascaded models:
         # Build, BuildProcess, Config, Release, AppMetricsMonitor, AppImageCredential,

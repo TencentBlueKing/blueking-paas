@@ -32,7 +32,7 @@ class UsernamePasswordPairSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppUserCredential
-        fields = '__all__'
+        fields = "__all__"
 
 
 class ImageCredentialSLZ(serializers.Serializer):

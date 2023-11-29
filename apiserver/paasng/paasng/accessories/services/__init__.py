@@ -19,4 +19,4 @@ to the current version of the project delivered to anyone in the future.
 """
 ServiceHub module
 """
-default_app_config = 'paasng.accessories.services.apps.ServicesAppConfig'
+default_app_config = "paasng.accessories.services.apps.ServicesAppConfig"

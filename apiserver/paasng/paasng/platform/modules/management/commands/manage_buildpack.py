@@ -28,25 +28,25 @@ class Command(BaseCommand):
     help = "管理 buildpack"
 
     def add_arguments(self, parser):
-        parser.add_argument('-n', '--name', required=True, help="name")
-        parser.add_argument('--display_name_zh_cn', required=False, help="buildpack display name(zh-cn)")
-        parser.add_argument('--display_name_en', required=False, help="buildpack display name(en)")
-        parser.add_argument('--description_zh_cn', required=False, help="buildpack description(zh-cn)")
-        parser.add_argument('--description_en', required=False, help="buildpack description(en)")
-        parser.add_argument('-t', '--tag', required=True, help="version")
-        parser.add_argument('-l', '--language', required=True, help="language")
-        parser.add_argument('-T', '--type', dest="type_", default="tar", help="type")
-        parser.add_argument('-a', '--address', required=True, help="address")
-        parser.add_argument('-r', '--region', required=True, dest="regions", help="available region name", nargs="+")
+        parser.add_argument("-n", "--name", required=True, help="name")
+        parser.add_argument("--display_name_zh_cn", required=False, help="buildpack display name(zh-cn)")
+        parser.add_argument("--display_name_en", required=False, help="buildpack display name(en)")
+        parser.add_argument("--description_zh_cn", required=False, help="buildpack description(zh-cn)")
+        parser.add_argument("--description_en", required=False, help="buildpack description(en)")
+        parser.add_argument("-t", "--tag", required=True, help="version")
+        parser.add_argument("-l", "--language", required=True, help="language")
+        parser.add_argument("-T", "--type", dest="type_", default="tar", help="type")
+        parser.add_argument("-a", "--address", required=True, help="address")
+        parser.add_argument("-r", "--region", required=True, dest="regions", help="available region name", nargs="+")
         parser.add_argument(
-            '-e',
-            '--environment',
+            "-e",
+            "--environment",
             dest="environments",
             help="environment(k=v)",
             default=[],
             nargs="*",
         )
-        parser.add_argument('--hidden', dest="is_hidden", help="is_hidden", action="store_true")
+        parser.add_argument("--hidden", dest="is_hidden", help="is_hidden", action="store_true")
 
     @transaction.atomic
     def handle(

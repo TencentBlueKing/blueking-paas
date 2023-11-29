@@ -97,7 +97,7 @@ def import_env_overlays(
         items = cast(list, items)
         for input_p in items:
             if not (proc_spec := existing_specs.get(input_p.process)):
-                logger.info('Process spec not found, ignore, name: %s', input_p.process)
+                logger.info("Process spec not found, ignore, name: %s", input_p.process)
                 continue
 
             # Remove duplicates by setdefault

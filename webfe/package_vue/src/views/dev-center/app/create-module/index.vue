@@ -178,7 +178,7 @@
                     :class="['tab-item template', { 'active': localSourceOrigin === 2 }]"
                     @click="handleCodeTypeChange(2)"
                   >
-                    {{ $t('蓝鲸可视化开发平台') }}
+                    {{ $t('蓝鲸运维开发平台') }}
                   </li>
                 </div>
               </section>
@@ -259,14 +259,14 @@
                 target="_blank"
                 :href="GLOBAL.LINK.LESSCODE_INDEX"
                 style="color: #3a84ff"
-              > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
+              > {{ $t('蓝鲸运维开发平台') }} </a> {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
             </div>
             <div
               v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
               class="error-tips pt10"
             >
-              {{ $t('蓝鲸可视化开发平台的应用 ID 只能由小写字母组成, 所属应用') }} {{ curAppInfo.application.name }} {{ $t('的应用 ID 为') }} {{ curAppInfo.application.code }},
-              {{ $t('故无法在当前应用下创建蓝鲸可视化开发平台的模块。') }}
+              {{ $t('蓝鲸运维开发平台的应用 ID 只能由小写字母组成, 所属应用') }} {{ curAppInfo.application.name }} {{ $t('的应用 ID 为') }} {{ curAppInfo.application.code }},
+              {{ $t('故无法在当前应用下创建蓝鲸运维开发平台的模块。') }}
             </div>
           </div>
 
@@ -909,7 +909,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.formLoading = false;

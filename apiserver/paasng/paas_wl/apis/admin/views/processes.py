@@ -46,7 +46,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
     serializer_class = ProcessSpecPlanSLZ
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [SearchFilter]
-    search_fields = ['region', 'environment']
+    search_fields = ["region", "environment"]
     queryset = ProcessSpecPlan.objects.all()
 
     def _list_data(self):
@@ -94,7 +94,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WlApp, region=self.kwargs['region'], name=self.kwargs['name'])
+        app = get_object_or_404(WlApp, region=self.kwargs["region"], name=self.kwargs["name"])
         self.check_object_permissions(self.request, app)
         return app
 
@@ -115,7 +115,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
             engine_app_id=wl_app.pk,
             name=process_type,
             defaults={
-                "type": 'process',
+                "type": "process",
                 "region": region,
                 "target_replicas": 1,
                 "target_status": ProcessTargetStatus.START,
@@ -143,7 +143,7 @@ class ProcessInstanceViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WlApp, region=self.kwargs['region'], name=self.kwargs['name'])
+        app = get_object_or_404(WlApp, region=self.kwargs["region"], name=self.kwargs["name"])
         self.check_object_permissions(self.request, app)
         return app
 

@@ -23,16 +23,16 @@ from typing import TYPE_CHECKING
 import yaml
 from django.utils.functional import cached_property
 
+from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.declarative.constants import AppDescPluginType
+from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.smart_app.detector import ManifestDetector
+from paasng.platform.smart_app.path import LocalFSPath, PathProtocol
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import BinaryTarClient
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir
-from paasng.platform.declarative.constants import AppDescPluginType
-from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
-from paasng.platform.smart_app.detector import ManifestDetector
-from paasng.platform.smart_app.path import LocalFSPath, PathProtocol
-from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.specs import ModuleSpecs
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
@@ -45,7 +45,7 @@ class SourceCodePatcher:
     """A helper to patch App SourceCode, base on application description file."""
 
     @classmethod
-    def patch_tarball(cls, module: 'Module', tarball_path: Path, working_dir: Path, stat: SPStat) -> Path:
+    def patch_tarball(cls, module: "Module", tarball_path: Path, working_dir: Path, stat: SPStat) -> Path:
         """Patch S-Mart SourcePackage, then return a newly S-Mart SourcePackage"""
         dest = Path(working_dir) / stat.name
         with generate_temp_dir() as temp_dir:
@@ -53,7 +53,7 @@ class SourceCodePatcher:
             return cls.patch_source_dir(module=module, source_dir=temp_dir, dest=dest, stat=stat)
 
     @classmethod
-    def patch_source_dir(cls, module: 'Module', source_dir: Path, dest: Path, stat: SPStat) -> Path:
+    def patch_source_dir(cls, module: "Module", source_dir: Path, dest: Path, stat: SPStat) -> Path:
         """Patch S-Mart SourcePackage, then return a newly S-Mart SourcePackage"""
         patcher = cls(
             module=module,
@@ -72,7 +72,7 @@ class SourceCodePatcher:
         return dest
 
     def __init__(
-        self, module: 'Module', source_dir: PathProtocol, desc_handler: DescriptionHandler, relative_path: str = "./"
+        self, module: "Module", source_dir: PathProtocol, desc_handler: DescriptionHandler, relative_path: str = "./"
     ):
         """
         :param module: 模块
@@ -99,7 +99,7 @@ class SourceCodePatcher:
         """当前模块代码的路径"""
         user_dir = Path(self.get_user_source_dir())
         if user_dir.is_absolute():
-            user_dir = Path(user_dir).relative_to('/')
+            user_dir = Path(user_dir).relative_to("/")
         return self.source_dir / self.relative_path / str(user_dir)
 
     def get_user_source_dir(self) -> str:

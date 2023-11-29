@@ -106,7 +106,6 @@ from paasng.platform.applications.utils import (
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.platform.bkapp_model.services import initialize_simple
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
@@ -145,14 +144,14 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         # Get applications by given params
         applications = UserApplicationFilter(request.user).filter(
-            exclude_collaborated=params.get('exclude_collaborated'),
-            include_inactive=params['include_inactive'],
-            languages=params.get('language'),
-            regions=params.get('region'),
-            search_term=params.get('search_term'),
-            source_origin=params.get('source_origin'),
-            type_=params.get('type'),
-            order_by=[params.get('order_by')],
+            exclude_collaborated=params.get("exclude_collaborated"),
+            include_inactive=params["include_inactive"],
+            languages=params.get("language"),
+            regions=params.get("region"),
+            search_term=params.get("search_term"),
+            source_origin=params.get("source_origin"),
+            type_=params.get("type"),
+            order_by=[params.get("order_by")],
         )
 
         # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
@@ -161,12 +160,12 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         paginator = ApplicationListPagination()
         # 如果将用户标记的应用排在前面，需要特殊处理一下
-        if params.get('prefer_marked'):
-            applications_ids = applications.values_list('id', flat=True)
+        if params.get("prefer_marked"):
+            applications_ids = applications.values_list("id", flat=True)
             applications_ids = sorted(applications_ids, key=lambda x: x in marked_application_ids, reverse=True)
 
             page = paginator.paginate_queryset(applications_ids, self.request, view=self)
-            page_applications = list(Application.objects.filter(id__in=page).select_related('product'))
+            page_applications = list(Application.objects.filter(id__in=page).select_related("product"))
             page_applications = sorted(page_applications, key=lambda x: applications_ids.index(x.id))
         else:
             page_applications = paginator.paginate_queryset(applications, self.request, view=self)
@@ -176,11 +175,11 @@ class ApplicationViewSet(viewsets.ViewSet):
             app._deploy_info = get_exposed_links(app)
         data = [
             {
-                'application': application,
-                'product': application.product if hasattr(application, "product") else None,
-                'marked': application.id in marked_application_ids,
+                "application": application,
+                "product": application.product if hasattr(application, "product") else None,
+                "marked": application.id in marked_application_ids,
                 # 应用市场访问地址信息
-                'market_config': MarketConfig.objects.get_or_create_by_app(application)[0],
+                "market_config": MarketConfig.objects.get_or_create_by_app(application)[0],
             }
             for application in page_applications
         ]
@@ -194,9 +193,9 @@ class ApplicationViewSet(viewsets.ViewSet):
         return paginator.get_paginated_response(
             serializer.data,
             extra_data={
-                'default_app_count': default_app_count,
-                'engineless_app_count': engineless_app_count,
-                'cloud_native_app_count': cloud_native_app_count,
+                "default_app_count": default_app_count,
+                "engineless_app_count": engineless_app_count,
+                "cloud_native_app_count": cloud_native_app_count,
             },
         )
 
@@ -209,7 +208,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         params = serializer.data
 
         applications = UserApplicationFilter(request.user).filter(
-            order_by=['name'],
+            order_by=["name"],
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
@@ -219,9 +218,9 @@ class ApplicationViewSet(viewsets.ViewSet):
             applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
 
         # 目前应用在市场的 name 和 Application 中的 name 一致
-        results = [{'application': application, 'product': {'name': application.name}} for application in applications]
+        results = [{"application": application, "product": {"name": application.name}} for application in applications]
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
-        return Response({'count': len(results), 'results': serializer.data})
+        return Response({"count": len(results), "results": serializer.data})
 
     def retrieve(self, request, code):
         """获取单个应用的信息"""
@@ -235,13 +234,13 @@ class ApplicationViewSet(viewsets.ViewSet):
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {
-                'role': slzs.RoleField().to_representation(main_role),
-                'application': slzs.ApplicationSLZ(application).data,
-                'product': slzs.ProductSLZ(product).data if product else None,
-                'marked': UserMarkedApplication.objects.filter(
+                "role": slzs.RoleField().to_representation(main_role),
+                "application": slzs.ApplicationSLZ(application).data,
+                "product": slzs.ProductSLZ(product).data if product else None,
+                "marked": UserMarkedApplication.objects.filter(
                     application=application, owner=request.user.pk
                 ).exists(),
-                'web_config': web_config,
+                "web_config": web_config,
             }
         )
 
@@ -255,13 +254,13 @@ class ApplicationViewSet(viewsets.ViewSet):
             serializer.is_valid(raise_exception=True)
         except Exception:
             # if keyword do not match regex, then return none
-            return Response({'count': 0, 'results': []})
+            return Response({"count": 0, "results": []})
 
         params = serializer.data
-        keyword = params.get('keyword')
+        keyword = params.get("keyword")
         # Get applications which contains keywords
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params['include_inactive'], order_by=['name'], search_term=keyword
+            include_inactive=params["include_inactive"], order_by=["name"], search_term=keyword
         )
 
         if params.get("prefer_marked"):
@@ -272,7 +271,7 @@ class ApplicationViewSet(viewsets.ViewSet):
             applications = sorted(applications, key=lambda app: app.id in marked_application_ids, reverse=True)
 
         serializer = slzs.ApplicationMinimalSLZ(applications, many=True)
-        return Response({'count': len(applications), 'results': serializer.data})
+        return Response({"count": len(applications), "results": serializer.data})
 
     def destroy(self, request, code):
         """
@@ -340,9 +339,9 @@ class ApplicationViewSet(viewsets.ViewSet):
         try:
             update_or_create_bk_monitor_space(application)
         except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
-            logger.info(f'Failed to update app space on BK Monitor, {e}')
+            logger.info(f"Failed to update app space on BK Monitor, {e}")
         except Exception:
-            logger.exception('Failed to update app space on BK Monitor')
+            logger.exception("Failed to update app space on BK Monitor")
 
         return Response(serializer.data)
 
@@ -370,22 +369,22 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer = slzs.CreateThirdPartyApplicationSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.data
-        market_params = data['market_params']
+        market_params = data["market_params"]
         operator = request.user.pk
 
         try:
             application = create_third_app(
-                data['region'], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
+                data["region"], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
             )
         except DbIntegrityError as e:
             # 并发创建时, 可能会绕过 CreateThirdPartyApplicationSLZ 中 code 和 name 的存在性校验
-            if 'Duplicate entry' in str(e):
-                err_msg = _("code 为 {} 或 name 为 {} 的应用已存在").format(data['code'], data["name_zh_cn"])
+            if "Duplicate entry" in str(e):
+                err_msg = _("code 为 {} 或 name 为 {} 的应用已存在").format(data["code"], data["name_zh_cn"])
                 raise error_codes.CANNOT_CREATE_APP.f(err_msg)
             raise e
 
         return Response(
-            data={'application': slzs.ApplicationSLZ(application).data, 'source_init_result': None},
+            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": None},
             status=status.HTTP_201_CREATED,
         )
 
@@ -397,28 +396,28 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer = slzs.CreateApplicationV2SLZ(data=request.data, context={"region": request.data["region"]})
         serializer.is_valid(raise_exception=True)
         params = serializer.data
-        engine_params = params.get('engine_params', {})
+        engine_params = params.get("engine_params", {})
 
         if not params["engine_enabled"]:
             return self.create_third_party(request)
 
         # Handle advanced options
-        advanced_options = params.get('advanced_options', {})
+        advanced_options = params.get("advanced_options", {})
         cluster_name = None
         if advanced_options:
             # Permission check
             if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
-                raise ValidationError(_('你无法使用高级创建选项'))
+                raise ValidationError(_("你无法使用高级创建选项"))
 
-            cluster_name = advanced_options.get('cluster_name')
+            cluster_name = advanced_options.get("cluster_name")
 
         # Permission check for non-default source origin
-        source_origin = SourceOrigin(engine_params['source_origin'])
+        source_origin = SourceOrigin(engine_params["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
 
         # Guide: check if a bk_plugin can be created
-        if params['type'] == ApplicationType.BK_PLUGIN and not get_bk_plugin_config(params['region']).allow_creation:
-            raise ValidationError(_('当前版本下无法创建蓝鲸插件应用'))
+        if params["type"] == ApplicationType.BK_PLUGIN and not get_bk_plugin_config(params["region"]).allow_creation:
+            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
         if source_origin == SourceOrigin.SCENE:
             return self._init_scene_app(request, params, engine_params)
@@ -464,10 +463,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         params = serializer.data
 
-        engine_params = params.get('engine_params', {})
+        engine_params = params.get("engine_params", {})
 
         # Permission check for non-default source origin
-        source_origin = SourceOrigin(engine_params['source_origin'])
+        source_origin = SourceOrigin(engine_params["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
 
         cluster_name = None
@@ -476,39 +475,31 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateCloudNativeAppSLZ, tags=["创建应用"])
     def create_cloud_native(self, request):
-        """[API] 创建云原生架构应用
-
-        `cloud_native_params` 为 object 类型，各字段说明：
-
-        - `image`: string | 必填 | 容器镜像地址，
-        - `command`：array[string] | 选填 | 启动命令列表，例如 ["/bin/bash"]
-        - `args`：array[string] | 选填 | 命令参数列表，例如 ["-name", "demo"]
-        - `target_port`：integer | 选填 | 容器端口
-        """
+        """[API] 创建云原生架构应用"""
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP):
-            raise ValidationError(_('你无法创建云原生应用'))
+            raise ValidationError(_("你无法创建云原生应用"))
 
         serializer = slzs.CreateCloudNativeAppSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
-        params = serializer.data
+        params = serializer.validated_data
 
-        advanced_options = params.get('advanced_options', {})
+        advanced_options = params.get("advanced_options", {})
         cluster_name = None
         if advanced_options:
             if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
-                raise ValidationError(_('你无法使用高级创建选项'))
-            cluster_name = advanced_options.get('cluster_name')
+                raise ValidationError(_("你无法使用高级创建选项"))
+            cluster_name = advanced_options.get("cluster_name")
 
         module_src_cfg: Dict[str, Any] = {"source_origin": SourceOrigin.CNATIVE_IMAGE}
-        if source_config := params.get('source_config'):
-            source_origin = SourceOrigin(source_config['source_origin'])
-            self._ensure_source_origin_available(request.user, source_origin)
+        source_config = params["source_config"]
+        source_origin = SourceOrigin(source_config["source_origin"])
+        self._ensure_source_origin_available(request.user, source_origin)
 
-            module_src_cfg['source_origin'] = source_origin
-            # 如果指定模板信息，则需要提取并保存
-            if tmpl_name := source_config['source_init_template']:
-                tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
-                module_src_cfg.update({'language': tmpl.language, 'source_init_template': tmpl_name})
+        module_src_cfg["source_origin"] = source_origin
+        # 如果指定模板信息，则需要提取并保存
+        if tmpl_name := source_config["source_init_template"]:
+            tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+            module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
 
         application = create_application(
             region=params["region"],
@@ -521,24 +512,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         module = create_default_module(application, **module_src_cfg)
 
         # 初始化应用镜像凭证信息
-        if image_credentials := params.get('image_credentials'):
-            self._init_image_credentials(application, image_credentials)
+        if image_credential := params["bkapp_spec"]["build_config"].image_credential:
+            self._init_image_credential(application, image_credential)
 
-        source_init_result = None
-        if cloud_native_params := params.get('cloud_native_params'):
-            initialize_simple(module=module, cluster_name=cluster_name, **cloud_native_params)
-        else:
-            source_config = params["source_config"]
-            source_init_result = init_module_in_view(
-                module,
-                repo_type=source_config.get('source_control_type'),
-                repo_url=source_config.get('source_repo_url'),
-                repo_auth_info=source_config.get('source_repo_auth_info'),
-                source_dir=source_config.get('source_dir', ''),
-                cluster_name=cluster_name,
-                manifest=params.get('manifest'),
-                build_config=serializer.validated_data['build_config'],
-            ).source_init_result
+        source_init_result = init_module_in_view(
+            module,
+            repo_type=source_config.get("source_control_type"),
+            repo_url=source_config.get("source_repo_url"),
+            repo_auth_info=source_config.get("source_repo_auth_info"),
+            source_dir=source_config.get("source_dir", ""),
+            cluster_name=cluster_name,
+            bkapp_spec=params["bkapp_spec"],
+        ).source_init_result
 
         https_enabled = self._get_cluster_entrance_https_enabled(
             module.region, cluster_name, ExposedURLType(module.exposed_url_type)
@@ -553,7 +538,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             prefer_https=https_enabled,
         )
         return Response(
-            data={'application': slzs.ApplicationSLZ(application).data, 'source_init_result': source_init_result},
+            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
             status=status.HTTP_201_CREATED,
         )
 
@@ -566,23 +551,23 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             for region_name in get_all_regions().keys():
                 clusters = RegionClusterService(region_name).list_clusters()
                 adv_region_clusters.append(
-                    {'region': region_name, 'cluster_names': [cluster.name for cluster in clusters]}
+                    {"region": region_name, "cluster_names": [cluster.name for cluster in clusters]}
                 )
 
         options = {
             # configs related with "bk_plugin"
-            'bk_plugin_configs': list(self._get_bk_plugin_configs()),
+            "bk_plugin_configs": list(self._get_bk_plugin_configs()),
             # ADVANCED options:
-            'allow_adv_options': allow_advanced,
+            "allow_adv_options": allow_advanced,
             # configs related with clusters, contains content only when "allow_adv_options" is true
-            'adv_region_clusters': adv_region_clusters,
+            "adv_region_clusters": adv_region_clusters,
         }
         return Response(options)
 
     def _get_bk_plugin_configs(self) -> Iterable[Dict]:
         """Get configs for bk_plugin module"""
         for name in get_all_regions().keys():
-            yield {'region': name, 'allow_creation': get_bk_plugin_config(name).allow_creation}
+            yield {"region": name, "allow_creation": get_bk_plugin_config(name).allow_creation}
 
     def _get_cluster_entrance_https_enabled(
         self, region: str, cluster_name: Optional[str], exposed_url_type: ExposedURLType
@@ -626,7 +611,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         # Create engine related data
         # `source_init_template` is optional
-        source_init_template = engine_params.get('source_init_template', '')
+        source_init_template = engine_params.get("source_init_template", "")
         if source_init_template:
             language = Template.objects.get(
                 name=source_init_template, type__in=TemplateType.normal_app_types()
@@ -640,7 +625,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
         source_init_result = init_module_in_view(
             module,
-            repo_type=engine_params.get('source_control_type'),
+            repo_type=engine_params.get("source_control_type"),
             repo_url=engine_params.get("source_repo_url"),
             repo_auth_info=engine_params.get("source_repo_auth_info"),
             source_dir=engine_params.get("source_dir"),
@@ -653,7 +638,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         if language:
             application.language = language
-            application.save(update_fields=['language'])
+            application.save(update_fields=["language"])
 
         post_create_application.send(sender=self.__class__, application=application)
         create_market_config(
@@ -665,14 +650,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
         return Response(
-            data={'application': slzs.ApplicationSLZ(application).data, 'source_init_result': source_init_result},
+            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
             status=status.HTTP_201_CREATED,
         )
 
     def _init_scene_app(self, request, params: Dict, engine_params: Dict) -> Response:
         """初始化场景 SaaS 应用，包含根据 app_desc 文件创建一或多个模块，配置应用市场配置等"""
-        tmpl_name = engine_params.get('source_init_template', '')
-        app_name, app_code, region = params['name_en'], params['code'], params['region']
+        tmpl_name = engine_params.get("source_init_template", "")
+        app_name, app_code, region = params["name_en"], params["code"], params["region"]
 
         try:
             application, result = SceneAPPInitializer(
@@ -685,14 +670,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             logger.exception("Controller error cause create app failed")
             raise error_codes.CANNOT_CREATE_APP.f(e.message)
 
-        source_init_result: Dict[str, Any] = {'code': result.error}
+        source_init_result: Dict[str, Any] = {"code": result.error}
         if result.is_success():
-            source_init_result = {'code': 'OK', 'extra_info': result.extra_info, 'dest_type': result.dest_type}
+            source_init_result = {"code": "OK", "extra_info": result.extra_info, "dest_type": result.dest_type}
 
         return Response(
             data={
-                'application': slzs.ApplicationSLZ(application).data,
-                'source_init_result': source_init_result,
+                "application": slzs.ApplicationSLZ(application).data,
+                "source_init_result": source_init_result,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -701,11 +686,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         """对使用非默认源码来源的，需要检查是否有权限"""
         if source_origin not in SourceOrigin.get_default_origins():
             if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-                raise ValidationError(_('你无法使用非默认的源码来源'))
+                raise ValidationError(_("你无法使用非默认的源码来源"))
 
-    def _init_image_credentials(self, application: Application, image_credentials: Dict):
+    def _init_image_credential(self, application: Application, image_credential: Dict):
         try:
-            AppUserCredential.objects.create(application_id=application.id, **image_credentials)
+            AppUserCredential.objects.create(application_id=application.id, **image_credential)
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 
@@ -716,13 +701,13 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     pagination_class = None
     permission_classes = [IsAuthenticated]
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def list(self, request, **kwargs):
         """Always add 'result' key in response"""
         members = fetch_application_members(self.get_application().code)
-        return Response({'results': ApplicationMemberSLZ(members, many=True).data})
+        return Response({"results": ApplicationMemberSLZ(members, many=True).data})
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy="merge")
     def create(self, request, **kwargs):
         application = self.get_application()
 
@@ -731,8 +716,8 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
 
         role_members_map = defaultdict(list)
         for info in serializer.data:
-            for role in info['roles']:
-                role_members_map[role['id']].append(info['user']['username'])
+            for role in info["roles"]:
+                role_members_map[role["id"]].append(info["user"]["username"])
 
         try:
             for role, members in role_members_map.items():
@@ -744,18 +729,18 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         sync_developers_to_sentry.delay(application.id)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy="merge")
     def update(self, request, *args, **kwargs):
         application = self.get_application()
 
         serializer = ApplicationMemberRoleOnlySLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        username = get_username_by_bkpaas_user_id(kwargs['user_id'])
+        username = get_username_by_bkpaas_user_id(kwargs["user_id"])
         self.check_admin_count(application.code, username)
         try:
             remove_user_all_roles(application.code, username)
-            add_role_members(application.code, ApplicationRole(serializer.data['role']['id']), username)
+            add_role_members(application.code, ApplicationRole(serializer.data["role"]["id"]), username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -763,7 +748,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
 
@@ -777,11 +762,11 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy="merge")
     def destroy(self, request, *args, **kwargs):
         application = self.get_application()
 
-        username = get_username_by_bkpaas_user_id(kwargs['user_id'])
+        username = get_username_by_bkpaas_user_id(kwargs["user_id"])
         self.check_admin_count(application.code, username)
         try:
             remove_user_all_roles(application.code, username)
@@ -799,7 +784,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
             raise error_codes.MEMBERSHIP_DELETE_FAILED
 
     def get_roles(self, request):
-        return Response({'results': ApplicationRole.get_django_choices()})
+        return Response({"results": ApplicationRole.get_django_choices()})
 
 
 class ApplicationMarkedViewSet(viewsets.ModelViewSet):
@@ -830,9 +815,9 @@ class ApplicationMarkedViewSet(viewsets.ModelViewSet):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
 
         assert lookup_url_kwarg in self.kwargs, (
-            'Expected view %s to be called with a URL keyword argument '
+            "Expected view %s to be called with a URL keyword argument "
             'named "%s". Fix your URL conf, or set the `.lookup_field` '
-            'attribute on the view correctly.' % (self.__class__.__name__, lookup_url_kwarg)
+            "attribute on the view correctly." % (self.__class__.__name__, lookup_url_kwarg)
         )
 
         filter_kwargs = {"application__code": self.kwargs[lookup_url_kwarg]}
@@ -853,23 +838,23 @@ class ApplicationGroupByStateStatisticsView(APIView):
         application_queryset = Application.objects.filter_by_user(request.user)
         applications_ids = application_queryset.values_list("id", flat=True)
         queryset = ApplicationEnvironment.objects.filter(application__id__in=applications_ids)
-        never_deployed = queryset.filter(deployments__isnull=True, environment='stag').values('id').distinct().count()
+        never_deployed = queryset.filter(deployments__isnull=True, environment="stag").values("id").distinct().count()
 
         # 预发布环境的应用, 需要排除同时部署过预发布环境和正式环境的应用
-        prod_deployed_ids = queryset.filter(is_offlined=False, deployments__isnull=False, environment='prod').values(
-            'id'
+        prod_deployed_ids = queryset.filter(is_offlined=False, deployments__isnull=False, environment="prod").values(
+            "id"
         )
         stag_deployed = (
-            queryset.filter(is_offlined=False, deployments__isnull=False, environment='stag')
+            queryset.filter(is_offlined=False, deployments__isnull=False, environment="stag")
             .exclude(id__in=prod_deployed_ids)
-            .values('id')
+            .values("id")
             .distinct()
             .count()
         )
 
         prod_deployed = (
-            queryset.filter(is_offlined=False, deployments__isnull=False, environment='prod')
-            .values('id')
+            queryset.filter(is_offlined=False, deployments__isnull=False, environment="prod")
+            .values("id")
             .distinct()
             .count()
         )
@@ -922,8 +907,8 @@ class ApplicationGroupByFieldStatisticsView(APIView):
         serializer.is_valid(raise_exception=True)
 
         params = serializer.data
-        include_inactive = params['include_inactive']
-        group_field = params['field']
+        include_inactive = params["include_inactive"]
+        group_field = params["field"]
 
         queryset = Application.objects.filter_by_user(request.user)
         # 从用户角度来看，应用分类需要区分是否为已删除应用
@@ -933,7 +918,7 @@ class ApplicationGroupByFieldStatisticsView(APIView):
         counter: Dict[str, int] = Counter(application_group)
         groups = [{group_field: group, "count": count} for group, count in list(counter.items())]
         # sort by count
-        sorted_groups = sorted(groups, key=itemgetter('count'), reverse=True)
+        sorted_groups = sorted(groups, key=itemgetter("count"), reverse=True)
         data = {"total": queryset.count(), "groups": sorted_groups}
         return Response(data)
 
@@ -963,13 +948,13 @@ class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(tags=["特性标记"])
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def list(self, request, code):
         application = self.get_application()
         return Response(application.feature_flag.get_application_features())
 
     @swagger_auto_schema(tags=["特性标记"])
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def list_with_env(self, request, code, module_name, environment):
         """根据应用部署环境获取 FeatureFlag 信息，适用于需要区分环境的场景"""
         cluster = get_cluster_by_app(self.get_wl_app_via_path())
@@ -977,7 +962,7 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
         return Response(response_data)
 
     @swagger_auto_schema(tags=["特性标记"])
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def switch_app_desc_flag(self, request, code):
         application = self.get_application()
         flag = AppFeatureFlag.APPLICATION_DESCRIPTION
@@ -1036,7 +1021,7 @@ class LightAppViewSet(viewsets.ViewSet):
             if logo_content:
                 logo_url = self.store_logo(app_code, logo_content)
             else:
-                logo_url = ''
+                logo_url = ""
 
             try:
                 light_app = AppAdaptor(session=session).create(
@@ -1095,7 +1080,7 @@ class LightAppViewSet(viewsets.ViewSet):
             try:
                 app_manager.soft_delete(code=app.code)
             except Exception as e:
-                logger.exception(u"save app base info fail: %s", e)
+                logger.exception("save app base info fail: %s", e)
                 raise LightAppAPIError(
                     LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
                 )
@@ -1180,7 +1165,7 @@ class LightAppViewSet(viewsets.ViewSet):
         # 轻应用的 app code 根据约定长度为 15
         # 为保证可创建的轻应用足够多(至少 36 * 36 个), 至少保留 2 位由随机字符生成
         parent_code = parent_code[:13]
-        salt = ''.join(random.choices(ALPHABET, k=15 - len(parent_code)))
+        salt = "".join(random.choices(ALPHABET, k=15 - len(parent_code)))
 
         return f"{parent_code}_{salt}"
 
@@ -1209,7 +1194,7 @@ class LightAppViewSet(viewsets.ViewSet):
         try:
             from paasng.platform.applications.handlers import initialize_app_logo_metadata
 
-            initialize_app_logo_metadata(Application._meta.get_field('logo').storage, bucket, logo_name)
+            initialize_app_logo_metadata(Application._meta.get_field("logo").storage, bucket, logo_name)
         except Exception:
             logger.exception("Fail to update logo cache.")
         return app_logo_storage.url(logo_name)
@@ -1251,13 +1236,13 @@ class ApplicationLogoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     serializer_class = slzs.ApplicationLogoSLZ
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def retrieve(self, request, code):
         """查看应用 Logo 相关信息"""
         serializer = slzs.ApplicationLogoSLZ(instance=self.get_application())
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy="merge")
     def update(self, request, code):
         """修改应用 Logo"""
         application = self.get_application()
@@ -1276,9 +1261,9 @@ class SysAppViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        operator = user_id_encoder.encode(settings.USER_TYPE, data['operator'])
+        operator = user_id_encoder.encode(settings.USER_TYPE, data["operator"])
 
-        application = create_third_app(data['region'], data["code"], data["name_zh_cn"], data["name_en"], operator)
+        application = create_third_app(data["region"], data["code"], data["name_zh_cn"], data["name_en"], operator)
 
         # 返回应用的密钥信息
         secret = get_oauth2_client_secret(application.code, application.region)

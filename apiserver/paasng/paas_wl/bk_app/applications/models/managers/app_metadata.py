@@ -32,12 +32,12 @@ logger = logging.getLogger(__name__)
 class WlAppMetadata:
     """An engine app's metadata object, contains essential information"""
 
-    paas_app_code: str = ''  # Owner application's code
-    module_name: str = ''  # Owner module's name
-    environment: str = ''  # Bound environment name
+    paas_app_code: str = ""  # Owner application's code
+    module_name: str = ""  # Owner module's name
+    environment: str = ""  # Bound environment name
     bkpa_site_id: Optional[int] = None  # Site ID for "PaaS Analysis" service
     acl_is_enabled: bool = False  # Whether ACL module is enabled
-    mapper_version: str = ''  # mapper_version of the k8s resources naming rules
+    mapper_version: str = ""  # mapper_version of the k8s resources naming rules
 
     def get_paas_app_code(self) -> str:
         """Get "paas_app_code" property, raise `RuntimeError` if result is empty, which
@@ -48,14 +48,14 @@ class WlAppMetadata:
         return self.paas_app_code
 
 
-def get_metadata(wl_app: 'WlApp') -> WlAppMetadata:
+def get_metadata(wl_app: "WlApp") -> WlAppMetadata:
     """Get metadata object"""
     # TODO: Use `make_json_field()` to get structured object from Model directly
     json_data = wl_app.latest_config.metadata or {}
     return cattr.structure(json_data, WlAppMetadata)
 
 
-def update_metadata(wl_app: 'WlApp', **kwargs) -> None:
+def update_metadata(wl_app: "WlApp", **kwargs) -> None:
     """Update wl_app's metadata by key, only valid keys(see `WlAppMetadata`) are allowed
 
     :param kwargs: New metadata values
@@ -66,8 +66,8 @@ def update_metadata(wl_app: 'WlApp', **kwargs) -> None:
     for key, value in kwargs.items():
         # If given key is not a valid attribute of WlAppMetadata type, raise error
         if not hasattr(obj, key):
-            raise ValueError(f'{key} is invalid')
+            raise ValueError(f"{key} is invalid")
         setattr(obj, key, value)
 
     latest_config.metadata = cattr.unstructure(obj)
-    latest_config.save(update_fields=['metadata', 'updated'])
+    latest_config.save(update_fields=["metadata", "updated"])

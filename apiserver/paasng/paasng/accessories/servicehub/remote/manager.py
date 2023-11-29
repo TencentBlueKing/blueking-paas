@@ -88,8 +88,8 @@ class MetaInfo:
         if not self.version:
             return False
 
-        parts = self.version.split('.')
-        given_parts = version.split('.')
+        parts = self.version.split(".")
+        given_parts = version.split(".")
         for i, j in zip(parts, given_parts):
             if int(i) > int(j):
                 return True
@@ -99,8 +99,8 @@ class MetaInfo:
 
 
 DEFAULT_META_INFO = MetaInfo(version=None)
-VERSION_WITH_INST_CONFIG = '0.1.0'
-VERSION_WITH_REST_UPSERT = '0.2.0'
+VERSION_WITH_INST_CONFIG = "0.1.0"
+VERSION_WITH_REST_UPSERT = "0.2.0"
 
 
 @dataclass
@@ -110,7 +110,7 @@ class RemotePlanObj(PlanObj):
         data.setdefault("is_active", True)
         properties = data.get("properties") or {}
         is_eager = data.pop("is_eager", False)
-        region = data.pop("region", '')
+        region = data.pop("region", "")
         config = data.pop("config", {})
         return cls(
             is_eager=properties.get("is_eager", is_eager),
@@ -129,33 +129,33 @@ class RemoteServiceObj(ServiceObj):
     category_id = None
 
     @classmethod
-    def from_data(cls, service: Dict, region=None) -> 'RemoteServiceObj':
+    def from_data(cls, service: Dict, region=None) -> "RemoteServiceObj":
         field_names = list(cls.__dataclass_fields__.keys())  # type: ignore
         fields: Dict[str, Any] = {k: service.get(k) for k in field_names if k in service}
-        fields['region'] = region
+        fields["region"] = region
 
-        fields['specifications'] = [ServiceSpecificationDefinition(**i) for i in fields.get('specifications') or ()]
-        fields['plans'] = [RemotePlanObj.from_data(i) for i in fields.get('plans') or ()]
+        fields["specifications"] = [ServiceSpecificationDefinition(**i) for i in fields.get("specifications") or ()]
+        fields["plans"] = [RemotePlanObj.from_data(i) for i in fields.get("plans") or ()]
 
         # Set up meta info
-        meta_info_data = service.get('_meta_info')
+        meta_info_data = service.get("_meta_info")
         if not meta_info_data:
-            fields['meta_info'] = DEFAULT_META_INFO
+            fields["meta_info"] = DEFAULT_META_INFO
         else:
-            fields['meta_info'] = MetaInfo(version=meta_info_data['version'])
+            fields["meta_info"] = MetaInfo(version=meta_info_data["version"])
 
         result = cls(**fields)
         result._data = service
-        result.category_id = service['category']
+        result.category_id = service["category"]
         return result
 
     @property
     def category(self):
         if not self._data:
             raise RuntimeError('RemoteServiceObj requires "_data" attribute')
-        return ServiceCategory.objects.get(pk=self._data['category'])
+        return ServiceCategory.objects.get(pk=self._data["category"])
 
-    def get_plans(self, is_active=True) -> List['PlanObj']:
+    def get_plans(self, is_active=True) -> List["PlanObj"]:
         return [plan.with_service(self) for plan in self.plans if (plan.is_active == is_active or is_active is NOTSET)]
 
     def supports_inst_config(self) -> bool:
@@ -169,7 +169,7 @@ class RemoteServiceObj(ServiceObj):
 
 @dataclass
 class EnvClusterInfo:
-    env: 'ModuleEnvironment'
+    env: "ModuleEnvironment"
 
     def get_egress_info(self):
         """Get current app cluster egress info
@@ -190,7 +190,7 @@ class EnvClusterInfo:
 class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
     """A relationship between EngineApp and Provisioned instance"""
 
-    def __init__(self, db_obj: RemoteServiceEngineAppAttachment, mgr: 'RemoteServiceMgr', store: RemoteServiceStore):
+    def __init__(self, db_obj: RemoteServiceEngineAppAttachment, mgr: "RemoteServiceMgr", store: RemoteServiceStore):
         self.store = store
         self.mgr = mgr
 
@@ -219,11 +219,11 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         :raises: ProvisionInstanceError
         """
         if self.is_provisioned():
-            logger.warning(f'remote instance {self.db_obj.pk} already provisioned, skip')
+            logger.warning(f"remote instance {self.db_obj.pk} already provisioned, skip")
             return
 
         if not self.remote_config.is_ready:
-            logger.warning(f'remote service {self.get_service().name} is not ready, skip')
+            logger.warning(f"remote service {self.get_service().name} is not ready, skip")
             return
 
         instance_id = str(uuid.uuid4())
@@ -233,9 +233,9 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
                 str(self.db_obj.service_id), str(self.db_obj.plan_id), instance_id, params=params
             )
         except Exception as e:
-            logger.exception(f'Error provisioning new instance for {self.db_application.name}')
+            logger.exception(f"Error provisioning new instance for {self.db_application.name}")
             raise exceptions.ProvisionInstanceError(
-                _('配置资源实例异常: unable to provision instance for services<{service_name}>').format(
+                _("配置资源实例异常: unable to provision instance for services<{service_name}>").format(
                     service_name=self.get_service().name
                 )
             ) from e
@@ -244,7 +244,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
         # Write back to database
         self.db_obj.service_instance_id = instance_id
-        self.db_obj.save(update_fields=['service_instance_id'])
+        self.db_obj.save(update_fields=["service_instance_id"])
 
         # Update instance config
         if service_obj.supports_inst_config():
@@ -260,20 +260,20 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
     def sync_instance_config(self):
         """Sync instance config with remote service"""
         paas_app_info: Dict[str, str] = {
-            'app_id': str(self.db_application.id),
-            'app_code': str(self.db_application.code),
-            'app_name': str(self.db_application.name),
-            'module': self.db_module.name,
-            'environment': self.db_env.environment,
+            "app_id": str(self.db_application.id),
+            "app_code": str(self.db_application.code),
+            "app_name": str(self.db_application.name),
+            "module": self.db_module.name,
+            "environment": self.db_env.environment,
         }
         instance_id = self.db_obj.service_instance_id
         if not instance_id:
-            raise ValueError('Relationship not provisioned, no instance_id can be found')
+            raise ValueError("Relationship not provisioned, no instance_id can be found")
 
         try:
-            self.remote_client.update_instance_config(instance_id, config={'paas_app_info': paas_app_info})
+            self.remote_client.update_instance_config(instance_id, config={"paas_app_info": paas_app_info})
         except Exception:
-            logger.exception(f'Error when updating instance config for {instance_id}')
+            logger.exception(f"Error when updating instance config for {instance_id}")
 
     def recycle_resource(self):
         """对于 remote service 我们默认其已经具备了回收的能力"""
@@ -289,20 +289,20 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
         if not self.is_provisioned():
-            raise ValueError('relationship is not provisioned yet')
+            raise ValueError("relationship is not provisioned yet")
 
         # TODO: failure tolerance
         instance_data = self.remote_client.retrieve_instance(str(self.db_obj.service_instance_id))
         # TODO: More data validations
-        if not instance_data.get('uuid') == str(self.db_obj.service_instance_id):
-            raise exceptions.SvcInstanceNotAvailableError('uuid in data does not match')
+        if not instance_data.get("uuid") == str(self.db_obj.service_instance_id):
+            raise exceptions.SvcInstanceNotAvailableError("uuid in data does not match")
 
         svc_obj = self.get_service()
-        create_time = arrow.get(instance_data.get('created'))  # type: ignore
+        create_time = arrow.get(instance_data.get("created"))  # type: ignore
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
-            credentials=instance_data['credentials'],
-            config=instance_data['config'],
+            credentials=instance_data["credentials"],
+            config=instance_data["config"],
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -322,7 +322,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
         bk_monitor_space_id = ""
         # 增强服务参数中声明了需要蓝鲸监控命名空间，则需要创建应用对应的蓝鲸监控命名空间
-        if 'bk_monitor_space_id' in params_tmpl:
+        if "bk_monitor_space_id" in params_tmpl:
             # 蓝鲸监控命名空间的成员只能初始化一个成员，默认初始化应用的创建者
             # 已测试用离职用户也能创建成功
             space, _ = get_or_create_bk_monitor_space(self.db_application)
@@ -348,17 +348,17 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             return RemotePlanObj.from_data(constants.LEGACY_PLAN_INSTANCE)
 
         svc_data = self.store.get(str(self.db_obj.service_id), region=self.db_application.region)
-        for d in svc_data['plans']:
+        for d in svc_data["plans"]:
             if d["uuid"] == plan_id:
                 return RemotePlanObj.from_data(d)
 
-        raise RuntimeError('Plan not found')
+        raise RuntimeError("Plan not found")
 
 
 class RemotePlainInstanceMgr(PlainInstanceMgr):
     """纯粹的远程增强服务实例的管理器, 仅调用远程接口创建增强服务实例, 不涉及增强服务资源申请的流程"""
 
-    def __init__(self, db_obj: RemoteServiceEngineAppAttachment, mgr: 'RemoteServiceMgr'):
+    def __init__(self, db_obj: RemoteServiceEngineAppAttachment, mgr: "RemoteServiceMgr"):
         self.mgr = mgr
         # Database objects
         self.db_obj = db_obj
@@ -380,20 +380,20 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
     def sync_instance_config(self):
         """Sync instance config with remote service"""
         paas_app_info: Dict[str, str] = {
-            'app_id': str(self.db_application.id),
-            'app_code': str(self.db_application.code),
-            'app_name': str(self.db_application.name),
-            'module': self.db_module.name,
-            'environment': self.db_env.environment,
+            "app_id": str(self.db_application.id),
+            "app_code": str(self.db_application.code),
+            "app_name": str(self.db_application.name),
+            "module": self.db_module.name,
+            "environment": self.db_env.environment,
         }
         instance_id = self.db_obj.service_instance_id
         if not instance_id:
-            raise ValueError('Relationship not provisioned, no instance_id can be found')
+            raise ValueError("Relationship not provisioned, no instance_id can be found")
 
         try:
-            self.remote_client.update_instance_config(str(instance_id), config={'paas_app_info': paas_app_info})
+            self.remote_client.update_instance_config(str(instance_id), config={"paas_app_info": paas_app_info})
         except Exception:
-            logger.exception(f'Error when updating instance config for {instance_id}')
+            logger.exception(f"Error when updating instance config for {instance_id}")
 
     def is_provisioned(self):
         return self.db_obj.service_instance_id is not None
@@ -413,16 +413,16 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
                 params={"credentials": credentials, "config": config},
             )
         except Exception as e:
-            logger.exception(f'Error bind instance for {self.db_application.name}')
+            logger.exception(f"Error bind instance for {self.db_application.name}")
             raise exceptions.BaseServicesException(
-                _('绑定实例异常: unable to provision instance for services<{service_obj_name}>').format(
+                _("绑定实例异常: unable to provision instance for services<{service_obj_name}>").format(
                     service_obj_name=service_obj.name
                 )
             ) from e
 
         # Write back to database
         self.db_obj.service_instance_id = instance_id
-        self.db_obj.save(update_fields=['service_instance_id', 'updated'])
+        self.db_obj.save(update_fields=["service_instance_id", "updated"])
 
         # Update instance config
         if service_obj.supports_inst_config():
@@ -440,7 +440,7 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
 
 
 def create_svc_instance_obj_from_remote(
-    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: 'datetime.datetime'
+    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: "datetime.datetime"
 ) -> ServiceInstanceObj:
     """Create a Service Instance object for remote service
 
@@ -452,14 +452,14 @@ def create_svc_instance_obj_from_remote(
 
     def _format_key(val):
         """Turn credential keys in to upper case and with prefix"""
-        return f'{field_prefix}_{val}'.upper()
+        return f"{field_prefix}_{val}".upper()
 
     _credentials = {_format_key(key): value for key, value in credentials.items()}
 
     # Parse and process meta configs
-    meta_config = config.pop('__meta__', {})
-    should_hidden_fields = list(map(_format_key, meta_config.get('should_hidden_fields', [])))
-    should_remove_fields = list(map(_format_key, meta_config.get('should_remove_fields', [])))
+    meta_config = config.pop("__meta__", {})
+    should_hidden_fields = list(map(_format_key, meta_config.get("should_hidden_fields", [])))
+    should_remove_fields = list(map(_format_key, meta_config.get("should_remove_fields", [])))
     return ServiceInstanceObj(uuid, _credentials, config, should_hidden_fields, should_remove_fields, create_time)
 
 
@@ -479,7 +479,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         try:
             obj = self.store.get(uuid, region)
         except (ServiceNotFound, RuntimeError) as e:
-            raise exceptions.ServiceObjNotFound(f'Service with id={uuid} not found in remote') from e
+            raise exceptions.ServiceObjNotFound(f"Service with id={uuid} not found in remote") from e
         return RemoteServiceObj.from_data(obj, region=region)
 
     def find_by_name(self, name: str, region: str) -> RemoteServiceObj:
@@ -489,7 +489,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         """
         objs = self.store.filter(region, conditions={"name": name})
         if not objs:
-            raise exceptions.ServiceObjNotFound(f'Service with name={name} not found in remote')
+            raise exceptions.ServiceObjNotFound(f"Service with name={name} not found in remote")
         # Use the first matched services objects
         return RemoteServiceObj.from_data(objs[0], region=region)
 
@@ -501,7 +501,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         for svc in items:
             obj = RemoteServiceObj.from_data(svc, region=region)
             # Ignore services which is_visible field is False
-            if not include_hidden and not svc['is_visible']:
+            if not include_hidden and not svc["is_visible"]:
                 continue
             yield obj
 
@@ -510,7 +510,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         items = self.store.filter(region)
         for svc in items:
             # Ignore services which is_visible field is False
-            if not include_hidden and not svc['is_visible']:
+            if not include_hidden and not svc["is_visible"]:
                 continue
 
             yield RemoteServiceObj.from_data(svc, region=region)
@@ -528,7 +528,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         # 远程增强服务的 specification 中的 display_name 是 TranslatedField
         # 但本地增强服务并无 specification 字段, 仅将这些额外属性存储在 config 字段中
         # specification.displayname 的国际化目前是由前端来处理
-        data['specifications'] = RemoteSpecDefinitionUpdateSLZ(data['specifications'], many=True).data
+        data["specifications"] = RemoteSpecDefinitionUpdateSLZ(data["specifications"], many=True).data
         return data
 
     def update(self, service: ServiceObj, data: Dict):
@@ -550,8 +550,8 @@ class RemoteServiceMgr(BaseServiceMgr):
 
     def list_binded(self, module: Module, category_id: Optional[int] = None) -> Iterator[ServiceObj]:
         """List application's bound services"""
-        attachments = RemoteServiceModuleAttachment.objects.filter(module=module).values('service_id')
-        service_ids = [str(obj['service_id']) for obj in attachments]
+        attachments = RemoteServiceModuleAttachment.objects.filter(module=module).values("service_id")
+        service_ids = [str(obj["service_id"]) for obj in attachments]
         for svc in self.store.bulk_get(service_ids, region=module.region):
             if svc:
                 obj = RemoteServiceObj.from_data(svc, region=module.region)
@@ -644,7 +644,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         """Check if a module is bound with a service"""
         return RemoteServiceModuleAttachment.objects.filter(module=module, service_id=service.uuid).exists()
 
-    def get_provisioned_envs(self, service: ServiceObj, module: Module) -> List['AppEnvName']:
+    def get_provisioned_envs(self, service: ServiceObj, module: Module) -> List["AppEnvName"]:
         """Get a list of bound envs"""
         env_list = []
         for env in module.get_envs():
@@ -737,10 +737,10 @@ class RemoteServiceBinder:
     @staticmethod
     def _get_plan_by_env(env: ModuleEnvironment, plans: List[PlanObj]) -> PlanObj:
         """Return the first plan which matching the given env."""
-        plans = sorted(plans, key=lambda i: ('restricted_envs' in i.properties), reverse=True)
+        plans = sorted(plans, key=lambda i: ("restricted_envs" in i.properties), reverse=True)
 
         for plan in plans:
-            if 'restricted_envs' not in plan.properties or env.environment in plan.properties['restricted_envs']:
+            if "restricted_envs" not in plan.properties or env.environment in plan.properties["restricted_envs"]:
                 return plan
         else:
             raise RuntimeError("can not bind a plan")

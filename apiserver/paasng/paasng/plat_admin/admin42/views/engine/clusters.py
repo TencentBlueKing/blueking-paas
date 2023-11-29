@@ -20,11 +20,11 @@ from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.platform.engine.constants import ClusterType
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.core.region.models import get_all_regions
+from paasng.platform.engine.constants import ClusterType
 
 
 class ClusterManageView(GenericTemplateView):
@@ -35,19 +35,19 @@ class ClusterManageView(GenericTemplateView):
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
 
         kwargs.update(
             {
-                'region_list': [
-                    {'value': region.name, 'text': region.display_name} for region in get_all_regions().values()
+                "region_list": [
+                    {"value": region.name, "text": region.display_name} for region in get_all_regions().values()
                 ],
-                'cluster_type_list': [
-                    {'value': value, 'text': display_name} for value, display_name in ClusterType.get_choices()
+                "cluster_type_list": [
+                    {"value": value, "text": display_name} for value, display_name in ClusterType.get_choices()
                 ],
-                'feature_flag_list': [
-                    {'value': value, 'text': display_name}
+                "feature_flag_list": [
+                    {"value": value, "text": display_name}
                     for value, display_name in ClusterFeatureFlag.get_django_choices()
                 ],
             }
@@ -63,8 +63,8 @@ class ClusterComponentManageView(GenericTemplateView):
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
 
-        kwargs['cluster_components'] = settings.BKPAAS_K8S_CLUSTER_COMPONENTS
+        kwargs["cluster_components"] = settings.BKPAAS_K8S_CLUSTER_COMPONENTS
         return kwargs

@@ -24,7 +24,7 @@ from django.core.management.base import BaseCommand
 class ReEncryptCommand(BaseCommand):
     help = "存量数据加密迁移"
 
-    app_label: str = ''
+    app_label: str = ""
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -41,7 +41,7 @@ class ReEncryptCommand(BaseCommand):
             help="name of the model for encryption migration",
         )
 
-        parser.add_argument('--no-dry-run', dest="dry_run", help="dry run", action="store_false")
+        parser.add_argument("--no-dry-run", dest="dry_run", help="dry run", action="store_false")
 
     def handle(self, app_label: str, model_name: str, dry_run: bool = True, **options):
         models = self._get_model_classes(model_name)

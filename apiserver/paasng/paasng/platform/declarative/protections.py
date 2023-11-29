@@ -19,16 +19,16 @@ to the current version of the project delivered to anyone in the future.
 """Protect resources created by declarative configs from external modifications"""
 from django.utils.translation import gettext_lazy as _
 
+from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.protections import AppResProtector, BaseAppResProtectCondition, ProtectedRes
-from paasng.core.core.protections.exceptions import ConditionNotMatched
 
 from .models import ApplicationDescription
 
 
-def modifications_not_allowed(application: Application, action_name: str = ''):
+def modifications_not_allowed(application: Application, action_name: str = ""):
     if ApplicationDescription.objects.filter(application=application, is_creation=True).exists():
-        raise ConditionNotMatched(_('通过描述文件定义的应用不支持该操作'), action_name)
+        raise ConditionNotMatched(_("通过描述文件定义的应用不支持该操作"), action_name)
 
 
 class ApplicationBasicInfoModificationCondition(BaseAppResProtectCondition):

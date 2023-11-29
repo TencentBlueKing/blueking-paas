@@ -34,11 +34,11 @@ from translated_fields import TranslatedFieldWithFallback
 from typing_extensions import Protocol
 
 from paasng.infras.accounts.oauth.utils import get_available_backends
+from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.svn.admin import get_svn_authorization_manager_cls
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
-from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, BkUserField, OwnerTimestampedModel, TimestampedModel
 from paasng.utils.text import remove_prefix, remove_suffix
 
@@ -83,7 +83,7 @@ class RepositoryMixin:
 
     def get_source_type(self) -> str:
         """返回源码库的类型"""
-        return self.server_name or ''
+        return self.server_name or ""
 
     def get_source_dir(self) -> str:
         """返回源码目录"""
@@ -105,8 +105,8 @@ class RepositoryMixin:
 class SvnRepository(OwnerTimestampedModel, RepositoryMixin):
     """基于 Svn 的软件存储库"""
 
-    server_name = models.CharField(verbose_name='SVN 服务名称', max_length=32)
-    repo_url = models.CharField(verbose_name='项目地址', max_length=2048)
+    server_name = models.CharField(verbose_name="SVN 服务名称", max_length=32)
+    repo_url = models.CharField(verbose_name="项目地址", max_length=2048)
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
 
     def get_repo_fullname(self) -> str:
@@ -184,9 +184,9 @@ class SvnAccountManager(models.Manager):
 class SvnAccount(TimestampedModel):
     """svn account for developer"""
 
-    account = models.CharField(max_length=64, help_text=u"目前仅支持固定格式", unique=True)
+    account = models.CharField(max_length=64, help_text="目前仅支持固定格式", unique=True)
     user = BkUserField()
-    synced_from_paas20 = models.BooleanField(default=False, help_text=u"账户信息是否从 PaaS 2.0 同步过来")
+    synced_from_paas20 = models.BooleanField(default=False, help_text="账户信息是否从 PaaS 2.0 同步过来")
 
     objects = SvnAccountManager()
 
@@ -197,8 +197,8 @@ class SvnAccount(TimestampedModel):
 class GitRepository(OwnerTimestampedModel, RepositoryMixin):
     """基于 Git 的软件存储库"""
 
-    server_name = models.CharField(verbose_name='GIT 服务名称', max_length=32)
-    repo_url = models.CharField(verbose_name='项目地址', max_length=2048)
+    server_name = models.CharField(verbose_name="GIT 服务名称", max_length=32)
+    repo_url = models.CharField(verbose_name="项目地址", max_length=2048)
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
 
     def get_repo_fullname(self) -> str:
@@ -211,19 +211,21 @@ class GitRepository(OwnerTimestampedModel, RepositoryMixin):
     def _get_alias_name(self) -> str:
         """获取仓库别名 namespace/repo_name 目前主要给蓝盾使用"""
         parse_result = urlparse(self.repo_url)
-        repo_regex = re.compile(r'^/(?P<alias_name>.+?)(?:\.git)?$')
+        repo_regex = re.compile(r"^/(?P<alias_name>.+?)(?:\.git)?$")
         obj = re.search(repo_regex, parse_result.path)
         if obj:
-            return obj.group('alias_name')
-        raise ValueError('no alias name found')
+            return obj.group("alias_name")
+        raise ValueError("no alias name found")
 
 
 class DockerRepository(OwnerTimestampedModel, RepositoryMixin):
     """容器镜像仓库"""
 
-    server_name = models.CharField(verbose_name='DockerRegistry 服务名称', max_length=32)
+    server_name = models.CharField(verbose_name="DockerRegistry 服务名称", max_length=32)
     repo_url = models.CharField(
-        verbose_name='项目地址', max_length=2048, help_text="形如 registry.hub.docker.com/library/python, 也可省略 registry 地址"
+        verbose_name="项目地址",
+        max_length=2048,
+        help_text="形如 registry.hub.docker.com/library/python, 也可省略 registry 地址",
     )
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
 
@@ -254,7 +256,7 @@ class DockerRepository(OwnerTimestampedModel, RepositoryMixin):
 
 
 class SourcePackageRepository:
-    def __init__(self, module: 'Module'):
+    def __init__(self, module: "Module"):
         self.module = module
 
     def get_identity(self) -> int:
@@ -262,7 +264,7 @@ class SourcePackageRepository:
         raise NotImplementedError
 
     def get_source_type(self) -> str:
-        return self.module.source_type or ''
+        return self.module.source_type or ""
 
     def get_source_dir(self) -> str:
         return ""
@@ -281,7 +283,7 @@ class SourcePackageManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().exclude(is_deleted=True)
 
-    def store(self, module: 'Module', policy: 'SPStoragePolicy', operator: Optional[User] = None):
+    def store(self, module: "Module", policy: "SPStoragePolicy", operator: Optional[User] = None):
         """根据存储策略, 将 package 的配置记录到数据库中"""
         qs = self.filter(module=module)
         if qs.filter(version=policy.stat.version).exists() and not policy.allow_overwrite:
@@ -315,16 +317,22 @@ class SourcePackage(OwnerTimestampedModel):
     package_name = models.CharField(verbose_name="源码包原始文件名", max_length=128)
     package_size = models.BigIntegerField(verbose_name="源码包大小, bytes")
     storage_engine = models.CharField(verbose_name="存储引擎", max_length=64, help_text="源码包真实存放的存储服务类型")
-    storage_path = models.CharField(verbose_name="存储路径", max_length=1024, help_text="[deprecated] 源码包在存储服务中存放的位置")
+    storage_path = models.CharField(
+        verbose_name="存储路径", max_length=1024, help_text="[deprecated] 源码包在存储服务中存放的位置"
+    )
     storage_url = models.CharField(verbose_name="存储地址", max_length=1024, help_text="可获取到源码包的 URL 地址")
 
     meta_info = JSONField(null=True, help_text="源码包的元信息, 例如 S-Mart 应用的 app.yaml")
     sha256_signature = models.CharField(verbose_name="sha256数字签名", max_length=64, null=True)
     relative_path = models.CharField(
-        max_length=255, verbose_name="源码入口的相对路径", help_text="如果压缩时将目录也打包进来, 入目录名是 foo, 那么 relative_path = 'foo/'"
+        max_length=255,
+        verbose_name="源码入口的相对路径",
+        help_text="如果压缩时将目录也打包进来, 入目录名是 foo, 那么 relative_path = 'foo/'",
     )
     is_deleted = models.BooleanField(
-        default=False, verbose_name="源码包是否已被清理", help_text="如果 SourcePackage 指向的源码包已被清理, 则设置该值为 True"
+        default=False,
+        verbose_name="源码包是否已被清理",
+        help_text="如果 SourcePackage 指向的源码包已被清理, 则设置该值为 True",
     )
 
     objects = SourcePackageManager()
@@ -480,7 +488,7 @@ class GitProject:
     type: str
 
     @classmethod
-    def parse_from_repo_url(cls, repo_url: str, sourcectl_type: str) -> 'GitProject':
+    def parse_from_repo_url(cls, repo_url: str, sourcectl_type: str) -> "GitProject":
         """从 repo_url 中解析出 GitProject
 
         :param repo_url: 仓库地址
@@ -492,7 +500,7 @@ class GitProject:
         -   http://domain/{group_name}/{project_name}
         -   http://domain/{user_name}/{project_name}
         """
-        parsing_repo_url = remove_suffix(repo_url, '.git')
+        parsing_repo_url = remove_suffix(repo_url, ".git")
         parsed_result = urlparse(parsing_repo_url)
         path_with_namespace = remove_prefix(parsed_result.path, "/")
 
@@ -501,7 +509,7 @@ class GitProject:
         )
 
     @classmethod
-    def parse_from_path_with_namespace(cls, path_with_namespace: str, sourcectl_type: str) -> 'GitProject':
+    def parse_from_path_with_namespace(cls, path_with_namespace: str, sourcectl_type: str) -> "GitProject":
         """从 path_with_namespace 解析出 GitProject
         由于 path_with_namespace 未记载源码控制系统类型, 因此需在参数中指定。
 
@@ -529,7 +537,7 @@ class GitProject:
 
         :param repo_url: git repo URL address
         """
-        types = GitRepository.objects.filter(repo_url=repo_url).values_list('server_name', flat=True)
+        types = GitRepository.objects.filter(repo_url=repo_url).values_list("server_name", flat=True)
         if len(set(types)) > 1:
             raise RuntimeError(f'More than one sourcectl name can be found with "{repo_url}"')
         return types[0] if types else None
@@ -540,10 +548,10 @@ class GitProject:
 
 
 class BasicAuthHolderManager(models.Manager):
-    def exists_by_repo(self, module: 'Module', repo_obj: RepositoryInstance) -> bool:
+    def exists_by_repo(self, module: "Module", repo_obj: RepositoryInstance) -> bool:
         return bool(self.filter(repo_id=repo_obj.get_identity(), repo_type=repo_obj.get_source_type(), module=module))
 
-    def get_by_repo(self, module: 'Module', repo_obj: RepositoryInstance) -> 'RepoBasicAuthHolder':
+    def get_by_repo(self, module: "Module", repo_obj: RepositoryInstance) -> "RepoBasicAuthHolder":
         return self.get(repo_id=repo_obj.get_identity(), repo_type=repo_obj.get_source_type(), module=module)
 
 
@@ -560,7 +568,7 @@ class RepoBasicAuthHolder(TimestampedModel):
     repo_type = models.CharField(verbose_name="仓库类型", max_length=32)
 
     # 不同 module 相同 repo，保存多份账号密码
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
+    module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
 
     objects = BasicAuthHolderManager()
 
@@ -586,40 +594,40 @@ class SourceTypeSpecConfig(AuditedModel):
     """SourceTypeSpec 数据存储"""
 
     # Source Type Spec 配置
-    name = models.CharField(verbose_name=_('服务名称'), unique=True, max_length=32)
-    label = TranslatedFieldWithFallback(models.CharField(verbose_name='标签', max_length=32))
-    enabled = models.BooleanField(verbose_name='是否启用', default=False)
-    spec_cls = models.CharField(verbose_name='配置类路径', max_length=128)
-    server_config = models.JSONField(verbose_name='服务配置', blank=True, default=dict)
-    display_info = TranslatedFieldWithFallback(models.JSONField(verbose_name='展示信息', blank=True, default=dict))
+    name = models.CharField(verbose_name=_("服务名称"), unique=True, max_length=32)
+    label = TranslatedFieldWithFallback(models.CharField(verbose_name="标签", max_length=32))
+    enabled = models.BooleanField(verbose_name="是否启用", default=False)
+    spec_cls = models.CharField(verbose_name="配置类路径", max_length=128)
+    server_config = models.JSONField(verbose_name="服务配置", blank=True, default=dict)
+    display_info = TranslatedFieldWithFallback(models.JSONField(verbose_name="展示信息", blank=True, default=dict))
     # OAuth Backend 配置
-    authorization_base_url = models.CharField(verbose_name='OAuth 授权链接', default='', blank=True, max_length=256)
-    client_id = models.CharField(verbose_name='OAuth App Client ID', default='', blank=True, max_length=256)
-    client_secret = EncryptField(verbose_name='OAuth App Client Secret', default='', blank=True, max_length=256)
-    redirect_uri = models.CharField(verbose_name='重定向（回调）地址', default='', blank=True, max_length=256)
-    token_base_url = models.CharField(verbose_name='获取 Token 链接', default='', blank=True, max_length=256)
+    authorization_base_url = models.CharField(verbose_name="OAuth 授权链接", default="", blank=True, max_length=256)
+    client_id = models.CharField(verbose_name="OAuth App Client ID", default="", blank=True, max_length=256)
+    client_secret = EncryptField(verbose_name="OAuth App Client Secret", default="", blank=True, max_length=256)
+    redirect_uri = models.CharField(verbose_name="重定向（回调）地址", default="", blank=True, max_length=256)
+    token_base_url = models.CharField(verbose_name="获取 Token 链接", default="", blank=True, max_length=256)
     oauth_display_info = TranslatedFieldWithFallback(
-        models.JSONField(verbose_name='OAuth 展示信息', blank=True, default=dict)
+        models.JSONField(verbose_name="OAuth 展示信息", blank=True, default=dict)
     )
 
     objects = SourceTypeSpecConfigMgr()
 
     def to_dict(self):
         return {
-            'attrs': {
-                'name': self.name,
-                'label': self.label,
-                'enabled': self.enabled,
-                'server_config': self.server_config,
-                'display_info': self.display_info,
-                'oauth_backend_config': {
-                    'authorization_base_url': self.authorization_base_url,
-                    'client_id': self.client_id,
-                    'client_secret': self.client_secret,
-                    'redirect_uri': self.redirect_uri,
-                    'token_base_url': self.token_base_url,
-                    'display_info': self.oauth_display_info,
+            "attrs": {
+                "name": self.name,
+                "label": self.label,
+                "enabled": self.enabled,
+                "server_config": self.server_config,
+                "display_info": self.display_info,
+                "oauth_backend_config": {
+                    "authorization_base_url": self.authorization_base_url,
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                    "redirect_uri": self.redirect_uri,
+                    "token_base_url": self.token_base_url,
+                    "display_info": self.oauth_display_info,
                 },
             },
-            'spec_cls': self.spec_cls,
+            "spec_cls": self.spec_cls,
         }

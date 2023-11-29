@@ -21,9 +21,9 @@ from django.conf import settings
 from django.urls import reverse
 from django_dynamic_fixture import G
 
+from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
-from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -72,52 +72,52 @@ def init_tmpls():
     Template.objects.get_or_create(
         name="python",
         defaults={
-            'type': TemplateType.NORMAL,
-            'display_name_zh_cn': 'Python 开发框架',
-            'display_name_en': 'Python Template',
-            'description_zh_cn': '...',
-            'description_en': '...',
-            'language': 'Python',
-            'market_ready': True,
-            'preset_services_config': {'mysql': {}},
-            'blob_url': {settings.DEFAULT_REGION_NAME: f'file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz'},
-            'enabled_regions': [settings.DEFAULT_REGION_NAME],
-            'required_buildpacks': ["extra"],
-            'tags': [],
-            'repo_url': 'http://github.com/blueking/dummy_tmpl',
+            "type": TemplateType.NORMAL,
+            "display_name_zh_cn": "Python 开发框架",
+            "display_name_en": "Python Template",
+            "description_zh_cn": "...",
+            "description_en": "...",
+            "language": "Python",
+            "market_ready": True,
+            "preset_services_config": {"mysql": {}},
+            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
+            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "required_buildpacks": ["extra"],
+            "tags": [],
+            "repo_url": "http://github.com/blueking/dummy_tmpl",
         },
     )
 
     Template.objects.get_or_create(
         name="nodejs",
         defaults={
-            'type': TemplateType.NORMAL,
-            'display_name_zh_cn': 'NodeJS 开发框架',
-            'display_name_en': 'NodeJS Template',
-            'description_zh_cn': '...',
-            'description_en': '...',
-            'language': 'NodeJS',
-            'market_ready': True,
-            'preset_services_config': {'mysql': {}},
-            'blob_url': {settings.DEFAULT_REGION_NAME: f'file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz'},
-            'enabled_regions': [settings.DEFAULT_REGION_NAME],
-            'required_buildpacks': [],
-            'tags': [],
-            'repo_url': 'http://github.com/blueking/dummy_tmpl',
+            "type": TemplateType.NORMAL,
+            "display_name_zh_cn": "NodeJS 开发框架",
+            "display_name_en": "NodeJS Template",
+            "description_zh_cn": "...",
+            "description_en": "...",
+            "language": "NodeJS",
+            "market_ready": True,
+            "preset_services_config": {"mysql": {}},
+            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
+            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "required_buildpacks": [],
+            "tags": [],
+            "repo_url": "http://github.com/blueking/dummy_tmpl",
         },
     )
 
 
 class TestRegionTemplateViewSet:
     @pytest.mark.parametrize(
-        'region, result_count',
+        "region, result_count",
         [
             (settings.DEFAULT_REGION_NAME, 2),
             ("region-not-exist", 0),
         ],
     )
     def test_list(self, init_tmpls, api_client, region, result_count):
-        url = reverse('api.templates.list', kwargs=dict(tpl_type=TemplateType.NORMAL.value, region=region))
+        url = reverse("api.templates.list", kwargs=dict(tpl_type=TemplateType.NORMAL.value, region=region))
         response = api_client.get(url)
         assert len(response.data) >= result_count
 
@@ -129,7 +129,7 @@ class TestRegionTemplateViewSet:
         self, request, api_client, init_tmpls, slugbuilder, slugrunner, image_name, tpl_name, expected_buildpacks
     ):
         url = reverse(
-            'api.templates.detail',
+            "api.templates.detail",
             kwargs=dict(tpl_type=TemplateType.NORMAL.value, region=settings.DEFAULT_REGION_NAME, tpl_name=tpl_name),
         )
         response = api_client.get(url)

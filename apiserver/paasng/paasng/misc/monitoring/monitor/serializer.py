@@ -70,7 +70,9 @@ class EventRecordListQuerySLZ(PaginationQuerySLZ, EventRecordTimeRangeSLZ):
     )
     search = serializers.CharField(help_text="搜索关键字", required=False)
     is_active = serializers.BooleanField(source="filters.is_active", help_text="是否激活", required=False)
-    genre = serializers.ListField(child=serializers.CharField(), source="genre.uuid", help_text="类型ID", required=False)
+    genre = serializers.ListField(
+        child=serializers.CharField(), source="genre.uuid", help_text="类型ID", required=False
+    )
     ordering = serializers.CharField(help_text="排序方式", default="-start", required=False)
 
 

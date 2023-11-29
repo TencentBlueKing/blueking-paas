@@ -46,18 +46,18 @@ class BaseEnvironmentVariableMigration(BaseMigration):
         return self.context.app.envs.get(environment=environment_name)
 
     def _add_environment_variable(
-        self, variables: List[EnvItem], environment: Optional['ApplicationEnvironment'] = None
+        self, variables: List[EnvItem], environment: Optional["ApplicationEnvironment"] = None
     ):
         data = []
         for v in variables:
             var = asdict(v)
             for module in self.context.app.modules.all():
-                var.pop('environment_name', None)
+                var.pop("environment_name", None)
                 kwargs = {"module": module, "is_global": bool(environment is None), **var}
                 if environment is not None:
-                    kwargs['environment'] = environment
+                    kwargs["environment"] = environment
                 else:
-                    kwargs['environment_id'] = ENVIRONMENT_ID_FOR_GLOBAL
+                    kwargs["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
 
                 data.append(ConfigVar(**kwargs))
         ConfigVar.objects.bulk_create(data)
@@ -78,13 +78,13 @@ class BaseEnvironmentVariableMigration(BaseMigration):
 
     def transform_system_envs(self, evns: Dict) -> List[EnvItem]:
         # 系统的环境变量都是内置环境变量
-        return [EnvItem(key=k, value=v, description='', is_builtin=True) for k, v in evns.items()]
+        return [EnvItem(key=k, value=v, description="", is_builtin=True) for k, v in evns.items()]
 
     def handle_env(self):
         custom_env_list = self.get_custom_envs()
         # 自定义变量按环境分类，方便后续一起写入
-        sorted_custom_envs = sorted(custom_env_list, key=lambda x: (x.environment_name or ''))
-        custom_env_group = groupby(sorted_custom_envs, key=attrgetter('environment_name'))
+        sorted_custom_envs = sorted(custom_env_list, key=lambda x: (x.environment_name or ""))
+        custom_env_group = groupby(sorted_custom_envs, key=attrgetter("environment_name"))
 
         custom_env_dict = {k: list(g) for k, g in custom_env_group}
 

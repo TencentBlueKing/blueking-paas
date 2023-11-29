@@ -33,7 +33,7 @@ class DescriptionValidationError(Exception):
     :param message: the simplified error string, which might not include all error fields
     """
 
-    def __init__(self, detail: Any, message: str = ''):
+    def __init__(self, detail: Any, message: str = ""):
         self.detail = detail
         if not message:
             message = self.build_message_by_detail(detail)
@@ -46,13 +46,13 @@ class DescriptionValidationError(Exception):
         if isinstance(detail, dict):
             # Get a random item from dict
             item = list(detail.items())[0]
-            return f'{item[0]}: {item[1]}'
+            return f"{item[0]}: {item[1]}"
         elif isinstance(detail, (list, tuple)):
             return detail[0]
         return str(detail)
 
     @classmethod
-    def from_validation_error(cls, error: ValidationError) -> 'DescriptionValidationError':
+    def from_validation_error(cls, error: ValidationError) -> "DescriptionValidationError":
         """Transform DRF's ValidationError into DescriptionValidationError"""
         err_messages = stringify_validation_error(error)
         return cls(error.detail, err_messages[0])

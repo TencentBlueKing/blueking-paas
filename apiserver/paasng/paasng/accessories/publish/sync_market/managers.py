@@ -60,11 +60,11 @@ class AppTagManger(AppTagAdaptor):
         # 是否为二级分类
         if tag_data.parent_id:
             parent = TagMap.objects.get(remote_id=tag_data.parent_id).tag
-            tag_dict['parent'] = parent
+            tag_dict["parent"] = parent
         else:
-            tag_dict['parent'] = None
-        tag_dict.pop('parent_id', '')
-        tag_dict.pop('id', None)
+            tag_dict["parent"] = None
+        tag_dict.pop("parent_id", "")
+        tag_dict.pop("id", None)
         tag = Tag.objects.create(**tag_dict)
 
         TagMap.objects.create(tag=tag, remote_id=tag_data.id)
@@ -82,10 +82,10 @@ class AppTagManger(AppTagAdaptor):
                     # 更新分类名称
                     rel.tag.name = tag.name
                     rel.tag.save()
-                    logger.info(f'Tag name is updated from {old_name} to {tag.name}')
+                    logger.info(f"Tag name is updated from {old_name} to {tag.name}")
             except TagMap.DoesNotExist:
                 self.create_tagmap(tag)
-                logger.info(f'add new tag, name is {tag.name}')
+                logger.info(f"add new tag, name is {tag.name}")
 
     def get_tag_by_name(self, name: str):
         """根据名称获取 tag 信息"""

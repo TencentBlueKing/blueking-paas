@@ -28,12 +28,13 @@ from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import generate_random_string, initialize_module
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 logger = logging.getLogger(__name__)
@@ -43,16 +44,16 @@ class TestModuleCreation:
     """Test module creation APIs"""
 
     @pytest.mark.parametrize(
-        'creation_params',
+        "creation_params",
         [
             {
-                'source_origin': SourceOrigin.AUTHORIZED_VCS.value,
-                'source_control_type': 'dft_bk_svn',
+                "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                "source_control_type": "dft_bk_svn",
             },
             {
-                'source_origin': SourceOrigin.IMAGE_REGISTRY.value,
-                'source_control_type': 'dft_docker',
-                'source_repo_url': '127.0.0.1:5000/library/python',
+                "source_origin": SourceOrigin.IMAGE_REGISTRY.value,
+                "source_control_type": "dft_docker",
+                "source_repo_url": "127.0.0.1:5000/library/python",
             },
         ],
     )
@@ -65,22 +66,22 @@ class TestModuleCreation:
         mock_initialize_vcs_with_template,
         creation_params,
     ):
-        with mock.patch.object(IntegratedSvnAppRepoConnector, 'sync_templated_sources') as mocked_sync:
+        with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
             # Mock return value of syncing template
-            mocked_sync.return_value = SourceSyncResult(dest_type='mock')
+            mocked_sync.return_value = SourceSyncResult(dest_type="mock")
 
             random_suffix = generate_random_string(length=6)
             response = api_client.post(
-                f'/api/bkapps/applications/{bk_app.code}/modules/',
+                f"/api/bkapps/applications/{bk_app.code}/modules/",
                 data={
-                    'name': f'uta-{random_suffix}',
-                    'source_init_template': settings.DUMMY_TEMPLATE_NAME,
+                    "name": f"uta-{random_suffix}",
+                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     **creation_params,
                 },
             )
             assert response.status_code == 201
 
-    @pytest.mark.parametrize('with_feature_flag,is_success', [(True, True), (False, False)])
+    @pytest.mark.parametrize("with_feature_flag,is_success", [(True, True), (False, False)])
     def test_create_nondefault_origin(
         self,
         api_client,
@@ -94,17 +95,17 @@ class TestModuleCreation:
         # Set user feature flag
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
 
-        with mock.patch.object(IntegratedSvnAppRepoConnector, 'sync_templated_sources') as mocked_sync:
+        with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
             # Mock return value of syncing template
-            mocked_sync.return_value = SourceSyncResult(dest_type='mock')
+            mocked_sync.return_value = SourceSyncResult(dest_type="mock")
 
             random_suffix = generate_random_string(length=6)
             response = api_client.post(
-                f'/api/bkapps/applications/{bk_app.code}/modules/',
+                f"/api/bkapps/applications/{bk_app.code}/modules/",
                 data={
-                    'name': f'uta-{random_suffix}',
-                    'source_init_template': settings.DUMMY_TEMPLATE_NAME,
-                    'source_origin': SourceOrigin.BK_LESS_CODE.value,
+                    "name": f"uta-{random_suffix}",
+                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                    "source_origin": SourceOrigin.BK_LESS_CODE.value,
                 },
             )
             desired_status_code = 201 if is_success else 400
@@ -117,43 +118,49 @@ class TestCreateCloudNativeModule:
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
-    def test_create_with_manifest(self, bk_cnative_app, api_client):
-        """托管方式：仅镜像（提供 manifest）"""
+    def test_create_with_image(self, bk_cnative_app, api_client):
+        """托管方式：仅镜像"""
         random_suffix = generate_random_string(length=6)
+        image_repository = "strm/helloworld-http"
         response = api_client.post(
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
-                "name": f'uta-{random_suffix}',
+                "name": f"uta-{random_suffix}",
                 "source_config": {
                     "source_origin": SourceOrigin.CNATIVE_IMAGE,
                     "source_repo_url": "strm/helloworld-http",
                 },
-                "build_config": {
-                    "build_method": "custom_image",
-                },
-                "manifest": {
-                    "apiVersion": "paas.bk.tencent.com/v1alpha2",
-                    "kind": "BkApp",
-                    "metadata": {
-                        "name": f"{bk_cnative_app.code}-m-uta-{random_suffix}",
-                        "generation": 0,
-                        "annotations": {},
-                    },
-                    "spec": {
-                        "build": {"image": "strm/helloworld-http", "imagePullPolicy": "IfNotPresent"},
-                        "processes": [{"name": "web", "replicas": 1}],
-                        "configuration": {"env": []},
-                    },
+                "bkapp_spec": {
+                    "build_config": {"build_method": "custom_image", "image_repository": image_repository},
+                    "processes": [
+                        {
+                            "name": "web",
+                            "command": ["bash", "/app/start_web.sh"],
+                            "env_overlay": {
+                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
+                                "prod": {"environment_name": "prod", "target_replicas": 2, "plan_name": "2C1G"},
+                            },
+                        }
+                    ],
                 },
             },
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        module_data = response.json()['module']
-        assert module_data['web_config']['build_method'] == 'custom_image'
-        assert module_data['web_config']['artifact_type'] == 'none'
+        module_data = response.json()["module"]
+        assert module_data["web_config"]["build_method"] == "custom_image"
+        assert module_data["web_config"]["artifact_type"] == "none"
+        module = Module.objects.get(id=module_data["id"])
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
+        assert cfg.image_repository == image_repository
+        process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
+        assert process_spec.image is None
+        assert process_spec.image_credential_name is None
+        assert process_spec.command == ["bash", "/app/start_web.sh"]
+        assert process_spec.get_target_replicas("stag") == 1
+        assert process_spec.get_target_replicas("prod") == 2
 
-    @mock.patch('paasng.platform.modules.helpers.ModuleRuntimeBinder')
-    @mock.patch('paasng.platform.engine.configurations.building.ModuleRuntimeManager')
+    @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
+    @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
     def test_create_with_buildpack(
         self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, bk_cnative_app, init_tmpls
     ):
@@ -167,10 +174,8 @@ class TestCreateCloudNativeModule:
         response = api_client.post(
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
-                "name": f'uta-{random_suffix}',
-                "build_config": {
-                    "build_method": "buildpack",
-                },
+                "name": f"uta-{random_suffix}",
+                "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
                 "source_config": {
                     "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                     "source_origin": SourceOrigin.AUTHORIZED_VCS,
@@ -180,9 +185,9 @@ class TestCreateCloudNativeModule:
             },
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        module_data = response.json()['module']
-        assert module_data['web_config']['build_method'] == 'buildpack'
-        assert module_data['web_config']['artifact_type'] == 'image'
+        module_data = response.json()["module"]
+        assert module_data["web_config"]["build_method"] == "buildpack"
+        assert module_data["web_config"]["artifact_type"] == "image"
 
     def test_create_with_dockerfile(self, api_client, bk_cnative_app, init_tmpls):
         """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
@@ -190,10 +195,12 @@ class TestCreateCloudNativeModule:
         response = api_client.post(
             f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
             data={
-                "name": f'uta-{random_suffix}',
-                "build_config": {
-                    "build_method": "dockerfile",
-                    'dockerfile_path': 'Dockerfile',
+                "name": f"uta-{random_suffix}",
+                "bkapp_spec": {
+                    "build_config": {
+                        "build_method": "dockerfile",
+                        "dockerfile_path": "Dockerfile",
+                    }
                 },
                 "source_config": {
                     "source_init_template": "docker",
@@ -204,9 +211,9 @@ class TestCreateCloudNativeModule:
             },
         )
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        module_data = response.json()['module']
-        assert module_data['web_config']['build_method'] == 'dockerfile'
-        assert module_data['web_config']['artifact_type'] == 'image'
+        module_data = response.json()["module"]
+        assert module_data["web_config"]["build_method"] == "dockerfile"
+        assert module_data["web_config"]["artifact_type"] == "image"
 
 
 class TestModuleDeployConfigViewSet:
@@ -302,7 +309,7 @@ class TestModuleDeletion:
 
     def test_delete_main_module(self, api_client, bk_app, bk_module, bk_user):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
-        response = api_client.delete(f'/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/')
+        response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/")
         assert response.status_code == 400
         assert "主模块不允许被删除" in response.json()["detail"]
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
@@ -319,7 +326,7 @@ class TestModuleDeletion:
 
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
-            response = api_client.delete(f'/api/bkapps/applications/{bk_app.code}/modules/{module.name}/')
+            response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
 
@@ -329,6 +336,6 @@ class TestModuleDeletion:
 
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
         with mock.patch("paasng.platform.modules.views.delete_module", side_effect=Exception):
-            response = api_client.delete(f'/api/bkapps/applications/{bk_app.code}/modules/{module.name}/')
+            response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 400
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()

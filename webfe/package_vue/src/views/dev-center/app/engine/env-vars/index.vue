@@ -781,7 +781,7 @@
   </div>
 </template>
 
-<script> import _ from 'lodash';
+<script>import _ from 'lodash';
 import dropdown from '@/components/ui/Dropdown';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
 import appBaseMixin from '@/mixins/app-base-mixin';
@@ -1199,7 +1199,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.exportDialog.loading = false;
@@ -1265,7 +1265,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -1283,7 +1283,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -1333,7 +1333,7 @@ export default {
         this.isRuntimeUpdaing = false;
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -1541,7 +1541,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.loadingConf.basicLoading = false;
@@ -1559,7 +1559,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.loadingConf.appRuntimeLoading = false;
@@ -1577,7 +1577,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         setTimeout(() => {

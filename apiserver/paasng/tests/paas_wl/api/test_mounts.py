@@ -24,7 +24,7 @@ from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceTyp
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.serializers import MountSLZ
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture

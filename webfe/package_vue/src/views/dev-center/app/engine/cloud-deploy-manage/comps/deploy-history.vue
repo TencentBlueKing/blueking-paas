@@ -156,7 +156,7 @@
           show-overflow-tooltip
         />
         <bk-table-column
-          :width="localLanguage === 'en' ? 200 : 150"
+          :width="localLanguage === 'en' ? 200 : 180"
           :label="$t('操作')"
         >
           <template slot-scope="{ row }">
@@ -477,7 +477,6 @@ export default {
     handleShowYamlSideslider(row) {
       // this.$refs.logSidesliderRef?.handleShowLog(row);
       this.yamlSidesliderConfig.isShow = true;
-      console.log('row', row, this.curModuleId);
       this.getDeployVersionDetails(row);
     },
 
@@ -491,7 +490,7 @@ export default {
           environment: data.environment,
           revisionId: data.deployment.bkapp_revision_id,
         });
-        this.yamlData = res.manifest;
+        this.yamlData = res.deployed_value;
       } catch (error) {
         this.$paasMessage({
           theme: 'error',

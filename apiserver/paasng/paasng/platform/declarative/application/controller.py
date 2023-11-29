@@ -84,7 +84,7 @@ class AppDeclarativeController:
         if not desc.region:
             desc.region = allowed_regions[0]
         elif desc.region not in allowed_regions:
-            raise DescriptionValidationError({'region': _('用户没有权限在 {} 下创建应用').format(desc.region)})
+            raise DescriptionValidationError({"region": _("用户没有权限在 {} 下创建应用").format(desc.region)})
 
         is_smart_app = self.source_origin == SourceOrigin.S_MART
         is_scene_app = self.source_origin == SourceOrigin.SCENE
@@ -115,7 +115,7 @@ class AppDeclarativeController:
             auto_enable_when_deploy=True,
             source_module=default_module,
             source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
-            source_tp_url='',
+            source_tp_url="",
         )
 
         self.sync_market_fields(application, desc.market)
@@ -138,7 +138,7 @@ class AppDeclarativeController:
             desc.region = application.region
 
         if not user_has_app_action_perm(self.user, application, AppAction.BASIC_DEVELOP):
-            raise DescriptionValidationError({APP_CODE_FIELD: _('你没有权限操作当前应用')})
+            raise DescriptionValidationError({APP_CODE_FIELD: _("你没有权限操作当前应用")})
 
         # Handle field modifications
         for field_cls in self.update_allowed_fields:
@@ -172,7 +172,7 @@ class AppDeclarativeController:
                 source_origin=self.source_origin.value,
                 source_type=None,
                 language=module_desc.language.value,
-                source_init_template='',
+                source_init_template="",
                 exposed_url_type=region.entrance_config.exposed_url_type,
             )
             # Initialize module
@@ -206,14 +206,14 @@ class AppDeclarativeController:
         market_enabled = application.market_config.enabled
         if market_enabled and not ModulePublishPreparer(new_default_module).all_matched:
             raise ControllerError(
-                _("目标 {new_default_module_name} 模块未满足应用市场服务开启条件，切换主模块会导致应用在市场中访问异常, 请关闭市场开关后重新操作。").format(
-                    new_default_module_name=new_default_module_name
-                )
+                _(
+                    "目标 {new_default_module_name} 模块未满足应用市场服务开启条件，切换主模块会导致应用在市场中访问异常, 请关闭市场开关后重新操作。"
+                ).format(new_default_module_name=new_default_module_name)
             )
 
         logger.info(
-            f'Switching default module for application[{application.code}], '
-            f'{old_default_module.name} -> {new_default_module.name}...'
+            f"Switching default module for application[{application.code}], "
+            f"{old_default_module.name} -> {new_default_module.name}..."
         )
         old_default_module.is_default = False
         new_default_module.is_default = True
@@ -245,7 +245,7 @@ class AppDeclarativeController:
         )
         logo = product_defaults.pop("logo", None)
         if market_desc.tag_id:
-            product_defaults['tag_id'] = market_desc.tag_id
+            product_defaults["tag_id"] = market_desc.tag_id
 
         product, created = Product.objects.update_or_create(application=application, defaults=product_defaults)
         if logo:

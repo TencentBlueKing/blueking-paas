@@ -39,7 +39,7 @@ def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.CREATE_APPROVAL.value).service_id
 
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
-    paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
+    paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
     callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/"
 
     # 组装提单数据,包含插件的基本信息
@@ -65,12 +65,12 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
 
     # 查询插件的市场信息，用户填充申请单据
     market_info = None
-    if hasattr(plugin, 'pluginmarketinfo'):
+    if hasattr(plugin, "pluginmarketinfo"):
         market_info = plugin.pluginmarketinfo
 
     # 组装提单数据,包含插件的基本信息和版本信息
     basic_fields = _get_basic_fields(pd, plugin)
-    advanced_fields = _get_advanced_fields(version, market_info)
+    advanced_fields = _get_advanced_fields(pd, plugin, version, market_info)
     title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
     fields = basic_fields + advanced_fields + title_fields
 
@@ -78,7 +78,7 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.ONLINE_APPROVAL.value).service_id
 
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
-    paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
+    paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
     callback_url = (
         f"{paas_url}/open/api/itsm/bkplugins/"
         + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/stages/{current_stage.id}/"
@@ -116,12 +116,12 @@ def get_ticket_status(sn: str):
     client = ItsmClient()
     data = client.get_ticket_status(sn)
 
-    operation_dict = {d['key']: d['can_operate'] for d in data['operations']}
+    operation_dict = {d["key"]: d["can_operate"] for d in data["operations"]}
     return {
-        "ticket_url": data['ticket_url'],
-        "current_status": data['current_status'],
-        "current_status_display": ItsmTicketStatus.get_choice_label(data['current_status']),
-        "can_withdraw": operation_dict.get('WITHDRAW', False),
+        "ticket_url": data["ticket_url"],
+        "current_status": data["current_status"],
+        "current_status_display": ItsmTicketStatus.get_choice_label(data["current_status"]),
+        "can_withdraw": operation_dict.get("WITHDRAW", False),
     }
 
 
@@ -169,7 +169,9 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
     return fields
 
 
-def _get_advanced_fields(version: PluginRelease, market_info: Optional[PluginMarketInfo]) -> List[dict]:
+def _get_advanced_fields(
+    pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, market_info: Optional[PluginMarketInfo]
+) -> List[dict]:
     """获取插件的版本、市场相关字段信息，可用于上线申请提单"""
     fields = [
         {
@@ -199,6 +201,10 @@ def _get_advanced_fields(version: PluginRelease, market_info: Optional[PluginMar
         {
             "key": "contact",
             "value": market_info.contact if market_info else "",
+        },
+        {
+            "key": "version_url",
+            "value": f"{settings.PLUGIN_CENTER_URL}/plugin/{pd.identifier}/{plugin.id}/version-release?release_id={version.id}",  # noqa
         },
     ]
     return fields

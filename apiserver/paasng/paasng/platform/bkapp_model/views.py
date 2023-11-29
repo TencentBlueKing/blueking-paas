@@ -52,7 +52,7 @@ from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 logger = logging.getLogger(__name__)
 
 # The default scaling config value object when autoscaling config is absent.
-default_scaling_config = AutoscalingConfig(min_replicas=1, max_replicas=1, policy='default')
+default_scaling_config = AutoscalingConfig(min_replicas=1, max_replicas=1, policy="default")
 
 
 # TODO: Remove this API entirely because if become stale
@@ -71,7 +71,7 @@ class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin)
         try:
             from paasng.security.access_control.models import ApplicationAccessControlSwitch
         except ImportError:
-            logger.info('access control only supported in te region, skip...')
+            logger.info("access control only supported in te region, skip...")
         else:
             if ApplicationAccessControlSwitch.objects.is_enabled(self.get_application()):
                 manifest_ext["metadata"]["annotations"][ACCESS_CONTROL_ANNO_KEY] = "true"
@@ -91,12 +91,12 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         module = self.get_module_via_path()
 
-        output_format = slz.validated_data['output_format']
-        if output_format == 'yaml':
+        output_format = slz.validated_data["output_format"]
+        if output_format == "yaml":
             manifests = get_manifest(module)
             response = yaml.safe_dump_all(manifests)
             # Use django's response to ignore DRF's renders
-            return HttpResponse(response, content_type='application/yaml')
+            return HttpResponse(response, content_type="application/yaml")
         else:
             return Response(get_manifest(module))
 
@@ -247,7 +247,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         svc_disc, _ = SvcDiscConfig.objects.update_or_create(
             application_id=application.id,
             defaults={
-                'bk_saas': validated_data['bk_saas'],
+                "bk_saas": validated_data["bk_saas"],
             },
         )
         svc_disc.refresh_from_db()
@@ -273,12 +273,12 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         validated_data = slz.validated_data
 
         defaults = {}
-        nameservers = validated_data.get('nameservers')
+        nameservers = validated_data.get("nameservers")
         if nameservers is not None:
-            defaults['nameservers'] = nameservers
-        host_aliases = validated_data.get('host_aliases')
+            defaults["nameservers"] = nameservers
+        host_aliases = validated_data.get("host_aliases")
         if host_aliases is not None:
-            defaults['host_aliases'] = host_aliases
+            defaults["host_aliases"] = host_aliases
 
         domain_resolution, _ = DomainResolution.objects.update_or_create(application=application, defaults=defaults)
 

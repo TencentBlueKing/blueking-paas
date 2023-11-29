@@ -33,11 +33,10 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
@@ -45,12 +44,13 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.bkapp_model.importer.importer import import_manifest_yaml
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.engine.constants import ImagePullPolicy, RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
+from paasng.platform.modules.handlers import on_module_initialized
 from paasng.platform.modules.helpers import (
     ModuleRuntimeBinder,
     get_image_labels_by_module,
@@ -114,7 +114,7 @@ class ModuleBuildpackPlaner:
 class ModuleInitializer:
     """Initializer for Module"""
 
-    default_environments = ['stag', 'prod']
+    default_environments = ["stag", "prod"]
 
     def __init__(self, module: Module):
         self.module = module
@@ -126,9 +126,9 @@ class ModuleInitializer:
     def make_engine_meta_info(self, env: ModuleEnvironment) -> Dict[str, Any]:
         ext_metadata = make_app_metadata(env)
         return {
-            'paas_app_code': self.application.code,
-            'module_name': self.module.name,
-            'environment': env.environment,
+            "paas_app_code": self.application.code,
+            "module_name": self.module.name,
+            "environment": env.environment,
             **ext_metadata,
         }
 
@@ -152,14 +152,13 @@ class ModuleInitializer:
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
             update_metadata_by_env(env, engine_app_meta_info)
-        return
 
     def initialize_vcs_with_template(
         self,
         repo_type: Optional[str] = None,
         repo_url: Optional[str] = None,
         repo_auth_info: Optional[dict] = None,
-        source_dir: str = '',
+        source_dir: str = "",
     ):
         """Initialize module vcs with source template
 
@@ -170,34 +169,34 @@ class ModuleInitializer:
         """
         if not self._should_initialize_vcs():
             logger.info(
-                'Skip initializing template for application:<%s>/<%s>', self.application.code, self.module.name
+                "Skip initializing template for application:<%s>/<%s>", self.application.code, self.module.name
             )
-            return {'code': 'OK', "extra_info": {}, "dest_type": 'null'}
+            return {"code": "OK", "extra_info": {}, "dest_type": "null"}
 
         client_secret = get_oauth2_client_secret(self.application.code, self.application.region)
         context = {
-            'region': self.application.region,
-            'owner_username': get_username_by_bkpaas_user_id(self.application.owner),
-            'app_code': self.application.code,
-            'app_secret': client_secret,
-            'app_name': self.application.name,
+            "region": self.application.region,
+            "owner_username": get_username_by_bkpaas_user_id(self.application.owner),
+            "app_code": self.application.code,
+            "app_secret": client_secret,
+            "app_name": self.application.name,
         }
 
         if not repo_type:
-            raise ValueError('repo type must not be None')
+            raise ValueError("repo type must not be None")
 
         connector = get_repo_connector(repo_type, self.module)
         connector.bind(repo_url, source_dir=source_dir, repo_auth_info=repo_auth_info)
 
         # Only run syncing procedure when `source_init_template` is valid
         if not Template.objects.filter(name=self.module.source_init_template, type=TemplateType.NORMAL).exists():
-            return {'code': 'OK', "extra_info": {}, "dest_type": 'null'}
+            return {"code": "OK", "extra_info": {}, "dest_type": "null"}
 
         result = connector.sync_templated_sources(context)
 
         if result.is_success():
-            return {'code': 'OK', "extra_info": result.extra_info, "dest_type": result.dest_type}
-        return {'code': result.error}
+            return {"code": "OK", "extra_info": result.extra_info, "dest_type": result.dest_type}
+        return {"code": result.error}
 
     def _should_initialize_vcs(self) -> bool:
         """Check if current module should run source template initializing procedure"""
@@ -255,30 +254,72 @@ class ModuleInitializer:
         for buildpack in planer.get_required_buildpacks(bp_stack_name=slugbuilder.name):
             binder.bind_buildpack(buildpack)
 
-    def initialize_log_config(self):
-        for env in self.module.get_envs():
-            setup_env_log_model(env)
+    def initialize_app_model_resource(self, bkapp_spec: Optional[Dict] = None):
+        """
+        Initialize the AppModelResource and import the bkapp_spec into the corresponding bkapp models
 
-    def initialize_app_model_resource(self, manifest: Optional[Dict] = None):
+        :param bkapp_spec: validated_data from CreateBkAppSpecSLZ
+        """
         # 只有云原生应用需要在创建模块后初始化 AppModelResource
         if self.application.type != ApplicationType.CLOUD_NATIVE:
             return
 
-        res_name = generate_bkapp_name(self.module)
-        # 即使没有指定 manifest，也会默认初始化 AppModelResource，
+        # 即使没有指定 bkapp_spec，也会默认初始化 AppModelResource，
         # 但这仅仅是占位数据，应当在第一次部署时候被源码库中的配置替换
-        resource = create_app_resource(name=res_name, image='stub')
-        if manifest:
-            manifest['metadata']['name'] = res_name
-            resource = BkAppResource(**manifest)
-
+        # TODO 删除创建 AppModelResource 占位用途?
+        res_name = generate_bkapp_name(self.module)
+        resource = create_app_resource(name=res_name, image="stub")
         AppModelResource.objects.create_from_resource(
             region=self.application.region,
             application_id=self.application.id,
             module_id=self.module.id,
             resource=resource,
         )
-        import_manifest_yaml(module=self.module, input_yaml_data=resource.json(exclude_none=True))
+
+        if not bkapp_spec or bkapp_spec["build_config"].build_method != RuntimeType.CUSTOM_IMAGE:
+            return
+
+        # 镜像交付的应用需要将模块配置导入到 DB(bkapp model)
+        # 导入 BuildConfig
+        build_config = bkapp_spec["build_config"]
+        config_obj = BuildConfig.objects.get_or_create_by_module(self.module)
+        build_params = {
+            "image_repository": build_config.image_repository,
+            "image_credential_name": None,
+        }
+        if image_credential := build_config.image_credential:
+            build_params["image_credential_name"] = image_credential["name"]
+        update_build_config_with_method(config_obj, build_method=build_config.build_method, data=build_params)
+
+        # 导入进程配置
+        processes = [
+            BkAppProcess(
+                name=proc["name"],
+                command=proc["command"],
+                args=proc["args"],
+                targetPort=proc.get("port", None),
+                imagePullPolicy=ImagePullPolicy.IF_NOT_PRESENT,
+            )
+            for proc in bkapp_spec["processes"]
+        ]
+        image_credential_names = (
+            {proc["name"]: image_credential["name"] for proc in bkapp_spec["processes"]} if image_credential else {}
+        )
+
+        mgr = ModuleProcessSpecManager(self.module)
+        mgr.sync_from_bkapp(processes, image_credential_names)
+        for proc in bkapp_spec["processes"]:
+            if env_overlay := proc.get("env_overlay"):
+                mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)
+
+        # 导入 hook 配置
+        if hook := bkapp_spec.get("hooks"):
+            self.module.deploy_hooks.enable_hook(
+                type_=hook["type"],
+                proc_command=hook.get("proc_command"),
+                command=hook.get("command"),
+                args=hook.get("args"),
+            )
 
     def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""
@@ -289,7 +330,7 @@ class ModuleInitializer:
         return engine_app
 
 
-ModuleInitResult = namedtuple('ModuleInitResult', 'source_init_result')
+ModuleInitResult = namedtuple("ModuleInitResult", "source_init_result")
 
 
 @contextmanager
@@ -298,7 +339,7 @@ def _humanize_exception(step_name: str, message: str):
     try:
         yield
     except Exception as e:
-        logger.exception("An exception occurred during `%s`, detail: %s", step_name, e)
+        logger.exception("An exception occurred during `%s`", step_name)
         raise ModuleInitializationError(message) from e
 
 
@@ -319,20 +360,18 @@ def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):
     module_spec = ModuleSpecs(module)
 
     # Create engine apps first
-    with _humanize_exception('create_engine_apps', _('服务暂时不可用，请稍候再试')):
+    with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
         module_initializer.create_engine_apps(cluster_name=cluster_name)
 
-    with _humanize_exception('bind_default_services', _('绑定初始增强服务失败，请稍候再试')):
+    with _humanize_exception("bind_default_services", _("绑定初始增强服务失败，请稍候再试")):
         module_initializer.bind_default_services()
 
     if module_spec.runtime_type == RuntimeType.BUILDPACK:
         # bind heroku runtime, such as slug builder/runner and buildpacks
-        with _humanize_exception(_('绑定初始运行环境失败，请稍候再试'), 'bind default runtime'):
+        with _humanize_exception(_("绑定初始运行环境失败，请稍候再试"), "bind default runtime"):
             module_initializer.bind_default_runtime()
 
-    with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
-        module_initializer.initialize_log_config()
-
+    on_module_initialized.send(sender=initialize_smart_module, module=module)
     return ModuleInitResult(source_init_result={})
 
 
@@ -341,10 +380,9 @@ def initialize_module(
     repo_type: str,
     repo_url: Optional[str],
     repo_auth_info: Optional[dict],
-    source_dir: str = '',
+    source_dir: str = "",
     cluster_name: Optional[str] = None,
-    manifest: Optional[Dict] = None,
-    build_config: Optional[entities.BuildConfig] = None,
+    bkapp_spec: Optional[Dict] = None,
 ) -> ModuleInitResult:
     """Initialize a module
 
@@ -353,25 +391,25 @@ def initialize_module(
     :param repo_auth_info: The auth of repository, such as {"username": "ddd", "password": "www"}
     :param source_dir: The work dir, which containing Procfile.
     :param cluster_name: optional engine cluster name
-    :param manifest: optional cnative module manifest(only build_method=custom_image required)
-    :param build_config: optional build config
+    :param bkapp_spec: optional cnative module bkapp_spec
     :raises: ModuleInitializationError when any steps failed
     """
     module_initializer = ModuleInitializer(module)
     module_spec = ModuleSpecs(module)
 
     # Create engine apps first
-    with _humanize_exception('create_engine_apps', _('服务暂时不可用，请稍候再试')):
+    with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
         module_initializer.create_engine_apps(cluster_name=cluster_name)
 
     source_init_result = {}
     if module_spec.has_vcs:
         # initialize module vcs with template if required
-        with _humanize_exception('initialize_app_source', _('代码初始化过程失败，请稍候再试')):
+        with _humanize_exception("initialize_app_source", _("代码初始化过程失败，请稍候再试")):
             source_init_result = module_initializer.initialize_vcs_with_template(
                 repo_type, repo_url, repo_auth_info=repo_auth_info, source_dir=source_dir
             )
 
+    build_config = bkapp_spec["build_config"] if bkapp_spec else None
     if not build_config:
         if module_spec.templated_source_enabled:
             tmpl_mgr = TemplateRuntimeManager(region=module.region, tmpl_name=module.source_init_template)
@@ -386,25 +424,23 @@ def initialize_module(
     config_obj.save(update_fields=["build_method"])
 
     if build_config.build_method == RuntimeType.BUILDPACK:
-        with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
+        with _humanize_exception("bind_default_runtime", _("绑定初始运行环境失败，请稍候再试")):
             # bind heroku runtime, such as slug builder/runner and buildpacks
             module_initializer.bind_default_runtime()
     elif build_config.build_method == RuntimeType.DOCKERFILE:
-        with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
+        with _humanize_exception("bind_default_runtime", _("绑定初始运行环境失败，请稍候再试")):
             module_initializer.initialize_docker_build_config(build_config)
     elif module_spec.source_origin == SourceOrigin.IMAGE_REGISTRY:
-        with _humanize_exception('config_image_registry', _('配置镜像 Registry 失败，请稍候再试')):
-            init_image_repo(module, repo_url or '', source_dir, repo_auth_info or {})
+        with _humanize_exception("config_image_registry", _("配置镜像 Registry 失败，请稍候再试")):
+            init_image_repo(module, repo_url or "", source_dir, repo_auth_info or {})
 
-    with _humanize_exception('bind_default_services', _('绑定初始增强服务失败，请稍候再试')):
+    with _humanize_exception("bind_default_services", _("绑定初始增强服务失败，请稍候再试")):
         module_initializer.bind_default_services()
 
-    with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
-        module_initializer.initialize_log_config()
-
     with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
-        module_initializer.initialize_app_model_resource(manifest)
+        module_initializer.initialize_app_model_resource(bkapp_spec)
 
+    on_module_initialized.send(sender=initialize_module, module=module)
     return ModuleInitResult(source_init_result=source_init_result)
 
 
@@ -496,8 +532,8 @@ class DefaultServicesBinder:
 def make_engine_app_name(module: Module, app_code: str, env: str) -> str:
     # 兼容考虑，如果模块名为 default 则不在 engine 名字中插入 module 名
     if module.name == ModuleName.DEFAULT.value:
-        name = f'{DEFAULT_ENGINE_APP_PREFIX}-{app_code}-{env}'
+        name = f"{DEFAULT_ENGINE_APP_PREFIX}-{app_code}-{env}"
     else:
         # use `-m-` to divide module name and app code
-        name = f'{DEFAULT_ENGINE_APP_PREFIX}-{app_code}-m-{module.name}-{env}'
+        name = f"{DEFAULT_ENGINE_APP_PREFIX}-{app_code}-m-{module.name}-{env}"
     return name

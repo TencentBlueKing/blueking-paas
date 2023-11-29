@@ -65,7 +65,7 @@ def generate_state(region: str, cluster_name: str, client, ignore_labels: List) 
 def filter_nodes_with_labels(nodes: List[ResourceInstance], ignore_labels):
     for node in nodes:
         # If node contains any label in ignore_labels, ignore this node
-        labels = node.metadata.get('labels', {})
+        labels = node.metadata.get("labels", {})
         should_ignore = any(True for k, v in ignore_labels if labels.get(k) == v)
         if not should_ignore:
             yield node
@@ -119,6 +119,6 @@ def sync_state_to_nodes(client: EnhancedApiClient, state):
     labels = state.to_labels()
     for node_name in state.nodes_name:
         node = KNode(client).get(node_name)
-        node.metadata.labels = {**node.metadata.get('labels', {}), **labels}
+        node.metadata.labels = {**node.metadata.get("labels", {}), **labels}
         logger.debug(f"Patching node object {node_name} with labels {labels}")
         KNode(client).ops_name.replace_or_patch(node_name, node, update_method="patch")

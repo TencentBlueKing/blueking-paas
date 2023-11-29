@@ -24,15 +24,15 @@ from paasng.infras.accounts.constants import AccountFeatureFlag
 class DiffFeatureType(str, StructuredEnum):
     """代码对比类型"""
 
-    INTERNAL = 'internal'
-    EXTERNAL = 'external'
+    INTERNAL = "internal"
+    EXTERNAL = "external"
 
 
 class BasicSourceType(str, StructuredEnum):
     """基础源码类型"""
 
-    GIT = 'git'
-    SVN = 'svn'
+    GIT = "git"
+    SVN = "svn"
     PACKAGE = "package"
 
 

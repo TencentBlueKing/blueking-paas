@@ -43,13 +43,13 @@ class TestModuleTagger:
 
 class TestGetDynamicTag:
     @pytest.mark.parametrize(
-        'tag_str,tag_obj',
+        "tag_str,tag_obj",
         [
-            ('deploy-failure:fix_procfile', DeploymentFailureTag('fix_procfile')),
-            ('app-pl:python', AppPLTag('python')),
+            ("deploy-failure:fix_procfile", DeploymentFailureTag("fix_procfile")),
+            ("app-pl:python", AppPLTag("python")),
             # When expected tag is None, a ValueError will be raised
-            ('invalid-type:value', None),
-            ('invalid_tag_string', None),
+            ("invalid-type:value", None),
+            ("invalid_tag_string", None),
         ],
     )
     def test_normal(self, tag_str, tag_obj):

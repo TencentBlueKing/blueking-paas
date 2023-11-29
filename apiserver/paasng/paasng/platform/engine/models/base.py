@@ -36,15 +36,15 @@ logger = logging.getLogger(__name__)
 class OperationVersionBase(TimestampedModel):
     """带操作版本信息的BaseModel"""
 
-    id = models.UUIDField('UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     operator = BkUserField()
 
-    source_type = models.CharField(verbose_name=u'源码托管类型', max_length=16, null=True)
-    source_location = models.CharField(u"代码地址", max_length=2048)
-    source_version_type = models.CharField(u"代码版本类型", max_length=64)
-    source_version_name = models.CharField(u"代码版本名称", max_length=64)
-    source_revision = models.CharField(u"版本号", max_length=128, null=True)
-    source_comment = models.TextField(u"版本说明")
+    source_type = models.CharField(verbose_name="源码托管类型", max_length=16, null=True)
+    source_location = models.CharField("代码地址", max_length=2048)
+    source_version_type = models.CharField("代码版本类型", max_length=64)
+    source_version_name = models.CharField("代码版本名称", max_length=64)
+    source_revision = models.CharField("版本号", max_length=128, null=True)
+    source_comment = models.TextField("版本说明")
 
     class Meta:
         abstract = True
@@ -53,16 +53,16 @@ class OperationVersionBase(TimestampedModel):
 class EngineApp(OwnerTimestampedModel):
     """蓝鲸应用引擎应用"""
 
-    id = models.UUIDField('UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     name = models.CharField(max_length=64, unique=True)
 
     region = models.CharField(max_length=32)
-    is_active = models.BooleanField(verbose_name='是否活跃', default=True)
+    is_active = models.BooleanField(verbose_name="是否活跃", default=True)
 
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)
 
-    def to_wl_obj(self) -> 'WlApp':
+    def to_wl_obj(self) -> "WlApp":
         """Return the corresponding WlApp object in the workloads module"""
         return WlApp.objects.get(region=self.region, name=self.name)
 
@@ -76,9 +76,9 @@ class MarkStatusMixin:
     def to_dict(cls) -> dict:
         raise NotImplementedError
 
-    def mark_procedure_status(self, status: 'JobStatus'):
+    def mark_procedure_status(self, status: "JobStatus"):
         """针对拥有 complete_time 和 start_time 的应用标记其状态"""
-        update_fields = ['status', 'updated']
+        update_fields = ["status", "updated"]
         now = timezone.localtime(timezone.now())
 
         if status in JobStatus.get_finished_states():
@@ -96,7 +96,7 @@ class MarkStatusMixin:
         self.status = status.value
         self.save(update_fields=update_fields)  # type: ignore
 
-    def mark_and_write_to_stream(self, stream: 'DeployStream', status: 'JobStatus', extra_info: Optional[dict] = None):
+    def mark_and_write_to_stream(self, stream: "DeployStream", status: "JobStatus", extra_info: Optional[dict] = None):
         """标记状态，并写到 stream"""
         self.mark_procedure_status(status)
         detail = self.to_dict()

@@ -61,7 +61,7 @@ def fake_bad_client():
     """Make a fake client which produce failed result"""
     fake_client = MagicMock()
     fake_client.create_project_by_app.return_value = {"code": -1, "message": "lesscode平台校验不通过", "data": None}
-    fake_client.find_project_by_app.side_effect = APIGatewayResponseError('foo error')
+    fake_client.find_project_by_app.side_effect = APIGatewayResponseError("foo error")
     return fake_client
 
 
@@ -99,9 +99,9 @@ class TestBkLesscode:
         assert is_created is True
         assert fake_good_client.create_project_by_app.called
         _, kwargs = fake_good_client.create_project_by_app.call_args_list[0]
-        assert kwargs['headers']['x-bkapi-authorization'] != ""
-        assert kwargs['data']['appCode'] == bk_app_code
-        assert kwargs['data']['moduleCode'] == bk_module_name
+        assert kwargs["headers"]["x-bkapi-authorization"] != ""
+        assert kwargs["data"]["appCode"] == bk_app_code
+        assert kwargs["data"]["moduleCode"] == bk_module_name
 
     def test_call_api_failed(self, bk_token, bk_app_code, bk_app_name, bk_module_name, fake_bad_client):
         lesscodeClient = make_bk_lesscode_client(bk_token, fake_bad_client)

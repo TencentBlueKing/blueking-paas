@@ -45,7 +45,7 @@ class Command(BaseCommand):
     into the existed cluster.
     """
 
-    help = 'Generates region state based on current cluster status'
+    help = "Generates region state based on current cluster status"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -63,14 +63,14 @@ class Command(BaseCommand):
         parser.add_argument(
             "--no-input",
             default=False,
-            action='store_true',
-            help='Skip prompt',
+            action="store_true",
+            help="Skip prompt",
         )
         parser.add_argument(
             "--ignore-labels",
             default=[],
             type=str,
-            nargs='+',
+            nargs="+",
             help=(
                 "ignore nodes if it matches any of these labels, "
                 "will always include 'node-role.kubernetes.io/master=true'"
@@ -97,9 +97,9 @@ class Command(BaseCommand):
             raise ValueError("Invalid label given!")
 
         if not options["include_masters"]:
-            ignore_labels.append(('node-role.kubernetes.io/master', 'true'))
+            ignore_labels.append(("node-role.kubernetes.io/master", "true"))
 
-        cluster_name = options.get('cluster_name')
+        cluster_name = options.get("cluster_name")
 
         for region in regions:
             logger.debug(f"Make scheduler client from region: {region}")
@@ -108,7 +108,7 @@ class Command(BaseCommand):
                     continue
 
                 logger.info(f"Will generate state for [{region}/{cluster.name}]...")
-                if not options.get('no_input') and input("Confirm? (y/n, default: n) ").lower() != 'y':
+                if not options.get("no_input") and input("Confirm? (y/n, default: n) ").lower() != "y":
                     continue
 
                 try:

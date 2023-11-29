@@ -126,15 +126,15 @@ class TestLightAppViewSet:
         if "logo" in data:
             assert f"o_{light_app_code}.png" in logo
 
-        assert result["bk_error_code"] == '0'
+        assert result["bk_error_code"] == "0"
         assert result["bk_error_msg"] == ""
         assert result["result"]
 
     @pytest.mark.parametrize(
         "is_lapp, expected",
         [
-            (False, {'bk_error_msg': '{code} not found', 'bk_error_code': '1301100', 'data': None, 'result': False}),
-            (True, {'bk_error_msg': '', 'bk_error_code': '0', 'data': {'count': 1}, 'result': True}),
+            (False, {"bk_error_msg": "{code} not found", "bk_error_code": "1301100", "data": None, "result": False}),
+            (True, {"bk_error_msg": "", "bk_error_code": "0", "data": {"count": 1}, "result": True}),
         ],
     )
     def test_delete(self, legacy_app, sys_light_api_client, is_lapp, expected):
@@ -153,8 +153,8 @@ class TestLightAppViewSet:
     @pytest.mark.parametrize(
         "is_lapp, expected",
         [
-            (False, {'bk_error_msg': '{code} not found', 'bk_error_code': '1301100', 'result': False}),
-            (True, {'bk_error_msg': '', 'bk_error_code': '0', 'result': True}),
+            (False, {"bk_error_msg": "{code} not found", "bk_error_code": "1301100", "result": False}),
+            (True, {"bk_error_msg": "", "bk_error_code": "0", "result": True}),
         ],
     )
     def test_query(self, legacy_app, sys_light_api_client, is_lapp, expected):
@@ -176,15 +176,15 @@ class TestLightAppViewSet:
     @pytest.mark.parametrize(
         "is_lapp, data, expected",
         [
-            (False, {}, {'bk_error_msg': '{code} not found', 'bk_error_code': '1301100', 'result': False, 'data': ''}),
+            (False, {}, {"bk_error_msg": "{code} not found", "bk_error_code": "1301100", "result": False, "data": ""}),
             (
                 True,
                 {"app_name": "Bar", "introduction": "introduction", "developers": ["admin", "blueking"]},
                 {
-                    'bk_error_msg': '',
-                    'bk_error_code': '0',
-                    'result': True,
-                    'data': {
+                    "bk_error_msg": "",
+                    "bk_error_code": "0",
+                    "result": True,
+                    "data": {
                         "light_app_code": "{light_app_code}",
                         "app_name": "{app_name}",
                         "introduction": "introduction",
@@ -201,10 +201,10 @@ class TestLightAppViewSet:
                     "app_tag": "",
                 },
                 {
-                    'bk_error_msg': '',
-                    'bk_error_code': '0',
-                    'result': True,
-                    'data': {
+                    "bk_error_msg": "",
+                    "bk_error_code": "0",
+                    "result": True,
+                    "data": {
                         "light_app_code": "{light_app_code}",
                         "app_name": "{app_name}",
                         "introduction": "introduction",

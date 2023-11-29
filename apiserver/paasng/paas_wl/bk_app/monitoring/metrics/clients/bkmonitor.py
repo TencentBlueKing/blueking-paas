@@ -43,7 +43,7 @@ class BkMonitorMetricClient:
         for query in queries:
             try:
                 if not query.is_ranged or not query.time_range:
-                    raise ValueError('query metric in bkmonitor without time range is unsupported!')
+                    raise ValueError("query metric in bkmonitor without time range is unsupported!")
 
                 results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
             except Exception as e:
@@ -68,7 +68,7 @@ class BkMonitorMetricClient:
         :param step: 步长
         :param container_name: 请求容器名
         """
-        logger.info('prometheus query_range promql: %s, start: %s, end: %s, step: %s', promql, start, end, step)
+        logger.info("prometheus query_range promql: %s, start: %s, end: %s, step: %s", promql, start, end, step)
         try:
             series = self._request(promql, start, end, step)
             ret = BkPromResult.from_series(series).get_raw_by_container_name(container_name)
@@ -100,7 +100,7 @@ class BkPromRangeSingleMetric:
         container_name: str
 
         def __init__(self, *args, **kwargs):
-            _name = kwargs.get('container_name') or kwargs.get('container')
+            _name = kwargs.get("container_name") or kwargs.get("container")
             self.container_name = str(_name)
 
         def to_raw(self):
@@ -130,13 +130,13 @@ class BkPromRangeSingleMetric:
     @classmethod
     def from_raw(cls, raw):
         return cls(
-            metric=cls.MetricResult(**raw['dimensions']),
-            values=[cls.ValuePair(timestamp=timestamp, value=val) for (val, timestamp) in raw['datapoints']],
+            metric=cls.MetricResult(**raw["dimensions"]),
+            values=[cls.ValuePair(timestamp=timestamp, value=val) for (val, timestamp) in raw["datapoints"]],
         )
 
     def to_raw(self) -> dict:
         # 当前为了兼容原来的处理方法，会重新转换成 dict
-        return {'metric': self.metric.to_raw(), 'values': [i.to_raw() for i in self.values] if self.values else []}
+        return {"metric": self.metric.to_raw(), "values": [i.to_raw() for i in self.values] if self.values else []}
 
 
 @define
@@ -146,7 +146,7 @@ class BkPromResult:
     results: List[BkPromRangeSingleMetric]
 
     @classmethod
-    def from_series(cls, series: List[Dict]) -> 'BkPromResult':
+    def from_series(cls, series: List[Dict]) -> "BkPromResult":
         """直接根据蓝鲸监控返回的 series 数据，生成 BkPromResult"""
         if not series:
             raise ValueError("source series is empty")

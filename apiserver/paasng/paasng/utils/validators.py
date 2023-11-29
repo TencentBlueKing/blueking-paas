@@ -28,10 +28,10 @@ from past.builtins import basestring
 
 from paasng.core.region.models import Region, RegionList, filter_region_by_name
 
-RE_APP_CODE = re.compile(r'^[a-z0-9-]{1,16}$')
-RE_APP_SEARCH = re.compile(u'[\u4300-\u9fa5\\w_\\-\\d]{1,20}')
+RE_APP_CODE = re.compile(r"^[a-z0-9-]{1,16}$")
+RE_APP_SEARCH = re.compile("[\u4300-\u9fa5\\w_\\-\\d]{1,20}")
 
-RE_CONFIG_VAR_KEY = re.compile(r'^[A-Z][A-Z0-9_]*$')
+RE_CONFIG_VAR_KEY = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
 @deconstructible
@@ -41,7 +41,7 @@ class DnsSafeNameValidator:
     def __init__(self, resource_type: str):
         self.resource_type = resource_type
         self.message = f"{self.resource_type} 不能以 - 或数字开头或结尾, 且不能为纯数字"
-        self.validator = RegexValidator('^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-]{,63}(?<!-)$', message=self.message)
+        self.validator = RegexValidator("^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-]{,63}(?<!-)$", message=self.message)
 
     def __call__(self, value):
         value = force_text(value)
@@ -54,7 +54,7 @@ class ReservedWordValidator:
 
     def __init__(self, resource_type: str):
         self.resource_type = resource_type
-        self.reserved_word = ['-dot-', '0us0', '--', '-m-']
+        self.reserved_word = ["-dot-", "0us0", "--", "-m-"]
         self.message = f"{self.resource_type} 不能包含保留字 {self.reserved_word}"
         self.validator = RegexValidator("|".join(self.reserved_word), message=self.message, inverse_match=True)
 
@@ -72,19 +72,19 @@ class RegionListValidator:
             return value
 
         if isinstance(value, RegionList) and all(isinstance(x, Region) for x in value):
-            region_names = ';'.join([x.name for x in value])
+            region_names = ";".join([x.name for x in value])
             return region_names
         raise ValidationError("please supply valid RegionList")
 
     @staticmethod
     def is_formatted_string(value):
         try:
-            region_list = filter_region_by_name(value.split(';'))
+            region_list = filter_region_by_name(value.split(";"))
         except Exception:
             return False
         else:
             # make sure region not repeat
-            if len(region_list) == len(set(region_list)) == len(value.split(';')):
+            if len(region_list) == len(set(region_list)) == len(value.split(";")):
                 return True
             return False
 
@@ -100,34 +100,34 @@ class Base64Validator:
 
 def str2bool(value):
     TRUE_VALUES = {
-        't',
-        'T',
-        'y',
-        'Y',
-        'yes',
-        'YES',
-        'true',
-        'True',
-        'TRUE',
-        'on',
-        'On',
-        'ON',
-        '1',
+        "t",
+        "T",
+        "y",
+        "Y",
+        "yes",
+        "YES",
+        "true",
+        "True",
+        "TRUE",
+        "on",
+        "On",
+        "ON",
+        "1",
     }
     FALSE_VALUES = {
-        'f',
-        'F',
-        'n',
-        'N',
-        'no',
-        'NO',
-        'false',
-        'False',
-        'FALSE',
-        'off',
-        'Off',
-        'OFF',
-        '0',
+        "f",
+        "F",
+        "n",
+        "N",
+        "no",
+        "NO",
+        "false",
+        "False",
+        "FALSE",
+        "off",
+        "Off",
+        "OFF",
+        "0",
     }
     if value in TRUE_VALUES:
         return True
@@ -137,7 +137,7 @@ def str2bool(value):
         raise ValueError(f"Given value({value}) not valid!")
 
 
-PROC_TYPE_PATTERN = re.compile(r'^[a-zA-Z0-9]([-a-zA-Z0-9])*$')
+PROC_TYPE_PATTERN = re.compile(r"^[a-zA-Z0-9]([-a-zA-Z0-9])*$")
 PROC_TYPE_MAX_LENGTH = 12
 
 
@@ -150,11 +150,11 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     for proc_type in procfile.keys():
         if not PROC_TYPE_PATTERN.match(proc_type):
             raise ValidationError(
-                f'Invalid proc type: {proc_type}, must match ' f'pattern {PROC_TYPE_PATTERN.pattern}'
+                f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"
             )
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
             raise ValidationError(
-                f'Invalid proc type: {proc_type}, must not ' f'longer than {PROC_TYPE_MAX_LENGTH} characters'
+                f"Invalid proc type: {proc_type}, must not " f"longer than {PROC_TYPE_MAX_LENGTH} characters"
             )
 
     # Formalize procfile data and return

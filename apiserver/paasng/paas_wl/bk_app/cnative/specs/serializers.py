@@ -33,9 +33,9 @@ logger = logging.getLogger(__name__)
 class AppModelResourceSerializer(serializers.Serializer):
     """云原生架构应用 Serializer"""
 
-    application_id = serializers.UUIDField(label=_('所属应用'))
-    module_id = serializers.UUIDField(label=_('所属模块'))
-    manifest = serializers.JSONField(label=_('BkApp 配置信息'), source='revision.json_value')
+    application_id = serializers.UUIDField(label=_("所属应用"))
+    module_id = serializers.UUIDField(label=_("所属模块"))
+    manifest = serializers.JSONField(label=_("BkApp 配置信息"), source="revision.json_value")
 
 
 class CreateDeploySerializer(serializers.Serializer):
@@ -43,59 +43,56 @@ class CreateDeploySerializer(serializers.Serializer):
 
     # TODO: 后续支持版本与部署分离，可以通过指定版本号的方式部署
     # 不提供时，使用应用当前 revision 所指向的 manifest 值
-    manifest = serializers.JSONField(label=_('BkApp 配置信息'), required=False)
+    manifest = serializers.JSONField(label=_("BkApp 配置信息"), required=False)
 
 
 class ProcReplicasChangeSLZ(serializers.Serializer):
     """Format `ProcReplicasChange` object"""
 
-    proc_type = serializers.CharField(label=_('进程类型'))
-    old = serializers.IntegerField(label=_('旧副本数'))
-    new = serializers.IntegerField(label=_('新副本数'))
+    proc_type = serializers.CharField(label=_("进程类型"))
+    old = serializers.IntegerField(label=_("旧副本数"))
+    new = serializers.IntegerField(label=_("新副本数"))
 
 
 class DeployPrepResultSLZ(serializers.Serializer):
     """Format deploy preparation result"""
 
-    proc_replicas_changes = serializers.ListField(label=_('进程副本数变化'), child=ProcReplicasChangeSLZ())
+    proc_replicas_changes = serializers.ListField(label=_("进程副本数变化"), child=ProcReplicasChangeSLZ())
 
 
 class QueryDeploysSerializer(serializers.Serializer):
     """Serializer for querying AppModelDeploy objects"""
 
-    operator = serializers.CharField(label=_('操作者'), required=False)
+    operator = serializers.CharField(label=_("操作者"), required=False)
 
 
 class DeployDetailSerializer(serializers.ModelSerializer):
     """Serializer for representing detailed AppModelDeploy object"""
 
-    manifest = serializers.JSONField(label=_('BkApp 配置信息'), source='revision.json_value')
-    operator = serializers.CharField(source='operator.username')
+    manifest = serializers.JSONField(label=_("BkApp 配置信息"), source="revision.json_value")
+    operator = serializers.CharField(source="operator.username")
 
     class Meta:
         model = AppModelDeploy
-        exclude = ('module_id',)
+        exclude = ("module_id",)
 
 
 class AppModelRevisionSerializer(serializers.ModelSerializer):
     """Serializer for representing detailed AppModelDeploy object"""
 
-    manifest = serializers.JSONField(label=_('BkApp 配置信息'), source='json_value')
-    deployed_manifest = serializers.JSONField(label=_('已部署的配置信息'), source='deployed_value')
-
     class Meta:
         model = AppModelRevision
-        exclude = ('module_id', 'yaml_value')
+        exclude = ("module_id", "yaml_value")
 
 
 class DeploySerializer(serializers.ModelSerializer):
     """Serializer for representing AppModelDeploy objects"""
 
-    operator = serializers.CharField(source='operator.username')
+    operator = serializers.CharField(source="operator.username")
 
     class Meta:
         model = AppModelDeploy
-        exclude = ('module_id',)
+        exclude = ("module_id",)
 
 
 class MresDeploymentStatusSLZ(serializers.Serializer):
@@ -107,7 +104,7 @@ class MresDeploymentStatusSLZ(serializers.Serializer):
     message = serializers.CharField(allow_blank=True)
     last_transition_time = serializers.DateTimeField()
 
-    operator = serializers.CharField(source='operator.username', help_text="操作人")
+    operator = serializers.CharField(source="operator.username", help_text="操作人")
     created = serializers.DateTimeField(help_text="发布时间")
 
 
@@ -165,14 +162,15 @@ class ResQuotaPlanSLZ(serializers.Serializer):
 class UpsertMountSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
     name = serializers.RegexField(
-        help_text=_('挂载卷名称'), regex=r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', max_length=63, required=True
+        help_text=_("挂载卷名称"), regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63, required=True
     )
     mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)*$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 
     source_config_data = serializers.DictField(
         help_text=_(
-            "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。" "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
+            "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。"
+            "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
         ),
         child=serializers.CharField(),
     )
@@ -181,7 +179,7 @@ class UpsertMountSLZ(serializers.Serializer):
         environment_name = attrs["environment_name"]
         name = attrs["name"]
 
-        module_id = self.context.get('module_id')
+        module_id = self.context.get("module_id")
 
         # 验证重名挂载卷
         filtered_mounts = Mount.objects.filter(
@@ -190,7 +188,7 @@ class UpsertMountSLZ(serializers.Serializer):
             environment_name__in=[environment_name, MountEnvName.GLOBAL.value],
         )
         # 传入了 mount_instance 表示更新操作，否则表示创建操作。更新操作时候，排除被更新 mount 对象
-        if mount_id := self.context.get('mount_id', None):
+        if mount_id := self.context.get("mount_id", None):
             filtered_mounts = filtered_mounts.exclude(id=mount_id)
 
         if filtered_mounts.exists():
@@ -212,22 +210,22 @@ class UpsertMountSLZ(serializers.Serializer):
 
 
 class MountSLZ(serializers.ModelSerializer):
-    source_config_data = serializers.SerializerMethodField(label=_('挂载卷内容'))
+    source_config_data = serializers.SerializerMethodField(label=_("挂载卷内容"))
 
     class Meta:
         model = Mount
         fields = (
-            'id',
-            'region',
-            'created',
-            'updated',
-            'module_id',
-            'environment_name',
-            'name',
-            'mount_path',
-            'source_type',
-            'source_config',
-            'source_config_data',
+            "id",
+            "region",
+            "created",
+            "updated",
+            "module_id",
+            "environment_name",
+            "name",
+            "mount_path",
+            "source_type",
+            "source_config",
+            "source_config_data",
         )
 
     def get_source_config_data(self, obj):

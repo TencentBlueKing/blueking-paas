@@ -27,5 +27,5 @@ def create_user(username: Optional[str] = None):
     from tests.utils.helpers import generate_random_string
 
     username = username or generate_random_string(length=6)
-    token = LoginToken(login_token='any_token', expires_in=86400)
+    token = LoginToken(login_token="any_token", expires_in=86400)
     return User(token=token, provider_type=settings.USER_TYPE, username=username)

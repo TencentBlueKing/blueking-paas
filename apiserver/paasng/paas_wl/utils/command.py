@@ -24,5 +24,5 @@ def get_command_name(command: str) -> str:
     if command.startswith("python manage.py celery"):
         return "celery"
 
-    process_exec = command.split(' ')[0]
+    process_exec = command.split(" ")[0]
     return os.path.basename(process_exec)

@@ -31,12 +31,12 @@ from .models import ResourceId
 
 def get_vendor_config(vendor_name: str, *, result_cls: Type):
     """Get basic config for vendor from settings"""
-    all_configs = getattr(settings, 'SERVICES_VENDOR_CONFIGS', {})
+    all_configs = getattr(settings, "SERVICES_VENDOR_CONFIGS", {})
     try:
         value = all_configs[vendor_name]
     except KeyError:
         raise ImproperlyConfigured(
-            f'No config can be found for vendor: {vendor_name}, please check `SERVICES_VENDOR_CONFIGS` settings'
+            f"No config can be found for vendor: {vendor_name}, please check `SERVICES_VENDOR_CONFIGS` settings"
         )
     return result_cls(**value)
 
@@ -50,14 +50,14 @@ def generate_password(length=10):
     password_chars = [random.choice(string.ascii_letters + string.digits) for _ in range(length)]
     password_chars.append(random.choice(string.digits))
     random.shuffle(password_chars)
-    return ''.join(password_chars)
+    return "".join(password_chars)
 
 
 def format_name(name):
     return name.replace("-", "_").lower()
 
 
-def gen_unique_id(name: str, namespace: str = 'default', max_length: int = 16, divide_char: str = '-'):
+def gen_unique_id(name: str, namespace: str = "default", max_length: int = 16, divide_char: str = "-"):
     """Generate an unique id via given name"""
     with transaction.atomic():
         # create a db instance for getting auto increment id
@@ -97,7 +97,7 @@ class Base36Handler:
             num, rem = divmod(num, base)
             arr.append(alphabet[rem])
         arr.reverse()
-        return ''.join(arr)
+        return "".join(arr)
 
     @classmethod
     def decode(cls, encoded: str, alphabet=BASE36):
@@ -135,7 +135,7 @@ class WRItem:
         self.weight = weight
 
     def __str__(self):
-        return f'values={self.values} weight={self.weight}'
+        return f"values={self.values} weight={self.weight}"
 
 
 class WRItemList:

@@ -31,17 +31,17 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestReplaceAppDomainService:
     def test_invalid_input(self, bk_app, bk_stag_env, bk_stag_wl_app):
         with pytest.raises(ReplaceAppDomainFailed):
-            ReplaceAppDomainService(bk_stag_env, 'invalid-name.example.com', '/')
+            ReplaceAppDomainService(bk_stag_env, "invalid-name.example.com", "/")
 
     @pytest.mark.mock_get_structured_app
     @pytest.mark.auto_create_ns
     @pytest.mark.parametrize(
-        'old_host,old_path_prefix,new_host,new_path_prefix',
+        "old_host,old_path_prefix,new_host,new_path_prefix",
         [
             # From direct to subpath
-            ('foo.example.com', '/', 'bar.example.com', '/bar/'),
+            ("foo.example.com", "/", "bar.example.com", "/bar/"),
             # From subpath to subpath
-            ('foo.example.com', '/foo/', 'bar.example.com', '/bar/'),
+            ("foo.example.com", "/foo/", "bar.example.com", "/bar/"),
         ],
     )
     def test_integrated(

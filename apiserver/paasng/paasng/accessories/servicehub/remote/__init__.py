@@ -19,4 +19,4 @@ to the current version of the project delivered to anyone in the future.
 """Remote services package"""
 from .manager import RemoteServiceMgr, RemoteServiceObj
 
-__all__ = ['RemoteServiceMgr', 'RemoteServiceObj']
+__all__ = ["RemoteServiceMgr", "RemoteServiceObj"]

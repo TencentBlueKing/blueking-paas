@@ -20,5 +20,4 @@ from enum import Enum
 
 
 class DeployFailurePatternType(int, Enum):
-
     REGULAR_EXPRESSION = 1

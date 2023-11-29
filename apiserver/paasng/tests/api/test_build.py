@@ -23,7 +23,7 @@ from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.utils.constants import BuildStatus
 from tests.paas_wl.utils.build import create_build, create_build_proc
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestImageArtifactViewSet:

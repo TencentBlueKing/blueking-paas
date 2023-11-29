@@ -22,13 +22,13 @@ from django.utils.translation import gettext_lazy as _
 
 class IntegrityError(Exception):
     _fields_display = {
-        'code': _("应用编码"),
-        'name': _("应用名称"),
+        "code": _("应用编码"),
+        "name": _("应用名称"),
     }
 
     def __init__(self, field: str, *args, **kwargs):
         self.field = field
-        super().__init__(f'field: {self.field}')
+        super().__init__(f"field: {self.field}")
 
     def get_field_display(self):
         return self._fields_display.get(self.field, self.field)
@@ -38,15 +38,15 @@ class AppFieldValidationError(Exception):
     """Error when external app field validation failed"""
 
     REASONS = {
-        'duplicated',
-        'not_exist',
+        "duplicated",
+        "not_exist",
     }
 
     def __init__(self, reason: str, *args, **kwargs):
         self.reason = reason
         if reason not in self.REASONS:
             raise ValueError(f'Invalid reason: "{reason}"')
-        super().__init__(f'reason: {self.reason}')
+        super().__init__(f"reason: {self.reason}")
 
 
 class AppResourceProtected(Exception):

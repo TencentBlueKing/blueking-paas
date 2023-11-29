@@ -45,14 +45,14 @@ def wrap_validation_error(exc: ValidationError, parent: str) -> ValidationError:
         for data in exc.detail:
             if isinstance(data, str):
                 # Preserve the "code" attribute
-                code = getattr(data, 'code', ValidationError.default_code)
-                details.append(ErrorDetail(f'[{parent}] {data}', code))
+                code = getattr(data, "code", ValidationError.default_code)
+                details.append(ErrorDetail(f"[{parent}] {data}", code))
             else:
                 details.append(data)
         return ValidationError(detail=details)
     elif isinstance(exc.detail, dict):
         return ValidationError(detail={parent: exc.detail})
-    raise RuntimeError('The type of detail is invalid')
+    raise RuntimeError("The type of detail is invalid")
 
 
 def find_innermost_exception(exception: BaseException) -> BaseException:

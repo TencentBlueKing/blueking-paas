@@ -20,7 +20,7 @@ from django.apps import AppConfig
 
 
 class BKMonitorAppConfig(AppConfig):
-    name = 'paasng.infras.bkmonitorv3'
+    name = "paasng.infras.bkmonitorv3"
 
     def ready(self):
         super().ready()

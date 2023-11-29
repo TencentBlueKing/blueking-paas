@@ -42,7 +42,7 @@ remote_service_mgr = RemoteServiceMgr(get_remote_store())
 
 class LegacyBaseServiceMigration(BaseMigration):
     # TODO: remove this class
-    service_name: str = ''
+    service_name: str = ""
 
     def get_service(self, service_name: str):
         return mixed_service_mgr.find_by_name(service_name, self.context.app.region)
@@ -53,11 +53,11 @@ class LegacyBaseServiceMigration(BaseMigration):
         # Only local service can be migrated because remote services does not support remote
         # instance data written at this moment.
         if not isinstance(service_obj, LocalServiceObj):
-            if service_name in ['rabbitmq']:
+            if service_name in ["rabbitmq"]:
                 # 远程增强服务是重新申请新实例, 无法进行数据同步
                 logger.warning(f"support {service_name} to migrate")
             else:
-                raise RuntimeError(f'service {service_name} is not local service, will abort')
+                raise RuntimeError(f"service {service_name} is not local service, will abort")
 
         module = self.context.app.get_default_module()
         mixed_service_mgr.bind_service(service_obj, module)
@@ -84,7 +84,7 @@ class LegacyBaseServiceMigration(BaseMigration):
         if not service_attachment.service_instance:
             service_instance = ServiceInstance.objects.create(**kwargs)
             service_attachment.service_instance = service_instance
-            service_attachment.save(update_fields=['service_instance'])
+            service_attachment.save(update_fields=["service_instance"])
 
     def get_stag_service_data(self):
         raise NotImplementedError
@@ -93,9 +93,9 @@ class LegacyBaseServiceMigration(BaseMigration):
         raise NotImplementedError
 
     def get_service_data(self, environment):
-        if environment == 'stag':
+        if environment == "stag":
             return self.get_stag_service_data()
-        elif environment == 'prod':
+        elif environment == "prod":
             return self.get_prod_service_data()
         else:
             raise ValueError(environment)
@@ -110,7 +110,7 @@ class LegacyBaseServiceMigration(BaseMigration):
 
             kwargs = dict(environment=environment, credentials=credentials)
             if config is not None:
-                kwargs['config'] = config
+                kwargs["config"] = config
             instance_info.append(kwargs)
 
         # bind only when necessary
@@ -130,7 +130,7 @@ class LegacyBaseServiceMigration(BaseMigration):
             service_instance = service_attachment.service_instance
             if service_instance is not None:
                 service_attachment.service_instance = None
-                service_attachment.save(update_fields=['service_instance'])
+                service_attachment.save(update_fields=["service_instance"])
                 ServiceInstance.objects.filter(pk=service_instance.pk).delete()
 
             try:
@@ -144,8 +144,7 @@ class LegacyBaseServiceMigration(BaseMigration):
 
 
 class BaseServiceMigration(BaseMigration):
-
-    service_name: ClassVar[str] = ''
+    service_name: ClassVar[str] = ""
     service_mgr: Union[LocalServiceMgr, RemoteServiceMgr]
     engine_app_attachment_cls: Type[Union[ServiceEngineAppAttachment, RemoteServiceEngineAppAttachment]]
 

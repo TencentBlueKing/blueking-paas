@@ -35,8 +35,8 @@ pytestmark = [pytest.mark.xdist_group(name="remote-services")]
 class TestRemoteStore:
     @pytest.fixture(autouse=True)
     def setup_data(self, config, raw_store):
-        meta_info = {'version': None}
-        with mock.patch('requests.get') as mocked_get:
+        meta_info = {"version": None}
+        with mock.patch("requests.get") as mocked_get:
             # Mock requests response
             mocked_get.return_value = mock_json_response(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON)
             fetcher = collector.RemoteSvcFetcher(config)
@@ -46,19 +46,19 @@ class TestRemoteStore:
 
     def test_get_non_exists(self, store):
         with pytest.raises(ServiceNotFound):
-            store.get('invalid-uuid', region='r1')
+            store.get("invalid-uuid", region="r1")
 
     def test_get_normal(self, store):
-        uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]['uuid']
-        obj = store.get(uuid, region='r1')
+        uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]
+        obj = store.get(uuid, region="r1")
         assert obj is not None
 
     def test_list_all(self, store):
-        assert len(store.filter('r1')) == 2
-        assert len(store.filter('r2')) == 1
+        assert len(store.filter("r1")) == 2
+        assert len(store.filter("r2")) == 1
 
     def test_list_by_category(self, store):
-        assert len(store.filter('r1', conditions={"category": Category.DATA_STORAGE})) == 1
+        assert len(store.filter("r1", conditions={"category": Category.DATA_STORAGE})) == 1
 
     def test_get_source_config(self, config, store):
         uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]
@@ -113,10 +113,10 @@ class TestRemoteStore:
 
     def test_bulk_update_conflict(self, store, config):
         config_json = config.to_json()
-        meta_info = {'version': None}
+        meta_info = {"version": None}
         # 增强服务的普通配置信息可以更新
-        config_json['is_ready'] = False
-        config_json['endpoint_url'] = 'http://faked-host-new'
+        config_json["is_ready"] = False
+        config_json["endpoint_url"] = "http://faked-host-new"
         store.bulk_upsert(deepcopy(store.all()), meta_info, collector.RemoteSvcConfig.from_json(config_json))
 
         # 增强服务的名称不能更新

@@ -32,7 +32,7 @@ class EnvVarsReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self, module: 'Module') -> List[ConfigVar]:
+    def read_all(self, module: "Module") -> List[ConfigVar]:
         """Read all the env vars and keep the original formatting
 
         :param module: App module object

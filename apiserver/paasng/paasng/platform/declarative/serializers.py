@@ -24,6 +24,9 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.accessories.publish.market.serializers import ProductTagByNameField
+from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
 from paasng.platform.declarative import constants
 from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
@@ -33,9 +36,6 @@ from paasng.platform.declarative.application.resources import (
 )
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
-from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField
 from paasng.utils.validators import ReservedWordValidator
@@ -82,9 +82,9 @@ class UniConfigSLZ(serializers.Serializer):
     app_version = serializers.CharField(required=False)
     spec_version = serializers.IntegerField(required=False)
     # NOTE: 这个 app 实际上是 AppDescriptionSLZ
-    app = serializers.JSONField(required=False, default={}, help_text='App-related config fields')
-    modules = serializers.JSONField(required=False, default={}, help_text='Modules-related config fields')
-    module = serializers.JSONField(required=False, default={}, help_text='Deploy-related config fields')
+    app = serializers.JSONField(required=False, default={}, help_text="App-related config fields")
+    modules = serializers.JSONField(required=False, default={}, help_text="Modules-related config fields")
+    module = serializers.JSONField(required=False, default={}, help_text="Deploy-related config fields")
 
 
 # Serializers for S-Mart App
@@ -93,10 +93,10 @@ class UniConfigSLZ(serializers.Serializer):
 class DesktopOptionsSLZ(serializers.Serializer):
     """Serializer for validating application's market display options"""
 
-    width = serializers.IntegerField(help_text='窗口宽度', required=False, default=1280)
-    height = serializers.IntegerField(help_text='窗口高度', required=False, default=600)
-    is_max = serializers.BooleanField(default=False, source='is_win_maximize', help_text='是否最大化')
-    is_display = serializers.BooleanField(default=True, source='visible', help_text='是否在桌面展示')
+    width = serializers.IntegerField(help_text="窗口宽度", required=False, default=1280)
+    height = serializers.IntegerField(help_text="窗口高度", required=False, default=600)
+    is_max = serializers.BooleanField(default=False, source="is_win_maximize", help_text="是否最大化")
+    is_display = serializers.BooleanField(default=True, source="visible", help_text="是否在桌面展示")
 
     @classmethod
     def gen_default_value(cls) -> DisplayOptions:
@@ -136,10 +136,10 @@ class LegacyEnvVariableSLZ(serializers.Serializer):
     """Legacy env variable serializer, only allow keys which starts with 'BK_APP_'"""
 
     key = serializers.RegexField(
-        r'^BKAPP_[A-Z0-9_]+$',
+        r"^BKAPP_[A-Z0-9_]+$",
         max_length=50,
         required=True,
-        error_messages={'invalid': _('格式错误，只能以 "BKAPP_" 开头，由大写字母、数字与下划线组成，长度不超过 50。')},
+        error_messages={"invalid": _('格式错误，只能以 "BKAPP_" 开头，由大写字母、数字与下划线组成，长度不超过 50。')},
     )
     value = serializers.CharField(required=True, max_length=1000)
 
@@ -152,25 +152,25 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
         # DNS safe(prefix)
         regex="^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-_]{,63}(?<!-)$",
         validators=[ReservedWordValidator("应用 ID"), AppIDUniqueValidator()],
-        error_messages={'invalid': _('格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)')},
+        error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)")},
     )
     app_name = I18NExtend(AppNameField())
-    version = serializers.RegexField(r'^([0-9]+)\.([0-9]+)\.([0-9]+)$', required=True, help_text='版本')
+    version = serializers.RegexField(r"^([0-9]+)\.([0-9]+)\.([0-9]+)$", required=True, help_text="版本")
     # Celery 相关
-    is_use_celery = serializers.BooleanField(required=True, help_text='是否启用 celery')
+    is_use_celery = serializers.BooleanField(required=True, help_text="是否启用 celery")
     is_use_celery_with_gevent = serializers.BooleanField(
         required=False, help_text="是否启用 celery (gevent)模式", default=False
     )
     is_use_celery_beat = serializers.BooleanField(required=False, help_text="是否启用 celery beat", default=False)
-    author = serializers.CharField(required=True, help_text='应用作者')
-    introduction = I18NExtend(serializers.CharField(required=True, help_text='简介'))
+    author = serializers.CharField(required=True, help_text="应用作者")
+    introduction = I18NExtend(serializers.CharField(required=True, help_text="简介"))
 
     # Not required fields
     category = ProductTagByNameField(required=False, source="tag")
     language = serializers.CharField(
-        required=False, help_text='开发语言', default=AppLanguage.PYTHON.value, validators=[validate_language]
+        required=False, help_text="开发语言", default=AppLanguage.PYTHON.value, validators=[validate_language]
     )
-    desktop = DesktopOptionsSLZ(required=False, default=DesktopOptionsSLZ.gen_default_value, help_text='桌面展示选项')
+    desktop = DesktopOptionsSLZ(required=False, default=DesktopOptionsSLZ.gen_default_value, help_text="桌面展示选项")
     env = serializers.ListField(child=LegacyEnvVariableSLZ(), required=False, default=list)
     container = ContainerSpecSLZ(required=False, allow_null=True, source="package_plan")
     libraries = serializers.ListField(child=LibrarySLZ(), required=False, default=list)
@@ -179,13 +179,13 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
     def to_internal_value(self, data) -> Tuple[ApplicationDesc, DeploymentDesc]:
         attrs = super().to_internal_value(data)
         market_desc = MarketDesc(
-            introduction_en=attrs['introduction_en'],
-            introduction_zh_cn=attrs['introduction_zh_cn'],
-            display_options=attrs.get('desktop'),
+            introduction_en=attrs["introduction_en"],
+            introduction_zh_cn=attrs["introduction_zh_cn"],
+            display_options=attrs.get("desktop"),
             logo=attrs.get("logo", constants.OMITTED_VALUE),
         )
-        if attrs.get('tag'):
-            market_desc.tag_id = attrs['tag'].id
+        if attrs.get("tag"):
+            market_desc.tag_id = attrs["tag"].id
 
         package_plan = attrs.get("package_plan")
         services = [ServiceSpec(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
@@ -209,9 +209,9 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
 
         application_desc = ApplicationDesc(
             spec_version=constants.AppSpecVersion.VER_1,
-            code=attrs['app_code'],
+            code=attrs["app_code"],
             name_en=attrs["app_name_en"],
-            name_zh_cn=attrs['app_name_zh_cn'],
+            name_zh_cn=attrs["app_name_zh_cn"],
             market=market_desc,
             modules={
                 "default": {
@@ -223,7 +223,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
             instance_existed=bool(self.instance),
         )
         deployment_desc = cattr.structure(
-            {"env_variables": attrs.get('env', []), "processes": processes, "language": attrs.get("language")},
+            {"env_variables": attrs.get("env", []), "processes": processes, "language": attrs.get("language")},
             DeploymentDesc,
         )
         # TODO: is_use_celery / author / version / language /

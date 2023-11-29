@@ -27,7 +27,7 @@ class RegionClusterStateSLZ(serializers.ModelSerializer):
     class Meta:
         model = RegionClusterState
         # fields = '__all__'
-        exclude = ['nodes_digest', 'nodes_data']
+        exclude = ["nodes_digest", "nodes_data"]
 
     def to_representation(self, obj):
         result = super().to_representation(obj)
@@ -42,4 +42,4 @@ class RCStateAppBindingSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = RCStateAppBinding
-        exclude = ['app']
+        exclude = ["app"]

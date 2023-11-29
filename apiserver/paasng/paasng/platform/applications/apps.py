@@ -20,7 +20,7 @@ from django.apps import AppConfig
 
 
 class ApplicationConfig(AppConfig):
-    name = 'paasng.platform.applications'
+    name = "paasng.platform.applications"
 
     def ready(self):
         # init sentry sdk when settings loaded.

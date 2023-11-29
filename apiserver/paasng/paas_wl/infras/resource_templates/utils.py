@@ -23,13 +23,13 @@ import cattr
 from django.conf import settings
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.utils.basic import convert_key_to_camel
 from paas_wl.bk_app.processes.constants import ProbeType
 from paas_wl.bk_app.processes.models import ProcessProbe
 from paas_wl.infras.resource_templates.components.probe import Probe, get_default_readiness_probe
 from paas_wl.infras.resource_templates.components.volume import Volume, VolumeMount
 from paas_wl.infras.resource_templates.constants import AppAddOnType
 from paas_wl.infras.resource_templates.models import AppAddOn
+from paas_wl.utils.basic import convert_key_to_camel
 
 
 class ProcessProbeManager:
@@ -49,11 +49,11 @@ class ProcessProbeManager:
         # 占位符 ${PORT} 替换为环境变量 PORT
         probe_handler = _render_by_env(probe_handler)
         parameters_json = {
-            'initialDelaySeconds': process_probe.initial_delay_seconds,
-            'timeoutSeconds': process_probe.timeout_seconds,
-            'periodSeconds': process_probe.period_seconds,
-            'successThreshold': process_probe.success_threshold,
-            'failureThreshold': process_probe.failure_threshold,
+            "initialDelaySeconds": process_probe.initial_delay_seconds,
+            "timeoutSeconds": process_probe.timeout_seconds,
+            "periodSeconds": process_probe.period_seconds,
+            "successThreshold": process_probe.success_threshold,
+            "failureThreshold": process_probe.failure_threshold,
         }
         combined_json = {**probe_handler, **parameters_json}
 

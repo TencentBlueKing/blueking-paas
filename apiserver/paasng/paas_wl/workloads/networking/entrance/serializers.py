@@ -38,14 +38,14 @@ class DomainEditableMixin(serializers.Serializer):
     - "valid_domain_suffixes": if given, validate domain_name with given suffixes
     """
 
-    path_prefix = serializers.RegexField(r'^/[^/]*/?$', default='/', help_text='支持一级子目录，格式: "/path/"')
+    path_prefix = serializers.RegexField(r"^/[^/]*/?$", default="/", help_text='支持一级子目录，格式: "/path/"')
     domain_name = serializers.RegexField(
-        re.compile(r'^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?$'),
+        re.compile(r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?$"),
         max_length=253,
         required=True,
-        error_messages={'invalid': u'域名格式错误'},
+        error_messages={"invalid": "域名格式错误"},
         source="name",
-        help_text='域名',
+        help_text="域名",
     )
     https_enabled = serializers.BooleanField(required=False, default=False, help_text="是否开启HTTPS")
 
@@ -53,32 +53,34 @@ class DomainEditableMixin(serializers.Serializer):
         validators = [
             UniqueTogetherValidator(
                 queryset=Domain.objects.all(),
-                fields=('domain_name', 'path_prefix'),
-                message='该域名与路径组合已被其他应用或模块使用',
+                fields=("domain_name", "path_prefix"),
+                message="该域名与路径组合已被其他应用或模块使用",
             ),
         ]
 
     def validate_path_prefix(self, value) -> str:
         """Process path_prefix, transform to standard format '/subpath/'"""
         if not value:
-            return '/'
-        return value.rstrip('/') + '/'
+            return "/"
+        return value.rstrip("/") + "/"
 
     def validate_domain_name(self, value: str):
         """Validate domain name field"""
-        if self.context.get('valid_domain_suffixes'):
-            if not any(value.endswith(suffix) for suffix in self.context['valid_domain_suffixes']):
-                raise ValidationError('当前域名后缀非法，合法后缀：{}'.format(' / '.join(self.context['valid_domain_suffixes'])))
+        if self.context.get("valid_domain_suffixes"):
+            if not any(value.endswith(suffix) for suffix in self.context["valid_domain_suffixes"]):
+                raise ValidationError(
+                    "当前域名后缀非法，合法后缀：{}".format(" / ".join(self.context["valid_domain_suffixes"]))
+                )
         return value
 
 
 class DomainSLZ(DomainEditableMixin):
     """For creation and representation"""
 
-    id = serializers.IntegerField(read_only=True, help_text='记录 ID，仅供展示')
-    module_name = serializers.CharField(source='module.name', help_text='模块名')
+    id = serializers.IntegerField(read_only=True, help_text="记录 ID，仅供展示")
+    module_name = serializers.CharField(source="module.name", help_text="模块名")
     environment_name = serializers.ChoiceField(
-        source='environment.environment', choices=('stag', 'prod'), required=True, help_text='环境'
+        source="environment.environment", choices=("stag", "prod"), required=True, help_text="环境"
     )
 
 
@@ -110,7 +112,7 @@ def validate_domain_payload(
         data=data,
         instance=instance,
         context={
-            'valid_domain_suffixes': get_custom_domain_config(application.region).valid_domain_suffixes,
+            "valid_domain_suffixes": get_custom_domain_config(application.region).valid_domain_suffixes,
         },
     )
     serializer.is_valid(raise_exception=True)
@@ -144,9 +146,11 @@ class ModuleEntrancesSLZ(serializers.Serializer):
 
 
 class CustomDomainsConfigSLZ(serializers.Serializer):
-    module = serializers.CharField(help_text='所属模块')
-    environment = serializers.CharField(help_text='部署环境')
-    frontend_ingress_ip = serializers.CharField(help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能')
+    module = serializers.CharField(help_text="所属模块")
+    environment = serializers.CharField(help_text="部署环境")
+    frontend_ingress_ip = serializers.CharField(
+        help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能'
+    )
 
 
 class SwitchMarketEntranceSLZ(serializers.Serializer):

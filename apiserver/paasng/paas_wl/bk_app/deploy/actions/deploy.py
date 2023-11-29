@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 class DeployAction:
-    def __init__(self, env: ModuleEnvironment, release: 'Release', extra_envs: Dict):
+    def __init__(self, env: ModuleEnvironment, release: "Release", extra_envs: Dict):
         self.env = env
         self.wl_app = env.wl_app
         self.release = release
@@ -114,11 +114,11 @@ class ZombieProcessesKiller:
     :return: processes which should be undead
     """
 
-    def __init__(self, release: 'Release', last_release: 'Release'):
+    def __init__(self, release: "Release", last_release: "Release"):
         self.release = release
         self.last_release = last_release
 
-    def search(self) -> Tuple[List['Process'], List['Process']]:
+    def search(self) -> Tuple[List["Process"], List["Process"]]:
         """
         :return: tuple, (List[Process] with inconsistent process types, List[Process] with inconsistent command name)
         """
@@ -152,7 +152,7 @@ class ZombieProcessesKiller:
 
         return zombie_type_processes, zombie_name_processes
 
-    def kill(self, scheduler_client: 'K8sScheduler'):
+    def kill(self, scheduler_client: "K8sScheduler"):
         type_zombies, name_zombies = self.search()
         try:
             logger.info(f"going to clean process {type_zombies} for changing of process_type")

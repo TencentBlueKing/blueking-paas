@@ -26,17 +26,17 @@ from ..constants import JobStatus
 
 
 class OneOffCommand(TimestampedModel):
-    id = models.UUIDField('UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     deployment = models.ForeignKey(
-        'engine.Deployment', on_delete=models.CASCADE, related_name='oneoffcommands', null=True
+        "engine.Deployment", on_delete=models.CASCADE, related_name="oneoffcommands", null=True
     )
-    engine_cmd_id = models.UUIDField('engine command id', max_length=32, null=True)
+    engine_cmd_id = models.UUIDField("engine command id", max_length=32, null=True)
     is_pre_run = models.BooleanField(default=True)
-    exit_code = models.SmallIntegerField('ExitCode', null=True)
+    exit_code = models.SmallIntegerField("ExitCode", null=True)
     status = models.CharField(choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
     command = models.TextField()
     operator = BkUserField()
 
     class Meta:
-        get_latest_by = 'created'
-        ordering = ['-created']
+        get_latest_by = "created"
+        ordering = ["-created"]

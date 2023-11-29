@@ -73,7 +73,7 @@ class TestGitClient:
     @pytest.mark.parametrize(
         "expected",
         [
-            ['git', 'clone', 'http://username:password@hostname', '.'],
+            ["git", "clone", "http://username:password@hostname", "."],
         ],
     )
     def test_clone(self, client, expected):
@@ -125,8 +125,8 @@ class TestGitClient:
             (
                 "0123456789   HEAD\n0123456789 refs/heads/master",
                 [
-                    ('0123456789', 'HEAD'),
-                    ('0123456789', 'refs/heads/master'),
+                    ("0123456789", "HEAD"),
+                    ("0123456789", "refs/heads/master"),
                 ],
             ),
         ],
@@ -134,7 +134,7 @@ class TestGitClient:
     def test_list_remote(self, client, cmd_result, expected):
         with patch.object(client, "run") as mock_run:
             mock_run.return_value = cmd_result
-            assert client.list_remote('http://example.com/foo.git') == expected
+            assert client.list_remote("http://example.com/foo.git") == expected
 
     @pytest.mark.parametrize(
         "commits,expected",

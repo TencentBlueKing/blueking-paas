@@ -26,25 +26,25 @@ class KServiceMonitor(BaseKresource):
 class BkApp(BaseKresource):
     """CRD: App model resource feature"""
 
-    kind = 'BkApp'
+    kind = "BkApp"
 
 
 class DomainGroupMapping(BaseKresource):
     """CRD: Mapping between BkApp and DomainGroups"""
 
-    kind = 'DomainGroupMapping'
+    kind = "DomainGroupMapping"
 
 
 class GPA(BaseKresource):
     """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
 
-    kind = 'GeneralPodAutoscaler'
+    kind = "GeneralPodAutoscaler"
 
 
 class Egress(BaseKresource):
     """CRD: Egress, support fixed egress ip, provided by bcs"""
 
-    kind = 'Egress'
+    kind = "Egress"
 
 
 class BKLogConfig(BaseKresource):

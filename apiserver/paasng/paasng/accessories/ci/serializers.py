@@ -59,12 +59,12 @@ class CIAtomJobSerializer(serializers.Serializer):
         version_name = version_info.version_name
 
         return {
-            'source_type': obj.deployment.source_type,
-            'type': version_type,
-            'name': version_name,
-            'url': obj.deployment.source_location,
-            'revision': revision,
-            'comment': obj.deployment.source_comment,
+            "source_type": obj.deployment.source_type,
+            "type": version_type,
+            "name": version_name,
+            "url": obj.deployment.source_location,
+            "revision": revision,
+            "comment": obj.deployment.source_comment,
         }
 
 

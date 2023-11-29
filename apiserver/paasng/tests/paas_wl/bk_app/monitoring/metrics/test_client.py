@@ -99,13 +99,13 @@ class TestPromResult(TestCase):
         pr = PromResult.from_resp(raw_resp=self.fake_range_result)
         r1 = pr.get_raw_by_container_name("ieod-bkapp-career-stag")
 
-        assert r1 and len(r1['values']) == 4
+        assert r1 and len(r1["values"]) == 4
 
         r2 = pr.get_raw_by_container_name("cl5")
-        assert r2 and len(r2['values']) == 3
+        assert r2 and len(r2["values"]) == 3
 
-        assert r1['metric'] == {"container_name": "ieod-bkapp-career-stag"}
-        assert r1['values'] == [
+        assert r1["metric"] == {"container_name": "ieod-bkapp-career-stag"}
+        assert r1["values"] == [
             [1590000844, "0.0003452615666667214"],
             [1590001444, "0.00040326460000083365"],
             [1590002044, "0.0003675630666667947"],
@@ -116,7 +116,7 @@ class TestPromResult(TestCase):
         assert r3 is None
 
         r4 = pr.get_raw_by_container_name()
-        assert r4 and len(r4['values']) == 3
+        assert r4 and len(r4["values"]) == 3
 
     def test_response_change(self):
         """测试返回值变动（只测试增）"""
@@ -149,7 +149,7 @@ class TestPromResult(TestCase):
         }
         pr = PromResult.from_resp(raw_resp=fake_range_result)
         r1 = pr.get_raw_by_container_name("ieod-bkapp-career-stag")
-        assert r1 and len(r1['values']) == 4
+        assert r1 and len(r1["values"]) == 4
 
 
 class TestBkPrometheusResult(TestCase):
@@ -198,19 +198,19 @@ class TestBkPrometheusResult(TestCase):
     def test_get_by_container_name(self):
         """测试对象转换为 dict"""
         pr = BkPromResult.from_series(self.fake_range_series)
-        r1 = pr.get_raw_by_container_name('celery-proc')
+        r1 = pr.get_raw_by_container_name("celery-proc")
 
-        assert r1 and len(r1['values']) == 4
+        assert r1 and len(r1["values"]) == 4
 
-        r2 = pr.get_raw_by_container_name('web-proc')
-        assert r2 and len(r2['values']) == 3
+        r2 = pr.get_raw_by_container_name("web-proc")
+        assert r2 and len(r2["values"]) == 3
 
-        assert r1['metric'] == {'container_name': 'celery-proc'}
-        assert r1['values'] == [
-            [1673257280, '1073741824'],
-            [1673257290, '1073741824'],
-            [1673257300, '1073741824'],
-            [1673257310, '1073741824'],
+        assert r1["metric"] == {"container_name": "celery-proc"}
+        assert r1["values"] == [
+            [1673257280, "1073741824"],
+            [1673257290, "1073741824"],
+            [1673257300, "1073741824"],
+            [1673257310, "1073741824"],
         ]
 
         r3 = pr.get_raw_by_container_name("xxx")
@@ -218,7 +218,7 @@ class TestBkPrometheusResult(TestCase):
 
         # 不指定容器名称时，默认返回第一个
         r4 = pr.get_raw_by_container_name()
-        assert r4 and len(r4['values']) == 3
+        assert r4 and len(r4["values"]) == 3
 
     def test_no_container_name(self):
         fake_series = [
@@ -236,7 +236,7 @@ class TestBkPrometheusResult(TestCase):
         ]
         pr = BkPromResult.from_series(fake_series)
         r1 = pr.get_raw_by_container_name("web-proc")
-        assert r1 and r1['values'] == [
-            [1673257280, '1073741824'],
-            [1673257290, '1073741824'],
+        assert r1 and r1["values"] == [
+            [1673257280, "1073741824"],
+            [1673257290, "1073741824"],
         ]

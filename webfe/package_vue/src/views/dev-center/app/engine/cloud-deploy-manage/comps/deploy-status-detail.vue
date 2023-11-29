@@ -689,7 +689,7 @@ export default {
               },
             },
           ];
-          const value = this.isSmartApp ? smartRoute : (this.curAppModule.source_origin === 1 ? this.$t('代码库') : this.$t('蓝鲸可视化开发平台提供源码包'));
+          const value = this.isSmartApp ? smartRoute : (this.curAppModule.source_origin === 1 ? this.$t('代码库') : this.$t('蓝鲸运维开发平台提供源码包'));
           // 普通应用不展示
           if (this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
             sourceInfo.push({

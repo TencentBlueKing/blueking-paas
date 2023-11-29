@@ -25,7 +25,7 @@ def random_resource_name():
     """A random name used as kubernetes resource name to avoid conflict
     can also be used for application name
     """
-    return 'bkapp-' + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
+    return "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
 
 
 def make_container_status(state: dict, last_state: dict):

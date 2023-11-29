@@ -75,7 +75,7 @@ class ImageField(models.ImageField):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        kwargs.pop('storage', None)
+        kwargs.pop("storage", None)
         return name, path, args, kwargs
 
 
@@ -101,7 +101,7 @@ class ProcessedImageFieldFile(ImageFieldFile):
         filename, ext = os.path.splitext(name)
         spec = self.field.get_spec(source=content)
         ext = suggest_extension(name, spec.format)
-        new_name = '%s%s' % (filename, ext)
+        new_name = "%s%s" % (filename, ext)
         content = generate(spec, filename=filename)
         return super().save(new_name, content, save)
 
@@ -117,7 +117,7 @@ class ProcessedImageField(OrigProcessedImageField):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        kwargs.pop('storage', None)
+        kwargs.pop("storage", None)
         return name, path, args, kwargs
 
 
@@ -148,14 +148,14 @@ class BkUserFieldAttribute(DeferredAttribute):
 class BkUserField(models.CharField):
     """Field for storing blueking user pk"""
 
-    description = 'DB field for storing blueking user'
+    description = "DB field for storing blueking user"
     descriptor_class = BkUserFieldAttribute
 
     def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 64
-        kwargs['blank'] = True
-        kwargs['null'] = True
-        kwargs.setdefault('db_index', True)
+        kwargs["max_length"] = 64
+        kwargs["blank"] = True
+        kwargs["null"] = True
+        kwargs.setdefault("db_index", True)
         super(BkUserField, self).__init__(*args, **kwargs)
 
     def from_db_value(self, value, expression, connection):
@@ -179,17 +179,17 @@ class RegionListField(models.CharField):
     save as 'ieod;tencent;clouds'
     """
 
-    description = 'DB field for storing region list'
+    description = "DB field for storing region list"
 
     def __init__(self, *args, **kwargs):
-        kwargs['default'] = self._default_value
-        kwargs['max_length'] = 128
-        kwargs['blank'] = True
-        kwargs['null'] = True
-        kwargs['validators'] = [
+        kwargs["default"] = self._default_value
+        kwargs["max_length"] = 128
+        kwargs["blank"] = True
+        kwargs["null"] = True
+        kwargs["validators"] = [
             RegionListValidator(),
         ]
-        kwargs.setdefault('db_index', False)
+        kwargs.setdefault("db_index", False)
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -203,13 +203,13 @@ class RegionListField(models.CharField):
         if value is None:
             return value
 
-        return RegionList(filter_region_by_name(value.split(';')))
+        return RegionList(filter_region_by_name(value.split(";")))
 
 
 class TimestampedModel(models.Model):
     """Model with 'created' and 'updated' fields."""
 
-    region = models.CharField(max_length=32, help_text=u"部署区域")
+    region = models.CharField(max_length=32, help_text="部署区域")
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
@@ -234,7 +234,7 @@ class WithOwnerManager(models.Manager):
 
     @staticmethod
     def get_user_id(user):
-        if hasattr(user, 'pk'):
+        if hasattr(user, "pk"):
             return user.pk
         return user
 
@@ -256,7 +256,7 @@ class UuidAuditedModel(AuditedModel):
     """Add a UUID primary key to an :class:`AuditedModel`."""
 
     uuid = models.UUIDField(
-        'UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True
+        "UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True
     )
 
     class Meta:
@@ -271,16 +271,16 @@ class OrderByField:
     is_descending: bool = False
 
     @classmethod
-    def from_string(cls, s: str) -> 'OrderByField':
+    def from_string(cls, s: str) -> "OrderByField":
         """Create an instance from string"""
-        if s.startswith('-'):
+        if s.startswith("-"):
             return cls(name=s[1:], is_descending=True)
         return cls(name=s)
 
     def __str__(self) -> str:
         """Return as string"""
-        prefix = '-' if self.is_descending else ''
-        return f'{prefix}{self.name}'
+        prefix = "-" if self.is_descending else ""
+        return f"{prefix}{self.name}"
 
 
 F = TypeVar("F", bound=models.Field)
@@ -410,7 +410,7 @@ def __get_module_from_frame() -> Optional[str]:
     """从函数调用堆栈中获取调用 make_json_field 的模块名"""
     try:
         # NOTE: 由于该函数在当前模块中被调用(堆栈数+1), 因此需要往上回溯 3 层堆栈.
-        module = sys._getframe(3).f_globals.get('__name__', '__main__')
+        module = sys._getframe(3).f_globals.get("__name__", "__main__")
     except (AttributeError, ValueError):
         module = None
 

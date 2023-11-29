@@ -22,16 +22,16 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from paasng.platform.sourcectl.package.cleaner import delete_from_blob_store
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.sourcectl.package.cleaner import delete_from_blob_store
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = '清理源码包'
+    help = "清理源码包"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -50,7 +50,7 @@ class Command(BaseCommand):
             default=5,
             help="How many package will be reserved in each module, default is 5.",
         )
-        parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true")
+        parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
 
     def handle(self, source_origin, max_num, dry_run, *args, **options):
         source_origin = SourceOrigin(source_origin)

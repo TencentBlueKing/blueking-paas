@@ -19,18 +19,18 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List, Optional, Tuple
 
-from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.core.env import env_is_running
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance.addrs import URL, Address
 from paas_wl.workloads.networking.entrance.allocator.domains import ModuleEnvDomains
 from paas_wl.workloads.networking.entrance.allocator.subpaths import ModuleEnvSubpaths
 from paas_wl.workloads.networking.entrance.constants import AddressType
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppSubpath, Domain
-from paas_wl.bk_app.applications.models import WlApp
+from paasng.core.region.models import get_region
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.core.region.models import get_region
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class BaseEnvAddresses:
                 return True
         return False
 
-    def _make_url(self, https_enabled: bool, host: str, path: str = '/') -> str:
+    def _make_url(self, https_enabled: bool, host: str, path: str = "/") -> str:
         """Make URL address"""
         protocol = "https" if https_enabled else "http"
         port = self.ingress_cfg.port_map.get_port_num(protocol)
@@ -134,7 +134,7 @@ class LiveEnvAddresses(BaseEnvAddresses):
 
     def list_subpath(self) -> List[Address]:
         """list all `activated` subpath for deployed environment"""
-        path_objs = AppSubpath.objects.filter(app=self.wl_app).order_by('created')
+        path_objs = AppSubpath.objects.filter(app=self.wl_app).order_by("created")
         addrs = []
         for domain in self.ingress_cfg.sub_path_domains:
             for obj in path_objs:
@@ -189,7 +189,7 @@ def get_builtin_addr_preferred(env: ModuleEnvironment) -> Tuple[bool, Optional[A
             # Find the first address ends with preferred root domain
             preferred_addr = next((a for a in addresses if a.hostname_endswith(preferred_root)), None)
             if not preferred_addr:
-                logger.warning('No addresses found matching preferred root domain: %s', preferred_root)
+                logger.warning("No addresses found matching preferred root domain: %s", preferred_root)
             else:
                 addr = preferred_addr
     return is_living, addr

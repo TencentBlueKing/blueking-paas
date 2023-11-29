@@ -20,8 +20,8 @@ import pickle
 from typing import List, Optional, Set, Tuple, TypeVar
 
 from paas_wl.bk_app.processes.processes import PlainProcess
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.applications.models import ModuleEnvironment
 
 T = TypeVar("T")
 
@@ -40,7 +40,7 @@ class ProcessesSnapshotStore:
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.redis_db = get_default_redis()
-        self.rkey = f'procs::snapshot::app:{env.engine_app.name}'
+        self.rkey = f"procs::snapshot::app:{env.engine_app.name}"
 
     def save(self, processes: List[PlainProcess]):
         """Save processes"""

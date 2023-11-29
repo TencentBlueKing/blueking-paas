@@ -23,13 +23,14 @@ from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
 from paasng.platform.bkapp_model.importer.env_overlays import import_env_overlays
 from paasng.platform.bkapp_model.models import ProcessSpecEnvOverlay
+from paasng.platform.engine.models.deployment import AutoscalingConfig
 
 pytestmark = pytest.mark.django_db
 
 
 class Test__import_env_overlays:
     @pytest.fixture(autouse=True)
-    def setup(self, bk_module, proc_web, proc_celery):
+    def _setup(self, bk_module, proc_web, proc_celery):
         G(
             ProcessSpecEnvOverlay,
             proc_spec=proc_web,
@@ -54,8 +55,8 @@ class Test__import_env_overlays:
         ret = import_env_overlays(
             bk_module,
             [
-                ReplicasOverlay(envName='prod', process='web', count='2'),
-                ReplicasOverlay(envName='prod', process='worker', count='2'),
+                ReplicasOverlay(envName="prod", process="web", count="2"),
+                ReplicasOverlay(envName="prod", process="worker", count="2"),
             ],
             [],
             [],
@@ -112,24 +113,21 @@ class Test__import_env_overlays:
         assert ret.deleted_num == 1
 
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod").autoscaling
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod").scaling_config == {
-            "min_replicas": 1,
-            "max_replicas": 2,
-            "policy": "default",
-        }
+        assert ProcessSpecEnvOverlay.objects.get(
+            proc_spec=proc_web, environment_name="prod"
+        ).scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=2, policy="default")
+
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_celery, environment_name="prod").autoscaling
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_celery, environment_name="prod").scaling_config == {
-            "min_replicas": 2,
-            "max_replicas": 5,
-            "policy": "default",
-        }
+        assert ProcessSpecEnvOverlay.objects.get(
+            proc_spec=proc_celery, environment_name="prod"
+        ).scaling_config == AutoscalingConfig(min_replicas=2, max_replicas=5, policy="default")
 
     def test_integrated(self, bk_module, proc_web, proc_celery):
         assert ProcessSpecEnvOverlay.objects.count() == 2
 
         ret = import_env_overlays(
             bk_module,
-            [ReplicasOverlay(envName='prod', process='web', count='5')],
+            [ReplicasOverlay(envName="prod", process="web", count="5")],
             [ResQuotaOverlay(envName="prod", process="web", plan=ResQuotaPlan.P_4C4G)],
             [AutoscalingOverlay(envName="prod", process="worker", minReplicas=1, maxReplicas=2, policy="default")],
         )

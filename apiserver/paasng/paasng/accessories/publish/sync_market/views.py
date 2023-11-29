@@ -21,11 +21,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.models import Application
-from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.accessories.publish.sync_market.managers import AppUseRecordManger
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.models import Application
 
 from .handlers import on_product_deploy_success
 from .serializers import PVGroupByAppSLZ
@@ -54,10 +54,9 @@ class StatisticsPVAPIView(APIView):
 
 
 class TestONProductDeployAPIView(APIView):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_APP_MARKET)]
 
     def get(self, request, code):
         application = Application.objects.get(code=code)
-        on_product_deploy_success(application.get_product(), 'prod')
-        return Response({"msg": 'ok!', 'data': application.code})
+        on_product_deploy_success(application.get_product(), "prod")
+        return Response({"msg": "ok!", "data": application.code})

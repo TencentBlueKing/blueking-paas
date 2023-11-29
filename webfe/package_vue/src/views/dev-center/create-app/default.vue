@@ -131,7 +131,7 @@
                   v-if="!notBkLesscode"
                   class="bk-less-code"
                 >
-                  {{ $t('蓝鲸可视化开发平台') }}
+                  {{ $t('蓝鲸运维开发平台') }}
                 </li>
                 <!-- 蓝鲸插件创建入口 -->
                 <li
@@ -281,7 +281,7 @@
               target="_blank"
               :href="GLOBAL.LINK.LESSCODE_INDEX"
               style="color: #3a84ff"
-            > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
+            > {{ $t('蓝鲸运维开发平台') }} </a> {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
           </div>
 
           <div

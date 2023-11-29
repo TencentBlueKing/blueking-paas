@@ -22,7 +22,7 @@ from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_
 from paasng.misc.monitoring.monitor.alert_rules.manager import AlertRuleManager, get_supported_alert_codes
 from paasng.misc.monitoring.monitor.models import AppAlertRule
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAlertRuleManager:
@@ -38,16 +38,16 @@ class TestAlertRuleManager:
         assert mock_import_configs.call_count == 2
         rule_configs, notice_group_config = bk_app_init_rule_configs
         expected_args = [
-            ((notice_group_config, f'{bk_app.code}_notice_group'), {'incremental': False}),
+            ((notice_group_config, f"{bk_app.code}_notice_group"), {"incremental": False}),
             ((rule_configs,),),
         ]
         assert mock_import_configs.call_args_list == expected_args
 
-        assert AppAlertRule.objects.filter(application=bk_app, alert_code='high_cpu_usage').count() == 2
+        assert AppAlertRule.objects.filter(application=bk_app, alert_code="high_cpu_usage").count() == 2
 
     def test_create_rules(self, bk_app, wl_namespaces):
         manager = AlertRuleManager(bk_app)
-        manager.create_rules(bk_app.get_default_module().name, 'stag')
+        manager.create_rules(bk_app.get_default_module().name, "stag")
         assert AppAlertRule.objects.filter_app_scoped(bk_app).count() == len(
             get_supported_alert_codes(bk_app.type).app_scoped_codes
         )
@@ -55,8 +55,8 @@ class TestAlertRuleManager:
             get_supported_alert_codes(bk_app.type).module_scoped_codes
         )
         assert (
-            AppAlertRule.objects.get(application=bk_app, alert_code='high_cpu_usage').threshold_expr
-            == DEFAULT_RULE_CONFIGS['high_cpu_usage']['threshold_expr']
+            AppAlertRule.objects.get(application=bk_app, alert_code="high_cpu_usage").threshold_expr
+            == DEFAULT_RULE_CONFIGS["high_cpu_usage"]["threshold_expr"]
         )
 
     def test_update_notice_group(self, bk_app, mock_import_configs):

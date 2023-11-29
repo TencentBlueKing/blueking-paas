@@ -24,6 +24,6 @@ class PipelineBuildStatus(str, StructuredEnum):
 
     # 由于蓝盾接口文档未提供所有枚举值, 因此这里只列举目前已知的状态
 
-    SUCCEED = EnumField('SUCCEED', label='成功')
-    FAILED = EnumField('FAILED', label='失败')
-    CANCELED = EnumField('CANCELED', label='已取消')
+    SUCCEED = EnumField("SUCCEED", label="成功")
+    FAILED = EnumField("FAILED", label="失败")
+    CANCELED = EnumField("CANCELED", label="已取消")

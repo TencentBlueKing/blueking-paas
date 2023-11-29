@@ -21,7 +21,7 @@ from typing import List
 import cattr
 import pytest
 
-from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecManager, ProcessTmpl
+from paas_wl.bk_app.processes.models import AutoscalingConfig, ProcessSpec, ProcessSpecManager, ProcessTmpl
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -56,3 +56,66 @@ class TestProcessSpecManager:
         assert web.target_replicas == 3
         assert web.plan.name == "4C1G5R"
         assert ProcessSpec.objects.filter(engine_app=wl_app).count() == 1
+
+    def test_switch(self, wl_app):
+        # init data
+        mgr = ProcessSpecManager(wl_app)
+        mgr.sync(
+            cattr.structure(
+                [{"name": "web", "command": "foo", "replicas": 2}, {"name": "celery", "command": "foo"}],
+                List[ProcessTmpl],
+            )
+        )
+
+        web = ProcessSpec.objects.get(engine_app=wl_app, name="web")
+        assert web.target_replicas == 2
+        assert not web.autoscaling
+        assert web.scaling_config is None
+
+        # switch to autoscaling
+        mgr.sync(
+            cattr.structure(
+                [
+                    {
+                        "name": "web",
+                        "command": "foo",
+                        "replicas": 2,
+                        "scaling_config": {"min_replicas": 1, "max_replicas": 3, "policy": "default"},
+                        "autoscaling": True,
+                    },
+                    {
+                        "name": "celery",
+                        "command": "foo",
+                    },
+                ],
+                List[ProcessTmpl],
+            )
+        )
+        web.refresh_from_db()
+        assert web.target_replicas == 2
+        assert web.autoscaling
+        assert web.scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=3, policy="default")
+
+        # rollback
+        mgr.sync(
+            cattr.structure(
+                [
+                    {
+                        "name": "web",
+                        "command": "foo",
+                        "replicas": 2,
+                        "autoscaling": False,
+                    },
+                    {
+                        "name": "celery",
+                        "command": "foo",
+                    },
+                ],
+                List[ProcessTmpl],
+            )
+        )
+        web.refresh_from_db()
+        assert web.target_replicas == 2
+        assert not web.autoscaling
+        # sync 时未提供 scaling_config, 不会设置未 None
+        assert web.scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=3, policy="default")

@@ -20,6 +20,6 @@ from django.apps import AppConfig
 
 
 class EgressAppConfig(AppConfig):
-    name = 'paas_wl.workloads.networking.egress'
+    name = "paas_wl.workloads.networking.egress"
     # Change label for backward compatibility
-    label = 'region'
+    label = "region"

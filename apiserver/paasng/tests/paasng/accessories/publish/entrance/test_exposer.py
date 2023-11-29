@@ -23,8 +23,8 @@ import pytest
 
 from paas_wl.workloads.networking.entrance.addrs import Address
 from paas_wl.workloads.networking.entrance.constants import AddressType
-from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db
@@ -35,7 +35,7 @@ def setup_addrs(bk_app, mock_env_is_running, mock_get_builtin_addresses):
     """Set up common mock and configs for testing functions related with addresses"""
 
     def update_region_hook(config):
-        config['basic_info']['link_engine_app'] = "http://example.com/{region}-legacy-path/"
+        config["basic_info"]["link_engine_app"] = "http://example.com/{region}-legacy-path/"
 
     mock_env_is_running["stag"] = True
     mock_get_builtin_addresses["stag"] = [
@@ -76,5 +76,5 @@ class TestGetExposedUrl:
 
         url = get_exposed_url(bk_stag_env)
         assert url is not None
-        assert url.provider_type == 'subdomain'
+        assert url.provider_type == "subdomain"
         assert url.address == expected

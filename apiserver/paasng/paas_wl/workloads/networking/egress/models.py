@@ -41,7 +41,7 @@ class RegionClusterState(AuditedModel):
 
     region = models.CharField(max_length=32)
     cluster_name = models.CharField(max_length=32, null=True)
-    name = models.CharField('informative name of state', max_length=64)
+    name = models.CharField("informative name of state", max_length=64)
     nodes_digest = models.CharField(max_length=64, db_index=True)
     nodes_cnt = models.IntegerField(default=0)
     nodes_name = JSONField(default=[], blank=True)
@@ -55,8 +55,8 @@ class RegionClusterState(AuditedModel):
 
     class Meta:
         unique_together = ("region", "cluster_name", "name")
-        get_latest_by = 'created'
-        ordering = ['-created']
+        get_latest_by = "created"
+        ordering = ["-created"]
 
 
 class RCStateAppBinding(AuditedModel):
@@ -115,18 +115,18 @@ class EgressSpec(AuditedModel):
 class EgressRule(AuditedModel):
     """BCS Egress.spec.rules"""
 
-    spec = models.ForeignKey(EgressSpec, on_delete=models.CASCADE, related_name='rules')
+    spec = models.ForeignKey(EgressSpec, on_delete=models.CASCADE, related_name="rules")
     # host 是目标服务的域名/IP，dport 为目标服务的端口
     # egress pod 会对目标是 host:dport 的流量做转发
-    dst_port = models.IntegerField('目标端口')
-    host = models.CharField('目标主机', max_length=128)
+    dst_port = models.IntegerField("目标端口")
+    host = models.CharField("目标主机", max_length=128)
     # protocol 协议，一般是 TCP，也可以是 UDP
-    protocol = models.CharField('协议', choices=NetworkProtocol.get_django_choices(), max_length=32)
+    protocol = models.CharField("协议", choices=NetworkProtocol.get_django_choices(), max_length=32)
     # service 指定后，会在同名命名空间中创建名称为该值的 service，sport 为 service 的端口
     # 在启用定制版的 coredns 后，服务可以通过访问 service 达到原有的按域名访问的效果
     # 一般来说，service 与 host 值相同，dport 与 sport 值相同
-    src_port = models.IntegerField('源端口')
-    service = models.CharField('服务名', max_length=128)
+    src_port = models.IntegerField("源端口")
+    service = models.CharField("服务名", max_length=128)
 
 
 @label_toleration_providers.register_labels

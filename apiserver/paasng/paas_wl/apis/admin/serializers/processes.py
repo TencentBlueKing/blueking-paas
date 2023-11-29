@@ -47,7 +47,7 @@ class ProcessSpecPlanSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = ProcessSpecPlan
-        fields = '__all__'
+        fields = "__all__"
 
 
 class InstanceSerializer(InstanceForDisplaySLZ):

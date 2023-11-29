@@ -20,9 +20,9 @@ from django.conf.urls import url
 
 from . import views
 
-REGION = '(?P<region>[a-z0-9_-]{1,32})'
+REGION = "(?P<region>[a-z0-9_-]{1,32})"
 
 urlpatterns = [
     # service APIs
-    url(r'^api/regions/%s/$' % REGION, views.RegionViewSet.as_view({'get': 'retrieve'}), name='api.regions.retrieve'),
+    url(r"^api/regions/%s/$" % REGION, views.RegionViewSet.as_view({"get": "retrieve"}), name="api.regions.retrieve"),
 ]

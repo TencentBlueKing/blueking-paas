@@ -20,4 +20,4 @@ from paasng.utils.addons import PlugableAppConfig
 
 
 class FeatureFlagsConfig(PlugableAppConfig):
-    name = 'paasng.misc.feature_flags'
+    name = "paasng.misc.feature_flags"

@@ -26,16 +26,16 @@ from tests.utils.helpers import generate_random_string
 def get_fake_alerts(start_time: int, end_time: int) -> List:
     alerts = [
         {
-            'id': generate_random_string(6),
-            'bk_biz_id': random.randint(-5000000, -4000000),
-            'alert_name': generate_random_string(6),
-            'status': random.choice(['ABNORMAL', 'CLOSED', 'RECOVERED']),
-            'description': generate_random_string(),
-            'begin_time': start_time,
-            'end_time': end_time,
-            'stage_display': random.choice(['已通知', '未处理']),
-            'assignee': [generate_random_string(6), generate_random_string(6)],
-            'labels': [random.choice(['stag', 'prod'])],
+            "id": generate_random_string(6),
+            "bk_biz_id": random.randint(-5000000, -4000000),
+            "alert_name": generate_random_string(6),
+            "status": random.choice(["ABNORMAL", "CLOSED", "RECOVERED"]),
+            "description": generate_random_string(),
+            "begin_time": start_time,
+            "end_time": end_time,
+            "stage_display": random.choice(["已通知", "未处理"]),
+            "assignee": [generate_random_string(6), generate_random_string(6)],
+            "labels": [random.choice(["stag", "prod"])],
         }
         for _ in range(3)
     ]
@@ -45,24 +45,24 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
 def get_fake_alarm_strategies() -> Dict:
     alarm_strategies = [
         {
-            'id': generate_random_string(6),
-            'bk_biz_id': random.randint(-5000000, -4000000),
-            'name': generate_random_string(6),
-            'is_enabled': random.choice(['true', 'false']),
-            'labels': [generate_random_string(6) for _ in range(random.randint(1, 4))],
-            'notice': {"user_groups": [random.randint(1, 4) for _ in range(random.randint(1, 4))]},
-            'detects': [
+            "id": generate_random_string(6),
+            "bk_biz_id": random.randint(-5000000, -4000000),
+            "name": generate_random_string(6),
+            "is_enabled": random.choice(["true", "false"]),
+            "labels": [generate_random_string(6) for _ in range(random.randint(1, 4))],
+            "notice": {"user_groups": [random.randint(1, 4) for _ in range(random.randint(1, 4))]},
+            "detects": [
                 {
                     "trigger_config": {"count": random.randint(1, 4), "check_window": random.randint(1, 10)},
-                    "connector": random.choice(['and', 'or']),
+                    "connector": random.choice(["and", "or"]),
                 }
             ],
-            'items': [
+            "items": [
                 {
-                    'algorithms': [
+                    "algorithms": [
                         {
-                            'type': generate_random_string(6),
-                            'config': generate_random_string(6),
+                            "type": generate_random_string(6),
+                            "config": generate_random_string(6),
                             "level": random.randint(1, 3),
                         }
                     ]
@@ -86,7 +86,7 @@ class StubBKMonitorClient(BkMonitorClient):
 
     def query_alerts(self, query_params: QueryAlertsParams) -> List:
         query_data = query_params.to_dict()
-        return get_fake_alerts(query_data['start_time'], query_data['end_time'])
+        return get_fake_alerts(query_data["start_time"], query_data["end_time"])
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         query_params.to_dict()

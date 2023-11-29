@@ -45,18 +45,18 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     )
     data = slz.data
     resp = utils.make_client(pd.release_revision.api.create).call(data=data, path_params={"plugin_id": instance.id})
-    if result := resp.get("result"):
+    if not (result := resp.get("result", True)):
         logger.error(f"create release error: {resp}")
     return result
 
 
-def update_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str):
-    """更新发布版本 - 回调第三方系统
+def update_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str) -> bool:
+    """版本发布结束时（状态：成功、失败、已中断） - 回调第三方系统
 
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
     if not pd.release_revision.api or not pd.release_revision.api.update:
-        return
+        return True
 
     slz = PluginReleaseAPIRequestSLZ(
         {
@@ -71,4 +71,6 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     resp = utils.make_client(pd.release_revision.api.update).call(
         data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
     )
-    return resp
+    if not (result := resp.get("result", True)):
+        logger.error(f"create release error: {resp}")
+    return result

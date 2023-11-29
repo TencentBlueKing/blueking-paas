@@ -115,4 +115,4 @@ class UserActionRateLimiter(RedisTokenBucketRateLimiter):
         self.action = action
 
     def _gen_key(self) -> str:
-        return f'bk_paas3:rate_limits:{self.username}:{self.action}'
+        return f"bk_paas3:rate_limits:{self.username}:{self.action}"

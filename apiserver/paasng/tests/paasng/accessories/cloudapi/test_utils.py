@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db
 
 class TestUtils:
     @pytest.mark.parametrize(
-        'mocked_region_map, region, expected, will_error',
+        "mocked_region_map, region, expected, will_error",
         [
             (
                 {

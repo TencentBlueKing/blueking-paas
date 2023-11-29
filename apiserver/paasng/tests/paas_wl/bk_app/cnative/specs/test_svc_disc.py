@@ -28,12 +28,12 @@ class TestApplyConfigmap:
     @pytest.fixture
     def res_without_svc_disc(self, bk_app, bk_stag_env, bk_user):
         """A BkAppResource without service discovery config"""
-        return create_app_resource(bk_app.name, 'nginx:latest')
+        return create_app_resource(bk_app.name, "nginx:latest")
 
     @pytest.fixture
     def res_with_svc_disc(self, bk_app, bk_stag_env, bk_user):
         """A BkAppResource with service discovery config"""
-        resource = create_app_resource(bk_app.name, 'nginx:latest')
+        resource = create_app_resource(bk_app.name, "nginx:latest")
         resource.spec.svcDiscovery = SvcDiscConfig(
             bkSaaS=[
                 SvcDiscEntryBkSaaS(bkAppCode="foo"),
@@ -45,7 +45,7 @@ class TestApplyConfigmap:
     def test_normal(self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc, with_stag_ns):
         apply_configmap(bk_stag_env, res_with_svc_disc)
         mgr = ConfigMapManager(bk_stag_env, bk_app_name=bk_app.name)
-        assert mgr.read_data()[mgr.key_bk_saas] != ''
+        assert mgr.read_data()[mgr.key_bk_saas] != ""
 
     def test_deletion(
         self, bk_app, bk_stag_env, bk_stag_wl_app, res_with_svc_disc, res_without_svc_disc, with_stag_ns

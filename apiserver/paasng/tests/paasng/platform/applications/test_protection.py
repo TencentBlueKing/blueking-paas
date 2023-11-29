@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db
 
 class ForbidUpdate(BaseAppResProtectCondition):
     def validate(self):
-        raise ConditionNotMatched('forbidden', 'forbidden')
+        raise ConditionNotMatched("forbidden", "forbidden")
 
 
 class TestAppResProtector:
@@ -49,7 +49,7 @@ class TestAppResProtector:
             ProtectedRes.BASIC_INFO_MODIFICATIONS: ProtectionStatus([]),
             ProtectedRes.SERVICES_MODIFICATIONS: ProtectionStatus([]),
             ProtectedRes.DISABLE_APP_DESC: ProtectionStatus(
-                [ConditionNotMatched('S-Mart 不可关闭应用描述文件', 'disable_application_description')]
+                [ConditionNotMatched("S-Mart 不可关闭应用描述文件", "disable_application_description")]
             ),
         }
 
@@ -59,7 +59,7 @@ class TestAppResProtector:
         ):
             assert AppResProtector(bk_app).list_status() == {
                 ProtectedRes.BASIC_INFO_MODIFICATIONS: ProtectionStatus(
-                    [ConditionNotMatched('forbidden', 'forbidden')]
+                    [ConditionNotMatched("forbidden", "forbidden")]
                 ),
                 ProtectedRes.SERVICES_MODIFICATIONS: ProtectionStatus([]),
                 ProtectedRes.DISABLE_APP_DESC: ProtectionStatus([]),
@@ -68,5 +68,5 @@ class TestAppResProtector:
     def test_get_status(self, bk_app):
         with AppResProtector.override_preconditions({ProtectedRes.BASIC_INFO_MODIFICATIONS: [ForbidUpdate]}):
             assert AppResProtector(bk_app).get_status(ProtectedRes.BASIC_INFO_MODIFICATIONS) == ProtectionStatus(
-                [ConditionNotMatched('forbidden', 'forbidden')]
+                [ConditionNotMatched("forbidden", "forbidden")]
             )

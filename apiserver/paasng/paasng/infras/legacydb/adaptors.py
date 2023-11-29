@@ -89,26 +89,26 @@ class AppAdaptor:
         """
         # 兼容老数据
         for key in [
-            'description',
-            'created_state',
-            'is_mapp',
-            'use_mobile_online',
-            'use_mobile_test',
-            'mobile_url_test',
-            'mobile_url_prod',
-            'deploy_env',
-            'deploy_ver',
-            'use_celery',
-            'use_celery_beat',
+            "description",
+            "created_state",
+            "is_mapp",
+            "use_mobile_online",
+            "use_mobile_test",
+            "mobile_url_test",
+            "mobile_url_prod",
+            "deploy_env",
+            "deploy_ver",
+            "use_celery",
+            "use_celery_beat",
         ]:
             if key in data:
                 data.pop(key)
-                logger.info(f'Application attribute {key} does not exist, skip synchronization')
+                logger.info(f"Application attribute {key} does not exist, skip synchronization")
 
-        if 'isresize' in data:
-            data['is_resize'] = data.pop('isresize')
-        if 'issetbar' in data:
-            data['is_setbar'] = data.pop('issetbar')
+        if "isresize" in data:
+            data["is_resize"] = data.pop("isresize")
+        if "issetbar" in data:
+            data["is_setbar"] = data.pop("issetbar")
 
         count = self.session.query(self.model).filter_by(code=code).update(data)
         return count
@@ -119,12 +119,12 @@ class AppAdaptor:
         name: str,
         deploy_ver: str,
         from_paasv3: bool = True,
-        logo: str = '',
+        logo: str = "",
         is_lapp: bool = False,
-        creator: str = 'blueking',
+        creator: str = "blueking",
         tag: Optional["legacy_models.LApplicationTag"] = None,
-        external_url: str = '',
-        introduction: str = '',
+        external_url: str = "",
+        introduction: str = "",
         height: int = 550,
         width: int = 890,
         state: int = LegacyAppState.DEVELOPMENT.value,
@@ -163,7 +163,7 @@ class AppAdaptor:
             is_display=1,  # 是否显示在桌面
             from_paasv3=1 if from_paasv3 else 0,  # 是否Paas3.0应用
             migrated_to_paasv3=0,  # 是否已经迁移到Paas3.0
-            open_mode='new_tab',  # 应用打开方式, desktop: 桌面打开, new_tab: 新标签页打开
+            open_mode="new_tab",  # 应用打开方式, desktop: 桌面打开, new_tab: 新标签页打开
         )
         try:
             self.session.add(app)
@@ -172,9 +172,9 @@ class AppAdaptor:
             if len(e.args) > 0:
                 error_msg = e.args[0]
                 if re.search("Duplicate entry '.*' for key '.*code'", error_msg):
-                    raise IntegrityError(field='code')
+                    raise IntegrityError(field="code")
                 elif re.search("Duplicate entry '.*' for key '.*name'", error_msg):
-                    raise IntegrityError(field='name')
+                    raise IntegrityError(field="name")
                 else:
                     raise e
             else:
@@ -184,9 +184,9 @@ class AppAdaptor:
         try:
             oauth = OAuth2Client.objects.get(client_id=code)
         except OAuth2Client.DoesNotExist:
-            logger.info(f'APP(code:{code}) oauth information does not exist, skip oauth synchronization')
+            logger.info(f"APP(code:{code}) oauth information does not exist, skip oauth synchronization")
         else:
-            self.sync_oauth('', code, oauth.client_secret)
+            self.sync_oauth("", code, oauth.client_secret)
         return app
 
     def sync_oauth(self, region: str, code: str, secret: str) -> "legacy_models.LApplication":
@@ -194,7 +194,7 @@ class AppAdaptor:
         # 企业版 secret 以明文存储
         app = self.get(code)
         if not app:
-            logger.info(f'APP(code:{code}) does not exist, skip oauth synchronization')
+            logger.info(f"APP(code:{code}) does not exist, skip oauth synchronization")
             return None
 
         self.update(
@@ -233,7 +233,7 @@ class AppAdaptor:
 
         return SaaSPackageInfo(
             version=app_version_obj.version,
-            url=f'{settings.BK_PAAS2_INNER_URL}/media/{file_obj.file}',
+            url=f"{settings.BK_PAAS2_INNER_URL}/media/{file_obj.file}",
             name=file_obj.name,
         )
 
@@ -251,13 +251,13 @@ class AppTagAdaptor:
 
     def get_tag_list(self) -> list:
         """获取桌面的分类列表，可由API提供"""
-        console_tags = self.session.query(self.model).order_by('id')
+        console_tags = self.session.query(self.model).order_by("id")
 
         tag_list = []
         for tag in console_tags:
             region = settings.DEFAULT_REGION_NAME
             tag_list.append(
-                TagData(id=tag.id, name=tag.name, enabled=True, index=tag.index, remark='', parent_id=0, region=region)
+                TagData(id=tag.id, name=tag.name, enabled=True, index=tag.index, remark="", parent_id=0, region=region)
             )
         return tag_list
 
@@ -289,11 +289,11 @@ class AuthUserAdaptor:
             is_superuser=auth_user.is_superuser,
             last_login=datetime.datetime.now(),
             date_joined=datetime.datetime.now(),
-            password='',
-            company='',
-            qq='',
-            phone='',
-            role='',
+            password="",
+            company="",
+            qq="",
+            phone="",
+            role="",
         )
         self.session.add(user)
         self.session.commit()
@@ -323,7 +323,7 @@ class AppDeveloperAdaptor:
         """
         app = AppAdaptor(self.session).get(code)
         if not app:
-            logger.warning(f'App(code:{code}) does not exist, skip updating developers to console')
+            logger.warning(f"App(code:{code}) does not exist, skip updating developers to console")
             return None
 
         console_delelopers = self.get_developer_names(code)
@@ -425,9 +425,9 @@ class AppReleaseRecordAdaptor:
             return False
 
         try:
-            operate_id = {'stag': 0, 'prod': 1}[env_name]
+            operate_id = {"stag": 0, "prod": 1}[env_name]
         except KeyError:
-            raise ValueError(f'{env_name} is not a valid environment name!')
+            raise ValueError(f"{env_name} is not a valid environment name!")
         self.session.add(
             self.model(
                 app_code=app.code,
@@ -439,8 +439,8 @@ class AppReleaseRecordAdaptor:
                 is_tips=False,
                 is_version=False,
                 version=None,
-                message='',
-                extra_data='{}',
+                message="",
+                extra_data="{}",
                 app_old_state=1,
             )
         )
@@ -457,9 +457,9 @@ class AppEnvVarAdaptor:
         env_vars = self.session.query(self.model).filter_by(app_code=code)
         # PaaS2.0的环境变量生效环境与PaaS3.0的对应关系
         environment_map = {
-            'all': ConfigVarEnvName.GLOBAL.value,
-            'test': ConfigVarEnvName.STAG.value,
-            'prod': ConfigVarEnvName.PROD.value,
+            "all": ConfigVarEnvName.GLOBAL.value,
+            "test": ConfigVarEnvName.STAG.value,
+            "prod": ConfigVarEnvName.PROD.value,
         }
         return [
             EnvItem(

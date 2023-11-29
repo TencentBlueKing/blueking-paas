@@ -44,7 +44,7 @@ class DeployPhaseTypes(str, StructuredEnum):
 class DeployPhaseEventSLZ(Serializer):
     """Phase SeverSendEvent"""
 
-    name = CharField(source='type')
+    name = CharField(source="type")
     start_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
     complete_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
     status = CharField(allow_null=True)
@@ -61,7 +61,7 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
     complete_time = models.DateTimeField(_("阶段完成时间"), null=True)
 
     class Meta:
-        ordering = ['created']
+        ordering = ["created"]
 
     @property
     def attached(self) -> bool:
@@ -72,7 +72,7 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
     def _get_step_pattern_map(self, pattern_type: str) -> Dict[str, str]:
         """获取关联的步骤和匹配字符串集"""
         step_pattern_map: Dict[str, str] = {}
-        for step_name, patterns in self.steps.select_related("meta").all().values_list('name', pattern_type):
+        for step_name, patterns in self.steps.select_related("meta").all().values_list("name", pattern_type):
             # 防御 meta 未关联的情况
             if patterns is None:
                 continue
@@ -84,12 +84,12 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
         return step_pattern_map
 
     def get_started_pattern_map(self) -> Dict:
-        return self._get_step_pattern_map('meta__started_patterns')
+        return self._get_step_pattern_map("meta__started_patterns")
 
     def get_finished_pattern_map(self) -> Dict:
-        return self._get_step_pattern_map('meta__finished_patterns')
+        return self._get_step_pattern_map("meta__finished_patterns")
 
-    def get_step_by_name(self, name: str) -> 'DeployStep':
+    def get_step_by_name(self, name: str) -> "DeployStep":
         """通过步骤名获取步骤实例"""
         try:
             # 由于同一个 phase 内的 step 原则上是不能同名的，所以可以直接 get
@@ -104,7 +104,7 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
             return
 
         self.deployment = deployment
-        self.save(update_fields=['deployment', 'updated'])
+        self.save(update_fields=["deployment", "updated"])
 
     def get_unfinished_steps(self):
         """获取所有未结束的步骤"""

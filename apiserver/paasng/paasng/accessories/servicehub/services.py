@@ -48,7 +48,7 @@ class ServiceSpecificationDefinition:
     description: str
     recommended_value: Optional[str] = None
     is_public: Optional[bool] = field(default=None)
-    display_name: str = ''
+    display_name: str = ""
 
     def __post_init__(self):
         # 规格定义是否需要暴露给用户
@@ -74,28 +74,28 @@ class ServiceObj:
     logo: str = field(compare=False)
     is_visible: bool
     is_active: bool = True
-    available_languages: str = ''
+    available_languages: str = ""
     config: Dict = field(default_factory=dict, compare=False)
-    specifications: List['ServiceSpecificationDefinition'] = field(default_factory=list, compare=False)
+    specifications: List["ServiceSpecificationDefinition"] = field(default_factory=list, compare=False)
 
-    display_name: str = ''
-    description: str = ''
-    long_description: str = ''
-    instance_tutorial: str = ''
+    display_name: str = ""
+    description: str = ""
+    long_description: str = ""
+    instance_tutorial: str = ""
 
     # below attributes should be set by subclass
     category_id = None
     category = None
 
     @property
-    def public_specifications(self) -> List['ServiceSpecificationDefinition']:
+    def public_specifications(self) -> List["ServiceSpecificationDefinition"]:
         return [i for i in self.specifications if i.is_public]
 
     @property
-    def protected_specifications(self) -> List['ServiceSpecificationDefinition']:
+    def protected_specifications(self) -> List["ServiceSpecificationDefinition"]:
         return [i for i in self.specifications if not i.is_public]
 
-    def get_plans(self, is_active=True) -> List['PlanObj']:
+    def get_plans(self, is_active=True) -> List["PlanObj"]:
         """Return all related plans"""
         raise NotImplementedError()
 
@@ -136,7 +136,7 @@ class ServiceInstanceObj:
         config: Dict,
         should_hidden_fields: Optional[List] = None,
         should_remove_fields: Optional[List] = None,
-        create_time: Optional['datetime.datetime'] = None,
+        create_time: Optional["datetime.datetime"] = None,
     ):
         self.uuid = uuid
         self._credentials = credentials
@@ -315,13 +315,13 @@ class BasePlanMgr:
 class ServicePlansHelper:
     """Hepler work for plans"""
 
-    plans: List['PlanObj']
+    plans: List["PlanObj"]
 
     @classmethod
-    def from_service(cls, service: 'ServiceObj') -> 'ServicePlansHelper':
+    def from_service(cls, service: "ServiceObj") -> "ServicePlansHelper":
         return cls(service.get_plans())
 
-    def get_by_region(self, region: 'str') -> 'Iterable[PlanObj]':
+    def get_by_region(self, region: "str") -> "Iterable[PlanObj]":
         """"""
         for p in self.plans:
             if p.region == region:
@@ -332,8 +332,8 @@ class ServicePlansHelper:
 class ServiceSpecificationHelper:
     """Helper work for service specifications"""
 
-    definitions: List['ServiceSpecificationDefinition']
-    plans: List['PlanObj']
+    definitions: List["ServiceSpecificationDefinition"]
+    plans: List["PlanObj"]
 
     def __post_init__(self):
         specification_keys = {definition.name for definition in self.definitions}
@@ -341,18 +341,18 @@ class ServiceSpecificationHelper:
             raise ValueError("Encountered duplicate field name.")
 
     @classmethod
-    def from_service(cls, service: 'ServiceObj') -> 'ServiceSpecificationHelper':
+    def from_service(cls, service: "ServiceObj") -> "ServiceSpecificationHelper":
         return cls(definitions=service.specifications, plans=service.get_plans())
 
     @classmethod
-    def from_service_public_specifications(cls, service: 'ServiceObj') -> 'ServiceSpecificationHelper':
+    def from_service_public_specifications(cls, service: "ServiceObj") -> "ServiceSpecificationHelper":
         return cls(definitions=service.public_specifications, plans=service.get_plans())
 
     @classmethod
-    def from_service_protected_specifications(cls, service: 'ServiceObj') -> 'ServiceSpecificationHelper':
+    def from_service_protected_specifications(cls, service: "ServiceObj") -> "ServiceSpecificationHelper":
         return cls(definitions=service.protected_specifications, plans=service.get_plans())
 
-    def filter_plans(self, specifications: Optional[Dict] = None) -> List['PlanObj']:
+    def filter_plans(self, specifications: Optional[Dict] = None) -> List["PlanObj"]:
         """Get plans which matched specifications. But if not provided any specifications, return all plans."""
         plans = self.plans
         if not specifications:
@@ -455,8 +455,8 @@ class ServiceSpecificationHelper:
 
 @dataclass
 class ModuleSpecificationsHelper:
-    service: 'ServiceObj'
-    module: 'Module'
+    service: "ServiceObj"
+    module: "Module"
     specs: Dict[str, str]
 
     def __post_init__(self):

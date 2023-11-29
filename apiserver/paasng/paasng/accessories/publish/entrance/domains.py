@@ -22,8 +22,8 @@ from typing import List, NamedTuple, Optional
 from paas_wl.infras.cluster.models import IngressConfig
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance.allocator.domains import Domain, SubDomainAllocator
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
 
 
 class PreDomains(NamedTuple):
@@ -50,7 +50,7 @@ def get_preallocated_domains_by_env(env: ModuleEnvironment) -> List[Domain]:
             results.append(allocator.for_universal(domain_cfg, module.name, env.environment))
         else:
             if env.environment == AppEnvName.STAG.value:
-                results.append(allocator.for_default_module(domain_cfg, 'stag'))
+                results.append(allocator.for_default_module(domain_cfg, "stag"))
             else:
                 results.append(allocator.for_default_module_prod_env(domain_cfg))
     return results
@@ -74,11 +74,11 @@ def get_preallocated_domain(
     domain_cfg = ingress_config.default_root_domain
     if not module_name:
         return PreDomains(
-            stag=allocator.for_default_module(domain_cfg, 'stag'),
+            stag=allocator.for_default_module(domain_cfg, "stag"),
             prod=allocator.for_default_module_prod_env(domain_cfg),
         )
     else:
         return PreDomains(
-            stag=allocator.for_universal(domain_cfg, module_name, 'stag'),
-            prod=allocator.for_universal(domain_cfg, module_name, 'prod'),
+            stag=allocator.for_universal(domain_cfg, module_name, "stag"),
+            prod=allocator.for_universal(domain_cfg, module_name, "prod"),
         )

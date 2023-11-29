@@ -40,7 +40,7 @@ class DocumentaryLinkView(GenericTemplateView):
         kwargs = super().get_context_data(**kwargs)
 
         kwargs["documents"] = self.list(self.request, *self.args, **self.kwargs)
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
 
@@ -67,7 +67,7 @@ class DeployFailurePatternView(GenericTemplateView):
         kwargs = super().get_context_data(**kwargs)
 
         kwargs["failure_tips"] = self.list(self.request, *self.args, **self.kwargs)
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
 

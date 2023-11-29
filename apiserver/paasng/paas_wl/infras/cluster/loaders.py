@@ -95,9 +95,9 @@ class LegacyKubeConfigLoader(KubeConfigLoader):
     def _get_tag_from_context(self, context: dict) -> str:
         """从 context 中获取 tag，不存在则取 context name"""
         try:
-            return context['context']['tag']
+            return context["context"]["tag"]
         except KeyError:
-            return context['name']
+            return context["name"]
 
     def get_all_tags(self) -> List[str]:
         all_contexts_meta = self.list_contexts()
@@ -108,7 +108,7 @@ class LegacyKubeConfigLoader(KubeConfigLoader):
 
         all_contexts_meta = self.list_contexts()
         target_context_names = [
-            context['name'] for context in all_contexts_meta if self._get_tag_from_context(context) == tag
+            context["name"] for context in all_contexts_meta if self._get_tag_from_context(context) == tag
         ]
 
         for context_name in target_context_names:
@@ -121,12 +121,12 @@ class LegacyKubeConfigLoader(KubeConfigLoader):
     def _load_cluster_info(self):
         """make force domain field available for config setting"""
         super()._load_cluster_info()
-        setattr(self, 'overridden_hostname', self._cluster.safe_get('overridden-hostname'))
+        setattr(self, "overridden_hostname", self._cluster.safe_get("overridden-hostname"))
 
     def _set_config(self, client_configuration):
         """make force domain field into configuration"""
         super()._set_config(client_configuration)
 
-        keys = ['overridden_hostname']
+        keys = ["overridden_hostname"]
         for key in keys:
             setattr(client_configuration, key, getattr(self, key, None))

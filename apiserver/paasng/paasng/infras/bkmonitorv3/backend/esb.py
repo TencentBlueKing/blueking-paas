@@ -72,17 +72,17 @@ class MonitorV3Group(OperationGroup):
     # 统一查询时序数据
     promql_query = bind_property(
         Operation,
-        name='promql_query',
-        method='POST',
-        path='/api/c/compapi/v2/monitor_v3/graph_promql_query/',
+        name="promql_query",
+        method="POST",
+        path="/api/c/compapi/v2/monitor_v3/graph_promql_query/",
     )
 
     # 下发告警规则(esb 不可用)
     as_code_import_config = bind_property(
         Operation,
-        name='as_code_import_config',
-        method='POST',
-        path='/api/c/compapi/v2/monitor_v3/as_code_import_config/',
+        name="as_code_import_config",
+        method="POST",
+        path="/api/c/compapi/v2/monitor_v3/as_code_import_config/",
     )
 
 

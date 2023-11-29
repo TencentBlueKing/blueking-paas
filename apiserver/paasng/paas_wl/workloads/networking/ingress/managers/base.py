@@ -49,7 +49,7 @@ class AppIngressMgr(abc.ABC):
     # Whether to set header `X-Script-Name` to all request
     set_header_x_script_name: bool = True
 
-    def __init__(self, app: 'WlApp'):
+    def __init__(self, app: "WlApp"):
         self.app = app
         self.ingress_name = self.make_ingress_name()
         self.ingress_updater = IngressUpdater(self.app, self.ingress_name)
@@ -109,14 +109,14 @@ class AppIngressMgr(abc.ABC):
 
         :params domains: current ingress domain objects
         """
-        return self._get_plugins_snippets('server', domains)
+        return self._get_plugins_snippets("server", domains)
 
     def construct_configuration_snippet(self, domains: Sequence[PIngressDomain]) -> str:
         """Construct configuration snippet, this method will call registered plugins
 
         :params domains: current ingress domain objects
         """
-        return self._get_plugins_snippets('configuration', domains)
+        return self._get_plugins_snippets("configuration", domains)
 
     def _get_plugins_snippets(self, snippet_type: str, domains: Sequence[PIngressDomain]) -> str:
         """Get snippets set by plugins
@@ -124,15 +124,15 @@ class AppIngressMgr(abc.ABC):
         :param snippet_type: server / configuration
         :params domains: current ingress domain objects
         """
-        func_name = f'make_{snippet_type}_snippet'
+        func_name = f"make_{snippet_type}_snippet"
         snippets = []
         for plugin_cls in self.get_plugins():
             try:
                 func = getattr(plugin_cls(self.app, domains), func_name)
                 snippets.append(func())
             except PluginNotConfigured:
-                logger.debug('Plugin: %s not configured, skip processing.')
-        return '\n'.join([s for s in snippets if s])
+                logger.debug("Plugin: %s not configured, skip processing.")
+        return "\n".join([s for s in snippets if s])
 
     def get_plugins(self) -> List[Type[IngressPlugin]]:
         """Return plugins for current manager"""
@@ -153,9 +153,9 @@ class IngressUpdater:
     """Helper class for updating ingress object"""
 
     # the hard-coded default port name, does not support modification yet
-    DEFAULT_PORT_NAME = 'http'
+    DEFAULT_PORT_NAME = "http"
 
-    def __init__(self, app: 'WlApp', ingress_name: str):
+    def __init__(self, app: "WlApp", ingress_name: str):
         self.app = app
         self.ingress_name = ingress_name
 
@@ -163,8 +163,8 @@ class IngressUpdater:
         self,
         domains: List[PIngressDomain],
         default_service_name: Optional[str] = None,
-        server_snippet: str = '',
-        configuration_snippet: str = '',
+        server_snippet: str = "",
+        configuration_snippet: str = "",
         annotations: Optional[Dict] = None,
         rewrite_to_root: bool = True,
         set_header_x_script_name: bool = True,
@@ -193,9 +193,9 @@ class IngressUpdater:
             ingress = ingress_kmodel.get(self.app, self.ingress_name)
         except AppEntityNotFound:
             if not default_service_name:
-                raise DefaultServiceNameRequired('no existed ingress found, default_server_name is required')
+                raise DefaultServiceNameRequired("no existed ingress found, default_server_name is required")
 
-            logger.info('Creating new default ingress<%s> with service<%s>', self.ingress_name, default_service_name)
+            logger.info("Creating new default ingress<%s> with service<%s>", self.ingress_name, default_service_name)
             desired_ingress = ProcessIngress(
                 app=self.app,
                 name=self.ingress_name,
@@ -214,14 +214,14 @@ class IngressUpdater:
                 # Restore service name to default if it's invalid
                 if not self._service_name_valid(ingress.service_name):
                     logger.info(
-                        'Restore service name to default, ingress: %s, current name: %s, new name: %s',
+                        "Restore service name to default, ingress: %s, current name: %s, new name: %s",
                         ingress.name,
                         ingress.service_name,
                         default_service_name,
                     )
                     ingress.service_name = default_service_name
 
-            logger.info('Updating existed ingress<%s>', ingress.name)
+            logger.info("Updating existed ingress<%s>", ingress.name)
             ingress.domains = domains
             ingress.server_snippet = server_snippet
             ingress.configuration_snippet = configuration_snippet
@@ -234,8 +234,8 @@ class IngressUpdater:
         """Update target service and port_name for current ingress resource"""
         ingress = ingress_kmodel.get(self.app, self.ingress_name)
         logger.info(
-            f'updating existed ingress<{ingress.name}>, set service_name={service_name} '
-            f'port_name={service_port_name}'
+            f"updating existed ingress<{ingress.name}>, set service_name={service_name} "
+            f"port_name={service_port_name}"
         )
         ingress.service_name = service_name
         ingress.service_port_name = service_port_name

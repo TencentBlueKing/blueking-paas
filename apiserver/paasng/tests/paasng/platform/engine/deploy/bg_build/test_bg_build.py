@@ -25,7 +25,7 @@ from paasng.platform.engine.deploy.bg_build.bg_build import BuildProcessExecutor
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.utils.output import ConsoleStream
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestBuildProcessExecutor:
@@ -44,8 +44,10 @@ class TestBuildProcessExecutor:
 
         bpe = BuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
         # TODO: Too much mocks, both tests and codes need refactor
-        with mock.patch("paasng.platform.engine.deploy.bg_build.bg_build.BuildProcessExecutor.start_slugbuilder"), mock.patch(
-            "paasng.platform.engine.deploy.bg_build.bg_build.get_scheduler_client_by_app"
-        ), mock.patch('paasng.platform.engine.deploy.bg_build.utils.get_schedule_config'):
+        with mock.patch(
+            "paasng.platform.engine.deploy.bg_build.bg_build.BuildProcessExecutor.start_slugbuilder"
+        ), mock.patch("paasng.platform.engine.deploy.bg_build.bg_build.get_scheduler_client_by_app"), mock.patch(
+            "paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"
+        ):
             bpe.execute({"image": ""})
         assert build_proc.status == BuildStatus.SUCCESSFUL.value, "部署失败"

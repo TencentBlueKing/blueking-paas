@@ -152,14 +152,14 @@ def strftime_ms(ms, fmt="%Y-%m-%d %H:%M:%S") -> str:
     return local_dt.strftime(fmt)
 
 
-def convert_timestamp_to_str(timestamp: int, timespec: str = 'seconds') -> str:
+def convert_timestamp_to_str(timestamp: int, timespec: str = "seconds") -> str:
     """基于 datetime 的 isoformat, 将整型的时间戳转化成标准化的时间字符串
 
     :param timestamp: 整型时间戳
     :param timespec: 时间组件值. 默认 seconds, 表示以 YYYY-MM-DD HH:MM:SS 格式包含 hour, minute 和 second
            timespec 设置具体可参考 https://docs.python.org/3.8/library/datetime.html#datetime.datetime.isoformat
     """
-    return datetime.datetime.fromtimestamp(timestamp).isoformat(' ', timespec)
+    return datetime.datetime.fromtimestamp(timestamp).isoformat(" ", timespec)
 
 
 def valid_date_type(arg_date_str) -> datetime.date:

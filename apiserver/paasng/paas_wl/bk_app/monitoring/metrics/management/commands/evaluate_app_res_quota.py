@@ -42,10 +42,10 @@ from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
-    help = 'Collect and statistics application history metrics'
+    help = "Collect and statistics application history metrics"
 
     def add_arguments(self, parser):
-        parser.add_argument("--codes", dest="app_codes", default=[], nargs='*', help="应用 Code 列表")
+        parser.add_argument("--codes", dest="app_codes", default=[], nargs="*", help="应用 Code 列表")
         parser.add_argument("--all", dest="evaluate_all", default=False, action="store_true", help="评估全量应用")
         parser.add_argument("--step", dest="step", default="15m", help="采样间隔")
         parser.add_argument("--time-range", dest="time_range", default="7d", help="采样时间范围")
@@ -61,10 +61,10 @@ class Command(BaseCommand):
         summaries = []
         for app in applications:
             try:
-                print(f'start evaluate app: {app.code}.....')
+                print(f"start evaluate app: {app.code}.....")
                 summary = AppResQuotaEvaluator(app, step, time_range).evaluate()
             except Exception as e:
-                print(f'failed to evaluate app: {app.code}, error: {str(e)}')
+                print(f"failed to evaluate app: {app.code}, error: {str(e)}")
             else:
                 summaries.append(asdict(summary))
 

@@ -25,8 +25,8 @@ from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
 
 class MetricClient(Protocol):
     def general_query(
-        self, queries: List['MetricQuery'], container_name: str
-    ) -> Generator['MetricSeriesResult', None, None]:
+        self, queries: List["MetricQuery"], container_name: str
+    ) -> Generator["MetricSeriesResult", None, None]:
         raise NotImplementedError
 
     def get_query_promql(

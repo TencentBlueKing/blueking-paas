@@ -70,7 +70,7 @@ class ImageReleaseMgr(DeployStep):
         module = self.module_environment.module
         is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        with self.procedure('解析应用进程信息', phase=preparation_phase):
+        with self.procedure("解析应用进程信息", phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id
             if build_id:
                 # 托管源码的应用在发布历史镜像时, advanced_options.build_id 不为空
@@ -99,6 +99,7 @@ class ImageReleaseMgr(DeployStep):
                             command=proc_spec.get_proc_command(),
                             replicas=proc_spec.get_target_replicas(self.module_environment.environment),
                             plan=proc_spec.get_plan_name(self.module_environment.environment),
+                            scaling_config=proc_spec.get_scaling_config(self.module_environment.environment),
                         )
                         for proc_spec in ModuleProcessSpec.objects.filter(module=module)
                     ]
@@ -117,10 +118,10 @@ class ImageReleaseMgr(DeployStep):
                 processes={p.name: p for p in processes}, build_status=JobStatus.SUCCESSFUL, build_id=build_id
             )
 
-        with self.procedure_force_phase('配置镜像访问凭证', phase=preparation_phase):
+        with self.procedure_force_phase("配置镜像访问凭证", phase=preparation_phase):
             self._setup_image_credentials()
 
-        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
+        with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:
             self._provision_services(p)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
@@ -135,7 +136,7 @@ class ImageReleaseMgr(DeployStep):
 
         for rel in mixed_service_mgr.list_unprovisioned_rels(self.engine_app):
             p.stream.write_message(
-                'Creating new service instance of %s, it will take several minutes...' % rel.get_service().display_name
+                "Creating new service instance of %s, it will take several minutes..." % rel.get_service().display_name
             )
             rel.provision()
 

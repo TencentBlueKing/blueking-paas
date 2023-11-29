@@ -28,94 +28,94 @@ from .views import logs as logs_views
 urlpatterns = [
     # 结构化日志
     re_path(
-        make_app_pattern(r'/log/structured/list/$'),
+        make_app_pattern(r"/log/structured/list/$"),
         logs_views.StructuredLogAPIView.as_view({"post": "query_logs"}),
-        name='api.logs.structured.query_logs',
+        name="api.logs.structured.query_logs",
     ),
     re_path(
-        make_app_pattern(r'/log/structured/date_histogram/$'),
+        make_app_pattern(r"/log/structured/date_histogram/$"),
         logs_views.StructuredLogAPIView.as_view({"post": "aggregate_date_histogram"}),
-        name='api.logs.structured.aggregate_date_histogram',
+        name="api.logs.structured.aggregate_date_histogram",
     ),
     re_path(
-        make_app_pattern(r'/log/structured/fields_filters/$'),
+        make_app_pattern(r"/log/structured/fields_filters/$"),
         logs_views.StructuredLogAPIView.as_view({"post": "aggregate_fields_filters"}),
-        name='api.logs.structured.aggregate_fields_filters',
+        name="api.logs.structured.aggregate_fields_filters",
     ),
     # 标准输出日志
     re_path(
-        make_app_pattern(r'/log/stdout/list/$'),
+        make_app_pattern(r"/log/stdout/list/$"),
         logs_views.StdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
-        name='api.logs.stdout.query_logs',
+        name="api.logs.stdout.query_logs",
     ),
     re_path(
-        make_app_pattern(r'/log/stdout/fields_filters/$'),
+        make_app_pattern(r"/log/stdout/fields_filters/$"),
         logs_views.StdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
-        name='api.logs.stdout.aggregate_fields_filters',
+        name="api.logs.stdout.aggregate_fields_filters",
     ),
     # Ingress 日志
     re_path(
-        make_app_pattern(r'/log/ingress/list/$'),
+        make_app_pattern(r"/log/ingress/list/$"),
         logs_views.IngressLogAPIView.as_view({"post": "query_logs"}),
-        name='api.logs.ingress.query_logs',
+        name="api.logs.ingress.query_logs",
     ),
     re_path(
-        make_app_pattern(r'/log/ingress/date_histogram/$'),
+        make_app_pattern(r"/log/ingress/date_histogram/$"),
         logs_views.IngressLogAPIView.as_view({"post": "aggregate_date_histogram"}),
-        name='api.logs.ingress.aggregate_date_histogram',
+        name="api.logs.ingress.aggregate_date_histogram",
     ),
     re_path(
-        make_app_pattern(r'/log/ingress/fields_filters/$'),
+        make_app_pattern(r"/log/ingress/fields_filters/$"),
         logs_views.IngressLogAPIView.as_view({"post": "aggregate_fields_filters"}),
-        name='api.logs.ingress.aggregate_fields_filters',
+        name="api.logs.ingress.aggregate_fields_filters",
     ),
     # 模块维度下的日志搜索
     re_path(
-        make_app_pattern(r'/log/structured/list/$', include_envs=False),
+        make_app_pattern(r"/log/structured/list/$", include_envs=False),
         logs_views.ModuleStructuredLogAPIView.as_view({"post": "query_logs"}),
-        name='api.logs.structured.query_logs.legacy',
+        name="api.logs.structured.query_logs.legacy",
     ),
     re_path(
-        make_app_pattern(r'/log/structured/date_histogram/$', include_envs=False),
+        make_app_pattern(r"/log/structured/date_histogram/$", include_envs=False),
         logs_views.ModuleStructuredLogAPIView.as_view({"post": "aggregate_date_histogram"}),
-        name='api.logs.structured.aggregate_date_histogram.legacy',
+        name="api.logs.structured.aggregate_date_histogram.legacy",
     ),
     re_path(
-        make_app_pattern(r'/log/structured/fields_filters/$', include_envs=False),
+        make_app_pattern(r"/log/structured/fields_filters/$", include_envs=False),
         logs_views.ModuleStructuredLogAPIView.as_view({"post": "aggregate_fields_filters"}),
-        name='api.logs.structured.aggregate_fields_filters.legacy',
+        name="api.logs.structured.aggregate_fields_filters.legacy",
     ),
     re_path(
-        make_app_pattern(r'/log/stdout/list/$', include_envs=False),
+        make_app_pattern(r"/log/stdout/list/$", include_envs=False),
         logs_views.ModuleStdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
-        name='api.logs.stdout.query_logs.legacy',
+        name="api.logs.stdout.query_logs.legacy",
     ),
     re_path(
-        make_app_pattern(r'/log/stdout/fields_filters/$', include_envs=False),
+        make_app_pattern(r"/log/stdout/fields_filters/$", include_envs=False),
         logs_views.ModuleStdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
-        name='api.logs.stdout.aggregate_fields_filters.legacy',
+        name="api.logs.stdout.aggregate_fields_filters.legacy",
     ),
     re_path(
-        make_app_pattern(r'/log/ingress/list/$', include_envs=False),
+        make_app_pattern(r"/log/ingress/list/$", include_envs=False),
         logs_views.ModuleIngressLogAPIView.as_view({"post": "query_logs"}),
-        name='api.logs.ingress.query_logs.legacy',
+        name="api.logs.ingress.query_logs.legacy",
     ),
     re_path(
-        make_app_pattern(r'/log/ingress/date_histogram/$', include_envs=False),
+        make_app_pattern(r"/log/ingress/date_histogram/$", include_envs=False),
         logs_views.ModuleIngressLogAPIView.as_view({"post": "aggregate_date_histogram"}),
-        name='api.logs.ingress.aggregate_date_histogram.legacy',
+        name="api.logs.ingress.aggregate_date_histogram.legacy",
     ),
     re_path(
-        make_app_pattern(r'/log/ingress/fields_filters/$', include_envs=False),
+        make_app_pattern(r"/log/ingress/fields_filters/$", include_envs=False),
         logs_views.ModuleIngressLogAPIView.as_view({"post": "aggregate_fields_filters"}),
-        name='api.logs.ingress.aggregate_fields_filters.legacy',
+        name="api.logs.ingress.aggregate_fields_filters.legacy",
     ),
     # System APIs
     url(
-        r'sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/'
-        r'envs/(?P<environment>stag|prod)/structured/list/$',
+        r"sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"envs/(?P<environment>stag|prod)/structured/list/$",
         logs_views.SysStructuredLogAPIView.as_view({"post": "query_logs"}),
-        name='sys.api.logs.structured',
+        name="sys.api.logs.structured",
     ),
 ]
 
@@ -140,13 +140,13 @@ urlpatterns += [
 # 以下接口已注册到 APIGW, 慎重删除
 urlpatterns += [
     re_path(
-        make_app_pattern(r'/log/standard_output/list/$', include_envs=False),
+        make_app_pattern(r"/log/standard_output/list/$", include_envs=False),
         legacy_views.V1StdoutLogAPIView.as_view({"get": "query_logs_scroll_with_get", "post": "query_logs_scroll"}),
         name="api.logs.standard.list.deprecated",
     ),
     url(
-        r'sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/structured/list/$',
+        r"sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/structured/list/$",
         legacy_views.V1SysStructuredLogAPIView.as_view({"post": "query_logs", "get": "query_logs_get"}),
-        name='sys.api.logs.structured.deprecated',
+        name="sys.api.logs.structured.deprecated",
     ),
 ]

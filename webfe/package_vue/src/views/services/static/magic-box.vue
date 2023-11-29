@@ -19,7 +19,7 @@
                     apiexplain: this.$t('蓝鲸MagicBox提供丰富的PC端、移动端前端UI组件，更有样例套餐助您快速搭建前端页面。同时蓝鲸MagicBox提供可视化开发服务，支持在线拖拽页面，所见即所得。'),
                     apiList: [
                         {
-                            'title': this.$t('可视化开发平台'),
+                            'title': this.$t('运维开发平台'),
                             'explain': this.$t('支持在线拖拽，使用MagicBox提供的组件，自由布局页面。'),
                             'url': this.GLOBAL.LINK.LESSCODE_INDEX
                         },

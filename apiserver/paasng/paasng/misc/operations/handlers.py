@@ -25,18 +25,12 @@ from django.dispatch import receiver
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
 from paas_wl.core.signals import new_operation_happened
-from paasng.platform.engine.constants import JobStatus, OperationTypes
-from paasng.platform.engine.models import Deployment, ModuleEnvironmentOperations
-from paasng.platform.engine.signals import post_appenv_deploy
-from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.applications.signals import (
-    module_environment_offline_event,
-    module_environment_offline_success,
-    online_market_success,
-    pre_delete_application,
-    pre_delete_module,
+from paasng.accessories.publish.market.constant import AppState
+from paasng.accessories.publish.market.signals import (
+    offline_market,
+    product_create_or_update_by_operator,
+    release_to_market,
 )
-from paasng.platform.modules.models import Module
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import (
     AppDeploymentOperationObj,
@@ -45,8 +39,18 @@ from paasng.misc.operations.models import (
     CNativeAppDeployOperationObj,
     Operation,
 )
-from paasng.accessories.publish.market.constant import AppState
-from paasng.accessories.publish.market.signals import offline_market, product_create_or_update_by_operator, release_to_market
+from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.applications.signals import (
+    module_environment_offline_event,
+    module_environment_offline_success,
+    online_market_success,
+    pre_delete_application,
+    pre_delete_module,
+)
+from paasng.platform.engine.constants import JobStatus, OperationTypes
+from paasng.platform.engine.models import Deployment, ModuleEnvironmentOperations
+from paasng.platform.engine.signals import post_appenv_deploy
+from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -205,9 +209,9 @@ def on_operation_created(sender, instance, created, raw, using, update_fields, *
     ApplicationLatestOp.objects.update_or_create(
         application=instance.application,
         defaults={
-            'operation_type': instance.type,
-            'operation_id': instance.id,
-            'latest_operated_at': instance.created,
+            "operation_type": instance.type,
+            "operation_id": instance.id,
+            "latest_operated_at": instance.created,
         },
     )
 

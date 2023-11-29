@@ -44,7 +44,7 @@ class IngressPlugin(ABC):
 
     config_key: str
 
-    def __init__(self, app: WlApp, domains: Optional[Sequence['PIngressDomain']] = None):
+    def __init__(self, app: WlApp, domains: Optional[Sequence["PIngressDomain"]] = None):
         self.app = app
         self.domains = domains
 
@@ -57,18 +57,18 @@ class IngressPlugin(ABC):
         generated nginx config file. Which means you should implement this method
         with caution, prefer "configuration-snippet" if it meets your requirement.
         """
-        return ''
+        return ""
 
     def make_configuration_snippet(self) -> str:
         """Make configuration snippet which will be placed in "location" block"""
-        return ''
+        return ""
 
     def _get_config(self) -> RegionAwareConfig:
         """Get config object from settings"""
         try:
             json_config = settings.SERVICES_PLUGINS[self.config_key]
         except KeyError:
-            raise PluginNotConfigured(f'services plugin:{self.config_key} was not configured')
+            raise PluginNotConfigured(f"services plugin:{self.config_key} was not configured")
         return RegionAwareConfig(json_config)
 
 
@@ -82,7 +82,7 @@ class AccessControlPlugin(IngressPlugin):
     ```
     """
 
-    config_key = 'access_control'
+    config_key = "access_control"
 
     TMPL = dedent(
         """\
@@ -102,7 +102,7 @@ class AccessControlPlugin(IngressPlugin):
         """
     )
 
-    def __init__(self, app: WlApp, domains: Optional[Sequence['PIngressDomain']] = None):
+    def __init__(self, app: WlApp, domains: Optional[Sequence["PIngressDomain"]] = None):
         super().__init__(app, domains)
 
     def make_configuration_snippet(self) -> str:
@@ -116,18 +116,18 @@ class AccessControlPlugin(IngressPlugin):
         """
         conf = self._get_config().get(self.app.region)
         if not get_metadata(self.app).acl_is_enabled:
-            return ''
+            return ""
 
         # app_name is not the REAL app name, we need to prepend the region field to make
         # access control works
-        app_name = self.app.region + '-' + self.app.name
+        app_name = self.app.region + "-" + self.app.name
 
         # In case app's metadata is not available
-        default_env_name = self.app.name.rsplit('-', 1)[-1]
-        env_name = self.app.latest_config.values.get('environment', default_env_name)
+        default_env_name = self.app.name.rsplit("-", 1)[-1]
+        env_name = self.app.latest_config.values.get("environment", default_env_name)
 
-        redis_server_name = conf['redis_server_name']
-        dj_admin_ip_range = conf['dj_admin_ip_range_map']
+        redis_server_name = conf["redis_server_name"]
+        dj_admin_ip_range = conf["dj_admin_ip_range_map"]
         return self.TMPL.format(
             app_name=app_name,
             bk_app_name=get_metadata(self.app).get_paas_app_code(),
@@ -148,15 +148,15 @@ class PaasAnalysisPlugin(IngressPlugin):
     ```
     """
 
-    config_key = 'paas_analysis'
+    config_key = "paas_analysis"
     TMPL = dedent(
-        '''\
+        """\
         set $bkpa_site_id {bkpa_site_id};
         header_filter_by_lua_file $module_root/paas_analysis/main.lua;
-        '''
+        """
     )
 
-    def __init__(self, app: WlApp, domains: Optional[Sequence['PIngressDomain']] = None):
+    def __init__(self, app: WlApp, domains: Optional[Sequence["PIngressDomain"]] = None):
         super().__init__(app, domains)
 
     def make_configuration_snippet(self) -> str:
@@ -165,13 +165,13 @@ class PaasAnalysisPlugin(IngressPlugin):
         :raises: PluginNotConfigured when no plugin configs can be found in settings
         """
         conf = self._get_config().get(self.app.region)
-        if not conf.get('enabled', False):
-            return ''
+        if not conf.get("enabled", False):
+            return ""
 
         bkpa_site_id = get_metadata(self.app).bkpa_site_id
         if bkpa_site_id is None:
             logger.warning('"bkpa_site_id" not found in metadata')
-            return ''
+            return ""
 
         return self.TMPL.format(bkpa_site_id=str(bkpa_site_id))
 

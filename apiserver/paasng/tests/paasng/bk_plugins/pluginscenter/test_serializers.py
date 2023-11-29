@@ -59,7 +59,7 @@ def make_translate_fields(field, value) -> Dict:
         (
             {"id": "12345678901", "name": "2", "template": "foo"},
             False,
-            {'id': [ErrorDetail(string='请确保这个字段不能超过 10 个字符。', code='max_length')]},
+            {"id": [ErrorDetail(string="请确保这个字段不能超过 10 个字符。", code="max_length")]},
         ),
         (
             {
@@ -118,9 +118,17 @@ def test_make_create_plugin_validator(pd, data, is_valid, expected):
 @pytest.mark.parametrize(
     "field, value, expected",
     [
-        ("id", 1, {'non_field_errors': [ErrorDetail(string='插件ID 为 1 的插件已存在', code='unique')]}),
-        ("name_en", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
-        ("name_zh_cn", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
+        ("id", 1, {"non_field_errors": [ErrorDetail(string="插件ID 为 1 的插件已存在", code="unique")]}),
+        (
+            "name_en",
+            "FLAG",
+            {"non_field_errors": [ErrorDetail(string="插件名称 为 FLAG 的插件已存在", code="unique")]},
+        ),
+        (
+            "name_zh_cn",
+            "FLAG",
+            {"non_field_errors": [ErrorDetail(string="插件名称 为 FLAG 的插件已存在", code="unique")]},
+        ),
     ],
 )
 def test_make_create_plugin_validator_conflict(pd, plugin, field, value, expected):

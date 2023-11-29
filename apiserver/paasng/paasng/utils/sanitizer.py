@@ -36,42 +36,42 @@ from bleach.encoding import force_unicode
 from bleach.sanitizer import BleachSanitizerFilter, Cleaner
 
 allow_tags = [
-    'a',
-    'img',
-    'br',
-    'strong',
-    'b',
-    'code',
-    'pre',
-    'p',
-    'div',
-    'em',
-    'span',
-    'h1',
-    'h2',
-    'h3',
-    'h4',
-    'h5',
-    'h6',
-    'blockquote',
-    'ul',
-    'ol',
-    'tr',
-    'th',
-    'td',
-    'hr',
-    'li',
-    'u',
-    'embed',
-    's',
-    'table',
-    'thead',
-    'tbody',
-    'caption',
-    'small',
-    'q',
-    'sup',
-    'sub',
+    "a",
+    "img",
+    "br",
+    "strong",
+    "b",
+    "code",
+    "pre",
+    "p",
+    "div",
+    "em",
+    "span",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "blockquote",
+    "ul",
+    "ol",
+    "tr",
+    "th",
+    "td",
+    "hr",
+    "li",
+    "u",
+    "embed",
+    "s",
+    "table",
+    "thead",
+    "tbody",
+    "caption",
+    "small",
+    "q",
+    "sup",
+    "sub",
 ]
 common_attrs = ["id", "style", "class", "name"]
 nonend_tags = ["img", "hr", "br", "embed"]
@@ -94,10 +94,10 @@ class BkBleachSanitizerFilter(BleachSanitizerFilter):
         return data
 
     def allow_token_a(self, token):
-        if u"data" in token and (None, u'href') in token[u'data']:
-            token[u"data"].setdefault((None, u"target"), u"_blank")
-            token[u"data"][(None, u"rel")] = u"noopener noreferrer"
-            self.limit_attribute_value(token[u'data'], (None, u'target'), [u'_blank', u'_self'])
+        if "data" in token and (None, "href") in token["data"]:
+            token["data"].setdefault((None, "target"), "_blank")
+            token["data"][(None, "rel")] = "noopener noreferrer"
+            self.limit_attribute_value(token["data"], (None, "target"), ["_blank", "_self"])
         return token
 
     def allow_token(self, token):
@@ -118,7 +118,7 @@ class BkCleaner(Cleaner):
 
         """
         if not text:
-            return u''
+            return ""
 
         text = force_unicode(text)
 

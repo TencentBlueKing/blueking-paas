@@ -18,4 +18,4 @@ to the current version of the project delivered to anyone in the future.
 """
 """Modules related with cross systems comunications"""
 
-default_app_config = 'paasng.plat_admin.system.apps.SystemConfig'
+default_app_config = "paasng.plat_admin.system.apps.SystemConfig"

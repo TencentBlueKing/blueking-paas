@@ -35,12 +35,12 @@ class GitLabApiClient:
             api_url,
             http_username=username,
             http_password=password,
-            private_token=kwargs.get('private_token'),
-            oauth_token=kwargs.get('oauth_token'),
+            private_token=kwargs.get("private_token"),
+            oauth_token=kwargs.get("oauth_token"),
         )
         self.gl.auth()
 
-    def list_repo(self, visibility='private') -> List[ProjectFile]:
+    def list_repo(self, visibility="private") -> List[ProjectFile]:
         """从远程服务器获取当前用户的所有仓库
         visibility:
             private:    Project access must be granted explicitly for each user.
@@ -53,7 +53,7 @@ class GitLabApiClient:
         """尝试访问远程仓库, 试探是否有访问权限"""
         return self.gl.projects.get(project.path_with_namespace)
 
-    def repo_get_raw_file(self, project: GitProject, file_path, ref='master', **kwargs) -> bytes:
+    def repo_get_raw_file(self, project: GitProject, file_path, ref="master", **kwargs) -> bytes:
         """
         从远程仓库下载 file_path 的文件
         :param project: 项目对象
@@ -65,7 +65,7 @@ class GitLabApiClient:
         try:
             file = project_obj.files.get(file_path=file_path, ref=ref)
         except GitlabGetError:
-            raise DoesNotExistsOnGitServer(f'file: {file_path} not found')
+            raise DoesNotExistsOnGitServer(f"file: {file_path} not found")
         return base64.b64decode(file.attributes["content"])
 
     def repo_list_branches(self, project: GitProject, **kwargs) -> List[dict]:

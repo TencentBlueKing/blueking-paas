@@ -22,8 +22,8 @@ from prometheus_client.core import GaugeMetricFamily, Metric
 
 
 class GaugeMetric:
-    name = 'gauge'
-    description = 'gauge metric'
+    name = "gauge"
+    description = "gauge metric"
 
     @classmethod
     def calc_value(self) -> Any:

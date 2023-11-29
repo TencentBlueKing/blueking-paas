@@ -25,14 +25,14 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.accessories.cloudapi import serializers
 from paasng.accessories.cloudapi.components.bk_apigateway_inner import bk_apigateway_inner_component
 from paasng.accessories.cloudapi.utils import get_user_auth_type
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -43,21 +43,21 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWAPISLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_apis(self, request, app_code: str, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_resource_permissions(self, request, app_code: str, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         request_body=serializers.APIGWPermissionApplySLZ,
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def apply(self, request, app_code: str, *args, **kwargs):
         slz = serializers.APIGWPermissionApplySLZ(data=request.data)
@@ -68,7 +68,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         request_body=serializers.APIGWPermissionRenewSLZ,
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def renew(self, request, app_code: str, *args, **kwargs):
         slz = serializers.APIGWPermissionRenewSLZ(data=request.data)
@@ -79,14 +79,14 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWAllowApplyByAPISLZ,
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def allow_apply_by_api(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_app_resource_permissions(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
@@ -94,35 +94,35 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         query_serializer=serializers.APIGWPermissionApplyRecordQuerySLZ,
         response_serializer=serializers.APIGWPermissionApplyRecordSLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_resource_permission_apply_records(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionApplyRecordDetailSLZ,
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def retrieve_resource_permission_apply_record(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.ESBSystemSLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_esb_systems(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_component_permissions(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         request_body=serializers.ESBPermissionApplySLZ,
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def apply_component_permissions(self, request, app_code, *args, **kwargs):
         slz = serializers.ESBPermissionApplySLZ(data=request.data)
@@ -133,7 +133,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         request_body=serializers.ESBPermissionRenewSLZ,
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def renew_component_permissions(self, request, app_code, *args, **kwargs):
         slz = serializers.ESBPermissionRenewSLZ(data=request.data)
@@ -144,7 +144,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_app_component_permissions(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
@@ -152,14 +152,14 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         query_serializer=serializers.APIGWPermissionApplyRecordQuerySLZ,
         response_serializer=serializers.APIGWPermissionApplyRecordSLZ(many=True),
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def list_component_permission_apply_records(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.ESBPermissionApplyRecordDetailSLZ,
-        tags=['CloudAPI'],
+        tags=["CloudAPI"],
     )
     def retrieve_component_permission_apply_record(self, request, app_code, *args, **kwargs):
         return self._get(request, app_code, *args, **kwargs)
@@ -169,8 +169,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         params = copy.copy(request.query_params)
         params.update(
             {
-                'target_app_code': app_code,
-                'user_auth_type': get_user_auth_type(self._get_app_region()),
+                "target_app_code": app_code,
+                "user_auth_type": get_user_auth_type(self._get_app_region()),
             }
         )
 
@@ -186,8 +186,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = copy.copy(request.data)
         data.update(
             {
-                'target_app_code': app_code,
-                'user_auth_type': get_user_auth_type(self._get_app_region()),
+                "target_app_code": app_code,
+                "user_auth_type": get_user_auth_type(self._get_app_region()),
             }
         )
 
@@ -200,7 +200,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 记录操作记录
         try:
             # 部分 API 没有带上网关名，则不记录到操作记录中
-            gateway_name = data.get('gateway_name')
+            gateway_name = data.get("gateway_name")
             if gateway_name:
                 application = self.get_application()
                 Operation.objects.create(
@@ -220,13 +220,13 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # `/api/v1/` + `其他部分` 即为 bk-apigateway-inner 接口地址
         prefix = self._get_request_path_prefix(path, app_code)
         if path.startswith(prefix):
-            return f'/api/v1/{path[len(prefix):]}'
+            return f"/api/v1/{path[len(prefix):]}"
 
         raise error_codes.CLOUDAPI_PATH_ERROR
 
     def _get_request_path_prefix(self, path: str, app_code: str) -> str:
-        force_script_name = getattr(settings, 'FORCE_SCRIPT_NAME', '') or ''
-        return f'{force_script_name}/api/cloudapi/apps/{app_code}/'
+        force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
+        return f"{force_script_name}/api/cloudapi/apps/{app_code}/"
 
     def _get_app_region(self) -> str:
         app = self.get_application()

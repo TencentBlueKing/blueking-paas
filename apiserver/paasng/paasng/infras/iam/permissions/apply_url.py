@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 
 class ApplyURLGenerator:
-
     iam = IAM(
         settings.IAM_APP_CODE,
         settings.IAM_APP_SECRET,
@@ -48,7 +47,7 @@ class ApplyURLGenerator:
         app = cls._make_application(action_request_list)
         ok, message, url = cls.iam.get_apply_url(app, bk_username=username)
         if not ok:
-            logger.error('generate_apply_url failed: %s', message)
+            logger.error("generate_apply_url failed: %s", message)
             return settings.BK_IAM_URL
         return url
 

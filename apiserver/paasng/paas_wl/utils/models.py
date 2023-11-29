@@ -43,7 +43,7 @@ class UuidAuditedModel(AuditedModel):
     """Add a UUID primary key to an class`AuditedModel`."""
 
     uuid = models.UUIDField(
-        'UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True
+        "UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True
     )
 
     class Meta:
@@ -138,7 +138,7 @@ def make_json_field(  # noqa: C901
     # For pickling(and django migrations) to work, the __module__ variable needs to be set to the frame
     # where the JsonField is created.
     try:
-        module = sys._getframe(1).f_globals.get('__name__', '__main__')
+        module = sys._getframe(1).f_globals.get("__name__", "__main__")
     except (AttributeError, ValueError):
         if module is None:
             raise RuntimeError("Can't detect the module name. please provide by func args.")
@@ -154,7 +154,7 @@ def validate_procfile(value: Dict[str, str]) -> Dict[str, str]:
     for proc_type in value:
         if not re.match(settings.PROC_TYPE_PATTERN, proc_type):
             raise ValidationError(
-                'Invalid proc type: %s: must match the regex %s' % (proc_type, settings.PROC_TYPE_PATTERN)
+                "Invalid proc type: %s: must match the regex %s" % (proc_type, settings.PROC_TYPE_PATTERN)
             )
     return value
 
@@ -162,13 +162,13 @@ def validate_procfile(value: Dict[str, str]) -> Dict[str, str]:
 class BkUserField(models.CharField):
     """Field for storing blueking user pk"""
 
-    description = 'DB field for storing blueking user'
+    description = "DB field for storing blueking user"
 
     def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 64
-        kwargs['blank'] = True
-        kwargs['null'] = True
-        kwargs.setdefault('db_index', True)
+        kwargs["max_length"] = 64
+        kwargs["blank"] = True
+        kwargs["null"] = True
+        kwargs.setdefault("db_index", True)
         super(BkUserField, self).__init__(*args, **kwargs)
 
     def from_db_value(self, value, expression, connection):

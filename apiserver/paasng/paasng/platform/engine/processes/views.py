@@ -106,7 +106,7 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
                 command,
             )
         except AppEntityNotFound:
-            raise error_codes.ERROR_UPDATING_PROC_SERVICE.f('未找到服务')
+            raise error_codes.ERROR_UPDATING_PROC_SERVICE.f("未找到服务")
 
         data = result.get("data") or {}
         return Response(

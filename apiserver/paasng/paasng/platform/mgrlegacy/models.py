@@ -123,7 +123,7 @@ class MigrationProcess(OwnerTimestampedModel):
 
     def set_app(self, app):
         self.app = app
-        self.save(update_fields=['app'])
+        self.save(update_fields=["app"])
 
     # on_migration and on_rollback
 
@@ -133,7 +133,7 @@ class MigrationProcess(OwnerTimestampedModel):
         :param migration: Migration instance.
         """
         self.ongoing_migration = migration.get_info()
-        self.save(update_fields=['ongoing_migration'])
+        self.save(update_fields=["ongoing_migration"])
 
     def append_migration(self, migration):
         """Append a migration
@@ -142,11 +142,11 @@ class MigrationProcess(OwnerTimestampedModel):
         """
         self.ongoing_migration = None
         self.finished_migrations = (self.finished_migrations or []) + [migration.get_info()]
-        self.save(update_fields=['ongoing_migration', 'finished_migrations'])
+        self.save(update_fields=["ongoing_migration", "finished_migrations"])
 
     def append_rollback(self, migration):
         self.finished_rollbacks = (self.finished_rollbacks or []) + [migration.get_info()]
-        self.save(update_fields=['finished_rollbacks'])
+        self.save(update_fields=["finished_rollbacks"])
 
     # fail
 
@@ -161,32 +161,32 @@ class MigrationProcess(OwnerTimestampedModel):
         self.status = MigrationStatus.FAILED.value
         self.failed_date = datetime.datetime.now()
 
-        self.save(update_fields=['ongoing_migration', 'finished_migrations', 'status', 'failed_date'])
+        self.save(update_fields=["ongoing_migration", "finished_migrations", "status", "failed_date"])
 
     # status
 
     def set_status(self, status):
         self.ongoing_migration = None
         self.status = status
-        self.save(update_fields=['status', 'ongoing_migration'])
+        self.save(update_fields=["status", "ongoing_migration"])
 
     def set_done_migrate_state(self):
         self.ongoing_migration = None
         self.migrated_date = datetime.datetime.now()
         self.status = MigrationStatus.DONE_MIGRATION.value
-        self.save(update_fields=['status', 'migrated_date', 'ongoing_migration'])
+        self.save(update_fields=["status", "migrated_date", "ongoing_migration"])
 
     def set_rollback_state(self):
         self.ongoing_migration = None
         self.rollbacked_date = datetime.datetime.now()
         self.status = MigrationStatus.ROLLBACKED.value
-        self.save(update_fields=['status', 'rollbacked_date', 'ongoing_migration'])
+        self.save(update_fields=["status", "rollbacked_date", "ongoing_migration"])
 
     def set_confirmed_state(self):
         self.ongoing_migration = None
         self.status = MigrationStatus.CONFIRMED.value
         self.confirmed_date = datetime.datetime.now()
-        self.save(update_fields=['status', 'confirmed_date', 'ongoing_migration'])
+        self.save(update_fields=["status", "confirmed_date", "ongoing_migration"])
 
     def is_active(self):
         """
@@ -213,8 +213,8 @@ class MigrationProcess(OwnerTimestampedModel):
         # 返回之前按照 create_ts 排序
         operations = (self.finished_migrations or []) + (self.finished_rollbacks or [])
         for operation in operations:
-            operation.setdefault('created_ts', 0)
-        return sorted(operations, key=itemgetter('created_ts'))
+            operation.setdefault("created_ts", 0)
+        return sorted(operations, key=itemgetter("created_ts"))
 
     def __repr__(self):
         return "%s[%s]" % (self.__class__, self.id)

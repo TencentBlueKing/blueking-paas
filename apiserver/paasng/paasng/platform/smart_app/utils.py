@@ -51,7 +51,7 @@ def get_app_description(stat: SPStat) -> ApplicationDesc:
     :raises: ValidationError when meta info is invalid or empty
     """
     if not stat.meta_info:
-        raise ValidationError(_('找不到任何有效的应用描述信息'))
+        raise ValidationError(_("找不到任何有效的应用描述信息"))
 
     try:
         desc = get_desc_handler(stat.meta_info).app_desc
@@ -66,7 +66,7 @@ def get_deploy_description(stat: SPStat) -> DeploymentDesc:
     :raises: ValidationError when meta info is invalid or empty
     """
     if not stat.meta_info:
-        raise ValidationError(_('找不到任何有效的应用描述信息'))
+        raise ValidationError(_("找不到任何有效的应用描述信息"))
 
     try:
         desc = get_desc_handler(stat.meta_info).get_deploy_desc(None)

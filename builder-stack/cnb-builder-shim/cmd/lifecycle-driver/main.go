@@ -30,7 +30,7 @@ import (
 	"github.com/go-logr/logr"
 	flag "github.com/spf13/pflag"
 
-	"bk.tencent.com/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 
 const (

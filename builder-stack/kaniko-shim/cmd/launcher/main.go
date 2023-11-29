@@ -33,10 +33,10 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
-	"bk.tencent.com/kaniko-shim/pkg/fetcher/fs"
-	"bk.tencent.com/kaniko-shim/pkg/fetcher/http"
-	"bk.tencent.com/kaniko-shim/pkg/logging"
-	"bk.tencent.com/kaniko-shim/pkg/utils"
+	"github.com/TencentBlueking/bkpaas/kaniko-shim/pkg/fetcher/fs"
+	"github.com/TencentBlueking/bkpaas/kaniko-shim/pkg/fetcher/http"
+	"github.com/TencentBlueking/bkpaas/kaniko-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/kaniko-shim/pkg/utils"
 )
 
 const (

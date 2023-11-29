@@ -31,10 +31,10 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
-	"bk.tencent.com/cnb-builder-shim/pkg/dockercreds"
-	"bk.tencent.com/cnb-builder-shim/pkg/fetcher/fs"
-	"bk.tencent.com/cnb-builder-shim/pkg/fetcher/http"
-	"bk.tencent.com/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/dockercreds"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 
 const (

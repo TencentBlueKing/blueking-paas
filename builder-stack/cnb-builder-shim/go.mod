@@ -1,4 +1,4 @@
-module bk.tencent.com/cnb-builder-shim
+module github.com/TencentBlueking/bkpaas/cnb-builder-shim
 
 go 1.18
 

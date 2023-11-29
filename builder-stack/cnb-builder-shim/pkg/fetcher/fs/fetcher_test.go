@@ -25,8 +25,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	fetcher "bk.tencent.com/cnb-builder-shim/pkg/fetcher/fs"
-	"bk.tencent.com/cnb-builder-shim/pkg/logging"
+	fetcher "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 
 var (

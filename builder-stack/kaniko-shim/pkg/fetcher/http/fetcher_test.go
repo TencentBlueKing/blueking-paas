@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	fetcher "bk.tencent.com/kaniko-shim/pkg/fetcher/http"
+	fetcher "github.com/TencentBlueking/bkpaas/kaniko-shim/pkg/fetcher/http"
 )
 
 var (

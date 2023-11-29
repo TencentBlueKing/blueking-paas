@@ -1,4 +1,4 @@
-module bk.tencent.com/kaniko-shim
+module github.com/TencentBlueking/bkpaas/kaniko-shim
 
 go 1.18
 

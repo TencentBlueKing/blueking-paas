@@ -61,6 +61,7 @@ export default {
       const schema = localStorage.getItem('pluginSchema');
       this.schema = JSON.parse(schema);
     }
+    this.schema.properties = this.addValidation(this.schema.properties);
   },
   methods: {
     async request(url) {
@@ -111,6 +112,24 @@ export default {
     },
     goBack() {
       this.$router.go(-1);
+    },
+    // 多选添加校验
+    addValidation(properties) {
+      if (!Object.keys(properties).length) {
+        return properties;
+      }
+      for (const key in properties) {
+        if (Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules') && Array.isArray(properties[key].default)) {
+          // 多选校验
+          properties[key]['ui:rules'] = [
+            {
+              validator: '{{ $self.value.length > 0 }}',
+              message: '必填项',
+            },
+          ];
+        }
+      }
+      return properties;
     },
   },
 };

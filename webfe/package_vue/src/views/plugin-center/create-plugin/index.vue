@@ -387,16 +387,17 @@ export default {
             isQuery = true;
           }
           e.name = e.plugin_type.name;
-          e.properties = e.schema.extra_fields;
+          // 多选表单添加必填校验
+          e.properties = this.addValidation(e.schema.extra_fields);
           return e;
         });
         // 参数指定插件类型，没有指定默认为第一项
         this.form.pd_id = isQuery ? this.defaultPluginType : res[0].plugin_type.id;
 
         // 默认为第一项
-        const properties = res[0]?.schema.extra_fields;
+        const properties = this.pluginTypeList[0]?.schema?.extra_fields;
         // 根据 extra_fields_order 字段排序
-        const extraFieldsOrder = res[0]?.schema.extra_fields_order || [];
+        const extraFieldsOrder = this.pluginTypeList[0]?.schema.extra_fields_order || [];
         const sortdProperties = this.sortdSchema(extraFieldsOrder, properties);
         this.schema = { type: 'object', required: this.getRequiredFields(sortdProperties), properties: sortdProperties };
         this.addRules();
@@ -412,6 +413,24 @@ export default {
           this.isLoading = false;
         }, 200);
       }
+    },
+    // 多选添加校验
+    addValidation(properties) {
+      if (!Object.keys(properties).length) {
+        return properties;
+      }
+      for (const key in properties) {
+        if (Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules') && Array.isArray(properties[key].default)) {
+          // 多选校验
+          properties[key]['ui:rules'] = [
+            {
+              validator: '{{ $self.value.length > 0 }}',
+              message: '必填项',
+            },
+          ];
+        }
+      }
+      return properties;
     },
     /**
      * 根据 fieldsOrder 字段排序 schema

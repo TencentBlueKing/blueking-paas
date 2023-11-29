@@ -211,6 +211,7 @@ class ReleaseStageDefinition(BaseModel):
     pipelineId: Optional[str] = Field(description="类型为 pipeline 时必填")
     pageUrl: Optional[str] = Field(description="类型为 subpage 时必填")
     pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")
+    pipelineEnv: Optional[str] = Field(default="prod", description="蓝盾流水线环境，默认为正式环境")
     itsmServiceName: Optional[str] = Field(description="itsm 服务名称, 类型为 itsm 时必填")
     builtinParams: Optional[Dict] = Field(
         description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)"

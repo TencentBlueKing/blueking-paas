@@ -16,13 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.addons import PlugableAppConfig
+from celery import shared_task
+
+from paasng.accessories.log.shim import setup_env_log_model
+from paasng.platform.modules.models import Module
 
 
-class ModulesConfig(PlugableAppConfig):
-    name = "paasng.platform.modules"
-
-    def ready(self):
-        super().ready()
-
-        from . import handlers  # noqa
+@shared_task
+def setup_module_log_model(module_id):
+    module = Module.objects.get(pk=module_id)
+    for env in module.get_envs():
+        setup_env_log_model(env)

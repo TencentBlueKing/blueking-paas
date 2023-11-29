@@ -1085,6 +1085,11 @@ export default {
           build_method: 'custom_image',
           image_repository: this.mirrorData.url,
         };
+        const processData = await this.$refs?.processRef?.handleSave();
+        const hookData = await this.$refs?.hookRef?.handleSave();
+        hookData.type = 'pre-release-hook';
+        params.bkapp_spec.processes = processData;
+        params.bkapp_spec.hook = hookData;
       }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
@@ -1116,11 +1121,6 @@ export default {
       //     }
       //   });
       // }
-      const processData = await this.$refs?.processRef.handleSave();
-      const hookData = await this.$refs?.hookRef.handleSave();
-      hookData.type = 'pre-release-hook';
-      params.bkapp_spec.processes = processData;
-      params.bkapp_spec.hook = hookData;
       debugger;
       try {
         this.formLoading = true;

@@ -425,7 +425,9 @@
         collapse-item-name="process"
         :title="$t('进程配置')"
       >
-        <deploy-process ref="processRef" :image-url="formData.url" :is-create="isCreate"></deploy-process>
+        <deploy-process
+          ref="processRef" :image-url="formData.url"
+          :image-credential-name="formData.imageCredentialName" :is-create="isCreate"></deploy-process>
       </collapseContent>
 
       <collapseContent
@@ -1047,6 +1049,11 @@ export default {
           build_method: 'custom_image',
           image_repository: this.formData.url,
         };
+        const processData = await this.$refs?.processRef?.handleSave();
+        const hookData = await this.$refs?.hookRef?.handleSave();
+        hookData.type = 'pre-release-hook';
+        params.bkapp_spec.processes = processData;
+        params.bkapp_spec.hook = hookData;
       }
 
       // 集群名称
@@ -1098,14 +1105,6 @@ export default {
       //   });
       // }
 
-
-      const processData = await this.$refs?.processRef.handleSave();
-      const hookData = await this.$refs?.hookRef.handleSave();
-      hookData.type = 'pre-release-hook';
-      console.log('params', params, processData, hookData);
-      params.bkapp_spec.processes = processData;
-      params.bkapp_spec.hook = hookData;
-      debugger;
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
           appCode: this.appCode,

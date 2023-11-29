@@ -851,7 +851,13 @@ export default {
       type: Boolean,
       default: false,
     },
+    // 创建应用镜像仓库
     imageUrl: {
+      type: String,
+      default: '',
+    },
+    // 创建应用镜像凭证
+    imageCredentialName: {
       type: String,
       default: '',
     },
@@ -1094,10 +1100,22 @@ export default {
     },
     imageUrl: {
       handler(v) {
-        // 创建应用且没有值 则设置
+        // 创建应用且没有镜像仓库值 则设置
         if (this.isCreate && !this.formData.image) {
           this.$nextTick(() => {
             this.$set(this.formData, 'image', v);
+          });
+        }
+      },
+      immediate: true,
+    },
+    imageCredentialName: {
+      handler(v) {
+        // 创建应用且没有镜像凭证值 则设置
+        if (this.isCreate && !this.formData.image_credential_name) {
+          this.$nextTick(() => {
+            console.log('vvvvv', v);
+            this.$set(this.formData, 'image_credential_name', v);
           });
         }
       },

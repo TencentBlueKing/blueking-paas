@@ -99,7 +99,7 @@ class Base64Validator:
 
 
 def str2bool(value):
-    TRUE_VALUES = {
+    true_values = {
         "t",
         "T",
         "y",
@@ -114,7 +114,7 @@ def str2bool(value):
         "ON",
         "1",
     }
-    FALSE_VALUES = {
+    false_values = {
         "f",
         "F",
         "n",
@@ -129,9 +129,9 @@ def str2bool(value):
         "OFF",
         "0",
     }
-    if value in TRUE_VALUES:
+    if value in true_values:
         return True
-    elif value in FALSE_VALUES:
+    elif value in false_values:
         return False
     else:
         raise ValueError(f"Given value({value}) not valid!")
@@ -147,7 +147,7 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     :return: validated procfile, which all key is lower case.
     :raise: django.core.exceptions.ValidationError
     """
-    for proc_type in procfile.keys():
+    for proc_type in procfile:
         if not PROC_TYPE_PATTERN.match(proc_type):
             raise ValidationError(
                 f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"

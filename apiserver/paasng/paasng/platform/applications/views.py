@@ -381,7 +381,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             if "Duplicate entry" in str(e):
                 err_msg = _("code 为 {} 或 name 为 {} 的应用已存在").format(data["code"], data["name_zh_cn"])
                 raise error_codes.CANNOT_CREATE_APP.f(err_msg)
-            raise e
+            raise
 
         return Response(
             data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": None},
@@ -548,7 +548,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         allow_advanced = AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS)
         adv_region_clusters = []
         if allow_advanced:
-            for region_name in get_all_regions().keys():
+            for region_name in get_all_regions():
                 clusters = RegionClusterService(region_name).list_clusters()
                 adv_region_clusters.append(
                     {"region": region_name, "cluster_names": [cluster.name for cluster in clusters]}
@@ -566,7 +566,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
     def _get_bk_plugin_configs(self) -> Iterable[Dict]:
         """Get configs for bk_plugin module"""
-        for name in get_all_regions().keys():
+        for name in get_all_regions():
             yield {"region": name, "allow_creation": get_bk_plugin_config(name).allow_creation}
 
     def _get_cluster_entrance_https_enabled(
@@ -684,9 +684,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
     def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
         """对使用非默认源码来源的，需要检查是否有权限"""
-        if source_origin not in SourceOrigin.get_default_origins():
-            if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-                raise ValidationError(_("你无法使用非默认的源码来源"))
+        if source_origin not in SourceOrigin.get_default_origins() and not AccountFeatureFlag.objects.has_feature(
+            user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN
+        ):
+            raise ValidationError(_("你无法使用非默认的源码来源"))
 
     def _init_image_credential(self, application: Application, image_credential: Dict):
         try:
@@ -1047,7 +1048,7 @@ class LightAppViewSet(viewsets.ViewSet):
                     message=f"app with the same {e.field} already exists.",
                 )
             except Exception as e:
-                logger.exception("save app base info fail: %s", e)
+                logger.exception("save app base info fail.")
                 raise LightAppAPIError(
                     LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
                 ) from e
@@ -1079,8 +1080,8 @@ class LightAppViewSet(viewsets.ViewSet):
 
             try:
                 app_manager.soft_delete(code=app.code)
-            except Exception as e:
-                logger.exception("save app base info fail: %s", e)
+            except Exception:
+                logger.exception("save app base info fail.")
                 raise LightAppAPIError(
                     LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
                 )
@@ -1113,8 +1114,8 @@ class LightAppViewSet(viewsets.ViewSet):
 
             try:
                 app_manager.update(app.code, data)
-            except Exception as e:
-                logger.exception("save app base info fail: %s", e)
+            except Exception:
+                logger.exception("save app base info fail.")
                 raise LightAppAPIError(
                     LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="edit light app failed"
                 )
@@ -1160,13 +1161,12 @@ class LightAppViewSet(viewsets.ViewSet):
         """
         生成轻应用 ID
         """
-        ALPHABET = string.digits + string.ascii_lowercase
+        alphabet = string.digits + string.ascii_lowercase
 
         # 轻应用的 app code 根据约定长度为 15
         # 为保证可创建的轻应用足够多(至少 36 * 36 个), 至少保留 2 位由随机字符生成
         parent_code = parent_code[:13]
-        salt = "".join(random.choices(ALPHABET, k=15 - len(parent_code)))
-
+        salt = "".join(random.choices(alphabet, k=15 - len(parent_code)))
         return f"{parent_code}_{salt}"
 
     @classmethod
@@ -1176,6 +1176,7 @@ class LightAppViewSet(viewsets.ViewSet):
             app_code = cls.generate_app_maker_code(parent_code)
             if not app_manager.get(app_code):
                 return app_code
+        return None
 
     @staticmethod
     def store_logo(app_code, logo: str):

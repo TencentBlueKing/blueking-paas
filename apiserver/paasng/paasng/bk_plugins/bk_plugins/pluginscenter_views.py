@@ -281,7 +281,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         with closing(subscriber):
             channel_state = subscriber.get_channel_state()
-            if channel_state == "none" or channel_state == "unknown":
+            if channel_state in ("none", "unknown"):
                 # redis 管道已结束, 取数据库中存储的日志
                 return Response(
                     data=api_serializers.PluginReleaseLogsResponseSLZ(
@@ -371,9 +371,8 @@ class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for member in data:
             role = ApplicationRole(member["role"]["id"])
             username = member["username"]
-            if username in existed_members:
-                if redundant_roles := set(existed_members[username]["roles"]) - {role}:
-                    need_to_clean[username].extend(redundant_roles)
+            if username in existed_members and (redundant_roles := set(existed_members[username]["roles"]) - {role}):
+                need_to_clean[username].extend(redundant_roles)
             need_to_add[role].append(username)
             current_members.add(username)
 

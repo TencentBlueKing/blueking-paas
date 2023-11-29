@@ -39,10 +39,10 @@ class AppUniqueValidator(UniqueValidator):
     field_label = ""
     signal: Signal
 
-    def __init__(self, field_name: Optional[str] = None, *args, **kwargs):
+    def __init__(self, field_name: Optional[str] = None, **kwargs):
         if field_name:
             self.field_name = field_name
-        super().__init__(queryset=Application.default_objects.all(), lookup="exact", *args, **kwargs)
+        super().__init__(queryset=Application.default_objects.all(), lookup="exact", **kwargs)
 
     def __call__(self, value, serializer_field):
         # Determine the existing instance, if this is an update operation.
@@ -93,3 +93,4 @@ class AppIDUniqueValidator(AppUniqueValidator):
         if instance.code != value:
             # Modifying 'code' field was forbidden at this moment
             raise ValidationError(_("不支持修改应用 ID"))
+        return None

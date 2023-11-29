@@ -33,10 +33,10 @@ class LazyDiscoverer(_LazyDiscoverer):
     Note: You cannot change the name `LazyDiscoverer`, otherwise the override will not work
     """
 
-    def __search(self, parts, resources, reqParams):  # noqa: C901
+    def __search(self, parts, resources, reqParams):  # noqa
         part = parts[0]
         if part != "*":
-            resourcePart = resources.get(part)
+            resourcePart = resources.get(part)  # noqa
             if not resourcePart:
                 return []
             elif isinstance(resourcePart, ResourceGroup):
@@ -63,7 +63,7 @@ class LazyDiscoverer(_LazyDiscoverer):
                 # In this case parts [0] will be a specified prefix, group, version
                 # as we recurse
                 return self.__search(parts[1:], resourcePart, reqParams + [part])
-            else:
+            else:  # noqa
                 if parts[1] != "*" and isinstance(parts[1], dict):
                     for _resource in resourcePart:
                         for term, value in parts[1].items():
@@ -74,7 +74,7 @@ class LazyDiscoverer(_LazyDiscoverer):
                     return resourcePart
         else:
             matches = []
-            for key in resources.keys():
+            for key in resources:
                 matches.extend(self.__search([key] + parts[1:], resources, reqParams))
             return matches
 
@@ -132,7 +132,7 @@ class CoreDynamicClient(DynamicClient):
 def patch_resource_field_cls():
     """Path original ResourceField class, raise exception when access a non-existent attribute"""
 
-    def __getattr__(self, name):
+    def __getattr__(self, name):  # noqa: N807
         """The original `ResourceField.__getattr__` will return `None` silently when getting a non-existent
         attribute, this function raise an exception instead.
 

@@ -57,10 +57,13 @@ def wrap_request_exc():
         raise BkOauthApiException(f"invalid json response: {e.doc}") from e
     except BkOauthApiResponseError as e:
         logger.exception(
-            "invalid response(%s) from %s ,request_id: %s ,Detail: %s"
-            % (e.status_code, e.request_url, e.request_id, e.response_text)
+            "invalid response(%s) from %s ,request_id: %s ,Detail: %s",
+            e.status_code,
+            e.request_url,
+            e.request_id,
+            e.response_text,
         )
-        raise e
+        raise
 
 
 class BkOauthClient:
@@ -93,7 +96,7 @@ class BkOauthClient:
         with wrap_request_exc():
             resp = requests.post(url, json=data, headers=self.headers)
             # 状态码 409 代表 bk_app_code client 已经存在
-            if resp.status_code == 200 or resp.status_code == 409:
+            if resp.status_code in (200, 409):
                 return
 
             self._validate_resp(resp)

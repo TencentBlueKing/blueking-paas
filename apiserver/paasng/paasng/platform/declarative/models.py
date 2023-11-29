@@ -82,7 +82,7 @@ class DeploymentDescription(TimestampedModel):
 
         ProcessesTmpl is a dict containing a process type and its corresponding ProcessTmpl"""
         processes = self.runtime.get("processes", {})
-        return {key: process for key, process in processes.items()}
+        return dict(processes.items())
 
     def get_deploy_hooks(self) -> HookList:
         hooks = HookList()

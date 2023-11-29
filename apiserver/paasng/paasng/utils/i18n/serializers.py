@@ -82,7 +82,7 @@ def i18n(
             # - validate_method = getattr(self, 'validate_' + field.field_name, None)
             # - errors[field.field_name] = ...
             with ExitStack() as stack:
-                for raw_field_name in fields.keys():
+                for raw_field_name in fields:
                     for language_code in languages:
                         i18n_field_name = to_translated_field(attr, language_code=language_code)
 

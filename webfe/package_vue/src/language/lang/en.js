@@ -2442,4 +2442,5 @@ export default {
   总在容器启动时拉取最新的镜像: 'Always pulls the latest image from the remote registry when starting the container.',
   当本地不存在镜像时从远程仓库拉取: 'The image is pulled only if it is not already present locally.',
   上次选择: 'Last selected',
+  '格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)': 'Format error, can only contain letters (a-zA-Z), numbers (0-9), and half-width hyphen (-), underscore (_), space ( ), and period (.).',
 };

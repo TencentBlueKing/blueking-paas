@@ -31,7 +31,7 @@ from paasng.utils.views import permission_classes as _permission_classes
 
 
 @pytest.mark.parametrize(
-    "error,expected",
+    ("error", "expected"),
     [
         (ValidationError("foo"), "foo"),
         (ValidationError({"foo": [ErrorDetail("err1"), ErrorDetail("err2")]}), "foo: err1"),
@@ -50,7 +50,7 @@ def dummy_hook(key, value):
 
 
 @pytest.mark.parametrize(
-    "hooks, expected",
+    ("hooks", "expected"),
     [
         (
             [
@@ -79,7 +79,7 @@ def test_hook_chain(hooks, expected):
 
 class TestBkStandardApiJSONRenderer:
     @pytest.mark.parametrize(
-        "resp,result",
+        ("resp", "result"),
         [
             # Successful response
             (Response([0, 1, 2], status=200), {"result": True, "data": [0, 1, 2], "code": 0, "message": ""}),

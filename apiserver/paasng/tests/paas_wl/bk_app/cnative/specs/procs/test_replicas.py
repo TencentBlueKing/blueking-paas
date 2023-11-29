@@ -28,7 +28,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
-def _deploy_stag_env(bk_stag_env, bk_stag_wl_app, with_stag_ns):
+def _deploy_stag_env(bk_stag_env, bk_stag_wl_app, _with_stag_ns):
     """Deploy a default payload to cluster for stag environment"""
     resource = create_app_resource(generate_bkapp_name(bk_stag_env), "nginx:latest")
     deploy(bk_stag_env, resource.to_deployable())

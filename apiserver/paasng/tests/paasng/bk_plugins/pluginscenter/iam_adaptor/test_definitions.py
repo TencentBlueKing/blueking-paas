@@ -50,7 +50,7 @@ def test_gen_iam_grade_manager(pd, plugin):
 
 
 @pytest.mark.parametrize(
-    "role, name, description",
+    ("role", "name", "description"),
     [
         (
             PluginRole.ADMINISTRATOR,

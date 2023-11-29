@@ -157,6 +157,8 @@ def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_cont
     source_origin = SourceOrigin(source_origin)
     if source_origin not in [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.SCENE]:
         raise NotImplementedError
+    if not source_control_type:
+        raise NotImplementedError("empty source control type")
 
     return get_sourcectl_type(source_control_type).repo_controller_class
 

@@ -136,7 +136,7 @@ def generate_s3cmd_conf(endpoint, access_key, secret_key, region_name, sig_versi
     Server.
     """
     ret = urllib.parse.urlparse(endpoint)
-    signature_v2 = not (sig_version == "s3v4")
+    signature_v2 = sig_version != "s3v4"
     return dedent(
         f"""\
         # Setup endpoint

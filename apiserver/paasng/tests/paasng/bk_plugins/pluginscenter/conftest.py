@@ -48,7 +48,7 @@ def make_api_resource(path: str = ""):
     return {"apiName": "dummy", "path": path, "method": "GET"}
 
 
-@pytest.fixture
+@pytest.fixture()
 def pd():
     log_params = {"indexPattern": "", "termTemplate": {}}
     pd: PluginDefinition = G(
@@ -146,7 +146,7 @@ def pd():
     return pd
 
 
-@pytest.fixture
+@pytest.fixture()
 def plugin(pd, bk_user):
     identifier = generate_random_string(length=10, chars=string.ascii_lowercase)
     plugin: PluginInstance = G(
@@ -170,7 +170,7 @@ def plugin(pd, bk_user):
     return plugin
 
 
-@pytest.fixture
+@pytest.fixture()
 def plugin_with_role(plugin):
     # 初始化成员信息
     G(PluginGradeManager, pd_id=plugin.pd.identifier, plugin_id=plugin.id, grade_manager_id=1)
@@ -179,7 +179,7 @@ def plugin_with_role(plugin):
     return plugin
 
 
-@pytest.fixture
+@pytest.fixture()
 def release(plugin):
     release: PluginRelease = G(
         PluginRelease,
@@ -195,7 +195,7 @@ def release(plugin):
     return release
 
 
-@pytest.fixture
+@pytest.fixture()
 def itsm_online_stage(release):
     stage = PluginReleaseStage.objects.filter(
         release=release, invoke_method="itsm", stage_id="online_approval"
@@ -203,19 +203,19 @@ def itsm_online_stage(release):
     return stage
 
 
-@pytest.fixture
+@pytest.fixture()
 def online_approval_service():
     svc: ApprovalService = G(ApprovalService, service_name=ApprovalServiceName.ONLINE_APPROVAL.value, service_id=1)
     return svc
 
 
-@pytest.fixture
+@pytest.fixture()
 def thirdparty_client():
     with mock.patch("paasng.bk_plugins.pluginscenter.thirdparty.utils.DynamicClient") as cls:
         yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
 
 
-@pytest.fixture
+@pytest.fixture()
 def iam_policy_client():
     with mock.patch(
         "paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client",
@@ -228,5 +228,5 @@ def iam_policy_client():
 
 
 @pytest.fixture()
-def setup_bk_user(bk_user):
+def _setup_bk_user(bk_user):
     AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_PLUGIN_CENTER, True)

@@ -27,9 +27,9 @@ import jinja2
 from elasticsearch_dsl.aggs import Terms
 from rest_framework.fields import get_attribute
 
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.accessories.log.models import ElasticSearchParams
 from paasng.accessories.log.utils import get_es_term
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.es_log.search import SmartSearch
@@ -110,7 +110,7 @@ def count_filters_options_from_logs(logs: List, properties: Dict[str, FieldFilte
     """
     # 在内存中统计 filters 的可选值
     field_counter: Dict[str, Counter] = defaultdict(Counter)
-    log_fields = [(f, f.split(".")) for f in properties.keys()]
+    log_fields = [(f, f.split(".")) for f in properties]
     for log in logs:
         for log_field, split_log_field in log_fields:
             try:
@@ -138,7 +138,7 @@ def count_filters_options_from_logs(logs: List, properties: Dict[str, FieldFilte
         result[title] = FieldFilter(
             name=f.name,
             key=f.key,
-            options=[(k, v) for k, v in options.items()],
+            options=list(options.items()),
             total=total,
         )
     return result

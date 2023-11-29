@@ -66,7 +66,7 @@ class TestEnvVars:
         update_env_vars_with_metadata(env, metadata)
 
         assert metadata["extra_envs"]["a"] == env["a"]
-        assert "git x https://github.com/x.git 1.1;tar x https://rgw.com/x.tar 1.2" == env["REQUIRED_BUILDPACKS"]
+        assert env["REQUIRED_BUILDPACKS"] == "git x https://github.com/x.git 1.1;tar x https://rgw.com/x.tar 1.2"
 
 
 class TestUtils:
@@ -83,7 +83,7 @@ class TestUtils:
             tolerations=[],
         ),
     )
-    def test_prepare_slugbuilder_template_without_metadata(self, _, wl_app, build_proc):
+    def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
         env_vars = generate_builder_env_vars(build_proc, {})
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
         assert (

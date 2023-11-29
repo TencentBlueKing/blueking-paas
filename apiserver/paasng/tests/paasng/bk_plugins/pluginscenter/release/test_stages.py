@@ -27,7 +27,7 @@ pytestmark = pytest.mark.django_db
 
 class TestPipelineStage:
     @pytest.fixture(autouse=True)
-    def setup(self, plugin, release):
+    def _setup(self, plugin, release):
         plugin.repository = "http://git.example.com/foo.git"
         plugin.save()
         release.source_location = plugin.repository
@@ -36,7 +36,7 @@ class TestPipelineStage:
         release.save()
 
     @pytest.mark.parametrize(
-        "template, expected",
+        ("template", "expected"),
         [
             (
                 {"repo_url": "{{ source_location }}", "tag": "{{ source_version_name }}"},

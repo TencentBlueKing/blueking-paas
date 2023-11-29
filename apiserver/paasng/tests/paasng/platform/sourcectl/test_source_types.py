@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from paasng.platform.sourcectl.connector import ModuleRepoConnector  # noqa
 
 
-@pytest.fixture
+@pytest.fixture()
 def server_config_with_region():
     return {
         "_lookup_field": "region",
@@ -36,7 +36,7 @@ def server_config_with_region():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def oauth_credentials():
     return {
         "authorization_base_url": "https://example.com",
@@ -46,7 +46,7 @@ def oauth_credentials():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def oauth_display_info():
     return {
         "display_name": "dummy-oauth",
@@ -57,7 +57,7 @@ def oauth_display_info():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def partial_oauth_display_info():
     return {"display_name": "dummy-override"}
 
@@ -184,7 +184,7 @@ class TestSourceTypeSpec:
 
 
 class TestSourceTypes:
-    @pytest.fixture
+    @pytest.fixture()
     def source_types(self):
         source_type_spec_configs = [
             {
@@ -209,7 +209,7 @@ class TestSourceTypes:
 
     def test_find_by_type(self, source_types):
         assert source_types.find_by_type(DummySourceTypeSpec) is not None
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*not exists in source_types"):
             source_types.find_by_type(int)
 
     def test_get_choices(self, source_types):
@@ -223,7 +223,7 @@ class TestSourceTypes:
 
 
 class TestSourceTypeNames:
-    @pytest.fixture
+    @pytest.fixture()
     def source_types(self):
         source_type_spec_configs = [
             {
@@ -244,7 +244,7 @@ class TestSourceTypeNames:
         return obj
 
     @pytest.mark.parametrize(
-        "key,result,exc_raised",
+        ("key", "result", "exc_raised"),
         [
             ("my_dummy_1", "my_dummy_1", False),
             ("GitDummySourceTypeSpec", "my_another_dummy", False),
@@ -297,7 +297,7 @@ class TestSourceTypeNames:
         assert names.git_dummy == "my_another_dummy"
 
     @pytest.mark.parametrize(
-        "basic_type,expected_names",
+        ("basic_type", "expected_names"),
         [
             ("svn", ["my_dummy_1", "my_dummy_2"]),
             ("git", ["my_another_dummy"]),

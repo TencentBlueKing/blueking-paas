@@ -39,12 +39,11 @@ from tests.utils.helpers import create_legacy_application
 
 # Create application with source obj to make tests work
 create_app = functools.partial(helper_create_app, additional_modules=["sourcectl"])
-pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
-
-
-@pytest.fixture(autouse=True)
-def setup(init_tmpls):
-    pass
+pytestmark = [
+    pytest.mark.django_db,
+    pytest.mark.xdist_group(name="legacy-db"),
+    pytest.mark.usefixtures("_init_tmpls"),
+]
 
 
 class TestDefaultAppDataBuilder:
@@ -77,7 +76,8 @@ class TestLegacyAppDataBuilder:
 
         # Find app from results
         simple_app = next((simple_app for simple_app in results if simple_app.name == app.name), None)
-        assert simple_app and isinstance(simple_app, SimpleApp)
+        assert simple_app is not None
+        assert isinstance(simple_app, SimpleApp)
 
 
 @skip_if_legacy_not_configured()
@@ -85,8 +85,8 @@ class TestCalculateUserContribution:
     def test_with_mock(self):
         create_app(owner_username="user1", repo_type="bk_svn")
         user, _, apps = list(group_apps_by_developers(filter_developers=["user1"]))[0]
-        with mock.patch("paasng.platform.sourcectl.svn.client.RemoteClient") as RemoteClient:
-            RemoteClient().calculate_user_contribution.return_value = dict(
+        with mock.patch("paasng.platform.sourcectl.svn.client.RemoteClient") as mocked_remote_client:
+            mocked_remote_client().calculate_user_contribution.return_value = dict(
                 project_total_lines=0, user_total_lines=0, project_commit_nums=0, user_commit_nums=0
             )
             contribution = calculate_user_contribution_in_app(user, apps[0])

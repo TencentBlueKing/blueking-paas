@@ -24,7 +24,7 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.converter import PluginP
 
 class TestPluginPolicyConverter:
     @pytest.mark.parametrize(
-        "data, expected",
+        ("data", "expected"),
         [
             ({"field": "plugin.id", "op": "eq", "value": "saas:plugin-1"}, Q(id="plugin-1", pd__identifier="saas")),
             (

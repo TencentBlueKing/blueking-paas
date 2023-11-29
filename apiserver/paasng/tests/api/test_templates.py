@@ -34,25 +34,25 @@ def image_name():
     return generate_random_string()
 
 
-@pytest.fixture
+@pytest.fixture()
 def py_buildpack():
     buildpack = G(AppBuildPack, name="python", region=settings.DEFAULT_REGION_NAME, language="Python")
     return buildpack
 
 
-@pytest.fixture
+@pytest.fixture()
 def nodejs_buildpack():
     buildpack = G(AppBuildPack, name="nodejs", region=settings.DEFAULT_REGION_NAME, language="NodeJS")
     return buildpack
 
 
-@pytest.fixture
+@pytest.fixture()
 def extra_buildpack():
     buildpack = G(AppBuildPack, name="extra", region=settings.DEFAULT_REGION_NAME)
     return buildpack
 
 
-@pytest.fixture
+@pytest.fixture()
 def slugbuilder(py_buildpack, nodejs_buildpack, extra_buildpack, image_name):
     slugbuilder = G(AppSlugBuilder, name=image_name, region=settings.DEFAULT_REGION_NAME, is_default=True)
     slugbuilder.buildpacks.add(py_buildpack)
@@ -61,14 +61,14 @@ def slugbuilder(py_buildpack, nodejs_buildpack, extra_buildpack, image_name):
     return slugbuilder
 
 
-@pytest.fixture
+@pytest.fixture()
 def slugrunner(image_name):
     slugrunner = G(AppSlugRunner, name=image_name, region=settings.DEFAULT_REGION_NAME, is_default=True)
     return slugrunner
 
 
-@pytest.fixture
-def init_tmpls():
+@pytest.fixture()
+def _init_tmpls():
     Template.objects.get_or_create(
         name="python",
         defaults={
@@ -109,25 +109,25 @@ def init_tmpls():
 
 
 class TestRegionTemplateViewSet:
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        "region, result_count",
+        ("region", "result_count"),
         [
             (settings.DEFAULT_REGION_NAME, 2),
             ("region-not-exist", 0),
         ],
     )
-    def test_list(self, init_tmpls, api_client, region, result_count):
+    def test_list(self, api_client, region, result_count):
         url = reverse("api.templates.list", kwargs=dict(tpl_type=TemplateType.NORMAL.value, region=region))
         response = api_client.get(url)
         assert len(response.data) >= result_count
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        "tpl_name, expected_buildpacks",
+        ("tpl_name", "expected_buildpacks"),
         [("python", [{"name": "extra"}, {"name": "python"}]), ("nodejs", [{"name": "nodejs"}])],
     )
-    def test_retrieve(
-        self, request, api_client, init_tmpls, slugbuilder, slugrunner, image_name, tpl_name, expected_buildpacks
-    ):
+    def test_retrieve(self, request, api_client, slugbuilder, slugrunner, image_name, tpl_name, expected_buildpacks):
         url = reverse(
             "api.templates.detail",
             kwargs=dict(tpl_type=TemplateType.NORMAL.value, region=settings.DEFAULT_REGION_NAME, tpl_name=tpl_name),

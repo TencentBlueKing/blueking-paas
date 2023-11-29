@@ -49,7 +49,7 @@ class TestGeneralGitController:
         )
 
     @pytest.mark.parametrize(
-        "auth_token_pair,repo_url,target_url",
+        ("auth_token_pair", "repo_url", "target_url"),
         [
             (("admin", "tokenfake"), "http://asdf.com/ddd.git", "http://admin:tokenfake@asdf.com/ddd.git"),
             (("admin", "tokenfake"), "git://asdf.com/ddd.git", "git://admin:tokenfake@asdf.com/ddd.git"),

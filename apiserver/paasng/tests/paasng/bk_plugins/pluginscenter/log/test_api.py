@@ -39,7 +39,7 @@ from paasng.utils.es_log.time_range import SmartTimeRange
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def log_client():
     with mock.patch(
         "paasng.bk_plugins.pluginscenter.log.instantiate_log_client", spec=LogClientProtocol, new=mock.MagicMock()
@@ -47,7 +47,7 @@ def log_client():
         yield mock_client_factory()
 
 
-@pytest.fixture
+@pytest.fixture()
 def time_range():
     return SmartTimeRange(time_range="1h")
 

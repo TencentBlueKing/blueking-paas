@@ -63,7 +63,7 @@ class TestEnvVariablesField:
 
 class TestEnvVariablesReader:
     @pytest.fixture(autouse=True)
-    def setup_tasks(self, bk_user, bk_deployment):
+    def _setup_tasks(self, bk_user, bk_deployment):
         json_data = {
             "env_variables": [
                 {"key": "FOO", "value": "1"},
@@ -151,7 +151,7 @@ class TestSvcDiscoveryField:
 
 class TestHookField:
     @pytest.mark.parametrize(
-        "json_data, expected",
+        ("json_data", "expected"),
         [
             ({"language": "python"}, HookList()),
             (
@@ -169,7 +169,7 @@ class TestHookField:
         assert bk_deployment.get_deploy_hooks() == expected
 
     @pytest.mark.parametrize(
-        "json_data, expected",
+        ("json_data", "expected"),
         [
             ({"language": "python"}, HookList()),
             (

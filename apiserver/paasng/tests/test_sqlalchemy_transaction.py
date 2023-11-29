@@ -30,7 +30,7 @@ except ImportError:
     from paasng.infras.legacydb.models import LApplication
 
 
-@pytest.fixture
+@pytest.fixture()
 def legacy_app():
     if not check_legacy_enabled():
         raise pytest.skip("Legacy db engine is not initialized")

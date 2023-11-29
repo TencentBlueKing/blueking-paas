@@ -59,7 +59,7 @@ class TestPreCreatedInstanceImport:
         assert json.loads(instance.credentials) == json.loads(DUMMY_CREDENTIALS)
 
     @pytest.mark.parametrize(
-        "input_, expected",
+        ("input_", "expected"),
         [
             ([], 0),
             ([{"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS}], 1),
@@ -80,7 +80,7 @@ class TestPreCreatedInstanceImport:
         assert PreCreatedInstance.objects.filter(plan=bk_plan).count() == expected
 
     @pytest.mark.parametrize(
-        "input_, expected",
+        ("input_", "expected"),
         [
             (
                 dedent(

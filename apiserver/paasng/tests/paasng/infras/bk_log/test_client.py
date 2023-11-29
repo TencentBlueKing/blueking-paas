@@ -27,16 +27,16 @@ from paasng.infras.bk_log.exceptions import CollectorConfigNotPersisted
 
 
 class TestBkLogClient:
-    @pytest.fixture
+    @pytest.fixture()
     def mocked_api(self):
         return mock.MagicMock(spec=type(BKLogAPIProtocol.__name__, (), BKLogAPIProtocol.__annotations__))
 
-    @pytest.fixture
+    @pytest.fixture()
     def client(self, mocked_api):
         return BkLogClient(mocked_api)
 
     @pytest.mark.parametrize(
-        "config, expected_data",
+        ("config", "expected_data"),
         [
             # 测试最简配置
             (
@@ -188,7 +188,7 @@ class TestBkLogClient:
 
     # 测试数据和 test_create_custom_collector_config 一致, 但 expected_data 不一样
     @pytest.mark.parametrize(
-        "config, expected_data",
+        ("config", "expected_data"),
         [
             # 测试最简配置
             (

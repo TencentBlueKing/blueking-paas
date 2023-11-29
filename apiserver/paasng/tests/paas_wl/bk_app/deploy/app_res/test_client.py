@@ -56,18 +56,18 @@ RG = settings.DEFAULT_REGION_NAME
 
 class TestClientProcess:
     @pytest.fixture(autouse=True)
-    def set_res_version(self, wl_app):
+    def _set_res_version(self, wl_app):
         AppResVerManager(wl_app).update("v1")
 
-    @pytest.fixture
+    @pytest.fixture()
     def web_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("web", release=wl_release)
 
-    @pytest.fixture
+    @pytest.fixture()
     def worker_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("worker", release=wl_release)
 
-    @pytest.mark.mock_get_structured_app
+    @pytest.mark.mock_get_structured_app()
     def test_deploy_processes(self, wl_app, scheduler_client, web_process):
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch") as kd, patch(
             "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
@@ -112,8 +112,8 @@ class TestClientProcess:
             assert kwargs.get("body")["spec"]["replicas"] == 3
 
     def test_shutdown_process(self, scheduler_client, wl_app):
-        DSpec = make_dataclass("Dspec", [("replicas", int)])
-        DBody = make_dataclass("DBody", [("spec", DSpec)])
+        DSpec = make_dataclass("Dspec", [("replicas", int)])  # noqa: N806
+        DBody = make_dataclass("DBody", [("spec", DSpec)])  # noqa: N806
         kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
             "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
@@ -134,8 +134,8 @@ class TestClientProcess:
             assert kwargs["body"]["spec"]["replicas"] == 0
 
     def test_shutdown_web_processes(self, wl_app, scheduler_client, web_process):
-        DSpec = make_dataclass("Dspec", [("replicas", int)])
-        DBody = make_dataclass("DBody", [("spec", DSpec)])
+        DSpec = make_dataclass("Dspec", [("replicas", int)])  # noqa: N806
+        DBody = make_dataclass("DBody", [("spec", DSpec)])  # noqa: N806
         kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
             "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
@@ -162,7 +162,7 @@ class TestClientProcess:
 
 
 class TestClientBuild:
-    @pytest.fixture
+    @pytest.fixture()
     def pod_template(self):
         return SlugBuilderTemplate(
             name="slug-builder",
@@ -218,7 +218,7 @@ class TestClientBuild:
         )
         kpod_get = Mock(return_value=pod_body)
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create), patch(
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create), patch(  # noqa: SIM117
             "paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check
         ), patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get):
             with pytest.raises(ResourceDuplicate):
@@ -266,7 +266,7 @@ class TestClientBuild:
             assert not kpod_delete.called
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestClientBuildNew:
     """New test cases using pytest"""
 
@@ -298,7 +298,7 @@ class TestClientBuildNew:
             scheduler_client.wait_build_succeeded(wl_app.namespace, generate_builder_name(wl_app), timeout=1)
 
     @pytest.mark.parametrize(
-        "phase, exc_context",
+        ("phase", "exc_context"),
         [
             ("Pending", pytest.raises(PodTimeoutError)),
             ("Running", pytest.raises(PodTimeoutError)),

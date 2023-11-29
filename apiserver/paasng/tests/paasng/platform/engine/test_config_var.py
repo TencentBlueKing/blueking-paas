@@ -88,7 +88,7 @@ class TestGetConfigVars:
         assert result == {"DJANGO_SETTINGS_MODULE": "global.settings"}
 
     def test_invalid_env_name(self, bk_module):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"^Invalid env_name given.*"):
             get_config_vars(bk_module, "__invalid_env_name")
 
     def test_empty(self, bk_module):
@@ -99,7 +99,7 @@ class TestFilterByEnvironmentName:
     """TestCases for ConfigVar.objects.filter_by_environment_name"""
 
     @pytest.mark.parametrize(
-        "environment_name,length,keys",
+        ("environment_name", "length", "keys"),
         [
             (ConfigVarEnvName.GLOBAL, 1, {"G1"}),
             (ConfigVarEnvName.STAG, 2, {"S1", "S2"}),
@@ -117,7 +117,7 @@ class TestFilterByEnvironmentName:
         assert {x.key for x in qs} == keys
 
 
-@pytest.fixture
+@pytest.fixture()
 def dest_module(bk_app):
     """Return another module if current application fixture"""
     module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
@@ -125,7 +125,7 @@ def dest_module(bk_app):
     return module
 
 
-@pytest.fixture
+@pytest.fixture()
 def dest_prod_env(dest_module):
     return dest_module.envs.get(environment="prod")
 
@@ -144,7 +144,7 @@ def random_config_var_maker():
 
 class TestConfigVarManager:
     @pytest.mark.parametrize(
-        "source_vars, dest_vars, expected_result, expected_vars",
+        ("source_vars", "dest_vars", "expected_result", "expected_vars"),
         [
             (
                 [
@@ -237,7 +237,7 @@ class TestConfigVarManager:
         assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == (0, 10, 0)
 
     @pytest.mark.parametrize(
-        "config_vars, order_by, expected",
+        ("config_vars", "order_by", "expected"),
         [
             (
                 [
@@ -289,7 +289,7 @@ class TestConfigVarManager:
         assert exported.env_variables == expected
 
     @pytest.mark.parametrize(
-        "vars_in_db, new_vars, expected_result",
+        ("vars_in_db", "new_vars", "expected_result"),
         [
             (
                 # 更新已有数据
@@ -370,7 +370,7 @@ class TestConfigVarFormatSLZ:
 
 class TestExportedConfigVars:
     @pytest.mark.parametrize(
-        "env_variables, expected",
+        ("env_variables", "expected"),
         [
             (
                 [],

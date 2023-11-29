@@ -42,23 +42,24 @@ from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainCert
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestAssignDomains:
     @pytest.fixture()
-    def foo_shared_cert(self, bk_stag_wl_app):
+    def _foo_shared_cert(self, bk_stag_wl_app):
         AppDomainSharedCert.objects.create(
             region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*.foo.com"
         )
 
+    @pytest.mark.usefixtures("_foo_shared_cert")
     @pytest.mark.parametrize(
         "domains",
-        (
+        [
             [AutoGenDomain("foo.com"), AutoGenDomain("bar.com")],
             [AutoGenDomain("foo.com"), AutoGenDomain("www.foo.com")],
             [AutoGenDomain("foo.com"), AutoGenDomain("www.foo.com", https_enabled=True)],
-        ),
+        ],
     )
-    def test_brand_new_domains(self, bk_stag_wl_app, foo_shared_cert, domains):
+    def test_brand_new_domains(self, bk_stag_wl_app, domains):
         assign_custom_hosts(bk_stag_wl_app, domains, "foo-service")
 
         ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
@@ -67,14 +68,15 @@ class TestAssignDomains:
         assert len(ingress.domains) == len(domains)
         assert {d.host for d in domains} == {d.host for d in ingress.domains}
 
+    @pytest.mark.usefixtures("_foo_shared_cert")
     @pytest.mark.parametrize(
-        "hostnames, domains_https_enabled",
-        (
+        ("hostnames", "domains_https_enabled"),
+        [
             (["www.foo.com", "bar.com"], [True, False]),
             (["www.foo.com", "bar.foo.com"], [True, True]),
-        ),
+        ],
     )
-    def test_create_https_domains(self, bk_stag_wl_app, foo_shared_cert, hostnames, domains_https_enabled):
+    def test_create_https_domains(self, bk_stag_wl_app, hostnames, domains_https_enabled):
         domains = [AutoGenDomain(hostname, https_enabled=True) for hostname in hostnames]
         assign_custom_hosts(bk_stag_wl_app, domains, default_service_name="foo-service")
         domain_count = len(domains)
@@ -121,7 +123,7 @@ class TestAssignDomains:
         assert [d.host for d in ingress.domains] == ["foo.com"]
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestSubdomainAppIngressMgrCommon:
     """Test common interfaces for `SubdomainAppIngressMgr`"""
 
@@ -133,8 +135,8 @@ class TestSubdomainAppIngressMgrCommon:
 
     def test_sync_no_domains(self, bk_stag_wl_app):
         AppDomain.objects.filter(app=bk_stag_wl_app).delete()
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         with pytest.raises(EmptyAppIngressError):
-            ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
             ingress_mgr.sync(default_service_name="foo")
 
     def test_sync_creation_with_no_default_server_name(self, bk_stag_wl_app):
@@ -190,7 +192,7 @@ class TestSubdomainAppIngressMgrCommon:
         assert ingress.service_port_name == "foo-port"
 
     @pytest.mark.parametrize(
-        "rewrite_to_root,expected_ret",
+        ("rewrite_to_root", "expected_ret"),
         [
             (True, True),
             (False, False),
@@ -231,11 +233,11 @@ class TestSubdomainAppIngressMgr:
         assert len(ingress_mgr.list_desired_domains()) == 0
 
 
-@pytest.mark.mock_get_structured_app
-@pytest.mark.auto_create_ns
+@pytest.mark.mock_get_structured_app()
+@pytest.mark.auto_create_ns()
 class TestCustomDomainIngressMgr:
     @pytest.mark.parametrize(
-        "path_prefix,expected_path_prefixes,customized_ingress_name",
+        ("path_prefix", "expected_path_prefixes", "customized_ingress_name"),
         [
             ("/", ["/"], False),
             ("/foo/", ["/foo/"], True),
@@ -277,7 +279,7 @@ class TestCustomDomainIngressMgr:
             ingress_kmodel.get(bk_stag_wl_app, mgr.make_ingress_name())
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestIntegratedDomains:
     """Test cases for some combined situations"""
 
@@ -316,9 +318,10 @@ class TestIngressDomainFactory:
         domain = factory.create(domain_with_cert, raise_on_no_cert=False)
         assert domain.tls_enabled is False
 
-    @pytest.mark.auto_create_ns
+    @pytest.mark.auto_create_ns()
     @pytest.mark.parametrize(
-        "cert_type, expected_cert_name", [(AppDomainCert, "eng-normal-test"), (AppDomainSharedCert, "eng-shared-test")]
+        ("cert_type", "expected_cert_name"),
+        [(AppDomainCert, "eng-normal-test"), (AppDomainSharedCert, "eng-shared-test")],
     )
     def test_https_cert_created(self, bk_stag_wl_app, cert_type, expected_cert_name):
         cert = G(cert_type, name="test")

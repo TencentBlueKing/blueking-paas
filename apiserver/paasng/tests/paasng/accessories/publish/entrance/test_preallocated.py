@@ -75,12 +75,11 @@ def test_default_preallocated_urls_normal(bk_stag_env):
 
 class TestGetPreallocatedAddress:
     def test_not_configured(self):
-        with mock_cluster_service(replaced_ingress_config={}):
-            with pytest.raises(ValueError):
-                get_preallocated_address("test-code")
+        with mock_cluster_service(replaced_ingress_config={}), pytest.raises(ValueError, match=r"^failed to get.*"):
+            get_preallocated_address("test-code")
 
     @pytest.mark.parametrize(
-        "ingress_config,expected_address",
+        ("ingress_config", "expected_address"),
         [
             ({"app_root_domains": [{"name": "foo.com"}]}, "http://test-code.foo.com"),
             ({"sub_path_domains": [{"name": "foo.com"}]}, "http://foo.com/test-code/"),
@@ -95,7 +94,7 @@ class TestGetPreallocatedAddress:
             assert get_preallocated_address("test-code").prod == expected_address
 
     @pytest.mark.parametrize(
-        "preferred_url_type,expected_address",
+        ("preferred_url_type", "expected_address"),
         [
             (ExposedURLType.SUBDOMAIN, "http://test-code.foo.com"),
             (ExposedURLType.SUBPATH, "http://foo.com/test-code/"),
@@ -109,7 +108,7 @@ class TestGetPreallocatedAddress:
             )
 
     @pytest.mark.parametrize(
-        "clusters, stag_address, prod_address",
+        ("clusters", "stag_address", "prod_address"),
         [
             # 同集群的情况
             (
@@ -208,7 +207,7 @@ class TestDefaultEntrance:
         ):
             yield
 
-    def test_single_entrance(setup_addrs, bk_app, bk_module, bk_stag_env):
+    def test_single_entrance(self, bk_app, bk_module, bk_stag_env):
         """Test: default module's stag env"""
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
         bk_module.is_default = True
@@ -218,7 +217,7 @@ class TestDefaultEntrance:
         assert url is not None
         assert url.address == f"http://stag-dot-{bk_app.code}.bar-1.example.com"
 
-    def test_sub_domain(setup_addrs, bk_app, bk_module, bk_stag_env):
+    def test_sub_domain(self, bk_app, bk_module, bk_stag_env):
         """Test: default module's stag env"""
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
         bk_module.is_default = True
@@ -230,7 +229,7 @@ class TestDefaultEntrance:
             f"http://stag-dot-{bk_app.code}.bar-2.example.org",
         ]
 
-    def test_get_preallocated_urls_legacy(setup_addrs, bk_app, bk_module, bk_stag_env):
+    def test_get_preallocated_urls_legacy(self, bk_app, bk_module, bk_stag_env):
         """Test: default module's stag env with exposed url type set to None"""
         bk_module.exposed_url_type = None
         bk_module.is_default = True

@@ -30,7 +30,7 @@ from paasng.platform.modules.constants import ExposedURLType
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def set_custom_domain():
     """Allow to set custom domains by mocking"""
     with mock.patch("paasng.accessories.publish.market.utils.LiveEnvAddresses.list_custom") as mocker:
@@ -50,10 +50,9 @@ class TestMarketAvailableAddressHelper:
             Address(type=AddressType.SUBDOMAIN, url="https://foo.example.com"),
             Address(type=AddressType.SUBPATH, url="https://example.org/foo/"),
         ]
-        yield
 
     @pytest.mark.parametrize(
-        "filter_domain,results",
+        ("filter_domain", "results"),
         [
             ("http://test.example.com", AvailableAddress(address="http://test.example.com", type=4)),
             ("http://404.bking.com", None),
@@ -110,7 +109,7 @@ class TestMarketAvailableAddressHelper:
         assert entrance.address == "http://test.example.com"
 
     @pytest.mark.parametrize(
-        "source_url_type,address",
+        ("source_url_type", "address"),
         [
             (ProductSourceUrlType.THIRD_PARTY.value, "http://test.example.com"),
             (ProductSourceUrlType.DISABLED.value, None),

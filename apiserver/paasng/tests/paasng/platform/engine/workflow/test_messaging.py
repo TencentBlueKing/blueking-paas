@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db
 
 
 class TestServerSendEvent:
-    @pytest.mark.parametrize("eid, event, data_dict", [("1", "xxxx", {"aaa": "bbb"}), (333, "xxxx", {})])
+    @pytest.mark.parametrize(("eid", "event", "data_dict"), [("1", "xxxx", {"aaa": "bbb"}), (333, "xxxx", {})])
     def test_from_raw_normal(self, eid, event, data_dict):
         """测试正常加载 raw event"""
 
@@ -35,7 +35,9 @@ class TestServerSendEvent:
         assert e.data == data_dict
         assert not e.is_internal
 
-    @pytest.mark.parametrize("eid, event, data_dict", [("1", "message", {"aaa": "bbb"}), ("1", "msg", {"aaa": "bbb"})])
+    @pytest.mark.parametrize(
+        ("eid", "event", "data_dict"), [("1", "message", {"aaa": "bbb"}), ("1", "msg", {"aaa": "bbb"})]
+    )
     def test_from_raw_message(self, eid, event, data_dict):
         """测试正常加载 raw event"""
 
@@ -46,15 +48,13 @@ class TestServerSendEvent:
         assert e.data == data_dict
         assert not e.is_internal
 
-    @pytest.mark.parametrize(
-        "eid, event, data_dict", [("1", "internal", {"aaa": "bbb"}), ("1", "internal", {"aaa": "bbb"})]
-    )
+    @pytest.mark.parametrize(("eid", "event", "data_dict"), [("1", "internal", {"aaa": "bbb"})])
     def test_from_raw_internal(self, eid, event, data_dict):
         """测试正常加载 raw event"""
         e = ServerSendEvent.from_raw(dict(id=eid, event=event, data=data_dict))
         assert e.is_internal
 
-    @pytest.mark.parametrize("eid, event, data_dict", [("1", "internal", {"aaa": "bbb"})])
+    @pytest.mark.parametrize(("eid", "event", "data_dict"), [("1", "internal", {"aaa": "bbb"})])
     def test_to_yield_str_list(self, eid, event, data_dict):
         e = ServerSendEvent.from_raw(dict(id=eid, event=event, data=data_dict))
         assert e.to_yield_str_list() == ["id: %s\n" % e.id, "event: %s\n" % e.event, "data: %s\n\n" % e.data]

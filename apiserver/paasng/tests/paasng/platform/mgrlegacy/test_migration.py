@@ -230,7 +230,7 @@ class TestProductMigration(BaseTestCaseForMigration):
         display_options = DisplayOptions.objects.get(product=product)
         assert display_options.contact is None, "# 写该单元测试时, 未同步contact"
 
-    @pytest.mark.usefixtures("init_tmpls")
+    @pytest.mark.usefixtures("_init_tmpls")
     def test_migrate_when_released_to_market(self):
         """模拟应用迁移前已发布至市场, 市场功能需在同步 Product 才能正常访问"""
         self.context.legacy_app.is_display = 1
@@ -249,7 +249,7 @@ class TestProductMigration(BaseTestCaseForMigration):
         assert legacy_app.is_display == 1, "迁移时, 应用被错误下架"
         assert legacy_app.is_already_online == 1, "迁移时, 应用被错误下架"
 
-    @pytest.mark.usefixtures("init_tmpls")
+    @pytest.mark.usefixtures("_init_tmpls")
     def test_migrate_before_release_to_market(self):
         """模拟应用迁移前已发布至市场, 市场功能需在同步 Product 才能正常访问"""
         self.context.legacy_app.is_display = 0

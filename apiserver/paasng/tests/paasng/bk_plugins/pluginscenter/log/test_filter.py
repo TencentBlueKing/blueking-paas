@@ -27,13 +27,13 @@ pytestmark = pytest.mark.django_db
 
 
 class TestElasticSearchFilter:
-    @pytest.fixture
+    @pytest.fixture()
     def plugin(self, plugin):
         # 修改 plugin.id 确保单测
         plugin.id = "foo"
         return plugin
 
-    @pytest.fixture
+    @pytest.fixture()
     def search(self):
         # 避免引入 time_range 相关的过滤语句
         search = SmartSearch.__new__(SmartSearch)
@@ -41,7 +41,7 @@ class TestElasticSearchFilter:
         return search
 
     @pytest.mark.parametrize(
-        "params, expected",
+        ("params", "expected"),
         [
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"plugin_id": "{{ plugin_id }}"}),
@@ -79,7 +79,7 @@ class TestElasticSearchFilter:
         assert ElasticSearchFilter(plugin, params).filter_by_plugin(search).to_dict() == expected
 
     @pytest.mark.parametrize(
-        "params, expected",
+        ("params", "expected"),
         [
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinFilters={"a": "a", "b": "b"}),
@@ -113,7 +113,7 @@ class TestElasticSearchFilter:
         assert ElasticSearchFilter(plugin, params).filter_by_builtin_filters(search).to_dict() == expected
 
     @pytest.mark.parametrize(
-        "params, expected",
+        ("params", "expected"),
         [
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinExcludes={"a": "a", "b": "b"}),

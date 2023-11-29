@@ -65,13 +65,13 @@ class TestModuleAccessControl:
 
 
 class TestPaasAnalysisPlugin:
-    @pytest.fixture
+    @pytest.fixture()
     def app_with_metadata(self, bk_stag_wl_app):
         update_metadata(bk_stag_wl_app, bkpa_site_id=100)
         return bk_stag_wl_app
 
     @pytest.mark.parametrize(
-        "plugins_config,snippet_is_empty",
+        ("plugins_config", "snippet_is_empty"),
         [
             ({"enabled": True}, False),
             ({"enabled": False}, True),

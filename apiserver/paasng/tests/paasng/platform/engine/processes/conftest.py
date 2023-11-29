@@ -21,7 +21,7 @@ import pytest
 from paas_wl.bk_app.processes.processes import PlainInstance, PlainProcess
 
 
-@pytest.fixture
+@pytest.fixture()
 def instance():
     return PlainInstance(name="instance-foo", version=1, process_type="web", ready=False)
 

@@ -47,7 +47,7 @@ class Command(BaseCommand):
         application = Application.objects.get(code=app_code)
         module = application.get_module(module_name=module_name)
 
-        qs = module.configvar_set.filter(is_builtin=False).select_related("environment")
+        qs = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         exported = ExportedConfigVars.from_list(list(qs))
 
         with file_ as fh:

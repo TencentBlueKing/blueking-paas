@@ -40,30 +40,30 @@ _placeholder_response = {
 
 class TestModuleBuildConfigViewSet:
     @pytest.fixture(autouse=True)
-    def setup_settings(self, settings):
+    def _setup_settings(self, settings):
         settings.APP_DOCKER_REGISTRY_HOST = "example.com"
         settings.APP_DOCKER_REGISTRY_NAMESPACE = "bkapps"
 
-    @pytest.fixture
+    @pytest.fixture()
     def bp_stack_name(self):
         return generate_random_string()
 
-    @pytest.fixture
+    @pytest.fixture()
     def buildpack_x(self, settings):
         buildpack = G(AppBuildPack, name="x", region=settings.DEFAULT_REGION_NAME, language="Python")
         return buildpack
 
-    @pytest.fixture
+    @pytest.fixture()
     def buildpack_y(self, settings):
         buildpack = G(AppBuildPack, name="y", region=settings.DEFAULT_REGION_NAME, language="Python")
         return buildpack
 
-    @pytest.fixture
+    @pytest.fixture()
     def buildpack_z(self, settings):
         buildpack = G(AppBuildPack, name="z", region=settings.DEFAULT_REGION_NAME, language="Python")
         return buildpack
 
-    @pytest.fixture
+    @pytest.fixture()
     def slugbuilder(self, settings, buildpack_x, buildpack_y, buildpack_z, bp_stack_name):
         slugbuilder = G(
             AppSlugBuilder,
@@ -78,7 +78,7 @@ class TestModuleBuildConfigViewSet:
         slugbuilder.buildpacks.add(buildpack_z)
         return slugbuilder
 
-    @pytest.fixture
+    @pytest.fixture()
     def slugrunner(self, settings, bp_stack_name):
         slugrunner = G(AppSlugRunner, name=bp_stack_name, region=settings.DEFAULT_REGION_NAME, is_hidden=False)
         return slugrunner

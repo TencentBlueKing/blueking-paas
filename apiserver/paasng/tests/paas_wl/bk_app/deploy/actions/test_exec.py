@@ -35,7 +35,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppCommandExecutor:
-    @pytest.fixture
+    @pytest.fixture()
     def stream(self):
         return ConsoleStream()
 
@@ -53,11 +53,12 @@ class TestAppCommandExecutor:
         return core
 
     @pytest.fixture(autouse=True)
-    def disable_termcolor(self):
+    def _disable_termcolor(self):
         with override_settings(COLORFUL_TERMINAL_OUTPUT=False):
             yield
 
-    def test_perform_successful(self, hook_maker, mock_run_command, stream, capsys):
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_successful(self, hook_maker, stream, capsys):
         hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
@@ -78,7 +79,8 @@ class TestAppCommandExecutor:
         assert hook.status == CommandStatus.SUCCESSFUL
         assert hook.exit_code == 0
 
-    def test_perform_logs_unready(self, hook_maker, mock_run_command, stream, capsys, caplog):
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_logs_unready(self, hook_maker, stream, capsys, caplog):
         hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
@@ -94,7 +96,8 @@ class TestAppCommandExecutor:
         assert hook.status == CommandStatus.FAILED
         assert hook.exit_code is None
 
-    def test_perform_but_pod_dead(self, hook_maker, mock_run_command, stream, capsys, caplog):
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_but_pod_dead(self, hook_maker, stream, capsys, caplog):
         hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
@@ -122,7 +125,8 @@ class TestAppCommandExecutor:
         assert hook.exit_code == 1
         assert f"Pod<{hook.app.namespace}/pre-release-hook> ends unsuccessfully" in caplog.text
 
-    def test_perform_but_be_interrupt(self, hook_maker, mock_run_command, stream, capsys, caplog):
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_but_be_interrupt(self, hook_maker, stream, capsys, caplog):
         hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)

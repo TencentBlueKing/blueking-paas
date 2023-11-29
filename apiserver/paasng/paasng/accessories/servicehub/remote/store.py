@@ -54,7 +54,7 @@ def _loads(dumped: bytes) -> Dict:
 
 def get_remote_store():
     """Get the single instanced remote services database object"""
-    global _g_services_store
+    global _g_services_store  # noqa: PLW0603
     if _g_services_store is None:
         _g_services_store = RemoteServiceStore()
     return _g_services_store
@@ -94,17 +94,14 @@ class StoreMixin:
             try:
                 items.append(self.get(uuid, region))
             except ServiceNotFound:
-                logger.error(f"bulk_get: can not find a service by uuid {uuid}")
+                logger.warning(f"bulk_get: can not find a service by uuid {uuid}")
                 items.append(None)
         return items
 
     @staticmethod
     def _svc_supports_region(svc_data: Dict, region: str) -> bool:
         """Check if a service supports given region"""
-        for plan in svc_data["plans"]:
-            if plan["properties"].get("region") == region:
-                return True
-        return False
+        return any(plan["properties"].get("region") == region for plan in svc_data["plans"])
 
 
 class MemoryStore(StoreMixin):
@@ -141,7 +138,8 @@ class MemoryStore(StoreMixin):
             item = copy.deepcopy(self._map_id_to_service[uuid])
             if not self._svc_supports_region(item, region):
                 raise RuntimeError("service does not contains a plan in given region")
-            return item
+            else:
+                return item
         except KeyError:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 

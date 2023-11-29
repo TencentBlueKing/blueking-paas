@@ -332,7 +332,12 @@
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
-                      v-bk-tooltips="{ content: varItem.key, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      v-bk-tooltips="{
+                        content: varItem.key === '*' ? '*\&nbsp' : varItem.key,
+                        trigger: 'mouseenter',
+                        maxWidth: 400,
+                        extCls: 'env-var-popover'
+                      }"
                       class="desc-form-content"
                     >{{ varItem.key }}</div>
                   </template>
@@ -352,7 +357,12 @@
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
-                      v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      v-bk-tooltips="{
+                        content: varItem.value === '*' ? '*\&nbsp' : varItem.value,
+                        trigger: 'mouseenter',
+                        maxWidth: 400,
+                        extCls: 'env-var-popover'
+                      }"
                       class="desc-form-content"
                     >
                       {{ varItem.value }}

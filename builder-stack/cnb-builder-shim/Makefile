@@ -59,7 +59,7 @@ $(LOCALBIN):
 GOCILINT ?= $(LOCALBIN)/golangci-lint
 .PHONY: install-golangci-lint
 install-golangci-lint: $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3
 
 
 .PHONY: help

@@ -68,17 +68,34 @@ const (
 )
 
 var (
-	dockerfilePath = flag.String("dockerfile", os.Getenv(DockerfileEnvVarKey), "Path to the dockerfile to be built.")
-	buildArgs      = flag.String("build-arg", os.Getenv(BuildArgEnvVarKey), "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.\"")
+	dockerfilePath = flag.String("dockerfile",
+		os.Getenv(DockerfileEnvVarKey),
+		"Path to the dockerfile to be built.")
+	buildArgs = flag.String("build-arg",
+		os.Getenv(BuildArgEnvVarKey),
+		"This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
 
-	outputImage = flag.String("output-image", os.Getenv(OutputImageEnvVarKey), "The name of image that will get created by the kaniko.")
-	cacheRepo   = flag.String("cache-repo", os.Getenv(CacheRepoEnvVarKey), "Specify a repository to use as a cache, otherwise one will be inferred from the destination provided; when prefixed with 'oci:' the repository will be written in OCI image layout format at the path provided")
+	outputImage = flag.String("output-image",
+		os.Getenv(OutputImageEnvVarKey),
+		"The name of image that will get created by the kaniko.")
+	cacheRepo = flag.String("cache-repo",
+		os.Getenv(CacheRepoEnvVarKey),
+		"Specify a repository to use as a cache, otherwise one will be inferred from the destination provided; "+
+			"when prefixed with 'oci:' the repository will be written in OCI image layout format at the path provided")
 
-	sourceUrl        = flag.String("source-url", os.Getenv(SourceUrlEnvVarKey), "The url of the dockerfile build context")
-	dockerConfigJson = flag.String("docker-config", os.Getenv(DockerConfigJsonEnvVarKey), "The Docker credential to visit the container image registry.")
+	sourceUrl = flag.String("source-url",
+		os.Getenv(SourceUrlEnvVarKey),
+		"The url of the dockerfile build context")
+	dockerConfigJson = flag.String("docker-config",
+		os.Getenv(DockerConfigJsonEnvVarKey),
+		"The Docker credential to visit the container image registry.")
 
-	insecureRegistries      = flag.String("insecure-registries", os.Getenv(InsecureRegistriesEnvVarKey), "Insecure registry using plain HTTP to push and pull. Join with ';' for multiple registries.")
-	skipTlsVerifyRegistries = flag.String("skip-tls-verify-registries", os.Getenv(SkipTLSVerifyRegistriesEnvVarKey), "Insecure registry ignoring TLS verify to push and pull. Join with ';' for multiple registries.")
+	insecureRegistries = flag.String("insecure-registries",
+		os.Getenv(InsecureRegistriesEnvVarKey),
+		"Insecure registry using plain HTTP to push and pull. Join with ';' for multiple registries.")
+	skipTlsVerifyRegistries = flag.String("skip-tls-verify-registries",
+		os.Getenv(SkipTLSVerifyRegistriesEnvVarKey),
+		"Insecure registry ignoring TLS verify to push and pull. Join with ';' for multiple registries.")
 )
 
 func init() {
@@ -97,12 +114,16 @@ func main() {
 
 	logger := logging.Default()
 	if *outputImage == "" {
-		logger.Error(fmt.Errorf("outputImage is empty"), fmt.Sprintf("please provide outputImage by --output-image or env variable %s", OutputImageEnvVarKey))
+		logger.Error(
+			fmt.Errorf("outputImage is empty"),
+			fmt.Sprintf("please provide outputImage by --output-image or env variable %s", OutputImageEnvVarKey),
+		)
 		os.Exit(1)
 	}
 
 	if *dockerConfigJson == "" {
-		logger.Info("`--docker-config` is not provided, So you must mount Docker credential to `/kaniko/.docker/config.json` manually")
+		logger.Info("`--docker-config` is not provided, " +
+			"So you must mount Docker credential to `/kaniko/.docker/config.json` manually")
 	} else {
 		logger.Info("Setup Docker Config Json")
 		if err := setupDockerConfigJson(*dockerConfigJson); err != nil {
@@ -129,7 +150,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Decompressing the image layer is time-consuming. 
+	// Decompressing the image layer is time-consuming.
 	// Keep printing logs to avoid being misunderstood that the program is suspended.
 	go func() {
 		for {

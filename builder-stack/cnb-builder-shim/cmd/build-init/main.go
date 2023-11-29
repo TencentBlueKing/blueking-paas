@@ -80,15 +80,24 @@ func main() {
 	flag.Parse()
 	logger := logging.Default()
 	if *outputImage == "" {
-		logger.Error(fmt.Errorf("outputImage is empty"), fmt.Sprintf("please provide outputImage by --output-image or env variable %s", OutputImageEnvVarKey))
+		logger.Error(
+			fmt.Errorf("outputImage is empty"),
+			fmt.Sprintf("please provide outputImage by --output-image or env variable %s", OutputImageEnvVarKey),
+		)
 		os.Exit(1)
 	}
 	if *runImage == "" {
-		logger.Error(fmt.Errorf("runImage is empty"), fmt.Sprintf("please provide it by using --run-image or setting it as an environment variable %s", RunImageEnvVarKey))
+		logger.Error(
+			fmt.Errorf("runImage is empty"),
+			fmt.Sprintf("please provide it by using --run-image or setting it as an environment variable %s", RunImageEnvVarKey),
+		)
 		os.Exit(1)
 	}
 	if *sourceUrl == "" {
-		logger.Error(fmt.Errorf("sourceUrl is empty"), fmt.Sprintf("please provide it by using --source-url or setting it as an environment variable %s", SourceUrlEnvVarKey))
+		logger.Error(
+			fmt.Errorf("sourceUrl is empty"),
+			fmt.Sprintf("please provide it by using --source-url or setting it as an environment variable %s", SourceUrlEnvVarKey),
+		)
 		os.Exit(1)
 	}
 

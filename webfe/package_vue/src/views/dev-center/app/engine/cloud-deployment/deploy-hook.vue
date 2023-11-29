@@ -77,7 +77,7 @@
           <bk-tag-input
             v-model="preFormData.command"
             style="width: 500px"
-            :placeholder="$t('请输入启动命令')"
+            :placeholder="$t('请输入启动命令，并按 Enter 键结束')"
             :allow-create="allowCreate"
             :allow-auto-match="true"
             :has-delete-icon="hasDeleteIcon"
@@ -100,7 +100,7 @@
             v-model="preFormData.args"
             style="width: 500px"
             ext-cls="tag-extra"
-            :placeholder="$t('请输入命令参数')"
+            :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
             :allow-create="allowCreate"
             :allow-auto-match="true"
             :has-delete-icon="hasDeleteIcon"

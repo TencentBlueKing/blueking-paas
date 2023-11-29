@@ -227,7 +227,7 @@
                 v-model="formData.args"
                 style="width: 500px"
                 ext-cls="tag-extra"
-                :placeholder="$t('请输入命令参数')"
+                :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
                 :allow-create="allowCreate"
                 :allow-auto-match="true"
                 :has-delete-icon="hasDeleteIcon"

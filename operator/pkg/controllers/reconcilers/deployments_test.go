@@ -144,7 +144,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 	Context("test get old deployments", func() {
 		It("no deployment", func() {
 			r := NewDeploymentReconciler(builder.Build())
-			deployList, err := r.getOldDeployments(context.Background(), bkapp)
+			deployList, err := r.getCurrentDeployments(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deployList)).To(Equal(0))
 		})
@@ -152,7 +152,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 		It("one deployment", func() {
 			client := builder.WithObjects(&fakeDeploy).Build()
 			r := NewDeploymentReconciler(client)
-			deployList, err := r.getOldDeployments(context.Background(), bkapp)
+			deployList, err := r.getCurrentDeployments(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deployList)).To(Equal(1))
 		})
@@ -171,7 +171,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 
 		// A shortcut function to get the old deployments
 		oldDeployments := func() []*appsv1.Deployment {
-			deployList, _ := r.getOldDeployments(ctx, bkapp)
+			deployList, _ := r.getCurrentDeployments(ctx, bkapp)
 			return deployList
 		}
 

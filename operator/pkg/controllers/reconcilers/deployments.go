@@ -55,14 +55,14 @@ type DeploymentReconciler struct {
 // Reconcile ...
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	log := logf.FromContext(ctx)
-	deployList, err := r.getOldDeployments(ctx, bkapp)
+	currentDeploys, err := r.getCurrentDeployments(ctx, bkapp)
 	if err != nil {
 		return r.Result.WithError(err)
 	}
 
 	// Get deployments synced with the current bkapp, new deployment resource might be created and old deployments
 	// might be updated.
-	newDeployMap, err := r.getNewDeployments(ctx, bkapp, deployList)
+	newDeployMap, err := r.getNewDeployments(ctx, bkapp, currentDeploys)
 	if err != nil {
 		return r.Result.WithError(err)
 	}
@@ -72,7 +72,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	for _, d := range newDeployMap {
 		newDeployNames = append(newDeployNames, d.Name)
 	}
-	if err = r.cleanUpDeployments(ctx, bkapp, deployList, newDeployNames); err != nil {
+	if err = r.cleanUpDeployments(ctx, bkapp, currentDeploys, newDeployNames); err != nil {
 		return r.Result.WithError(err)
 	}
 
@@ -89,7 +89,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 }
 
 // get all deployment objects owned by the given bkapp
-func (r *DeploymentReconciler) getOldDeployments(
+func (r *DeploymentReconciler) getCurrentDeployments(
 	ctx context.Context,
 	bkapp *paasv1alpha2.BkApp,
 ) (result []*appsv1.Deployment, err error) {
@@ -168,32 +168,12 @@ func (r *DeploymentReconciler) findNewDeployments(
 			continue
 		}
 
-		givenBkApp := bkapp.DeepCopy()
 		// If the deployment ID has been changed, always treat current deployment as outdated.
-		if givenBkApp.Annotations[paasv1alpha2.DeployIDAnnoKey] != syncedBkApp.Annotations[paasv1alpha2.DeployIDAnnoKey] {
+		if bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey] != syncedBkApp.Annotations[paasv1alpha2.DeployIDAnnoKey] {
 			log.V(2).Info("Deploy ID changed, current deployment is outdated.", "name", d.Name)
 			continue
 		}
-
-		// Remove unrelated content before comparing
-		delete(givenBkApp.Annotations, paasv1alpha2.DeployIDAnnoKey)
-		delete(syncedBkApp.Annotations, paasv1alpha2.DeployIDAnnoKey)
-
-		// Compare the given and the synced BkApp
-		if apiequality.Semantic.DeepEqual(givenBkApp.Spec, syncedBkApp.Spec) &&
-			apiequality.Semantic.DeepEqual(givenBkApp.Annotations, syncedBkApp.Annotations) {
-			procName := d.Labels[paasv1alpha2.ProcessNameKey]
-			results[procName] = d
-			continue
-		}
-		// Also compare with the synced BkApp whose "nil" values have been set to default values, this can
-		// handle the situation when BkApp's schema has been updated and the given app has been mutated by
-		// the webhook. In this case, the former comparison will fail because new fields in the synced bkapp have
-		// not been set to the default values but the given bkapp has.
-		syncedBkAppWithDefaults := syncedBkApp.DeepCopy()
-		syncedBkAppWithDefaults.Default()
-		if apiequality.Semantic.DeepEqual(givenBkApp.Spec, syncedBkAppWithDefaults.Spec) &&
-			apiequality.Semantic.DeepEqual(givenBkApp.Annotations, syncedBkAppWithDefaults.Annotations) {
+		if BkAppSemanticEqual(bkapp, &syncedBkApp) {
 			procName := d.Labels[paasv1alpha2.ProcessNameKey]
 			results[procName] = d
 			continue
@@ -223,7 +203,7 @@ func (r *DeploymentReconciler) cleanUpDeployments(ctx context.Context,
 
 // update condition `AppAvailable`
 func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
-	current, err := r.getOldDeployments(ctx, bkapp)
+	current, err := r.getCurrentDeployments(ctx, bkapp)
 	if err != nil {
 		return err
 	}
@@ -344,4 +324,32 @@ func (r *DeploymentReconciler) updateHandler(
 		)
 	}
 	return nil
+}
+
+// BkAppSemanticEqual checks if two bkapp resources are semantically equal, it respect the default values.
+// Args:
+// - bkApp: The bkapp resource.
+// - syncBkApp: The bkapp stored in the annotation, not mutated by the default webhook.
+func BkAppSemanticEqual(bkApp, syncedBkApp *paasv1alpha2.BkApp) bool {
+	bkAppCopy := bkApp.DeepCopy()
+	syncedBkAppCopy := syncedBkApp.DeepCopy()
+	// Remove unrelated content before comparing
+	delete(bkAppCopy.Annotations, paasv1alpha2.DeployIDAnnoKey)
+	delete(syncedBkAppCopy.Annotations, paasv1alpha2.DeployIDAnnoKey)
+
+	// Compare the given and the synced BkApp
+	if apiequality.Semantic.DeepEqual(bkAppCopy.Spec, syncedBkAppCopy.Spec) &&
+		apiequality.Semantic.DeepEqual(bkAppCopy.Annotations, syncedBkAppCopy.Annotations) {
+		return true
+	}
+	// Also compare with the synced BkApp whose "nil" values have been set to default values, this can
+	// handle the situation when BkApp's schema has been updated and the given app has been mutated by
+	// the webhook. In this case, the former comparison will fail because new fields in the synced bkapp have
+	// not been set to the default values but the given bkapp has.
+	syncedBkAppCopy.Default()
+	if apiequality.Semantic.DeepEqual(bkAppCopy.Spec, syncedBkAppCopy.Spec) &&
+		apiequality.Semantic.DeepEqual(bkAppCopy.Annotations, syncedBkAppCopy.Annotations) {
+		return true
+	}
+	return false
 }

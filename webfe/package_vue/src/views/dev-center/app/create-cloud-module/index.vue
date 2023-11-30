@@ -470,7 +470,8 @@
               collapse-item-name="process"
               :title="$t('进程配置')">
               <deploy-process
-                ref="processRef" :cloud-form-data="formData"
+                ref="processRef"
+                :cloud-form-data="{url: mirrorData.url, imageCredentialName: imageCredentialsData.name}"
                 :is-create="isCreate"></deploy-process>
             </collapseContent>
 

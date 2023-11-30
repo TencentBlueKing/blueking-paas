@@ -470,12 +470,7 @@
               collapse-item-name="process"
               :title="$t('进程配置')">
               <deploy-process
-                <<<<<<< HEAD
                 ref="processRef" :cloud-form-data="formData"
-                =="====="
-                ref="processRef" :image-url="mirrorData.url"
-                :image-credential-name="imageCredentialsData.name"
-              >>>>>>> upstream/main
                 :is-create="isCreate"></deploy-process>
             </collapseContent>
 

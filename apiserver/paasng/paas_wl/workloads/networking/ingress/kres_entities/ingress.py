@@ -251,7 +251,7 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         spec = kube_data.spec
         rules = spec.get("rules") or []
         service_name, service_port_name = self.parse_service_info_from_rules(rules)
-        all_annotations = kube_data.metadata.annotations or {}
+        all_annotations = kube_data.metadata.annotations.__dict__ or {}
         extra_annotations = {k: v for k, v in all_annotations.items() if k not in reserved_annotations}
 
         configuration_snippet = all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")
@@ -404,7 +404,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         spec = kube_data.spec
         rules = spec.get("rules") or []
         service_name, service_port_name = self.parse_service_info_from_rules(rules)
-        all_annotations = kube_data.metadata.annotations or {}
+        all_annotations = kube_data.metadata.annotations.__dict__ or {}
         extra_annotations = {k: v for k, v in all_annotations.items() if k not in reserved_annotations}
 
         configuration_snippet = all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")

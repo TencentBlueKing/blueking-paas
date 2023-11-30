@@ -28,25 +28,25 @@ from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
 @pytest.fixture(autouse=True)
-def setup_languages():
+def _setup_languages():
     with override_settings(LANGUAGES=[("en", "English"), ("zh-cn", "简体中文")]):
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def serializer_class():
     class DummySLZ(serializers.Serializer):
-        A = serializers.CharField(required=False, allow_blank=True, default='')
-        B = TranslatedCharField(required=False, allow_blank=True, default='')
+        A = serializers.CharField(required=False, allow_blank=True, default="")
+        B = TranslatedCharField(required=False, allow_blank=True, default="")
         # 由于这个类没有被 i18n 包裹, 所以最后生成的 slz 没有 C 这个字段
-        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default=''))
+        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default=""))
 
     return DummySLZ
 
 
 class TestTranslatedCharField:
     @pytest.mark.parametrize(
-        "init_kwargs, ctx, expected",
+        ("init_kwargs", "ctx", "expected"),
         [
             ({}, nullcontext(), {"A": "", "B": ""}),
             ({"B": "beta"}, nullcontext(), {"A": "", "B": "beta"}),
@@ -61,7 +61,7 @@ class TestTranslatedCharField:
             assert slz.validated_data == expected
 
     @pytest.mark.parametrize(
-        "init_kwargs, ctx, expected",
+        ("init_kwargs", "ctx", "expected"),
         [
             ({}, nullcontext(), {"A": "", "B": ""}),
             ({"B": "beta"}, nullcontext(), {"A": "", "B": "beta"}),
@@ -75,24 +75,28 @@ class TestTranslatedCharField:
             assert slz.data == expected
 
 
-@pytest.fixture
+@pytest.fixture()
 def i18n_serializer_class():
     @i18n
     class DummySLZ(serializers.Serializer):
-        A = serializers.CharField(required=False, allow_blank=True, default='')
-        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default='', max_length=6))
+        A = serializers.CharField(required=False, allow_blank=True, default="")
+        C = I18NExtend(serializers.CharField(required=False, allow_blank=True, default="", max_length=6))
 
     return DummySLZ
 
 
 class TestI18NExtend:
     @pytest.mark.parametrize(
-        "init_kwargs, ctx, expected",
+        ("init_kwargs", "ctx", "expected"),
         [
-            ({}, nullcontext(), {"A": "", "c_en": '', "c_zh_cn": ""}),
-            ({"C": "delta"}, nullcontext(), {"A": "", "c_en": 'delta', "c_zh_cn": "delta"}),
-            ({"c_en": "delta", "c_zh_cn": "德尔塔"}, override("en"), {"A": "", "c_en": 'delta', "c_zh_cn": "德尔塔"}),
-            ({"c_en": "delta", "c_zh_cn": "德尔塔"}, override("zh-cn"), {"A": "", "c_en": 'delta', "c_zh_cn": "德尔塔"}),
+            ({}, nullcontext(), {"A": "", "c_en": "", "c_zh_cn": ""}),
+            ({"C": "delta"}, nullcontext(), {"A": "", "c_en": "delta", "c_zh_cn": "delta"}),
+            ({"c_en": "delta", "c_zh_cn": "德尔塔"}, override("en"), {"A": "", "c_en": "delta", "c_zh_cn": "德尔塔"}),
+            (
+                {"c_en": "delta", "c_zh_cn": "德尔塔"},
+                override("zh-cn"),
+                {"A": "", "c_en": "delta", "c_zh_cn": "德尔塔"},
+            ),
         ],
     )
     def test_valid(self, i18n_serializer_class, init_kwargs, ctx, expected):
@@ -102,7 +106,7 @@ class TestI18NExtend:
             assert slz.validated_data == expected
 
     @pytest.mark.parametrize(
-        "init_kwargs, ctx",
+        ("init_kwargs", "ctx"),
         [
             ({"C": "delta-delta-delta"}, nullcontext()),
             (

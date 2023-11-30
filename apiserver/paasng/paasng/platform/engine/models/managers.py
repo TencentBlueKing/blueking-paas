@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class DeployOperationManager:
     """目前用来统一管理 Deployment & Offline 两类的操作，旨在替换掉 Operation Model"""
 
-    def __init__(self, module: 'Module'):
+    def __init__(self, module: "Module"):
         self.module = module
         self.model_classes: List[Type[Model]] = [Deployment, OfflineOperation]
 
@@ -98,7 +98,7 @@ class ExportedConfigVars(BaseModel):
         return f"{directions}{content}"
 
     @classmethod
-    def from_list(cls, config_vars: List[ConfigVar]) -> 'ExportedConfigVars':
+    def from_list(cls, config_vars: List[ConfigVar]) -> "ExportedConfigVars":
         """serialize provided config vars to an ExportedConfigVars
 
         :param List[ConfigVar] config_vars: The config_vars set
@@ -119,7 +119,7 @@ class ExportedConfigVars(BaseModel):
 
 class ConfigVarManager:
     @transaction.atomic
-    def apply_vars_to_module(self, module: 'Module', config_vars: List[ConfigVar]) -> ApplyResult:
+    def apply_vars_to_module(self, module: "Module", config_vars: List[ConfigVar]) -> ApplyResult:
         """Apply a list of `config_vars` objects to the `module`, these objects may
         be created or will overwrite the old ones with the same name.
 
@@ -157,7 +157,7 @@ class ConfigVarManager:
         )
 
     @transaction.atomic
-    def remove_bulk(self, module: 'Module', exclude_keys: List[str]) -> int:
+    def remove_bulk(self, module: "Module", exclude_keys: List[str]) -> int:
         """Remove a bulk of config vars.
 
         :param exclude_keys: The keys to exclude from removing.
@@ -170,14 +170,14 @@ class ConfigVarManager:
                 ret += 1
         return ret
 
-    def clone_vars(self, source: 'Module', dest: 'Module') -> ApplyResult:
+    def clone_vars(self, source: "Module", dest: "Module") -> ApplyResult:
         """Clone All Config Vars from `source` Module  to `dest` Module, but ignore all built-in ones."""
         return self.apply_vars_to_module(dest, list(source.configvar_set.filter(is_builtin=False)))
 
     @transaction.atomic
-    def batch_save(self, module: 'Module', config_vars: List[ConfigVar]) -> ApplyResult:
+    def batch_save(self, module: "Module", config_vars: List[ConfigVar]) -> ApplyResult:
         """Save environment variables in batches, including adding, updating, and deleting"""
-        instance_list = module.configvar_set.filter(is_builtin=False).select_related('environment')
+        instance_list = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         instance_mapping = {obj.id: obj for obj in instance_list}
 
         # Create new instance if id is not provided
@@ -202,7 +202,7 @@ class ConfigVarManager:
 
         # Perform deletions.
         deleted_num = len(instance_mapping)
-        for _, obj in instance_mapping.items():
+        for obj in instance_mapping.values():
             obj.delete()
 
         ConfigVar.objects.bulk_create(create_list)

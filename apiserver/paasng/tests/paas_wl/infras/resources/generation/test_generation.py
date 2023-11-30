@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGeneration:
-    @pytest.fixture
+    @pytest.fixture()
     def release(self, wl_app):
         return create_wl_release(
             wl_app=wl_app,
@@ -39,19 +39,19 @@ class TestGeneration:
             release_params={"version": 2},
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def process(self, wl_app, release):
         return AppProcessManager(app=wl_app).assemble_process(process_type="web", release=release)
 
-    @pytest.fixture
+    @pytest.fixture()
     def client(self, wl_app):
         return get_client_by_app(wl_app)
 
-    @pytest.fixture
+    @pytest.fixture()
     def v1_mapper(self):
         return get_mapper_version("v1")
 
-    @pytest.fixture
+    @pytest.fixture()
     def v2_mapper(self):
         return get_mapper_version("v2")
 
@@ -74,7 +74,7 @@ class TestGeneration:
         )
 
     def test_v1_get(self, wl_app, process, client, v1_mapper):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"client is required.*"):
             v1_mapper.pod(process=process).get()
 
         mapper = v1_mapper.pod(process=process, client=client)
@@ -82,28 +82,28 @@ class TestGeneration:
             mapper.get()
 
         kp = Mock(return_value={"items": [1, 2, 3]})
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get', kp):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kp):
             assert mapper.get() == {"items": [1, 2, 3]}
 
     def test_v1_delete(self, wl_app, process, client, v1_mapper):
         kd = Mock(return_value=None)
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.delete', kd):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kd):
             mapper = v1_mapper.pod(process=process, client=client)
             assert mapper.delete() is None
             args, kwargs = kd.call_args_list[0]
             assert kd.called
-            assert kwargs['name'] == mapper.name
-            assert kwargs['namespace'] == mapper.namespace
+            assert kwargs["name"] == mapper.name
+            assert kwargs["namespace"] == mapper.namespace
 
     def test_v1_create(self, wl_app, process, client, v1_mapper):
         kd = Mock(return_value={"items": [1, 2, 3]})
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.create', kd):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.create", kd):
             mapper = v1_mapper.pod(process=process, client=client)
             assert mapper.create(body={}) == {"items": [1, 2, 3]}
             args, kwargs = kd.call_args_list[0]
             assert kd.called
-            assert kwargs['name'] == mapper.name
-            assert kwargs['namespace'] == mapper.namespace
+            assert kwargs["name"] == mapper.name
+            assert kwargs["namespace"] == mapper.namespace
 
     def test_v2_name(self, process, v2_mapper):
         assert v2_mapper.pod(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.type}"
@@ -111,4 +111,4 @@ class TestGeneration:
 
 
 def test_get_proc_deployment_name(wl_app):
-    assert get_proc_deployment_name(wl_app, 'web') != ''
+    assert get_proc_deployment_name(wl_app, "web") != ""

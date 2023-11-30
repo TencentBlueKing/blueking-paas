@@ -29,31 +29,31 @@ from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_good_client():
     """Make a fake client which produce successful result"""
     fake_client = MagicMock()
     fake_client.sync_api.return_value = {
-        'data': {'id': 1, 'name': 'foo'},
-        'code': 0,
-        'result': True,
-        'message': 'OK',
+        "data": {"id": 1, "name": "foo"},
+        "code": 0,
+        "result": True,
+        "message": "OK",
     }
-    empty_payload = {'data': None, 'code': 0, 'result': True, 'message': ''}
+    empty_payload = {"data": None, "code": 0, "result": True, "message": ""}
     fake_client.grant_permissions.return_value = empty_payload
     fake_client.revoke_permissions.return_value = empty_payload
     fake_client.update_gateway_status.return_value = empty_payload
     return fake_client
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_bad_client():
     """Make a fake client which produce failed result"""
     fake_client = MagicMock()
-    fake_client.sync_api.side_effect = BKAPIError('foo error')
-    fake_client.grant_permissions.side_effect = BKAPIError('foo error')
-    fake_client.revoke_permissions.side_effect = BKAPIError('foo error')
-    fake_client.update_gateway_status.side_effect = BKAPIError('foo error')
+    fake_client.sync_api.side_effect = BKAPIError("foo error")
+    fake_client.grant_permissions.side_effect = BKAPIError("foo error")
+    fake_client.revoke_permissions.side_effect = BKAPIError("foo error")
+    fake_client.update_gateway_status.side_effect = BKAPIError("foo error")
     return fake_client
 
 
@@ -65,7 +65,7 @@ class TestPluginDefaultAPIGateway:
         assert apigw_id == 1
         assert fake_good_client.sync_api.called
         _, kwargs = fake_good_client.sync_api.call_args_list[0]
-        assert len(kwargs['data']['maintainers']) > 0
+        assert len(kwargs["data"]["maintainers"]) > 0
 
     def test_sync_failed(self, bk_plugin_app, fake_bad_client):
         apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_bad_client)
@@ -73,23 +73,23 @@ class TestPluginDefaultAPIGateway:
             _ = apigw_service.sync()
 
     def test_sync_reuse_apigw_name(self, bk_plugin_app, fake_good_client):
-        bk_plugin_app.bk_plugin_profile.api_gw_name = 'updated_name'
+        bk_plugin_app.bk_plugin_profile.api_gw_name = "updated_name"
         bk_plugin_app.bk_plugin_profile.save()
 
         apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_good_client)
         apigw_service.sync()
 
         _, kwargs = fake_good_client.sync_api.call_args_list[0]
-        assert kwargs['data']['name'] == 'updated_name', '`sync()` should reuse the name of synced gateway'
+        assert kwargs["data"]["name"] == "updated_name", "`sync()` should reuse the name of synced gateway"
 
     def test_grant_succeeded(self, bk_plugin_app, fake_good_client):
-        distributor = G(BkPluginDistributor, code_name='sample-dis-1', bk_app_code='sample-dis-1')
+        distributor = G(BkPluginDistributor, code_name="sample-dis-1", bk_app_code="sample-dis-1")
         apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_good_client)
         apigw_service.grant(distributor)
         assert fake_good_client.grant_permissions.called
 
     def test_revoke_succeeded(self, bk_plugin_app, fake_good_client):
-        distributor = G(BkPluginDistributor, code_name='sample-dis-1', bk_app_code='sample-dis-1')
+        distributor = G(BkPluginDistributor, code_name="sample-dis-1", bk_app_code="sample-dis-1")
         apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_good_client)
         apigw_service.revoke(distributor)
         assert fake_good_client.revoke_permissions.called
@@ -119,9 +119,10 @@ def test_safe_sync_apigw_failed(bk_plugin_app, fake_bad_client):
 
 
 class TestSetDistributors:
-    def test_integrated(self, init_tmpls, bk_plugin_app, fake_good_client):
-        dis_1 = G(BkPluginDistributor, code_name='sample-dis-1', bk_app_code='sample-dis-1')
-        dis_2 = G(BkPluginDistributor, code_name='sample-dis-2', bk_app_code='sample-dis-2')
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_integrated(self, bk_plugin_app, fake_good_client):
+        dis_1 = G(BkPluginDistributor, code_name="sample-dis-1", bk_app_code="sample-dis-1")
+        dis_2 = G(BkPluginDistributor, code_name="sample-dis-2", bk_app_code="sample-dis-2")
 
         with patch(
             "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
@@ -138,7 +139,7 @@ class TestSetDistributors:
             # Grant permissions should be called twice
             call_args_list = fake_good_client.grant_permissions.call_args_list
             assert len(call_args_list) == 2
-            assert sorted([kwargs['data']['target_app_code'] for _, kwargs in call_args_list]) == [
+            assert sorted([kwargs["data"]["target_app_code"] for _, kwargs in call_args_list]) == [
                 dis_1.bk_app_code,
                 dis_2.bk_app_code,
             ]
@@ -146,7 +147,7 @@ class TestSetDistributors:
             # Revoke permissions should be called twice
             call_args_list = fake_good_client.revoke_permissions.call_args_list
             assert len(call_args_list) == 2
-            assert sorted([kwargs['data']['target_app_codes'] for _, kwargs in call_args_list]) == [
+            assert sorted([kwargs["data"]["target_app_codes"] for _, kwargs in call_args_list]) == [
                 [dis_1.bk_app_code],
                 [dis_2.bk_app_code],
             ]

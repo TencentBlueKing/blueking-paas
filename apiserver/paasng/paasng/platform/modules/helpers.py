@@ -141,7 +141,7 @@ class SlugbuilderBinder:
 class ModuleRuntimeBinder:
     """模块相关运行时绑定工具"""
 
-    def __init__(self, module: 'Module'):
+    def __init__(self, module: "Module"):
         self.module = module
         self.build_config = BuildConfig.objects.get_or_create_by_module(module)
 
@@ -169,7 +169,7 @@ class ModuleRuntimeBinder:
         module = self.module
 
         if slugbuilder is None:
-            raise RuntimeError('slugbuilder is None')
+            raise RuntimeError("slugbuilder is None")
 
         if slugrunner.name != slugbuilder.name:
             raise BindError(
@@ -211,7 +211,7 @@ class ModuleRuntimeBinder:
         """绑定 Module/Slugbuilder/buildpack 三方关系"""
         slugbuilder = self.build_config.buildpack_builder
         if slugbuilder is None:
-            raise RuntimeError('slugbuilder is None')
+            raise RuntimeError("slugbuilder is None")
 
         if slugbuilder.region != buildpack.region or not slugbuilder.buildpacks.filter(pk=buildpack.pk).exists():
             # 当前 slugbuilder 不能与当前 buildpack 建立关联
@@ -226,7 +226,7 @@ class ModuleRuntimeBinder:
     @staticmethod
     def get_ordered_buildpacks_list(
         buildpacks: Iterable["AppBuildPack"], ordered_bp_ids: List[int]
-    ) -> List['AppBuildPack']:
+    ) -> List["AppBuildPack"]:
         """Get the ordered buildpacks list.
 
         :params buildpacks: the buildpacks list to be sorted
@@ -243,7 +243,7 @@ class ModuleRuntimeManager:
     HTTP_SUPPORTED_LABEL = "supportHttp"
     CNB_LABEL = "isCloudNativeBuilder"
 
-    def __init__(self, module: 'Module'):
+    def __init__(self, module: "Module"):
         self.module = module
         self.build_config = BuildConfig.objects.get_or_create_by_module(module=self.module)
 
@@ -334,12 +334,12 @@ class ModuleRuntimeManager:
         ]
 
 
-def get_module_clusters(module: 'Module') -> Dict[AppEnvName, Cluster]:
+def get_module_clusters(module: "Module") -> Dict[AppEnvName, Cluster]:
     """return all cluster info of module envs"""
     return {AppEnvName(env.environment): EnvClusterService(env).get_cluster() for env in module.envs.all()}
 
 
-def get_module_prod_env_root_domains(module: 'Module', include_reserved: bool = False) -> List[Domain]:
+def get_module_prod_env_root_domains(module: "Module", include_reserved: bool = False) -> List[Domain]:
     """返回当前模块（生产环境）支持的所有根域名
 
     :param module: 模块
@@ -358,7 +358,7 @@ def get_module_prod_env_root_domains(module: 'Module', include_reserved: bool = 
     return [domain for domain in root_domains if include_reserved or not domain.reserved]
 
 
-def get_image_labels_by_module(module: 'Module') -> Dict[str, str]:
+def get_image_labels_by_module(module: "Module") -> Dict[str, str]:
     """根据 module 的属性获取筛选镜像的label"""
     labels = {}
     if module.application.type == ApplicationType.CLOUD_NATIVE:

@@ -54,37 +54,37 @@ class TestModuleStructuredLogAPIView:
         assert response.data["logs"] == []
         # 测试 dsl 的拼接 是否符合预期
         assert json.loads(response.data["dsl"]) == {
-            'query': {
-                'bool': {
-                    'filter': [
-                        {'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}},
+            "query": {
+                "bool": {
+                    "filter": [
+                        {"range": {"@timestamp": {"gte": "now-1h", "lte": "now"}}},
                         # mappings 返回类型是 text, 因此添加了 .keyword
-                        {'term': {'app_code.keyword': bk_app.code}},
-                        {'term': {'module_name': bk_module.name}},
-                        {'bool': {'must_not': [{'terms': {'stream': ['stderr', 'stdout']}}]}},
+                        {"term": {"app_code.keyword": bk_app.code}},
+                        {"term": {"module_name": bk_module.name}},
+                        {"bool": {"must_not": [{"terms": {"stream": ["stderr", "stdout"]}}]}},
                     ],
-                    'must': [
-                        {'query_string': {'query': 'query_string', 'analyze_wildcard': True}},
-                        {'terms': {'terms': ['foo', 'bar']}},
+                    "must": [
+                        {"query_string": {"query": "query_string", "analyze_wildcard": True}},
+                        {"terms": {"terms": ["foo", "bar"]}},
                     ],
-                    'must_not': [{'terms': {'exclude': ['foo', 'bar']}}],
+                    "must_not": [{"terms": {"exclude": ["foo", "bar"]}}],
                 }
             },
-            'sort': [{'@timestamp': {'order': 'desc'}, 'some-field': {'order': 'asc'}}],
-            'size': 100,
-            'from': 0,
-            'highlight': {
-                'fields': {'*': {'number_of_fragments': 0}, '*.*': {'number_of_fragments': 0}},
-                'pre_tags': ['[bk-mark]'],
-                'post_tags': ['[/bk-mark]'],
-                'require_field_match': False,
-                'highlight_query': {
-                    'bool': {
-                        'must': [
-                            {'query_string': {'query': 'query_string', 'analyze_wildcard': True}},
-                            {'terms': {'terms': ['foo', 'bar']}},
+            "sort": [{"@timestamp": {"order": "desc"}, "some-field": {"order": "asc"}}],
+            "size": 100,
+            "from": 0,
+            "highlight": {
+                "fields": {"*": {"number_of_fragments": 0}, "*.*": {"number_of_fragments": 0}},
+                "pre_tags": ["[bk-mark]"],
+                "post_tags": ["[/bk-mark]"],
+                "require_field_match": False,
+                "highlight_query": {
+                    "bool": {
+                        "must": [
+                            {"query_string": {"query": "query_string", "analyze_wildcard": True}},
+                            {"terms": {"terms": ["foo", "bar"]}},
                         ],
-                        'must_not': [{'terms': {'exclude': ['foo', 'bar']}}],
+                        "must_not": [{"terms": {"exclude": ["foo", "bar"]}}],
                     }
                 },
             },
@@ -159,21 +159,21 @@ class TestModuleStructuredLogAPIView:
 
 
 class TestCustomCollectorConfigViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def cfg_maker(self, bk_module):
         def maker(**kwargs):
             return G(CustomCollectorConfig, module=bk_module, **kwargs)
 
         return maker
 
-    @pytest.fixture
+    @pytest.fixture()
     def builtin_json_cfg(self, bk_module, cfg_maker):
         return cfg_maker(
             name_en=build_custom_collector_config_name(bk_module, type="json"),
             log_type="json",
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def builtin_stdout_cfg(self, bk_module, cfg_maker):
         return cfg_maker(
             name_en=build_custom_collector_config_name(bk_module, type="stdout"),
@@ -194,7 +194,7 @@ class TestCustomCollectorConfigViewSet:
         assert resp.data[1]["is_builtin"]
         assert resp.data[2]["is_builtin"]
 
-    @pytest.fixture
+    @pytest.fixture()
     def apigw_client(self):
         with mock.patch("paasng.infras.bk_log.client.APIGWClient") as cls, override_settings(ENABLE_BK_LOG_APIGW=True):
             yield cls().api

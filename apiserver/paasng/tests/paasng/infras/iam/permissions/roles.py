@@ -17,25 +17,25 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 # 超级管理员
-ADMIN_USER = 'admin'
+ADMIN_USER = "admin"
 
 # 应用开发者
-APP_DEVELOP_USER = 'app_develop_user'
+APP_DEVELOP_USER = "app_develop_user"
 
 # 应用运营者
-APP_OPERATE_USER = 'app_operate_user'
+APP_OPERATE_USER = "app_operate_user"
 
 # 应用管理者
-APP_ADMIN_USER = 'app_admin_user'
+APP_ADMIN_USER = "app_admin_user"
 
 # 平台管理者
-PLATFORM_ADMIN_USER = 'platform_admin_user'
+PLATFORM_ADMIN_USER = "platform_admin_user"
 
 # 平台运营者
-PLATFORM_OPERATE_USER = 'platform_operate_user'
+PLATFORM_OPERATE_USER = "platform_operate_user"
 
 # 应用模板管理者
-APP_TMPL_ADMIN_USER = 'app_tmpl_admin_user'
+APP_TMPL_ADMIN_USER = "app_tmpl_admin_user"
 
 # 可以使用外部版的用户
-EXTERNAL_REGION_ENABLED_USER = 'external_region_enabled_user'
+EXTERNAL_REGION_ENABLED_USER = "external_region_enabled_user"

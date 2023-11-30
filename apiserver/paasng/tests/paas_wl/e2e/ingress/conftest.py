@@ -77,7 +77,7 @@ def skip_if_configuration_not_ready(request):
     if not settings.FOR_TEST_E2E_INGRESS_CONFIG:
         pytest.skip("nginx-ingress e2e configuration not ready, skip e2e test")
 
-    if not request.config.getvalue('run_e2e_test'):
+    if not request.config.getvalue("run_e2e_test"):
         pytest.skip("run_e2e_test is disabled, skip e2e test")
 
 
@@ -128,8 +128,8 @@ def e2e_app(namespace_maker, django_db_setup, django_db_blocker):
             app=app,
             metadata={
                 "environment": "prod",
-                "paas_app_code": 'paas-' + app.name,
-                "module_name": 'default',
+                "paas_app_code": "paas-" + app.name,
+                "module_name": "default",
             },
         )
         create_wl_release(app)
@@ -159,11 +159,11 @@ def echo_pod(namespace_maker, framework, e2e_app):
     """An echo server is a server that replicates the request sent by the client and sends it back."""
     kube_selector = get_process_selector(e2e_app, "web")
     pod_dict = {
-        'apiVersion': 'v1',
-        'kind': 'Pod',
-        'metadata': {'name': e2e_app.scheduler_safe_name, 'labels': kube_selector},
-        'spec': {
-            'containers': [
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {"name": e2e_app.scheduler_safe_name, "labels": kube_selector},
+        "spec": {
+            "containers": [
                 {
                     "name": "main",
                     "imagePullPolicy": "IfNotPresent",
@@ -171,7 +171,7 @@ def echo_pod(namespace_maker, framework, e2e_app):
                     # ref: https://hub.docker.com/r/ealen/echo-server
                     "image": "ealen/echo-server:0.7.0",
                     "env": [{"name": "PORT", "value": str(settings.CONTAINER_PORT)}],
-                    "ports": [{'containerPort': settings.CONTAINER_PORT}],
+                    "ports": [{"containerPort": settings.CONTAINER_PORT}],
                 }
             ],
             "restartPolicy": "Always",

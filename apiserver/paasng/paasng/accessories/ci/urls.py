@@ -22,22 +22,22 @@ from . import views
 
 urlpatterns = [
     re_path(
-        make_app_pattern(r'/ci/info/$', include_envs=False),
-        views.CIInfoViewSet.as_view({'get': 'query'}),
-        name='api.ci.info',
+        make_app_pattern(r"/ci/info/$", include_envs=False),
+        views.CIInfoViewSet.as_view({"get": "query"}),
+        name="api.ci.info",
     ),
     re_path(
-        make_app_pattern(r'/ci/detail/$', include_envs=False),
-        views.CIInfoViewSet.as_view({'get': 'get_detail'}),
-        name='api.ci.detail',
+        make_app_pattern(r"/ci/detail/$", include_envs=False),
+        views.CIInfoViewSet.as_view({"get": "get_detail"}),
+        name="api.ci.detail",
     ),
 ]
 
 # TODO 前端处理完后删除
 urlpatterns += [
     re_path(
-        make_app_pattern(r'/ci/jobs/$', include_envs=False),
-        views.CIJobViewSet.as_view({'get': 'list'}),
-        name='api.ci.jobs',
+        make_app_pattern(r"/ci/jobs/$", include_envs=False),
+        views.CIJobViewSet.as_view({"get": "list"}),
+        name="api.ci.jobs",
     ),
 ]

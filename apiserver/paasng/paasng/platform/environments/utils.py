@@ -37,7 +37,7 @@ def env_role_protection_check(operation: str, env: ModuleEnvironment, roles: Lis
         return
 
     # 取交集，如果结果不为空，则说明有允许的角色
-    if set(roles) & set(protections.values_list('allowed_role', flat=True)):
+    if set(roles) & set(protections.values_list("allowed_role", flat=True)):
         return
 
     raise RoleNotAllowError()
@@ -51,7 +51,7 @@ def batch_save_protections(
         module_env__module=module, operation=operation, allowed_role__in=allowed_roles
     )
     # 查看 DB 中已经设置了操作限制的环境
-    db_envs_set = set(qs.values_list('module_env__environment', flat=True))
+    db_envs_set = set(qs.values_list("module_env__environment", flat=True))
 
     # 不再输入数据中，但是在 DB 中的环境，则需要删除
     input_envs_set = set(input_envs)

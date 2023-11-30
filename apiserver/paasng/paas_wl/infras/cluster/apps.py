@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class KubeClusterConfig(AppConfig):
-    name = 'paas_wl.infras.cluster'
+    name = "paas_wl.infras.cluster"

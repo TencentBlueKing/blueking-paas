@@ -57,15 +57,15 @@ class ProcessSpecPlanManageView(GenericTemplateView):
         self.paginator.default_limit = 2
         self.paginator.request = self.request
         kwargs.update(self.request.query_params)
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
 
         kwargs["env_choices"] = [{"value": value, "text": text} for value, text in AppEnvName.get_choices()]
         kwargs["region_list"] = [
             {"value": region.name, "text": region.display_name} for region in get_all_regions().values()
         ]
         kwargs["process_spec_plan_list"] = self.list(self.request, *self.args, **self.kwargs)
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
     def get(self, request, *args, **kwargs):

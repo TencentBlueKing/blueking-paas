@@ -25,9 +25,9 @@ from typing import Optional
 import arrow
 from prometheus_client.core import GaugeMetricFamily
 
-from paasng.platform.engine.utils.client import EngineDeployClient
-from paasng.misc.metrics.collector import cb_metric_collector
 from paasng.core.core.storages.cache import region as cache_region
+from paasng.misc.metrics.collector import cb_metric_collector
+from paasng.platform.engine.utils.client import EngineDeployClient
 
 from .constants import JobStatus
 from .models.deployment import Deployment
@@ -43,13 +43,13 @@ def count_frozen_deployments(edge_seconds: int = 90, now: Optional[datetime.date
     """
     edge_date = arrow.get(now).shift(seconds=-edge_seconds)
 
-    logger.info('Start counting frozen deployments since {}'.format(edge_date.format()))
+    logger.info("Start counting frozen deployments since {}".format(edge_date.format()))
     # Set `created__lte` to narrow source dataset, while it's not required because deployment_is_frozen will filter
     # unqualified deployments anyway.
     deploys = Deployment.objects.filter(status=JobStatus.PENDING.value, created__lte=edge_date.datetime)
 
     frozen_deployments_cnt = sum(deployment_is_frozen(deployment, edge_date.datetime) for deployment in deploys)
-    logger.info('Frozen deployments count: {}'.format(frozen_deployments_cnt))
+    logger.info("Frozen deployments count: {}".format(frozen_deployments_cnt))
     return frozen_deployments_cnt
 
 
@@ -73,7 +73,7 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
     # Deployment which has no new lines in `edge_seconds` was frozen
     last_log_line = log_lines[-1]
     try:
-        last_line_created = arrow.get(last_log_line['created'])
+        last_line_created = arrow.get(last_log_line["created"])
     except KeyError:
         # Backward compatibility
         return False
@@ -81,13 +81,13 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
 
 
 class FrozenDeploymentsMetric:
-    name = 'frozen_deployments'
-    description = 'count of frozen deployments'
+    name = "frozen_deployments"
+    description = "count of frozen deployments"
 
     @classmethod
     def calc_metric(cls) -> GaugeMetricFamily:
         """获取 metric"""
-        cached_count_frozen_deployments = cache_region.cache_on_arguments(namespace='v1', expiration_time=60)(
+        cached_count_frozen_deployments = cache_region.cache_on_arguments(namespace="v1", expiration_time=60)(
             count_frozen_deployments
         )
         value = cached_count_frozen_deployments()

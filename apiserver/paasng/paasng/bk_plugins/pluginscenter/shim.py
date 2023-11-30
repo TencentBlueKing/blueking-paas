@@ -22,7 +22,6 @@ from functools import wraps
 from blue_krill.web.std_error import APIError as StdAPIError
 from django.utils.translation import gettext_lazy as _
 
-from paasng.platform.sourcectl.git.client import GitCommandExecutionError
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import (
@@ -35,6 +34,7 @@ from paasng.bk_plugins.pluginscenter.sourcectl import add_repo_member, get_plugi
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import APIError as SourceAPIError
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import PluginRepoNameConflict
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance
+from paasng.platform.sourcectl.git.client import GitCommandExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -81,12 +81,15 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     # 调用第三方系统API时, 必须保证 plugin.repository 不为空
     if plugin.pd.basic_info_definition.api.create:
         try:
-            create_instance(plugin.pd, plugin, operator)
+            api_call_success = create_instance(plugin.pd, plugin, operator)
         except StdAPIError:
             logger.exception("同步插件信息至第三方系统失败, 请联系相应的平台管理员排查")
             raise
         except Exception:
             logger.exception("同步插件信息至第三方系统失败, 请联系相应的平台管理员排查")
+            raise error_codes.THIRD_PARTY_API_ERROR
+
+        if not api_call_success:
             raise error_codes.THIRD_PARTY_API_ERROR
 
     # 创建默认市场信息

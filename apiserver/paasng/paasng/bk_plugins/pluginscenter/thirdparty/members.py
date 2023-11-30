@@ -16,14 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import fetch_plugin_members
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.bk_plugins.pluginscenter.thirdparty import utils
 from paasng.bk_plugins.pluginscenter.thirdparty.api_serializers import PluginMemberSLZ
+
+logger = logging.getLogger(__name__)
 
 
 def sync_members(pd: PluginDefinition, instance: PluginInstance):
     """同步插件开发中心成员列表至第三方系统"""
     slz = PluginMemberSLZ(fetch_plugin_members(plugin=instance), many=True)
     data = slz.data
-    utils.make_client(pd.basic_info_definition.sync_members).call(data=data, path_params={"plugin_id": instance.id})
+    resp = utils.make_client(pd.basic_info_definition.sync_members).call(
+        data=data, path_params={"plugin_id": instance.id}
+    )
+
+    if not (result := resp.get("result", True)):
+        logger.error(f"sync members error [plugin_id: {instance.id}, data:{data}], error: {resp}")
+    return result

@@ -32,7 +32,7 @@ class Base64FileFieldSLZ(serializers.Serializer):
 
 class TestBase64FileField:
     @pytest.mark.parametrize(
-        "data, ctx",
+        ("data", "ctx"),
         [
             ("base64,MQ==", nullcontext(b"1")),
             (b"1", nullcontext(b"1")),
@@ -47,7 +47,7 @@ class TestBase64FileField:
             assert slz.validated_data["file"].read() == expected
 
     @pytest.mark.parametrize(
-        "data, ctx",
+        ("data", "ctx"),
         [
             ("base64,MQ==", nullcontext("base64,MQ==")),
             (b"1", nullcontext("base64,MQ==")),
@@ -64,7 +64,7 @@ class TestBase64FileField:
 
 
 @pytest.mark.parametrize(
-    "protected_key_list, protected_prefix_list, key, expected",
+    ("protected_key_list", "protected_prefix_list", "key", "expected"),
     [
         ([], [], "foo", nullcontext()),
         (["foo"], [], "foo", pytest.raises(ValidationError)),

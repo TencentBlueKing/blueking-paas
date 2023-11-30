@@ -23,19 +23,19 @@ import pytest
 
 from paas_wl.workloads.networking.entrance.addrs import Address
 from paas_wl.workloads.networking.entrance.constants import AddressType
-from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def setup_addrs(bk_app, mock_env_is_running, mock_get_builtin_addresses):
+@pytest.fixture()
+def _setup_addrs(bk_app, mock_env_is_running, mock_get_builtin_addresses):
     """Set up common mock and configs for testing functions related with addresses"""
 
     def update_region_hook(config):
-        config['basic_info']['link_engine_app'] = "http://example.com/{region}-legacy-path/"
+        config["basic_info"]["link_engine_app"] = "http://example.com/{region}-legacy-path/"
 
     mock_env_is_running["stag"] = True
     mock_get_builtin_addresses["stag"] = [
@@ -60,8 +60,9 @@ class TestGetExposedUrl:
         mock_env_is_running[bk_prod_env] = False
         assert get_exposed_url(bk_prod_env) is None
 
+    @pytest.mark.usefixtures("_setup_addrs")
     @pytest.mark.parametrize(
-        "preferred_root, expected",
+        ("preferred_root", "expected"),
         [
             (None, "http://foo.example.com/"),
             ("example.org", "http://default-foo.example.org/"),
@@ -69,12 +70,12 @@ class TestGetExposedUrl:
             ("invalid-example.com", "http://foo.example.com/"),
         ],
     )
-    def test_preferred_root(self, preferred_root, expected, bk_module, bk_stag_env, setup_addrs):
+    def test_preferred_root(self, preferred_root, expected, bk_module, bk_stag_env):
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
         bk_module.user_preferred_root_domain = preferred_root
         bk_module.save()
 
         url = get_exposed_url(bk_stag_env)
         assert url is not None
-        assert url.provider_type == 'subdomain'
+        assert url.provider_type == "subdomain"
         assert url.address == expected

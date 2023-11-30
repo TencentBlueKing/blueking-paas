@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "data, region, ctx, expected",
+    ("data", "region", "ctx", "expected"),
     [
         (
             {"_lookup_field": "region", "data": {"default": CLUSTER_NAME_FOR_TESTING}},

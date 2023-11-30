@@ -24,16 +24,16 @@ from paasng.accessories.cloudapi.components.component import BaseComponent
 
 class TestBaseComponent:
     @pytest.mark.parametrize(
-        'mocked_http_ok, mocked_resp, will_error',
+        ("mocked_http_ok", "mocked_resp", "will_error"),
         [
             (
                 True,
-                {'code': 0},
+                {"code": 0},
                 False,
             ),
             (
                 False,
-                {'code': 0},
+                {"code": 0},
                 True,
             ),
             (
@@ -43,7 +43,7 @@ class TestBaseComponent:
             ),
             (
                 True,
-                {'code': 1, 'message': 'error'},
+                {"code": 1, "message": "error"},
                 True,
             ),
         ],
@@ -56,30 +56,30 @@ class TestBaseComponent:
 
         if will_error:
             with pytest.raises(APIError):
-                comp._call_api(http_func, '/api')
+                comp._call_api(http_func, "/api")
 
             return
 
-        result = comp._call_api(http_func, '/api')
+        result = comp._call_api(http_func, "/api")
         assert result == mocked_resp
 
     @pytest.mark.parametrize(
-        'host, path, expected',
+        ("host", "path", "expected"),
         [
             (
-                'http://bking.com',
-                '/api',
-                'http://bking.com/api',
+                "http://bking.com",
+                "/api",
+                "http://bking.com/api",
             ),
             (
-                'http://bking.com/',
-                '/api',
-                'http://bking.com/api',
+                "http://bking.com/",
+                "/api",
+                "http://bking.com/api",
             ),
             (
-                'http://bking.com/',
-                'api',
-                'http://bking.com/api',
+                "http://bking.com/",
+                "api",
+                "http://bking.com/api",
             ),
         ],
     )

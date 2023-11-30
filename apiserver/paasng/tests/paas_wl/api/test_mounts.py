@@ -24,10 +24,10 @@ from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceTyp
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.serializers import MountSLZ
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def mount(bk_app, bk_module):
     """创建一个 mount 对象"""
     mount = Mount.objects.new(
@@ -44,7 +44,7 @@ def mount(bk_app, bk_module):
     return mount
 
 
-@pytest.fixture
+@pytest.fixture()
 def mounts(bk_app, bk_module):
     """创建一个包含 15 个 mount 对象的集合"""
     mount_list = []
@@ -66,7 +66,7 @@ def mounts(bk_app, bk_module):
 
 
 @pytest.fixture(autouse=True, scope="class")
-def mock_volume_source_manager():
+def _mock_volume_source_manager():
     with patch(
         "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None
     ), patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None):

@@ -24,11 +24,11 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.converter import PluginP
 
 class TestPluginPolicyConverter:
     @pytest.mark.parametrize(
-        "data, expected",
+        ("data", "expected"),
         [
-            ({'field': 'plugin.id', 'op': 'eq', 'value': 'saas:plugin-1'}, Q(id="plugin-1", pd__identifier="saas")),
+            ({"field": "plugin.id", "op": "eq", "value": "saas:plugin-1"}, Q(id="plugin-1", pd__identifier="saas")),
             (
-                {'field': 'plugin.id', 'op': 'in', 'value': ['saas:plugin-1', 'udc:plugin-2']},
+                {"field": "plugin.id", "op": "in", "value": ["saas:plugin-1", "udc:plugin-2"]},
                 Q(id="plugin-1", pd__identifier="saas") | Q(id="plugin-2", pd__identifier="udc"),
             ),
         ],

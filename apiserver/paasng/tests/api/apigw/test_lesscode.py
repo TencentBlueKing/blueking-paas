@@ -33,20 +33,20 @@ from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 from tests.utils.helpers import generate_random_string
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_app_code():
     return generate_random_string(8, string.ascii_lowercase)
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_app_name():
     return generate_random_string(8)
 
 
-@pytest.fixture
+@pytest.fixture()
 def lesscode_public_params():
     return {
         "type": "default",
@@ -58,8 +58,9 @@ def lesscode_public_params():
 class TestApiInAPIGW:
     """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        "is_lesscode_app_cloud_native, app_type",
+        ("is_lesscode_app_cloud_native", "app_type"),
         [(True, ApplicationType.CLOUD_NATIVE.value), (False, ApplicationType.DEFAULT.value)],
     )
     def test_create_lesscode_api(
@@ -70,41 +71,40 @@ class TestApiInAPIGW:
         lesscode_public_params,
         bk_app_code,
         bk_app_name,
-        init_tmpls,
         is_lesscode_app_cloud_native,
         app_type,
     ):
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, True)
         lesscode_public_params.update(
             {
-                'region': settings.DEFAULT_REGION_NAME,
-                'code': bk_app_code,
-                'name': bk_app_name,
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": bk_app_code,
+                "name": bk_app_name,
             }
         )
         with override_settings(IS_LESSCODE_APP_CLOUD_NATIVE=is_lesscode_app_cloud_native):
             response = api_client.post(
-                '/apigw/api/bkapps/applications/',
+                "/apigw/api/bkapps/applications/",
                 data=lesscode_public_params,
             )
         assert response.status_code == 201
-        assert response.json()['application']['modules'][0]['source_origin'] == SourceOrigin.BK_LESS_CODE
-        assert response.json()['application']['type'] == app_type
+        assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.BK_LESS_CODE
+        assert response.json()["application"]["type"] == app_type
 
 
 class TestModuleSourcePackageViewSet:
     """测试源码包上传的接口"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def contents(self):
         """The default contents for making tar file."""
         app_desc = {
-            'spec_version': 2,
+            "spec_version": 2,
             "module": {"is_default": True, "processes": {"web": {"command": "npm run online"}}, "language": "NodeJS"},
         }
         return {"app.yaml": yaml.safe_dump(app_desc)}
 
-    @pytest.fixture
+    @pytest.fixture()
     def tar_path(self, contents):
         with generate_temp_file() as file_path:
             gen_tar(file_path, contents)

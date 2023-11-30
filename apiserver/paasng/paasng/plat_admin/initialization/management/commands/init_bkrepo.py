@@ -67,9 +67,9 @@ def allow_resource_exists():
         # 项目已存在: 251005
         # 仓库已存在: 251007
         logger.debug(f"错误码: {e.code}")
-        if str(e.code) in ['251005', '251007']:
+        if str(e.code) in ["251005", "251007"]:
             pass
-        elif str(e.code) in ['251006', '251008']:
+        elif str(e.code) in ["251006", "251008"]:
             logger.warning("[deprecated] 捕获到可能是旧版本的蓝鲸制品库(bkrepo)的错误码, 忽略.")
         else:
             raise
@@ -79,7 +79,9 @@ class Command(BaseCommand):
     help = "初始化 bkrepo"
 
     def add_arguments(self, parser):
-        parser.add_argument("--dry-run", dest="dry_run", default=True, type=str2bool, help="避免意外触发, 若想执行需添加该参数")
+        parser.add_argument(
+            "--dry-run", dest="dry_run", default=True, type=str2bool, help="避免意外触发, 若想执行需添加该参数"
+        )
         parser.add_argument("--init-enabled", dest="init_enabled", type=str2bool, required=True, default=True)
         parser.add_argument("--super-username", dest="super_username", required=True)
         parser.add_argument("--super-password", dest="super_password", required=True)

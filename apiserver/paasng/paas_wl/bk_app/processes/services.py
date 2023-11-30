@@ -24,4 +24,4 @@ def refresh_res_reqs(config: Config):
     config.resource_requirements = {
         pack.name: pack.plan.get_resource_summary() for pack in ProcessSpec.objects.filter(engine_app_id=config.app.pk)
     }
-    config.save(update_fields=['resource_requirements'])
+    config.save(update_fields=["resource_requirements"])

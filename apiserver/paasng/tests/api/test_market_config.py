@@ -22,20 +22,27 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paasng.platform.sourcectl.source_types import get_sourcectl_names
-from paasng.platform.engine.models import Deployment
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.market.protections import AppPublishPreparer
+from paasng.platform.applications.models import Application
+from paasng.platform.engine.models import Deployment
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from tests.conftest import mark_skip_if_console_not_configured
 from tests.utils.helpers import generate_random_string
 
 pytestmark = [mark_skip_if_console_not_configured(), pytest.mark.django_db]
 
 
+@pytest.mark.usefixtures("_init_tmpls")
 @pytest.mark.parametrize(
-    'confirm_required_when_publish, deployment_status, auto_enable_when_deploy, released_state, console_state',
+    (
+        "confirm_required_when_publish",
+        "deployment_status",
+        "auto_enable_when_deploy",
+        "released_state",
+        "console_state",
+    ),
     [
         (False, "failed", True, False, False),
         (False, "pending", True, False, False),
@@ -53,34 +60,33 @@ def test_create_then_release(
     deployment_status,
     released_state,
     console_state,
-    init_tmpls,
 ):
     # mock spec when creating application
     with patch(
-        'paasng.platform.applications.views.AppSpecs.confirm_required_when_publish',
+        "paasng.platform.applications.views.AppSpecs.confirm_required_when_publish",
         new_callable=PropertyMock,
         return_value=confirm_required_when_publish,
     ):
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
-            '/api/bkapps/applications/v2/',
+            "/api/bkapps/applications/v2/",
             data={
-                'region': settings.DEFAULT_REGION_NAME,
-                'code': f'uta-{random_suffix}',
-                'name': f'uta-{random_suffix}',
-                'engine_enabled': True,
-                'engine_params': {
-                    'source_origin': SourceOrigin.AUTHORIZED_VCS.value,
-                    'source_control_type': get_sourcectl_names().bk_svn,
-                    'source_init_template': 'dummy_template',
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
+                "engine_enabled": True,
+                "engine_params": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                    "source_control_type": get_sourcectl_names().bk_svn,
+                    "source_init_template": "dummy_template",
                 },
-                'market_params': {'enabled': False, 'source_url_type': 1},
+                "market_params": {"enabled": False, "source_url_type": 1},
             },
         )
 
     assert (
         response.status_code == 201
-    ), f'status code invalid: {response.status_code}, response content: {response.data}'
+    ), f"status code invalid: {response.status_code}, response content: {response.data}"
     pk = response.json()["application"]["id"]
     application = Application.objects.get(pk=pk)
 
@@ -100,7 +106,7 @@ def test_create_then_release(
     assert market_config.enabled == released_state
 
     # 通过 mock 控制 Preparer 所依赖的“环境部署状态”，保持与部署结果同步
-    with patch('paasng.accessories.publish.market.protections.env_is_deployed', return_value=deployment_status):
+    with patch("paasng.accessories.publish.market.protections.env_is_deployed", return_value=deployment_status):
         assert (market_config.enabled and AppPublishPreparer(application).all_matched) == console_state
 
     if console_state:

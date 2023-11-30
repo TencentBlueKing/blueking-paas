@@ -87,6 +87,7 @@ export default {
         'cloudAppImageManage',
         'cloudAppImageList',
         'cloudAppBuildHistory',
+        'networkConfig',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -152,6 +153,8 @@ export default {
           'cloudAppBuildHistory',
           // 模块配置-可观测性配置
           'observabilityConfig',
+          // 网络配置
+          'networkConfig',
         ],
         developer: [
           // 概览
@@ -212,6 +215,8 @@ export default {
           'cloudAppBuildHistory',
           // 模块配置-可观测性配置
           'observabilityConfig',
+          // 网络配置
+          'networkConfig',
         ],
         operator: [
           // 权限管理
@@ -432,6 +437,7 @@ export default {
         'cloudAppImageManage',
         'cloudAppImageList',
         'cloudAppBuildHistory',
+        'networkConfig',
       ];
 
       this.navTree.forEach((nav) => {

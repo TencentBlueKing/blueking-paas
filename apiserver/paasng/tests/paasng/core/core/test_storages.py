@@ -22,7 +22,7 @@ from paasng.core.core.storages.utils import SADBManager, make_sa_conn_string
 
 
 @pytest.mark.parametrize(
-    "driver_type, config, expected",
+    ("driver_type", "config", "expected"),
     [
         (
             (
@@ -39,7 +39,7 @@ def test_make_sa_conn_string(driver_type, config, expected):
 
 class TestSADBManager:
     @pytest.mark.parametrize(
-        "config, expected", [((dict(NAME="f1", USER="f2", PASSWORD="f3", HOST="f4", PORT="f5"), "f4:f5:f2:f1"))]
+        ("config", "expected"), [((dict(NAME="f1", USER="f2", PASSWORD="f3", HOST="f4", PORT="f5"), "f4:f5:f2:f1"))]
     )
     def test_make_uni_key(self, config, expected):
         assert SADBManager.make_uni_key(config) == expected

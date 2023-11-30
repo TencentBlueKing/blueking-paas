@@ -20,19 +20,19 @@ import pytest
 
 from paasng.platform.bkapp_model.models import DomainResolution, SvcDiscConfig
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestSvcDiscConfigViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def svc_disc(self, bk_app):
         """创建一个 SvcDiscConfig 对象"""
         svc_disc = SvcDiscConfig.objects.create(
             application=bk_app,
             bk_saas=[
                 {
-                    'bkAppCode': 'bk_app_code_test',
-                    'moduleName': 'module_name_test',
+                    "bkAppCode": "bk_app_code_test",
+                    "moduleName": "module_name_test",
                 }
             ],
         )
@@ -42,7 +42,7 @@ class TestSvcDiscConfigViewSet:
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
         response = api_client.get(url)
         assert response.status_code == 200
-        assert response.data["bk_saas"] == [{'bk_app_code': 'bk_app_code_test', 'module_name': 'module_name_test'}]
+        assert response.data["bk_saas"] == [{"bk_app_code": "bk_app_code_test", "module_name": "module_name_test"}]
 
     def test_get_error(self, api_client, bk_app):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
@@ -51,31 +51,31 @@ class TestSvcDiscConfigViewSet:
 
     def test_upsert(self, api_client, bk_app, svc_disc):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
-        request_body = {'bk_saas': [{'bk_app_code': bk_app.code}]}
+        request_body = {"bk_saas": [{"bk_app_code": bk_app.code}]}
         response = api_client.post(url, request_body)
         assert response.status_code == 200
-        assert response.data["bk_saas"] == [{'bk_app_code': bk_app.code, 'module_name': 'default'}]
+        assert response.data["bk_saas"] == [{"bk_app_code": bk_app.code, "module_name": "default"}]
 
     def test_upsert_error(self, api_client, bk_app, svc_disc):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
-        request_body = {'bk_saas': [{'bk_app_code': bk_app.id, 'module_name': 'test'}]}
+        request_body = {"bk_saas": [{"bk_app_code": bk_app.id, "module_name": "test"}]}
         response = api_client.post(url, request_body)
         assert response.status_code == 400
 
 
 class TestDomainResolutionViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def domain_resolution(self, bk_app):
         """创建一个 DomainResolution 对象"""
         domain_resolution = DomainResolution.objects.create(
             application=bk_app,
-            nameservers=['192.168.1.1', '192.168.1.2'],
+            nameservers=["192.168.1.1", "192.168.1.2"],
             host_aliases=[
                 {
-                    'ip': 'bk_app_code_test',
-                    'hostnames': [
-                        'bk_app_code_test',
-                        'bk_app_code_test_x',
+                    "ip": "bk_app_code_test",
+                    "hostnames": [
+                        "bk_app_code_test",
+                        "bk_app_code_test_x",
                     ],
                 }
             ],
@@ -86,13 +86,13 @@ class TestDomainResolutionViewSet:
         url = f"/api/bkapps/applications/{bk_app.code}/domain_resolution/"
         response = api_client.get(url)
         assert response.status_code == 200
-        assert response.data['nameservers'] == ['192.168.1.1', '192.168.1.2']
-        assert response.data['host_aliases'] == [
+        assert response.data["nameservers"] == ["192.168.1.1", "192.168.1.2"]
+        assert response.data["host_aliases"] == [
             {
-                'ip': 'bk_app_code_test',
-                'hostnames': [
-                    'bk_app_code_test',
-                    'bk_app_code_test_x',
+                "ip": "bk_app_code_test",
+                "hostnames": [
+                    "bk_app_code_test",
+                    "bk_app_code_test_x",
                 ],
             }
         ]
@@ -103,47 +103,47 @@ class TestDomainResolutionViewSet:
         assert response.status_code == 404
 
     @pytest.mark.parametrize(
-        "request_body, nameservers, host_aliases",
+        ("request_body", "nameservers", "host_aliases"),
         [
             (
                 {
-                    'nameservers': ['192.168.1.3', '192.168.1.4'],
-                    'host_aliases': [
+                    "nameservers": ["192.168.1.3", "192.168.1.4"],
+                    "host_aliases": [
                         {
-                            'ip': '1.1.1.1',
-                            'hostnames': [
-                                'bk_app_code_test',
-                                'bk_app_code_test_z',
+                            "ip": "1.1.1.1",
+                            "hostnames": [
+                                "bk_app_code_test",
+                                "bk_app_code_test_z",
                             ],
                         }
                     ],
                 },
-                ['192.168.1.3', '192.168.1.4'],
+                ["192.168.1.3", "192.168.1.4"],
                 [
                     {
-                        'ip': '1.1.1.1',
-                        'hostnames': [
-                            'bk_app_code_test',
-                            'bk_app_code_test_z',
+                        "ip": "1.1.1.1",
+                        "hostnames": [
+                            "bk_app_code_test",
+                            "bk_app_code_test_z",
                         ],
                     }
                 ],
             ),
             (
                 {
-                    'nameservers': ['192.168.1.3', '192.168.1.4'],
+                    "nameservers": ["192.168.1.3", "192.168.1.4"],
                 },
-                ['192.168.1.3', '192.168.1.4'],
+                ["192.168.1.3", "192.168.1.4"],
                 [],
             ),
             (
                 {
-                    'host_aliases': [
+                    "host_aliases": [
                         {
-                            'ip': '1.1.1.1',
-                            'hostnames': [
-                                'bk_app_code_test',
-                                'bk_app_code_test_z',
+                            "ip": "1.1.1.1",
+                            "hostnames": [
+                                "bk_app_code_test",
+                                "bk_app_code_test_z",
                             ],
                         }
                     ],
@@ -151,18 +151,18 @@ class TestDomainResolutionViewSet:
                 [],
                 [
                     {
-                        'ip': '1.1.1.1',
-                        'hostnames': [
-                            'bk_app_code_test',
-                            'bk_app_code_test_z',
+                        "ip": "1.1.1.1",
+                        "hostnames": [
+                            "bk_app_code_test",
+                            "bk_app_code_test_z",
                         ],
                     }
                 ],
             ),
             (
                 {
-                    'nameservers': [],
-                    'host_aliases': [],
+                    "nameservers": [],
+                    "host_aliases": [],
                 },
                 [],
                 [],

@@ -23,13 +23,13 @@ import pytest
 import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
 
-from paasng.platform.sourcectl.utils import generate_temp_dir
 from paasng.platform.declarative import constants
 from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.smart_app.patcher import SourceCodePatcher
 from paasng.platform.smart_app.path import LocalFSPath
-from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML
 
 pytestmark = pytest.mark.django_db
@@ -52,12 +52,12 @@ class TestSourcePackagePatcher:
             yield dest
 
     @pytest.mark.parametrize(
-        'user_source_dir',
+        "user_source_dir",
         [
             # Different kinds of value including empty, relative and absolute  path
-            (''),
-            ('foo'),
-            ('/foo/bar'),
+            (""),
+            ("foo"),
+            ("/foo/bar"),
         ],
     )
     def test_module_dir(self, user_source_dir, tmp_path, tar_path, bk_module_full):
@@ -70,11 +70,11 @@ class TestSourcePackagePatcher:
             desc_handler=get_desc_handler(stat.meta_info),
             relative_path=stat.relative_path,
         )
-        with mock.patch.object(patcher, 'get_user_source_dir', return_value=user_source_dir):
+        with mock.patch.object(patcher, "get_user_source_dir", return_value=user_source_dir):
             assert str(patcher.module_dir.path).startswith(str(tmp_path))
 
     @pytest.mark.parametrize(
-        "contents, target, ctx, expected",
+        ("contents", "target", "ctx", "expected"),
         [
             # 我们的打包脚本会默认打成相对路径形式
             (
@@ -173,7 +173,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {'hello': "echo 'hello world!';"},
+                {"hello": "echo 'hello world!';"},
             ),
             # 测试 Procfile 不会被覆盖
             (
@@ -191,11 +191,11 @@ class TestSourcePackagePatcher:
                             },
                         }
                     ),
-                    'foo/Procfile': yaml.dump({"hello": "echo 'good morning!';"}),
+                    "foo/Procfile": yaml.dump({"hello": "echo 'good morning!';"}),
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {'hello': "echo 'good morning!';"},
+                {"hello": "echo 'good morning!';"},
             ),
             # 测试多模块.
             (
@@ -222,7 +222,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/src/bar/Procfile",
                 does_not_raise(),
-                {'hello': "echo 'Hello Foo, i am Bar!';"},
+                {"hello": "echo 'Hello Foo, i am Bar!';"},
             ),
             # 测试多模块(已加密)
             (
@@ -246,11 +246,11 @@ class TestSourcePackagePatcher:
                             },
                         }
                     ),
-                    "foo/src/bar": '',
+                    "foo/src/bar": "",
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {'hello': "echo 'Hello Foo, i am Bar!';"},
+                {"hello": "echo 'Hello Foo, i am Bar!';"},
             ),
         ],
     )
@@ -262,7 +262,7 @@ class TestSourcePackagePatcher:
             assert yaml.load(fp.read()) == expected
 
     @pytest.mark.parametrize(
-        "contents, target, ctx, expected",
+        ("contents", "target", "ctx", "expected"),
         [
             (
                 {

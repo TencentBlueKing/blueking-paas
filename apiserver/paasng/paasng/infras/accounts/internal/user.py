@@ -38,8 +38,8 @@ class SysUserFromVerifiedClientMiddleware:
     """When current request was issued by a verified internal service(using JWT),
     treat current user as an internal system user."""
 
-    _client_role = 'internal-sys'
-    _default_username = 'sys-internal-svc-admin'
+    _client_role = "internal-sys"
+    _default_username = "sys-internal-svc-admin"
     _default_role = SiteRole.SYSTEM_API_BASIC_MAINTAINER.value
 
     def __init__(self, get_response):
@@ -47,7 +47,7 @@ class SysUserFromVerifiedClientMiddleware:
 
     def __call__(self, request):
         # Ignore already authenticated requests
-        if getattr(request, 'user', None) and request.user.is_authenticated:
+        if getattr(request, "user", None) and request.user.is_authenticated:
             return self.get_response(request)
 
         # Ignore not authenticated clients
@@ -62,5 +62,5 @@ class SysUserFromVerifiedClientMiddleware:
         user_db, created = User.objects.get_or_create(username=self._default_username)
         user = DatabaseUser.from_db_obj(user_db)
         if created:
-            UserProfile.objects.update_or_create(user=user.pk, defaults={'role': self._default_role})
+            UserProfile.objects.update_or_create(user=user.pk, defaults={"role": self._default_role})
         return user

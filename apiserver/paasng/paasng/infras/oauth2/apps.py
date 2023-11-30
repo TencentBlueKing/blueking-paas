@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class Oauth2Config(AppConfig):
-    name = 'paasng.infras.oauth2'
+    name = "paasng.infras.oauth2"

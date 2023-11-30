@@ -20,5 +20,5 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
 class NetworkProtocol(str, StructuredEnum):
-    TCP = EnumField('TCP', label='TCP')
-    UDP = EnumField('UDP', label='UDP')
+    TCP = EnumField("TCP", label="TCP")
+    UDP = EnumField("UDP", label="UDP")

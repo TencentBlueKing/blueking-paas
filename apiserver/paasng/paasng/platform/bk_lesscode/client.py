@@ -53,10 +53,10 @@ class LessCodeClient:
 
     def _prepare_headers(self) -> dict:
         headers = {
-            'x-bkapi-authorization': json.dumps(
+            "x-bkapi-authorization": json.dumps(
                 {
-                    'bk_app_code': settings.BK_APP_CODE,
-                    'bk_app_secret': settings.BK_APP_SECRET,
+                    "bk_app_code": settings.BK_APP_CODE,
+                    "bk_app_secret": settings.BK_APP_SECRET,
                     self.login_cookie_name: self.login_cookie,
                 }
             )
@@ -79,11 +79,11 @@ class LessCodeClient:
             )
         except APIGatewayResponseError as e:
             # bkapi_client sdk 中已经记录了详细的日志，这里就不需要再记录
-            raise LessCodeGatewayServiceError(f'create lesscode app error, detail: {e}')
+            raise LessCodeGatewayServiceError(f"create lesscode app error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(f'create lesscode app error, message:{resp["message"]} \n data: {data}')
-            raise LessCodeApiError(resp['message'])
+            raise LessCodeApiError(resp["message"])
 
         return True
 
@@ -93,16 +93,16 @@ class LessCodeClient:
         params = {"appCode": app_id, "moduleCode": module_name}
         try:
             resp = self.client.find_project_by_app(headers=self._prepare_headers(), params=params)
-        except Exception as e:
-            logger.exception(f'get lesscode app address path, detail: {e}')
+        except Exception:
+            logger.exception("Get lesscode app address path error.")
             # 获取不到地址时，不展示给用户就行，页面上不需要报错
             return ""
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(f'create lesscode app error, message:{resp["message"]} \n params: {params}')
             return ""
 
-        address_path = resp.get('data', {}).get('linkUrl')
+        address_path = resp.get("data", {}).get("linkUrl")
         return f"{settings.BK_LESSCODE_URL}{address_path}"
 
 

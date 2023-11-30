@@ -31,6 +31,6 @@ class APIRequestFactory(DRFAPIRequestFactory):
         return request
 
 
-@pytest.fixture
+@pytest.fixture()
 def request_factory(bk_user):
     return APIRequestFactory(bk_user)

@@ -31,22 +31,22 @@ IMAGE_RELEASE_STEPSET_NAME = "image-release"
 class ClusterType(str, StructuredEnum):
     """集群类别"""
 
-    NORMAL = EnumField('normal', label=_('普通集群'))
-    VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
+    NORMAL = EnumField("normal", label=_("普通集群"))
+    VIRTUAL = EnumField("virtual", label=_("虚拟集群"))
 
 
 class AppEnvName(str, StructuredEnum):
     """The default environment names"""
 
-    STAG = EnumField('stag', label=_("预发布环境"))
-    PROD = EnumField('prod', label=_("生产环境"))
+    STAG = EnumField("stag", label=_("预发布环境"))
+    PROD = EnumField("prod", label=_("生产环境"))
 
 
 class JobStatus(str, StructuredEnum):
-    SUCCESSFUL = EnumField('successful', label='成功')
-    FAILED = EnumField('failed', label='失败')
-    PENDING = EnumField('pending', label='等待')
-    INTERRUPTED = EnumField('interrupted', label='已中断')
+    SUCCESSFUL = EnumField("successful", label="成功")
+    FAILED = EnumField("failed", label="失败")
+    PENDING = EnumField("pending", label="等待")
+    INTERRUPTED = EnumField("interrupted", label="已中断")
 
     @classmethod
     def get_finished_states(cls) -> List[str]:
@@ -57,10 +57,10 @@ class JobStatus(str, StructuredEnum):
 class BuildStatus(str, StructuredEnum):
     """While `BuildStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
-    SUCCESSFUL = 'successful'
-    FAILED = 'failed'
-    PENDING = 'pending'
-    INTERRUPTED = 'interrupted'
+    SUCCESSFUL = "successful"
+    FAILED = "failed"
+    PENDING = "pending"
+    INTERRUPTED = "interrupted"
 
     @classmethod
     def get_finished_states(cls) -> List[str]:
@@ -71,10 +71,10 @@ class BuildStatus(str, StructuredEnum):
 class ReleaseStatus(str, StructuredEnum):
     """While `ReleaseStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
-    SUCCESSFUL = 'successful'
-    FAILED = 'failed'
-    PENDING = 'pending'
-    INTERRUPTED = 'interrupted'
+    SUCCESSFUL = "successful"
+    FAILED = "failed"
+    PENDING = "pending"
+    INTERRUPTED = "interrupted"
 
     def to_job_status(self) -> JobStatus:
         """Transform to `JobStatus`"""
@@ -84,38 +84,38 @@ class ReleaseStatus(str, StructuredEnum):
 
 
 class OperationTypes(ChoicesEnum):
-    OFFLINE = 'offline'
-    ONLINE = 'online'
+    OFFLINE = "offline"
+    ONLINE = "online"
 
     _choices_labels = (
-        (OFFLINE, 'OFFLINE'),
-        (ONLINE, 'ONLINE'),
+        (OFFLINE, "OFFLINE"),
+        (ONLINE, "ONLINE"),
     )
 
 
 class LBPlans(ChoicesEnum):
-    LBDefaultPlan = 'LBDefaultPlan'
+    LBDefaultPlan = "LBDefaultPlan"
 
-    _choices_labels = ((LBDefaultPlan, 'requests from bk lb to bk cluster'),)
+    _choices_labels = ((LBDefaultPlan, "requests from bk lb to bk cluster"),)
 
 
 lbplan_2_prefix_mapper = {LBPlans.LBDefaultPlan.value: "defaultplan_prefix"}
 
 
 class MetricsType(ChoicesEnum):
-    MEM = 'mem'
-    CPU = 'cpu'
-    __ALL__ = '__all__'
+    MEM = "mem"
+    CPU = "cpu"
+    __ALL__ = "__all__"
 
-    _choices_labels = ((MEM, 'mem'), (CPU, 'cpu'), (__ALL__, '__all__'))
+    _choices_labels = ((MEM, "mem"), (CPU, "cpu"), (__ALL__, "__all__"))
 
 
 class ConfigVarEnvName(str, StructuredEnum):
     """Environment name for managing config var"""
 
-    STAG = EnumField('stag', label='仅测试环境')
-    PROD = EnumField('prod', label='仅生产环境')
-    GLOBAL = EnumField('_global_', label='所有环境')
+    STAG = EnumField("stag", label="仅测试环境")
+    PROD = EnumField("prod", label="仅生产环境")
+    GLOBAL = EnumField("_global_", label="所有环境")
 
 
 class DeployConditions(ChoicesEnum):

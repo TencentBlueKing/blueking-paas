@@ -36,41 +36,41 @@ class TestPrivateTokenAuthenticationMiddleware(TestCase):
         self.get_response = lambda request: None
 
     def test_no_token_provided(self):
-        request = self.request_factory.get('/')
+        request = self.request_factory.get("/")
 
         middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
         middleware(request)
-        assert not hasattr(request, 'user')
+        assert not hasattr(request, "user")
 
     def test_random_invalid_token(self):
-        request = self.request_factory.get('/')
+        request = self.request_factory.get("/")
 
         middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
         middleware(request)
-        assert not hasattr(request, 'user')
+        assert not hasattr(request, "user")
 
     def test_valid_token_provided(self):
-        user = User.objects.create(username='foo_user')
+        user = User.objects.create(username="foo_user")
         token = UserPrivateToken.objects.create_token(user=user, expires_in=None)
 
         # Provide token in query string
-        request = self.request_factory.get('/', {'private_token': token.token})
+        request = self.request_factory.get("/", {"private_token": token.token})
 
         middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
         middleware(request)
-        assert request.user.username == 'foo_user'
+        assert request.user.username == "foo_user"
         assert request.user.is_authenticated
 
     def test_valid_token_provided_by_header(self):
-        user = User.objects.create(username='foo_user')
+        user = User.objects.create(username="foo_user")
         token = UserPrivateToken.objects.create_token(user=user, expires_in=None)
 
         # Provide token in query string
-        request = self.request_factory.get('/', HTTP_AUTHORIZATION=f'Bearer {token.token}')
+        request = self.request_factory.get("/", HTTP_AUTHORIZATION=f"Bearer {token.token}")
 
         middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
         middleware(request)
-        assert request.user.username == 'foo_user'
+        assert request.user.username == "foo_user"
         assert request.user.is_authenticated
 
 
@@ -99,34 +99,34 @@ class ForTestNotMarkedAuthViewSet(viewsets.ViewSet):
 
 class TestAuthenticatedAppAsUserMiddleware:
     @pytest.mark.parametrize(
-        'app,marked_as_force_allow,expected_username',
+        ("app", "marked_as_force_allow", "expected_username"),
         [
-            (SimpleApp(bk_app_code='foo', verified=True), False, 'foo-user'),
-            (SimpleApp(bk_app_code='foo', verified=False), False, ''),
-            (SimpleApp(bk_app_code='bar', verified=True), False, ''),
+            (SimpleApp(bk_app_code="foo", verified=True), False, "foo-user"),
+            (SimpleApp(bk_app_code="foo", verified=False), False, ""),
+            (SimpleApp(bk_app_code="bar", verified=True), False, ""),
             # When view set has been marked as "force allow authed app", an user will be created
-            (SimpleApp(bk_app_code='bar', verified=True), True, 'authed-app-bar'),
-            (SimpleApp(bk_app_code='bar', verified=False), True, ''),
-            (None, False, ''),
+            (SimpleApp(bk_app_code="bar", verified=True), True, "authed-app-bar"),
+            (SimpleApp(bk_app_code="bar", verified=False), True, ""),
+            (None, False, ""),
         ],
     )
     def test_verified_app_provided(self, app, marked_as_force_allow, expected_username):
         # Set up data fixtures
-        user = User.objects.create(username='foo-user')
-        AuthenticatedAppAsUser.objects.create(user=user, bk_app_code='foo')
+        user = User.objects.create(username="foo-user")
+        AuthenticatedAppAsUser.objects.create(user=user, bk_app_code="foo")
 
-        request = request_factory.get('/')
+        request = request_factory.get("/")
         if app:
             request.app = app
 
         view_func = (
-            ForTestMarkedAuthViewSet.as_view({'get': 'retrieve'})
+            ForTestMarkedAuthViewSet.as_view({"get": "retrieve"})
             if marked_as_force_allow
-            else ForTestNotMarkedAuthViewSet.as_view({'get': 'retrieve'})
+            else ForTestNotMarkedAuthViewSet.as_view({"get": "retrieve"})
         )
         AuthenticatedAppAsUserMiddleware(get_response).process_view(request, view_func, None, None)
         if expected_username:
             assert request.user.username == expected_username
             assert request.user.is_authenticated
         else:
-            assert not hasattr(request, 'user')
+            assert not hasattr(request, "user")

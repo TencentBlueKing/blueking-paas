@@ -28,8 +28,8 @@ from paas_wl.infras.cluster.models import IngressConfig, PortMap
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance.addrs import URL
 from paas_wl.workloads.networking.entrance.utils import to_dns_safe
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
 
 
 class DomainPriorityType(int, StructuredEnum):
@@ -59,14 +59,14 @@ class Domain:
         )
 
     def as_dict(self) -> Dict:
-        return {'host': self.host, 'https_enabled': self.https_enabled}
+        return {"host": self.host, "https_enabled": self.https_enabled}
 
     @staticmethod
-    def sort_by_len(domain: 'Domain'):
+    def sort_by_len(domain: "Domain"):
         return len(domain.host)
 
     @staticmethod
-    def sort_by_type(domain: 'Domain'):
+    def sort_by_type(domain: "Domain"):
         return domain.type
 
 
@@ -113,7 +113,7 @@ class SubDomainAllocator:
     :param port_map: The PortMap config
     """
 
-    DOT_SEP = '-dot-'
+    DOT_SEP = "-dot-"
 
     def __init__(self, app_code: str, port_map: PortMap):
         self.app_code = app_code
@@ -180,4 +180,4 @@ class SubDomainAllocator:
     def _make_host(cls, root_domain: str, *parts: str):
         """Make a host name"""
         safe_parts = [to_dns_safe(s) for s in parts]
-        return (cls.DOT_SEP.join(safe_parts) + '.' + root_domain).lower()
+        return (cls.DOT_SEP.join(safe_parts) + "." + root_domain).lower()

@@ -21,9 +21,9 @@ import logging
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.engine.models import ConfigVar
 from paasng.bk_plugins.bk_plugins.apigw import safe_sync_apigw
 from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor
+from paasng.platform.engine.models import ConfigVar
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +33,13 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture(autouse=True)
 def _setup_fixtures():
     # Default distributors
-    G(BkPluginDistributor, code_name='sample-dis-1', bk_app_code='sample-dis-1')
-    G(BkPluginDistributor, code_name='sample-dis-2', bk_app_code='sample-dis-2')
+    G(BkPluginDistributor, code_name="sample-dis-1", bk_app_code="sample-dis-1")
+    G(BkPluginDistributor, code_name="sample-dis-2", bk_app_code="sample-dis-2")
 
 
 class TestDistributors:
     def test_list(self, api_client):
-        response = api_client.get('/api/bk_plugin_distributors/')
+        response = api_client.get("/api/bk_plugin_distributors/")
         assert response.status_code == 200, f'error: {response.json()["detail"]}'
         assert len(response.json()) == 2
 
@@ -48,26 +48,25 @@ class TestDistributorRels:
     """Test APIS of managing distributors of a single bk_plugin"""
 
     @pytest.fixture(autouse=True)
-    def do_preparations(self, bk_plugin_app, mock_apigw_api_client):
+    def _do_preparations(self, bk_plugin_app, mock_apigw_api_client):
         safe_sync_apigw(bk_plugin_app)
-        yield
 
     def test_update(self, bk_plugin_app, api_client):
         """Test updating a plugin's distributors"""
         response = api_client.put(
-            f'/api/bk_plugins/{bk_plugin_app.code}/distributors/', {'distributors': ['sample-dis-1', 'sample-dis-2']}
+            f"/api/bk_plugins/{bk_plugin_app.code}/distributors/", {"distributors": ["sample-dis-1", "sample-dis-2"]}
         )
         assert response.status_code == 200, f'error: {response.json()["detail"]}'
         assert len(response.json()) == 2
 
     def test_integrated(self, bk_plugin_app, api_client):
         """Test both update and list operations"""
-        api_client.put(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/', {'distributors': []})
-        resp = api_client.get(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/')
+        api_client.put(f"/api/bk_plugins/{bk_plugin_app.code}/distributors/", {"distributors": []})
+        resp = api_client.get(f"/api/bk_plugins/{bk_plugin_app.code}/distributors/")
         assert len(resp.json()) == 0
 
-        api_client.put(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/', {'distributors': ['sample-dis-1']})
-        resp = api_client.get(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/')
+        api_client.put(f"/api/bk_plugins/{bk_plugin_app.code}/distributors/", {"distributors": ["sample-dis-1"]})
+        resp = api_client.get(f"/api/bk_plugins/{bk_plugin_app.code}/distributors/")
         assert len(resp.json()) == 1
 
 

@@ -43,7 +43,7 @@ from .app import (
     SysThirdPartyApplicationSLZ,
     UpdateApplicationSLZ,
 )
-from .cnative import CloudNativeParamsSLZ, CreateCloudNativeAppSLZ
+from .cnative import CreateCloudNativeAppSLZ
 from .fields import AppIDField, ApplicationField, AppNameField
 from .light_app import LightAppCreateSLZ, LightAppDeleteSLZ, LightAppEditSLZ, LightAppQuerySLZ
 from .member_role import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ, RoleField
@@ -75,7 +75,6 @@ __all__ = [
     "SearchApplicationSLZ",
     "SysThirdPartyApplicationSLZ",
     "UpdateApplicationSLZ",
-    "CloudNativeParamsSLZ",
     "CreateCloudNativeAppSLZ",
     "AppIDField",
     "ApplicationField",

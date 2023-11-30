@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 ENVIRONMENT_ID_FOR_GLOBAL = -1
 ENVIRONMENT_NAME_FOR_GLOBAL = ConfigVarEnvName.GLOBAL.value
 # 需要设置 environment(外键) 而非 environment_id, model_to_dict 只认 environment
-CONFIG_VAR_INPUT_FIELDS = ['is_global', 'environment', 'key', 'value', 'description']
+CONFIG_VAR_INPUT_FIELDS = ["is_global", "environment", "key", "value", "description"]
 
 
-def get_config_vars(module: 'Module', env_name: str) -> Dict[str, str]:
+def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
     """Get ConfigVars of module as dict, config vars priority: builtin/not global/global
 
     :param str env_name: environment name, such as 'prod'
@@ -42,11 +42,11 @@ def get_config_vars(module: 'Module', env_name: str) -> Dict[str, str]:
     try:
         env_id = module.envs.get(environment=env_name).pk
     except ObjectDoesNotExist:
-        raise ValueError('Invalid env_name given: %s' % env_name)
+        raise ValueError("Invalid env_name given: %s" % env_name)
 
     config_vars = ConfigVar.objects.filter(
         module=module, environment_id__in=(ENVIRONMENT_ID_FOR_GLOBAL, env_id)
-    ).order_by('environment_id')
+    ).order_by("environment_id")
     return {obj.key: obj.value for obj in config_vars}
 
 
@@ -57,19 +57,19 @@ class ConfigVarQuerySet(models.QuerySet):
         """Filter ConfigVar objects by environment name"""
         if name == ConfigVarEnvName.GLOBAL:
             return self.filter(environment_id=ENVIRONMENT_ID_FOR_GLOBAL)
-        return self.filter(environment__environment=name.value)
+        return self.filter(environment__environment=name.value).prefetch_related("environment")
 
 
 class ConfigVar(TimestampedModel):
     """Config vars for application"""
 
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, null=True)
+    module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, null=True)
 
     is_global = models.BooleanField(default=False)
     # When is_global is True, environment_id will be set to -1, because null value will break
     # MySQL unique index, see: https://stackoverflow.com/questions/1346765/unique-constraint-that-allows-empty-values-in-mysql # noqa
     environment = models.ForeignKey(
-        'applications.ApplicationEnvironment', on_delete=models.CASCADE, db_constraint=False, null=True
+        "applications.ApplicationEnvironment", on_delete=models.CASCADE, db_constraint=False, null=True
     )
 
     key = models.CharField(max_length=128, null=False)
@@ -80,7 +80,7 @@ class ConfigVar(TimestampedModel):
     objects = ConfigVarQuerySet.as_manager()
 
     class Meta:
-        unique_together = ('module', 'is_global', 'environment', 'key')
+        unique_together = ("module", "is_global", "environment", "key")
 
     def __str__(self):
         return "{var_name}-{var_value}-{app_code}".format(
@@ -93,7 +93,7 @@ class ConfigVar(TimestampedModel):
             return ConfigVarEnvName.GLOBAL.value
         return ConfigVarEnvName(self.environment.environment).value
 
-    def is_equivalent_to(self, other: 'ConfigVar') -> bool:
+    def is_equivalent_to(self, other: "ConfigVar") -> bool:
         """Determine whether the two ConfigVars are equivalent.
 
         Equivalent is meaning that the tow quadruple(key, value, description, environment_name) are all equal.
@@ -108,7 +108,7 @@ class ConfigVar(TimestampedModel):
             other.environment_name,
         )
 
-    def clone_to(self, module: 'Module') -> 'ConfigVar':
+    def clone_to(self, module: "Module") -> "ConfigVar":
         """Make a copy ConfigVar, but linking to the module in params."""
         if self.environment_id == ENVIRONMENT_ID_FOR_GLOBAL:
             environment_id = ENVIRONMENT_ID_FOR_GLOBAL

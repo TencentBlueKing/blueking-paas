@@ -19,8 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 
-@pytest.fixture
-def with_stag_ns(namespace_maker, bk_stag_wl_app):
+@pytest.fixture()
+def _with_stag_ns(namespace_maker, bk_stag_wl_app):
     """Create and auto-recycle namespace for stag environment"""
     namespace_maker.make(bk_stag_wl_app.namespace)
-    yield

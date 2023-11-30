@@ -24,14 +24,12 @@ from django.utils.translation import get_language
 from .component import BaseComponent
 from .http import http_get, http_post
 
-
 # bk-apigateway-inner 接口地址
 BK_APIGATEWAY_INNER_GATEWAY_STAGE = settings.BK_API_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway-inner", "prod")
 BK_APIGATEWAY_INNER_API_URL = f"{settings.BK_API_URL_TMPL.format(api_name='bk-apigateway-inner').rstrip('/')}/{BK_APIGATEWAY_INNER_GATEWAY_STAGE}"
 
 
 class BkApigatewayInnerComponent(BaseComponent):
-
     host = BK_APIGATEWAY_INNER_API_URL
     system_name = "bk-apigateway-inner"
 

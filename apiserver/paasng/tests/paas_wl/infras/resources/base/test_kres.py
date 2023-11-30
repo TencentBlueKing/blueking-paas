@@ -29,7 +29,11 @@ import yaml
 from kubernetes.client.rest import ApiException
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.infras.resources.base.exceptions import CreateServiceAccountTimeout, ReadTargetStatusTimeout, ResourceMissing
+from paas_wl.infras.resources.base.exceptions import (
+    CreateServiceAccountTimeout,
+    ReadTargetStatusTimeout,
+    ResourceMissing,
+)
 from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod, KServiceAccount
 from tests.paas_wl.utils.basic import random_resource_name
 
@@ -49,11 +53,10 @@ class TestNameBasedOps:
             KNamespace(k8s_client).delete(random_resource_name(), raise_if_non_exists=True)
 
     def test_delete_api_error(self, k8s_client):
-        with pytest.raises(ApiException), mock.patch(
-            "paas_wl.infras.resources.base.kube_client.CoreDynamicClient.get_preferred_resource"
-        ) as obj:
+        with mock.patch("paas_wl.infras.resources.base.kube_client.CoreDynamicClient.get_preferred_resource") as obj:
             obj().delete.side_effect = ApiException(status=400)
-            KNamespace(k8s_client).delete(random_resource_name(), raise_if_non_exists=True)
+            with pytest.raises(ApiException):
+                KNamespace(k8s_client).delete(random_resource_name(), raise_if_non_exists=True)
 
     def test_get_or_create(self, k8s_client, namespace_maker):
         namespace = random_resource_name()
@@ -79,7 +82,7 @@ class TestNameBasedOps:
         assert obj.metadata.annotations["age"] == "3"
         assert created is True
 
-        deployment_body['metadata']['annotations']["age"] = "4"
+        deployment_body["metadata"]["annotations"]["age"] = "4"
         obj, created = KDeployment(k8s_client).create_or_update(name, namespace=namespace, body=deployment_body)
         assert obj.metadata.name == name
         assert obj.metadata.annotations["age"] == "4"
@@ -92,7 +95,7 @@ class TestNameBasedOps:
         deployment_body = construct_foo_deployment(resource_name, KDeployment(k8s_client).get_preferred_version())
         KDeployment(k8s_client).create_or_update(resource_name, namespace=namespace, body=deployment_body)
 
-        deployment_body['metadata']['annotations']["age"] = "4"
+        deployment_body["metadata"]["annotations"]["age"] = "4"
         obj = KDeployment(k8s_client).replace_or_patch(resource_name, namespace=namespace, body=deployment_body)
         assert obj.metadata.annotations["age"] == "4"
 
@@ -104,12 +107,12 @@ class TestNameBasedOps:
         KDeployment(k8s_client).create_or_update(resource_name, namespace=namespace, body=deployment_body)
 
         # Only provide necessarily fields
-        body = {'metadata': {'annotations': {"age": "4"}}}
+        body = {"metadata": {"annotations": {"age": "4"}}}
         obj = KDeployment(k8s_client).patch(resource_name, namespace=namespace, body=body)
         assert obj.metadata.annotations["age"] == "4"
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestLabelBasedOps:
     def test_create_watch_stream(self, k8s_client, wl_app):
         # Create a pod to generate event
@@ -201,7 +204,7 @@ class TestKNamespace:
         KNamespace(k8s_client).get_or_create(namespace)
 
         # Create default SA
-        sa_body: Dict[str, Any] = {'kind': 'ServiceAccount', 'metadata': {'name': 'default'}}
+        sa_body: Dict[str, Any] = {"kind": "ServiceAccount", "metadata": {"name": "default"}}
         KServiceAccount(k8s_client).create_or_update("default", body=sa_body, namespace=namespace)
         assert KNamespace(k8s_client).default_sa_exists(namespace) is True
 
@@ -226,14 +229,14 @@ class TestKNamespace:
         assert created is True
 
         # Create default SA
-        sa_body: Dict[str, Any] = {'kind': 'ServiceAccount', 'metadata': {'name': 'default'}}
+        sa_body: Dict[str, Any] = {"kind": "ServiceAccount", "metadata": {"name": "default"}}
         KServiceAccount(k8s_client).create_or_update("default", body=sa_body, namespace=namespace)
         assert KNamespace(k8s_client).wait_for_default_sa(namespace, timeout=1) is None
 
         KNamespace(k8s_client).delete(namespace)
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestKPod:
     def test_wait_for_status_no_resource(self, k8s_client):
         time_started = time.time()
@@ -281,7 +284,7 @@ class TestKPod:
 def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1") -> Dict:
     manifest = yaml.load(
         dedent(
-            '''\
+            """\
         apiVersion: {api_version}
         kind: Deployment
         metadata:
@@ -304,9 +307,7 @@ def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1")
                     containers:
                     - name: main
                       image: busybox
-    '''.format(
-                api_version=api_version, name=name
-            )
+    """.format(api_version=api_version, name=name)
         )
     )
     return manifest
@@ -314,14 +315,14 @@ def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1")
 
 def construct_foo_pod(name: str, labels: Optional[Dict] = None, restart_policy: str = "Always") -> Dict:
     return {
-        'apiVersion': 'v1',
-        'kind': 'Pod',
-        'metadata': {'name': name, 'labels': labels or {}},
-        'spec': {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {"name": name, "labels": labels or {}},
+        "spec": {
             # Set "schedulerName", so the pod won't be processed by the default
             # scheduler.
-            'schedulerName': 'no-running-scheduler',
-            'containers': [{'name': "main", 'image': "busybox:latest", "imagePullPolicy": "IfNotPresent"}],
+            "schedulerName": "no-running-scheduler",
+            "containers": [{"name": "main", "image": "busybox:latest", "imagePullPolicy": "IfNotPresent"}],
             "restartPolicy": restart_policy,
             "automountServiceAccountToken": False,
         },

@@ -20,5 +20,5 @@ from rest_framework import serializers
 
 
 class PVGroupByAppSLZ(serializers.Serializer):
-    limit = serializers.IntegerField(default=5, min_value=1, max_value=20, help_text=u"应用数量")
-    days_before = serializers.IntegerField(default=30, help_text=u"统计天数")
+    limit = serializers.IntegerField(default=5, min_value=1, max_value=20, help_text="应用数量")
+    days_before = serializers.IntegerField(default=30, help_text="统计天数")

@@ -22,14 +22,14 @@ from django.utils.translation import get_language
 from paasng.misc.changelog.query import Changelog
 
 TEST_CHANGELOG_FILE_NAMES = [
-    {'name': 'V1.0.0_2022-10-17.md', 'valid': True},
-    {'name': 'V1.1.17_2022-10-17.md', 'valid': True},
-    {'name': 'V1.0.0-beta_2022-10-17.md', 'valid': True},
-    {'name': 'V1.1.2_2022-10-17.md', 'valid': True},
-    {'name': 'v1.1.2_2022-10-17.md', 'valid': False},
-    {'name': 'V1.0.1-2022-10-17.md', 'valid': False},
-    {'name': 'V1.0.18_2022-13-17.md', 'valid': False},
-    {'name': 'V1.2.0_2022-10-17.txt', 'valid': False},
+    {"name": "V1.0.0_2022-10-17.md", "valid": True},
+    {"name": "V1.1.17_2022-10-17.md", "valid": True},
+    {"name": "V1.0.0-beta_2022-10-17.md", "valid": True},
+    {"name": "V1.1.2_2022-10-17.md", "valid": True},
+    {"name": "v1.1.2_2022-10-17.md", "valid": False},
+    {"name": "V1.0.1-2022-10-17.md", "valid": False},
+    {"name": "V1.0.18_2022-13-17.md", "valid": False},
+    {"name": "V1.2.0_2022-10-17.txt", "valid": False},
 ]
 
 
@@ -40,18 +40,18 @@ class TestChangelog:
         d.mkdir()
 
         for file in TEST_CHANGELOG_FILE_NAMES:
-            f = d / file['name']
+            f = d / file["name"]
             f.write_text(f"# {file['name'].partition('_')[0]}")  # type: ignore
 
     def test_list_logs(self, tmp_path):
         logs = Changelog(tmp_path).list_logs()
 
         # 验证过滤掉非法文件名
-        assert len(logs) == len([file for file in TEST_CHANGELOG_FILE_NAMES if file['valid']])
+        assert len(logs) == len([file for file in TEST_CHANGELOG_FILE_NAMES if file["valid"]])
 
         # 验证按照版本号语义降序排序
-        assert logs[0].version == 'V1.1.17'
-        assert logs[0].content == '# V1.1.17'
-        assert logs[1].version == 'V1.1.2'
-        assert logs[2].version == 'V1.0.0'
-        assert logs[3].version == 'V1.0.0-beta'
+        assert logs[0].version == "V1.1.17"
+        assert logs[0].content == "# V1.1.17"
+        assert logs[1].version == "V1.1.2"
+        assert logs[2].version == "V1.0.0"
+        assert logs[3].version == "V1.0.0-beta"

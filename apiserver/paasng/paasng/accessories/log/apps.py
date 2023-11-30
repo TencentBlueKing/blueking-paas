@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class LogAppConfig(AppConfig):
-    name = 'paasng.accessories.log'
+    name = "paasng.accessories.log"

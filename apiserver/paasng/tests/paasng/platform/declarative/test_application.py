@@ -68,39 +68,39 @@ def make_app_desc(
 ) -> Dict[str, Any]:
     """Make description data for testing"""
     result: Dict[str, Any] = {
-        'region': region,
-        'bk_app_code': random_name,
-        'bk_app_name': random_name,
-        'market': {
-            'introduction': introduction or random_name,
-            'introduction_en': (introduction or random_name)[::-1],
+        "region": region,
+        "bk_app_code": random_name,
+        "bk_app_name": random_name,
+        "market": {
+            "introduction": introduction or random_name,
+            "introduction_en": (introduction or random_name)[::-1],
         },
         "modules": {random_name: {"is_default": True, "language": "python"}},
     }
     if display_options is not None:
-        result['market']['display_options'] = display_options
+        result["market"]["display_options"] = display_options
     if tag is not None:
-        result['market']['category'] = tag.name
+        result["market"]["category"] = tag.name
     if description is not None:
-        result['market']['description'] = description
-        result['market']['description_en'] = description[::-1]
+        result["market"]["description"] = description
+        result["market"]["description_en"] = description[::-1]
     if services is not None:
         result["modules"][random_name]["services"] = services
     return result
 
 
 class TestAppDeclarativeControllerCreation:
-    @pytest.mark.parametrize('field_name', ['bk_app_code', 'bk_app_name', 'region'])
+    @pytest.mark.parametrize("field_name", ["bk_app_code", "bk_app_name", "region"])
     def test_run_invalid_input(self, bk_user, random_name, field_name):
-        app_json = {'bk_app_code': random_name, 'bk_app_name': random_name}
-        app_json[field_name] = '@invalid value' * 10
+        app_json = {"bk_app_code": random_name, "bk_app_name": random_name}
+        app_json[field_name] = "@invalid value" * 10
 
         controller = AppDeclarativeController(bk_user)
         with pytest.raises(DescriptionValidationError) as exc_info:
             controller.perform_action(get_app_description(app_json))
         assert field_name in exc_info.value.detail
 
-    @pytest.mark.parametrize('bk_app_code_len,is_valid', [(16, True), (20, False), (30, False)])
+    @pytest.mark.parametrize(("bk_app_code_len", "is_valid"), [(16, True), (20, False), (30, False)])
     def test_app_code_length(self, bk_user, random_name, bk_app_code_len, is_valid):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len-2))}"
@@ -116,36 +116,36 @@ class TestAppDeclarativeControllerCreation:
     def test_name_is_duplicated(self, bk_user, random_name):
         existed_app = create_app()
         app_json = {
-            'bk_app_code': random_name,
-            'bk_app_name': existed_app.name,
+            "bk_app_code": random_name,
+            "bk_app_name": existed_app.name,
         }
         with pytest.raises(DescriptionValidationError) as exc_info:
             AppDeclarativeController(bk_user).perform_action(get_app_description(app_json))
-        assert 'bk_app_name' in exc_info.value.detail
+        assert "bk_app_name" in exc_info.value.detail
 
     @pytest.mark.parametrize("module_name", ["$", "0us0", "-a", "a-", "_a", "a_", "a0us0b"])
     def test_invalid_module_name(self, module_name, random_name):
         app_json = {
-            'bk_app_code': random_name,
-            'bk_app_name': random_name,
-            'modules': {module_name: {"is_default": True, "language": "python"}},
+            "bk_app_code": random_name,
+            "bk_app_name": random_name,
+            "modules": {module_name: {"is_default": True, "language": "python"}},
         }
         with pytest.raises(DescriptionValidationError):
             get_app_description(app_json)
 
     @pytest.mark.parametrize(
-        'profile_regions,region,is_success',
+        ("profile_regions", "region", "is_success"),
         [
-            (['r1'], 'r1', True),
-            (['r1'], 'r2', False),
-            (['r1'], None, True),
+            (["r1"], "r1", True),
+            (["r1"], "r2", False),
+            (["r1"], None, True),
         ],
     )
     def test_region_perm_check(self, bk_user, random_name, profile_regions, region, is_success):
-        with configure_regions(['r1', 'r2']):
+        with configure_regions(["r1", "r2"]):
             # Update user enabled regions
             user_profile = UserProfile.objects.get_profile(bk_user)
-            user_profile.enable_regions = ';'.join(profile_regions)
+            user_profile.enable_regions = ";".join(profile_regions)
             user_profile.save()
 
             app_json = make_app_desc(random_name, region=region)
@@ -153,7 +153,7 @@ class TestAppDeclarativeControllerCreation:
             if not is_success:
                 with pytest.raises(DescriptionValidationError) as exc_info:
                     controller.perform_action(get_app_description(app_json))
-                assert 'region' in exc_info.value.detail
+                assert "region" in exc_info.value.detail
             else:
                 controller.perform_action(get_app_description(app_json))
 
@@ -178,7 +178,7 @@ class TestAppDeclarativeControllerCreation:
 
 
 class TestAppDeclarativeControllerUpdate:
-    @pytest.fixture
+    @pytest.fixture()
     def existed_app(self, bk_user, random_name):
         """Create an application before to test update"""
         app_json = make_app_desc(random_name)
@@ -187,13 +187,13 @@ class TestAppDeclarativeControllerUpdate:
         return Application.objects.get(code=random_name)
 
     def test_without_permission(self, bk_user, existed_app):
-        another_user = create_user(username='another_user')
+        another_user = create_user(username="another_user")
         app_json = make_app_desc(existed_app.code)
 
         controller = AppDeclarativeController(another_user)
         with pytest.raises(DescriptionValidationError) as exc_info:
             controller.perform_action(get_app_description(app_json))
-        assert 'bk_app_code' in exc_info.value.detail
+        assert "bk_app_code" in exc_info.value.detail
 
     def test_region_modified(self, bk_user, existed_app):
         # Get a different and valid region
@@ -207,17 +207,17 @@ class TestAppDeclarativeControllerUpdate:
         controller = AppDeclarativeController(bk_user)
         with pytest.raises(DescriptionValidationError) as exc_info:
             controller.perform_action(get_app_description(app_json))
-        assert 'region' in exc_info.value.detail
+        assert "region" in exc_info.value.detail
 
     def test_name_modified(self, bk_user, existed_app):
         # Use new name
         app_json = make_app_desc(existed_app.code)
-        app_json["bk_app_name"] = existed_app.name + '2'
+        app_json["bk_app_name"] = existed_app.name + "2"
 
         controller = AppDeclarativeController(bk_user)
         with pytest.raises(DescriptionValidationError) as exc_info:
             controller.perform_action(get_app_description(app_json))
-        assert 'bk_app_name' in exc_info.value.detail
+        assert "bk_app_name" in exc_info.value.detail
 
     def test_normal(self, bk_user, existed_app):
         app_json = make_app_desc(existed_app.code)
@@ -238,18 +238,18 @@ class TestMarketField:
         assert product.introduction == random_name
 
     def test_update_partial(self, bk_user, random_name):
-        app_desc = make_app_desc(random_name, introduction='foo', description='foo')
+        app_desc = make_app_desc(random_name, introduction="foo", description="foo")
         AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
         product = Product.objects.get(code=random_name)
-        assert product.introduction == 'foo'
-        assert product.description == 'foo'
+        assert product.introduction == "foo"
+        assert product.description == "foo"
 
         # Update with description omitted
-        app_desc = make_app_desc(random_name, introduction='bar')
+        app_desc = make_app_desc(random_name, introduction="bar")
         AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
         product = Product.objects.get(code=random_name)
-        assert product.introduction == 'bar'
-        assert product.description == 'foo'
+        assert product.introduction == "bar"
+        assert product.description == "foo"
 
 
 class TestMarketDisplayOptionsField:
@@ -268,11 +268,11 @@ class TestMarketDisplayOptionsField:
         assert product.displayoptions.open_mode == "new_tab"
 
     def test_update_partial(self, bk_user, random_name, tag):
-        app_desc = make_app_desc(random_name, display_options={'width': 99, 'height': 99, "open_mode": "desktop"})
+        app_desc = make_app_desc(random_name, display_options={"width": 99, "height": 99, "open_mode": "desktop"})
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
 
-        app_desc = make_app_desc(random_name, display_options={'height': 10, "open_mode": "new_tab"})
+        app_desc = make_app_desc(random_name, display_options={"height": 10, "open_mode": "new_tab"})
         AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
 
         product = Product.objects.get(code=random_name)
@@ -283,32 +283,35 @@ class TestMarketDisplayOptionsField:
 
 
 class TestServicesField:
-    @pytest.fixture(autouse=True, params=['legacy-local', 'newly-local'])
-    def default_services(self, request):
+    @pytest.fixture(autouse=True, params=["legacy-local", "newly-local"])
+    def _default_services(self, request):
         """Create local services in order by run unit tests"""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        service_names = ['mysql', 'rabbitmq']
+        service_names = ["mysql", "rabbitmq"]
         for name in service_names:
             # Create service object
             svc = G(Service, name=name, category=category, region=settings.DEFAULT_REGION_NAME, logo_b64="dummy")
             # Create default plans
             if request.param == "legacy-local":
-                G(Plan, name='no-ha', service=svc, config='{}', is_active=True)
-                G(Plan, name='ha', service=svc, config='{}', is_active=True)
+                G(Plan, name="no-ha", service=svc, config="{}", is_active=True)
+                G(Plan, name="ha", service=svc, config="{}", is_active=True)
             else:
-                G(Plan, name=generate_random_string(), service=svc, config='{}', is_active=True)
+                G(Plan, name=generate_random_string(), service=svc, config="{}", is_active=True)
 
-    @pytest.fixture
+    @pytest.fixture()
     def app_desc(self, random_name, tag):
         return make_app_desc(
-            random_name, introduction="应用简介", display_options={"open_mode": "desktop"}, services=[{'name': 'mysql'}]
+            random_name,
+            introduction="应用简介",
+            display_options={"open_mode": "desktop"},
+            services=[{"name": "mysql"}],
         )
 
     def test_creation(self, bk_user, random_name, tag, app_desc):
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
 
-        service_obj = mixed_service_mgr.find_by_name('mysql', settings.DEFAULT_REGION_NAME)
+        service_obj = mixed_service_mgr.find_by_name("mysql", settings.DEFAULT_REGION_NAME)
         application = Application.objects.get(code=random_name)
         assert mixed_service_mgr.module_is_bound_with(service_obj, application.get_default_module()) is True
 
@@ -317,16 +320,16 @@ class TestServicesField:
         controller.perform_action(get_app_description(app_desc))
 
         # Add a new service
-        service_obj = mixed_service_mgr.find_by_name('rabbitmq', settings.DEFAULT_REGION_NAME)
+        service_obj = mixed_service_mgr.find_by_name("rabbitmq", settings.DEFAULT_REGION_NAME)
         module = Application.objects.get(code=random_name).get_default_module()
 
         assert mixed_service_mgr.module_is_bound_with(service_obj, module) is False
-        app_desc["modules"][random_name]["services"].append({'name': service_obj.name})
+        app_desc["modules"][random_name]["services"].append({"name": service_obj.name})
         controller.perform_action(get_app_description(app_desc))
         assert mixed_service_mgr.module_is_bound_with(service_obj, module) is True
 
     def test_not_existed_service(self, bk_user, random_name, tag, app_desc):
-        app_desc["modules"][random_name]["services"] = [{'name': 'invalid-service'}]
+        app_desc["modules"][random_name]["services"] = [{"name": "invalid-service"}]
 
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
@@ -339,12 +342,12 @@ class TestServicesField:
         app_desc["modules"][random_name + "1"] = {
             "is_default": False,
             "language": "python",
-            "services": [{'name': 'mysql', 'shared_from': random_name}],
+            "services": [{"name": "mysql", "shared_from": random_name}],
         }
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
 
-        service_obj = mixed_service_mgr.find_by_name('mysql', settings.DEFAULT_REGION_NAME)
+        service_obj = mixed_service_mgr.find_by_name("mysql", settings.DEFAULT_REGION_NAME)
         application = Application.objects.get(code=random_name)
         module = application.get_module(random_name + "1")
         ref_module = application.get_module(random_name)
@@ -356,7 +359,7 @@ class TestServicesField:
     def test_shared_service_but_module_not_found(self, bk_user, random_name, tag, app_desc):
         app_desc["modules"][random_name + "1"] = {
             "is_default": False,
-            "services": [{'name': 'mysql', 'shared_from': random_name + "2"}],
+            "services": [{"name": "mysql", "shared_from": random_name + "2"}],
         }
         with pytest.raises(DescriptionValidationError):
             get_app_description(app_desc)

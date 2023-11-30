@@ -87,7 +87,7 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         """获取指定模块所有环境的增强服务使用信息"""
         services_info = {}
         for env in self.get_module_via_path().get_envs():
-            services_info[env.environment] = ServicesInfo.get_detail(env.engine_app)['services_info']
+            services_info[env.environment] = ServicesInfo.get_detail(env.engine_app)["services_info"]
         return Response(data=slzs.ModuleServiceInfoSLZ(services_info).data)
 
 
@@ -106,17 +106,17 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateAttachmentSLZ, response_serializer=slzs.ServiceAttachmentSLZ)
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def bind(self, request):
         """创建蓝鲸应用与增强服务的绑定关系"""
         serializer = slzs.CreateAttachmentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         data = serializer.data
-        specs = data['specs']
-        application = self._get_application_by_code(data['code'])
-        service_obj = self.get_service(data['service_id'], application)
-        module = application.get_module(data.get('module_name', None))
+        specs = data["specs"]
+        application = self._get_application_by_code(data["code"])
+        service_obj = self.get_service(data["service_id"], application)
+        module = application.get_module(data.get("module_name", None))
 
         try:
             rel_pk = mixed_service_mgr.bind_service(service_obj, module, specs)
@@ -133,15 +133,15 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         SERVICE_BIND_COUNTER.labels(service=service_obj.name, region=application.region).inc()
         serializer = slzs.ServiceAttachmentSLZ(
             {
-                'id': rel_pk,
-                'application': application,
-                'service': service_obj.uuid,
-                'module_name': module.name,
+                "id": rel_pk,
+                "application": application,
+                "service": service_obj.uuid,
+                "module_name": module.name,
             }
         )
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def retrieve(self, request, code, module_name, service_id):
         """查看应用模块与增强服务的绑定关系详情"""
         application = self.get_application()
@@ -167,9 +167,9 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     }
                 )
         serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
-        return Response({'count': len(results), 'results': serializer.data})
+        return Response({"count": len(results), "results": serializer.data})
 
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def retrieve_specs(self, request, code, module_name, service_id):
         """获取应用已绑定的服务规格"""
         application = self.get_application()
@@ -197,7 +197,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = slzs.ServicePlanSpecificationSLZ(results, many=True)
         return Response({"results": slz.data})
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy="merge")
     def unbind(self, request, code, module_name, service_id):
         """删除一个服务绑定关系"""
         application = self._get_application_by_code(code)
@@ -209,14 +209,14 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             module_attachment = mixed_service_mgr.get_module_rel(module_id=module.id, service_id=service_id)
         except Exception as e:
-            logger.exception('Unable to get module relationship')
+            logger.exception("Unable to get module relationship")
             raise error_codes.CANNOT_DESTROY_SERVICE.f(f"{e}")
 
         cleaner = ModuleCleaner(module=module)
         try:
             cleaner.delete_services(service_id=service_id)
         except Exception as e:
-            logger.exception('Unable to unbind service: %s', service_id)
+            logger.exception("Unable to unbind service: %s", service_id)
             raise error_codes.CANNOT_DESTROY_SERVICE.f(f"{e}")
 
         module_attachment.delete()
@@ -231,7 +231,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @property
     def paginator(self):
-        if not hasattr(self, '_paginator'):
+        if not hasattr(self, "_paginator"):
             self._paginator = LimitOffsetPagination()
             self._paginator.default_limit = 5
         return self._paginator
@@ -240,7 +240,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取服务详细信息"""
         service = mixed_service_mgr.get_without_region(uuid=service_id)
         serializer = self.serializer_class(service)
-        return Response({'result': serializer.data})
+        return Response({"result": serializer.data})
 
     def list_by_template(self, request, region, template):
         """根据初始模板获取相关增强服务"""
@@ -266,12 +266,12 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             )
             services[service.name] = slz.data
 
-        return Response({'result': services})
+        return Response({"result": services})
 
     def list_by_region(self, request, region):
         """根据region获取所有增强服务"""
         results = []
-        for category in ServiceCategory.objects.order_by('sort_priority').all():
+        for category in ServiceCategory.objects.order_by("sort_priority").all():
             services = []
             for service in mixed_service_mgr.list_by_category(region=region, category_id=category.id):
                 if not service.is_visible:
@@ -282,7 +282,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             if services:
                 results.append({"category": category, "services": services})
         serializer = slzs.ServiceCategoryByRegionSLZ(results, many=True)
-        return Response({'count': len(results), 'results': serializer.data})
+        return Response({"count": len(results), "results": serializer.data})
 
     @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
     def list_related_apps(self, request, service_id):
@@ -291,11 +291,11 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         param = serializer.data
-        application_ids = list(Application.objects.filter_by_user(request.user).values_list('id', flat=True))
+        application_ids = list(Application.objects.filter_by_user(request.user).values_list("id", flat=True))
 
         service = mixed_service_mgr.get_without_region(uuid=service_id)
         qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=application_ids).order_by(
-            param['order_by']
+            param["order_by"]
         )
 
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
@@ -304,11 +304,11 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 与模块信息，前端也需要同时升级。
         for obj in page:
             _data = {
-                'id': obj.pk,
-                'application': obj.module.application,
-                'module_name': obj.module.name,
-                'created': obj.created,
-                'service': obj.service_id,
+                "id": obj.pk,
+                "application": obj.module.application,
+                "module_name": obj.module.name,
+                "created": obj.created,
+                "service": obj.service_id,
             }
             page_data.append(_data)
         serializer = slzs.ServiceAttachmentDetailedSLZ(page_data, many=True)
@@ -340,12 +340,12 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         total = len(bound_services) + len(shared_services) + len(unbound_services)
         return Response(
             {
-                'count': total,
-                'category': slzs.CategorySLZ(category).data,
-                'results': {
-                    'bound': slzs.ServiceMinimalSLZ(bound_services, many=True).data,
-                    'shared': slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
-                    'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
+                "count": total,
+                "category": slzs.CategorySLZ(category).data,
+                "results": {
+                    "bound": slzs.ServiceMinimalSLZ(bound_services, many=True).data,
+                    "shared": slzs.SharedServiceInfoSLZ(shared_infos, many=True).data,
+                    "unbound": slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
                 },
             }
         )
@@ -373,7 +373,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 补充引用当前模块实例的模块信息
         sharing_ref_mgr = SharingReferencesManager(module)
         for svc_info in bound_service_infos:
-            svc_info['ref_modules'] = sharing_ref_mgr.list_related_modules(svc_info['service'])
+            svc_info["ref_modules"] = sharing_ref_mgr.list_related_modules(svc_info["service"])
 
         # 共享其他模块的增强服务
         shared_service_infos = []
@@ -392,9 +392,9 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(
             {
-                'bound': slzs.BoundServiceInfoSLZ(bound_service_infos, many=True).data,
-                'shared': slzs.SharedServiceInfoWithAllocationSLZ(shared_service_infos, many=True).data,
-                'unbound': slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
+                "bound": slzs.BoundServiceInfoSLZ(bound_service_infos, many=True).data,
+                "shared": slzs.SharedServiceInfoWithAllocationSLZ(shared_service_infos, many=True).data,
+                "unbound": slzs.ServiceMinimalSLZ(unbound_services, many=True).data,
             }
         )
 
@@ -402,7 +402,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def _gen_service_obj_allocations(module: Module, services: List[ServiceObj]) -> Dict[str, Any]:
         """生成服务对象分配信息"""
         svc_allocation_map: Dict[str, Dict[str, Any]] = {
-            svc.uuid: {'service': svc, 'provision_infos': {}, 'specifications': []} for svc in services
+            svc.uuid: {"service": svc, "provision_infos": {}, "specifications": []} for svc in services
         }
         for env in module.get_envs():
             rels = mixed_service_mgr.list_all_rels(env.engine_app)
@@ -413,18 +413,18 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
                 alloc = svc_allocation_map[svc.uuid]
                 # 补充实例分配信息
-                alloc['provision_infos'][env.environment] = rel.is_provisioned()
+                alloc["provision_infos"][env.environment] = rel.is_provisioned()
 
                 # 现阶段所有环境的服务规格一致，若某环境已经获取到配置参数信息，则跳过以免重复
-                if alloc['specifications']:
+                if alloc["specifications"]:
                     continue
 
                 # 补充配置参数信息
                 specs = rel.get_plan().specifications
-                for definition in alloc['service'].specifications:
+                for definition in alloc["service"].specifications:
                     result = definition.as_dict()
-                    result['value'] = specs.get(definition.name)
-                    alloc['specifications'].append(result)
+                    result["value"] = specs.get(definition.name)
+                    alloc["specifications"].append(result)
 
         return svc_allocation_map
 
@@ -461,9 +461,9 @@ class ServiceSetViewSet(viewsets.ViewSet):
 
         return Response(
             {
-                'count': len(service_sets),
-                'results': slzs.ServiceSetGroupByNameSLZ(service_sets.values(), many=True).data,
-                'regions': all_regions,
+                "count": len(service_sets),
+                "results": slzs.ServiceSetGroupByNameSLZ(service_sets.values(), many=True).data,
+                "regions": all_regions,
             }
         )
 
@@ -473,7 +473,7 @@ class ServiceSetViewSet(viewsets.ViewSet):
         根据增强服务的英文名字，查询所有命名为该名字的增强服务(不区分 region), 并带上绑定服务的实例信息
         """
         # 查询用户具有权限的应用id列表
-        application_ids = list(UserApplicationFilter(request.user).filter().values_list('id', flat=True))
+        application_ids = list(UserApplicationFilter(request.user).filter().values_list("id", flat=True))
         all_regions = get_all_regions().keys()
 
         serializer = slzs.ServiceAttachmentQuerySLZ(data=request.query_params)
@@ -500,7 +500,7 @@ class ServiceSetViewSet(viewsets.ViewSet):
         # 查询与 Services 绑定的 Module
         qs = mixed_service_mgr.get_provisioned_queryset_by_services(
             service_set.services, application_ids=application_ids
-        ).order_by(param['order_by'])
+        ).order_by(param["order_by"])
 
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
         # TODO: 查询结果里面同一个应用如果有多个 Module，就会在结果集中出现多次。应该升级为同时返回应用
@@ -508,13 +508,13 @@ class ServiceSetViewSet(viewsets.ViewSet):
         for obj in page:
             service_set.instances.append(
                 {
-                    'id': obj.pk,
-                    'application': obj.module.application,
-                    'module_name': obj.module.name,
-                    'created': obj.created,
-                    'service': obj.service_id,
+                    "id": obj.pk,
+                    "application": obj.module.application,
+                    "module_name": obj.module.name,
+                    "created": obj.created,
+                    "service": obj.service_id,
                     # 由于增强服务不一定有记录 region 信息, 因此使用 module 的 region 信息
-                    'region': obj.module.region,
+                    "region": obj.module.region,
                 }
             )
         return self.paginator.get_paginated_response(slzs.ServiceSetGroupByNameSLZ(service_set).data)
@@ -551,8 +551,8 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_service(service_id, application):
         return mixed_service_mgr.get_or_404(service_id, region=application.region)
 
-    @swagger_auto_schema(tags=['增强服务'], response_serializer=MinimalModuleSLZ(many=True))
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
+    @swagger_auto_schema(tags=["增强服务"], response_serializer=MinimalModuleSLZ(many=True))
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def list_shareable(self, request, code, module_name, service_id):
         """查看所有可被共享的模块
 
@@ -564,9 +564,9 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(MinimalModuleSLZ(modules, many=True).data)
 
     @swagger_auto_schema(
-        tags=['增强服务'], request_body=slzs.CreateSharedAttachmentsSLZ, responses={201: openapi_empty_response}
+        tags=["增强服务"], request_body=slzs.CreateSharedAttachmentsSLZ, responses={201: openapi_empty_response}
     )
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def create_shared(self, request, code, module_name, service_id):
         """创建增强服务共享关系
 
@@ -579,12 +579,12 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = slzs.CreateSharedAttachmentsSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        ref_module_name = slz.data['ref_module_name']
+        ref_module_name = slz.data["ref_module_name"]
         try:
             ref_module = application.get_module(ref_module_name)
         except ObjectDoesNotExist:
             raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(
-                _('模块 {ref_module_name} 不存在').format(ref_module_name=ref_module_name)
+                _("模块 {ref_module_name} 不存在").format(ref_module_name=ref_module_name)
             )
 
         service_obj = self.get_service(service_id, application)
@@ -592,17 +592,17 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             ServiceSharingManager(module).create(service_obj, ref_module)
         except RuntimeError:
-            raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_('未知错误'))
+            raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_("未知错误"))
         except ReferencedAttachmentNotFound:
             raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(
-                _('模块 {ref_module_name} 无法被共享').format(ref_module_name=ref_module_name)
+                _("模块 {ref_module_name} 无法被共享").format(ref_module_name=ref_module_name)
             )
         except SharedAttachmentAlreadyExists:
-            raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_('不能重复共享'))
+            raise error_codes.CREATE_SHARED_ATTACHMENT_ERROR.f(_("不能重复共享"))
         return Response({}, status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(tags=['增强服务'], response_serializer=slzs.SharedServiceInfoSLZ)
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
+    @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.SharedServiceInfoSLZ)
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def retrieve(self, request, code, module_name, service_id):
         """查看已创建的共享关系
 
@@ -615,8 +615,8 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise Http404
         return Response(slzs.SharedServiceInfoSLZ(info).data)
 
-    @swagger_auto_schema(tags=['增强服务'], responses={204: openapi_empty_response})
-    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy='merge')
+    @swagger_auto_schema(tags=["增强服务"], responses={204: openapi_empty_response})
+    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy="merge")
     def destroy(self, request, code, module_name, service_id):
         """解除共享关系
 
@@ -637,7 +637,7 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_service(service_id, application):
         return mixed_service_mgr.get_or_404(service_id, region=application.region)
 
-    @swagger_auto_schema(tags=['增强服务'], response_serializer=MinimalModuleSLZ(many=True))
+    @swagger_auto_schema(tags=["增强服务"], response_serializer=MinimalModuleSLZ(many=True))
     def list_related_modules(self, request, code, module_name, service_id):
         """查看模块增强服务被共享引用情况
 

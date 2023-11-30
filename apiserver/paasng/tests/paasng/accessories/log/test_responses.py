@@ -30,48 +30,48 @@ from paasng.accessories.log.utils import clean_logs
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def search_params():
     return ElasticSearchParams(indexPattern="foo-*", termTemplate={}, timeFormat="datetime")
 
 
-@pytest.fixture
+@pytest.fixture()
 def make_fake_hit():
     """一个用于测试的日志返回结果"""
 
     def _make_fake_hit(force_source: Optional[dict] = None, deleting_field: Optional[List[str]] = None):
         template = {
-            '_index': 'fake_index',
-            '_type': 'doc',
-            '_id': 'AXZBV87o_J-Z3_Obv',
-            '_score': None,
-            '_source': {
-                'json': {'message': 'fake_message'},
-                'source': 'fake_source',
-                'pod_name': 'useless_pod_name',
-                'container_name': 'useless_container_name',
-                'module_name': 'backend',
-                'offset': 346441043,
-                '@version': '1',
-                'region': 'fake_region',
-                'host': {'name': 'useless_host'},
-                '@timestamp': '2020-12-08T07:25:00.622Z',
-                'environment': 'fake',
-                'namespace': 'useless_container_name',
-                'tags': ['stdout'],
-                'stream': 'stderr',
-                'ns': 622628538,
-                'app_code': 'fake_code',
-                'process_type': 'fake_process_id',
+            "_index": "fake_index",
+            "_type": "doc",
+            "_id": "AXZBV87o_J-Z3_Obv",
+            "_score": None,
+            "_source": {
+                "json": {"message": "fake_message"},
+                "source": "fake_source",
+                "pod_name": "useless_pod_name",
+                "container_name": "useless_container_name",
+                "module_name": "backend",
+                "offset": 346441043,
+                "@version": "1",
+                "region": "fake_region",
+                "host": {"name": "useless_host"},
+                "@timestamp": "2020-12-08T07:25:00.622Z",
+                "environment": "fake",
+                "namespace": "useless_container_name",
+                "tags": ["stdout"],
+                "stream": "stderr",
+                "ns": 622628538,
+                "app_code": "fake_code",
+                "process_type": "fake_process_id",
             },
-            'sort': [1607412300622, 622628538],
+            "sort": [1607412300622, 622628538],
         }
         if force_source:
-            template['_source'].update(force_source)  # type: ignore
+            template["_source"].update(force_source)  # type: ignore
         deleting_field = deleting_field or []
         for f in deleting_field:
-            if f in template['_source']:  # type: ignore
-                del template['_source'][f]  # type: ignore
+            if f in template["_source"]:  # type: ignore
+                del template["_source"][f]  # type: ignore
 
         return Hit(template)
 
@@ -89,25 +89,25 @@ class TestStructureLogLine:
                 # "2020-12-08T07:25:00.622Z"
                 timestamp=1607412300,
                 raw={
-                    'json.message': 'fake_message',
-                    'source': 'fake_source',
-                    'pod_name': 'useless_pod_name',
-                    'container_name': 'useless_container_name',
-                    'module_name': 'backend',
-                    'offset': 346441043,
-                    '@version': '1',
-                    'region': 'fake_region',
-                    'host.name': 'useless_host',
-                    '@timestamp': '2020-12-08T07:25:00.622Z',
-                    'environment': 'fake',
-                    'namespace': 'useless_container_name',
-                    'tags': ['stdout'],
-                    'stream': 'stderr',
-                    'ns': 622628538,
-                    'app_code': 'fake_code',
-                    'process_type': 'fake_process_id',
+                    "json.message": "fake_message",
+                    "source": "fake_source",
+                    "pod_name": "useless_pod_name",
+                    "container_name": "useless_container_name",
+                    "module_name": "backend",
+                    "offset": 346441043,
+                    "@version": "1",
+                    "region": "fake_region",
+                    "host.name": "useless_host",
+                    "@timestamp": "2020-12-08T07:25:00.622Z",
+                    "environment": "fake",
+                    "namespace": "useless_container_name",
+                    "tags": ["stdout"],
+                    "stream": "stderr",
+                    "ns": 622628538,
+                    "app_code": "fake_code",
+                    "process_type": "fake_process_id",
                     # 源数据的 process_type 被复制成 process_id
-                    'process_id': 'fake_process_id',
+                    "process_id": "fake_process_id",
                 },
             ),
             StructureLogLine,
@@ -126,13 +126,13 @@ class TestStructureLogLine:
     )
     def test_lacking_key_info(self, search_params, make_fake_hit, deleting_field):
         """针对一些字段缺失，能够正确抛出异常"""
+        hit = make_fake_hit(deleting_field=deleting_field)
         with pytest.raises(LogLineInfoBrokenError):
-            hit = make_fake_hit(deleting_field=deleting_field)
             cattr.structure(clean_logs([hit], search_params)[0], StructureLogLine)
 
 
 class TestIngressLogLine:
-    @pytest.fixture
+    @pytest.fixture()
     def make_fake_hit(self, make_fake_hit):
         def _make_fake_hit(force_source: dict, deleting_fields: List[str]):
             ingress_detail = {
@@ -152,7 +152,7 @@ class TestIngressLogLine:
         return _make_fake_hit
 
     @pytest.mark.parametrize(
-        "force_update, expected",
+        ("force_update", "expected"),
         [
             (
                 {"engine_app_name": "normal"},
@@ -185,25 +185,25 @@ class TestIngressLogLine:
                 "message": "fake_message",
                 "timestamp": 1607412300,
                 "raw": {
-                    'json.message': 'fake_message',
-                    'source': 'fake_source',
-                    'pod_name': 'useless_pod_name',
-                    'container_name': 'useless_container_name',
-                    'module_name': 'backend',
-                    'offset': 346441043,
-                    '@version': '1',
-                    'region': 'fake_region',
-                    'host.name': 'useless_host',
-                    '@timestamp': '2020-12-08T07:25:00.622Z',
-                    'environment': 'fake',
-                    'namespace': 'useless_container_name',
-                    'tags': ['stdout'],
-                    'stream': 'stderr',
-                    'ns': 622628538,
-                    'app_code': 'fake_code',
-                    'process_type': 'fake_process_id',
+                    "json.message": "fake_message",
+                    "source": "fake_source",
+                    "pod_name": "useless_pod_name",
+                    "container_name": "useless_container_name",
+                    "module_name": "backend",
+                    "offset": 346441043,
+                    "@version": "1",
+                    "region": "fake_region",
+                    "host.name": "useless_host",
+                    "@timestamp": "2020-12-08T07:25:00.622Z",
+                    "environment": "fake",
+                    "namespace": "useless_container_name",
+                    "tags": ["stdout"],
+                    "stream": "stderr",
+                    "ns": 622628538,
+                    "app_code": "fake_code",
+                    "process_type": "fake_process_id",
                     # 源数据的 process_type 被复制成 process_id
-                    'process_id': 'fake_process_id',
+                    "process_id": "fake_process_id",
                     # ingress 日志字段
                     "engine_app_name": "aaa",
                     "method": "aaa",
@@ -233,6 +233,6 @@ class TestIngressLogLine:
     )
     def test_ingress_lacking_key_info(self, search_params, make_fake_hit, deleting_field):
         """针对一些字段缺失，能够正确抛出异常"""
+        hit = make_fake_hit({}, deleting_field)
         with pytest.raises(LogLineInfoBrokenError):
-            hit = make_fake_hit({}, deleting_field)
             cattr.structure(clean_logs([hit], search_params), List[IngressLogLine])

@@ -30,7 +30,7 @@ class Command(BaseCommand):
     help = "update cluster feature flags, will be executed in initial-cluster-state job"
 
     def add_arguments(self, parser):
-        parser.add_argument('--cluster-names', nargs='*', help='specified cluster name list')
+        parser.add_argument("--cluster-names", nargs="*", help="specified cluster name list")
 
     def handle(self, cluster_names, *args, **options):
         cluster_qs = Cluster.objects.all()

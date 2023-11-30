@@ -45,19 +45,19 @@ class AppAlertRuleManager(models.Manager):
 class AppAlertRule(AuditedModel):
     """记录 app 初始的告警规则配置"""
 
-    alert_code = models.CharField(max_length=64, help_text='alert rule code e.g. high_cpu_usage')
+    alert_code = models.CharField(max_length=64, help_text="alert rule code e.g. high_cpu_usage")
     display_name = models.CharField(max_length=512)
     enabled = models.BooleanField(default=True)
     threshold_expr = models.CharField(max_length=64)
     receivers = models.JSONField(default=list)
     application = models.ForeignKey(
-        'applications.Application', on_delete=models.CASCADE, db_constraint=False, related_name='alert_rules'
+        "applications.Application", on_delete=models.CASCADE, db_constraint=False, related_name="alert_rules"
     )
-    environment = models.CharField(verbose_name='部署环境', max_length=16)
+    environment = models.CharField(verbose_name="部署环境", max_length=16)
     module = models.ForeignKey(
-        'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name='alert_rules', null=True
+        "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="alert_rules", null=True
     )
     objects = AppAlertRuleManager()
 
     def __str__(self):
-        return f'{self.display_name}-{self.alert_code}'
+        return f"{self.display_name}-{self.alert_code}"

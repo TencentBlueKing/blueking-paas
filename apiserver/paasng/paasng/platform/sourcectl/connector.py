@@ -69,7 +69,7 @@ class ModuleRepoConnector(abc.ABC):
         self.repo_type = repo_type
 
     @abc.abstractmethod
-    def bind(self, repo_url: Optional[str] = "", source_dir: str = '', **kwargs) -> RepositoryInstance:
+    def bind(self, repo_url: Optional[str] = "", source_dir: str = "", **kwargs) -> RepositoryInstance:
         """Bind a repo address to current module"""
 
     @abc.abstractmethod
@@ -103,10 +103,10 @@ class DBBasedMixin:
     def _get_or_create_repo_obj(self, repo_url: str, source_dir: str) -> Any:
         """Get or create a repository object by given url and source_dir."""
         repo_kwargs = {
-            'region': self.application.region,
-            'server_name': self.repo_type,
-            'repo_url': repo_url,
-            'source_dir': source_dir,
+            "region": self.application.region,
+            "server_name": self.repo_type,
+            "repo_url": repo_url,
+            "source_dir": source_dir,
         }
         # Not using `get_or_create` because it might return more than 1 results
         repo_objs = self.repository_model.objects.filter(**repo_kwargs)[:1]
@@ -121,15 +121,14 @@ class DBBasedMixin:
         repo = self._get_or_create_repo_obj(repo_url, source_dir=source_dir)
         self.module.source_type = self.repo_type
         self.module.source_repo_id = repo.id
-        self.module.save(update_fields=['source_type', 'source_repo_id'])
+        self.module.save(update_fields=["source_type", "source_repo_id"])
         return repo
 
     def untie_repo(self):
         """Unbind the module and repo"""
         self.module.source_type = None
         self.module.source_repo_id = None
-        self.module.save(update_fields=['source_type', 'source_repo_id'])
-        return None
+        self.module.save(update_fields=["source_type", "source_repo_id"])
 
     def get_repo(self):
         return self.module.get_source_obj()
@@ -187,7 +186,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         repo_info = acquire_repo(desired_name=desired_name, with_branches_and_tags=with_branches_and_tags, **base_info)
         return repo_info["repo_url"]
 
-    def bind(self, repo_url: Optional[str] = "", source_dir: str = '', **kwargs):
+    def bind(self, repo_url: Optional[str] = "", source_dir: str = "", **kwargs):
         if not repo_url:
             # get unique repo root, sample-app will get sample-app-7Gt
             unique_app_root = unique_id_generator(self.application.code)
@@ -202,7 +201,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         repo_url = self.get_repo().get_repo_url()
         with generate_temp_dir() as source_path, promote_repo_privilege_temporary(self.application):
             self.write_templates_to_dir(source_path, self.module.source_init_template, context)
-            svn_credentials = get_bksvn_config(context['region'], name=self.repo_type).get_admin_credentials()
+            svn_credentials = get_bksvn_config(context["region"], name=self.repo_type).get_admin_credentials()
 
             sync_procedure = SvnSyncProcedure(repo_url, svn_credentials["username"], svn_credentials["password"])
             return sync_procedure.run(source_path=str(source_path))
@@ -218,7 +217,7 @@ class ExternalGitAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
     auth_method = "oauth"
     repository_model = GitRepository
 
-    def bind(self, repo_url: Optional[str] = "", source_dir: str = '', **kwargs):
+    def bind(self, repo_url: Optional[str] = "", source_dir: str = "", **kwargs):
         if not repo_url:
             raise ValueError('must provide "repo_url" when connecting to git')
         return self.save_repo_info(repo_url, source_dir=source_dir)
@@ -254,8 +253,8 @@ class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
             repo_type=repo_obj.get_source_type(),
             module=self.module,
             defaults={
-                "username": repo_auth_info.get("username", ''),
-                "password": repo_auth_info.get("password", ''),
+                "username": repo_auth_info.get("username", ""),
+                "password": repo_auth_info.get("password", ""),
             },
         )
         if created:
@@ -263,13 +262,13 @@ class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
 
         return holder
 
-    def bind(self, repo_url: Optional[str] = "", source_dir: str = '', **kwargs):
+    def bind(self, repo_url: Optional[str] = "", source_dir: str = "", **kwargs):
         """绑定仓库同时，为仓库绑定 Basic Auth"""
         if not repo_url:
             raise ValueError('must provide "repo_url" when connecting to git')
 
         repo_obj = self.save_repo_info(repo_url, source_dir=source_dir)
-        repo_auth_info = kwargs['repo_auth_info']
+        repo_auth_info = kwargs["repo_auth_info"]
         self.update_repo_basic_auth(repo_obj, repo_auth_info)
         return repo_obj
 
@@ -312,7 +311,7 @@ class BlobStoreSyncProcedure:
         with generate_temp_file(suffix=".tar.gz") as package_path:
             logger.debug("compressing templated source, key=%s...", self.key)
             compress_directory(source_path, package_path)
-            self.blob_store.upload_file(package_path, self.key, ExtraArgs={'ACL': 'private'})
+            self.blob_store.upload_file(package_path, self.key, ExtraArgs={"ACL": "private"})
 
         # Generate a temporary accessable url for source codes
         url = self.blob_store.generate_presigned_url(key=self.key, expires_in=self.downloadable_address_expires_in)
@@ -347,11 +346,11 @@ def generate_downloadable_app_template(module: Module, context: Optional[Dict[st
         # generate default context
         client_secret = get_oauth2_client_secret(application.code, application.region)
         context = {
-            'region': application.region,
-            'owner_username': get_username_by_bkpaas_user_id(application.owner),
-            'app_code': application.code,
-            'app_secret': client_secret,
-            'app_name': application.name,
+            "region": application.region,
+            "owner_username": get_username_by_bkpaas_user_id(application.owner),
+            "app_code": application.code,
+            "app_secret": client_secret,
+            "app_name": application.name,
         }
     key = f"app-template-instances/{application.region}/{application.code}-{module.name}.tar.gz"
     sync_procedure = BlobStoreSyncProcedure(

@@ -37,7 +37,7 @@ def add_monitoring_space_permission(app_code: str, app_name: str, bk_space_id: s
     grade_manager_id = ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id
     cli.update_grade_managers_with_bksaas_space(grade_manager_id, app_code, app_name, bk_space_id)
 
-    user_groups = ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role')
+    user_groups = ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role")
     user_groups_list = [{"id": user_group.user_group_id, "role": user_group.role} for user_group in user_groups]
 
     # 2. 给应用的管理员、开发者、运营者添加监控平台、日志平台权限

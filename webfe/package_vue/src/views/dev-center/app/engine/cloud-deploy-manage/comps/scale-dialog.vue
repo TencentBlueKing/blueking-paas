@@ -103,13 +103,13 @@
         <div class="replica-count-cls">
           <bk-form-item
             v-if="autoscaling"
-            property="maxReplicas"
-            :label="$t('最大副本数量')"
-            :rules="rules.maxReplicas"
+            property="minReplicas"
+            :label="$t('最小副本数量')"
+            :rules="rules.minReplicas"
             :error-display-type="'normal'"
           >
             <bk-input
-              v-model="scalingConfig.maxReplicas"
+              v-model="scalingConfig.minReplicas"
               type="number"
               :max="5"
               :min="0"
@@ -118,13 +118,13 @@
           </bk-form-item>
           <bk-form-item
             v-if="autoscaling"
-            property="minReplicas"
-            :label="$t('最小副本数量')"
-            :rules="rules.minReplicas"
+            property="maxReplicas"
+            :label="$t('最大副本数量')"
+            :rules="rules.maxReplicas"
             :error-display-type="'normal'"
           >
             <bk-input
-              v-model="scalingConfig.minReplicas"
+              v-model="scalingConfig.maxReplicas"
               type="number"
               :max="5"
               :min="0"
@@ -139,6 +139,7 @@
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
+import _ from 'lodash';
 let maxReplicasNum = 0;
 
 export default {
@@ -226,6 +227,7 @@ export default {
 
   computed: {
     shrinkLimit() {
+      if (!this.curTargetReplicas) return '0%';
       return `${(((this.curTargetReplicas - 1) / this.curTargetReplicas) * 85).toFixed(1)}%`;
     },
   },
@@ -254,7 +256,8 @@ export default {
     },
 
     isScalingConfigChange() {
-      return JSON.stringify(this.scalingConfig) === JSON.stringify(this.initScalingConfig);
+      return this.autoscaling === this.autoscalingBackUp
+      && JSON.stringify(this.scalingConfig) === JSON.stringify(this.initScalingConfig);
     },
 
     // 进程实例设置
@@ -264,7 +267,7 @@ export default {
         return;
       }
 
-      // 如果没有改变也不允许操作
+      // 如果没有改变值也没有改变扩缩容方式不允许操作
       if (this.isScalingConfigChange()) {
         this.handleCancel();
         return;
@@ -434,7 +437,7 @@ export default {
     handleShowDialog(process, env = 'stag', moduleName) {
       this.environment = env;
       this.moduleName = moduleName;
-      // this.getAutoScalFlag();
+      this.getAutoScalFlag();
 
       // 最大副本数
       maxReplicasNum = process.maxReplicas;
@@ -449,12 +452,14 @@ export default {
 
       // 扩容方式
       this.autoscaling = process.autoscaling;
+      this.autoscalingBackUp = _.cloneDeep(this.autoscaling);
       this.curActiveType = process.autoscaling ? 'automatic' : 'manual';
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || maxReplicasNum;
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || minReplicasNum;
-      this.scalingConfig.targetReplicas = process.available_instance_count;
+      this.scalingConfig.targetReplicas = process.targetReplicas;
 
       this.initScalingConfig = { ...this.scalingConfig };
+      console.log('this.processPlan', this.processPlan);
       this.curTargetReplicas = this.processPlan.targetReplicas;
 
       this.scaleDialog.visible = true;

@@ -29,8 +29,8 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from paasng.platform.engine.workflow import ServerSendEvent
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.engine.workflow import ServerSendEvent
 from paasng.utils.error_codes import error_codes
 from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
@@ -45,7 +45,7 @@ class StreamViewSet(ViewSet):
     def get_subscriber(self, channel_id):
         subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
         channel_state = subscriber.get_channel_state()
-        if channel_state == 'none':
+        if channel_state == "none":
             raise error_codes.CHANNEL_NOT_FOUND
         return subscriber
 
@@ -66,7 +66,7 @@ class StreamViewSet(ViewSet):
                 for s in ServerSendEvent.to_eof_str_list():
                     yield s
 
-        return StreamingHttpResponse(resp(), content_type='text/event-stream')
+        return StreamingHttpResponse(resp(), content_type="text/event-stream")
 
     @swagger_auto_schema(query_serializer=HistoryEventsQuerySLZ, responses={200: StreamEventSLZ(many=True)})
     def history_events(self, request, channel_id):
@@ -84,7 +84,7 @@ class StreamViewSet(ViewSet):
 
 class StreamDebuggerView(View):
     def get(self, request):
-        return render(request, 'streaming/debugger.html')
+        return render(request, "streaming/debugger.html")
 
 
 class VoidViewset(viewsets.ViewSet):

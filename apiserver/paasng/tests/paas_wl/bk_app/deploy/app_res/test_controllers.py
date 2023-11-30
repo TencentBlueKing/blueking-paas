@@ -34,19 +34,20 @@ from paas_wl.workloads.release_controller.hooks.models import Command as Command
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestCommand:
     @pytest.fixture(autouse=True)
-    def skip_if(self, k8s_version):
+    def _skip_if(self, k8s_version):
         # 测试用例需要真实的 k8s 集群
         if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 8):
             pytest.skip("dummy cluster can't run e2e test")
 
-    @pytest.fixture
-    def command_model(self, wl_app):
+    @pytest.fixture()
+    def command_model(self, wl_app, wl_build):
+        wl_build.image = "busybox:latest"
+        wl_build.artifact_metadata = {"entrypoint": ["sh", "-c"]}
+        wl_build.save()
         config = wl_app.latest_config
-        config.runtime.image = "busybox:latest"
-        config.runtime.entrypoint = ["sh", "-c"]
         config.runtime.image_pull_policy = ImagePullPolicy.NEVER
         config.save()
         return G(
@@ -54,20 +55,21 @@ class TestCommand:
             app=wl_app,
             command=r"echo\ 'finished'",
             config=config,
+            build=wl_build,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def command(self, command_model):
         return Command.from_db_obj(command_model)
 
-    @pytest.fixture
+    @pytest.fixture()
     def handler(self, k8s_client, settings):
         return CommandHandler(
             client=k8s_client,
             default_connect_timeout=settings.K8S_DEFAULT_CONNECT_TIMEOUT,
             default_request_timeout=settings.K8S_DEFAULT_CONNECT_TIMEOUT + settings.K8S_DEFAULT_READ_TIMEOUT,
             mapper_version=get_mapper_version(
-                target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={'client': k8s_client}
+                target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={"client": k8s_client}
             ),
         )
 
@@ -81,7 +83,7 @@ class TestCommand:
         command_in_k8s = command_kmodel.get(command.app, command.name)
         assert command_in_k8s.phase == "Succeeded"
 
-    @pytest.fixture
+    @pytest.fixture()
     def sidecar(self, wl_app):
         template = G(
             AppAddOnTemplate,

@@ -43,6 +43,7 @@ class WhiteNoiseRespectPrefixMiddleware(WhiteNoiseMiddleware):
             static_file = self.files.get(path_info)
         if static_file is not None:
             return self.serve(static_file, request)
+        return None
 
 
 class AutoDisableCSRFMiddleware:
@@ -56,11 +57,11 @@ class AutoDisableCSRFMiddleware:
         # gateway JWT Token), below attribute will be set to True.
         # For those requests, It's required to disable CSRF check because them do not contain any
         # CSRF token cookies.
-        if getattr(request, '_bkpaas_auth_authenticated_from_non_cookies', False):
+        if getattr(request, "_bkpaas_auth_authenticated_from_non_cookies", False):
             request._dont_enforce_csrf_checks = True
 
         # A setting to disable CSRF check entirely, useful for local development
-        if getattr(settings, 'DEBUG_FORCE_DISABLE_CSRF', False):
+        if getattr(settings, "DEBUG_FORCE_DISABLE_CSRF", False):
             request._dont_enforce_csrf_checks = True
         return self.get_response(request)
 
@@ -69,9 +70,8 @@ class AutoDisableCSRFMiddleware:
         # not recognising the csrf_exempt exemption
         # DRF's CSRF checks behave in the same way as the CsrfViewMiddleware and need to be skipped by
         # setting request._dont_enforce_csrf_checks = True.
-        if getattr(view, 'csrf_exempt', False):
+        if getattr(view, "csrf_exempt", False):
             request._dont_enforce_csrf_checks = True
-        return None
 
 
 class APILanguageMiddleware(MiddlewareMixin):
@@ -83,7 +83,7 @@ class APILanguageMiddleware(MiddlewareMixin):
         full_path = request.get_full_path()
         is_sys_url = full_path.startswith(settings.SITE_URL + "sys/api/")
 
-        if is_sys_url and getattr(request, '_bkpaas_auth_authenticated_from_non_cookies', False):
+        if is_sys_url and getattr(request, "_bkpaas_auth_authenticated_from_non_cookies", False):
             language = request.META.get("HTTP_BLUEKING_LANGUAGE", settings.LANGUAGE_CODE)
             try:
                 language = trans.get_supported_language_variant(language)

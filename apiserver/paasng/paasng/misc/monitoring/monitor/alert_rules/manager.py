@@ -47,7 +47,7 @@ class AlertRuleManager:
         rule_configs = self.config_generator.gen_app_scoped_rule_configs()
 
         # extend app module scoped alert rule configs
-        module_names = self.application.modules.values_list('name', flat=True)
+        module_names = self.application.modules.values_list("name", flat=True)
         for module_name in module_names:
             rule_configs.extend(self.config_generator.gen_module_scoped_rule_configs(module_name))
 
@@ -112,9 +112,9 @@ class AlertRuleManager:
                 module=r.module,
                 environment=r.environment,
                 defaults={
-                    'display_name': r.display_name,
-                    'enabled': r.enabled,
-                    'threshold_expr': r.threshold_expr,
-                    'receivers': r.receivers,
+                    "display_name": r.display_name,
+                    "enabled": r.enabled,
+                    "threshold_expr": r.threshold_expr,
+                    "receivers": r.receivers,
                 },
             )

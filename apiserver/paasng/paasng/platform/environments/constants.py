@@ -21,9 +21,9 @@ from paasng.utils.basic import ChoicesEnum
 
 
 class EnvRoleOperation(ChoicesEnum):
-    DEPLOY = 'deploy'
+    DEPLOY = "deploy"
 
-    _choices_labels = ((DEPLOY, '部署'),)
+    _choices_labels = ((DEPLOY, "部署"),)
 
     __default = {
         DEPLOY: [ApplicationRole.ADMINISTRATOR.value],

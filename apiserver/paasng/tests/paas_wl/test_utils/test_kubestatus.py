@@ -37,7 +37,7 @@ def make_status(
 
 
 @pytest.mark.parametrize(
-    "instance, expected",
+    ("instance", "expected"),
     [
         (ResourceInstance(None, {"kind": ""}), V1Pod(kind="")),
         (ResourceInstance(None, {"kind": "Pod"}), V1Pod(kind="Pod")),
@@ -55,7 +55,7 @@ def test_parse_pod(instance, expected):
 
 
 @pytest.mark.parametrize(
-    "health_status, expected",
+    ("health_status", "expected"),
     [
         (make_status(message="foo"), None),
         (make_status(message="failed with exit code 0"), 0),
@@ -68,7 +68,7 @@ def test_extract_exit_code(health_status, expected):
 
 
 @pytest.mark.parametrize(
-    "container_statuses, expected",
+    ("container_statuses", "expected"),
     [
         ([], None),
         (

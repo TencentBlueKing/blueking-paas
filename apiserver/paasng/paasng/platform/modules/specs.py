@@ -52,9 +52,9 @@ class ModuleSpecs:
         self.source_origin = SourceOrigin(module.get_source_origin())
         self.source_origin_specs = SourceOriginSpecs.get(self.source_origin)
 
-    has_vcs = source_origin_property('has_vcs')
-    has_template_code = source_origin_property('has_template_code')
-    deploy_via_package = source_origin_property('deploy_via_package')
+    has_vcs = source_origin_property("has_vcs")
+    has_template_code = source_origin_property("has_template_code")
+    deploy_via_package = source_origin_property("deploy_via_package")
 
     @property
     def templated_source_enabled(self) -> bool:
@@ -87,7 +87,7 @@ class ModuleSpecs:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'templated_source_enabled': self.templated_source_enabled,
+            "templated_source_enabled": self.templated_source_enabled,
             # 运行时类型
             "runtime_type": self.runtime_type,
             # 构建方式
@@ -114,7 +114,7 @@ class SourceOriginSpecs(ABC):
     # Whether module was deployed via source package file
     deploy_via_package: bool = False
 
-    _spec_types: Dict[SourceOrigin, Type['SourceOriginSpecs']] = {}
+    _spec_types: Dict[SourceOrigin, Type["SourceOriginSpecs"]] = {}
 
     @classmethod
     def __init_subclass__(cls) -> None:
@@ -124,11 +124,11 @@ class SourceOriginSpecs(ABC):
             cls._spec_types[cls.source_origin] = cls
 
     @classmethod
-    def get(cls, source_origin: SourceOrigin) -> 'SourceOriginSpecs':
+    def get(cls, source_origin: SourceOrigin) -> "SourceOriginSpecs":
         try:
             return cls._spec_types[source_origin]()
         except KeyError:
-            raise RuntimeError(f'{source_origin} is not valid, no SourceOriginSpecs can be found!')
+            raise RuntimeError(f"{source_origin} is not valid, no SourceOriginSpecs can be found!")
 
     @classmethod
     def supported_runtime_types(self) -> List[RuntimeType]:

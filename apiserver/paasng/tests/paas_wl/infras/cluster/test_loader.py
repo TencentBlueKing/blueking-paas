@@ -59,7 +59,7 @@ def cluster_creator(ca_data, cert_data, key_data):
 
 class TestLoader:
     @pytest.fixture(autouse=True)
-    def setup(self, cluster_creator, clusters):
+    def _setup(self, cluster_creator, clusters):
         Cluster.objects.all().delete()
         for cluster_name, attrs in clusters.items():
             cluster_creator(cluster_name, attrs["api_servers"])
@@ -69,7 +69,7 @@ class TestLoader:
         assert len(loader.get_all_cluster_names()) == 3
 
     @pytest.mark.parametrize(
-        "context_name, configurations_count, server_hostname_set",
+        ("context_name", "configurations_count", "server_hostname_set"),
         [
             ("foo", 1, {"hostname-of-foo"}),
             ("bar", 2, {"hostname-of-bar-a", "hostname-of-bar-b"}),
@@ -87,19 +87,19 @@ class TestLoader:
 
 class TestLoaderNoInitialClusters:
     @pytest.mark.parametrize(
-        'token_value,auth_header_value',
+        ("token_value", "auth_header_value"),
         [
             (None, None),
-            ('foo_token', 'Bearer foo_token'),
+            ("foo_token", "Bearer foo_token"),
         ],
     )
     def test_auth_types(self, token_value, auth_header_value, cluster_creator):
         Cluster.objects.all().delete()
-        api_servers = [{'host': 'https://hostname-of-foo:6553'}]
-        cluster_creator('default-cluster', api_servers, token_value=token_value)
+        api_servers = [{"host": "https://hostname-of-foo:6553"}]
+        cluster_creator("default-cluster", api_servers, token_value=token_value)
 
-        config = list(DBConfigLoader().list_configurations_by_name('default-cluster'))[0]
-        assert config.api_key.get('authorization') == auth_header_value
+        config = list(DBConfigLoader().list_configurations_by_name("default-cluster"))[0]
+        assert config.api_key.get("authorization") == auth_header_value
 
 
 class TestEnhancedKubeConfigLoader:
@@ -110,7 +110,7 @@ class TestEnhancedKubeConfigLoader:
         assert len(loader.get_all_tags()) == 3
 
     @pytest.mark.parametrize(
-        "tag, configurations_count, server_hostname_set",
+        ("tag", "configurations_count", "server_hostname_set"),
         [
             ("foo", 1, {"hostname-of-foo"}),
             ("bar", 2, {"hostname-of-bar-a", "hostname-of-bar-b"}),

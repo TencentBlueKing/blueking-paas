@@ -72,7 +72,7 @@ def py_module_in_requirements(name, requirements):
         if line.startswith("#"):
             continue
 
-        obj = re.search(r'^[\w.-]+', line)
+        obj = re.search(r"^[\w.-]+", line)
         if not obj:
             continue
         if obj.group() == name:
@@ -89,7 +89,7 @@ def get_deployment_tags(deployment: Deployment) -> List[Tag]:
     logs = get_all_logs(deployment)
     for pattern in patterns:
         if re.search(pattern.value, logs, re.IGNORECASE):
-            logger.debug('Deployment failure pattern match found: %s', pattern.value)
+            logger.debug("Deployment failure pattern match found: %s", pattern.value)
             tag_strs.append(pattern.tag_str)
 
     return [get_dynamic_tag(tag_str) for tag_str in tag_strs]

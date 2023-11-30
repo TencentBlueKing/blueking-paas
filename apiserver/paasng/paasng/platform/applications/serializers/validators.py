@@ -35,18 +35,18 @@ class AppUniqueValidator(UniqueValidator):
     - an extra signal was triggered to do external check on other data sources
     """
 
-    field_name = ''
-    field_label = ''
+    field_name = ""
+    field_label = ""
     signal: Signal
 
-    def __init__(self, field_name: Optional[str] = None, *args, **kwargs):
+    def __init__(self, field_name: Optional[str] = None, **kwargs):
         if field_name:
             self.field_name = field_name
-        super().__init__(queryset=Application.default_objects.all(), lookup="exact", *args, **kwargs)
+        super().__init__(queryset=Application.default_objects.all(), lookup="exact", **kwargs)
 
     def __call__(self, value, serializer_field):
         # Determine the existing instance, if this is an update operation.
-        instance = getattr(serializer_field.parent, 'instance', None)
+        instance = getattr(serializer_field.parent, "instance", None)
         if not isinstance(instance, Application):
             instance = serializer_field.parent.context.get("application", None)
 
@@ -54,7 +54,7 @@ class AppUniqueValidator(UniqueValidator):
         queryset = self.filter_queryset(value, queryset, self.field_name)
         queryset = self.exclude_current_instance(queryset, instance)
         if qs_exists(queryset):
-            raise ValidationError(self.get_message(value), code='unique')
+            raise ValidationError(self.get_message(value), code="unique")
 
         # Send signal to external data sources
         self.signal_external(value, instance=instance)
@@ -64,32 +64,33 @@ class AppUniqueValidator(UniqueValidator):
         try:
             self.signal.send(sender=self.__class__, value=value, instance=instance)
         except AppFieldValidationError as e:
-            if e.reason == 'duplicated':
-                raise ValidationError(self.get_message(value), code='unique')
+            if e.reason == "duplicated":
+                raise ValidationError(self.get_message(value), code="unique")
 
     def get_message(self, value) -> str:
         """Get user-friendly error message"""
-        return _('{} 为 {} 的应用已存在').format(self.field_label, value)
+        return _("{} 为 {} 的应用已存在").format(self.field_label, value)
 
 
 class AppNameUniqueValidator(AppUniqueValidator):
-    field_name = 'name'
-    field_label = '应用名称'
+    field_name = "name"
+    field_label = "应用名称"
     signal = prepare_use_application_name
 
 
 class AppIDUniqueValidator(AppUniqueValidator):
-    field_name = 'code'
-    field_label = '应用 ID'
+    field_name = "code"
+    field_label = "应用 ID"
     signal = prepare_use_application_code
 
     def __call__(self, value, serializer_field):
         # Determine the existing instance, if this is an update operation.
-        instance = getattr(serializer_field.parent, 'instance', None)
+        instance = getattr(serializer_field.parent, "instance", None)
 
         if not instance:
             return super().__call__(value, serializer_field)
 
         if instance.code != value:
             # Modifying 'code' field was forbidden at this moment
-            raise ValidationError(_('不支持修改应用 ID'))
+            raise ValidationError(_("不支持修改应用 ID"))
+        return None

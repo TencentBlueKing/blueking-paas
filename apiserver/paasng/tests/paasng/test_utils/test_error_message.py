@@ -23,12 +23,16 @@ from paasng.accessories.servicehub.remote.exceptions import GetClusterEgressInfo
 from paasng.utils.error_message import find_coded_error_message, find_innermost_exception, wrap_validation_error
 
 
+class TestMsgError(Exception):
+    pass
+
+
 @pytest.mark.parametrize(
-    "exception, expected",
+    ("exception", "expected"),
     [
         (GetClusterEgressInfoError("Detail Message"), "错误码: 4313021, 获取集群信息失败: Detail Message。"),
-        (Exception("AAAAA"), None),
-        pytest.param("unexpected", "", marks=pytest.mark.xfail(raises=ValueError)),
+        (TestMsgError("AAAAA"), None),
+        pytest.param("unexpected", "", marks=pytest.mark.xfail(raises=TypeError)),
     ],
 )
 def test_find_coded_error_message(exception, expected):
@@ -36,68 +40,68 @@ def test_find_coded_error_message(exception, expected):
 
 
 def a():
-    raise Exception("A")
+    raise TestMsgError("A")
 
 
 def b_in_a():
     try:
         a()
-    except Exception as e:
-        raise Exception("B") from e
+    except TestMsgError as e:
+        raise TestMsgError("B") from e
 
 
 def b():
     try:
         a()
-    except Exception:
-        raise Exception("B")
+    except TestMsgError:
+        raise TestMsgError("B")
 
 
 def c_in_b_in_a():
     try:
         b_in_a()
-    except Exception as e:
-        raise Exception("C") from e
+    except TestMsgError as e:
+        raise TestMsgError("C") from e
 
 
 def c_in_b():
     try:
         b()
-    except Exception as e:
-        raise Exception("C") from e
+    except TestMsgError as e:
+        raise TestMsgError("C") from e
 
 
 @pytest.mark.parametrize(
-    "trigger, expected",
+    ("trigger", "expected"),
     [
-        (a, Exception("A")),
-        (b_in_a, Exception("A")),
-        (c_in_b_in_a, Exception("A")),
-        (b, Exception("B")),
-        (c_in_b, Exception("B")),
+        (a, TestMsgError("A")),
+        (b_in_a, TestMsgError("A")),
+        (c_in_b_in_a, TestMsgError("A")),
+        (b, TestMsgError("B")),
+        (c_in_b, TestMsgError("B")),
     ],
 )
 def test_find_innermost_exception(trigger, expected):
     try:
         trigger()
-    except Exception as e:
-        assert str(find_innermost_exception(e)) == str(expected)
+    except TestMsgError as e:
+        assert str(find_innermost_exception(e)) == str(expected)  # noqa: PT017
 
 
 def test_wrap_validation_error_dict():
-    wrapped_ext = wrap_validation_error(ValidationError(detail={'foo': 'required'}, code='bar'), 'parent')
-    assert 'parent' in wrapped_ext.detail
-    assert wrapped_ext.detail['parent']['foo'] == 'required'
-    assert wrapped_ext.detail['parent']['foo'].code == 'bar'
+    wrapped_ext = wrap_validation_error(ValidationError(detail={"foo": "required"}, code="bar"), "parent")
+    assert "parent" in wrapped_ext.detail
+    assert wrapped_ext.detail["parent"]["foo"] == "required"
+    assert wrapped_ext.detail["parent"]["foo"].code == "bar"
 
 
 def test_wrap_validation_error_list():
-    wrapped_ext = wrap_validation_error(ValidationError(detail=['foo: required'], code='bar'), 'parent')
-    assert wrapped_ext.detail[0] == '[parent] foo: required'
-    assert wrapped_ext.detail[0].code == 'bar'
+    wrapped_ext = wrap_validation_error(ValidationError(detail=["foo: required"], code="bar"), "parent")
+    assert wrapped_ext.detail[0] == "[parent] foo: required"
+    assert wrapped_ext.detail[0].code == "bar"
 
 
 def test_wrap_validation_error_str():
-    wrapped_ext = wrap_validation_error(ValidationError(detail='foo: required', code='bar'), 'parent')
-    assert wrapped_ext.detail[0] == '[parent] foo: required'
-    assert wrapped_ext.detail[0].code == 'bar'
+    wrapped_ext = wrap_validation_error(ValidationError(detail="foo: required", code="bar"), "parent")
+    assert wrapped_ext.detail[0] == "[parent] foo: required"
+    assert wrapped_ext.detail[0].code == "bar"

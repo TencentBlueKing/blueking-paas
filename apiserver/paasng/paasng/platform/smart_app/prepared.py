@@ -22,15 +22,15 @@ from pathlib import Path
 from django.http.request import HttpRequest
 from django.utils.text import slugify
 
+from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
 from paasng.platform.sourcectl.package.downloader import download_file_via_url
 from paasng.platform.sourcectl.package.uploader import upload_to_blob_store
-from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
 
 
 class PreparedSourcePackage:
     """Upload a package to remote backend and store info in session for later usage"""
 
-    _package_path_key = 'prepared_package_path'
+    _package_path_key = "prepared_package_path"
 
     def __init__(self, request: HttpRequest, namespace: str = "default"):
         self.request = request
@@ -40,9 +40,9 @@ class PreparedSourcePackage:
 
     def generate_storage_path(self, file_path: PathLike) -> str:
         """Generate storage path for current request"""
-        basename, sep, suffix = Path(file_path).name.partition('.')
-        filename = ''.join([slugify(basename), sep, suffix])
-        return f'prepared_packages/{self._username}:{self.namespace}:{filename}'
+        basename, sep, suffix = Path(file_path).name.partition(".")
+        filename = "".join([slugify(basename), sep, suffix])
+        return f"prepared_packages/{self._username}:{self.namespace}:{filename}"
 
     def store(self, filepath: PathLike):
         """Store a local package file to remote storage backend"""
@@ -61,7 +61,7 @@ class PreparedSourcePackage:
         store_url, filename = self.request.session.get(self._package_path_key)
         output_path = Path(output_dir) / filename
         if not store_url:
-            raise PreparedPackageNotFound('not prepared package has been uploaded yet')
+            raise PreparedPackageNotFound("not prepared package has been uploaded yet")
 
         # TODO: don't use dummy url, replace with the real one.
         download_file_via_url(url=store_url, local_path=output_path)

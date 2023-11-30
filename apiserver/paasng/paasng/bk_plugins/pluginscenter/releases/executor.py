@@ -86,7 +86,14 @@ class PluginReleaseExecutor:
         if current_stage.status != constants.PluginReleaseStatus.INITIAL:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段已被执行, 不能重复触发已执行的阶段"))
 
-        init_stage_controller(current_stage).execute(operator)
+        controller = init_stage_controller(current_stage)
+        # 步骤执行前，先执行步骤前置命令
+        api_call_success = controller.execute_pre_command(operator)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
+
+        # 执行当前步骤
+        controller.execute(operator)
         current_stage.operator = operator
         current_stage.save(update_fields=["operator"])
         current_stage.refresh_from_db()
@@ -108,7 +115,9 @@ class PluginReleaseExecutor:
             raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("当前发布流程已结束"))
 
         if not self.release.retryable:
-            raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("当前插件类型不支持重置历史版本, 如需发布请创建新的版本"))
+            raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(
+                _("当前插件类型不支持重置历史版本, 如需发布请创建新的版本")
+            )
 
         current_stage = self.release.current_stage
         if (

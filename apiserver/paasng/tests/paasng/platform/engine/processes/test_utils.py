@@ -21,10 +21,10 @@ import pytest
 from paas_wl.bk_app.processes.processes import PlainInstance, PlainProcess
 from paasng.platform.engine.processes.utils import ProcessesSnapshotStore
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def process():
     """A Process object"""
     inst = PlainInstance(name="instance-foo", version=1, process_type="web", ready=False)

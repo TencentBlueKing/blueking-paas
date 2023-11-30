@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class SearchAppConfig(AppConfig):
-    name = 'paasng.misc.search'
+    name = "paasng.misc.search"

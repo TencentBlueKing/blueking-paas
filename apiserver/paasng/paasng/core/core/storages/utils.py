@@ -32,19 +32,19 @@ from typing_extensions import Protocol
 logger = logging.getLogger()
 
 
-def make_sa_conn_string(config_dict, driver_type='pymysql'):
+def make_sa_conn_string(config_dict, driver_type="pymysql"):
     """Convert a django db dict to sqlalchemy string"""
-    return 'mysql+%(driver_type)s://%(user)s:%(password)s@%(host)s:%(port)s/%(db)s?charset=utf8' % {
-        'driver_type': driver_type,
-        'user': config_dict['USER'],
-        'password': urllib.parse.quote(config_dict['PASSWORD']),
-        'host': config_dict['HOST'],
-        'port': config_dict['PORT'],
-        'db': config_dict['NAME'],
+    return "mysql+%(driver_type)s://%(user)s:%(password)s@%(host)s:%(port)s/%(db)s?charset=utf8" % {
+        "driver_type": driver_type,
+        "user": config_dict["USER"],
+        "password": urllib.parse.quote(config_dict["PASSWORD"]),
+        "host": config_dict["HOST"],
+        "port": config_dict["PORT"],
+        "db": config_dict["NAME"],
     }
 
 
-DEFAULT_POOL_OPTIONS = {'pool_size': 20, 'max_overflow': 100, 'pool_recycle': 600}
+DEFAULT_POOL_OPTIONS = {"pool_size": 20, "max_overflow": 100, "pool_recycle": 600}
 
 
 class DummyObject(LazyObject):
@@ -145,8 +145,8 @@ class SADBManager:
     def _create_engine(db_config) -> Engine:
         echo = logger.level == logging.DEBUG
         try:
-            dbstr = make_sa_conn_string(db_config, driver_type='pymysql')
-            pool_options = db_config.get('POOL_OPTIONS') or DEFAULT_POOL_OPTIONS
+            dbstr = make_sa_conn_string(db_config, driver_type="pymysql")
+            pool_options = db_config.get("POOL_OPTIONS") or DEFAULT_POOL_OPTIONS
             return create_engine(dbstr, echo=echo, **pool_options)
         except Exception as e:
             raise RuntimeError(

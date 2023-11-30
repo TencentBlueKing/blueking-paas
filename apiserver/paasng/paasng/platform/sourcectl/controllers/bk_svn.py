@@ -40,7 +40,7 @@ class SvnRepoController:
         return self.svn_client
 
     @classmethod
-    def init_by_module(cls, module: 'Module', operator: Optional[str] = None):
+    def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         repo_url = module.get_source_obj().get_repo_url()
         repo_admin_credentials = get_bksvn_config(module.region, name=module.source_type).get_admin_credentials()
         return cls(repo_url=repo_url, repo_admin_credentials=repo_admin_credentials)
@@ -75,20 +75,20 @@ class SvnRepoController:
         return self.svn_client.extract_smart_revision(smart_revision)["commit_revision"]  # type: ignore
 
     def extract_version_info(self, version_info: VersionInfo) -> Tuple[str, str]:
-        if version_info.version_type == 'trunk':
-            return 'trunk', version_info.revision
+        if version_info.version_type == "trunk":
+            return "trunk", version_info.revision
         else:
             version = svn_version_types.get_version_by_type(version_info.version_type)
             if not version:
-                raise RuntimeError(f'no svn version found for type: {version_info.version_type}')
+                raise RuntimeError(f"no svn version found for type: {version_info.version_type}")
             return version.get_rel_path(version_info.version_name), version_info.revision
 
     def build_url(self, version_info: VersionInfo) -> str:
-        base_url = self.repo_url.rstrip('/')
-        if version_info.version_type == 'trunk':
-            return f'{base_url}/{version_info.version_type}'
+        base_url = self.repo_url.rstrip("/")
+        if version_info.version_type == "trunk":
+            return f"{base_url}/{version_info.version_type}"
         else:
-            return f'{base_url}/{version_info.version_type}/{version_info.version_name}'
+            return f"{base_url}/{version_info.version_type}/{version_info.version_name}"
 
     def build_compare_url(self, from_revision, to_revision):
         """由子类实现，获取外部系统的源码差异对比的链接"""

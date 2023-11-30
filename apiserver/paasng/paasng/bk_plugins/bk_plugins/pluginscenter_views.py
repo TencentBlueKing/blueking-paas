@@ -32,15 +32,27 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.bk_plugins.bk_plugins import api_serializers, serializers
+from paasng.bk_plugins.bk_plugins.apigw import safe_update_gateway_status
+from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
+from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
+from paasng.bk_plugins.bk_plugins.views import logger
+from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.helpers import (
     add_role_members,
     delete_role_members,
     fetch_application_members,
     remove_user_all_roles,
 )
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.platform.sourcectl.models import VersionInfo
+from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.signals import application_member_updated, post_create_application
+from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.models import ConfigVar, Deployment
@@ -49,21 +61,9 @@ from paasng.platform.engine.phases_steps.steps import get_sorted_steps
 from paasng.platform.engine.streaming.constants import EventType
 from paasng.platform.engine.utils.client import get_all_logs
 from paasng.platform.engine.workflow import DeploymentCoordinator
-from paasng.bk_plugins.bk_plugins import api_serializers, serializers
-from paasng.bk_plugins.bk_plugins.apigw import safe_update_gateway_status
-from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
-from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
-from paasng.bk_plugins.bk_plugins.views import logger
-from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.signals import application_member_updated, post_create_application
-from paasng.platform.applications.tasks import sync_developers_to_sentry
-from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
-from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
-from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
 # TODO: 确认具体权限
@@ -118,9 +118,9 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
         application.language = module.language
-        application.save(update_fields=['language'])
+        application.save(update_fields=["language"])
 
-        post_create_application.send(sender=self.__class__, application=application, extra_fields=data['extra_fields'])
+        post_create_application.send(sender=self.__class__, application=application, extra_fields=data["extra_fields"])
         create_market_config(
             application=application,
             # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
@@ -281,7 +281,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         with closing(subscriber):
             channel_state = subscriber.get_channel_state()
-            if channel_state == 'none' or channel_state == 'unknown':
+            if channel_state in ("none", "unknown"):
                 # redis 管道已结束, 取数据库中存储的日志
                 return Response(
                     data=api_serializers.PluginReleaseLogsResponseSLZ(
@@ -317,9 +317,9 @@ class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         updated_data = {}
 
-        if data['contact']:
+        if data["contact"]:
             updated_data["contact"] = data["contact"]
-        if data['introduction']:
+        if data["introduction"]:
             # introduction 为 lazy 对象直接放到 BkPluginProfileSLZ 中会报错
             updated_data["introduction"] = str(data["introduction"])
 
@@ -371,9 +371,8 @@ class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for member in data:
             role = ApplicationRole(member["role"]["id"])
             username = member["username"]
-            if username in existed_members:
-                if redundant_roles := set(existed_members[username]["roles"]) - {role}:
-                    need_to_clean[username].extend(redundant_roles)
+            if username in existed_members and (redundant_roles := set(existed_members[username]["roles"]) - {role}):
+                need_to_clean[username].extend(redundant_roles)
             need_to_add[role].append(username)
             current_members.add(username)
 

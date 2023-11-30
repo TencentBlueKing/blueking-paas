@@ -62,7 +62,7 @@ def get_default_options():
 
 
 def set_default_options(options: ClientOptionsDict):
-    global _default_options
+    global _default_options  # noqa: PLW0603
     _default_options = options
 
 
@@ -71,16 +71,16 @@ class PatchType(str, Enum):
     See also: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
     """
 
-    JSON = 'json'
-    MERGE = 'merge'
-    STRATEGIC = 'strategic'
+    JSON = "json"
+    MERGE = "merge"
+    STRATEGIC = "strategic"
 
     def to_content_type(self):
         """Get header value when used in "Content-Type" """
         ct = {
-            PatchType.JSON: 'application/json-patch+json',
-            PatchType.MERGE: 'application/merge-patch+json',
-            PatchType.STRATEGIC: 'application/strategic-merge-patch+json',
+            PatchType.JSON: "application/json-patch+json",
+            PatchType.MERGE: "application/merge-patch+json",
+            PatchType.STRATEGIC: "application/strategic-merge-patch+json",
         }
         return ct[self]
 
@@ -116,14 +116,14 @@ class NameBasedMethodProxy:
         self.method_name = name
 
     @overload
-    def __get__(self, instance: None, owner: None) -> 'NameBasedMethodProxy':
+    def __get__(self, instance: None, owner: None) -> "NameBasedMethodProxy":
         ...
 
     @overload
     def __get__(self, instance: object, owner: Type) -> Callable:
         ...
 
-    def __get__(self, instance, owner: Optional[Type] = None) -> Union['NameBasedMethodProxy', Callable]:
+    def __get__(self, instance, owner: Optional[Type] = None) -> Union["NameBasedMethodProxy", Callable]:
         if not instance:
             return self
         return getattr(instance.ops_name, self.method_name)
@@ -137,9 +137,9 @@ class BaseKresource:
     :param api_version: Specify an api_version, otherwise use "preferred" version instead
     """
 
-    kind = ''
+    kind = ""
 
-    def __init__(self, client, request_timeout: Optional[float] = None, api_version: str = ''):
+    def __init__(self, client, request_timeout: Optional[float] = None, api_version: str = ""):
         # Kres is able to support both client module or an ApiClient instance
         if isinstance(client, ModuleType):
             # The ApiClient will use the default Configuration by default
@@ -176,7 +176,7 @@ class BaseKresource:
     update_status = NameBasedMethodProxy()
 
     @classmethod
-    def clone_from(cls, obj: 'BaseKresource') -> 'BaseKresource':
+    def clone_from(cls, obj: "BaseKresource") -> "BaseKresource":
         """Clone a Kres object from another"""
         return cls(obj.client, obj.request_timeout)
 
@@ -215,7 +215,7 @@ class BaseOperations:
 
     def get_preferred_version(self) -> str:
         if not self._preferred_resource:
-            return ''
+            return ""
 
         return self._preferred_resource.group_version
 
@@ -226,7 +226,7 @@ class BaseOperations:
     def default_kwargs(self) -> Dict[str, Union[str, float]]:
         """The default request kwargs"""
         if self.request_timeout:
-            return {'timeout_seconds': self.request_timeout}
+            return {"timeout_seconds": self.request_timeout}
         else:
             return {}
 
@@ -262,7 +262,7 @@ class NameBasedOperations(BaseOperations):
         """
         extra_kwargs = self.default_kwargs.copy()
         extra_kwargs.update(kwargs)
-        extra_kwargs['content_type'] = ptype.to_content_type()
+        extra_kwargs["content_type"] = ptype.to_content_type()
         res = self.resource
         if subresource:
             res = getattr(self.resource, subresource)
@@ -307,21 +307,22 @@ class NameBasedOperations(BaseOperations):
         assert update_method in ["replace", "patch"], "Invalid update_method {}".format(update_method)
         # Set a default body if body is not given
         if not body:
-            body_dict: Dict = {'kind': self.kres.kind, 'metadata': {'name': name}}
+            body_dict: Dict = {"kind": self.kres.kind, "metadata": {"name": name}}
         else:
             body_dict = self.client.serialize_body(body)
 
-        body_dict.setdefault('kind', self.kres.kind)
-        if body_dict and body_dict['metadata']['name'] != name:
+        body_dict.setdefault("kind", self.kres.kind)
+        if body_dict and body_dict["metadata"]["name"] != name:
             raise ValueError("name in args must match name in body")
         # Try call create method first
         try:
             obj = self.resource.create(body=body_dict, namespace=namespace, **self.default_kwargs)
-            return obj, True
         except ApiException as e:
             # Only continue when resource is already exits
             if not (e.status == 409 and json.loads(e.body)["reason"] == "AlreadyExists"):
                 raise
+        else:
+            return obj, True
 
         if update_method == "replace" and auto_add_version:
             self._add_resource_version(name, namespace, body_dict)
@@ -331,7 +332,7 @@ class NameBasedOperations(BaseOperations):
         _func = getattr(self.resource, update_method)
         update_kwargs = self.default_kwargs.copy()
         if content_type:
-            update_kwargs['content_type'] = content_type
+            update_kwargs["content_type"] = content_type
         obj = _func(name=name, body=body_dict, namespace=namespace, **update_kwargs)
         return obj, False
 
@@ -346,13 +347,14 @@ class NameBasedOperations(BaseOperations):
         """
         try:
             obj = self.get(name, namespace=namespace)
-            return obj, False
         except ResourceMissing:
             pass
+        else:
+            return obj, False
 
         # Set a default body if body is not given
         if not body:
-            body = {'kind': self.kres.kind, 'metadata': {'name': name}}
+            body = {"kind": self.kres.kind, "metadata": {"name": name}}
 
         logger.info("Unable to find %s %s, start creating.", self.kres.kind, name)
         instance = self.resource.create(body=body, namespace=namespace, **self.default_kwargs)
@@ -366,7 +368,7 @@ class NameBasedOperations(BaseOperations):
         :returns: instance
         """
         logger.info("Creating %s %s.", self.kres.kind, name)
-        body.setdefault('kind', self.kres.kind)
+        body.setdefault("kind", self.kres.kind)
         instance = self.resource.create(body=body, namespace=namespace, **self.default_kwargs)
         return instance
 
@@ -441,7 +443,7 @@ class NameBasedOperations(BaseOperations):
 
     def update_status(self, *args, **kwargs) -> ResourceInstance:
         """Update a resource's status field"""
-        return functools.partial(self.update_subres, 'status')(*args, **kwargs)
+        return functools.partial(self.update_subres, "status")(*args, **kwargs)
 
     def _add_resource_version(self, name: str, namespace: Namespace, body_dict: dict):
         """get resource from k8s, and set metadata.resourceVersion to body_dict
@@ -449,7 +451,7 @@ class NameBasedOperations(BaseOperations):
         :raises: ResourceMissing when resource can not be found.
         """
         obj = self.get(name, namespace)
-        body_dict['metadata'].setdefault('resourceVersion', obj.metadata.resourceVersion)
+        body_dict["metadata"].setdefault("resourceVersion", obj.metadata.resourceVersion)
 
 
 class LabelBasedOperations(BaseOperations):
@@ -488,7 +490,7 @@ class LabelBasedOperations(BaseOperations):
         """
         kwargs = {**self.default_kwargs, **kwargs}
         # be compatible with timeout_seconds parameter
-        kwargs.setdefault('timeout', kwargs.pop('timeout_seconds', None))
+        kwargs.setdefault("timeout", kwargs.pop("timeout_seconds", None))
         return self.resource.watch(label_selector=self.make_labels_string(labels), namespace=namespace, **kwargs)
 
     @staticmethod
@@ -504,11 +506,11 @@ class LabelBasedOperations(BaseOperations):
 
 
 class KNode(BaseKresource):
-    kind = 'Node'
+    kind = "Node"
 
 
 class KNamespace(BaseKresource):
-    kind = 'Namespace'
+    kind = "Namespace"
 
     def wait_for_default_sa(self, namespace: Namespace, timeout: Optional[float] = None, check_period: float = 0.5):
         """Calling this function will blocks until the default ServiceAccount was created
@@ -520,7 +522,7 @@ class KNamespace(BaseKresource):
         time_started = time.time()
         while timeout is None or time.time() - time_started < timeout:
             if self.default_sa_exists(namespace):
-                return None
+                return
 
             logger.warning("No default ServiceAccount found in namespace %s", namespace)
             time.sleep(check_period)
@@ -548,10 +550,11 @@ class KNamespace(BaseKresource):
             try:
                 self.get(namespace)
             except ResourceMissing:
-                return True
+                return
             time.sleep(check_period)
         if raise_timeout:
-            raise ResourceDeleteTimeout(resource_type=self.kind, namespace=namespace, name='')
+            raise ResourceDeleteTimeout(resource_type=self.kind, namespace=namespace, name="")
+        return
 
     def default_sa_exists(self, namespace: Namespace) -> bool:
         """Check if a namespace has default ServiceAccount or not, this account was usually created
@@ -560,7 +563,7 @@ class KNamespace(BaseKresource):
         :returns: bool
         """
         try:
-            KServiceAccount.clone_from(self).get('default', namespace=namespace)
+            KServiceAccount.clone_from(self).get("default", namespace=namespace)
         except ResourceMissing:
             return False
 
@@ -577,11 +580,11 @@ class KNamespace(BaseKresource):
 
 
 class KReplicaSet(BaseKresource):
-    kind = 'ReplicaSet'
+    kind = "ReplicaSet"
 
 
 class KPod(BaseKresource):
-    kind = 'Pod'
+    kind = "Pod"
 
     def wait_for_status(
         self,
@@ -625,31 +628,31 @@ class KPod(BaseKresource):
 
 
 class KDeployment(BaseKresource):
-    kind = 'Deployment'
+    kind = "Deployment"
 
 
 class KStatefulSet(BaseKresource):
-    kind = 'StatefulSet'
+    kind = "StatefulSet"
 
 
 class KDaemonSet(BaseKresource):
-    kind = 'DaemonSet'
+    kind = "DaemonSet"
 
 
 class KService(BaseKresource):
-    kind = 'Service'
+    kind = "Service"
 
 
 class KIngress(BaseKresource):
-    kind = 'Ingress'
+    kind = "Ingress"
 
 
 class KServiceAccount(BaseKresource):
-    kind = 'ServiceAccount'
+    kind = "ServiceAccount"
 
 
 class KSecret(BaseKresource):
-    kind = 'Secret'
+    kind = "Secret"
 
 
 class KEvent(BaseKresource):
@@ -661,7 +664,7 @@ class KCustomResourceDefinition(BaseKresource):
 
 
 class KConfigMap(BaseKresource):
-    kind = 'ConfigMap'
+    kind = "ConfigMap"
 
 
 # Individual resource types end

@@ -21,7 +21,7 @@ from unittest import mock
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def thirdparty_client_session():
     with mock.patch("bkapi_client_core.session.Session.request") as mocked_request:
         yield mocked_request

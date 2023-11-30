@@ -36,7 +36,7 @@ class TestProcessEvents:
 
         assert len(events) == 2
         assert events[0].type == ProcessEventType.CREATED
-        assert events[0].invoker.type == 'web'
+        assert events[0].invoker.type == "web"
 
         assert events[1].type == ProcInstEventType.CREATED
         assert events[1].invoker.name == instance.name
@@ -50,7 +50,7 @@ class TestProcessEvents:
 
         assert len(events) == 2
         assert events[0].type == ProcessEventType.REMOVED
-        assert events[0].invoker.type == 'web'
+        assert events[0].invoker.type == "web"
 
         assert events[1].type == ProcInstEventType.REMOVED
         assert events[1].invoker.name == instance.name
@@ -76,7 +76,7 @@ class TestProcessEvents:
 
         assert len(events) == 1
         assert events[0].type == ProcessEventType.UPDATED_COMMAND
-        assert events[0].invoker.command == 'bar'
+        assert events[0].invoker.command == "bar"
 
     def test_proc_updated_instances_added(self, process, instance):
         before = [process]

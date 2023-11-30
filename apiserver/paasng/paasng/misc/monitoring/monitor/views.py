@@ -67,7 +67,9 @@ from .serializers import (
 class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
-    @swagger_auto_schema(responses={200: EventRecordListSLZ}, request_body=EventRecordListQuerySLZ, tags=["查询告警记录"])
+    @swagger_auto_schema(
+        responses={200: EventRecordListSLZ}, request_body=EventRecordListQuerySLZ, tags=["查询告警记录"]
+    )
     def query(self, request: Request, code: Text):
         request_slz = EventRecordListQuerySLZ(data=request.data, partial=True)
         request_slz.is_valid(True)
@@ -135,7 +137,9 @@ class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
     @swagger_auto_schema(
-        responses={200: EventRecordMetricsResultSLZ}, query_serializer=EventRecordMetricsQuerySLZ, tags=["查询告警记录指标趋势"]
+        responses={200: EventRecordMetricsResultSLZ},
+        query_serializer=EventRecordMetricsQuerySLZ,
+        tags=["查询告警记录指标趋势"],
     )
     def get(self, request: Request, code: Text, record: Text):
         request_slz = EventRecordMetricsQuerySLZ(data=request.query_params)
@@ -159,7 +163,9 @@ class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
 class EventGenreView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
-    @swagger_auto_schema(responses={200: EventGenreListSLZ}, query_serializer=EventGenreListQuerySLZ, tags=["查询告警类型"])
+    @swagger_auto_schema(
+        responses={200: EventGenreListSLZ}, query_serializer=EventGenreListQuerySLZ, tags=["查询告警类型"]
+    )
     def list(self, request: Request, code: Text):
         request_slz = EventGenreListQuerySLZ(data=request.query_params, partial=True)
         request_slz.is_valid(True)
@@ -181,7 +187,7 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
     pagination_class = None
 
     @swagger_auto_schema(query_serializer=ListAlertRulesSLZ)
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def list(self, request, code, module_name):
         """查询告警规则列表"""
         serializer = ListAlertRulesSLZ(data=self.request.query_params)
@@ -193,22 +199,22 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
             Q(module=self.get_module_via_path()) | Q(module=None)
         )
 
-        if run_env := validated_data.get('environment'):
+        if run_env := validated_data.get("environment"):
             queryset = queryset.filter(environment=run_env)
 
-        if alert_code := validated_data.get('alert_code'):
+        if alert_code := validated_data.get("alert_code"):
             queryset = queryset.filter(alert_code=alert_code)
 
-        if keyword := validated_data.get('keyword'):
+        if keyword := validated_data.get("keyword"):
             queryset = queryset.filter(display_name__contains=keyword)
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy="merge")
     def update(self, request, code, id):
         """更新告警规则"""
-        filter_kwargs = {'id': id, 'application': self.get_application()}
+        filter_kwargs = {"id": id, "application": self.get_application()}
         instance = get_object_or_404(self.queryset, **filter_kwargs)
 
         serializer = self.get_serializer(instance, data=request.data)
@@ -223,12 +229,12 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         supported_alerts = []
 
         for alert_code, alert_config in DEFAULT_RULE_CONFIGS.items():
-            supported_alerts.append({'alert_code': alert_code, 'display_name': alert_config['display_name']})
+            supported_alerts.append({"alert_code": alert_code, "display_name": alert_config["display_name"]})
 
         serializer = SupportedAlertSLZ(supported_alerts, many=True)
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy="merge")
     def init_alert_rules(self, request, code):
         """初始化告警规则"""
         application = self.get_application()
@@ -249,7 +255,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(query_serializer=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
     def list(self, request, code):
         """查询告警"""
-        serializer = ListAlertsSLZ(data=request.data, context={'app_code': code})
+        serializer = ListAlertsSLZ(data=request.data, context={"app_code": code})
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -270,7 +276,7 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(query_serializer=ListAlarmStrategiesSLZ, responses={200: AlarmStrategySLZ})
     def list(self, request, code):
         """查询告警策略"""
-        serializer = ListAlarmStrategiesSLZ(data=request.data, context={'app_code': code})
+        serializer = ListAlarmStrategiesSLZ(data=request.data, context={"app_code": code})
         serializer.is_valid(raise_exception=True)
 
         try:

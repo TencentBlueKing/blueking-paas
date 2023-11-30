@@ -32,67 +32,67 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture(autouse=True)
-def create_mounts(bk_module):
+def _create_mounts(bk_module):
     Mount.objects.create(
         module_id=bk_module.id,
         environment_name=MountEnvName.STAG,
-        mount_path='/etc/conf',
-        name='nginx',
+        mount_path="/etc/conf",
+        name="nginx",
         source_type=VolumeSourceType.ConfigMap,
-        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name='nginx-configmap')),
-    ),
+        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name="nginx-configmap")),
+    )
     Mount.objects.create(
         module_id=bk_module.id,
         environment_name=MountEnvName.GLOBAL.value,
-        mount_path='/etc/redis',
-        name='redis',
+        mount_path="/etc/redis",
+        name="redis",
         source_type=VolumeSourceType.ConfigMap,
-        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name='redis-configmap')),
+        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name="redis-configmap")),
     )
     Mount.objects.create(
         module_id=bk_module.id,
         environment_name=MountEnvName.PROD.value,
-        mount_path='/etc/redis',
-        name='redis',
+        mount_path="/etc/redis",
+        name="redis",
         source_type=VolumeSourceType.ConfigMap,
-        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name='redis-configmap')),
+        source_config=VolumeSource(configMap=ConfigMapSourceSpec(name="redis-configmap")),
     )
 
 
 class TestVolumeSourceManager:
     @pytest.fixture(autouse=True)
-    def create_configmap_resource(self, bk_module):
+    def _create_configmap_resource(self, bk_module):
         ConfigMapSource.objects.create(
             application_id=bk_module.application_id,
-            name='nginx-configmap',
+            name="nginx-configmap",
             module_id=bk_module.id,
             environment_name=MountEnvName.STAG,
             data={"nginx.conf": "location / { }"},
         )
         ConfigMapSource.objects.create(
             application_id=bk_module.application_id,
-            name='redis-configmap',
+            name="redis-configmap",
             module_id=bk_module.id,
             environment_name=MountEnvName.GLOBAL,
             data={"redis.conf": "port 6379"},
         )
 
-    @pytest.fixture
-    def create_namespace(self, bk_stag_env, with_wl_apps):
+    @pytest.fixture()
+    def _create_namespace(self, bk_stag_env, with_wl_apps):
         wl_app = bk_stag_env.wl_app
         with get_client_by_app(wl_app) as client:
             body = {
-                'metadata': {'name': wl_app.namespace},
+                "metadata": {"name": wl_app.namespace},
             }
             KNamespace(client).create_or_update(
                 bk_stag_env.wl_app.namespace,
                 body=body,
-                update_method='patch',
+                update_method="patch",
             )
             yield
             KNamespace(client).delete(bk_stag_env.wl_app.namespace)
 
-    @pytest.fixture
+    @pytest.fixture()
     def mount(self, bk_app, bk_module):
         mount = Mount.objects.new(
             app_code=bk_app.code,
@@ -107,10 +107,12 @@ class TestVolumeSourceManager:
         Mount.objects.upsert_source(mount, source_data)
         return mount
 
-    def test_deploy(self, create_namespace, bk_stag_env, with_wl_apps):
+    @pytest.mark.usefixtures("_create_namespace")
+    def test_deploy(self, bk_stag_env, with_wl_apps):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
 
-    def test_delete(self, create_namespace, bk_stag_env, with_wl_apps, mount):
+    @pytest.mark.usefixtures("_create_namespace")
+    def test_delete(self, bk_stag_env, with_wl_apps, mount):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
         assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=mount.source.name)
         mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount)

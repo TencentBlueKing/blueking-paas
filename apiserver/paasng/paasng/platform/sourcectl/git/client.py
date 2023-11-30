@@ -148,7 +148,7 @@ class GitClient:
         :param path: 存储路径
         :return: 返回 clone 命令执行结果
         """
-        args = ['--filter=blob:none', '--no-checkout']
+        args = ["--filter=blob:none", "--no-checkout"]
         command = GitCloneCommand(
             git_filepath=self._git_filepath,
             repository=MutableURL(url),
@@ -270,11 +270,11 @@ class GitClient:
         :return: 包含类型（branch/tag）与值的元组。
         """
         prefixes = [
-            ('tag', 'refs/tags/'),
-            ('branch', 'refs/remotes/origin/'),
+            ("tag", "refs/tags/"),
+            ("branch", "refs/remotes/origin/"),
         ]
         # Ignore HEAD as branch
-        invalid_values = {'HEAD'}
+        invalid_values = {"HEAD"}
 
         for type_, prefix in prefixes:
             if ref.startswith(prefix):
@@ -292,7 +292,7 @@ class GitClient:
         """
         environment_variables = os.environ.copy()
         environment_variables.update(command.envs or {})
-        environment_variables['LANG'] = 'en_US.UTF-8'
+        environment_variables["LANG"] = "en_US.UTF-8"
 
         with subprocess.Popen(
             command.to_cmd(),

@@ -39,8 +39,8 @@ class ServiceCategory(models.Model):
     Service Category
     """
 
-    name = TranslatedField(models.CharField('分类名称', max_length=64, unique=True))
-    sort_priority = models.IntegerField('排序权重', default=0)
+    name = TranslatedField(models.CharField("分类名称", max_length=64, unique=True))
+    sort_priority = models.IntegerField("排序权重", default=0)
 
     def __str__(self):
         return self.name
@@ -57,21 +57,21 @@ class Service(UuidAuditedModel):
     """
 
     region = models.CharField(max_length=32)
-    name = models.CharField(verbose_name=u'服务名称', max_length=64)
-    display_name = TranslatedFieldWithFallback(models.CharField(verbose_name=u'服务全称', max_length=128))
-    logo = ImageField(storage=service_logo_storage, upload_to="service-logo", verbose_name=u'服务logo', null=True)
+    name = models.CharField(verbose_name="服务名称", max_length=64)
+    display_name = TranslatedFieldWithFallback(models.CharField(verbose_name="服务全称", max_length=128))
+    logo = ImageField(storage=service_logo_storage, upload_to="service-logo", verbose_name="服务logo", null=True)
     logo_b64 = models.TextField(verbose_name="服务 logo 的地址, 支持base64格式", null=True, blank=True)
-    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, verbose_name=u'服务分类')
-    description = TranslatedFieldWithFallback(models.CharField(verbose_name=u'服务简介', max_length=1024, blank=True))
-    long_description = TranslatedFieldWithFallback(models.TextField(verbose_name=u'服务详细介绍', blank=True))
-    instance_tutorial = TranslatedFieldWithFallback(models.TextField(verbose_name=u'服务markdown介绍', blank=True))
-    available_languages = models.CharField(verbose_name=u'支持编程语言', max_length=1024, null=True, blank=True)
+    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, verbose_name="服务分类")
+    description = TranslatedFieldWithFallback(models.CharField(verbose_name="服务简介", max_length=1024, blank=True))
+    long_description = TranslatedFieldWithFallback(models.TextField(verbose_name="服务详细介绍", blank=True))
+    instance_tutorial = TranslatedFieldWithFallback(models.TextField(verbose_name="服务markdown介绍", blank=True))
+    available_languages = models.CharField(verbose_name="支持编程语言", max_length=1024, null=True, blank=True)
     config = JSONField(default={})
-    is_active = models.BooleanField(verbose_name=u'是否可用', default=True)
+    is_active = models.BooleanField(verbose_name="是否可用", default=True)
 
     # When a service's "is_visible" was set to false, it will be hidden in application's service
     # index page. But an already existed binding relationship won't be affected.
-    is_visible = models.BooleanField(verbose_name=u"是否可见", default=True)
+    is_visible = models.BooleanField(verbose_name="是否可见", default=True)
 
     objects = ServiceManager()
 
@@ -84,7 +84,7 @@ class Service(UuidAuditedModel):
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)
 
-    def _get_service_vendor_instance(self, plan: 'Plan') -> 'BaseProvider':
+    def _get_service_vendor_instance(self, plan: "Plan") -> "BaseProvider":
         from paasng.accessories.services.providers import get_provider_cls_by_provider_name
 
         provider_cls = get_provider_cls_by_provider_name(self.provider_name)
@@ -103,13 +103,15 @@ class Service(UuidAuditedModel):
         {'host': 'xxx', 'RABBITMQ_PORT': 80}
         """
         credentials = {}
-        for key, value in list(raw_credentials.items()):
-            if protected_keys is None or key not in protected_keys:
-                key = "{prefix}_{key}".format(prefix=prefix, key=key).upper()
+        for raw_key, value in list(raw_credentials.items()):
+            if protected_keys is None or raw_key not in protected_keys:
+                key = "{prefix}_{key}".format(prefix=prefix, key=raw_key).upper()
+            else:
+                key = raw_key
             credentials[key] = value
         return credentials
 
-    def create_service_instance_by_plan(self, plan, params: Dict) -> 'ServiceInstance':
+    def create_service_instance_by_plan(self, plan, params: Dict) -> "ServiceInstance":
         """provision service instance"""
         # handler load config
         service_handler_instance = self._get_service_vendor_instance(plan)
@@ -127,7 +129,7 @@ class Service(UuidAuditedModel):
         service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)
         return service_instance
 
-    def delete_service_instance(self, service_instance: 'ServiceInstance') -> None:
+    def delete_service_instance(self, service_instance: "ServiceInstance") -> None:
         # handler load config
         service_handler_instance = self._get_service_vendor_instance(service_instance.plan)
 
@@ -162,8 +164,8 @@ class ServiceInstance(UuidAuditedModel):
     specific info of service
     """
 
-    service = models.ForeignKey('Service', on_delete=models.CASCADE)
-    plan = models.ForeignKey('Plan', on_delete=models.CASCADE)
+    service = models.ForeignKey("Service", on_delete=models.CASCADE)
+    plan = models.ForeignKey("Plan", on_delete=models.CASCADE)
     config = JSONField(default={})
     credentials = EncryptField(default="")
     to_be_deleted = models.BooleanField(default=False)
@@ -175,7 +177,7 @@ class ServiceInstance(UuidAuditedModel):
 class PreCreatedInstance(UuidAuditedModel):
     """预创建的服务实例"""
 
-    plan = models.ForeignKey('Plan', on_delete=models.SET_NULL, db_constraint=False, blank=True, null=True)
+    plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, db_constraint=False, blank=True, null=True)
     config = JSONField(default=dict, help_text="same of ServiceInstance.config")
     credentials = EncryptField(default="", help_text="same of ServiceInstance.credentials")
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
@@ -198,11 +200,11 @@ class Plan(UuidAuditedModel):
     contain provider and resource spec
     """
 
-    service = models.ForeignKey('Service', on_delete=models.CASCADE)
-    name = models.CharField(u'方案名称', max_length=64)
-    description = models.CharField(verbose_name=u'方案简介', max_length=1024, blank=True)
-    config = EncryptField(verbose_name='方案配置', default="")
-    is_active = models.BooleanField(verbose_name=u'是否可用', default=True)
+    service = models.ForeignKey("Service", on_delete=models.CASCADE)
+    name = models.CharField("方案名称", max_length=64)
+    description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
+    config = EncryptField(verbose_name="方案配置", default="")
+    is_active = models.BooleanField(verbose_name="是否可用", default=True)
 
     class Meta:
         unique_together = ("service", "name")
@@ -228,7 +230,7 @@ class ResourceId(models.Model):
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
 
     class Meta:
-        unique_together = ('namespace', 'uid')
+        unique_together = ("namespace", "uid")
 
     def __str__(self):
         return "{ns}-{id}".format(ns=self.namespace, id=self.uid)

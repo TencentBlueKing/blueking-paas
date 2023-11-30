@@ -79,8 +79,8 @@ class PluginStatus(str, StructuredEnum):
 class PluginRole(int, StructuredEnum):
     """插件角色"""
 
-    ADMINISTRATOR = EnumField(2, label='管理员')
-    DEVELOPER = EnumField(3, label='开发者')
+    ADMINISTRATOR = EnumField(2, label="管理员")
+    DEVELOPER = EnumField(3, label="开发者")
 
 
 class MarketInfoStorageType(str, StructuredEnum):
@@ -94,11 +94,11 @@ class MarketInfoStorageType(str, StructuredEnum):
 class PluginReleaseStatus(str, StructuredEnum):
     """插件发布状态"""
 
-    SUCCESSFUL = EnumField('successful', label='成功')
-    FAILED = EnumField('failed', label='失败')
-    PENDING = EnumField('pending', label='等待')
+    SUCCESSFUL = EnumField("successful", label="成功")
+    FAILED = EnumField("failed", label="失败")
+    PENDING = EnumField("pending", label="等待")
     INITIAL = EnumField("initial", label="初始化")
-    INTERRUPTED = EnumField('interrupted', label='已中断')
+    INTERRUPTED = EnumField("interrupted", label="已中断")
 
     @classmethod
     def abnormal_status(cls):
@@ -127,12 +127,13 @@ class ActionTypes(str, StructuredEnum):
     """操作记录-动作类型"""
 
     CREATE = EnumField("create", label=_("创建"))
-    ADD = EnumField('add', label=_("新建"))
-    RE_RELEASE = EnumField('re-release', label=_("重新发布"))
-    TERMINATE = EnumField('terminate', label=_("终止发布"))
+    ADD = EnumField("add", label=_("新建"))
+    RE_RELEASE = EnumField("re-release", label=_("重新发布"))
+    TERMINATE = EnumField("terminate", label=_("终止发布"))
     MODIFY = EnumField("modify", label=_("修改"))
     DELETE = EnumField("delete", label=_("删除"))
     ARCHIVE = EnumField("archive", label=_("下架"))
+    REACTIVATE = EnumField("reactivate", label=_("重新上架"))
 
 
 class SubjectTypes(str, StructuredEnum):

@@ -28,27 +28,27 @@ class Command(BaseCommand):
     help = "管理运行时镜像"
 
     def add_arguments(self, parser):
-        parser.add_argument('-n', '--name', required=True, dest="name", help="name")
-        parser.add_argument('-r', '--region', required=True, dest="regions", help="available region name", nargs="+")
-        parser.add_argument('--hidden', dest="is_hidden", help="is_hidden", action="store_true")
-        parser.add_argument('--slugbuilder', required=False, help="slugbuilder image")
-        parser.add_argument('--slugrunner', required=False, help="slugrunner image")
-        parser.add_argument('--image', required=False, help="universal image")
-        parser.add_argument('--display_name_zh_cn', required=False, help="image display name((zh_cn)")
-        parser.add_argument('--display_name_en', required=False, help="image display name(en)")
-        parser.add_argument('--description_zh_cn', required=False, help="image description(zh_cn)")
-        parser.add_argument('--description_en', required=False, help="image description(en)")
+        parser.add_argument("-n", "--name", required=True, dest="name", help="name")
+        parser.add_argument("-r", "--region", required=True, dest="regions", help="available region name", nargs="+")
+        parser.add_argument("--hidden", dest="is_hidden", help="is_hidden", action="store_true")
+        parser.add_argument("--slugbuilder", required=False, help="slugbuilder image")
+        parser.add_argument("--slugrunner", required=False, help="slugrunner image")
+        parser.add_argument("--image", required=False, help="universal image")
+        parser.add_argument("--display_name_zh_cn", required=False, help="image display name((zh_cn)")
+        parser.add_argument("--display_name_en", required=False, help="image display name(en)")
+        parser.add_argument("--description_zh_cn", required=False, help="image description(zh_cn)")
+        parser.add_argument("--description_en", required=False, help="image description(en)")
         parser.add_argument(
-            '-e',
-            '--environment',
+            "-e",
+            "--environment",
             dest="environments",
             help="environment(k=v)",
             default=[],
             nargs="*",
         )
         parser.add_argument(
-            '-l',
-            '--label',
+            "-l",
+            "--label",
             dest="labels",
             help="labels(k=v)",
             default=[],
@@ -72,7 +72,6 @@ class Command(BaseCommand):
         labels,
         **kwargs,
     ):
-
         slugbuilder = slugbuilder or image
         slugrunner = slugrunner or image
 

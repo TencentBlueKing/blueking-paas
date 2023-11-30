@@ -55,14 +55,14 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         entrance = get_exposed_url(deployment.app_environment)
         data = {
-            'deployment': DeploymentSLZ(deployment).data,
-            'exposed_link': {"url": entrance.address if entrance else None},
+            "deployment": DeploymentSLZ(deployment).data,
+            "exposed_link": {"url": entrance.address if entrance else None},
         }
-        if serializer.data['with_processes']:
+        if serializer.data["with_processes"]:
             _specs = ProcessManager(module_env).list_processes_specs()
             # Change structure of "specs", make it compatible with frontend client
-            specs = [{spec['name']: spec} for spec in _specs]
-            data['processes'] = specs
+            specs = [{spec["name"]: spec} for spec in _specs]
+            data["processes"] = specs
         return Response(data)
 
     @allow_resp_patch
@@ -97,9 +97,9 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         exposed_link = get_exposed_url(module_env)
         data = {
             "is_offlined": module_env.is_offlined,
-            'deployment': deployment_data,
+            "deployment": deployment_data,
             "offline": offline_data,
-            'exposed_link': {"url": exposed_link.address if exposed_link else None},
+            "exposed_link": {"url": exposed_link.address if exposed_link else None},
             "default_access_entrance": {"url": default_access_entrance.address if default_access_entrance else None},
             "feature_flag": {  # 应用 feature flag 接口已独立提供，后续 feature flag 不再往这里同步
                 "release_to_bk_market": app.feature_flag.has_feature(AppFeatureFlag.RELEASE_TO_BLUEKING_MARKET),
@@ -108,11 +108,11 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 ),
             },
         }
-        if serializer.data['with_processes']:
+        if serializer.data["with_processes"]:
             _specs = ProcessManager(module_env).list_processes_specs()
             # Change structure of "specs", make it compatible with frontend client
-            specs = [{spec['name']: spec} for spec in _specs]
-            data['processes'] = specs
+            specs = [{spec["name"]: spec} for spec in _specs]
+            data["processes"] = specs
 
         return Response(data)
 
@@ -149,6 +149,6 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 if build_id:
                     release_by_engine(application_env, str(build_id))
             except Exception:
-                raise error_codes.CANNOT_DEPLOY_APP.f(_(u"服务异常"))
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("服务异常"))
 
         return Response(status=status.HTTP_201_CREATED)

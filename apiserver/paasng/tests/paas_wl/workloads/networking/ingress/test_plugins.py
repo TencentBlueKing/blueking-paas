@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.bk_app.applications.models.managers.app_metadata import update_metadata
 from paas_wl.workloads.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.workloads.networking.ingress.plugins.ingress import AccessControlPlugin, PaasAnalysisPlugin
-from paas_wl.bk_app.applications.models.managers.app_metadata import update_metadata
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -32,19 +32,19 @@ class TestModuleAccessControl:
             AccessControlPlugin(bk_stag_wl_app).make_configuration_snippet()
 
     def test_acl_is_enabled_false(self, bk_stag_wl_app, settings):
-        settings.SERVICES_PLUGINS = {'access_control': {}}
+        settings.SERVICES_PLUGINS = {"access_control": {}}
         update_metadata(bk_stag_wl_app, acl_is_enabled=False)
-        assert AccessControlPlugin(bk_stag_wl_app).make_configuration_snippet() == ''
+        assert AccessControlPlugin(bk_stag_wl_app).make_configuration_snippet() == ""
 
     def test_configured_with_region(self, bk_stag_wl_app, settings):
         update_metadata(bk_stag_wl_app, acl_is_enabled=True)
         settings.SERVICES_PLUGINS = {
-            'access_control': {
-                '_lookup_field': 'region',
-                'data': {
+            "access_control": {
+                "_lookup_field": "region",
+                "data": {
                     settings.DEFAULT_REGION_NAME: {
-                        'dj_admin_ip_range_map': 'inner',
-                        'redis_server_name': 'local',
+                        "dj_admin_ip_range_map": "inner",
+                        "redis_server_name": "local",
                     }
                 },
             }
@@ -57,7 +57,7 @@ class TestModuleAccessControl:
     def test_configured_without_region(self, bk_stag_wl_app, settings):
         update_metadata(bk_stag_wl_app, acl_is_enabled=True)
         settings.SERVICES_PLUGINS = {
-            'access_control': {'dj_admin_ip_range_map': 'inner', 'redis_server_name': 'local'}
+            "access_control": {"dj_admin_ip_range_map": "inner", "redis_server_name": "local"}
         }
         snippet = AccessControlPlugin(bk_stag_wl_app).make_configuration_snippet()
         assert "set $acc_redis_server_name 'local';" in snippet
@@ -65,29 +65,29 @@ class TestModuleAccessControl:
 
 
 class TestPaasAnalysisPlugin:
-    @pytest.fixture
+    @pytest.fixture()
     def app_with_metadata(self, bk_stag_wl_app):
         update_metadata(bk_stag_wl_app, bkpa_site_id=100)
         return bk_stag_wl_app
 
     @pytest.mark.parametrize(
-        'plugins_config,snippet_is_empty',
+        ("plugins_config", "snippet_is_empty"),
         [
-            ({'enabled': True}, False),
-            ({'enabled': False}, True),
-            ({'foo': 'bar'}, True),
+            ({"enabled": True}, False),
+            ({"enabled": False}, True),
+            ({"foo": "bar"}, True),
         ],
     )
     def test_different_config(self, plugins_config, snippet_is_empty, app_with_metadata, settings):
-        settings.SERVICES_PLUGINS = {'paas_analysis': plugins_config}
+        settings.SERVICES_PLUGINS = {"paas_analysis": plugins_config}
         snippet = PaasAnalysisPlugin(app_with_metadata).make_configuration_snippet()
         if snippet_is_empty:
-            assert snippet == ''
+            assert snippet == ""
         else:
-            assert 'set $bkpa_site_id 100;' in snippet
+            assert "set $bkpa_site_id 100;" in snippet
 
     def test_enabled_no_metadata(self, bk_stag_wl_app, settings):
-        settings.SERVICES_PLUGINS = {'paas_analysis': {'enabled': True}}
+        settings.SERVICES_PLUGINS = {"paas_analysis": {"enabled": True}}
         module = PaasAnalysisPlugin(bk_stag_wl_app)
         snippet = module.make_configuration_snippet()
-        assert snippet == ''
+        assert snippet == ""

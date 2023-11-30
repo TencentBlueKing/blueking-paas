@@ -60,7 +60,7 @@ class TestApplicationPermission:
         with pytest.raises(PermissionDeniedError) as exec:
             app_permission_obj.can_delete_application(perm_ctx)
         assert exec.value.code == PermissionDeniedError.code
-        assert exec.value.data['perms']['apply_url'] == generate_apply_url(
+        assert exec.value.data["perms"]["apply_url"] == generate_apply_url(
             roles.APP_OPERATE_USER,
             action_request_list=[
                 ActionResourcesRequest(
@@ -98,9 +98,9 @@ class TestApplicationCreatorAction:
     def test_to_data(self, bk_user):
         action = AppCreatorAction(bk_user.username, code=TEST_APP_CODE, name=TEST_APP_NAME)
         assert action.to_data() == {
-            'id': TEST_APP_CODE,
-            'name': TEST_APP_NAME,
-            'creator': bk_user.username,
-            'type': ResourceType.Application,
-            'system': settings.IAM_PAAS_V3_SYSTEM_ID,
+            "id": TEST_APP_CODE,
+            "name": TEST_APP_NAME,
+            "creator": bk_user.username,
+            "type": ResourceType.Application,
+            "system": settings.IAM_PAAS_V3_SYSTEM_ID,
         }

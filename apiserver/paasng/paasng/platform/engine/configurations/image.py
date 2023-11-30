@@ -135,7 +135,7 @@ class ImageCredentialManager:
 class RuntimeImageInfo:
     """提供与当前应用匹配的运行时环境信息的工具"""
 
-    def __init__(self, engine_app: 'EngineApp'):
+    def __init__(self, engine_app: "EngineApp"):
         self.engine_app = engine_app
         self.module: Module = engine_app.env.module
         self.application = self.module.application
@@ -146,7 +146,7 @@ class RuntimeImageInfo:
         """返回当前 engine_app 的运行时的类型, buildpack 或者 custom_image"""
         return self.module_spec.runtime_type
 
-    def generate_image(self, version_info: 'VersionInfo', special_tag: Optional[str] = None) -> str:
+    def generate_image(self, version_info: "VersionInfo", special_tag: Optional[str] = None) -> str:
         """generate the runtime image of the application at a given version
 
         :param version_info: 版本信息
@@ -182,7 +182,7 @@ class RuntimeImageInfo:
             app_image_repository = generate_image_repository(self.module)
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
-        return getattr(slug_runner, "full_image", '')
+        return getattr(slug_runner, "full_image", "")
 
 
 def update_image_runtime_config(deployment: Deployment):
@@ -207,6 +207,6 @@ def update_image_runtime_config(deployment: Deployment):
     wl_app = engine_app.to_wl_obj()
     config = wl_app.latest_config
     config.runtime = runtime_dict
-    config.save(update_fields=['runtime', 'updated'])
+    config.save(update_fields=["runtime", "updated"])
     # Refresh resource requirements
     refresh_res_reqs(config)

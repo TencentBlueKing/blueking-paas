@@ -64,7 +64,7 @@ class Pattern:
             return bool(self.regexp.match(path))
         return False
 
-    def compile(self, sl: str):  # noqa: C901
+    def compile(self, sl: str):  # noqa: C901, PLR0915, PLR0912
         reg_str = "^"
         pattern = self.cleaned_pattern
         esc_sl = sl
@@ -121,7 +121,7 @@ class Pattern:
                     self.match_type = MatchType.Regexp
                 else:
                     reg_str += "\\"
-            elif ch == "[" or ch == "]":
+            elif ch in ("[", "]"):
                 reg_str += ch
                 self.match_type = MatchType.Regexp
             else:

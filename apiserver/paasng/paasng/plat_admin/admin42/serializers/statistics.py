@@ -28,11 +28,11 @@ class AppDeploymentFilterSlz(serializers.Serializer):
 
     def validate(self, data):
         # 开始时间默认为 1 年前
-        if 'start_time' not in data:
-            data['start_time'] = datetime.now() - timedelta(days=365)
+        if "start_time" not in data:
+            data["start_time"] = datetime.now() - timedelta(days=365)
 
-        if 'end_time' not in data:
-            data['end_time'] = datetime.now()
+        if "end_time" not in data:
+            data["end_time"] = datetime.now()
 
         return data
 

@@ -23,7 +23,7 @@ from .request import ActionResourcesRequest
 
 
 class PermissionDeniedError(Exception):
-    message = 'Permission denied'
+    message = "Permission denied"
     code = 40300
 
     def __init__(
@@ -47,17 +47,17 @@ class PermissionDeniedError(Exception):
     @property
     def data(self) -> Dict:
         return {
-            'perms': {
-                'apply_url': ApplyURLGenerator.generate_apply_url(self.username, self.action_request_list),
-                'action_list': [
-                    {'resource_type': action_request.resource_type, 'action_id': action_request.action_id}
+            "perms": {
+                "apply_url": ApplyURLGenerator.generate_apply_url(self.username, self.action_request_list),
+                "action_list": [
+                    {"resource_type": action_request.resource_type, "action_id": action_request.action_id}
                     for action_request in self.action_request_list
                 ],
             }
         }
 
     def __str__(self):
-        return f'{self.code}: {self.message}'
+        return f"{self.code}: {self.message}"
 
 
 class AttrValidationError(Exception):

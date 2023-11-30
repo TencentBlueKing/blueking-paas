@@ -28,12 +28,12 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.mocks.engine import mock_cluster_service
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppDefaultSubpaths:
     @pytest.fixture(autouse=True)
-    def setup(self, bk_app):
+    def _setup(self, bk_app):
         module = bk_app.get_default_module()
         module.exposed_url_type = ExposedURLType.SUBPATH
         module.save()
@@ -53,32 +53,32 @@ class TestAppDefaultSubpaths:
             }
             yield
 
-    @pytest.fixture
+    @pytest.fixture()
     def legacy_sub_path_app(self, bk_app):
         module = bk_app.get_default_module()
         module.exposed_url_type = None
         module.save()
         return bk_app
 
-    @pytest.fixture
+    @pytest.fixture()
     def sub_path_key(self, settings):
         return settings.CONFIGVAR_SYSTEM_PREFIX + "SUB_PATH"
 
-    @pytest.fixture
+    @pytest.fixture()
     def default_subpath_key(self, settings):
         return settings.CONFIGVAR_SYSTEM_PREFIX + "DEFAULT_SUBPATH_ADDRESS"
 
-    @pytest.fixture
+    @pytest.fixture()
     def legacy_style_sub_path(self, bk_stag_env):
         engine_app = bk_stag_env.get_engine_app()
-        return f'/{engine_app.region}-{engine_app.name}/'
+        return f"/{engine_app.region}-{engine_app.name}/"
 
-    @pytest.fixture
+    @pytest.fixture()
     def normal_style_sub_path(self, bk_app):
         return f"/stag--{bk_app.code}/"
 
     @pytest.mark.parametrize(
-        "app, force_legacy_style, expected",
+        ("app", "force_legacy_style", "expected"),
         [
             ("bk_app", False, "normal_style_sub_path"),
             ("bk_app", True, "legacy_style_sub_path"),
@@ -106,7 +106,7 @@ class TestAppDefaultSubpaths:
         }
 
     @pytest.mark.parametrize(
-        "app, force_legacy_style, expected",
+        ("app", "force_legacy_style", "expected"),
         [
             ("bk_app", False, "normal_style_sub_path"),
             ("bk_app", True, "legacy_style_sub_path"),
@@ -130,13 +130,13 @@ class TestAppDefaultSubpaths:
         assert envs[sub_path_key] == request.getfixturevalue(expected)
 
     def test_sync(self, bk_stag_env, with_wl_apps):
-        with mock.patch('paasng.platform.engine.configurations.ingress.sync_subpaths') as mocker:
+        with mock.patch("paasng.platform.engine.configurations.ingress.sync_subpaths") as mocker:
             AppDefaultSubpaths(bk_stag_env).sync()
             assert mocker.called
 
 
 class TestAppDefaultDomains:
     def test_sync(self, bk_stag_env, with_wl_apps):
-        with mock.patch('paasng.platform.engine.configurations.ingress.sync_subdomains') as mocker:
+        with mock.patch("paasng.platform.engine.configurations.ingress.sync_subdomains") as mocker:
             AppDefaultDomains(bk_stag_env).sync()
             assert mocker.called

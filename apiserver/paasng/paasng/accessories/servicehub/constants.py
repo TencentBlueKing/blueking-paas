@@ -27,10 +27,10 @@ SERVICE_SENSITIVE_FIELDS: dict = {}
 # 需要在平台侧隐藏展示的字段名称，用户可在产品上点击确认按钮后查看字段内容
 # 该配置仅对本地增强服务生效，远程增强服务的设置可参考：
 # https://github.com/TencentBlueKing/bkpaas-python-sdk/blob/master/sdks/paas-service/paas_service/models.py#L196
-SERVICE_HIDDEN_FIELDS: dict = {'redis': ['REDIS_PASSWORD']}
+SERVICE_HIDDEN_FIELDS: dict = {"redis": ["REDIS_PASSWORD"]}
 
 # 迁移服务的 plan 占位符
-LEGACY_PLAN_ID = uuid.UUID('{00000000-0000-0000-0000-000000000000}')
+LEGACY_PLAN_ID = uuid.UUID("{00000000-0000-0000-0000-000000000000}")
 LEGACY_PLAN_INSTANCE = dict(
     uuid=str(LEGACY_PLAN_ID),
     name="legacy-plan",
@@ -51,8 +51,8 @@ class Category(int, Enum):
 
 
 class ServiceType(str, StructuredEnum):
-    LOCAL = 'local'
-    REMOTE = 'remote'
+    LOCAL = "local"
+    REMOTE = "remote"
 
 
 class ServiceBindingType(int, Enum):

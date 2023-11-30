@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(
-    "request_path, original_path, x_script_name",
+    ("request_path", "original_path", "x_script_name"),
     [
         ("/", "/", "/"),
         ("/bar", "/bar", "/"),
@@ -58,14 +58,14 @@ def test_get(
         data = resp.json()
 
         assert data["http"]["originalUrl"] == original_path
-        assert data["request"]["params"]['0'] == original_path
+        assert data["request"]["params"]["0"] == original_path
         assert data["request"]["headers"]["host"] == echo_hostname
         assert data["request"]["headers"]["x-original-uri"] == request_path
         assert data["request"]["headers"]["x-script-name"] == x_script_name
 
 
 @pytest.mark.parametrize(
-    "request_path, original_path, x_script_name",
+    ("request_path", "original_path", "x_script_name"),
     [
         ("/", "/", "/"),
         ("/bar", "/bar", "/"),
@@ -99,7 +99,7 @@ def test_post(
         data = resp.json()
 
         assert data["http"]["originalUrl"] == original_path
-        assert data["request"]["params"]['0'] == original_path
+        assert data["request"]["params"]["0"] == original_path
         assert data["request"]["body"] == {"foo": "bar"}
         assert data["request"]["headers"]["host"] == echo_hostname
         assert data["request"]["headers"]["x-original-uri"] == request_path

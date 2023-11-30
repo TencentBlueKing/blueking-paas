@@ -70,4 +70,4 @@ class Status:
     version: int = 0
 
     def to_dict(self) -> Dict[str, int]:
-        return {'replicas': self.replicas, 'success': self.success, 'failed': self.failed}
+        return {"replicas": self.replicas, "success": self.success, "failed": self.failed}

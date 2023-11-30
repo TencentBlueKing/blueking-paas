@@ -33,18 +33,18 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.django_db(databases=["workloads"])
 def test_create_app_ignore_duplicated():
-    info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, 'foo-app', WlAppType.DEFAULT)
-    assert info.name == 'foo-app'
+    info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT)
+    assert info.name == "foo-app"
 
     # Create again with the same name
-    recreated_info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, 'foo-app', WlAppType.DEFAULT)
+    recreated_info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT)
     assert recreated_info.uuid == info.uuid
 
 
 def test_metadata_funcs(bk_app, bk_stag_env, with_wl_apps):
     assert get_metadata_by_env(bk_stag_env).paas_app_code == bk_app.code
-    update_metadata_by_env(bk_stag_env, {'paas_app_code': 'foo-updated'})
-    assert get_metadata_by_env(bk_stag_env).paas_app_code == 'foo-updated'
+    update_metadata_by_env(bk_stag_env, {"paas_app_code": "foo-updated"})
+    assert get_metadata_by_env(bk_stag_env).paas_app_code == "foo-updated"
 
 
 def test_delete_wl_resources(bk_stag_env, with_wl_apps):

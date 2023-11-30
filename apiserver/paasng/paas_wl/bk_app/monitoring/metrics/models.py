@@ -60,7 +60,7 @@ class MetricsInstanceResult:
 
 
 class ResourceMetricManager:
-    def __init__(self, process: 'Process', metric_client: MetricClient, bcs_cluster_id: str):
+    def __init__(self, process: "Process", metric_client: MetricClient, bcs_cluster_id: str):
         self.process = process
         self.metric_client = metric_client
         self.bcs_cluster_id = bcs_cluster_id
@@ -153,7 +153,7 @@ def get_resource_metric_manager(app: WlApp, process_type: str):
     try:
         cluster = get_cluster_by_app(app)
     except ObjectDoesNotExist:
-        raise RuntimeError('no cluster can be found, query aborted')
+        raise RuntimeError("no cluster can be found, query aborted")
 
     if not cluster.bcs_cluster_id:
         raise AppMetricNotSupportedError("cluster this process deployed isn't a bcs cluster, failed to get metrics")
@@ -161,14 +161,14 @@ def get_resource_metric_manager(app: WlApp, process_type: str):
     # 不同的指标数据来源依赖配置不同，需要分别检查
     if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_MONITOR):
         if not settings.ENABLE_BK_MONITOR:
-            raise AppMetricNotSupportedError('bkmonitor in this edition not enabled')
+            raise AppMetricNotSupportedError("bkmonitor in this edition not enabled")
         if not cluster.bk_biz_id:
             raise AppMetricNotSupportedError("cluster this process deployed hasn't bkcc info, failed to get metrics")
         metric_client = BkMonitorMetricClient(bk_biz_id=cluster.bk_biz_id)
 
     else:
         if not settings.MONITOR_CONFIG:
-            raise AppMetricNotSupportedError('MONITOR_CONFIG unset')
+            raise AppMetricNotSupportedError("MONITOR_CONFIG unset")
         metric_client = PrometheusMetricClient(**settings.MONITOR_CONFIG["metrics"]["prometheus"])  # type: ignore
 
     # 获取 WlApp 对应的进程实例
@@ -176,7 +176,7 @@ def get_resource_metric_manager(app: WlApp, process_type: str):
         process = process_kmodel.get_by_type(app, process_type)
         process.instances = instance_kmodel.list_by_process_type(app, process_type)
     except Exception:
-        raise AppInstancesNotFoundError('failed to get process instances info')
+        raise AppInstancesNotFoundError("failed to get process instances info")
 
     if not process.instances:
         raise AppInstancesNotFoundError("current process hasn't instances")

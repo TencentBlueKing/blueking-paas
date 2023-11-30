@@ -29,11 +29,11 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
@@ -68,11 +68,11 @@ class FilterPluginsMixin:
 
         # Query and paginate applications
         applications = BkPluginAppQuerySet().filter(
-            search_term=data['search_term'],
-            order_by=[data['order_by']],
-            has_deployed=data['has_deployed'],
-            distributor_code_name=data['distributor_code_name'],
-            tag_id=data['tag_id'],
+            search_term=data["search_term"],
+            order_by=[data["order_by"]],
+            has_deployed=data["has_deployed"],
+            distributor_code_name=data["distributor_code_name"],
+            tag_id=data["tag_id"],
         )
         paginator = LimitOffsetPagination()
         applications = paginator.paginate_queryset(applications, request, self)
@@ -110,7 +110,7 @@ class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
         # Read extra params
         serializer = serializers.ListDetailedBkPluginsExtraSLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
-        include_addresses = serializer.validated_data['include_addresses']
+        include_addresses = serializer.validated_data["include_addresses"]
 
         results = [
             serializers.BkPluginDetailedSLZ(plugin_to_detailed(plugin, include_addresses)).data for plugin in plugins
@@ -136,7 +136,7 @@ class SysBkPluginLogsViewset(viewsets.ViewSet):
         data = serializer.validated_data
 
         client = PluginLoggingClient(get_plugin_or_404(code))
-        logs = client.query(data['trace_id'], data.get('scroll_id'))
+        logs = client.query(data["trace_id"], data.get("scroll_id"))
         return Response(data=cattr.unstructure(logs))
 
 
@@ -201,7 +201,7 @@ class DistributorsViewSet(viewsets.ViewSet):
     @swagger_auto_schema(tags=["bk_plugin"], responses={200: serializers.DistributorSLZ(many=True)})
     def list(self, request):
         """查看系统中所有的“插件使用方（Plugin-Distributor）”，默认按照“创建时间（从旧到新）排序”"""
-        distributors = BkPluginDistributor.objects.all().order_by('created')
+        distributors = BkPluginDistributor.objects.all().order_by("created")
         return Response(serializers.DistributorSLZ(distributors, many=True).data)
 
 
@@ -236,11 +236,11 @@ class DistributorRelsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         plugin_app = self.get_application()
-        distributors = serializer.validated_data['distributors']
+        distributors = serializer.validated_data["distributors"]
         try:
             set_distributors(plugin_app, distributors)
         except RuntimeError:
-            logger.exception(f'Unable to set distributor for {plugin_app}')
+            logger.exception(f"Unable to set distributor for {plugin_app}")
             raise error_codes.UNABLE_TO_SET_DISTRIBUTORS
         return Response(serializers.DistributorSLZ(plugin_app.distributors, many=True).data)
 

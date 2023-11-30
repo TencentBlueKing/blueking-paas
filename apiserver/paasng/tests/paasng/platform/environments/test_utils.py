@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 
 class TestEnvRoleProtectionCheck:
     @pytest.mark.parametrize(
-        'db_roles,forbidden_roles,allowed_roles',
+        ("db_roles", "forbidden_roles", "allowed_roles"),
         [
             ([], [], [AR.ADMINISTRATOR, AR.DEVELOPER, AR.OPERATOR]),
             ([AR.ADMINISTRATOR], [AR.DEVELOPER, AR.OPERATOR], [AR.ADMINISTRATOR]),
@@ -56,13 +56,13 @@ class TestEnvRoleProtectionCheck:
             env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=bk_prod_env, roles=[role])
 
     @pytest.mark.parametrize(
-        'db_envs,input_envs',
+        ("db_envs", "input_envs"),
         [
-            ([], ['stag', 'prod']),
-            (['stag'], ['prod']),
-            (['prod'], ['prod']),
-            (['stag', 'prod'], ['prod']),
-            (['stag', 'prod'], []),
+            ([], ["stag", "prod"]),
+            (["stag"], ["prod"]),
+            (["prod"], ["prod"]),
+            (["stag", "prod"], ["prod"]),
+            (["stag", "prod"], []),
         ],
     )
     def test_batch_save_protections(self, bk_module, db_envs, input_envs):
@@ -75,6 +75,6 @@ class TestEnvRoleProtectionCheck:
 
         # 批量保存数据
         qs = batch_save_protections(bk_module, operation, [allowed_role], input_envs)
-        qs_envs = qs.values_list('module_env__environment', flat=True)
+        qs_envs = qs.values_list("module_env__environment", flat=True)
 
         assert set(qs_envs) == set(input_envs)

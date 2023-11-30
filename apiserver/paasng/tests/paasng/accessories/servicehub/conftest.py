@@ -51,27 +51,27 @@ def bk_plan_r2_v1():
 
 
 @pytest.fixture(autouse=True)
-def setup_mocks():
+def _setup_mocks():
     """
     - Setup regions which were used in mocked data
     - Mock ClusterService which will be used in bind_service
     """
-    with configure_regions(['r1', 'r2', 'r3', 'rr1', 'rr2']), mock_cluster_service():
+    with configure_regions(["r1", "r2", "r3", "rr1", "rr2"]), mock_cluster_service():
         yield
 
 
-@pytest.fixture
-def faked_remote_services():
+@pytest.fixture()
+def _faked_remote_services():
     """Stores some faked remote services"""
     store = get_remote_store()
     config_json = {
-        'name': 'obj_store_remote',
-        'endpoint_url': 'http://faked-host',
-        'provision_params_tmpl': {'username': '{engine_app.name}'},
-        'jwt_auth_conf': {'iss': 'foo', 'key': 's1'},
+        "name": "obj_store_remote",
+        "endpoint_url": "http://faked-host",
+        "provision_params_tmpl": {"username": "{engine_app.name}"},
+        "jwt_auth_conf": {"iss": "foo", "key": "s1"},
     }
-    meta_info = {'version': None}
-    with mock.patch('requests.get') as mocked_get:
+    meta_info = {"version": None}
+    with mock.patch("requests.get") as mocked_get:
         # Mock requests response
         mocked_get.return_value = mock_json_response(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON)
 

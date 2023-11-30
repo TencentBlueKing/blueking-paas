@@ -24,7 +24,7 @@ from paasng.platform.engine.models.deployment import AdvancedOptions
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 
 
-def create_fake_deployment(module, app_environment='prod', operator=None, **kwargs):
+def create_fake_deployment(module, app_environment="prod", operator=None, **kwargs):
     """Create a faked deployment objects
 
     :param app_environment: environment name, default to 'prod'
@@ -47,10 +47,10 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
         operator=operator,
         app_environment=module.get_envs(app_environment),
         source_type=module.source_type,
-        source_location='svn://local-svn/app/trunk',
-        source_revision='1000',
-        source_version_type='trunk',
-        source_version_name='trunk',
+        source_location="svn://local-svn/app/trunk",
+        source_revision="1000",
+        source_version_type="trunk",
+        source_version_name="trunk",
         advanced_options=AdvancedOptions(),
         procfile={
             proc_spec.name: proc_spec.get_proc_command()
@@ -61,5 +61,5 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
             for proc_spec in ModuleProcessSpec.objects.filter(module=module)
         },
         hooks=deepcopy(hooks),
-        **kwargs
+        **kwargs,
     )

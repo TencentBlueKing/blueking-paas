@@ -25,7 +25,7 @@ from unipath import Path
 class BaseFixture:
     """Base class for fixture"""
 
-    fixtures_dirname: str = ''
+    fixtures_dirname: str = ""
 
     def __init__(self, project_root: str, context: dict):
         """Base class for render fixtures
@@ -36,7 +36,7 @@ class BaseFixture:
         self.project_root = Path(project_root)
         self.fixture_path = None
         if self.fixtures_dirname:
-            self.fixture_path = Path(__file__).parent.child('fixtures', self.fixtures_dirname)
+            self.fixture_path = Path(__file__).parent.child("fixtures", self.fixtures_dirname)
 
         self.context = context
 
@@ -48,21 +48,21 @@ class BaseFixture:
         :param str target: The target path to write file.
         :param options: Additional context for template rendering.
         """
-        if not tpl_name.startswith('/') and not self.fixture_path:
-            raise ValueError('Must set fixture_path in order to use a relative tpl_name')
+        if not tpl_name.startswith("/") and not self.fixture_path:
+            raise ValueError("Must set fixture_path in order to use a relative tpl_name")
 
-        tpl_name = tpl_name if tpl_name.startswith('/') else Path(self.fixture_path, tpl_name)
+        tpl_name = tpl_name if tpl_name.startswith("/") else Path(self.fixture_path, tpl_name)
         with open(tpl_name) as fp:
             content = fp.read()
 
         self.write_to_file(content, target, **options)
 
     def write_to_file(self, content, target, **options):
-        with open(Path(self.project_root, target), 'w') as fp:
+        with open(Path(self.project_root, target), "w") as fp:
             fp.write(self.render_string(content, **options))
 
     def append_to_file(self, content, target, **options):
-        with open(Path(self.project_root, target), 'a') as fp:
+        with open(Path(self.project_root, target), "a") as fp:
             fp.write(self.render_string(content, **options))
 
     def render_string(self, content, **options):
@@ -74,17 +74,17 @@ class BaseFixture:
 class ProcfileFixture(BaseFixture):
     """Fixture for Profile"""
 
-    fixtures_dirname = 'common'
+    fixtures_dirname = "common"
 
     def setup(self, **options):
-        self.write_tmpl('Procfile-tpl', target='Procfile', **options)
+        self.write_tmpl("Procfile-tpl", target="Procfile", **options)
         # Double render to render variables in commands, like this:
         #
         # web: gunicorn {{ project_name }}.wsgi --log-file -
         # -->
         # web: gunicorn ng_demo.wsgi --log-file -
         #
-        with open(Path(self.project_root, 'Procfile'), 'r') as fp:
+        with open(Path(self.project_root, "Procfile"), "r") as fp:
             content = fp.read()
-        with open(Path(self.project_root, 'Procfile'), 'w') as fp:
+        with open(Path(self.project_root, "Procfile"), "w") as fp:
             fp.write(self.render_string(content))

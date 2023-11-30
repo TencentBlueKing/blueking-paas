@@ -50,63 +50,63 @@ class RemoteSvcConfig:
         fields = cls.__dataclass_fields__  # type: ignore
         for k in data.keys() ^ fields.keys():
             if k not in fields:
-                raise ValueError(f'config data is not valid, {k} is an unexpected argument')
+                raise ValueError(f"config data is not valid, {k} is an unexpected argument")
 
             field = fields[k]
             if field.default is MISSING and field.default_factory is MISSING:
-                raise ValueError(f'config data is not valid, {k} is missing')
+                raise ValueError(f"config data is not valid, {k} is missing")
 
         try:
             return cls(**data)
         except TypeError as e:
-            raise ValueError(f'config data is not valid, {e}')
+            raise ValueError(f"config data is not valid, {e}")
 
     def to_json(self) -> Dict:
         return {f: getattr(self, f) for f in self.__dataclass_fields__}  # type: ignore
 
     def get_jwt_auth_conf(self) -> JWTAuthConf:
         return JWTAuthConf(
-            iss=self.jwt_auth_conf['iss'],
-            key=self.jwt_auth_conf['key'],
-            role='internal_platform',
+            iss=self.jwt_auth_conf["iss"],
+            key=self.jwt_auth_conf["key"],
+            role="internal_platform",
         )
 
     def __post_init__(self):
-        self.meta_info_url = urljoin(self.endpoint_url, 'meta_info/')
+        self.meta_info_url = urljoin(self.endpoint_url, "meta_info/")
 
-        self.index_url = urljoin(self.endpoint_url, 'services/')
-        self.create_service_url = urljoin(self.endpoint_url, 'services/')
-        self.update_service_url = urljoin(self.endpoint_url, 'services/{service_id}/')
+        self.index_url = urljoin(self.endpoint_url, "services/")
+        self.create_service_url = urljoin(self.endpoint_url, "services/")
+        self.update_service_url = urljoin(self.endpoint_url, "services/{service_id}/")
 
         self.create_plan_url = urljoin(self.endpoint_url, "plans/")
         self.update_plan_url = urljoin(self.endpoint_url, "plans/{plan_id}/")
 
-        self.retrieve_instance_url = urljoin(self.endpoint_url, 'instances/{instance_id}/')
-        self.update_inst_config_url = urljoin(self.endpoint_url, 'instances/{instance_id}/config/')
-        self.create_instance_url = urljoin(self.endpoint_url, 'services/{service_id}/instances/{instance_id}/')
-        self.delete_instance_url = urljoin(self.endpoint_url, 'instances/{instance_id}/')
-        self.async_delete_instance_url = urljoin(self.endpoint_url, 'instances/{instance_id}/async_delete')
+        self.retrieve_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
+        self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
+        self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
+        self.delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
+        self.async_delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/async_delete")
         # 增强服务绑定
         self.create_client_side_instance_url = urljoin(
-            self.endpoint_url, 'services/{service_id}/client-side-instances/{instance_id}/'
+            self.endpoint_url, "services/{service_id}/client-side-instances/{instance_id}/"
         )
-        self.destroy_client_side_instance_url = urljoin(self.endpoint_url, 'client-side-instances/{instance_id}/')
+        self.destroy_client_side_instance_url = urljoin(self.endpoint_url, "client-side-instances/{instance_id}/")
 
     def __str__(self):
-        return f'{self.name} [{self.endpoint_url}]'
+        return f"{self.name} [{self.endpoint_url}]"
 
 
 @contextmanager
-def wrap_request_exc(client: 'RemoteServiceClient'):
+def wrap_request_exc(client: "RemoteServiceClient"):
     try:
         logger.debug("[servicehub] calling remote service<%s>", client.config)
         yield
     except RequestException as e:
-        logger.exception(f'unable to fetch remote services from {client.config.index_url}')
-        raise RemoteClientError(f'unable to fetch remote services: {e}') from e
+        logger.exception(f"unable to fetch remote services from {client.config.index_url}")
+        raise RemoteClientError(f"unable to fetch remote services: {e}") from e
     except json.decoder.JSONDecodeError as e:
-        logger.exception(f'invalid json response from {client.config.index_url}')
-        raise RemoteClientError(f'invalid json response: {e}') from e
+        logger.exception(f"invalid json response from {client.config.index_url}")
+        raise RemoteClientError(f"invalid json response: {e}") from e
 
 
 class RemoteServiceClient:
@@ -125,7 +125,7 @@ class RemoteServiceClient:
         """Validate response status code"""
         if not (resp.status_code >= 200 and resp.status_code < 300):
             raise RClientResponseError(
-                f'request_url: {desensitize_url(resp.url)}, status code is invalid: {resp.status_code}',
+                f"request_url: {desensitize_url(resp.url)}, status code is invalid: {resp.status_code}",
                 status_code=resp.status_code,
                 response_text=resp.text,
             )
@@ -206,7 +206,7 @@ class RemoteServiceClient:
         :return: <instance dict>
         """
         url = self.config.create_instance_url.format(service_id=service_id, instance_id=instance_id)
-        payload = {'plan_id': plan_id, 'params': params}
+        payload = {"plan_id": plan_id, "params": params}
         with wrap_request_exc(self):
             resp = requests.post(url, json=payload, auth=self.auth, timeout=self.REQUEST_CREATE_TIMEOUT)
             self.validate_resp(resp)

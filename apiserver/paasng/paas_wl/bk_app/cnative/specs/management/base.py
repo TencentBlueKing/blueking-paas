@@ -27,7 +27,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 
 
 class BaseAppModelResourceCommand(BaseCommand):
-    help = 'base command to handle bkapp'
+    help = "base command to handle bkapp"
 
     def add_arguments(self, parser):
         parser.add_argument("--app-code", dest="app_code", help="应用 Code", default="", required=False)
@@ -39,7 +39,9 @@ class BaseAppModelResourceCommand(BaseCommand):
             required=False,
             help="集群所在的 region, 当指定 cluster_name 时必须传递该参数;",
         )
-        parser.add_argument("--cluster", dest="cluster_name", help="处理指定集群内的所有 BkApp", default="", required=False)
+        parser.add_argument(
+            "--cluster", dest="cluster_name", help="处理指定集群内的所有 BkApp", default="", required=False
+        )
         parser.add_argument(
             "--all-clusters",
             dest="all_clusters",
@@ -47,7 +49,9 @@ class BaseAppModelResourceCommand(BaseCommand):
             default=False,
             help="处理所有应用集群的所有 BkApp, 如果指定了 region, 将只处理 region 内的所有集群",
         )
-        parser.add_argument("--no-dry-run", dest="dry_run", default=True, action="store_false", help="是否只打印带存储的环境变量信息")
+        parser.add_argument(
+            "--no-dry-run", dest="dry_run", default=True, action="store_false", help="是否只打印带存储的环境变量信息"
+        )
 
     def handle(self, app_code, module_name, region, cluster_name, all_clusters, verbosity, dry_run, **options):
         raise NotImplementedError

@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 class TestAppDomainSharedCert:
     @pytest.mark.parametrize(
-        'cns,hostname,expected',
+        ("cns", "hostname", "expected"),
         [
             ("*.foo.com;bar.com", "bar.com", True),
             ("*.foo.com;bar.com", "baz.foo.com", True),

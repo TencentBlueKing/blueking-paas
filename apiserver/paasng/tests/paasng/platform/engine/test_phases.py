@@ -30,20 +30,20 @@ pytestmark = pytest.mark.django_db
 class TestDeployPhase:
     """测试 DeployPhase"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def engine_app(self, bk_prod_env):
         return bk_prod_env.engine_app
 
-    @pytest.fixture
+    @pytest.fixture()
     def phase_manager(self, bk_prod_env):
         return DeployPhaseManager(bk_prod_env)
 
-    @pytest.fixture
+    @pytest.fixture()
     def preparation_phase(self, phase_manager, engine_app):
         return phase_manager._get_or_create(DeployPhaseTypes.PREPARATION)
 
     @pytest.mark.parametrize(
-        "status, finished", [(JobStatus.PENDING, False), (JobStatus.FAILED, True), (JobStatus.SUCCESSFUL, True)]
+        ("status", "finished"), [(JobStatus.PENDING, False), (JobStatus.FAILED, True), (JobStatus.SUCCESSFUL, True)]
     )
     def test_mark(self, preparation_phase, status, finished):
         assert not preparation_phase.status
@@ -63,11 +63,11 @@ class TestDeployPhase:
         assert not preparation_phase.status
 
     @pytest.mark.parametrize(
-        "status, extra_info",
+        ("status", "extra_info"),
         [(JobStatus.FAILED, {}), (JobStatus.FAILED, {"sss": "xxx"}), (JobStatus.SUCCESSFUL, {"sss": "xxx"})],
     )
     def test_mark_and_write_to_stream(self, preparation_phase, status, extra_info):
-        with mock.patch('paasng.platform.engine.utils.output.RedisChannelStream') as mocked_stream:
+        with mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream:
             preparation_phase.mark_and_write_to_stream(mocked_stream(), status, extra_info)
 
             assert preparation_phase.status == status.value

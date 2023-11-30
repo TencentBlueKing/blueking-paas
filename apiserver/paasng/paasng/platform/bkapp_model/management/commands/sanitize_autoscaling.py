@@ -26,8 +26,8 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnv
 
 logger = logging.getLogger("commands")
 
-ACTION_DISPLAY = 'display'
-ACTION_UPDATE = 'update'
+ACTION_DISPLAY = "display"
+ACTION_UPDATE = "update"
 
 
 class Command(BaseCommand):
@@ -39,43 +39,43 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        if options['action'] == ACTION_UPDATE:
+        if options["action"] == ACTION_UPDATE:
             return self.handle_update()
-        elif options['action'] == ACTION_DISPLAY:
+        elif options["action"] == ACTION_DISPLAY:
             return self.handle_display()
-        raise RuntimeError('Invalid action')
+        raise RuntimeError("Invalid action")
 
     def handle_update(self):
-        print('Start updating ProcessSpec model...')
+        print("Start updating ProcessSpec model...")
         for obj in ProcessSpec.objects.all():
             if c := obj.scaling_config:
                 obj.scaling_config = self.sanitize_config(c)
-                obj.save(update_fields=['scaling_config'])
+                obj.save(update_fields=["scaling_config"])
 
-        print('Start updating ModuleProcessSpec model...')
+        print("Start updating ModuleProcessSpec model...")
         for module_spec in ModuleProcessSpec.objects.all():
             if c := module_spec.scaling_config:
                 module_spec.scaling_config = self.sanitize_config(c)
-                module_spec.save(update_fields=['scaling_config'])
+                module_spec.save(update_fields=["scaling_config"])
 
-        print('Start updating ProcessSpecEnvOverlay model...')
+        print("Start updating ProcessSpecEnvOverlay model...")
         for overlay_spec in ProcessSpecEnvOverlay.objects.all():
             if c := overlay_spec.scaling_config:
                 overlay_spec.scaling_config = self.sanitize_config(c)
-                overlay_spec.save(update_fields=['scaling_config'])
+                overlay_spec.save(update_fields=["scaling_config"])
 
     def handle_display(self):
-        print('> ProcessSpec model:')
+        print("> ProcessSpec model:")
         for obj in ProcessSpec.objects.all():
             if obj.scaling_config:
                 print(obj.scaling_config)
 
-        print('> ModuleProcessSpec model:')
+        print("> ModuleProcessSpec model:")
         for module_spec in ModuleProcessSpec.objects.all():
             if module_spec.scaling_config:
                 print(module_spec.scaling_config)
 
-        print('> ProcessSpecEnvOverlay model:')
+        print("> ProcessSpecEnvOverlay model:")
         for overlay_spec in ProcessSpecEnvOverlay.objects.all():
             if overlay_spec.scaling_config:
                 print(overlay_spec.scaling_config)
@@ -84,8 +84,8 @@ class Command(BaseCommand):
     def sanitize_config(c: Dict):
         """Sanitize the config."""
         result = {
-            'min_replicas': c.get('min_replicas') or c.get('minReplicas') or 1,
-            'max_replicas': c.get('max_replicas') or c.get('maxReplicas') or 1,
-            'policy': 'default',
+            "min_replicas": c.get("min_replicas") or c.get("minReplicas") or 1,
+            "max_replicas": c.get("max_replicas") or c.get("maxReplicas") or 1,
+            "policy": "default",
         }
         return result

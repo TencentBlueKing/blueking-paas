@@ -49,7 +49,7 @@ class DocumentaryLinkAdvisor:
             subject_tags_by_type[tag.tag_type].add(tag)
 
         results = []
-        for link in DocumentaryLink.objects.all().order_by('pk'):
+        for link in DocumentaryLink.objects.all().order_by("pk"):
             score = 0
             for tag_type in subject_tags_by_type:
                 link_tags = link.get_affinity_tags_by_type(tag_type)

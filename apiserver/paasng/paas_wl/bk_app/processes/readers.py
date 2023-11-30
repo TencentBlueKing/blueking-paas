@@ -43,7 +43,7 @@ class ProcessAPIAdapter:
     """Data adapter for Process"""
 
     @staticmethod
-    def app_selector(app: 'WlApp') -> Dict[str, str]:
+    def app_selector(app: "WlApp") -> Dict[str, str]:
         """Return labels selector dict, useful for filter Process/Instance from k8s"""
         # TODO: 使用 resource-type/category 来过滤
         if app.type == WlAppType.CLOUD_NATIVE:
@@ -60,19 +60,19 @@ class ProcessAPIAdapter:
 class ProcessReader(AppEntityReader[Process]):
     """Manager for ProcSpecs"""
 
-    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Process]:
+    def list_by_app_with_meta(self, app: "WlApp", labels: Optional[Dict] = None) -> ResourceList[Process]:
         labels = labels or {}
         extra_labels = ProcessAPIAdapter.app_selector(app)
         labels.update(extra_labels)
         return super().list_by_app_with_meta(app, labels)
 
-    def get_by_type(self, app: 'WlApp', type: str) -> 'Process':
+    def get_by_type(self, app: "WlApp", type: str) -> "Process":
         """Get object by process type"""
         labels = get_process_selector(app, type)
         objs = self.list_by_app(app, labels=labels)
         if objs:
             return objs[0]
-        raise AppEntityNotFound(f'No processes can be found with type={type}')
+        raise AppEntityNotFound(f"No processes can be found with type={type}")
 
 
 process_kmodel = ProcessReader(Process)
@@ -81,12 +81,12 @@ process_kmodel = ProcessReader(Process)
 class InstanceReader(AppEntityReader[Instance]):
     """Customized reader for ProcInstance"""
 
-    def list_by_process_type(self, app: 'WlApp', process_type: str) -> List[Instance]:
+    def list_by_process_type(self, app: "WlApp", process_type: str) -> List[Instance]:
         """List instances by process type"""
         labels = get_process_selector(app, process_type)
         return self.list_by_app(app, labels=labels)
 
-    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
+    def list_by_app_with_meta(self, app: "WlApp", labels: Optional[Dict] = None) -> ResourceList[Instance]:
         labels = labels or {}
         extra_labels = ProcessAPIAdapter.app_selector(app)
         labels.update(extra_labels)

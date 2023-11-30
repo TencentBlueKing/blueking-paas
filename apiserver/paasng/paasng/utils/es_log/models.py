@@ -102,9 +102,8 @@ def field_extractor_factory(field_key: str, raise_exception: bool = True) -> _Ge
     """
 
     def core(raw_log: Dict[str, Any]) -> Any:
-        if field_key not in raw_log or raw_log[field_key] is NOT_SET:
-            if raise_exception:
-                raise LogLineInfoBrokenError(field_key)
+        if (field_key not in raw_log or raw_log[field_key] is NOT_SET) and raise_exception:
+            raise LogLineInfoBrokenError(field_key)
         return raw_log[field_key]
 
     return core

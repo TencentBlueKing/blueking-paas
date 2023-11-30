@@ -36,7 +36,7 @@ def make_translate_fields(field, value) -> Dict:
 
 
 @pytest.mark.parametrize(
-    "data, is_valid, expected",
+    ("data", "is_valid", "expected"),
     [
         (
             {"id": 1, "name": "2", "template": "foo"},
@@ -59,7 +59,7 @@ def make_translate_fields(field, value) -> Dict:
         (
             {"id": "12345678901", "name": "2", "template": "foo"},
             False,
-            {'id': [ErrorDetail(string='请确保这个字段不能超过 10 个字符。', code='max_length')]},
+            {"id": [ErrorDetail(string="请确保这个字段不能超过 10 个字符。", code="max_length")]},
         ),
         (
             {
@@ -116,11 +116,19 @@ def test_make_create_plugin_validator(pd, data, is_valid, expected):
 
 
 @pytest.mark.parametrize(
-    "field, value, expected",
+    ("field", "value", "expected"),
     [
-        ("id", 1, {'non_field_errors': [ErrorDetail(string='插件ID 为 1 的插件已存在', code='unique')]}),
-        ("name_en", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
-        ("name_zh_cn", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
+        ("id", 1, {"non_field_errors": [ErrorDetail(string="插件ID 为 1 的插件已存在", code="unique")]}),
+        (
+            "name_en",
+            "FLAG",
+            {"non_field_errors": [ErrorDetail(string="插件名称 为 FLAG 的插件已存在", code="unique")]},
+        ),
+        (
+            "name_zh_cn",
+            "FLAG",
+            {"non_field_errors": [ErrorDetail(string="插件名称 为 FLAG 的插件已存在", code="unique")]},
+        ),
     ],
 )
 def test_make_create_plugin_validator_conflict(pd, plugin, field, value, expected):
@@ -143,7 +151,7 @@ COMMON_DATA = {"source_version_name": "...", "source_version_type": "...", "comm
 
 
 @pytest.mark.parametrize(
-    "previous_version, data, is_valid",
+    ("previous_version", "data", "is_valid"),
     [
         ("0.1.2", {"semver_type": "major", "version": "1.0.0", **COMMON_DATA}, True),
         ("0.1.2", {"semver_type": "minor", "version": "0.2.0", **COMMON_DATA}, True),
@@ -164,7 +172,7 @@ def test_validate_automatic_semver(pd, previous_version, data, is_valid):
 
 
 @pytest.mark.parametrize(
-    "data, is_valid",
+    ("data", "is_valid"),
     [
         ({"version": "1.0.0", **COMMON_DATA, "source_version_name": "1.0.0"}, True),
         ({"version": "1.0.0", **COMMON_DATA, "source_version_name": "2.0.0"}, False),
@@ -180,7 +188,7 @@ def test_validate_revision_eq_source_revision(pd, data, is_valid):
 
 
 @pytest.mark.parametrize(
-    "source_hash, data, is_valid",
+    ("source_hash", "data", "is_valid"),
     [
         (
             "a407e44060597e4030d1872d1588c279686e90cb",
@@ -204,7 +212,7 @@ def test_validate_revision_eq_commit_hash(pd, source_hash, data, is_valid):
 
 
 @pytest.mark.parametrize(
-    "data, is_valid",
+    ("data", "is_valid"),
     [
         ({"category": "1", "introduction": "2", "description": "3", "contact": "4"}, True),
         ({"category": "1", "introduction_zh_cn": "2", "description": "3", "contact": "4"}, False),

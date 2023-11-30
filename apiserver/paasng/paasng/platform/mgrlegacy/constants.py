@@ -54,15 +54,15 @@ class MigrationStatus(ChoicesEnum):
     ROLLBACK_FAILED = 8
 
     _choices_labels = (
-        (DEFAULT, u'默认'),
-        (ON_MIGRATION, u'正在迁移'),
-        (FAILED, u'已失败'),
-        (DONE_MIGRATION, u'完成迁移'),
-        (ON_ROLLBACK, u'正在回滚'),
-        (ROLLBACKED, u'已回滚'),
-        (ON_CONFIRMING, u'正在确认'),
-        (CONFIRMED, u'已确认'),
-        (ROLLBACK_FAILED, u'回滚失败'),
+        (DEFAULT, "默认"),
+        (ON_MIGRATION, "正在迁移"),
+        (FAILED, "已失败"),
+        (DONE_MIGRATION, "完成迁移"),
+        (ON_ROLLBACK, "正在回滚"),
+        (ROLLBACKED, "已回滚"),
+        (ON_CONFIRMING, "正在确认"),
+        (CONFIRMED, "已确认"),
+        (ROLLBACK_FAILED, "回滚失败"),
     )
 
     _active_states = (ON_MIGRATION, DONE_MIGRATION, ON_ROLLBACK, ON_CONFIRMING)
@@ -79,12 +79,17 @@ class MigrationStatus(ChoicesEnum):
 
 
 class LegacyAppTag(ChoicesEnum):
-    SUPPORT = 'SUPPORT'
-    NOT_SUPPORT = 'NOT_SUPPORT'
-    ON_MIGRATION = 'ON_MIGRATION'
-    FINISHED_MIGRATION = 'FINISHED_MIGRATION'
+    SUPPORT = "SUPPORT"
+    NOT_SUPPORT = "NOT_SUPPORT"
+    ON_MIGRATION = "ON_MIGRATION"
+    FINISHED_MIGRATION = "FINISHED_MIGRATION"
 
-    _choices_labels = ((SUPPORT, u'支持'), (NOT_SUPPORT, u'不支持'), (ON_MIGRATION, u'迁移中'), (FINISHED_MIGRATION, u'迁移完成'))
+    _choices_labels = (
+        (SUPPORT, "支持"),
+        (NOT_SUPPORT, "不支持"),
+        (ON_MIGRATION, "迁移中"),
+        (FINISHED_MIGRATION, "迁移完成"),
+    )
 
 
 class LegacyAppState(ChoicesEnum):
@@ -99,13 +104,13 @@ class LegacyAppState(ChoicesEnum):
     IN_OUTLINE = 10
 
     _choices_labels = (
-        (OUTLINE, '已下架'),
-        (DEVELOPMENT, '开发中'),
-        (TEST, '测试中'),
-        (ONLINE, '已上线'),
-        (IN_TEST, '正在提测'),
-        (IN_ONLINE, '正在上线'),
-        (IN_OUTLINE, '正在下架'),
+        (OUTLINE, "已下架"),
+        (DEVELOPMENT, "开发中"),
+        (TEST, "测试中"),
+        (ONLINE, "已上线"),
+        (IN_TEST, "正在提测"),
+        (IN_ONLINE, "正在上线"),
+        (IN_OUTLINE, "正在下架"),
     )
 
 

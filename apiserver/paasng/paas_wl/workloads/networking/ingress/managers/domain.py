@@ -62,7 +62,7 @@ def save_subdomains(app: WlApp, domains: List[AutoGenDomain]) -> Set[WlApp]:
         obj, _ = AppDomain.objects.update_or_create(
             region=app.region,
             host=domain.host,
-            defaults={'app': app, 'source': AppDomainSource.AUTO_GEN, 'https_enabled': domain.https_enabled},
+            defaults={"app": app, "source": AppDomainSource.AUTO_GEN, "https_enabled": domain.https_enabled},
         )
     # Remove domains which are no longer bound with app
     AppDomain.objects.filter(app=app, source=AppDomainSource.AUTO_GEN).exclude(host__in=hosts).delete()
@@ -75,7 +75,7 @@ class SubdomainAppIngressMgr(AppIngressMgr):
     """manage the ingress rule with individual subdomains"""
 
     def make_ingress_name(self) -> str:
-        return f'{self.app.region}-{self.app.scheduler_safe_name}--direct'
+        return f"{self.app.region}-{self.app.scheduler_safe_name}--direct"
 
     def list_desired_domains(self) -> List[PIngressDomain]:
         """List all desired domains for current app"""
@@ -112,9 +112,9 @@ class CustomDomainIngressMgr(AppIngressMgr):
                 )
 
             # When path prefix is non-default, a different name is required to avoid conflict
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}-{self.domain.id}'
+            return f"{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}-{self.domain.id}"
         else:
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}'
+            return f"{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}"
 
     def list_desired_domains(self) -> List[PIngressDomain]:
         factory = IngressDomainFactory(self.app)
@@ -158,5 +158,5 @@ class IngressDomainFactory:
             raise ValidCertNotFound("cannot enable https: no cert object found")
         else:
             # Disable HTTPS and write a warning message
-            logger.warning('no valid cert can be found for domain: %s, disable HTTPS.', app_domain)
+            logger.warning("no valid cert can be found for domain: %s, disable HTTPS.", app_domain)
             return PIngressDomain(host=app_domain.host, path_prefix_list=[path_prefix], tls_enabled=False)

@@ -27,10 +27,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-_ci_managers_map: Dict[str, Type['CIManager']] = {}
+_ci_managers_map: Dict[str, Type["CIManager"]] = {}
 
 
-def register_ci_manager_cls(manager: Type['CIManager']):
+def register_ci_manager_cls(manager: Type["CIManager"]):
     _ci_managers_map[manager.backend] = manager
 
 

@@ -41,13 +41,13 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(autouse=True)
-def configure_ieod_region():
-    region_list = ['ieod']
+def _configure_ieod_region():
+    region_list = ["ieod"]
     with configure_regions(region_list):
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def migration_instance_maker(bk_app, legacy_app_code):
     def maker(migration_cls):
         instance = get_migration_instance(migration_cls)
@@ -61,10 +61,10 @@ def migration_instance_maker(bk_app, legacy_app_code):
 def svc_config():
     return RemoteSvcConfig.from_json(
         {
-            'name': 'obj_store_remote',
-            'endpoint_url': 'http://faked-host',
-            'provision_params_tmpl': {'username': '{engine_app.name}'},
-            'jwt_auth_conf': {'iss': 'foo', 'key': 's1'},
+            "name": "obj_store_remote",
+            "endpoint_url": "http://faked-host",
+            "provision_params_tmpl": {"username": "{engine_app.name}"},
+            "jwt_auth_conf": {"iss": "foo", "key": "s1"},
         }
     )
 
@@ -81,7 +81,7 @@ def store():
 
 
 @pytest.fixture(autouse=True)
-def mock_setup_log():
+def _mock_setup_log():
     with mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log:
         fake_log().get_cluster().has_feature_flag.return_value = False
         yield

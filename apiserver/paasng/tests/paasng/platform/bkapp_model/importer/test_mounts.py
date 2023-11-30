@@ -20,13 +20,12 @@ import functools
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource
+from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource, MountOverlay, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, VolumeSource
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.platform.bkapp_model.importer.mounts import import_mounts
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class Test__import_mounts:
@@ -34,31 +33,31 @@ class Test__import_mounts:
         create_mount = functools.partial(
             Mount.objects.create,
             module_id=bk_module.id,
-            name='nginx',
+            name="nginx",
             source_type=VolumeSourceType.ConfigMap,
-            source_config=VolumeSource(configMap=ConfigMapSource(name='nginx-configmap')),
+            source_config=VolumeSource(configMap=ConfigMapSource(name="nginx-configmap")),
         )
-        create_mount(mount_path='/etc/conf', environment_name=MountEnvName.GLOBAL.value)
-        create_mount(mount_path='/etc/conf_stag', environment_name=MountEnvName.STAG.value)
-        create_mount(mount_path='/etc/conf_stag_2', environment_name=MountEnvName.STAG.value)
-        create_mount(mount_path='/etc/conf_prod', environment_name=MountEnvName.PROD.value)
+        create_mount(mount_path="/etc/conf", environment_name=MountEnvName.GLOBAL.value)
+        create_mount(mount_path="/etc/conf_stag", environment_name=MountEnvName.STAG.value)
+        create_mount(mount_path="/etc/conf_stag_2", environment_name=MountEnvName.STAG.value)
+        create_mount(mount_path="/etc/conf_prod", environment_name=MountEnvName.PROD.value)
         assert Mount.objects.count() == 4
 
         ret = import_mounts(
             bk_module,
             [
                 MountSpec(
-                    mountPath='/etc/conf_another',
-                    name='nginx_another',
-                    source=VolumeSource(configMap=ConfigMapSource(name='nginx-configmap')),
+                    mountPath="/etc/conf_another",
+                    name="nginx_another",
+                    source=VolumeSource(configMap=ConfigMapSource(name="nginx-configmap")),
                 )
             ],
             [
                 MountOverlay(
-                    envName='stag',
-                    mountPath='/etc/conf_stag',
-                    name='nginx_stag',
-                    source=VolumeSource(configMap=ConfigMapSource(name='nginx-foobar')),
+                    envName="stag",
+                    mountPath="/etc/conf_stag",
+                    name="nginx_stag",
+                    source=VolumeSource(configMap=ConfigMapSource(name="nginx-foobar")),
                 )
             ],
         )

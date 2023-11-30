@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestZombieProcessesKiller:
     @pytest.mark.parametrize(
-        "last_procfile,latest_procfile,diff",
+        ("last_procfile", "latest_procfile", "diff"),
         [
             ({"web": "command -x -z -y"}, {"web1": "command -x -z -y"}, {"types": ["web"], "names": []}),
             (
@@ -41,13 +41,13 @@ class TestZombieProcessesKiller:
             ),
             (
                 {
-                    'web': 'gunicorn1 wsgi -w 4 -b :$PORT --access-logfile - '
-                    '--error-logfile - --access-logformat \'[%(h)s] '
+                    "web": "gunicorn1 wsgi -w 4 -b :$PORT --access-logfile - "
+                    "--error-logfile - --access-logformat '[%(h)s] "
                     '%({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
                 },
                 {
-                    'web': 'gunicorn wsgi -w 4 -b :$PORT --access-logfile - '
-                    '--error-logfile - --access-logformat \'[%(h)s] '
+                    "web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - "
+                    "--error-logfile - --access-logformat '[%(h)s] "
                     '%({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
                 },
                 {"types": [], "names": ["web"]},

@@ -37,7 +37,7 @@ pytestmark = pytest.mark.django_db
 
 class TestUtils:
     def test_bk_user_field(self):
-        profile = G(UserProfile, user='0235cce79c92')
+        profile = G(UserProfile, user="0235cce79c92")
         profile = UserProfile.objects.get(pk=profile.pk)
 
         assert profile.user == "0235cce79c92"
@@ -46,18 +46,18 @@ class TestUtils:
 
 class TestOrderByField:
     def test_from_string(self):
-        f = OrderByField.from_string('-created')
+        f = OrderByField.from_string("-created")
         assert f.is_descending is True
-        assert f.name == 'created'
+        assert f.name == "created"
 
-        f = OrderByField.from_string('created')
+        f = OrderByField.from_string("created")
         assert f.is_descending is False
-        assert f.name == 'created'
+        assert f.name == "created"
 
     def test_replacing_name(self):
-        f = OrderByField.from_string('-created')
-        f.name = 'updated'
-        assert str(f) == '-updated'
+        f = OrderByField.from_string("-created")
+        f.name = "updated"
+        assert str(f) == "-updated"
 
 
 def test_make_legacy_json_field():
@@ -65,7 +65,7 @@ def test_make_legacy_json_field():
     class Dummy:
         a: str
 
-    DummyField = make_legacy_json_field("DummyField", Dummy)
+    DummyField = make_legacy_json_field("DummyField", Dummy)  # noqa: N806
     assert DummyField.__module__ == __name__
     assert DummyField.__name__ == "DummyField"
 
@@ -75,7 +75,7 @@ def test_make_json_field():
     class Dummy:
         a: str
 
-    DummyField = make_json_field("DummyField", Dummy)
+    DummyField = make_json_field("DummyField", Dummy)  # noqa: N806
     assert DummyField.__module__ == __name__
     assert DummyField.__name__ == "DummyField"
 
@@ -93,7 +93,7 @@ UnPickleAbleField = make_legacy_json_field("NotAPickleAbleField", Baz)
 
 
 @pytest.mark.parametrize(
-    "field, expected",
+    ("field", "expected"),
     [
         (PickleAbleField1, does_not_raise()),
         (PickleAbleField2, does_not_raise()),

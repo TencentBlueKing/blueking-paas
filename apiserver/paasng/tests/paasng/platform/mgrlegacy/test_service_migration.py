@@ -57,7 +57,7 @@ dummy_service = RemoteServiceObj(
 
 @pytest.fixture(autouse=True)
 def mock_get_service():
-    with mock.patch.object(BaseServiceMigration, 'get_service') as get_service:
+    with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
         yield
 
@@ -105,7 +105,7 @@ class TestBaseRemoteServiceMigration:
 
         for env in list(AppEnvName):
             attachment = migration.get_engine_app_attachment(env)
-            assert attachment.plan_id == uuid.UUID('{11111111-1111-1111-1111-111111111111}')
+            assert attachment.plan_id == uuid.UUID("{11111111-1111-1111-1111-111111111111}")
 
     def test_get_engine_app_attachment(self, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)
@@ -113,7 +113,7 @@ class TestBaseRemoteServiceMigration:
 
         for env in list(AppEnvName):
             attachment = migration.get_engine_app_attachment(env)
-            assert attachment.plan_id == uuid.UUID('{00000000-0000-0000-0000-000000000000}')
+            assert attachment.plan_id == uuid.UUID("{00000000-0000-0000-0000-000000000000}")
 
     def test_rollback_service_instance(self, bk_module, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)

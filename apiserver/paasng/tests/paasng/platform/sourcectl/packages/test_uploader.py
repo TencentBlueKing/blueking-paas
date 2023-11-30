@@ -25,7 +25,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "stat, package_name",
+    ("stat", "package_name"),
     [
         (
             SPStat(name="name", version="v1", size=1, meta_info={}, sha256_signature="signature"),

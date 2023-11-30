@@ -25,12 +25,11 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture(autouse=True)
-def setup(settings, with_wl_apps):
+def _setup(settings, with_wl_apps):
     """setup clusters and wl_apps"""
     Cluster.objects.all().delete()
     G(Cluster, name="default", is_default=True, region=settings.DEFAULT_REGION_NAME)
     G(Cluster, name="extra-1", is_default=False, region=settings.DEFAULT_REGION_NAME)
-    yield
 
 
 class TestEnvClusterService:

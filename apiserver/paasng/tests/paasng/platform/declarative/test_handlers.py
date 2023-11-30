@@ -27,7 +27,9 @@ import cattr
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 
-from paasng.platform.sourcectl.utils import generate_temp_file
+from paasng.accessories.publish.market.models import Product
+from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ServiceSpec
 from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader, get_desc_env_variables
@@ -36,9 +38,7 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler, SMartDescriptionHandler, get_desc_handler
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.applications.models import Application
-from paasng.accessories.publish.market.models import Product
+from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 
 pytestmark = pytest.mark.django_db
@@ -46,14 +46,14 @@ pytestmark = pytest.mark.django_db
 
 class TestAppDescriptionHandler:
     def test_empty_file(self, bk_user):
-        fp = io.StringIO('')
+        fp = io.StringIO("")
         with pytest.raises(DescriptionValidationError):
             AppDescriptionHandler.from_file(fp).handle_app(bk_user)
 
     def test_app_normal(self, random_name, bk_user, one_px_png):
         fp = io.StringIO(
             dedent(
-                f'''
+                f"""
         spec_version: 2
         app:
             bk_app_code: {random_name}
@@ -65,7 +65,7 @@ class TestAppDescriptionHandler:
             default:
                 is_default: true
                 language: python
-        '''
+        """
             )
         )
 
@@ -81,7 +81,7 @@ class TestAppDescriptionHandler:
     def test_app_from_stat(self, random_name, bk_user, one_px_png):
         fp = io.StringIO(
             dedent(
-                f'''
+                f"""
         spec_version: 2
         app:
             bk_app_code: {random_name}
@@ -92,7 +92,7 @@ class TestAppDescriptionHandler:
             default:
                 is_default: true
                 language: python
-        '''
+        """
             )
         )
 
@@ -115,11 +115,11 @@ class TestAppDescriptionHandler:
             assert logo_content[23] == 144
 
     @pytest.mark.parametrize(
-        "yaml_content, ctx",
+        ("yaml_content", "ctx"),
         [
             (
                 dedent(
-                    '''
+                    """
                 spec_version: 2
                 module:
                     env_variables:
@@ -133,13 +133,13 @@ class TestAppDescriptionHandler:
                           module_name: api
                     bkmonitor:
                         port: 80
-                '''
+                """
                 ),
                 does_not_raise(
                     {
                         "env_variables": {"FOO": "1"},
                         "svc_discovery": {
-                            'BKPAAS_SERVICE_ADDRESSES_BKSAAS': base64.b64encode(
+                            "BKPAAS_SERVICE_ADDRESSES_BKSAAS": base64.b64encode(
                                 json.dumps(
                                     [
                                         {
@@ -150,7 +150,7 @@ class TestAppDescriptionHandler:
                                             },
                                         },
                                         {
-                                            "key": {"bk_app_code": "bar-app", "module_name": 'api'},
+                                            "key": {"bk_app_code": "bar-app", "module_name": "api"},
                                             "value": {
                                                 "stag": "http://stag-dot-api-dot-bar-app.bkapps.example.com",
                                                 "prod": "http://prod-dot-api-dot-bar-app.bkapps.example.com",
@@ -169,14 +169,14 @@ class TestAppDescriptionHandler:
             ),
             (
                 dedent(
-                    '''
+                    """
                     version: 1
                     module:
                         language: python
                         env_variables:
                             - key: BKPAAS_RESERVED_KEY
                               value: raise error
-                    '''
+                    """
                 ),
                 pytest.raises(DescriptionValidationError),
             ),
@@ -195,22 +195,22 @@ class TestAppDescriptionHandler:
 
 
 class TestSMartDescriptionHandler:
-    @pytest.fixture
+    @pytest.fixture()
     def app_desc(self, one_px_png) -> Dict:
         return {
-            'author': 'blueking',
-            'introduction': 'blueking app',
-            'is_use_celery': False,
-            'version': '0.0.1',
-            'env': [],
+            "author": "blueking",
+            "introduction": "blueking app",
+            "is_use_celery": False,
+            "version": "0.0.1",
+            "env": [],
             "logo_b64data": one_px_png,
         }
 
     def test_app_creation(self, random_name, bk_user, app_desc, one_px_png):
         app_desc.update(
             {
-                'app_code': random_name,
-                'app_name': random_name,
+                "app_code": random_name,
+                "app_name": random_name,
             }
         )
         SMartDescriptionHandler(app_desc).handle_app(bk_user)
@@ -224,9 +224,9 @@ class TestSMartDescriptionHandler:
     def test_app_update_existed(self, bk_app, bk_user, app_desc):
         app_desc.update(
             {
-                'app_code': bk_app.code,
-                'app_name': bk_app.name,
-                'desktop': {'width': 303, 'height': 100},
+                "app_code": bk_app.code,
+                "app_name": bk_app.name,
+                "desktop": {"width": 303, "height": 100},
             }
         )
         SMartDescriptionHandler(app_desc).handle_app(bk_user)
@@ -236,18 +236,18 @@ class TestSMartDescriptionHandler:
     def test_deployment_normal(self, random_name, bk_deployment, app_desc):
         app_desc.update(
             {
-                'app_code': random_name,
-                'app_name': random_name,
-                'env': [{'key': 'BKAPP_FOO', 'value': '1'}],
+                "app_code": random_name,
+                "app_name": random_name,
+                "env": [{"key": "BKAPP_FOO", "value": "1"}],
             }
         )
         SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert EnvVariablesReader(desc_obj).read_as_dict() == {'BKAPP_FOO': '1'}
+        assert EnvVariablesReader(desc_obj).read_as_dict() == {"BKAPP_FOO": "1"}
 
     @pytest.mark.parametrize(
-        "memory, expected_plan_name",
+        ("memory", "expected_plan_name"),
         [
             (512, "Starter"),
             (1024, "Starter"),
@@ -261,10 +261,10 @@ class TestSMartDescriptionHandler:
     def test_bind_process_spec_plans(self, random_name, bk_deployment, app_desc, memory, expected_plan_name):
         app_desc.update(
             {
-                'app_code': random_name,
-                'app_name': random_name,
-                'env': [{'key': 'BKAPP_FOO', 'value': '1'}],
-                'container': {'memory': memory},
+                "app_code": random_name,
+                "app_name": random_name,
+                "env": [{"key": "BKAPP_FOO", "value": "1"}],
+                "container": {"memory": memory},
             }
         )
         SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
@@ -273,21 +273,21 @@ class TestSMartDescriptionHandler:
         assert desc_obj.runtime["processes"]["web"]["plan"] == expected_plan_name
 
     @pytest.mark.parametrize(
-        "is_use_celery, expected_services",
+        ("is_use_celery", "expected_services"),
         [
             (True, [ServiceSpec(name="mysql"), ServiceSpec(name="rabbitmq")]),
             (False, [ServiceSpec(name="mysql")]),
         ],
     )
     def test_app_data_to_desc(self, random_name, app_desc, is_use_celery, expected_services):
-        app_desc.update({'app_code': random_name, 'app_name': random_name, "is_use_celery": is_use_celery})
+        app_desc.update({"app_code": random_name, "app_name": random_name, "is_use_celery": is_use_celery})
         assert SMartDescriptionHandler(app_desc).app_desc.default_module.services == expected_services
 
     @pytest.mark.parametrize(
-        'libraries, expected', [([], []), ([dict(name='foo', version='bar')], [dict(name='foo', version='bar')])]
+        ("libraries", "expected"), [([], []), ([dict(name="foo", version="bar")], [dict(name="foo", version="bar")])]
     )
     def test_libraries(self, random_name, app_desc, libraries, expected):
-        app_desc.update({'app_code': random_name, 'app_name': random_name, "libraries": libraries})
+        app_desc.update({"app_code": random_name, "app_name": random_name, "libraries": libraries})
         plugin = SMartDescriptionHandler(app_desc).app_desc.get_plugin(AppDescPluginType.APP_LIBRARIES)
         assert plugin
         assert plugin["data"] == expected
@@ -297,20 +297,20 @@ class TestSMartDescriptionHandler:
 def app_data(request, random_name):
     if request.param == AppSpecVersion.VER_1:
         return {
-            'author': 'blueking',
-            'introduction': 'blueking app',
-            'is_use_celery': False,
-            'version': '0.0.1',
-            'env': [],
-            'language': 'python',
-            'app_code': random_name,
-            'app_name': random_name,
+            "author": "blueking",
+            "introduction": "blueking app",
+            "is_use_celery": False,
+            "version": "0.0.1",
+            "env": [],
+            "language": "python",
+            "app_code": random_name,
+            "app_name": random_name,
         }
     return {
-        'spec_version': AppSpecVersion.VER_2,
-        'app_version': '0.0.1',
-        'app': {'bk_app_code': random_name, 'bk_app_name': random_name},
-        'modules': {'default': {'is_default': True, 'language': 'python'}},
+        "spec_version": AppSpecVersion.VER_2,
+        "app_version": "0.0.1",
+        "app": {"bk_app_code": random_name, "bk_app_name": random_name},
+        "modules": {"default": {"is_default": True, "language": "python"}},
     }
 
 
@@ -321,5 +321,5 @@ def test_app_data_to_desc(app_data, random_name):
     assert desc.code == random_name
     plugin = desc.get_plugin(AppDescPluginType.APP_VERSION)
     assert plugin
-    assert plugin['data'] == '0.0.1'
+    assert plugin["data"] == "0.0.1"
     assert desc.default_module.language == AppLanguage.PYTHON

@@ -41,23 +41,23 @@ class AppDomain(AuditedModel):
     # Only source="independent" domain may set it's "path_prefix" field to non-default values.
     # domains managed by other sources('built_in', 'custom') does not support customizing
     # 'path_prefix', only '/'(or None) are supported for those domains.
-    path_prefix = models.CharField(max_length=64, default='/', help_text="the accessable path for current domain")
+    path_prefix = models.CharField(max_length=64, default="/", help_text="the accessable path for current domain")
 
     # HTTPS related fields
     https_enabled = models.BooleanField(default=False)
     https_auto_redirection = models.BooleanField(default=False)
     # "cert" field has higher priority than auto selected "shared cert"
-    cert = models.ForeignKey('AppDomainCert', null=True, on_delete=models.SET_NULL)
-    shared_cert = models.ForeignKey('AppDomainSharedCert', null=True, on_delete=models.SET_NULL)
+    cert = models.ForeignKey("AppDomainCert", null=True, on_delete=models.SET_NULL)
+    shared_cert = models.ForeignKey("AppDomainSharedCert", null=True, on_delete=models.SET_NULL)
 
     source = models.IntegerField(choices=make_enum_choices(AppDomainSource))
 
     def has_customized_path_prefix(self) -> bool:
         """Check if current domain has configured a custom path prefix"""
-        return self.path_prefix != '/'
+        return self.path_prefix != "/"
 
     def __str__(self) -> str:
-        return f'<AppDomain: https_enabled={self.https_enabled} host={self.host}>'
+        return f"<AppDomain: https_enabled={self.https_enabled} host={self.host}>"
 
     class Meta:
         unique_together = ("region", "host", "path_prefix")
@@ -73,16 +73,16 @@ class BasicCert(AuditedModel):
     class Meta:
         abstract = True
 
-    type: str = ''
+    type: str = ""
 
     def get_secret_name(self) -> str:
-        return f'eng-{self.type}-{self.name}'
+        return f"eng-{self.type}-{self.name}"
 
 
 class AppDomainCert(BasicCert):
     """WlApp's TLS Certifications, usually managed by user"""
 
-    type = 'normal'
+    type = "normal"
 
     class Meta:
         db_table = "services_appdomaincert"
@@ -96,7 +96,7 @@ class AppDomainSharedCert(BasicCert):
     # Multiple CN are seperated by ";", for example: "foo.com;*.bar.com"
     auto_match_cns = models.TextField(max_length=2048)
 
-    type = 'shared'
+    type = "shared"
 
     class Meta:
         db_table = "services_appdomainsharedcert"
@@ -107,16 +107,16 @@ class AppDomainSharedCert(BasicCert):
         :param hostname: hostname to be checked, such as "foo.com".
         :return: True if matched, False otherwise.
         """
-        for cn in self.auto_match_cns.split(';'):
+        for cn in self.auto_match_cns.split(";"):
             # CN format: foo.com / *.bar.com
-            pattern = re.escape(cn).replace(r'\*', r'[a-zA-Z0-9-]+')
-            if re.match(f'^{pattern}$', hostname):
+            pattern = re.escape(cn).replace(r"\*", r"[a-zA-Z0-9-]+")
+            if re.match(f"^{pattern}$", hostname):
                 return True
         return False
 
 
 class AppSubpathManager(models.Manager):
-    def create_obj(self, app: WlApp, subpath: str, source=AppSubpathSource.DEFAULT) -> 'AppSubpath':
+    def create_obj(self, app: WlApp, subpath: str, source=AppSubpathSource.DEFAULT) -> "AppSubpath":
         """Create an subpath object"""
         cluster = get_cluster_by_app(app)
         return self.get_queryset().create(
@@ -139,10 +139,10 @@ class AppSubpath(AuditedModel):
     objects = AppSubpathManager()
 
     def __str__(self) -> str:
-        return f'<AppSubpath: subpath={self.subpath}>'
+        return f"<AppSubpath: subpath={self.subpath}>"
 
     class Meta:
-        unique_together = ('region', 'subpath')
+        unique_together = ("region", "subpath")
         db_table = "services_appsubpath"
 
 
@@ -152,17 +152,17 @@ class AppSubpath(AuditedModel):
 class Domain(TimestampedModel):
     """custom domain for application"""
 
-    name = models.CharField(help_text='域名', max_length=253, null=False)
-    path_prefix = models.CharField(max_length=64, default='/', help_text="the accessable path for current domain")
-    module_id = models.UUIDField(help_text='关联的模块 ID', null=False)
-    environment_id = models.BigIntegerField(help_text='关联的环境 ID', null=False)
+    name = models.CharField(help_text="域名", max_length=253, null=False)
+    path_prefix = models.CharField(max_length=64, default="/", help_text="the accessable path for current domain")
+    module_id = models.UUIDField(help_text="关联的模块 ID", null=False)
+    environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
     https_enabled = models.NullBooleanField(default=False, help_text="该域名是否开启 https.")
 
     module = ModuleAttrFromID()
     environment = ModuleEnvAttrFromID()
 
     class Meta:
-        unique_together = ('name', 'path_prefix', 'module_id', 'environment_id')
+        unique_together = ("name", "path_prefix", "module_id", "environment_id")
         db_table = "services_domain"
 
     @property
@@ -171,10 +171,10 @@ class Domain(TimestampedModel):
 
     def has_customized_path_prefix(self) -> bool:
         """Check if current domain has configured a custom path prefix"""
-        return self.path_prefix != '/'
+        return self.path_prefix != "/"
 
     def __str__(self):
-        return f'module={self.module_id}-{self.name}'
+        return f"module={self.module_id}-{self.name}"
 
 
 # PaaS "custom domain"(end-user) model end

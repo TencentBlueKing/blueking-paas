@@ -19,7 +19,7 @@ from django.apps import AppConfig
 
 
 class DeployAppConfig(AppConfig):
-    name = 'paas_wl.bk_app.deploy'
+    name = "paas_wl.bk_app.deploy"
 
     def ready(self):
         # Register controllers

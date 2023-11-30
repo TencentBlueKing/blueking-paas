@@ -35,13 +35,13 @@ REGION_NAME = settings.DEFAULT_REGION_NAME
 
 
 class TestCommandGenState:
-    @pytest.fixture
+    @pytest.fixture()
     def existing_node_names(self, k8s_client):
         """The name of nodes already exists in the cluster."""
         nodes = KNode(k8s_client).ops_label.list(labels={}).items
         return [obj.metadata.name for obj in nodes]
 
-    @pytest.fixture
+    @pytest.fixture()
     def node_maker(self, existing_node_names, k8s_client):
         created_node: List[str] = []
 
@@ -57,23 +57,22 @@ class TestCommandGenState:
         for node_name in created_node:
             KNode(k8s_client).delete(name=node_name)
 
-    @pytest.fixture
+    @pytest.fixture()
     def default_node_name(self):
         return "node-{}".format(random_resource_name())
 
     @pytest.fixture(autouse=True)
-    def setup(self, request, node_maker, default_node_name):
+    def _setup(self, request, node_maker, default_node_name, existing_node_names):
         # Always create a new node before starting any tests
         node_maker(
             body={
-                'metadata': {'name': default_node_name, 'labels': {'should_be_ignored': '1'}},
-                'status': {"addresses": [{"address": "x.x.x.x", "type": "InternalIP"}]},
+                "metadata": {"name": default_node_name, "labels": {"should_be_ignored": "1"}},
+                "status": {"addresses": [{"address": "x.x.x.x", "type": "InternalIP"}]},
             }
         )
-        yield
 
     def test_normal(self, existing_node_names, default_node_name, k8s_client):
-        call_command("region_gen_state", region=REGION_NAME, no_input=True, ignore_labels=["kind-node=true"])
+        call_command("region_gen_state", region=REGION_NAME, no_input=True)
         state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
 
         assert state.nodes_cnt == len(existing_node_names) + 1
@@ -84,19 +83,19 @@ class TestCommandGenState:
         assert node_res.metadata.labels[state.name] == "1"
 
         # Call the command multiple times without any nodes updates should generates no new states
-        call_command("region_gen_state", region=REGION_NAME, no_input=True, ignore_labels=["kind-node=true"])
+        call_command("region_gen_state", region=REGION_NAME, no_input=True)
         new_state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
         assert new_state.id == state.id
 
     def test_with_adding_node(self, node_maker, default_node_name, k8s_client):
-        call_command("region_gen_state", region=REGION_NAME, no_input=True, ignore_labels=["kind-node=true"])
+        call_command("region_gen_state", region=REGION_NAME, no_input=True)
         state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
 
         # Create a new node
         node_name = "node-{}".format(random_resource_name())
         node_maker(body={"metadata": {"name": node_name}})
 
-        call_command("region_gen_state", region=REGION_NAME, no_input=True, ignore_labels=["kind-node=true"])
+        call_command("region_gen_state", region=REGION_NAME, no_input=True)
         new_state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
 
         assert new_state.id != state.id
@@ -117,7 +116,7 @@ class TestCommandGenState:
         call_command(
             "region_gen_state",
             region=REGION_NAME,
-            ignore_labels=["should_be_ignored=1", "another_label=some_value", "kind-node=true"],
+            ignore_labels=["should_be_ignored=1", "another_label=some_value"],
             no_input=True,
         )
         state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
@@ -126,29 +125,29 @@ class TestCommandGenState:
 
     def test_ignore_multi_labels(self, existing_node_names, node_maker):
         node_name = "node-{}".format(random_resource_name())
-        node_maker(body={'metadata': {'name': node_name, 'labels': {'should_be_ignored_2': '1'}}})
+        node_maker(body={"metadata": {"name": node_name, "labels": {"should_be_ignored_2": "1"}}})
         call_command(
             "region_gen_state",
             region=REGION_NAME,
-            ignore_labels=["should_be_ignored=1", "should_be_ignored_2=1", "kind-node=true"],
+            ignore_labels=["should_be_ignored=1", "should_be_ignored_2=1"],
             no_input=True,
         )
         state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
 
         assert state.nodes_cnt == len(existing_node_names)
 
-    def test_ignore_masters(self, existing_node_names, node_maker):
+    def test_ignore_masters(self, k8s_client, existing_node_names, node_maker):
         node_name = "node-{}".format(random_resource_name())
         node_maker(
             body={
-                'metadata': {
-                    'name': node_name,
+                "metadata": {
+                    "name": node_name,
                     # Mark this node as a "master"
-                    'labels': {'node-role.kubernetes.io/master': 'true'},
+                    "labels": {"node-role.kubernetes.io/master": "true"},
                 },
             }
         )
-        call_command("region_gen_state", region=REGION_NAME, no_input=True, ignore_labels=["kind-node=true"])
+        call_command("region_gen_state", region=REGION_NAME, no_input=True)
         state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
 
         assert state.nodes_cnt == len(existing_node_names) + 1

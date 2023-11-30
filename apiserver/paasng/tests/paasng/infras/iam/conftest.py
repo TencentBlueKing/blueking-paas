@@ -31,24 +31,24 @@ from .fake.application import FakeApplicationPermission
 def generate_apply_url(username: str, action_request_list: List[ActionResourcesRequest]) -> str:
     expect = []
     for req in action_request_list:
-        resources = ''
+        resources = ""
         if req.resources:
-            resources = ''.join(req.resources)
+            resources = "".join(req.resources)
 
-        expect.append(f'resource_type({req.resource_type}):action_id({req.action_id}):resources({resources}))')
+        expect.append(f"resource_type({req.resource_type}):action_id({req.action_id}):resources({resources}))")
 
-    return ' and '.join(expect)
+    return " and ".join(expect)
 
 
 @pytest.fixture(autouse=True)
-def patch_generate_apply_url():
-    with mock.patch.object(ApplyURLGenerator, 'generate_apply_url', new=generate_apply_url):
+def _patch_generate_apply_url():
+    with mock.patch.object(ApplyURLGenerator, "generate_apply_url", new=generate_apply_url):
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def app_permission_obj():
-    patcher = mock.patch.object(ApplicationPermission, '__bases__', (FakeApplicationPermission,))
+    patcher = mock.patch.object(ApplicationPermission, "__bases__", (FakeApplicationPermission,))
     with patcher:
         patcher.is_local = True  # 标注为本地属性，__exit__ 的时候恢复成 patcher.temp_original
         yield ApplicationPermission()

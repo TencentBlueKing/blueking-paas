@@ -23,24 +23,24 @@ from paas_wl.bk_app.applications.models import UuidAuditedModel
 
 
 class OutputStream(UuidAuditedModel):
-    def write(self, line, stream='STDOUT'):
-        if not line.endswith('\n'):
-            line += '\n'
+    def write(self, line, stream="STDOUT"):
+        if not line.endswith("\n"):
+            line += "\n"
         OutputStreamLine.objects.create(output_stream=self, line=line, stream=stream)
 
 
 class OutputStreamLine(models.Model):
-    output_stream = models.ForeignKey('OutputStream', related_name='lines', on_delete=models.CASCADE)
+    output_stream = models.ForeignKey("OutputStream", related_name="lines", on_delete=models.CASCADE)
     stream = models.CharField(max_length=16)
     line = models.TextField()
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['created']
+        ordering = ["created"]
 
     def __str__(self):
-        return '%s-%s' % (self.id, self.line)
+        return "%s-%s" % (self.id, self.line)
 
 
 class OneOffCommand(UuidAuditedModel):
@@ -49,13 +49,13 @@ class OneOffCommand(UuidAuditedModel):
     operator = models.CharField(max_length=64, null=True)
     command = models.TextField()
     # release = models.ForeignKey('Release', null=True, on_delete=models.SET_NULL)
-    output_stream = models.OneToOneField('OutputStream', null=True, on_delete=models.CASCADE)
-    exit_code = models.SmallIntegerField('ExitCode', null=True)
-    build = models.ForeignKey('Build', null=True, on_delete=models.SET_NULL)
+    output_stream = models.OneToOneField("OutputStream", null=True, on_delete=models.CASCADE)
+    exit_code = models.SmallIntegerField("ExitCode", null=True)
+    build = models.ForeignKey("Build", null=True, on_delete=models.SET_NULL)
 
     class Meta:
-        ordering = ['created']
-        get_latest_by = 'created'
+        ordering = ["created"]
+        get_latest_by = "created"
 
     def __str__(self):
         return self.command

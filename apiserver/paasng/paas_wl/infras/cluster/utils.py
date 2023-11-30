@@ -16,8 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.infras.cluster.models import Cluster
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.models import Cluster
 
 
 def get_default_cluster_by_region(region: str) -> Cluster:
@@ -25,7 +25,7 @@ def get_default_cluster_by_region(region: str) -> Cluster:
     try:
         return Cluster.objects.get(is_default=True, region=region)
     except Cluster.DoesNotExist:
-        raise RuntimeError(f'No default cluster found in region `{region}`')
+        raise RuntimeError(f"No default cluster found in region `{region}`")
 
 
 def get_cluster_by_app(app: WlApp) -> Cluster:
@@ -41,4 +41,4 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
     try:
         return Cluster.objects.get(name=cluster_name)
     except Cluster.DoesNotExist:
-        raise RuntimeError(f'Can not find a cluster called {cluster_name}')
+        raise RuntimeError(f"Can not find a cluster called {cluster_name}")

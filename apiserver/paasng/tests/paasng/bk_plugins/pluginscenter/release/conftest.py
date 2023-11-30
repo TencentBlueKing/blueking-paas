@@ -21,4 +21,4 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def thirdparty_client(thirdparty_client):
-    yield thirdparty_client
+    return thirdparty_client

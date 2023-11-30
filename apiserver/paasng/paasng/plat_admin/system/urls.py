@@ -29,34 +29,34 @@ from paasng.utils.basic import make_app_pattern, re_path
 urlpatterns = [
     # Query universal applications
     url(
-        'sys/api/uni_applications/query/by_id/$',
-        SysUniApplicationViewSet.as_view({'get': 'query_by_id'}),
-        name='sys.api.uni_applications.list_by_ids',
+        "sys/api/uni_applications/query/by_id/$",
+        SysUniApplicationViewSet.as_view({"get": "query_by_id"}),
+        name="sys.api.uni_applications.list_by_ids",
     ),
     url(
-        'sys/api/uni_applications/query/by_username/$',
-        SysUniApplicationViewSet.as_view({'get': 'query_by_username'}),
-        name='sys.api.uni_applications.list_by_username',
+        "sys/api/uni_applications/query/by_username/$",
+        SysUniApplicationViewSet.as_view({"get": "query_by_username"}),
+        name="sys.api.uni_applications.list_by_username",
     ),
     # 分页查询应用基本信息
     url(
-        'sys/api/uni_applications/list/minimal/$',
-        SysUniApplicationViewSet.as_view({'get': 'list_minimal_app'}),
-        name='sys.api.uni_applications.list_minimal_app',
+        "sys/api/uni_applications/list/minimal/$",
+        SysUniApplicationViewSet.as_view({"get": "list_minimal_app"}),
+        name="sys.api.uni_applications.list_minimal_app",
     ),
     url(
-        'sys/api/bkapps/applications/(?P<code>[^/]+)/cluster_namespaces/$',
-        ClusterNamespaceInfoView.as_view({'get': 'list_by_app_code'}),
-        name='sys.api.applications.cluster_namespace.list_by_app_code',
+        "sys/api/bkapps/applications/(?P<code>[^/]+)/cluster_namespaces/$",
+        ClusterNamespaceInfoView.as_view({"get": "list_by_app_code"}),
+        name="sys.api.applications.cluster_namespace.list_by_app_code",
     ),
     re_path(
-        make_app_pattern(suffix="/lesscode/query_db_credentials", prefix='sys/api/bkapps/applications/'),
+        make_app_pattern(suffix="/lesscode/query_db_credentials", prefix="sys/api/bkapps/applications/"),
         LessCodeSystemAPIViewSet.as_view({"get": "query_db_credentials"}),
         name="sys.api.lesscode.query_db_credentials",
     ),
     re_path(
         make_app_pattern(
-            suffix="/lesscode/bind_db_service", prefix='sys/api/bkapps/applications/', include_envs=False
+            suffix="/lesscode/bind_db_service", prefix="sys/api/bkapps/applications/", include_envs=False
         ),
         LessCodeSystemAPIViewSet.as_view({"post": "bind_db_service"}),
         name="sys.api.lesscode.bind_db_service",

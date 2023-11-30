@@ -33,10 +33,10 @@ class LazyDiscoverer(_LazyDiscoverer):
     Note: You cannot change the name `LazyDiscoverer`, otherwise the override will not work
     """
 
-    def __search(self, parts, resources, reqParams):  # noqa: C901
+    def __search(self, parts, resources, reqParams):  # noqa
         part = parts[0]
-        if part != '*':
-            resourcePart = resources.get(part)
+        if part != "*":
+            resourcePart = resources.get(part)  # noqa
             if not resourcePart:
                 return []
             elif isinstance(resourcePart, ResourceGroup):
@@ -56,15 +56,15 @@ class LazyDiscoverer(_LazyDiscoverer):
                     # kubernetes python sdk will always update cache even if the resourcePart is not updated
                     # in order to avoid unnecessary disk writing, only update cache when resourcePart.resources is set
                     if resourcePart.resources:
-                        self._cache['resources'][prefix][group][version] = resourcePart
+                        self._cache["resources"][prefix][group][version] = resourcePart
                         self.__update_cache = True
                 return self.__search(parts[1:], resourcePart.resources, reqParams)
             elif isinstance(resourcePart, dict):
                 # In this case parts [0] will be a specified prefix, group, version
                 # as we recurse
                 return self.__search(parts[1:], resourcePart, reqParams + [part])
-            else:
-                if parts[1] != '*' and isinstance(parts[1], dict):
+            else:  # noqa
+                if parts[1] != "*" and isinstance(parts[1], dict):
                     for _resource in resourcePart:
                         for term, value in parts[1].items():
                             if getattr(_resource, term) == value:
@@ -74,7 +74,7 @@ class LazyDiscoverer(_LazyDiscoverer):
                     return resourcePart
         else:
             matches = []
-            for key in resources.keys():
+            for key in resources.keys():  # noqa: SIM118
                 matches.extend(self.__search([key] + parts[1:], resources, reqParams))
             return matches
 
@@ -92,11 +92,11 @@ class CoreDynamicClient(DynamicClient):
         - 把 ResourceInstance 对象转换为字典
         """
         # OpenAPI model object
-        if getattr(body, 'openapi_types', None):
+        if getattr(body, "openapi_types", None):
             return self.client.sanitize_for_serialization(body) or {}
 
         # dynamic ResourceInstance object
-        if callable(getattr(body, 'to_dict', None)):
+        if callable(getattr(body, "to_dict", None)):
             return body.to_dict()
         return body or {}
 
@@ -121,7 +121,7 @@ class CoreDynamicClient(DynamicClient):
         """
         path = resource.path(name=name, namespace=namespace)
         return self.request(
-            'delete', path, body=body, label_selector=label_selector, field_selector=field_selector, **kwargs
+            "delete", path, body=body, label_selector=label_selector, field_selector=field_selector, **kwargs
         )
 
     def request(self, method, path, body=None, **params):
@@ -132,7 +132,7 @@ class CoreDynamicClient(DynamicClient):
 def patch_resource_field_cls():
     """Path original ResourceField class, raise exception when access a non-existent attribute"""
 
-    def __getattr__(self, name):
+    def __getattr__(self, name):  # noqa: N807
         """The original `ResourceField.__getattr__` will return `None` silently when getting a non-existent
         attribute, this function raise an exception instead.
 

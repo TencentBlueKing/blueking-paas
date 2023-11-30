@@ -48,7 +48,7 @@ from .conftest import construct_foo_pod
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
-DummyObjectList = namedtuple('DummyObjectList', 'items metadata')
+DummyObjectList = namedtuple("DummyObjectList", "items metadata")
 
 # Make a shortcut name
 RG = settings.DEFAULT_REGION_NAME
@@ -56,22 +56,22 @@ RG = settings.DEFAULT_REGION_NAME
 
 class TestClientProcess:
     @pytest.fixture(autouse=True)
-    def set_res_version(self, wl_app):
+    def _set_res_version(self, wl_app):
         AppResVerManager(wl_app).update("v1")
 
-    @pytest.fixture
+    @pytest.fixture()
     def web_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("web", release=wl_release)
 
-    @pytest.fixture
+    @pytest.fixture()
     def worker_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("worker", release=wl_release)
 
-    @pytest.mark.mock_get_structured_app
+    @pytest.mark.mock_get_structured_app()
     def test_deploy_processes(self, wl_app, scheduler_client, web_process):
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
-            'paas_wl.workloads.networking.ingress.managers.service.service_kmodel'
-        ) as ks, patch('paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel') as ki:
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch") as kd, patch(
+            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
+        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki:
             ks.get.side_effect = AppEntityNotFound()
             ki.get.side_effect = AppEntityNotFound()
 
@@ -80,9 +80,9 @@ class TestClientProcess:
             # Check deployment resource
             assert kd.called
             deployment_args, deployment_kwargs = kd.call_args_list[0]
-            assert deployment_kwargs.get('name') == f"{RG}-{wl_app.name}-web-python-deployment"
-            assert deployment_kwargs.get('body')
-            assert deployment_kwargs.get('namespace') == wl_app.namespace
+            assert deployment_kwargs.get("name") == f"{RG}-{wl_app.name}-web-python-deployment"
+            assert deployment_kwargs.get("body")
+            assert deployment_kwargs.get("namespace") == wl_app.namespace
 
             # Check service resource
             assert ks.get.called
@@ -97,10 +97,10 @@ class TestClientProcess:
             assert proc_ingress.name == f"{RG}-{wl_app.name}"
 
     def test_scale_process(self, scheduler_client, wl_app):
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.patch') as kp, patch(
-            'paas_wl.workloads.networking.ingress.managers.service.service_kmodel'
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
+            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
         ) as ks:
-            scheduler_client.scale_process(wl_app, 'worker', 3)
+            scheduler_client.scale_process(wl_app, "worker", 3)
 
             # Test service patch was performed
             assert ks.get.called
@@ -109,18 +109,18 @@ class TestClientProcess:
             # Test deployment patch was performed
             assert kp.called
             args, kwargs = kp.call_args_list[0]
-            assert kwargs.get('body')['spec']['replicas'] == 3
+            assert kwargs.get("body")["spec"]["replicas"] == 3
 
     def test_shutdown_process(self, scheduler_client, wl_app):
-        DSpec = make_dataclass('Dspec', [('replicas', int)])
-        DBody = make_dataclass('DBody', [('spec', DSpec)])
+        DSpec = make_dataclass("Dspec", [("replicas", int)])  # noqa: N806
+        DBody = make_dataclass("DBody", [("spec", DSpec)])  # noqa: N806
         kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.patch') as kp, patch(
-            'paas_wl.workloads.networking.ingress.managers.service.service_kmodel'
-        ) as ks, patch('paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel') as ki, patch(
-            'paas_wl.infras.resources.base.kres.NameBasedOperations.get', kg
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
+            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
+        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
+            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
         ):
-            scheduler_client.shutdown_process(wl_app, 'worker')
+            scheduler_client.shutdown_process(wl_app, "worker")
 
             # 测试: 不删除 Service
             assert not ks.delete_by_name.called
@@ -131,23 +131,23 @@ class TestClientProcess:
             # Check deployment resource
             assert kp.called
             args, kwargs = kp.call_args_list[0]
-            assert kwargs['body']['spec']['replicas'] == 0
+            assert kwargs["body"]["spec"]["replicas"] == 0
 
     def test_shutdown_web_processes(self, wl_app, scheduler_client, web_process):
-        DSpec = make_dataclass('Dspec', [('replicas', int)])
-        DBody = make_dataclass('DBody', [('spec', DSpec)])
+        DSpec = make_dataclass("Dspec", [("replicas", int)])  # noqa: N806
+        DBody = make_dataclass("DBody", [("spec", DSpec)])  # noqa: N806
         kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.patch') as kp, patch(
-            'paas_wl.workloads.networking.ingress.managers.service.service_kmodel'
-        ) as ks, patch('paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel') as ki, patch(
-            'paas_wl.infras.resources.base.kres.NameBasedOperations.get', kg
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
+            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
+        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
+            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
         ):
             # Make ingress point to web service
             faked_ingress = Mock()
-            faked_ingress.configure_mock(service_name=f'{RG}-{wl_app.name}-web')
+            faked_ingress.configure_mock(service_name=f"{RG}-{wl_app.name}-web")
             ki.get.return_value = faked_ingress
 
-            scheduler_client.shutdown_process(wl_app, 'web')
+            scheduler_client.shutdown_process(wl_app, "web")
 
             # 测试: 不删除 Service
             assert not ks.delete_by_name.called
@@ -158,11 +158,11 @@ class TestClientProcess:
             # Check deployment resource
             assert kp.called
             args, kwargs = kp.call_args_list[0]
-            assert kwargs['body']['spec']['replicas'] == 0
+            assert kwargs["body"]["spec"]["replicas"] == 0
 
 
 class TestClientBuild:
-    @pytest.fixture
+    @pytest.fixture()
     def pod_template(self):
         return SlugBuilderTemplate(
             name="slug-builder",
@@ -171,7 +171,7 @@ class TestClientBuild:
             schedule=Schedule(
                 cluster_name="",
                 node_selector={},
-                tolerations=[{'key': 'region', 'operator': 'Equal', 'effect': 'NoExecute', 'value': 'sh'}],
+                tolerations=[{"key": "region", "operator": "Equal", "effect": "NoExecute", "value": "sh"}],
             ),
         )
 
@@ -187,24 +187,22 @@ class TestClientBuild:
         )
         kpod_create_or_update = Mock(return_value=(create_pod_body, True))
 
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create', namespace_create), patch(
-            'paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa', namespace_check
-        ), patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
-            'paas_wl.infras.resources.base.kres.NameBasedOperations.create_or_update', kpod_create_or_update
-        ), patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.WaitPodDelete.wait"
-        ):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create), patch(
+            "paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check
+        ), patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
+            "paas_wl.infras.resources.base.kres.NameBasedOperations.create_or_update", kpod_create_or_update
+        ), patch("paas_wl.bk_app.deploy.app_res.controllers.WaitPodDelete.wait"):
             scheduler_client.build_slug(template=pod_template)
             assert kpod_get.called
             assert kpod_create_or_update.called
 
             args, kwargs = kpod_create_or_update.call_args_list[0]
-            body = kwargs.get('body')
-            assert body['metadata']['name'] == "slug-builder"
-            assert body['spec']['containers'][0]['env'][0]['value'] == "1"
-            assert len(body['spec']['tolerations']) == 1
-            assert body['spec']['tolerations'][0]['key'] == 'region'
-            assert body['spec']['tolerations'][0]['operator'] == 'Equal'
+            body = kwargs.get("body")
+            assert body["metadata"]["name"] == "slug-builder"
+            assert body["spec"]["containers"][0]["env"][0]["value"] == "1"
+            assert len(body["spec"]["tolerations"]) == 1
+            assert body["spec"]["tolerations"][0]["key"] == "region"
+            assert body["spec"]["tolerations"][0]["operator"] == "Equal"
 
     def test_build_slug_exist(self, scheduler_client, pod_template):
         namespace_create = Mock(return_value=None)
@@ -220,9 +218,9 @@ class TestClientBuild:
         )
         kpod_get = Mock(return_value=pod_body)
 
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create', namespace_create), patch(
-            'paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa', namespace_check
-        ), patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get', kpod_get):
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create), patch(  # noqa: SIM117
+            "paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check
+        ), patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get):
             with pytest.raises(ResourceDuplicate):
                 scheduler_client.build_slug(template=pod_template)
 
@@ -231,8 +229,8 @@ class TestClientBuild:
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
 
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
-            'paas_wl.infras.resources.base.kres.NameBasedOperations.delete', kpod_delete
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
+            "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
         ):
             scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="slug-builder")
 
@@ -240,14 +238,14 @@ class TestClientBuild:
             assert kpod_delete.called
             args, kwargs = kpod_delete.call_args_list[0]
             assert args[0] == "slug-builder"
-            assert kwargs.get('namespace') == "bkapp-foo-stag"
+            assert kwargs.get("namespace") == "bkapp-foo-stag"
 
     def test_delete_slug_pod_missing(self, scheduler_client):
         kpod_get = Mock(side_effect=ResourceMissing("bkapp-foo-stag-slug-pod", "bkapp-foo-stag"))
         kpod_delete = Mock(return_value=None)
 
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
-            'paas_wl.infras.resources.base.kres.NameBasedOperations.delete', kpod_delete
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
+            "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
         ):
             scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
@@ -259,8 +257,8 @@ class TestClientBuild:
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
 
-        with patch('paas_wl.infras.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
-            'paas_wl.infras.resources.base.kres.NameBasedOperations.delete', kpod_delete
+        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
+            "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
         ):
             scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
@@ -268,7 +266,7 @@ class TestClientBuild:
             assert not kpod_delete.called
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestClientBuildNew:
     """New test cases using pytest"""
 
@@ -300,13 +298,13 @@ class TestClientBuildNew:
             scheduler_client.wait_build_succeeded(wl_app.namespace, generate_builder_name(wl_app), timeout=1)
 
     @pytest.mark.parametrize(
-        'phase, exc_context',
+        ("phase", "exc_context"),
         [
-            ('Pending', pytest.raises(PodTimeoutError)),
-            ('Running', pytest.raises(PodTimeoutError)),
-            ('Failed', pytest.raises(PodNotSucceededError)),
-            ('Unknown', pytest.raises(PodNotSucceededError)),
-            ('Succeeded', does_not_raise()),
+            ("Pending", pytest.raises(PodTimeoutError)),
+            ("Running", pytest.raises(PodTimeoutError)),
+            ("Failed", pytest.raises(PodNotSucceededError)),
+            ("Unknown", pytest.raises(PodNotSucceededError)),
+            ("Succeeded", does_not_raise()),
         ],
     )
     def test_wait_for_succeeded(self, phase, exc_context, wl_app, scheduler_client, k8s_client):
@@ -315,8 +313,8 @@ class TestClientBuildNew:
 
         KPod(k8s_client).create_or_update(pod_name, namespace=wl_app.namespace, body=body)
 
-        body = {'status': {'phase': phase, 'conditions': []}}
-        KPod(k8s_client).patch_subres('status', pod_name, namespace=wl_app.namespace, body=body, ptype=PatchType.MERGE)
+        body = {"status": {"phase": phase, "conditions": []}}
+        KPod(k8s_client).patch_subres("status", pod_name, namespace=wl_app.namespace, body=body, ptype=PatchType.MERGE)
 
         with exc_context:
             scheduler_client.wait_build_succeeded(wl_app.namespace, pod_name, timeout=1)

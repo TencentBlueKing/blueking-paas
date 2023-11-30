@@ -23,7 +23,7 @@ from paasng.misc.monitoring.monitor.alert_rules.config.metric_label import get_c
 from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from tests.utils.helpers import generate_random_string
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class FakeVersionInfo:
@@ -32,24 +32,24 @@ class FakeVersionInfo:
         self.minor = minor
 
     def to_str(self):
-        return f'{self.major}.{self.minor}'
+        return f"{self.major}.{self.minor}"
 
 
-@mock.patch('paasng.misc.monitoring.monitor.alert_rules.config.metric_label._get_cluster_info_cache')
+@mock.patch("paasng.misc.monitoring.monitor.alert_rules.config.metric_label._get_cluster_info_cache")
 @pytest.mark.parametrize(
-    'version_info',
+    "version_info",
     [
-        FakeVersionInfo('1', '8'),
-        FakeVersionInfo('1', '10'),
-        pytest.param(FakeVersionInfo('1', '11+')),
-        pytest.param(FakeVersionInfo('1', '12'), marks=pytest.mark.xfail),
-        pytest.param(FakeVersionInfo('1', '12+'), marks=pytest.mark.xfail),
-        pytest.param(FakeVersionInfo('1', '14+'), marks=pytest.mark.xfail),
-        pytest.param(FakeVersionInfo('1', '20'), marks=pytest.mark.xfail),
+        FakeVersionInfo("1", "8"),
+        FakeVersionInfo("1", "10"),
+        pytest.param(FakeVersionInfo("1", "11+")),
+        pytest.param(FakeVersionInfo("1", "12"), marks=pytest.mark.xfail),
+        pytest.param(FakeVersionInfo("1", "12+"), marks=pytest.mark.xfail),
+        pytest.param(FakeVersionInfo("1", "14+"), marks=pytest.mark.xfail),
+        pytest.param(FakeVersionInfo("1", "20"), marks=pytest.mark.xfail),
     ],
 )
 def test_get_invalid_cluster_id(mock_get_cluster_info_cache, bk_app, version_info):
-    mock_get_cluster_info_cache.return_value = {'bcs_cluster_id': generate_random_string(), 'version': version_info}
+    mock_get_cluster_info_cache.return_value = {"bcs_cluster_id": generate_random_string(), "version": version_info}
     with pytest.raises(BKMonitorNotSupportedError):
         get_cluster_id(
             app_code=generate_random_string(), run_env=generate_random_string(), module_name=generate_random_string()

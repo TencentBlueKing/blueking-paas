@@ -29,8 +29,8 @@ from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, Repo
 from paasng.platform.sourcectl.utils import generate_temp_dir
 
 if TYPE_CHECKING:
-    from paasng.platform.sourcectl.models import RepositoryInstance
     from paasng.platform.modules.models import Module
+    from paasng.platform.sourcectl.models import RepositoryInstance
 
 from paasng.platform.sourcectl.git.client import GitClient, GitCommandExecutionError, Ref
 
@@ -40,13 +40,13 @@ logger = logging.getLogger(__name__)
 class BareGitRepoController:
     """Git 协议仓库控制器"""
 
-    def __init__(self, repo_url: str, repo_obj: 'RepositoryInstance'):
+    def __init__(self, repo_url: str, repo_obj: "RepositoryInstance"):
         self.repo_url = MutableURL(repo_url)
         self.repo_obj = repo_obj
         self.client = GitClient()
 
     @classmethod
-    def init_by_module(cls, module: 'Module', operator: Optional[str] = None) -> 'BareGitRepoController':
+    def init_by_module(cls, module: "Module", operator: Optional[str] = None) -> "BareGitRepoController":
         repo_obj = module.get_source_obj()
         repo_url = repo_obj.get_repo_url()
         if not repo_url:
@@ -79,8 +79,8 @@ class BareGitRepoController:
             # 使用 ls-remote 来提速
             self.client.list_remote(self.repo_url)
         except GitCommandExecutionError as e:
-            if 'authentication failed' in str(e).lower():
-                raise BasicAuthError('wrong username or password')
+            if "authentication failed" in str(e).lower():
+                raise BasicAuthError("wrong username or password")
 
             logger.exception("Failed to access the remote git repo, command error.")
             raise

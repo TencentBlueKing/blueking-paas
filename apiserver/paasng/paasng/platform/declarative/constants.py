@@ -20,12 +20,12 @@ from typing import Any, TypeVar
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class OmittedType:
     def __repr__(self) -> str:
-        return 'OmittedType'
+        return "OmittedType"
 
     def __bool__(self) -> bool:
         return False
@@ -51,7 +51,7 @@ class AppSpecVersion(StructuredEnum):
 
 
 class AppDescPluginType(str, StructuredEnum):
-    APP_VERSION = EnumField('app_version', label="应用版本")
+    APP_VERSION = EnumField("app_version", label="应用版本")
     APP_LIBRARIES = EnumField("app_libraries", label="应用依赖库")
 
 

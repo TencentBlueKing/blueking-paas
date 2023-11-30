@@ -25,7 +25,6 @@ from paasng.bk_plugins.pluginscenter.releases.stages import init_stage_controlle
 
 
 class ReleaseStatusPoller(TaskPoller):
-
     overall_timeout_seconds = 30 * 60
 
     def query(self) -> PollingResult:
@@ -40,6 +39,7 @@ class ReleaseStatusPoller(TaskPoller):
         ctrl = init_stage_controller(release.current_stage)
         if not ctrl.async_check_status():
             return PollingResult.doing()
+
         return PollingResult.done()
 
 

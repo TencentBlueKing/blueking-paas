@@ -30,27 +30,27 @@ def key_mangler(key: str):
 
 
 if is_redis_sentinel_backend(REDIS_URL):
-    backend = SentinelBackend(REDIS_URL, settings.SENTINEL_MASTER_NAME, {'password': settings.SENTINEL_PASSWORD})
+    backend = SentinelBackend(REDIS_URL, settings.SENTINEL_MASTER_NAME, {"password": settings.SENTINEL_PASSWORD})
     region = make_region(key_mangler=key_mangler).configure(
-        'dogpile.cache.redis_sentinel',
+        "dogpile.cache.redis_sentinel",
         arguments={
-            'sentinels': [[host['host'], host['port']] for host in backend.hosts],
-            'db': backend.db,
-            'service_name': backend.master_name,
-            'sentinel_kwargs': backend.sentinel_kwargs,
-            'password': backend.password,
-            'redis_expiration_time': 600,
+            "sentinels": [[host["host"], host["port"]] for host in backend.hosts],
+            "db": backend.db,
+            "service_name": backend.master_name,
+            "sentinel_kwargs": backend.sentinel_kwargs,
+            "password": backend.password,
+            "redis_expiration_time": 600,
             # Disable distributed lock for better performance
-            'distributed_lock': False,
+            "distributed_lock": False,
         },
     )
 else:
     region = make_region(key_mangler=key_mangler).configure(
-        'dogpile.cache.redis',
+        "dogpile.cache.redis",
         arguments={
-            'url': REDIS_URL,
-            'redis_expiration_time': 600,
+            "url": REDIS_URL,
+            "redis_expiration_time": 600,
             # Disable distributed lock for better performance
-            'distributed_lock': False,
+            "distributed_lock": False,
         },
     )

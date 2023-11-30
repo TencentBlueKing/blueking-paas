@@ -58,7 +58,7 @@ class AccessTokenMissingError(AccessTokenError):
 
 
 class ExceptionWithGitProject(Exception):
-    def __init__(self, *args, project: Optional['GitProject'] = None):
+    def __init__(self, *args, project: Optional["GitProject"] = None):
         self.project = project
         super().__init__(*args)
 
@@ -133,7 +133,7 @@ class BasicAuthError(Exception):
 class OauthAuthorizationRequired(Exception):
     """需要进行 Oauth 授权"""
 
-    def __init__(self, authorization_url: str, auth_docs: str = ''):
+    def __init__(self, authorization_url: str, auth_docs: str = ""):
         super().__init__(authorization_url, auth_docs)
         self.authorization_url = authorization_url
         self.auth_docs = auth_docs

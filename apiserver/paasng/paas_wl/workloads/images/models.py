@@ -56,7 +56,7 @@ class AppImageCredential(UuidAuditedModel):
     objects = AppImageCredentialManager()
 
     class Meta:
-        unique_together = ('app', 'registry')
+        unique_together = ("app", "registry")
 
 
 class AppUserCredentialManager(models.Manager):
@@ -67,7 +67,7 @@ class AppUserCredentialManager(models.Manager):
 class AppUserCredential(UuidAuditedModel):
     """App owned UserCredential, aka (Username + Password) pair"""
 
-    application_id = models.UUIDField(verbose_name=_('所属应用'), null=False)
+    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
 
     name = models.CharField(max_length=32, help_text="凭证名称")
     username = models.CharField(max_length=64, help_text="账号")
@@ -77,4 +77,4 @@ class AppUserCredential(UuidAuditedModel):
     objects = AppUserCredentialManager()
 
     class Meta:
-        unique_together = ('application_id', 'name')
+        unique_together = ("application_id", "name")

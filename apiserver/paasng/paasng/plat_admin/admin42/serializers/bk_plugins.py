@@ -24,10 +24,10 @@ from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor, BkPluginTag
 class BKPluginTagSLZ(serializers.ModelSerializer):
     class Meta:
         model = BkPluginTag
-        fields = '__all__'
+        fields = "__all__"
 
 
 class BkPluginDistributorSLZ(serializers.ModelSerializer):
     class Meta:
         model = BkPluginDistributor
-        fields = ('id', 'name', 'code_name', 'bk_app_code', 'introduction')
+        fields = ("id", "name", "code_name", "bk_app_code", "introduction")

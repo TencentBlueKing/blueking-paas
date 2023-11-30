@@ -26,7 +26,10 @@ from django.utils.functional import Promise
 from django.utils.translation import gettext as _
 from pydantic import BaseModel, Field
 
+from paasng.accessories.publish.market.constant import OpenMode
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.basic import AllowOmittedModel
 from paasng.platform.declarative.constants import (
     OMITTED_VALUE,
@@ -36,10 +39,7 @@ from paasng.platform.declarative.constants import (
     OmittedType,
 )
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
-from paasng.accessories.publish.market.constant import OpenMode
 
 M = TypeVar("M")
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ def get_application(json_data: Dict, field_name: str) -> Optional[Application]:
     except Application.DoesNotExist:
         return None
     except KeyError:
-        raise DescriptionValidationError({field_name: '内容不能为空'})
+        raise DescriptionValidationError({field_name: "内容不能为空"})
 
 
 class DisplayOptions(AllowOmittedModel):
@@ -77,13 +77,12 @@ class MarketDesc(AllowOmittedModel):
 
 
 class ServiceSpec(BaseModel):
-
     name: str
     specs: Dict = Field(default_factory=dict, description="限定规格")
     display_name: Optional[str] = None
     shared_from: Optional[str] = None
 
-    def __init__(__pydantic_self__, **data: Any) -> None:
+    def __init__(__pydantic_self__, **data: Any) -> None:  # noqa: N805
         super().__init__(**data)
         if __pydantic_self__.display_name is None:
             __pydantic_self__.display_name = __pydantic_self__.name
@@ -133,12 +132,12 @@ class ApplicationDesc(BaseModel):
         try:
             return next(filter(lambda m: m.is_default, self.modules.values()))
         except StopIteration:
-            raise RuntimeError(_('当前应用未定义主模块'))
+            raise RuntimeError(_("当前应用未定义主模块"))
 
     def get_plugin(self, plugin_type: AppDescPluginType) -> Optional[Dict]:
         """Return the first plugin in given type"""
         for plugin in self.plugins:
-            if plugin['type'] == plugin_type:
+            if plugin["type"] == plugin_type:
                 return plugin
         return None
 
@@ -166,7 +165,7 @@ class ApplicationDescDiffDog:
                 )
         return diffs
 
-    def _diff_module(self, module: 'Module') -> ModuleDiffResult:
+    def _diff_module(self, module: "Module") -> ModuleDiffResult:
         """对比模块与模块定义之间的差异
 
         :param module: 需要与 ModuleSpec 做对比的模块

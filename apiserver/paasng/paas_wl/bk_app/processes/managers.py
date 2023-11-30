@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 class AppProcessManager:
     """从 WlApp 维度操作 Process"""
 
-    app: 'WlApp'
+    app: "WlApp"
 
     def assemble_process(
-        self, process_type: str, release: Optional['Release'] = None, extra_envs: Optional[dict] = None
+        self, process_type: str, release: Optional["Release"] = None, extra_envs: Optional[dict] = None
     ) -> Process:
         """通过 Release 对象组装单个 Process 对象"""
         # WARNING: 当 extra_envs 参数为 None 时，我们无法通过单纯的 release 对象来构造
@@ -56,11 +56,11 @@ class AppProcessManager:
         return Process.from_release(process_type, release, extra_envs)
 
     def assemble_processes(
-        self, release: Optional['Release'] = None, extra_envs: Optional[dict] = None
+        self, release: Optional["Release"] = None, extra_envs: Optional[dict] = None
     ) -> Iterable[Process]:
         """通过 Release 对象组装 WlApp 所有 Process 对象"""
         if not release:
             release = Release.objects.get_latest(self.app)
 
-        for process_type in release.get_procfile().keys():
+        for process_type in release.get_procfile():
             yield self.assemble_process(process_type, release, extra_envs)

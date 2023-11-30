@@ -23,26 +23,26 @@ from . import views
 urlpatterns = [
     # 返回合并后的 swagger文档
     url(
-        r'^docs/$',
-        views.FullSwaggerConfigurationView.with_ui('swagger', cache_timeout=0),
+        r"^docs/$",
+        views.FullSwaggerConfigurationView.with_ui("swagger", cache_timeout=0),
         name="full-swagger-ui",
     ),
     url(
-        r'^docs/swagger/$',
-        views.FullSwaggerConfigurationView.with_ui('swagger', cache_timeout=0),
+        r"^docs/swagger/$",
+        views.FullSwaggerConfigurationView.with_ui("swagger", cache_timeout=0),
         name="full-swagger-ui",
     ),
-    url(r'^docs/redoc/$', views.FullSwaggerConfigurationView.with_ui('redoc', cache_timeout=0), name="full-redoc"),
+    url(r"^docs/redoc/$", views.FullSwaggerConfigurationView.with_ui("redoc", cache_timeout=0), name="full-redoc"),
     url(
-        r'^docs/swagger(?P<format>\.json|\.yaml)$',
+        r"^docs/swagger(?P<format>\.json|\.yaml)$",
         views.FullSwaggerConfigurationView.without_ui(cache_timeout=0),
         name="full-schema",
     ),
     url(
-        r'^docs/auto/swagger(?P<format>\.json|\.yaml)$',
+        r"^docs/auto/swagger(?P<format>\.json|\.yaml)$",
         views.schema_view.without_ui(cache_timeout=0),
-        name='schema',
+        name="schema",
     ),
-    url(r'^docs/auto/swagger/$', views.schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    url(r'^docs/auto/redoc/$', views.schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    url(r"^docs/auto/swagger/$", views.schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+    url(r"^docs/auto/redoc/$", views.schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 ]

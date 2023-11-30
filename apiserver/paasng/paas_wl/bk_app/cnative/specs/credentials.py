@@ -86,7 +86,7 @@ class ImageCredentialsManager(_ImageCredentialsManager):
         super().__init__()
         self._client = client
 
-    def _kres(self, app: WlApp, api_version: str = '') -> Iterator[kres.BaseKresource]:
+    def _kres(self, app: WlApp, api_version: str = "") -> Iterator[kres.BaseKresource]:
         """return kres object using given k8s client"""
         yield self.entity_type.Meta.kres_class(self._client, api_version=api_version)
 

@@ -26,7 +26,7 @@ API_VISITED_TIME_CONSUME_HISTOGRAM = Histogram(
 )
 
 NEW_APP_COUNTER = Counter(
-    'new_application',
+    "new_application",
     "",
     (
         "region",
@@ -53,8 +53,8 @@ DEPLOYMENT_STATUS_COUNTER = Counter(
 DEPLOYMENT_INFO_COUNTER = Counter("deploy_operation", "", ("source_type", "environment", "status"))
 
 # 增强服务
-SERVICE_BIND_COUNTER = Counter('service_bind', "", ("service", "region"))
-SERVICE_PROVISION_COUNTER = Counter('service_provision', "", ("environment", "service", "plan"))
+SERVICE_BIND_COUNTER = Counter("service_bind", "", ("service", "region"))
+SERVICE_PROVISION_COUNTER = Counter("service_provision", "", ("environment", "service", "plan"))
 
 # 进程
-PROCESS_OPERATE_COUNTER = Counter('process_operate', "", ("environment", "operate_type"))
+PROCESS_OPERATE_COUNTER = Counter("process_operate", "", ("environment", "operate_type"))

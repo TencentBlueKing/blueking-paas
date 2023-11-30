@@ -22,7 +22,7 @@ from paasng.utils.patternmatcher import Pattern
 
 
 @pytest.mark.parametrize(
-    "pattern, path, expected",
+    ("pattern", "path", "expected"),
     [
         ("**", "file", True),
         ("**", "file/", True),

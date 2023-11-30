@@ -45,11 +45,11 @@ class Command(BaseCommand):
             type=str,
             help=("环境，可选 stag、prod"),
         )
-        parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true")
+        parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
 
     def handle(self, identifier, env, dry_run, *args, **options):
-        file_path = Path(settings.BASE_DIR) / 'support-files' / 'plugin' / f'{identifier}-{env}.yaml'
-        with open(file_path, 'r', encoding='utf-8') as f:
+        file_path = Path(settings.BASE_DIR) / "support-files" / "plugin" / f"{identifier}-{env}.yaml"
+        with open(file_path, "r", encoding="utf-8") as f:
             data = yaml.load(f)
 
         if models.PluginDefinition.objects.filter(identifier=identifier).exists():
@@ -66,16 +66,16 @@ class Command(BaseCommand):
         pd, _ = models.PluginDefinition.objects.update_or_create(
             identifier=pd_data.identifier,
             defaults={
-                'name_zh_cn': pd_data.name,
-                'description_zh_cn': pd_data.description,
-                'docs': pd_data.docs,
-                'logo': pd_data.logo,
-                'administrator': pd_data.administrator,
-                'approval_config': pd_data.approvalConfig,
-                'release_revision': pd_data.releaseRevision,
-                'release_stages': pd_data.releaseStages,
-                'log_config': pd_data.logConfig,
-                'features': pd_data.features,
+                "name_zh_cn": pd_data.name,
+                "description_zh_cn": pd_data.description,
+                "docs": pd_data.docs,
+                "logo": pd_data.logo,
+                "administrator": pd_data.administrator,
+                "approval_config": pd_data.approvalConfig,
+                "release_revision": pd_data.releaseRevision,
+                "release_stages": pd_data.releaseStages,
+                "log_config": pd_data.logConfig,
+                "features": pd_data.features,
             },
         )
         # 插件基本信息
@@ -89,6 +89,9 @@ class Command(BaseCommand):
                 "repository_group": pd_data.spec.basicInfo.repositoryGroup,
                 "api": pd_data.spec.basicInfo.api,
                 "extra_fields": pd_data.spec.basicInfo.extraFields,
+                "extra_fields_order": pd_data.spec.basicInfo.extraFieldsOrder,
+                "overview_page": pd_data.spec.basicInfo.overviewPage,
+                "sync_members": pd_data.spec.basicInfo.syncMembers,
             },
         )
 
@@ -100,6 +103,7 @@ class Command(BaseCommand):
                 "category": pd_data.spec.marketInfo.category,
                 "api": pd_data.spec.marketInfo.api,
                 "extra_fields": pd_data.spec.marketInfo.extraFields,
+                "extra_fields_order": pd_data.spec.marketInfo.extraFieldsOrder,
             },
         )
 

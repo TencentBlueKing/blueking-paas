@@ -20,65 +20,65 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
 class MetricsSeriesType(str, StructuredEnum):
-    CURRENT = EnumField('current', '使用量')
-    REQUEST = EnumField('request', '保留量')
-    LIMIT = EnumField('limit', '配额上限')
+    CURRENT = EnumField("current", "使用量")
+    REQUEST = EnumField("request", "保留量")
+    LIMIT = EnumField("limit", "配额上限")
 
 
 class MetricsResourceType(str, StructuredEnum):
-    MEM = EnumField('mem')
-    CPU = EnumField('cpu')
+    MEM = EnumField("mem")
+    CPU = EnumField("cpu")
 
     @classmethod
     def choices(cls):
         """Return original choice tuples with an extra value: __all__"""
         choices = super().get_django_choices()
-        return choices + [('__all__', '__ALL__')]
+        return choices + [("__all__", "__ALL__")]
 
 
 RAW_PROMQL_TMPL = {
     "mem": {
         # 内存实际使用值
-        'current': 'sum by(container_name)(container_memory_working_set_bytes{{'
+        "current": "sum by(container_name)(container_memory_working_set_bytes{{"
         'pod_name="{instance_name}", container_name!="POD", cluster_id="{cluster_id}"}})',
         # 内存预留值
-        'request': 'kube_pod_container_resource_requests_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
+        "request": 'kube_pod_container_resource_requests_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
         # 内存上限值
-        'limit': 'kube_pod_container_resource_limits_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
+        "limit": 'kube_pod_container_resource_limits_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
     },
     "cpu": {
         # CPU 实际使用值
-        'current': 'sum by (container_name)(rate(container_cpu_usage_seconds_total{{'
+        "current": "sum by (container_name)(rate(container_cpu_usage_seconds_total{{"
         'image!="",container_name!="POD",pod_name="{instance_name}", cluster_id="{cluster_id}"}}[1m]))',
         # CPU 预留值
-        'request': 'kube_pod_container_resource_requests_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
+        "request": 'kube_pod_container_resource_requests_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
         # CPU 上限值
-        'limit': 'kube_pod_container_resource_limits_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
+        "limit": 'kube_pod_container_resource_limits_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
     },
 }
 
 BKMONITOR_PROMQL_TMPL = {
-    'mem': {
+    "mem": {
         # 内存实际使用值
-        'current': 'sum by(container_name)(container_memory_working_set_bytes{{'
+        "current": "sum by(container_name)(container_memory_working_set_bytes{{"
         'pod_name="{instance_name}",container_name!="POD",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}})',
         # 内存预留值
-        'request': 'kube_pod_container_resource_requests_memory_bytes{{'
+        "request": "kube_pod_container_resource_requests_memory_bytes{{"
         'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
         # 内存上限值
-        'limit': 'kube_pod_container_resource_limits_memory_bytes{{'
+        "limit": "kube_pod_container_resource_limits_memory_bytes{{"
         'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
     },
-    'cpu': {
+    "cpu": {
         # CPU 实际使用值，由于蓝鲸监控默认采样率较低，rate 时间窗口设置为 2m
-        'current': 'sum by(container_name)(rate(container_cpu_usage_seconds_total{{'
+        "current": "sum by(container_name)(rate(container_cpu_usage_seconds_total{{"
         'image!="",pod_name="{instance_name}",container_name!="POD",'
         'bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}[2m]))',
         # CPU 预留值
-        'request': 'kube_pod_container_resource_requests_cpu_cores{{'
+        "request": "kube_pod_container_resource_requests_cpu_cores{{"
         'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
         # CPU 上限值
-        'limit': 'kube_pod_container_resource_limits_cpu_cores{{'
+        "limit": "kube_pod_container_resource_limits_cpu_cores{{"
         'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
     },
 }

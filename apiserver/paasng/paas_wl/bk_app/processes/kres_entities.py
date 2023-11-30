@@ -81,7 +81,7 @@ class Instance(AppEntity):
 
     @classmethod
     def get_shorter_instance_name(cls, instance_name: str) -> str:
-        return instance_name.split('-')[-1]
+        return instance_name.split("-")[-1]
 
 
 @dataclass
@@ -100,7 +100,7 @@ class Process(AppEntity):
     readiness_probe: Optional[Probe] = None
 
     # 实际资源的动态状态
-    metadata: Optional['ResourceField'] = None
+    metadata: Optional["ResourceField"] = None
     status: Optional[Status] = None
     instances: List[Instance] = field(default_factory=list)
 
@@ -110,7 +110,7 @@ class Process(AppEntity):
         serializer = ProcessSerializer
 
     @classmethod
-    def from_release(cls, type_: str, release: 'Release', extra_envs: Optional[dict] = None) -> 'Process':
+    def from_release(cls, type_: str, release: "Release", extra_envs: Optional[dict] = None) -> "Process":
         """通过 release 生成 Process"""
         build = release.build
         config = release.config
@@ -157,7 +157,7 @@ class Process(AppEntity):
     def available_instance_count(self):
         return sum(1 for instance in self.instances if instance.ready and instance.version == self.version)
 
-    def fulfill_runtime(self, replicas: int, success: int, metadata: 'ResourceField' = None):
+    def fulfill_runtime(self, replicas: int, success: int, metadata: "ResourceField" = None):
         """填充运行时具体信息"""
         self.status = Status(replicas=replicas, success=success, failed=max(replicas - success, 0))
         self.metadata = metadata

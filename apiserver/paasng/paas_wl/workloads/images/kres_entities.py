@@ -45,7 +45,7 @@ class ImageCredentials(AppEntity):
         serializer = ImageCredentialsSerializer
 
     @classmethod
-    def load_from_app(cls, app: WlApp) -> 'ImageCredentials':
+    def load_from_app(cls, app: WlApp) -> "ImageCredentials":
         qs = AppImageCredential.objects.filter(app=app)
         credentials = [
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
@@ -96,7 +96,7 @@ class ImageCredentialsManager(AppEntityManager[ImageCredentials]):
             existed = self.get(app=res.app, name=secret_name)
         except AppEntityNotFound:
             logger.info("Secret<%s/%s> does not exist, will skip delete", namespace, secret_name)
-            return
+            return None
         return super().delete(existed, non_grace_period)
 
 

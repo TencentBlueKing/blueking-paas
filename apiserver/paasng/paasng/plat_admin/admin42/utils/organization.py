@@ -40,22 +40,21 @@ class UserOrganization:
 
 
 def get_user_organization(username):
-
     try:
         # tof 获取用户信息的函数已经添加了缓存
         staff_info = tof_get_staff_info(username)
-        center_info = get_center_info_by_groupid(staff_info['GroupId'])
+        center_info = get_center_info_by_groupid(staff_info["GroupId"])
     except ComponentResponseInvalid:
         return UserOrganization()
 
     dept_id, dept_name = int(staff_info["DepartmentId"]), staff_info["DepartmentName"]
     bg_id, bg_name = tof_get_bg_info_by_dept_id(dept_id, dept_name)
     return UserOrganization(
-        staff_info['ChineseName'],
-        staff_info['StatusName'],
-        staff_info['TypeName'],
+        staff_info["ChineseName"],
+        staff_info["StatusName"],
+        staff_info["TypeName"],
         bg_name,
-        staff_info['DepartmentName'],
-        center_info.get('CenterName', ''),
-        staff_info['GroupName'],
+        staff_info["DepartmentName"],
+        center_info.get("CenterName", ""),
+        staff_info["GroupName"],
     )

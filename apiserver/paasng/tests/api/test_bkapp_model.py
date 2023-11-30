@@ -21,20 +21,21 @@ from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.models.deployment import AutoscalingConfig
 from paasng.platform.modules.models import BuildConfig
 
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModuleProcessSpecViewSet:
     @pytest.fixture(autouse=True)
-    def setup(self, bk_cnative_app, bk_module):
+    def _setup(self, bk_cnative_app, bk_module):
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         cfg.build_method = RuntimeType.CUSTOM_IMAGE
         cfg.image_repository = "example.com/foo"
         cfg.save()
 
-    @pytest.fixture
+    @pytest.fixture()
     def web(self, bk_module):
         return G(
             ModuleProcessSpec,
@@ -45,7 +46,7 @@ class TestModuleProcessSpecViewSet:
             port=8000,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def celery_worker(self, bk_module):
         return G(ModuleProcessSpec, module=bk_module, name="worker", command=["celery"])
 
@@ -62,10 +63,10 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["command"] == ["python"]
         assert proc_specs[0]["args"] == ["-m", "http.server"]
         assert proc_specs[0]["env_overlay"]["stag"]["scaling_config"] == {
-            'min_replicas': 1,
-            'max_replicas': 1,
-            'metrics': [{'type': 'Resource', 'metric': 'cpuUtilization', 'value': '85'}],
-            'policy': 'default',
+            "min_replicas": 1,
+            "max_replicas": 1,
+            "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
+            "policy": "default",
         }
 
         assert proc_specs[1]["name"] == "worker"
@@ -73,7 +74,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[1]["command"] == ["celery"]
         assert proc_specs[1]["args"] == []
 
-    @pytest.fixture
+    @pytest.fixture()
     def web_v1alpha1(self, web):
         web.image = "python:latest"
         web.save()
@@ -107,7 +108,7 @@ class TestModuleProcessSpecViewSet:
             scaling_config={
                 "min_replicas": 1,
                 "max_replicas": 5,
-                'policy': 'default',
+                "policy": "default",
             },
         )
         assert web.get_autoscaling("stag")
@@ -179,11 +180,13 @@ class TestModuleProcessSpecViewSet:
             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
             "policy": "default",
         }
-        assert ModuleProcessSpec.objects.get(module=bk_module, name="beat").get_scaling_config("prod") == {
-            "min_replicas": 1,
-            "max_replicas": 5,
-            "policy": "default",
-        }
+        assert ModuleProcessSpec.objects.get(module=bk_module, name="beat").get_scaling_config(
+            "prod"
+        ) == AutoscalingConfig(
+            min_replicas=1,
+            max_replicas=5,
+            policy="default",
+        )
 
     def test_save_v1alpha1(self, api_client, bk_cnative_app, bk_module, web_v1alpha1, celery_worker):
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"

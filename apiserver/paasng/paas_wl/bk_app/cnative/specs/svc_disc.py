@@ -46,7 +46,7 @@ def apply_configmap(env: ModuleEnvironment, bk_app_res: BkAppResource):
     if not (svc_disc and svc_disc.bkSaaS):
         # TODO: Only remove the configmap if the app previously had a valid svc-discovery
         # config, don't perform the remove() operation every time.
-        logger.debug('No service discovery config found, remove the ConfigMap if exists')
+        logger.debug("No service discovery config found, remove the ConfigMap if exists")
         mgr.remove()
         return
 
@@ -55,7 +55,7 @@ def apply_configmap(env: ModuleEnvironment, bk_app_res: BkAppResource):
     addrs = BkSaaSAddrDiscoverer().get(items)
 
     # Write the ConfigMap resource for current BkApp
-    logger.info('Writing the service discovery addresses to ConfigMap, bk_app_name: %s', mgr.bk_app_name)
+    logger.info("Writing the service discovery addresses to ConfigMap, bk_app_name: %s", mgr.bk_app_name)
     mgr.write(addrs)
 
 
@@ -66,7 +66,7 @@ class ConfigMapManager:
     :param bk_app_name: The name of BkApp resource.
     """
 
-    key_bk_saas = 'bk_saas_encoded_json'
+    key_bk_saas = "bk_saas_encoded_json"
 
     def __init__(self, env: ModuleEnvironment, bk_app_name: str):
         self.env = env
@@ -89,14 +89,14 @@ class ConfigMapManager:
         """
         with get_client_by_app(self.wl_app) as client:
             body = {
-                'metadata': {'name': self.resource_name},
-                'data': {self.key_bk_saas: self.encode_data(saas_addrs)},
+                "metadata": {"name": self.resource_name},
+                "data": {self.key_bk_saas: self.encode_data(saas_addrs)},
             }
             KConfigMap(client).create_or_update(
                 self.resource_name,
                 namespace=self.wl_app.namespace,
                 body=body,
-                update_method='patch',
+                update_method="patch",
             )
 
     def remove(self):
@@ -120,7 +120,7 @@ class ConfigMapManager:
     @property
     def resource_name(self) -> str:
         """Get the name of the ConfigMap object"""
-        return f'svc-disc-results-{self.bk_app_name}'
+        return f"svc-disc-results-{self.bk_app_name}"
 
     @staticmethod
     def encode_data(data: Any) -> str:

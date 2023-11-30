@@ -24,11 +24,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.modules.constants import ExposedURLType
-from paasng.platform.modules.helpers import get_module_prod_env_root_domains
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, update_exposed_url_type_to_subdomain
 from paasng.accessories.publish.entrance.preallocated import get_preallocated_urls
 from paasng.accessories.publish.entrance.serializers import (
@@ -40,6 +35,11 @@ from paasng.accessories.publish.entrance.serializers import (
     UpdateExposedURLTypeSLZ,
 )
 from paasng.accessories.publish.market.utils import ModuleEnvAvailableAddressHelper
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.modules.constants import ExposedURLType
+from paasng.platform.modules.helpers import get_module_prod_env_root_domains
 from paasng.utils.views import permission_classes as perm_classes
 
 
@@ -56,9 +56,9 @@ class ExposedURLTypeViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = UpdateExposedURLTypeSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        if serializer.data['exposed_url_type'] == ExposedURLType.SUBDOMAIN:
+        if serializer.data["exposed_url_type"] == ExposedURLType.SUBDOMAIN:
             if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
-                raise ValidationError(_('当前模块访问地址已经是子域名类型，无需修改'))
+                raise ValidationError(_("当前模块访问地址已经是子域名类型，无需修改"))
 
             update_exposed_url_type_to_subdomain(module)
         return Response({})
@@ -72,7 +72,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(responses={'200': ApplicationAvailableEntranceSLZ()}, tags=["访问入口"])
+    @swagger_auto_schema(responses={"200": ApplicationAvailableEntranceSLZ()}, tags=["访问入口"])
     def list_module_default_entrances(self, request, code, module_name):
         """(快速访问)查看模块的默认的所有访问入口(由平台提供的)，无论是否运行"""
         module = self.get_module_via_path()
@@ -101,7 +101,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
             )
         )
 
-    @swagger_auto_schema(responses={'200': ApplicationCustomDomainEntranceSLZ(many=True)}, tags=["访问入口"])
+    @swagger_auto_schema(responses={"200": ApplicationCustomDomainEntranceSLZ(many=True)}, tags=["访问入口"])
     def list_custom_domain_entrance(self, request, code):
         """(快速访问)查看应用所有的独立域名访问入口"""
         application = self.get_application()
@@ -121,7 +121,9 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
         return Response(ApplicationCustomDomainEntranceSLZ(results, many=True).data)
 
     # [Deprecated] use `api.applications.entrance.all_entrances` instead
-    @swagger_auto_schema(responses={'200': ApplicationDefaultEntranceSLZ(many=True)}, tags=["访问入口"], deprecated=True)
+    @swagger_auto_schema(
+        responses={"200": ApplicationDefaultEntranceSLZ(many=True)}, tags=["访问入口"], deprecated=True
+    )
     def list_default_entrance(self, request, code):
         """查看应用所有模块的默认的访问入口(由平台提供的)"""
         application = self.get_application()
@@ -144,7 +146,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
 class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(responses={'200': RootDoaminSLZ()}, tags=["访问入口"])
+    @swagger_auto_schema(responses={"200": RootDoaminSLZ()}, tags=["访问入口"])
     def list_root_domains(self, request, code, module_name):
         """
         查看模块所属集群的子域名根域名和当前模块的偏好的根域名
@@ -183,13 +185,13 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         serializer = PreferredRootDoaminSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
-        preferred_root_domain: str = serializer.data['preferred_root_domain']
+        preferred_root_domain: str = serializer.data["preferred_root_domain"]
 
         for domain in root_domains:
             if domain.name == preferred_root_domain and not domain.reserved:
                 break
         else:
-            raise ValidationError(_('不支持切换至该域名'))
+            raise ValidationError(_("不支持切换至该域名"))
 
         module.user_preferred_root_domain = preferred_root_domain
         module.save()

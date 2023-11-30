@@ -40,10 +40,10 @@ pytestmark = pytest.mark.django_db
 
 class TestGetExposedUrlType:
     def test_non_existent(self):
-        assert get_exposed_url_type('foo', 'bar-module') is None
+        assert get_exposed_url_type("foo", "bar-module") is None
 
     def test_non_existent_module(self, bk_app):
-        assert get_exposed_url_type(bk_app.code, 'bar-module') is None
+        assert get_exposed_url_type(bk_app.code, "bar-module") is None
 
     def test_normal(self, bk_module):
         bk_module.exposed_url_type = ExposedURLType.SUBPATH.value
@@ -56,141 +56,140 @@ class TestGetExposedUrlType:
         assert get_exposed_url_type(bk_module.application.code, bk_module.name) == ExposedURLType.SUBDOMAIN
         assert (
             get_exposed_url_type(bk_module.application.code, None) == ExposedURLType.SUBDOMAIN
-        ), 'test default module'
+        ), "test default module"
 
 
 def test_default_preallocated_urls_empty(bk_stag_env):
     with mock_cluster_service(replaced_ingress_config={}):
-        urls = _default_preallocated_urls(bk_stag_env)['BKPAAS_DEFAULT_PREALLOCATED_URLS']
-        assert urls == ''
+        urls = _default_preallocated_urls(bk_stag_env)["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
+        assert urls == ""
 
 
 def test_default_preallocated_urls_normal(bk_stag_env):
-    ingress_config = {'app_root_domains': [{"name": 'example.com'}]}
+    ingress_config = {"app_root_domains": [{"name": "example.com"}]}
     with mock_cluster_service(replaced_ingress_config=ingress_config):
-        urls = _default_preallocated_urls(bk_stag_env)['BKPAAS_DEFAULT_PREALLOCATED_URLS']
+        urls = _default_preallocated_urls(bk_stag_env)["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
         assert isinstance(urls, str)
-        assert set(json.loads(urls).keys()) == {'stag', 'prod'}
+        assert set(json.loads(urls).keys()) == {"stag", "prod"}
 
 
 class TestGetPreallocatedAddress:
     def test_not_configured(self):
-        with mock_cluster_service(replaced_ingress_config={}):
-            with pytest.raises(ValueError):
-                get_preallocated_address('test-code')
+        with mock_cluster_service(replaced_ingress_config={}), pytest.raises(ValueError, match=r"^failed to get.*"):
+            get_preallocated_address("test-code")
 
     @pytest.mark.parametrize(
-        'ingress_config,expected_address',
+        ("ingress_config", "expected_address"),
         [
-            ({'app_root_domains': [{"name": 'foo.com'}]}, 'http://test-code.foo.com'),
-            ({'sub_path_domains': [{"name": 'foo.com'}]}, 'http://foo.com/test-code/'),
+            ({"app_root_domains": [{"name": "foo.com"}]}, "http://test-code.foo.com"),
+            ({"sub_path_domains": [{"name": "foo.com"}]}, "http://foo.com/test-code/"),
             (
-                {'sub_path_domains': [{"name": 'foo.com'}], 'app_root_domains': [{"name": 'foo.com'}]},
-                'http://foo.com/test-code/',
+                {"sub_path_domains": [{"name": "foo.com"}], "app_root_domains": [{"name": "foo.com"}]},
+                "http://foo.com/test-code/",
             ),
         ],
     )
     def test_normal(self, ingress_config, expected_address):
         with mock_cluster_service(replaced_ingress_config=ingress_config):
-            assert get_preallocated_address('test-code').prod == expected_address
+            assert get_preallocated_address("test-code").prod == expected_address
 
     @pytest.mark.parametrize(
-        'preferred_url_type,expected_address',
+        ("preferred_url_type", "expected_address"),
         [
-            (ExposedURLType.SUBDOMAIN, 'http://test-code.foo.com'),
-            (ExposedURLType.SUBPATH, 'http://foo.com/test-code/'),
+            (ExposedURLType.SUBDOMAIN, "http://test-code.foo.com"),
+            (ExposedURLType.SUBPATH, "http://foo.com/test-code/"),
         ],
     )
     def test_preferred_url_type(self, preferred_url_type, expected_address):
-        ingress_config = {'sub_path_domains': [{"name": 'foo.com'}], 'app_root_domains': [{"name": 'foo.com'}]}
+        ingress_config = {"sub_path_domains": [{"name": "foo.com"}], "app_root_domains": [{"name": "foo.com"}]}
         with mock_cluster_service(replaced_ingress_config=ingress_config):
             assert (
-                get_preallocated_address('test-code', preferred_url_type=preferred_url_type).prod == expected_address
+                get_preallocated_address("test-code", preferred_url_type=preferred_url_type).prod == expected_address
             )
 
     @pytest.mark.parametrize(
-        'clusters, stag_address, prod_address',
+        ("clusters", "stag_address", "prod_address"),
         [
             # 同集群的情况
             (
                 {
                     AppEnvName.STAG: Cluster(
-                        name='c1',
+                        name="c1",
                         is_default=False,
-                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
-                        name='c1',
+                        name="c1",
                         is_default=False,
-                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                 },
-                'http://c1.foo.com/stag--test-code/',
-                'http://c1.foo.com/test-code/',
+                "http://c1.foo.com/stag--test-code/",
+                "http://c1.foo.com/test-code/",
             ),
             # 不同集群, 类型相同的情况
             (
                 {
                     AppEnvName.STAG: Cluster(
-                        name='c1',
+                        name="c1",
                         is_default=False,
-                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
-                        name='c2',
+                        name="c2",
                         is_default=False,
-                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c2.foo.com', reserved=False)]),
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name="c2.foo.com", reserved=False)]),
                     ),
                 },
-                'http://c1.foo.com/stag--test-code/',
-                'http://c2.foo.com/test-code/',
+                "http://c1.foo.com/stag--test-code/",
+                "http://c2.foo.com/test-code/",
             ),
             # 不同集群, 类型不同的情况
             (
                 {
                     AppEnvName.STAG: Cluster(
-                        name='c1',
+                        name="c1",
                         is_default=False,
                         ingress_config=IngressConfig(
-                            sub_path_domains=[Domain(name='c1.foo.com', reserved=False)],
+                            sub_path_domains=[Domain(name="c1.foo.com", reserved=False)],
                         ),
                     ),
                     AppEnvName.PROD: Cluster(
-                        name='c2',
+                        name="c2",
                         is_default=False,
                         ingress_config=IngressConfig(
-                            app_root_domains=[Domain(name='c2.foo.com', reserved=False)],
+                            app_root_domains=[Domain(name="c2.foo.com", reserved=False)],
                         ),
                     ),
                 },
-                'http://c1.foo.com/stag--test-code/',
-                'http://test-code.c2.foo.com',
+                "http://c1.foo.com/stag--test-code/",
+                "http://test-code.c2.foo.com",
             ),
             # 优先级的情况
             (
                 {
                     AppEnvName.STAG: Cluster(
-                        name='c1',
+                        name="c1",
                         is_default=False,
-                        ingress_config=IngressConfig(app_root_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                        ingress_config=IngressConfig(app_root_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
-                        name='c2',
+                        name="c2",
                         is_default=False,
                         ingress_config=IngressConfig(
-                            sub_path_domains=[Domain(name='c2.foo.com', reserved=False)],
-                            app_root_domains=[Domain(name='c2.foo.com', reserved=False)],
+                            sub_path_domains=[Domain(name="c2.foo.com", reserved=False)],
+                            app_root_domains=[Domain(name="c2.foo.com", reserved=False)],
                         ),
                     ),
                 },
-                'http://stag-dot-test-code.c1.foo.com',
-                'http://c2.foo.com/test-code/',
+                "http://stag-dot-test-code.c1.foo.com",
+                "http://c2.foo.com/test-code/",
             ),
         ],
     )
     def test_with_clusters(self, clusters, stag_address, prod_address):
         with mock_cluster_service():
-            addr = get_preallocated_address('test-code', clusters=clusters)
+            addr = get_preallocated_address("test-code", clusters=clusters)
         assert addr.prod == prod_address
         assert addr.stag == stag_address
 
@@ -200,15 +199,15 @@ class TestDefaultEntrance:
     def _setup(self):
         with mock_cluster_service(
             ingress_config={
-                'app_root_domains': [
-                    {"name": 'bar-1.example.com'},
-                    {"name": 'bar-2.example.org'},
+                "app_root_domains": [
+                    {"name": "bar-1.example.com"},
+                    {"name": "bar-2.example.org"},
                 ],
             }
         ):
             yield
 
-    def test_single_entrance(setup_addrs, bk_app, bk_module, bk_stag_env):
+    def test_single_entrance(self, bk_app, bk_module, bk_stag_env):
         """Test: default module's stag env"""
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
         bk_module.is_default = True
@@ -216,9 +215,9 @@ class TestDefaultEntrance:
 
         url = get_preallocated_url(bk_stag_env)
         assert url is not None
-        assert url.address == f'http://stag-dot-{bk_app.code}.bar-1.example.com'
+        assert url.address == f"http://stag-dot-{bk_app.code}.bar-1.example.com"
 
-    def test_sub_domain(setup_addrs, bk_app, bk_module, bk_stag_env):
+    def test_sub_domain(self, bk_app, bk_module, bk_stag_env):
         """Test: default module's stag env"""
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
         bk_module.is_default = True
@@ -226,19 +225,19 @@ class TestDefaultEntrance:
 
         urls = get_preallocated_urls(bk_stag_env)
         assert [u.address for u in urls] == [
-            f'http://stag-dot-{bk_app.code}.bar-1.example.com',
-            f'http://stag-dot-{bk_app.code}.bar-2.example.org',
+            f"http://stag-dot-{bk_app.code}.bar-1.example.com",
+            f"http://stag-dot-{bk_app.code}.bar-2.example.org",
         ]
 
-    def test_get_preallocated_urls_legacy(setup_addrs, bk_app, bk_module, bk_stag_env):
+    def test_get_preallocated_urls_legacy(self, bk_app, bk_module, bk_stag_env):
         """Test: default module's stag env with exposed url type set to None"""
         bk_module.exposed_url_type = None
         bk_module.is_default = True
         bk_module.save()
 
         def update_region_hook(config):
-            config['basic_info']['link_engine_app'] = "http://example.com/{region}-legacy-path/"
+            config["basic_info"]["link_engine_app"] = "http://example.com/{region}-legacy-path/"
 
         with override_region_configs(bk_app.region, update_region_hook):
             urls = get_preallocated_urls(bk_stag_env)
-            assert [u.address for u in urls] == [f'http://example.com/{bk_app.region}-legacy-path/']
+            assert [u.address for u in urls] == [f"http://example.com/{bk_app.region}-legacy-path/"]

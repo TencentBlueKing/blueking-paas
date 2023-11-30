@@ -52,7 +52,7 @@ DEFAULT_PROD_ENV_ID = 2
 
 
 @pytest.fixture(scope="session")
-def django_db_setup(django_db_setup, django_db_blocker):
+def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
     """Create default cluster for testing"""
     with django_db_blocker.unblock():
         with transaction.atomic():
@@ -70,7 +70,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def init_s3_bucket(request):
+def _init_s3_bucket(request):
     if not request.config.getvalue("init_s3_bucket"):
         return
 
@@ -83,7 +83,7 @@ def init_s3_bucket(request):
         pass
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def crds_is_configured(django_db_setup, django_db_blocker):
     """Configure 'BkApp' and other CRDs when tests starts
 
@@ -103,11 +103,11 @@ def crds_is_configured(django_db_setup, django_db_blocker):
         ]
         crd_client = KCustomResourceDefinition(client)
 
-        for name, path in crd_infos:
-            logger.info('Configure CRD %s...', name)
+        for crd_name, path in crd_infos:
+            logger.info("Configure CRD %s...", crd_name)
             body = yaml.safe_load((Path(__file__).parent / path).read_text())
             try:
-                name = body['metadata']['name']
+                name = body["metadata"]["name"]
                 crd_client.create_or_update(name=name, body=body)
             except ValueError as e:
                 logger.warning("Unknown Exception raise from k8s client, but should be ignored. Detail: %s", e)
@@ -128,18 +128,17 @@ def _skip_when_no_crds(request, crds_is_configured):
     """Handle @pytest.mark.skip_when_no_crds, skip current test when mark is used
     and CRDs are not configured(from "crds_is_configured" fixture).
     """
-    if request.keywords.get('skip_when_no_crds'):
-        if not crds_is_configured:
-            pytest.skip('Skip test because CRDs is not configured')
+    if request.keywords.get("skip_when_no_crds") and not crds_is_configured:
+        pytest.skip("Skip test because CRDs is not configured")
 
 
-@pytest.fixture
+@pytest.fixture()
 def k8s_client(settings):
     client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
     return client
 
 
-@pytest.fixture
+@pytest.fixture()
 def k8s_version(k8s_client):
     return VersionApi(k8s_client).get_code()
 
@@ -186,7 +185,7 @@ def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
     bk_stag_wl_app / bk_prod_wl_app
     """
-    if not request.keywords.get('auto_create_ns'):
+    if not request.keywords.get("auto_create_ns"):
         yield
         return
 
@@ -207,7 +206,7 @@ def _auto_create_ns(request):
     namespace_maker.set_block()
 
 
-@pytest.fixture
+@pytest.fixture()
 def resource_name() -> str:
     """A random resource name"""
     return random_resource_name()
@@ -222,7 +221,7 @@ def create_default_cluster():
     return cluster
 
 
-@pytest.fixture
+@pytest.fixture()
 def patch_ingress_config():
     """Patch ingress_config of the default cluster, usage:
 
@@ -240,13 +239,13 @@ def patch_ingress_config():
     def _patch_func(**kwargs):
         for k, v in kwargs.items():
             setattr(cluster.ingress_config, k, v)
-        cluster.save(update_fields=['ingress_config'])
+        cluster.save(update_fields=["ingress_config"])
 
     yield _patch_func
 
     # Restore to original
     cluster.ingress_config = orig_cfg
-    cluster.save(update_fields=['ingress_config'])
+    cluster.save(update_fields=["ingress_config"])
 
 
 def setup_default_client(cluster: Cluster):
@@ -275,12 +274,12 @@ def clear_kubernetes_dynamic_discoverer_cache():
         f.unlink(missing_ok=True)
 
 
-@pytest.fixture
+@pytest.fixture()
 def default_process_spec_plan():
     return ProcessSpecPlan.objects.first()
 
 
-@pytest.fixture
+@pytest.fixture()
 def set_structure(default_process_spec_plan):
     """A factory fixture, returns a function which updates app structure"""
 
@@ -292,22 +291,22 @@ def set_structure(default_process_spec_plan):
     return handler
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_stag_wl_app(bk_stag_env, with_wl_apps):
     return bk_stag_env.wl_app
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_prod_wl_app(bk_prod_env, with_wl_apps):
     return bk_prod_env.wl_app
 
 
-@pytest.fixture
+@pytest.fixture()
 def wl_app(bk_stag_wl_app) -> WlApp:
     return bk_stag_wl_app
 
 
-@pytest.fixture
+@pytest.fixture()
 def wl_release(wl_app):
     return create_wl_release(
         wl_app=wl_app,
@@ -316,7 +315,7 @@ def wl_release(wl_app):
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def wl_dirty_release(wl_app):
     return create_wl_release(
         wl_app=wl_app,
@@ -324,22 +323,23 @@ def wl_dirty_release(wl_app):
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
     env = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid)
     return create_build_proc(env)
 
 
-@pytest.fixture
+@pytest.fixture()
 def wl_build(bk_stag_wl_app, bk_user) -> Build:
     build_params = {
-        "owner": bk_user,
+        "owner": bk_user.pk,
         "app": bk_stag_wl_app,
         "slug_path": "",
         "source_type": "foo",
         "branch": "bar",
         "revision": "1",
         "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
+        "artifact_type": "slug",
     }
     return Build.objects.create(**build_params)

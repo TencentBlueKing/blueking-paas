@@ -34,58 +34,58 @@ class TestClient:
     def client(self, config):
         return RemoteServiceClient(config=config)
 
-    @mock.patch('requests.get')
+    @mock.patch("requests.get")
     def test_list_services_error(self, mocked_get, client):
-        mocked_get.side_effect = RequestException('faked requests exception')
+        mocked_get.side_effect = RequestException("faked requests exception")
         with pytest.raises(RemoteClientError):
             client.list_services()
 
-    @mock.patch('requests.get')
+    @mock.patch("requests.get")
     def test_list_services_status_code_error(self, mocked_get, client):
         mocked_get.return_value = mock_json_response({}, status_code=400)
         with pytest.raises(RClientResponseError):
             client.list_services()
 
-    @mock.patch('requests.get')
+    @mock.patch("requests.get")
     def test_list_services_normal(self, mocked_get, client):
         mocked_get.return_value = mock_json_response(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON)
 
         assert len(client.list_services()) == 3
         assert mocked_get.called
-        assert mocked_get.call_args[0][0] == 'http://faked-host/services/'
-        auth_inst = mocked_get.call_args[1]['auth']
+        assert mocked_get.call_args[0][0] == "http://faked-host/services/"
+        auth_inst = mocked_get.call_args[1]["auth"]
         assert isinstance(auth_inst, ClientJWTAuth)
 
-    @mock.patch('requests.get')
+    @mock.patch("requests.get")
     def test_retrieve_instance_normal(self, mocked_get, client):
         mocked_get.return_value = mock_json_response(data_mocks.REMOTE_INSTANCE_JSON)
 
-        data = client.retrieve_instance(instance_id='faked-id')
+        data = client.retrieve_instance(instance_id="faked-id")
         assert data is not None
         assert mocked_get.called
-        assert mocked_get.call_args[0][0] == 'http://faked-host/instances/faked-id/'
-        auth_inst = mocked_get.call_args[1]['auth']
+        assert mocked_get.call_args[0][0] == "http://faked-host/instances/faked-id/"
+        auth_inst = mocked_get.call_args[1]["auth"]
         assert isinstance(auth_inst, ClientJWTAuth)
 
-    @mock.patch('requests.post')
+    @mock.patch("requests.post")
     def test_provision_instance_normal(self, mocked_post, client):
         mocked_post.return_value = mock_json_response(data_mocks.REMOTE_INSTANCE_JSON)
 
         data = client.provision_instance(
-            service_id='faked-svc-id', plan_id='faked-plan-id', instance_id='faked-id', params={'foo': 'bar'}
+            service_id="faked-svc-id", plan_id="faked-plan-id", instance_id="faked-id", params={"foo": "bar"}
         )
         assert data is not None
         assert mocked_post.called
-        assert mocked_post.call_args[0][0] == 'http://faked-host/services/faked-svc-id/instances/faked-id/'
-        auth_inst = mocked_post.call_args[1]['auth']
+        assert mocked_post.call_args[0][0] == "http://faked-host/services/faked-svc-id/instances/faked-id/"
+        auth_inst = mocked_post.call_args[1]["auth"]
         assert isinstance(auth_inst, ClientJWTAuth)
 
-    @mock.patch('requests.get')
+    @mock.patch("requests.get")
     def test_retrieve_instance_has_created_field(self, mocked_get, client):
         mocked_get.return_value = mock_json_response(data_mocks.REMOTE_INSTANCE_JSON)
 
-        data = client.retrieve_instance(instance_id='faked-id')
-        assert 'created' in data
+        data = client.retrieve_instance(instance_id="faked-id")
+        assert "created" in data
 
         # raise nothing
-        arrow.get(data['created'])
+        arrow.get(data["created"])

@@ -82,7 +82,7 @@ def i18n(
             # - validate_method = getattr(self, 'validate_' + field.field_name, None)
             # - errors[field.field_name] = ...
             with ExitStack() as stack:
-                for raw_field_name in fields.keys():
+                for raw_field_name in fields:
                     for language_code in languages:
                         i18n_field_name = to_translated_field(attr, language_code=language_code)
 
@@ -212,10 +212,10 @@ class TranslatedCharField(serializers.CharField):
         for language_code in self.languages:
             i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
             value = data.pop(i18n_field_name, serializers.empty)
-            if value == '' or (self.trim_whitespace and str(value).strip() == ''):
+            if value == "" or (self.trim_whitespace and str(value).strip() == ""):
                 if not self.allow_blank:
-                    self.fail('blank')
-                value = ''
+                    self.fail("blank")
+                value = ""
             value = super().run_validation(value)
             data[language_code] = str(value)
         return gettext_lazy(data)
@@ -256,7 +256,7 @@ class FallbackMixin(_Base):
         self.source = field_name
         # self.source_attrs is a list of attributes that need to be looked up
         # when serializing the instance, or populating the validated data.
-        self.source_attrs = self.source.split('.')
+        self.source_attrs = self.source.split(".")
 
     def get_value(self, dictionary):
         """

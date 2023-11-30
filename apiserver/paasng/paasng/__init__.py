@@ -31,14 +31,14 @@ from .celery import app as celery_app
 try:
     # prometheus 多进程时, metrics 存放的文件夹
     os.environ.setdefault("prometheus_multiproc_dir", "prometheus")
-    path = os.environ.get('prometheus_multiproc_dir')
+    path = os.environ.get("prometheus_multiproc_dir")  # noqa: SIM112
     if path is not None:
         os.mkdir(path)
 except Exception:
     pass
 
 
-__all__ = ['celery_app']
+__all__ = ["celery_app"]
 
 
 orig_warn = util.warn
@@ -47,8 +47,8 @@ orig_warn = util.warn
 def warn(msg):
     """Ignore all useless warning messages"""
     # This warning message was caused by automap feature
-    if msg.startswith('This declarative base already contains a class'):
-        return
+    if msg.startswith("This declarative base already contains a class"):
+        return None
     return orig_warn(msg)
 
 
@@ -94,8 +94,8 @@ def formfield(self, **kwargs):
         # instead of directly mutating it in the original method.
         field.dump_kwargs = field.dump_kwargs.copy()
         # Note: TextField sets the Textarea widget
-        field.dump_kwargs.setdefault('indent', 4)
-        field.dump_kwargs.setdefault('ensure_ascii', False)
+        field.dump_kwargs.setdefault("indent", 4)
+        field.dump_kwargs.setdefault("ensure_ascii", False)
     return field
 
 

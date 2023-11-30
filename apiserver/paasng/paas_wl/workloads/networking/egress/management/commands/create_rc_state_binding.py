@@ -31,11 +31,9 @@ from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
-
-    help = 'Generates RCStateAppBinding for WlApp'
+    help = "Generates RCStateAppBinding for WlApp"
 
     def add_arguments(self, parser):
-
         parser.add_argument("--code", dest="app_code", required=True, help="应用 Code")
         parser.add_argument("--module", dest="module_name", required=True, help="模块名称")
         parser.add_argument("--env", dest="environment", required=True, help="部署环境", choices=["stag", "prod"])
@@ -50,8 +48,8 @@ class Command(BaseCommand):
             state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
             RCStateAppBinding.objects.create(app=wl_app, state=state)
         except RegionClusterState.DoesNotExist:
-            print('Cluster data is not initialized, please try again later')
+            print("Cluster data is not initialized, please try again later")
         except IntegrityError:
             print("Can't bound for the same WlApp more than once")
         else:
-            print(f'Bound successfully, wl_app: {wl_app}, state: {state}')
+            print(f"Bound successfully, wl_app: {wl_app}, state: {state}")

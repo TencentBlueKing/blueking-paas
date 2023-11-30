@@ -27,11 +27,11 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paas_wl.workloads.networking.egress.serializers import RCStateAppBindingSLZ
-from paas_wl.utils.error_codes import error_codes
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
@@ -51,8 +51,8 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
         return Response(
             {
                 # Use 'default' as name of the default egress gateway info for all environments
-                'name': 'default',
-                'rcs_binding_data': serializer.data,
+                "name": "default",
+                "rcs_binding_data": serializer.data,
             }
         )
 
@@ -71,16 +71,16 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
             state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
             binding = RCStateAppBinding.objects.create(app=wl_app, state=state)
         except RegionClusterState.DoesNotExist:
-            logger.warning('No cluster state can be found for region=%s', wl_app.region)
+            logger.warning("No cluster state can be found for region=%s", wl_app.region)
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("集群数据未初始化，请稍候再试")
         except IntegrityError:
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("不能重复绑定")
         except Exception:
-            logger.exception('Unable to crate RCStateBinding instance')
+            logger.exception("Unable to crate RCStateBinding instance")
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("请稍候再试")
 
         serializer = RCStateAppBindingSLZ(binding)
-        return Response({'name': 'default', 'rcs_binding_data': serializer.data}, status=status.HTTP_201_CREATED)
+        return Response({"name": "default", "rcs_binding_data": serializer.data}, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, code, module_name, environment):
         """清除已获取的出口网关信息"""

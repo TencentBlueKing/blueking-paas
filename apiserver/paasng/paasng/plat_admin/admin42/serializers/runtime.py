@@ -34,7 +34,7 @@ class AppSlugBuilderSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugBuilder
-        fields = '__all__'
+        fields = "__all__"
 
 
 class AppSlugRunnerSLZ(serializers.ModelSerializer):
@@ -45,7 +45,7 @@ class AppSlugRunnerSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugRunner
-        fields = '__all__'
+        fields = "__all__"
 
 
 class AppBuildPackSLZ(serializers.ModelSerializer):
@@ -55,4 +55,4 @@ class AppBuildPackSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppBuildPack
-        fields = '__all__'
+        fields = "__all__"

@@ -116,9 +116,9 @@ def create_cnative_app_model_resource(
         application.region, str(application.id), str(module.id), resource
     )
     return {
-        'application_id': model_resource.application_id,
-        'module_id': model_resource.module_id,
-        'manifest': model_resource.revision.json_value,
+        "application_id": model_resource.application_id,
+        "module_id": model_resource.module_id,
+        "manifest": model_resource.revision.json_value,
     }
 
 
@@ -128,6 +128,6 @@ def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:
     :return: `None` if no builds can be found
     """
     try:
-        return Build.objects.filter(app=env.wl_app).latest('created').pk
+        return Build.objects.filter(app=env.wl_app).latest("created").pk
     except Build.DoesNotExist:
         return None

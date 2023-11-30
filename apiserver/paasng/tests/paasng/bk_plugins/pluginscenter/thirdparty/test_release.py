@@ -25,7 +25,7 @@ from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def release_version(plugin) -> PluginRelease:
     return G(
         PluginRelease,
@@ -40,7 +40,7 @@ def release_version(plugin) -> PluginRelease:
     )
 
 
-@pytest.mark.parametrize("handler", (release_api.create_release, release_api.update_release))
+@pytest.mark.parametrize("handler", [release_api.create_release, release_api.update_release])
 def test_release_upsert_api(thirdparty_client, pd, plugin, handler, release_version):
     """测试 ReleaseVersion create/update 接口的序列化"""
     handler(pd, plugin, version=release_version, operator="nobody")

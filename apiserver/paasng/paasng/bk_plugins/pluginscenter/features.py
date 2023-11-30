@@ -32,6 +32,7 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     PLUGIN_DISTRIBUTER = FeatureFlagField(label="插件使用方", default=False)
     CANCEL_RELEASE = FeatureFlagField(label="终止发布版本", default=True)
     SHOW_ENTRANCES_ADDRESS = FeatureFlagField(label="显示访问入口地址", default=False)
+    CONFIGURATION_MANAGE = FeatureFlagField(label="配置管理", default=True)
 
 
 class PluginFeatureFlagsManager:

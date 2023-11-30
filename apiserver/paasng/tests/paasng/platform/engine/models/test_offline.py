@@ -26,10 +26,10 @@ pytestmark = pytest.mark.django_db
 class TestOfflineOperation:
     def test_set_failed(self, bk_prod_env):
         offline_op = OfflineOperation.objects.create(app_environment=bk_prod_env)
-        offline_op.set_failed('failed message')
-        assert offline_op.status == 'failed'
+        offline_op.set_failed("failed message")
+        assert offline_op.status == "failed"
 
     def test_set_successful(self, bk_prod_env):
         offline_op = OfflineOperation.objects.create(app_environment=bk_prod_env)
         offline_op.set_successful()
-        assert offline_op.status == 'successful'
+        assert offline_op.status == "successful"

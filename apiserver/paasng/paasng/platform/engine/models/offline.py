@@ -33,11 +33,11 @@ logger = logging.getLogger(__name__)
 class OfflineOperationQuerySet(models.QuerySet):
     def latest_succeeded(self):
         """Return the latest succeeded deployment of queryset"""
-        return self.filter(status=JobStatus.SUCCESSFUL.value).latest('created')
+        return self.filter(status=JobStatus.SUCCESSFUL.value).latest("created")
 
-    def get_latest_resumable(self, max_resumable_seconds: int) -> 'OfflineOperation':
+    def get_latest_resumable(self, max_resumable_seconds: int) -> "OfflineOperation":
         """return the latest resumable offline_operation queryset"""
-        offline_operation = self.latest('created')
+        offline_operation = self.latest("created")
         if (
             offline_operation.status == JobStatus.PENDING.value
             and (timezone.now() - offline_operation.created).total_seconds() <= max_resumable_seconds
@@ -50,13 +50,15 @@ class OfflineOperation(OperationVersionBase):
     """部署记录"""
 
     app_environment = models.ForeignKey(
-        'applications.ApplicationEnvironment', on_delete=models.CASCADE, related_name='offlines', null=True
+        "applications.ApplicationEnvironment", on_delete=models.CASCADE, related_name="offlines", null=True
     )
 
-    status = models.CharField(u"下线状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
+    status = models.CharField(
+        "下线状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
+    )
 
-    log = models.TextField(u"下线日志", null=True, blank=True)
-    err_detail = models.TextField(u"下线异常原因", null=True, blank=True)
+    log = models.TextField("下线日志", null=True, blank=True)
+    err_detail = models.TextField("下线异常原因", null=True, blank=True)
 
     objects = OfflineOperationQuerySet().as_manager()
 
@@ -65,16 +67,16 @@ class OfflineOperation(OperationVersionBase):
             app=self.app_environment.application.name, env=self.app_environment.environment, status=self.status
         )
 
-    def set_log(self, content=''):
+    def set_log(self, content=""):
         self.log = content
-        self.save(update_fields=['log'])
+        self.save(update_fields=["log"])
 
-    def append_log(self, content=''):
+    def append_log(self, content=""):
         if self.log is None:
             self.log = content
         else:
-            self.log += content + '\n'
-        self.save(update_fields=['log'])
+            self.log += content + "\n"
+        self.save(update_fields=["log"])
 
     def update_operation_status(self, status):
         """Update related operation status"""
@@ -91,23 +93,23 @@ class OfflineOperation(OperationVersionBase):
         self.append_log(message)
         self.status = JobStatus.FAILED.value
         self.err_detail = message
-        self.save(update_fields=['status', 'err_detail'])
+        self.save(update_fields=["status", "err_detail"])
 
         # Update related Module operation object
         self.update_operation_status(JobStatus.FAILED.value)
 
     def set_successful(self):
         """Set current operation as successful"""
-        self.append_log('offline succeeded.')
+        self.append_log("offline succeeded.")
         self.status = JobStatus.SUCCESSFUL.value
-        self.save(update_fields=['status'])
+        self.save(update_fields=["status"])
 
         # Update related Module operation object
         self.update_operation_status(JobStatus.SUCCESSFUL.value)
         # Update related app environment
         if self.app_environment.is_offlined is False:
             self.app_environment.is_offlined = True
-            self.app_environment.save(update_fields=['is_offlined'])
+            self.app_environment.save(update_fields=["is_offlined"])
 
     def get_version_info(self) -> VersionInfo:
         """获取源码的版本信息"""
@@ -115,6 +117,6 @@ class OfflineOperation(OperationVersionBase):
         version_name = self.source_version_name
         # Backward compatibility
         if not (version_type and version_name):
-            version_name = self.source_location.split('/')[-1]
-            version_type = 'trunk' if version_name == 'trunk' else self.source_location.split('/')[-2]
+            version_name = self.source_location.split("/")[-1]
+            version_type = "trunk" if version_name == "trunk" else self.source_location.split("/")[-2]
         return VersionInfo(self.source_revision, version_name, version_type)

@@ -27,13 +27,13 @@ class TestReservedWordValidator(TestCase):
     def setUp(self) -> None:
         self.validator = ReservedWordValidator("保留字测试样例")
         self.positive_sample = [
-            'v20190731-001',
-            'abc',
-            'a-b',
-            'paas-ng',
+            "v20190731-001",
+            "abc",
+            "a-b",
+            "paas-ng",
         ]
         # 保留字测试失败样本集
-        self.negative_sample = ['paas-ng-dot-backend', 'v201907310us0001', 'abc--def--ghi']
+        self.negative_sample = ["paas-ng-dot-backend", "v201907310us0001", "abc--def--ghi"]
 
     def test_positive_sample(self):
         for sample in self.positive_sample:
@@ -50,13 +50,13 @@ class TestDnsSafeNameValidator(TestCase):
     def setUp(self) -> None:
         self.validator = DnsSafeNameValidator("DNS安全名称测试样例")
         self.positive_sample = [
-            'v20190731-001',
-            'abc',
-            'a-b',
-            'paas-ng',
+            "v20190731-001",
+            "abc",
+            "a-b",
+            "paas-ng",
         ]
         # DNS安全名称测试失败样本集
-        self.negative_sample = ['20190731', 'abc-', '-abc', '9bb']
+        self.negative_sample = ["20190731", "abc-", "-abc", "9bb"]
 
     def test_positive_sample(self):
         for sample in self.positive_sample:

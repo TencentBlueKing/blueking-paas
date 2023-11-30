@@ -32,17 +32,17 @@ class ApplicationProvider(ResourceProvider):
     """蓝鲸应用 Provider"""
 
     def list_instance(self, filter_obj: FancyDict, page_obj: Page, **options) -> ListResult:
-        name_field = self._get_name_field(options.get('language'))
-        applications = Application.objects.all().values('code', name_field)
+        name_field = self._get_name_field(options.get("language"))
+        applications = Application.objects.all().values("code", name_field)
         results = [
-            {'id': app['code'], 'display_name': f"{app[name_field]} ({app['code']})"}
+            {"id": app["code"], "display_name": f"{app[name_field]} ({app['code']})"}
             for app in applications[page_obj.slice_from : page_obj.slice_to]
         ]
         return ListResult(results=results, count=applications.count())
 
     def fetch_instance_info(self, filter_obj: FancyDict, **options) -> ListResult:
         ids = filter_obj.ids or []
-        name_field = self._get_name_field(options.get('language'))
+        name_field = self._get_name_field(options.get("language"))
 
         results = []
         applications = Application.objects.filter(code__in=ids)
@@ -50,9 +50,9 @@ class ApplicationProvider(ResourceProvider):
         for app in applications:
             results.append(
                 {
-                    'id': app.code,
-                    'display_name': f"{getattr(app, name_field)} ({app.code})",
-                    '_bk_iam_approver_': approvers[app.code],
+                    "id": app.code,
+                    "display_name": f"{getattr(app, name_field)} ({app.code})",
+                    "_bk_iam_approver_": approvers[app.code],
                 }
             )
 
@@ -69,20 +69,20 @@ class ApplicationProvider(ResourceProvider):
 
     def search_instance(self, filter_obj: FancyDict, page_obj: Page, **options) -> ListResult:
         """支持模糊搜索应用名"""
-        keyword = filter_obj.keyword or ''
-        name_field = self._get_name_field(options.get('language'))
+        keyword = filter_obj.keyword or ""
+        name_field = self._get_name_field(options.get("language"))
         applications = Application.objects.filter(
             Q(name__icontains=keyword) | Q(name_en__icontains=keyword) | Q(code__icontains=keyword)
-        ).values('code', name_field)
+        ).values("code", name_field)
         results = [
-            {'id': app['code'], 'display_name': f"{app[name_field]} ({app['code']})"}
+            {"id": app["code"], "display_name": f"{app[name_field]} ({app['code']})"}
             for app in applications[page_obj.slice_from : page_obj.slice_to]
         ]
         return ListResult(results=results, count=applications.count())
 
     @staticmethod
     def _get_name_field(language: Optional[Any]) -> str:
-        return 'name_en' if language == "en" else 'name'
+        return "name_en" if language == "en" else "name"
 
     @staticmethod
     def _fetch_application_approvers(app_codes: List[str]) -> Dict[str, List[str]]:

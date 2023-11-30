@@ -43,9 +43,8 @@ def registry_definitions(schema: openapi.Schema, global_components: openapi.Refe
         for value in properties.values():
             if isinstance(value, openapi.Schema):
                 registry_definitions(value, global_components)
-    if items := schema.get("items"):
-        if isinstance(items, openapi.Schema):
-            registry_definitions(items, global_components)
+    if (items := schema.get("items")) and isinstance(items, openapi.Schema):
+        registry_definitions(items, global_components)
 
 
 class ExtraDefinitionsInspectorMixin:
@@ -72,7 +71,7 @@ class BaseModelRequestBodyInspectorMixin:
     """将 swagger_auto_schema 中继承自 pydantic.BaseModel 的 request_body 转换成 drf_yasg.openapi.Schema"""
 
     def _get_request_body_override(self: SwaggerAutoSchema):
-        body_override = self.overrides.get('request_body', None)
+        body_override = self.overrides.get("request_body", None)
         # 判断是否继承自 BaseModel
         if body_override and isinstance(body_override, type) and issubclass(body_override, BaseModel):
             # 得益于 pydantic 原生支持 Swagger/OpenAPI 规范, 这里的类型转换完全兼容
@@ -94,7 +93,7 @@ class ExtendedSwaggerAutoSchema(BaseModelRequestBodyInspectorMixin, ExtraDefinit
         # NOTE: fix a bug of drf-yasg
         # drf-yasg use request_body in get_default_response_serializer
         # but they allow raise Exception in method `_get_request_body_override`
-        response_serializer = self.overrides.get('response_serializer', None)
+        response_serializer = self.overrides.get("response_serializer", None)
         if response_serializer:
             if isinstance(response_serializer, openapi.Schema.OR_REF):
                 return response_serializer

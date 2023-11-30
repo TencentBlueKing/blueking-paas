@@ -59,7 +59,6 @@ def diff_replicas(old: BkAppResource, new: BkAppResource, env_name: AppEnvName) 
     new_vals = ReplicasReader(new).read_all(env_name)
     changes = []
     for proc_type, (val_o, _) in old_vals.items():
-        if proc_type in new_vals:
-            if (val_n := new_vals[proc_type][0]) != val_o:
-                changes.append(ProcReplicasChange(proc_type, val_o, val_n))
+        if proc_type in new_vals and (val_n := new_vals[proc_type][0]) != val_o:
+            changes.append(ProcReplicasChange(proc_type, val_o, val_n))
     return changes

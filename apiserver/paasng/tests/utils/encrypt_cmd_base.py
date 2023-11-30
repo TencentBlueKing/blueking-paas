@@ -73,7 +73,7 @@ def get_encrypt_header(encrypt_type):
     获取加密算法对应的加密头
     :param encrypt_type: 加密算法类型
     """
-    encrypt_header_dict = {'FernetCipher': 'bkcrypt$', 'SM4CTR': 'sm4ctr$'}
+    encrypt_header_dict = {"FernetCipher": "bkcrypt$", "SM4CTR": "sm4ctr$"}
     try:
         return encrypt_header_dict[encrypt_type]
     except KeyError:
@@ -93,7 +93,7 @@ class BaseTestEnctrypMigrationCmd:
             return unencrypted_dict
 
     @pytest.mark.parametrize(
-        "legacy_encrypt_type, encrypt_type", [('FernetCipher', 'SM4CTR'), ('SM4CTR', 'FernetCipher')]
+        ("legacy_encrypt_type", "encrypt_type"), [("FernetCipher", "SM4CTR"), ("SM4CTR", "FernetCipher")]
     )
     def test_migration_command(
         self,
@@ -133,20 +133,12 @@ class BaseTestEnctrypMigrationCmd:
             )
 
         with override_settings(ENCRYPT_CIPHER_TYPE=encrypt_type):
-            call_command(command_name, '--no-dry-run', '--model', model_name)
+            call_command(command_name, "--no-dry-run", "--model", model_name)
 
             for model_class in app_models:
                 pk = unencrypted_dict[model_class][0]
                 unencryped_field_dict = unencrypted_dict[model_class][1]
-                if not model_name:
-                    # 验证加密算法迁移完成,并且加解密成功
-                    assert_fields_encryped(
-                        model_class=model_class,
-                        pk=pk,
-                        unencryped_field_dict=unencryped_field_dict,
-                        encrypt_header=encrypt_header,
-                    )
-                elif model_class.__name__ == model_name:
+                if not model_name or model_class.__name__ == model_name:
                     # 验证加密算法迁移完成,并且加解密成功
                     assert_fields_encryped(
                         model_class=model_class,

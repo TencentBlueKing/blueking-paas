@@ -32,10 +32,10 @@ class ReleaseManager(models.Manager):
     def new(
         self,
         owner: str,
-        build: 'Build',
+        build: "Build",
         procfile: Dict[str, str],
         summary: Optional[str] = None,
-        config: Optional['Config'] = None,
+        config: Optional["Config"] = None,
     ):
         """Create a new release
 
@@ -54,10 +54,10 @@ class ReleaseManager(models.Manager):
             raise RuntimeError("Only call from app.release_set.")
 
         if build is None:
-            raise RuntimeError('No build associated with this release.')
+            raise RuntimeError("No build associated with this release.")
 
         app = self.instance
-        latest_release = self.order_by('-version').first()
+        latest_release = self.order_by("-version").first()
         if latest_release:
             new_version = latest_release.version + 1
             cfg = config or latest_release.config
@@ -76,7 +76,7 @@ class ReleaseManager(models.Manager):
         )
         return release
 
-    def any_successful(self, app: 'WlApp') -> bool:
+    def any_successful(self, app: "WlApp") -> bool:
         """Check if engine app has any successful releases"""
         # In legacy versions, "workloads" will create an initial release object for
         # apps after creation, the object's "build" field was set to `None` and
@@ -85,7 +85,7 @@ class ReleaseManager(models.Manager):
         qs = self.get_queryset().exclude(version=1, build=None)
         return qs.filter(app=app, failed=False).exists()
 
-    def get_latest(self, app: 'WlApp', ignore_failed: bool = False) -> 'Release':
+    def get_latest(self, app: "WlApp", ignore_failed: bool = False) -> "Release":
         """获取最后一次发布对象(不管是否成功或失败), 如果不存在, 则根据 allow_null 返回 None 或抛异常.
 
         :param WlApp app: engine app 对象
@@ -95,9 +95,9 @@ class ReleaseManager(models.Manager):
         if ignore_failed:
             qs = qs.filter(failed=False)
 
-        return qs.latest('version')
+        return qs.latest("version")
 
-    def get_by_version(self, app: 'WlApp', version: int) -> 'Release':
+    def get_by_version(self, app: "WlApp", version: int) -> "Release":
         """根据指定的 WlApp，Version 获取对应的 Release"""
         return self.get(app=app, version=version)
 
@@ -110,24 +110,24 @@ class Release(UuidAuditedModel):
     """
 
     owner = models.CharField(max_length=64)
-    app = models.ForeignKey('App', on_delete=models.CASCADE)
+    app = models.ForeignKey("App", on_delete=models.CASCADE)
     version = models.PositiveIntegerField()
     summary = models.TextField(blank=True, null=True)
     failed = models.BooleanField(default=False)
     procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
 
-    config = models.ForeignKey('Config', on_delete=models.CASCADE)
-    build = models.ForeignKey('Build', null=True, on_delete=models.CASCADE)
+    config = models.ForeignKey("Config", on_delete=models.CASCADE)
+    build = models.ForeignKey("Build", null=True, on_delete=models.CASCADE)
 
     objects = ReleaseManager()
 
     class Meta:
-        get_latest_by = 'created'
-        ordering = ['-created']
-        unique_together = (('app', 'version'),)
+        get_latest_by = "created"
+        ordering = ["-created"]
+        unique_together = (("app", "version"),)
 
     def __str__(self):
-        return 'Release: %s' % self.uuid
+        return "Release: %s" % self.uuid
 
     @property
     def region(self):
@@ -136,7 +136,7 @@ class Release(UuidAuditedModel):
     def fail(self, summary: str):
         self.failed = True
         self.summary = summary
-        self.save(update_fields=['failed', 'summary', 'updated'])
+        self.save(update_fields=["failed", "summary", "updated"])
 
     def get_procfile(self) -> Dict:
         """获取与这个发布对象关联的 procfile"""
@@ -152,9 +152,9 @@ class Release(UuidAuditedModel):
         envs.update(self.config.envs)
         return envs
 
-    def get_previous(self) -> 'Release':
+    def get_previous(self) -> "Release":
         """获取上一次的 release
 
         :raise ObjectDoesNotExist: 如果不存在上一次的 release, 则抛该异常
         """
-        return Release.objects.filter(app=self.app, version__lt=self.version).latest('version')
+        return Release.objects.filter(app=self.app, version__lt=self.version).latest("version")

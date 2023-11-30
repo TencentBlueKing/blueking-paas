@@ -77,4 +77,4 @@ class AutoscalingConfig:
                 max_replicas=self.max_replicas,
                 metrics=metrics,
             )
-        raise ValueError('Unable to get metrics, policy: {}'.format(self.policy))
+        raise ValueError("Unable to get metrics, policy: {}".format(self.policy))

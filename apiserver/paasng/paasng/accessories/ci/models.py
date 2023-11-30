@@ -38,13 +38,13 @@ class CIResourceAppEnvRelation(TimestampedModel):
 
     credentials = JSONField(default={})
     env = models.ForeignKey(
-        'applications.ApplicationEnvironment', on_delete=models.CASCADE, related_name='ci_resources', null=True
+        "applications.ApplicationEnvironment", on_delete=models.CASCADE, related_name="ci_resources", null=True
     )
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     backend = models.CharField(verbose_name="CI引擎", choices=CIBackend.get_django_choices(), max_length=32)
 
     class Meta:
-        get_latest_by = 'created'
+        get_latest_by = "created"
 
 
 class CIResourceAtom(TimestampedModel):
@@ -53,7 +53,7 @@ class CIResourceAtom(TimestampedModel):
     id = models.CharField("原子 ID", max_length=64, unique=True, db_index=True, primary_key=True)
     name = models.CharField("原子名称", max_length=32)
     env = models.ForeignKey(
-        'applications.ApplicationEnvironment', on_delete=models.CASCADE, related_name='ci_resource_atoms', null=True
+        "applications.ApplicationEnvironment", on_delete=models.CASCADE, related_name="ci_resource_atoms", null=True
     )
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     resource = models.ForeignKey(CIResourceAppEnvRelation, on_delete=models.CASCADE, related_name="related_atoms")
@@ -68,7 +68,7 @@ class CIResourceAtom(TimestampedModel):
         return self.id
 
     class Meta:
-        unique_together = ('env', 'name', 'backend')
+        unique_together = ("env", "name", "backend")
 
     def to_simple_data(self):
         return AtomData(name=self.name, id=self.id)
@@ -82,16 +82,16 @@ class CIAtomJob(OperationVersionBase):
     )
     backend = models.CharField(verbose_name="CI引擎", choices=CIBackend.get_django_choices(), max_length=32)
     env = models.ForeignKey(
-        'applications.ApplicationEnvironment', on_delete=models.CASCADE, related_name='ci_atom_jobs', null=True
+        "applications.ApplicationEnvironment", on_delete=models.CASCADE, related_name="ci_atom_jobs", null=True
     )
-    deployment = models.OneToOneField(Deployment, on_delete=models.CASCADE, related_name='ci_job', null=True)
+    deployment = models.OneToOneField(Deployment, on_delete=models.CASCADE, related_name="ci_job", null=True)
     atom = models.ForeignKey(CIResourceAtom, on_delete=models.CASCADE, related_name="related_jobs")
     build_id = models.CharField(verbose_name="构建ID", max_length=128)
     output = JSONField(default={})
 
     def finish(self, status: JobStatus):
         self.status = status
-        self.save(update_fields=['status'])
+        self.save(update_fields=["status"])
 
     def to_dict(self):
         return dict(

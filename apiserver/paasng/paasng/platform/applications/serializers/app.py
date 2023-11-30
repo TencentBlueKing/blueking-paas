@@ -51,13 +51,13 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
     def validate(self, attrs):
         super().validate(attrs)
 
-        if attrs['engine_enabled'] and not attrs.get('engine_params'):
-            raise ValidationError(_('应用引擎参数未提供'))
+        if attrs["engine_enabled"] and not attrs.get("engine_params"):
+            raise ValidationError(_("应用引擎参数未提供"))
 
         # Be compatible with current application creation page, should be removed when new design was published
-        if not attrs['engine_enabled']:
-            attrs['type'] = ApplicationType.ENGINELESS_APP.value
-        elif attrs['type'] == ApplicationType.ENGINELESS_APP.value:
+        if not attrs["engine_enabled"]:
+            attrs["type"] = ApplicationType.ENGINELESS_APP.value
+        elif attrs["type"] == ApplicationType.ENGINELESS_APP.value:
             raise ValidationError(_('已开启引擎，类型不能为 "engineless_app"'))
 
         self._validate_source_init_template(attrs)
@@ -65,15 +65,15 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
 
     def _validate_source_init_template(self, attrs):
         """'source_init_template' can only be optional for some special application types"""
-        type_specs = AppTypeSpecs.get_by_type(ApplicationType(attrs['type']))
-        if type_specs.require_templated_source and not attrs.get('engine_params', {}).get('source_init_template'):
-            raise ValidationError(_('engine_params.source_init_template: 必须选择一个应用模板'))
+        type_specs = AppTypeSpecs.get_by_type(ApplicationType(attrs["type"]))
+        if type_specs.require_templated_source and not attrs.get("engine_params", {}).get("source_init_template"):
+            raise ValidationError(_("engine_params.source_init_template: 必须选择一个应用模板"))
 
 
 class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):
     def to_internal_value(self, data: Dict):
         data = super().to_internal_value(data)
-        data['type'] = ApplicationType.CLOUD_NATIVE.value
+        data["type"] = ApplicationType.CLOUD_NATIVE.value
         return data
 
 
@@ -84,8 +84,8 @@ class CreateThirdPartyApplicationSLZ(AppBasicInfoMixin):
     market_params = MarketParamsMixin()
 
     def validate(self, attrs):
-        if attrs['engine_enabled']:
-            raise ValidationError(_('该接口只支持创建外链应用'))
+        if attrs["engine_enabled"]:
+            raise ValidationError(_("该接口只支持创建外链应用"))
         return attrs
 
 
@@ -95,7 +95,7 @@ class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
     operator = serializers.CharField(required=True)
 
     def validate_code(self, code):
-        sys_id = self.context.get('sys_id')
+        sys_id = self.context.get("sys_id")
         if sys_id not in settings.ALLOW_THIRD_APP_SYS_ID_LIST:
             raise ValidationError(f"系统({sys_id})未被允许创建外链应用")
 
@@ -136,9 +136,9 @@ class UpdateApplicationSLZ(serializers.Serializer):
     def update(self, instance, validated_data):
         # 仅修改对应语言的应用名称, 如果前端允许同时填写中英文的应用名称, 则可以去掉该逻辑.
         if get_language() == "zh-cn":
-            instance.name = validated_data['name_zh_cn']
+            instance.name = validated_data["name_zh_cn"]
         elif get_language() == "en":
-            instance.name_en = validated_data['name_en']
+            instance.name_en = validated_data["name_en"]
         instance.save()
         return instance
 
@@ -150,29 +150,29 @@ class SearchApplicationSLZ(serializers.Serializer):
 
 
 class EnvironmentDeployInfoSLZ(serializers.Serializer):
-    deployed = serializers.BooleanField(help_text=u"是否部署")
-    url = serializers.URLField(help_text=u"访问地址")
+    deployed = serializers.BooleanField(help_text="是否部署")
+    url = serializers.URLField(help_text="访问地址")
 
 
 class ApplicationSLZ(serializers.ModelSerializer):
     name = TranslatedCharField()
-    region_name = serializers.CharField(read_only=True, source='get_region_display', help_text="应用版本名称")
-    logo_url = serializers.CharField(read_only=True, source='get_logo_url', help_text="应用的 Logo 地址")
-    config_info = serializers.DictField(read_only=True, help_text='应用的额外状态信息')
-    modules = serializers.SerializerMethodField(help_text='应用各模块信息列表')
+    region_name = serializers.CharField(read_only=True, source="get_region_display", help_text="应用版本名称")
+    logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的 Logo 地址")
+    config_info = serializers.DictField(read_only=True, help_text="应用的额外状态信息")
+    modules = serializers.SerializerMethodField(help_text="应用各模块信息列表")
 
     def get_modules(self, application: Application):
         # 将 default_module 排在第一位
-        modules = application.modules.all().order_by('-is_default', '-created')
+        modules = application.modules.all().order_by("-is_default", "-created")
         return ModuleSLZ(modules, many=True).data
 
     class Meta:
         model = Application
-        exclude = ['logo']
+        exclude = ["logo"]
 
 
 class ApplicationWithDeployInfoSLZ(ApplicationSLZ):
-    deploy_info = serializers.JSONField(read_only=True, source='_deploy_info', help_text=u"部署状态")
+    deploy_info = serializers.JSONField(read_only=True, source="_deploy_info", help_text="部署状态")
 
 
 class ApplicationRelationSLZ(serializers.Serializer):
@@ -188,7 +188,7 @@ class ApplicationRelationSLZ(serializers.Serializer):
 class ApplicationListDetailedSLZ(serializers.Serializer):
     """Serializer for detailed app list"""
 
-    valid_order_by_fields = ('code', 'created', 'latest_operated_at', 'name')
+    valid_order_by_fields = ("code", "created", "latest_operated_at", "name")
     exclude_collaborated = serializers.BooleanField(default=False)
     include_inactive = serializers.BooleanField(default=False)
     region = serializers.ListField(required=False)
@@ -196,15 +196,15 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     search_term = serializers.CharField(required=False)
     source_origin = serializers.ChoiceField(required=False, allow_null=True, choices=SourceOrigin.get_choices())
     type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), required=False)
-    order_by = serializers.CharField(default='name')
+    order_by = serializers.CharField(default="name")
     prefer_marked = serializers.BooleanField(default=True)
 
     def validate_order_by(self, value):
-        if value.startswith('-'):
-            value = '-%s' % value.lstrip('-')
+        if value.startswith("-"):
+            value = "-%s" % value.lstrip("-")
 
-        if value.lstrip('-') not in self.valid_order_by_fields:
-            raise ValidationError(u'无效的排序选项：%s' % value)
+        if value.lstrip("-") not in self.valid_order_by_fields:
+            raise ValidationError("无效的排序选项：%s" % value)
         return value
 
     @staticmethod
@@ -224,10 +224,12 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     def validate_source_origin(self, value: Optional[int]):
         if value:
             return SourceOrigin(value)
+        return None
 
     def validate_type(self, value: Optional[str]):
         if value:
             return ApplicationType(value)
+        return None
 
 
 class ApplicationListMinimalSLZ(serializers.Serializer):
@@ -251,7 +253,7 @@ class ApplicationGroupFieldSLZ(serializers.Serializer):
 
 class ProductSLZ(serializers.Serializer):
     name = serializers.CharField()
-    logo = serializers.CharField(source='get_logo_url')
+    logo = serializers.CharField(source="get_logo_url")
 
 
 class MarketConfigSLZ(serializers.Serializer):
@@ -271,19 +273,19 @@ class ApplicationMinimalSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ['id', 'code', 'name']
+        fields = ["id", "code", "name"]
 
 
 class ApplicationSLZ4Record(serializers.ModelSerializer):
     """用于操作记录"""
 
     name = TranslatedCharField()
-    logo_url = serializers.CharField(read_only=True, source='get_logo_url', help_text=u"应用的Logo地址")
-    config_info = serializers.DictField(read_only=True, help_text='应用额外状态信息')
+    logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的Logo地址")
+    config_info = serializers.DictField(read_only=True, help_text="应用额外状态信息")
 
     class Meta:
         model = Application
-        fields = ['id', 'code', 'name', 'logo_url', 'config_info']
+        fields = ["id", "code", "name", "logo_url", "config_info"]
 
 
 class MarketAppMinimalSLZ(serializers.Serializer):
@@ -297,29 +299,31 @@ class ApplicationWithMarketMinimalSLZ(serializers.Serializer):
 
 class ApplicationMarkedSLZ(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(
-        view_name='api.user.mark.applications.detail', lookup_field='code', help_text=u"单条记录访问链接"
+        view_name="api.user.mark.applications.detail", lookup_field="code", help_text="单条记录访问链接"
     )
 
-    application_code = serializers.ReadOnlyField(source="application.code", help_text=u"应用编码")
-    application_name = serializers.ReadOnlyField(source="application.code", help_text=u"应用名称")
+    application_code = serializers.ReadOnlyField(source="application.code", help_text="应用编码")
+    application_name = serializers.ReadOnlyField(source="application.code", help_text="应用名称")
     application = ApplicationField(
-        slug_field='code',
+        slug_field="code",
         many=False,
         allow_null=True,
         help_text="应用id",
     )
 
     def validate(self, attrs):
-        if self.context["request"].method in ["POST"]:
-            if self.Meta.model.objects.filter(
+        if (
+            self.context["request"].method in ["POST"]
+            and self.Meta.model.objects.filter(
                 owner=self.context["request"].user.pk, application__code=attrs["application"].code
-            ).exists():
-                raise serializers.ValidationError(u'您已经标记该应用')
+            ).exists()
+        ):
+            raise serializers.ValidationError("您已经标记该应用")
         return attrs
 
     class Meta:
         model = UserMarkedApplication
-        fields = ['application_code', 'application_name', "application", "url"]
+        fields = ["application_code", "application_name", "application", "url"]
 
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user.pk
@@ -342,20 +346,20 @@ class ApplicationFeatureFlagSLZ(serializers.Serializer):
 class ProtectionStatusSLZ(serializers.Serializer):
     """Serialize app resource protection status"""
 
-    activated = serializers.BooleanField(help_text='是否激活保护')
-    reason = serializers.CharField(help_text='具体原因')
+    activated = serializers.BooleanField(help_text="是否激活保护")
+    reason = serializers.CharField(help_text="具体原因")
 
 
 class ApplicationLogoSLZ(serializers.ModelSerializer):
     """Serializer for representing and modifying Logo"""
 
     logo = serializers.ImageField(write_only=True)
-    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text=u"应用 Logo 访问地址")
-    code = serializers.ReadOnlyField(help_text=u"应用 Code")
+    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
+    code = serializers.ReadOnlyField(help_text="应用 Code")
 
     class Meta:
         model = Application
-        fields = ['logo', 'logo_url', 'code']
+        fields = ["logo", "logo_url", "code"]
 
     @atomic
     def update(self, instance: Application, validated_data: Dict) -> Dict:

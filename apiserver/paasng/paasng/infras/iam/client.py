@@ -51,10 +51,10 @@ class BKIAMClient:
 
     def _prepare_headers(self) -> dict:
         headers = {
-            'x-bkapi-authorization': json.dumps(
+            "x-bkapi-authorization": json.dumps(
                 {
-                    'bk_app_code': settings.BK_APP_CODE,
-                    'bk_app_secret': settings.BK_APP_SECRET,
+                    "bk_app_code": settings.BK_APP_CODE,
+                    "bk_app_secret": settings.BK_APP_SECRET,
                 }
             )
         }
@@ -70,21 +70,21 @@ class BKIAMClient:
         :returns: 分级管理员 ID
         """
         data = {
-            'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-            'name': utils.gen_grade_manager_name(app_code),
-            'description': utils.gen_grade_manager_desc(app_code),
-            'members': [init_member] if init_member else [],
+            "system": settings.IAM_PAAS_V3_SYSTEM_ID,
+            "name": utils.gen_grade_manager_name(app_code),
+            "description": utils.gen_grade_manager_desc(app_code),
+            "members": [init_member] if init_member else [],
             # 创建分级管理员时，仅授权开发者中心的权限
-            'authorization_scopes': [
+            "authorization_scopes": [
                 utils.get_paas_authorization_scopes(
                     app_code, app_name, ApplicationRole.ADMINISTRATOR, include_system=True
                 )
             ],
             # 可授权的人员范围为公司任意人
-            'subject_scopes': [
+            "subject_scopes": [
                 {
-                    'type': '*',
-                    'id': '*',
+                    "type": "*",
+                    "id": "*",
                 }
             ],
         }
@@ -94,16 +94,16 @@ class BKIAMClient:
                 data=data,
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'create grade managers error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"create grade managers error, detail: {e}")
 
-        if resp.get('code') != 0:
-            if resp['code'] == IAMErrorCodes.CONFLICT:
+        if resp.get("code") != 0:
+            if resp["code"] == IAMErrorCodes.CONFLICT:
                 return self.fetch_grade_manager(app_code)
 
             logger.exception(f"create iam grade managers error, message:{resp['message']} \n data: {data}")
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
-        return resp['data']['id']
+        return resp["data"]["id"]
 
     def delete_grade_manager(self, grade_manager_id: str):
         """
@@ -111,20 +111,20 @@ class BKIAMClient:
 
         :param grade_manager_id: 分级管理员 ID
         """
-        path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'id': grade_manager_id}
+        path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "id": grade_manager_id}
 
         try:
             resp = self.client.v2_management_delete_grade_manager(
                 path_params=path_params,
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'delete grade manager error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"delete grade manager error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'delete grade manager error, message:{} grade_manager_id: {}'.format(resp['message'], grade_manager_id)
+                "delete grade manager error, message:{} grade_manager_id: {}".format(resp["message"], grade_manager_id)
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
     def fetch_grade_manager(self, app_code: str) -> int:
         """
@@ -137,24 +137,24 @@ class BKIAMClient:
         try:
             resp = self.client.management_grade_managers_list(
                 params={
-                    'name': manager_name,
-                    'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-                    'page': DEFAULT_PAGE,
-                    'page_size': LIST_GRADE_MANAGERS_LIMIT,
+                    "name": manager_name,
+                    "system": settings.IAM_PAAS_V3_SYSTEM_ID,
+                    "page": DEFAULT_PAGE,
+                    "page_size": LIST_GRADE_MANAGERS_LIMIT,
                 },
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'fetch grade managers error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"fetch grade managers error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(f"fetch iam grade managers error, message:{resp['message']}")
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
-        for manager in resp['data']['results']:
-            if manager['name'] == manager_name:
-                return manager['id']
+        for manager in resp["data"]["results"]:
+            if manager["name"] == manager_name:
+                return manager["id"]
 
-        raise BKIAMApiError(f'failed to find application [{app_code}] grade manager')
+        raise BKIAMApiError(f"failed to find application [{app_code}] grade manager")
 
     def fetch_grade_manager_members(self, grade_manager_id: int) -> List[str]:
         """
@@ -165,20 +165,20 @@ class BKIAMClient:
         """
         try:
             resp = self.client.management_grade_manager_members(
-                path_params={'id': grade_manager_id},
+                path_params={"id": grade_manager_id},
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'get grade manager members error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"get grade manager members error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'get grade manager members error, grade_manager_id: {}, message:{}'.format(
-                    grade_manager_id, resp['message']
+                "get grade manager members error, grade_manager_id: {}, message:{}".format(
+                    grade_manager_id, resp["message"]
                 )
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
-        return resp.get('data', [])
+        return resp.get("data", [])
 
     def add_grade_manager_members(self, grade_manager_id: int, usernames: List[str]):
         """
@@ -192,7 +192,7 @@ class BKIAMClient:
         if not usernames:
             return
 
-        path_params, data = {'id': grade_manager_id}, {'members': usernames}
+        path_params, data = {"id": grade_manager_id}, {"members": usernames}
 
         try:
             resp = self.client.management_add_grade_manager_members(
@@ -200,15 +200,15 @@ class BKIAMClient:
                 data=data,
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'add grade manager (id: {grade_manager_id}) members error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"add grade manager (id: {grade_manager_id}) members error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'add grade manager (id: {}) members error, message:{} \n data: {}'.format(
-                    grade_manager_id, resp['message'], data
+                "add grade manager (id: {}) members error, message:{} \n data: {}".format(
+                    grade_manager_id, resp["message"], data
                 )
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
     def delete_grade_manager_members(self, grade_manager_id: int, usernames: List[str]):
         """
@@ -217,7 +217,7 @@ class BKIAMClient:
         :param grade_manager_id: 分级管理员 ID
         :param usernames: 待删除的成员名称
         """
-        path_params, params = {'id': grade_manager_id}, {'members': ','.join(usernames)}
+        path_params, params = {"id": grade_manager_id}, {"members": ",".join(usernames)}
 
         try:
             resp = self.client.management_delete_grade_manager_members(
@@ -225,15 +225,15 @@ class BKIAMClient:
                 params=params,
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'delete grade manager (id: {grade_manager_id}) members error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"delete grade manager (id: {grade_manager_id}) members error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'delete grade manager members error, message:{} \n id: {}, params: {}'.format(
-                    resp['message'], grade_manager_id, params
+                "delete grade manager members error, message:{} \n id: {}, params: {}".format(
+                    resp["message"], grade_manager_id, params
                 )
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
     def create_builtin_user_groups(self, grade_manager_id: int, app_code: str) -> List[Dict]:
         """
@@ -243,18 +243,18 @@ class BKIAMClient:
         :param app_code: 蓝鲸应用 ID
         :returns: 用户组信息
         """
-        path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'id': grade_manager_id}
+        path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "id": grade_manager_id}
 
         groups = [
             {
-                'name': utils.gen_user_group_name(app_code, role),
-                'description': utils.gen_user_group_desc(app_code, role),
+                "name": utils.gen_user_group_name(app_code, role),
+                "description": utils.gen_user_group_desc(app_code, role),
                 # 只读用户组，设置为 True 后，分级管理员无法在权限中心产品上删除该用户组
-                'readonly': True,
+                "readonly": True,
             }
             for role in APP_DEFAULT_ROLES
         ]
-        data = {'groups': groups}
+        data = {"groups": groups}
 
         conflict = False
         try:
@@ -264,19 +264,19 @@ class BKIAMClient:
             )
         except HTTPResponseError as e:
             if e.response.status_code != 409:
-                raise BKIAMGatewayServiceError(f'create user groups error, detail: {e}')
+                raise BKIAMGatewayServiceError(f"create user groups error, detail: {e}")
             conflict = True
             resp = self.client.v2_management_grade_manager_list_groups(path_params=path_params)
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'create user groups error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"create user groups error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'create user groups error, message:{} \n grade_manager_id: {}, data: {}'.format(
-                    resp['message'], grade_manager_id, data
+                "create user groups error, message:{} \n grade_manager_id: {}, data: {}".format(
+                    resp["message"], grade_manager_id, data
                 )
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
         if conflict:
             all_groups = {group["name"]: group for group in resp["data"]["results"]}
@@ -286,7 +286,7 @@ class BKIAMClient:
             ]
 
         # 按照顺序，填充申请创建得到的各个用户组的 ID
-        user_group_ids = resp.get('data', [])
+        user_group_ids = resp.get("data", [])
         for group, user_group_id, role in zip(groups, user_group_ids, APP_DEFAULT_ROLES):
             group.update({"id": user_group_id, "role": role})  # type: ignore
         return groups
@@ -294,17 +294,17 @@ class BKIAMClient:
     def delete_user_groups(self, user_group_ids: List[int]):
         """删除指定的用户组"""
         for group_id in user_group_ids:
-            path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': group_id}
+            path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": group_id}
             try:
                 resp = self.client.v2_management_grade_manager_delete_group(
                     path_params=path_params,
                 )
             except APIGatewayResponseError as e:
-                raise BKIAMGatewayServiceError(f'delete user group error, group_id: {group_id}, detail: {e}')
+                raise BKIAMGatewayServiceError(f"delete user group error, group_id: {group_id}, detail: {e}")
 
-            if resp.get('code') != 0:
-                logger.exception('delete user group error, group_id: {}, message:{}'.format(group_id, resp['message']))
-                raise BKIAMApiError(resp['message'], resp['code'])
+            if resp.get("code") != 0:
+                logger.exception("delete user group error, group_id: {}, message:{}".format(group_id, resp["message"]))
+                raise BKIAMApiError(resp["message"], resp["code"])
 
     def fetch_user_group_members(self, user_group_id: int) -> List[str]:
         """
@@ -313,23 +313,23 @@ class BKIAMClient:
         :param user_group_id: 用户组 ID
         :returns: 用户组成员列表 ['username1', 'username2']
         """
-        path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': user_group_id}
-        params = {'page': DEFAULT_PAGE, 'page_size': FETCH_USER_GROUP_MEMBERS_LIMIT}
+        path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": user_group_id}
+        params = {"page": DEFAULT_PAGE, "page_size": FETCH_USER_GROUP_MEMBERS_LIMIT}
 
         try:
             resp = self.client.v2_management_group_members(path_params=path_params, params=params)
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'get user group members error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"get user group members error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'get user group members error, message:{} \n id: {}, params: {}'.format(
-                    resp['message'], user_group_id, params
+                "get user group members error, message:{} \n id: {}, params: {}".format(
+                    resp["message"], user_group_id, params
                 )
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
-        return [user['id'] for user in resp['data']['results']]
+        return [user["id"] for user in resp["data"]["results"]]
 
     def add_user_group_members(self, user_group_id: int, usernames: List[str], expired_after_days: int):
         """
@@ -344,10 +344,10 @@ class BKIAMClient:
         if not usernames:
             return
 
-        path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': user_group_id}
+        path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": user_group_id}
         data = {
-            'members': [{'type': 'user', 'id': username} for username in usernames],
-            'expired_at': utils.calc_expired_at(expired_after_days),
+            "members": [{"type": "user", "id": username} for username in usernames],
+            "expired_at": utils.calc_expired_at(expired_after_days),
         }
 
         try:
@@ -356,15 +356,15 @@ class BKIAMClient:
                 data=data,
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'add user group (id: {user_group_id}) members error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"add user group (id: {user_group_id}) members error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'add user group members error, message:{} \n id: {}, data: {}'.format(
-                    resp['message'], user_group_id, data
+                "add user group members error, message:{} \n id: {}, data: {}".format(
+                    resp["message"], user_group_id, data
                 )
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
     def delete_user_group_members(self, user_group_id: int, usernames: List[str]):
         """
@@ -373,8 +373,8 @@ class BKIAMClient:
         :param user_group_id: 分级管理员 ID
         :param usernames: 待删除的成员名称
         """
-        path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': user_group_id}
-        params = {'type': 'user', 'ids': ','.join(usernames)}
+        path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": user_group_id}
+        params = {"type": "user", "ids": ",".join(usernames)}
 
         try:
             resp = self.client.v2_management_delete_group_members(
@@ -382,15 +382,15 @@ class BKIAMClient:
                 params=params,
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'delete user group (id: {user_group_id}) members error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"delete user group (id: {user_group_id}) members error, detail: {e}")
 
-        if resp.get('code') != 0:
+        if resp.get("code") != 0:
             logger.exception(
-                'delete user group members error, message:{} \n id: {}, params: {}'.format(
-                    resp['message'], user_group_id, params
+                "delete user group members error, message:{} \n id: {}, params: {}".format(
+                    resp["message"], user_group_id, params
                 )
             )
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
 
     def grant_user_group_policies(self, app_code: str, app_name: str, groups: List[Dict]):
         """
@@ -401,8 +401,8 @@ class BKIAMClient:
         :param groups: 用户组信息（create_builtin_user_groups 返回结果）
         """
         for group in groups:
-            path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': group['id']}
-            data = utils.get_paas_authorization_scopes(app_code, app_name, group['role'])
+            path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": group["id"]}
+            data = utils.get_paas_authorization_scopes(app_code, app_name, group["role"])
 
             try:
                 resp = self.client.v2_management_groups_policies_grant(
@@ -410,15 +410,15 @@ class BKIAMClient:
                     data=data,
                 )
             except APIGatewayResponseError as e:
-                raise BKIAMGatewayServiceError(f'grant user groups policies error, detail: {e}')
+                raise BKIAMGatewayServiceError(f"grant user groups policies error, detail: {e}")
 
-            if resp.get('code') != 0:
+            if resp.get("code") != 0:
                 logger.exception(
-                    'grant user groups policies error, message:{} \n user_group_id: {}, data: {}'.format(
-                        resp['message'], group['id'], data
+                    "grant user groups policies error, message:{} \n user_group_id: {}, data: {}".format(
+                        resp["message"], group["id"], data
                     )
                 )
-                raise BKIAMApiError(resp['message'], resp['code'])
+                raise BKIAMApiError(resp["message"], resp["code"])
 
     def update_grade_managers_with_bksaas_space(
         self, grade_manager_id: str, app_code: str, app_name: str, bk_space_id: str
@@ -432,11 +432,11 @@ class BKIAMClient:
         :param bk_space_id: 蓝鲸监控的空间ID，注意这是这一个负数
         """
         data = {
-            'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-            'name': utils.gen_grade_manager_name(app_code),
-            'description': utils.gen_grade_manager_desc(app_code),
+            "system": settings.IAM_PAAS_V3_SYSTEM_ID,
+            "name": utils.gen_grade_manager_name(app_code),
+            "description": utils.gen_grade_manager_desc(app_code),
             # 除创建时初始化的开发者中心权限外，新增监控平台、日志平台最小空间权限
-            'authorization_scopes': [
+            "authorization_scopes": [
                 utils.get_paas_authorization_scopes(
                     app_code, app_name, ApplicationRole.ADMINISTRATOR, include_system=True
                 )
@@ -444,15 +444,15 @@ class BKIAMClient:
             + utils.get_bk_monitor_authorization_scope_list(bk_space_id, app_name, include_system=True)
             + utils.get_bk_log_authorization_scope_list(bk_space_id, app_name, include_system=True),
             # 可授权的人员范围为公司任意人
-            'subject_scopes': [
+            "subject_scopes": [
                 {
-                    'type': '*',
-                    'id': '*',
+                    "type": "*",
+                    "id": "*",
                 }
             ],
         }
 
-        path_params = {'id': grade_manager_id}
+        path_params = {"id": grade_manager_id}
         try:
             resp = self.client.management_grade_managers_update(
                 headers=self._prepare_headers(),
@@ -460,14 +460,15 @@ class BKIAMClient:
                 path_params=path_params,
             )
         except APIGatewayResponseError as e:
-            raise BKIAMGatewayServiceError(f'update grade managers error, detail: {e}')
+            raise BKIAMGatewayServiceError(f"update grade managers error, detail: {e}")
 
-        if resp.get('code') != 0:
-            if resp['code'] == IAMErrorCodes.CONFLICT:
+        if resp.get("code") != 0:
+            if resp["code"] == IAMErrorCodes.CONFLICT:
                 return self.fetch_grade_manager(app_code)
 
             logger.exception(f"update iam grade managers error, message:{resp['message']} \n data: {data}")
-            raise BKIAMApiError(resp['message'], resp['code'])
+            raise BKIAMApiError(resp["message"], resp["code"])
+        return None
 
     def grant_user_group_policies_in_bk_monitor(self, bk_space_id: str, app_name: str, groups: List[Dict]):
         """
@@ -478,7 +479,7 @@ class BKIAMClient:
         :param groups: 用户组信息（create_builtin_user_groups 返回结果）
         """
         for group in groups:
-            path_params = {'system_id': BK_MONITOR_SYSTEM_ID, 'group_id': group['id']}
+            path_params = {"system_id": BK_MONITOR_SYSTEM_ID, "group_id": group["id"]}
 
             scope_list = utils.get_bk_monitor_authorization_scope_list(bk_space_id, app_name)
             for scope in scope_list:
@@ -489,15 +490,15 @@ class BKIAMClient:
                         data=scope,
                     )
                 except APIGatewayResponseError as e:
-                    raise BKIAMGatewayServiceError(f'grant user groups policies in bk monitor  error, detail: {e}')
+                    raise BKIAMGatewayServiceError(f"grant user groups policies in bk monitor  error, detail: {e}")
 
-                if resp.get('code') != 0:
+                if resp.get("code") != 0:
                     logger.exception(
-                        'grant user groups policies in bk monitor error, msg:{} \n user_group_id: {}, data: {}'.format(
-                            resp['message'], group['id'], scope
+                        "grant user groups policies in bk monitor error, msg:{} \n user_group_id: {}, data: {}".format(
+                            resp["message"], group["id"], scope
                         )
                     )
-                    raise BKIAMApiError(resp['message'], resp['code'])
+                    raise BKIAMApiError(resp["message"], resp["code"])
 
     def grant_user_group_policies_in_bk_log(self, bk_space_id: str, app_name: str, groups: List[Dict]):
         """
@@ -508,7 +509,7 @@ class BKIAMClient:
         :param groups: 用户组信息（create_builtin_user_groups 返回结果）
         """
         for group in groups:
-            path_params = {'system_id': BK_LOG_SYSTEM_ID, 'group_id': group['id']}
+            path_params = {"system_id": BK_LOG_SYSTEM_ID, "group_id": group["id"]}
 
             scope_list = utils.get_bk_log_authorization_scope_list(bk_space_id, app_name)
             for scope in scope_list:
@@ -519,12 +520,12 @@ class BKIAMClient:
                         data=scope,
                     )
                 except APIGatewayResponseError as e:
-                    raise BKIAMGatewayServiceError(f'grant user groups policies in bk log  error, detail: {e}')
+                    raise BKIAMGatewayServiceError(f"grant user groups policies in bk log  error, detail: {e}")
 
-                if resp.get('code') != 0:
+                if resp.get("code") != 0:
                     logger.exception(
-                        'grant user groups policies in bk log error, message:{} \n user_group_id: {}, data: {}'.format(
-                            resp['message'], group['id'], scope
+                        "grant user groups policies in bk log error, message:{} \n user_group_id: {}, data: {}".format(
+                            resp["message"], group["id"], scope
                         )
                     )
-                    raise BKIAMApiError(resp['message'], resp['code'])
+                    raise BKIAMApiError(resp["message"], resp["code"])

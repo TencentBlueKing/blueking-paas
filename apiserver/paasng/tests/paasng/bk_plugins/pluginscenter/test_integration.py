@@ -33,12 +33,12 @@ class TestReleaseStages:
     """Release 状态扭转的集成测试"""
 
     @pytest.fixture(autouse=True)
-    def mock_refresh_source_hash(self):
+    def _mock_refresh_source_hash(self):
         with mock.patch("paasng.bk_plugins.pluginscenter.releases.stages.DeployAPIStage._refresh_source_hash"):
             yield
 
-    @pytest.fixture
-    def setup_release_stages(self, pd):
+    @pytest.fixture()
+    def _setup_release_stages(self, pd):
         pd.release_stages = [
             {
                 "id": "market",
@@ -59,9 +59,8 @@ class TestReleaseStages:
         pd.save()
         pd.refresh_from_db()
 
-    def test_release_version(
-        self, thirdparty_client, pd, plugin, setup_release_stages, api_client, iam_policy_client, setup_bk_user
-    ):
+    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    def test_release_version(self, thirdparty_client, pd, plugin, api_client, iam_policy_client):
         assert PluginRelease.objects.count() == 0
         with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
@@ -87,8 +86,8 @@ class TestReleaseStages:
         resp = api_client.post(f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/next/")
         assert resp.status_code == 400
         assert resp.json() == {
-            'code': error_codes.EXECUTE_STAGE_ERROR.code,
-            'detail': error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message,
+            "code": error_codes.EXECUTE_STAGE_ERROR.code,
+            "detail": error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message,
         }
 
         # 测试保存市场信息(完成当前阶段的操作)
@@ -161,14 +160,14 @@ class TestReleaseStages:
             f"/stages/{release.current_stage.stage_id}/"
         )
         assert resp.json() == {
-            'stage_id': 'deploy',
-            'stage_name': '部署',
-            'status': 'pending',
-            'fail_message': '',
-            'detail': {
-                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'successful'}],
-                'finished': True,
-                'logs': ['1', '2', '3'],
+            "stage_id": "deploy",
+            "stage_name": "部署",
+            "status": "pending",
+            "fail_message": "",
+            "detail": {
+                "steps": [{"id": "step-1", "name": "步骤1", "status": "successful"}],
+                "finished": True,
+                "logs": ["1", "2", "3"],
             },
         }
 

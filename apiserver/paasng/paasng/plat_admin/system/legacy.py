@@ -32,7 +32,7 @@ except ImportError:
     from paasng.infras.legacydb.models import get_developers_by_v2_application
 
 
-RE_QQ = re.compile(r'^\d{5,}$')
+RE_QQ = re.compile(r"^\d{5,}$")
 
 
 def build_legacy_region_maps():
@@ -50,14 +50,14 @@ class LegacyAppNormalizer:
 
     def get_region(self) -> Optional[str]:
         """Get region"""
-        if hasattr(self.app, 'deploy_ver'):
+        if hasattr(self.app, "deploy_ver"):
             return _region_map.get(self.app.deploy_ver)
         else:
             return settings.DEFAULT_REGION_NAME
 
     def get_developers(self) -> List[str]:
         """Get app's developers list, the results will be cached in memory"""
-        if not getattr(self, '_cached_developers', None):
+        if not getattr(self, "_cached_developers", None):
             developers = get_developers_by_v2_application(self.app)
             # Skip external developers which is QQ number
             self._cached_developers = [u for u in developers if not RE_QQ.match(u)]
@@ -66,7 +66,7 @@ class LegacyAppNormalizer:
     def get_creator(self) -> str:
         """Get app's creator"""
         # "creater" is not a typo
-        creator = self.app.creater or ''
+        creator = self.app.creater or ""
         if RE_QQ.match(creator):
             developers = self.get_developers()
             if developers:

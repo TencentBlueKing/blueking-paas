@@ -23,39 +23,39 @@ import pytest
 from paasng.utils.configs import RegionAwareConfig, get_region_aware
 
 
-@pytest.fixture
+@pytest.fixture()
 def config_with_region():
     return {
-        '_lookup_field': 'region',
-        'data': {'r1': {'url': 'r1.com'}, 'r2': {'url': 'r2.com'}},
+        "_lookup_field": "region",
+        "data": {"r1": {"url": "r1.com"}, "r2": {"url": "r2.com"}},
     }
 
 
 class TestRegionAwareConfig:
     @pytest.mark.parametrize(
-        'user_settings,expected_config',
+        ("user_settings", "expected_config"),
         [
-            ({'url': 'http://example.com'}, {'url': 'http://example.com'}),
-            (['foo', 'bar'], ['foo', 'bar']),
+            ({"url": "http://example.com"}, {"url": "http://example.com"}),
+            (["foo", "bar"], ["foo", "bar"]),
         ],
     )
     def test_no_region(self, user_settings, expected_config):
         config = RegionAwareConfig(user_settings)
-        assert config.get('foo') == expected_config
+        assert config.get("foo") == expected_config
 
     def test_region(self, config_with_region):
         config = RegionAwareConfig(config_with_region)
-        assert config.get('r1') == {'url': 'r1.com'}
-        assert config.get('r2') == {'url': 'r2.com'}
+        assert config.get("r1") == {"url": "r1.com"}
+        assert config.get("r2") == {"url": "r2.com"}
 
     def test_region_not_found(self, config_with_region):
         config = RegionAwareConfig(config_with_region)
         with pytest.raises(KeyError):
-            config.get('r100')
+            config.get("r100")
 
     def test_region_not_found_default(self, config_with_region):
         config = RegionAwareConfig(config_with_region)
-        assert config.get('r100', use_default_value=True) is not None
+        assert config.get("r100", use_default_value=True) is not None
 
 
 @dataclass
@@ -65,18 +65,18 @@ class FooConfig:
 
 
 @pytest.mark.parametrize(
-    'region,result_cls,expected_result',
+    ("region", "result_cls", "expected_result"),
     [
-        ('r1', None, {'key': 'r1', 'value': 'r1-value'}),
-        ('r1', FooConfig, FooConfig('r1', 'r1-value')),
+        ("r1", None, {"key": "r1", "value": "r1-value"}),
+        ("r1", FooConfig, FooConfig("r1", "r1-value")),
     ],
 )
 def test_get_region_aware(region, result_cls, expected_result, settings):
     settings.FOO_CONFIG = {
-        '_lookup_field': 'region',
-        'data': {
-            'r1': {'key': 'r1', 'value': 'r1-value'},
-            'r2': {'key': 'r2', 'value': 'r2-value'},
+        "_lookup_field": "region",
+        "data": {
+            "r1": {"key": "r1", "value": "r1-value"},
+            "r2": {"key": "r2", "value": "r2-value"},
         },
     }
-    assert get_region_aware('FOO_CONFIG', region, result_cls=result_cls) == expected_result
+    assert get_region_aware("FOO_CONFIG", region, result_cls=result_cls) == expected_result

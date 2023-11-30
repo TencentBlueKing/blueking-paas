@@ -22,8 +22,8 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from paas_wl.core.app_structure import get_structure
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.core.app_structure import get_structure
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KService
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -37,10 +37,10 @@ class Command(BaseCommand):
     - Update annotation field: add "process_type"
     """
 
-    help = 'Patch existed kubernetes services'
+    help = "Patch existed kubernetes services"
 
     def handle(self, *args, **options):
-        for app in WlApp.objects.all().order_by('created'):
+        for app in WlApp.objects.all().order_by("created"):
             client = get_client_by_app(app)
             for process_type in get_structure(app):
                 default_service_name = f"{app.region}-{app.scheduler_safe_name}-{process_type}"
@@ -53,6 +53,6 @@ class Command(BaseCommand):
                 annotations = svc.metadata.annotations or {}
                 if not annotations:
                     print(f"Updating service, set annotation to process_type={process_type}")
-                    annotations['process_type'] = process_type
+                    annotations["process_type"] = process_type
                     svc.metadata.annotations = annotations
                     KService(client).replace_or_patch(default_service_name, svc, namespace=app.namespace)

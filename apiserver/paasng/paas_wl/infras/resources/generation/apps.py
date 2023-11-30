@@ -19,7 +19,7 @@ from django.apps import AppConfig
 
 
 class GenerationConfig(AppConfig):
-    name = 'paas_wl.infras.resources.generation'
+    name = "paas_wl.infras.resources.generation"
 
     def ready(self):
         # Register signal handlers

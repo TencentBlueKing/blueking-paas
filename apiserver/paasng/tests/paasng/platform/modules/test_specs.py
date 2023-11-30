@@ -28,7 +28,7 @@ pytestmark = pytest.mark.django_db
 
 class TestModuleSpecs:
     @pytest.mark.parametrize(
-        'type_, factor_1',
+        ("type_", "factor_1"),
         [
             (ApplicationType.DEFAULT, True),
             (ApplicationType.ENGINELESS_APP, False),
@@ -36,7 +36,7 @@ class TestModuleSpecs:
         ],
     )
     @pytest.mark.parametrize(
-        "source_origin, factor_2",
+        ("source_origin", "factor_2"),
         [
             (SourceOrigin.AUTHORIZED_VCS, True),
             (SourceOrigin.S_MART, False),
@@ -48,13 +48,13 @@ class TestModuleSpecs:
         bk_module.source_origin = source_origin
         bk_module.save(update_fields=["source_origin"])
         bk_app.type = type_
-        bk_app.save(update_fields=['type'])
+        bk_app.save(update_fields=["type"])
         assert ModuleSpecs(bk_module).templated_source_enabled == (
             (factor_1 or (bool(bk_module.source_init_template))) and factor_2
         )
 
     @pytest.mark.parametrize(
-        "source_origin, runtime_type, has_template_code, deploy_via_package",
+        ("source_origin", "runtime_type", "has_template_code", "deploy_via_package"),
         [
             (SourceOrigin.AUTHORIZED_VCS, RuntimeType.BUILDPACK, True, False),
             (SourceOrigin.S_MART, RuntimeType.BUILDPACK, False, True),

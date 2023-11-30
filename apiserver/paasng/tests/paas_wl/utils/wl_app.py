@@ -36,7 +36,7 @@ def create_wl_app(
     owner: Optional[User] = None,
 ) -> WlApp:
     default_environment = random.choice(["stag", "prod"])
-    default_app_name = 'app-' + get_random_string(length=12).lower()
+    default_app_name = "app-" + get_random_string(length=12).lower()
     app_info = {
         "region": settings.DEFAULT_REGION_NAME,
         "name": default_app_name,
@@ -54,8 +54,8 @@ def create_wl_app(
         metadata={
             "environment": environment or default_environment,
             # Use app name as paas_app_code by default if not given
-            "paas_app_code": paas_app_code or app_info['name'],
-            "module_name": 'default',
+            "paas_app_code": paas_app_code or app_info["name"],
+            "module_name": "default",
         },
     )
     return wl_app

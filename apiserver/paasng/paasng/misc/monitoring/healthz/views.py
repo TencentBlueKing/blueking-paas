@@ -42,7 +42,7 @@ class HealthViewSet(viewsets.ViewSet):
     ]
 
     def healthz(self, request):
-        token = request.query_params.get('token', '')
+        token = request.query_params.get("token", "")
         if not settings.HEALTHZ_TOKEN:
             return Response(
                 data={"errors": "Token was not configured in settings, request denied"},
@@ -62,7 +62,7 @@ class HealthViewSet(viewsets.ViewSet):
             # by monitor system and make response as a plain text
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=diagnosis_list.get_fatal_report())
 
-        return Response(data={'results': DianosisSerializer(diagnosis_list.items, many=True).data})
+        return Response(data={"results": DianosisSerializer(diagnosis_list.items, many=True).data})
 
     def readyz(self, request):
         return Response()

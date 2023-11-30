@@ -51,7 +51,7 @@ class DeploymentQuerySet(models.QuerySet):
 
     def latest_succeeded(self):
         """Return the latest succeeded deployment of queryset"""
-        return self.filter(status=JobStatus.SUCCESSFUL.value).latest('created')
+        return self.filter(status=JobStatus.SUCCESSFUL.value).latest("created")
 
 
 @define
@@ -70,6 +70,20 @@ class AdvancedOptions:
 
 
 @dataclass
+class AutoscalingConfig:
+    """This class is a duplication of paas_wl.workloads.autoscaling.entities.AutoscalingConfig, it
+    avoids a circular import problem.
+    """
+
+    # 最小副本数量
+    min_replicas: int
+    # 最大副本数量
+    max_replicas: int
+    # 扩缩容策略
+    policy: str
+
+
+@dataclass
 class ProcessTmpl:
     """This class is a duplication of paas_wl.bk_app.processes.models.ProcessTmpl, it
     avoids a circular import problem.
@@ -79,6 +93,8 @@ class ProcessTmpl:
     command: str
     replicas: Optional[int] = None
     plan: Optional[str] = None
+    autoscaling: bool = False
+    scaling_config: Optional[AutoscalingConfig] = None
 
     def __post_init__(self):
         self.name = self.name.lower()
@@ -92,33 +108,37 @@ class Deployment(OperationVersionBase):
     """部署记录"""
 
     app_environment = models.ForeignKey(
-        'applications.ApplicationEnvironment', on_delete=models.CASCADE, related_name='deployments', null=True
+        "applications.ApplicationEnvironment", on_delete=models.CASCADE, related_name="deployments", null=True
     )
-    status = models.CharField(u"部署状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
+    status = models.CharField(
+        "部署状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
+    )
 
     # Related with engine
     build_process_id = models.UUIDField(max_length=32, null=True)
     build_id = models.UUIDField(max_length=32, null=True)
     build_status = models.CharField(choices=BuildStatus.get_choices(), max_length=16, default=BuildStatus.PENDING)
-    build_int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断 build 的时间')
+    build_int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断 build 的时间")
     pre_release_id = models.UUIDField(max_length=32, null=True)
     pre_release_status = models.CharField(
         choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
     )
-    pre_release_int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断 pre-release 的时间')
+    pre_release_int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断 pre-release 的时间")
     release_id = models.UUIDField(max_length=32, null=True)
     bkapp_release_id = models.BigIntegerField(null=True, help_text="云原生应用发布记录ID")
     release_status = models.CharField(choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
-    release_int_requested_at = models.DateTimeField(null=True, help_text='用户请求中断 release 的时间')
+    release_int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断 release 的时间")
 
-    err_detail = models.TextField(u"部署异常原因", null=True, blank=True)
+    err_detail = models.TextField("部署异常原因", null=True, blank=True)
     advanced_options: AdvancedOptions = AdvancedOptionsField("高级选项", null=True)
 
     procfile = JSONField(
-        default=dict, help_text="[deprecated] 启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile"
+        default=dict,
+        help_text="[deprecated] 启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile",
     )
     processes = DeclarativeProcessField(
-        default=dict, help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec"
+        default=dict,
+        help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec",
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
     bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
@@ -134,16 +154,16 @@ class Deployment(OperationVersionBase):
         )
 
     def update_fields(self, **u_fields):
-        logger.info('update_fields, deployment_id: %s, fields: %s', self.id, u_fields)
+        logger.info("update_fields, deployment_id: %s, fields: %s", self.id, u_fields)
         before_time = self.updated
         kind: Optional[str]
         status: Optional[JobStatus]
-        if 'release_status' in u_fields:
-            kind = 'release'
-            status = JobStatus(u_fields['release_status'])
-        elif 'build_status' in u_fields:
-            kind = 'build'
-            status = JobStatus(u_fields['build_status'])
+        if "release_status" in u_fields:
+            kind = "release"
+            status = JobStatus(u_fields["release_status"])
+        elif "build_status" in u_fields:
+            kind = "build"
+            status = JobStatus(u_fields["build_status"])
         else:
             kind = None
             status = None
@@ -155,7 +175,7 @@ class Deployment(OperationVersionBase):
         if kind and status in JobStatus.get_finished_states():
             DEPLOYMENT_STATUS_COUNTER.labels(kind=kind, status=status.value).inc()
             total_seconds = (self.updated - before_time).total_seconds()
-            logger.info(f'update_release {total_seconds}')
+            logger.info(f"update_release {total_seconds}")
             DEPLOYMENT_TIME_CONSUME_HISTOGRAM.labels(
                 language=self.app_environment.application.language, kind=kind, status=status.value
             ).observe(total_seconds)
@@ -239,8 +259,8 @@ class Deployment(OperationVersionBase):
             version_name = self.source_version_name
             # Backward compatibility
             if not (version_type and version_name):
-                version_name = self.source_location.split('/')[-1]
-                version_type = 'trunk' if version_name == 'trunk' else self.source_location.split('/')[-2]
+                version_name = self.source_location.split("/")[-1]
+                version_type = "trunk" if version_name == "trunk" else self.source_location.split("/")[-2]
             return VersionInfo(self.source_revision, version_name, version_type)
 
         # 查询第一个引用 build_id 的 Deployment
@@ -273,7 +293,7 @@ class Deployment(OperationVersionBase):
         if self.processes:
             return list(self.processes.values())
         # 兼容旧字段 procfile
-        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas
+        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas,scaling_config
         elif self.procfile:
             return cattr.structure(
                 [{"name": name, "command": command} for name, command in self.procfile.items()],

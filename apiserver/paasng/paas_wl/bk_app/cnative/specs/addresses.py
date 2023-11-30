@@ -103,7 +103,7 @@ class AddrResourceManager:
         if not root_domains:
             return []
 
-        objs = AppSubpath.objects.filter(app=self.wl_app).order_by('created')
+        objs = AppSubpath.objects.filter(app=self.wl_app).order_by("created")
         paths = [obj.subpath for obj in objs]
         if not paths:
             return []
@@ -128,18 +128,18 @@ def to_domain(d: AppDomain) -> Domain:
     :param d: AppDomain object, it might be updated if a shared cert was found
     """
     if not d.https_enabled:
-        return Domain(host=d.host, pathPrefixList=['/'])
+        return Domain(host=d.host, pathPrefixList=["/"])
 
     domain = DomainWithCert.from_app_domain(d)
     if not domain.cert:
         # Disable HTTPS and write a warning message
-        logger.warning('no valid cert can be found for domain: %s, disable HTTPS.', d)
-        return Domain(host=d.host, pathPrefixList=['/'])
+        logger.warning("no valid cert can be found for domain: %s, disable HTTPS.", d)
+        return Domain(host=d.host, pathPrefixList=["/"])
 
     secret_name, created = update_or_create_secret_by_cert(d.app, domain.cert)
     if created:
         logger.info("created a secret %s for host %s", secret_name, d.host)
-    return Domain(host=d.host, pathPrefixList=['/'], tlsSecretName=secret_name)
+    return Domain(host=d.host, pathPrefixList=["/"], tlsSecretName=secret_name)
 
 
 def to_shared_tls_domain(d: Domain, app: WlApp) -> Domain:

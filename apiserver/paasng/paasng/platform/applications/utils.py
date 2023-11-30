@@ -44,8 +44,8 @@ logger = logging.getLogger(__name__)
 
 def create_default_module(
     application: Application,
-    language: str = '',
-    source_init_template: str = '',
+    language: str = "",
+    source_init_template: str = "",
     source_origin: SourceOrigin = SourceOrigin.AUTHORIZED_VCS,
 ) -> Module:
     """Create the default module for application
@@ -143,7 +143,7 @@ def create_market_config(
         auto_enable_when_deploy=not confirm_required_when_publish,
         source_module=application.get_default_module(),
         source_url_type=source_url_type.value,
-        source_tp_url=source_tp_url or '',
+        source_tp_url=source_tp_url or "",
         prefer_https=prefer_https,
     )
 
@@ -213,9 +213,9 @@ def get_app_overview(application: Application) -> dict:
     """
     data = {}
     # 查询所有的模块
-    modules = application.modules.all().order_by('-is_default', '-created')
+    modules = application.modules.all().order_by("-is_default", "-created")
     for module in modules:
-        module_info = {'is_default': module.is_default, 'envs': {}}
+        module_info = {"is_default": module.is_default, "envs": {}}
         # 查看模块下每个环境的访问地址和进程信息
         for env in AppEnvironment.get_values():
             module_env = module.get_envs(environment=env)
@@ -225,17 +225,17 @@ def get_app_overview(application: Application) -> dict:
 
             # 进程信息
             _specs = ProcessManager(module_env).list_processes_specs()
-            specs = [{spec['name']: spec} for spec in _specs]
+            specs = [{spec["name"]: spec} for spec in _specs]
 
             latest_dp = None
             if is_deployed:
                 latest_dp = get_latest_deployment_basic_info(application, module_env)
 
-            module_info['envs'][env] = {
-                'is_deployed': is_deployed,
-                'exposed_link': {"url": exposed_link.address if exposed_link else None},
-                'processes': specs,
-                'deployment': latest_dp,
+            module_info["envs"][env] = {
+                "is_deployed": is_deployed,
+                "exposed_link": {"url": exposed_link.address if exposed_link else None},
+                "processes": specs,
+                "deployment": latest_dp,
             }
 
         data[module.name] = module_info
@@ -273,10 +273,10 @@ class ResQuotasAggregation:
 
             for _specs in processes_specs:
                 quotas[app_env.environment]["memory_total"] += (
-                    _specs["resource_limit_quota"]['memory'] * _specs['target_replicas']
+                    _specs["resource_limit_quota"]["memory"] * _specs["target_replicas"]
                 )
                 quotas[app_env.environment]["cpu_total"] += (
-                    _specs["resource_limit_quota"]['cpu'] * _specs['target_replicas']
+                    _specs["resource_limit_quota"]["cpu"] * _specs["target_replicas"]
                 )
 
         # cpu 的单位从默认的 m 转为 核

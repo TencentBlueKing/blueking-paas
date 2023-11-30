@@ -21,22 +21,22 @@ from typing import TYPE_CHECKING, Type, cast
 import pytest
 
 from paasng.infras.accounts.oauth.backends import OAuth2Backend
-from paasng.platform.sourcectl.source_types import ServerConfig, SourcectlTypeNames, SourceTypes, SourceTypeSpec
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.source_types import ServerConfig, SourcectlTypeNames, SourceTypes, SourceTypeSpec
 
 if TYPE_CHECKING:
     from paasng.platform.sourcectl.connector import ModuleRepoConnector  # noqa
 
 
-@pytest.fixture
+@pytest.fixture()
 def server_config_with_region():
     return {
-        '_lookup_field': 'region',
-        'data': {'r1': {'url': 'r1.com'}, 'r2': {'url': 'r2.com'}},
+        "_lookup_field": "region",
+        "data": {"r1": {"url": "r1.com"}, "r2": {"url": "r2.com"}},
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def oauth_credentials():
     return {
         "authorization_base_url": "https://example.com",
@@ -46,7 +46,7 @@ def oauth_credentials():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def oauth_display_info():
     return {
         "display_name": "dummy-oauth",
@@ -57,7 +57,7 @@ def oauth_display_info():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def partial_oauth_display_info():
     return {"display_name": "dummy-override"}
 
@@ -65,12 +65,12 @@ def partial_oauth_display_info():
 class TestServerConfig:
     def test_region(self, server_config_with_region):
         config = ServerConfig(server_config_with_region)
-        assert config.get('r1') == {'url': 'r1.com'}
-        assert config.get('r2') == {'url': 'r2.com'}
+        assert config.get("r1") == {"url": "r1.com"}
+        assert config.get("r2") == {"url": "r2.com"}
 
     def test_region_not_found_default(self, server_config_with_region):
         config = ServerConfig(server_config_with_region)
-        assert config.get('r100', use_default_value=True) is not None
+        assert config.get("r100", use_default_value=True) is not None
 
     def test_region_agonostic_error(self, server_config_with_region):
         config = ServerConfig(server_config_with_region)
@@ -78,8 +78,8 @@ class TestServerConfig:
             config.get_region_agnostic()
 
     def test_region_agonostic_normal(self, server_config_with_region):
-        config = ServerConfig({'foo': 'bar'})
-        assert config.get_region_agnostic() == {'foo': 'bar'}
+        config = ServerConfig({"foo": "bar"})
+        assert config.get_region_agnostic() == {"foo": "bar"}
 
 
 class DummyClass:
@@ -91,48 +91,48 @@ class DummyOAuth2Backend(OAuth2Backend):
 
 
 class DummySourceTypeSpec(SourceTypeSpec):
-    connector_class = cast(Type['ModuleRepoConnector'], DummyClass)
+    connector_class = cast(Type["ModuleRepoConnector"], DummyClass)
     repo_controller_class = DummyClass  # type: ignore
     oauth_backend_class = DummyOAuth2Backend
-    basic_type = 'svn'
+    basic_type = "svn"
 
     _default_source_origin = SourceOrigin.AUTHORIZED_VCS
-    _default_label = 'dummy'
+    _default_label = "dummy"
     _default_display_info = {
-        'name': 'dummy',
-        'description': 'dummy',
+        "name": "dummy",
+        "description": "dummy",
     }
 
 
 class GitDummySourceTypeSpec(SourceTypeSpec):
-    connector_class = cast(Type['ModuleRepoConnector'], DummyClass)
+    connector_class = cast(Type["ModuleRepoConnector"], DummyClass)
     repo_controller_class = DummyClass  # type: ignore
     oauth_backend_class = DummyOAuth2Backend
-    basic_type = 'git'
+    basic_type = "git"
 
     _default_source_origin = SourceOrigin.AUTHORIZED_VCS
-    _default_label = 'dummy'
+    _default_label = "dummy"
     _default_display_info = {
-        'name': 'dummy',
-        'description': 'dummy',
+        "name": "dummy",
+        "description": "dummy",
     }
 
 
 class TestSourceTypeSpec:
     def test_normal(self, server_config_with_region):
-        spec = DummySourceTypeSpec('my_dummy', server_config=server_config_with_region)
-        assert spec.make_feature_flag_field().name == 'ENABLE_MY_DUMMY'
+        spec = DummySourceTypeSpec("my_dummy", server_config=server_config_with_region)
+        assert spec.make_feature_flag_field().name == "ENABLE_MY_DUMMY"
         assert spec.support_oauth() is True
-        assert spec.get_server_config('r1') == {'url': 'r1.com'}
+        assert spec.get_server_config("r1") == {"url": "r1.com"}
 
     def test_non_region_server_config(self):
-        spec = DummySourceTypeSpec('my_dummy', server_config={'foo': 'bar'})
-        assert spec.get_server_config('r1') == {'foo': 'bar'}
+        spec = DummySourceTypeSpec("my_dummy", server_config={"foo": "bar"})
+        assert spec.get_server_config("r1") == {"foo": "bar"}
 
     def test_oauth_credentials(self, server_config_with_region, oauth_credentials):
         """测试只使用 oauth_credentials 配置 credentials, display_info 使用类中的默认值"""
         spec = DummySourceTypeSpec(
-            'my_dummy', server_config=server_config_with_region, oauth_credentials=oauth_credentials
+            "my_dummy", server_config=server_config_with_region, oauth_credentials=oauth_credentials
         )
         backend = spec.make_oauth_backend()
         assert backend
@@ -146,7 +146,7 @@ class TestSourceTypeSpec:
     def test_oauth_backend_config(self, server_config_with_region, oauth_credentials, oauth_display_info):
         """测试只使用 oauth_backend_config 完成 credentials 和 display_info"""
         merged = {"display_info": oauth_display_info, **oauth_credentials}
-        spec = DummySourceTypeSpec('my_dummy', server_config=server_config_with_region, oauth_backend_config=merged)
+        spec = DummySourceTypeSpec("my_dummy", server_config=server_config_with_region, oauth_backend_config=merged)
         backend = spec.make_oauth_backend()
         assert backend
         assert backend.authorization_base_url == merged["authorization_base_url"]
@@ -158,7 +158,7 @@ class TestSourceTypeSpec:
     def test_oauth_mixin(self, server_config_with_region, oauth_credentials, oauth_display_info):
         """测试使用 oauth_credentials 配置 credentials, oauth_backend_config 配置 display_info"""
         spec = DummySourceTypeSpec(
-            'my_dummy',
+            "my_dummy",
             server_config=server_config_with_region,
             oauth_backend_config={"display_info": oauth_display_info},
             oauth_credentials=oauth_credentials,
@@ -176,7 +176,7 @@ class TestSourceTypeSpec:
     ):
         """测试只覆盖 display_info 部分值"""
         merged = {"display_info": partial_oauth_display_info, **oauth_credentials}
-        spec = DummySourceTypeSpec('my_dummy', server_config=server_config_with_region, oauth_backend_config=merged)
+        spec = DummySourceTypeSpec("my_dummy", server_config=server_config_with_region, oauth_backend_config=merged)
         backend = spec.make_oauth_backend()
         assert backend
         assert backend.display_info.display_name == partial_oauth_display_info["display_name"]
@@ -184,16 +184,16 @@ class TestSourceTypeSpec:
 
 
 class TestSourceTypes:
-    @pytest.fixture
+    @pytest.fixture()
     def source_types(self):
         source_type_spec_configs = [
             {
-                'spec_cls': 'tests.paasng.platform.sourcectl.test_source_types.DummySourceTypeSpec',
-                'attrs': {'name': 'my_dummy_1', 'label': 'Dummy-1'},
+                "spec_cls": "tests.paasng.platform.sourcectl.test_source_types.DummySourceTypeSpec",
+                "attrs": {"name": "my_dummy_1", "label": "Dummy-1"},
             },
             {
-                'spec_cls': 'tests.paasng.platform.sourcectl.test_source_types.GitDummySourceTypeSpec',
-                'attrs': {'name': 'my_dummy_2'},
+                "spec_cls": "tests.paasng.platform.sourcectl.test_source_types.GitDummySourceTypeSpec",
+                "attrs": {"name": "my_dummy_2"},
             },
         ]
         obj = SourceTypes()
@@ -205,38 +205,38 @@ class TestSourceTypes:
         assert len(source_types.items()) == 2
 
     def test_get_by_name(self, source_types):
-        assert source_types.get('my_dummy_1') is not None
+        assert source_types.get("my_dummy_1") is not None
 
     def test_find_by_type(self, source_types):
         assert source_types.find_by_type(DummySourceTypeSpec) is not None
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*not exists in source_types"):
             source_types.find_by_type(int)
 
     def test_get_choices(self, source_types):
         assert source_types.get_choices() == [
-            ('my_dummy_1', 'Dummy-1'),
-            ('my_dummy_2', 'dummy'),
+            ("my_dummy_1", "Dummy-1"),
+            ("my_dummy_2", "dummy"),
         ]
 
     def test_get_choice_label(self, source_types):
-        assert source_types.get_choice_label('my_dummy_1') == 'Dummy-1'
+        assert source_types.get_choice_label("my_dummy_1") == "Dummy-1"
 
 
 class TestSourceTypeNames:
-    @pytest.fixture
+    @pytest.fixture()
     def source_types(self):
         source_type_spec_configs = [
             {
-                'spec_cls': 'tests.paasng.platform.sourcectl.test_source_types.DummySourceTypeSpec',
-                'attrs': {'name': 'my_dummy_1'},
+                "spec_cls": "tests.paasng.platform.sourcectl.test_source_types.DummySourceTypeSpec",
+                "attrs": {"name": "my_dummy_1"},
             },
             {
-                'spec_cls': 'tests.paasng.platform.sourcectl.test_source_types.DummySourceTypeSpec',
-                'attrs': {'name': 'my_dummy_2'},
+                "spec_cls": "tests.paasng.platform.sourcectl.test_source_types.DummySourceTypeSpec",
+                "attrs": {"name": "my_dummy_2"},
             },
             {
-                'spec_cls': 'tests.paasng.platform.sourcectl.test_source_types.GitDummySourceTypeSpec',
-                'attrs': {'name': 'my_another_dummy'},
+                "spec_cls": "tests.paasng.platform.sourcectl.test_source_types.GitDummySourceTypeSpec",
+                "attrs": {"name": "my_another_dummy"},
             },
         ]
         obj = SourceTypes()
@@ -244,15 +244,15 @@ class TestSourceTypeNames:
         return obj
 
     @pytest.mark.parametrize(
-        'key,result,exc_raised',
+        ("key", "result", "exc_raised"),
         [
-            ('my_dummy_1', 'my_dummy_1', False),
-            ('GitDummySourceTypeSpec', 'my_another_dummy', False),
-            ('GitDummy', 'my_another_dummy', False),
-            ('git_dummy', 'my_another_dummy', False),
-            ('DummySourceTypeSpec', None, True),
-            ('dummy', None, True),
-            ('invalid_name', None, True),
+            ("my_dummy_1", "my_dummy_1", False),
+            ("GitDummySourceTypeSpec", "my_another_dummy", False),
+            ("GitDummy", "my_another_dummy", False),
+            ("git_dummy", "my_another_dummy", False),
+            ("DummySourceTypeSpec", None, True),
+            ("dummy", None, True),
+            ("invalid_name", None, True),
         ],
     )
     def test_get(self, key, result, exc_raised, source_types):
@@ -266,41 +266,41 @@ class TestSourceTypeNames:
 
     def test_default(self, source_types):
         names = SourcectlTypeNames(source_types)
-        assert names.get_default() == 'my_dummy_1'
+        assert names.get_default() == "my_dummy_1"
 
     def test_build_name_index(self, source_types):
         names = SourcectlTypeNames(source_types)
         assert names._build_name_index() == {
-            'my_dummy_1': ['my_dummy_1'],
-            'my_dummy_2': ['my_dummy_2'],
-            'my_another_dummy': ['my_another_dummy'],
+            "my_dummy_1": ["my_dummy_1"],
+            "my_dummy_2": ["my_dummy_2"],
+            "my_another_dummy": ["my_another_dummy"],
         }
 
     def test_build_type_name_index(self, source_types):
         names = SourcectlTypeNames(source_types)
         assert names._build_type_name_index() == {
-            'DummySourceTypeSpec': ['my_dummy_1', 'my_dummy_2'],
-            'GitDummySourceTypeSpec': ['my_another_dummy'],
+            "DummySourceTypeSpec": ["my_dummy_1", "my_dummy_2"],
+            "GitDummySourceTypeSpec": ["my_another_dummy"],
         }
 
     def test_build_shorter_type_name_index(self, source_types):
         names = SourcectlTypeNames(source_types)
         assert names._build_shorter_type_name_index() == {
-            'Dummy': ['my_dummy_1', 'my_dummy_2'],
-            'dummy': ['my_dummy_1', 'my_dummy_2'],
-            'GitDummy': ['my_another_dummy'],
-            'git_dummy': ['my_another_dummy'],
+            "Dummy": ["my_dummy_1", "my_dummy_2"],
+            "dummy": ["my_dummy_1", "my_dummy_2"],
+            "GitDummy": ["my_another_dummy"],
+            "git_dummy": ["my_another_dummy"],
         }
 
     def test_getattr(self, source_types):
         names = SourcectlTypeNames(source_types)
-        assert names.git_dummy == 'my_another_dummy'
+        assert names.git_dummy == "my_another_dummy"
 
     @pytest.mark.parametrize(
-        'basic_type,expected_names',
+        ("basic_type", "expected_names"),
         [
-            ('svn', ['my_dummy_1', 'my_dummy_2']),
-            ('git', ['my_another_dummy']),
+            ("svn", ["my_dummy_1", "my_dummy_2"]),
+            ("git", ["my_another_dummy"]),
         ],
     )
     def test_filter_by_basic_type(self, basic_type, expected_names, source_types):
@@ -309,10 +309,10 @@ class TestSourceTypeNames:
 
     def test_validate_svn(self, source_types):
         names = SourcectlTypeNames(source_types)
-        assert names.validate_svn('my_dummy_1') is True
-        assert names.validate_svn('my_another_dummy') is False
+        assert names.validate_svn("my_dummy_1") is True
+        assert names.validate_svn("my_another_dummy") is False
 
     def test_validate_git(self, source_types):
         names = SourcectlTypeNames(source_types)
-        assert names.validate_git('my_dummy_1') is False
-        assert names.validate_git('my_another_dummy') is True
+        assert names.validate_git("my_dummy_1") is False
+        assert names.validate_git("my_another_dummy") is True

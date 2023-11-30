@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.permissions import IsAuthenticated
 
+from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.core.region.models import get_all_regions
 from paasng.utils.configs import get_region_aware
 
 
@@ -33,16 +33,16 @@ class OperatorManageView(GenericTemplateView):
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
 
         cnative_default_cluster = {}
-        for region in get_all_regions().keys():
+        for region in get_all_regions():
             try:
-                cluster_name = get_region_aware('CLOUD_NATIVE_APP_DEFAULT_CLUSTER', region)
+                cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
             except KeyError:
-                cluster_name = '--'
+                cluster_name = "--"
             cnative_default_cluster[region] = cluster_name
 
-        kwargs['cnative_default_cluster'] = cnative_default_cluster
+        kwargs["cnative_default_cluster"] = cnative_default_cluster
         return kwargs

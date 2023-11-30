@@ -38,7 +38,7 @@ class TestServiceSpecificationHelper:
         assert helper_from_svc.plans == helper_from_init.plans
 
     @pytest.mark.parametrize(
-        "action, ssd_list, spec_fields_cnt, values_cnt",
+        ("action", "ssd_list", "spec_fields_cnt", "values_cnt"),
         [
             ("from_service", [generate_ssd(), generate_ssd("app_zone")], 2, 2),
             ("from_service", [generate_ssd(), generate_ssd(), generate_ssd("app_zone")], 3, 3),
@@ -86,7 +86,7 @@ class TestServiceSpecificationHelper:
             assert "app_zone" in recommended_specs
 
     @pytest.mark.parametrize(
-        "action, ssd_list",
+        ("action", "ssd_list"),
         [
             ("from_service", [generate_ssd(name="app_zone")] * 2 + [generate_ssd()] * 2),
             ("from_service_public_specifications", [generate_ssd()] * 2),
@@ -100,12 +100,12 @@ class TestServiceSpecificationHelper:
         mock_get_plans.return_value = [bk_plan_r1_v1]
         bk_service_r1.specifications = ssd_list
 
-        with pytest.raises(ValueError) as exec_info:
+        with pytest.raises(ValueError, match=r".* duplicate field name") as exec_info:
             getattr(ServiceSpecificationHelper, action)(bk_service_r1)
         assert "Encountered duplicate field name" in str(exec_info.value)
 
     @pytest.mark.parametrize(
-        "filters, expected",
+        ("filters", "expected"),
         [
             ({"version": "1"}, ["bk_plan_r1_v1", "bk_plan_r2_v1"]),
             ({"app_zone": "1"}, ["bk_plan_r1_v1", "bk_plan_r1_v2"]),
@@ -130,24 +130,24 @@ class TestServiceSpecificationHelper:
         assert uuids == {plan_maps[attr].uuid for attr in expected}
 
     @pytest.mark.parametrize(
-        "service_ssd_list, extra_plans, expected",
+        ("service_ssd_list", "extra_plans", "expected"),
         [
-            ([generate_ssd("app_zone")], [gen_plan("r1", specifications={})], {'1': None, '2': None, None: None}),
-            ([generate_ssd("version")], [gen_plan("r1", specifications={})], {'1': None, '2': None, None: None}),
+            ([generate_ssd("app_zone")], [gen_plan("r1", specifications={})], {"1": None, "2": None, None: None}),
+            ([generate_ssd("version")], [gen_plan("r1", specifications={})], {"1": None, "2": None, None: None}),
             (
                 [generate_ssd("version"), generate_ssd("app_zone")],
                 [gen_plan("r1", specifications={})],
-                {'1': {'1': None, '2': None}, '2': {'1': None}, None: {None: None}},
+                {"1": {"1": None, "2": None}, "2": {"1": None}, None: {None: None}},
             ),
             (
                 [generate_ssd("version"), generate_ssd("sth_unexpected")],
                 [gen_plan("r1", specifications={})],
-                {'1': {None: None}, '2': {None: None}, None: {None: None}},
+                {"1": {None: None}, "2": {None: None}, None: {None: None}},
             ),
             (
                 [generate_ssd("version"), generate_ssd("app_zone"), generate_ssd("sth_unexpected")],
                 [gen_plan("r1", specifications={})],
-                {'1': {'1': {None: None}, '2': {None: None}}, '2': {'1': {None: None}}, None: {None: {None: None}}},
+                {"1": {"1": {None: None}, "2": {None: None}}, "2": {"1": {None: None}}, None: {None: {None: None}}},
             ),
         ],
     )
@@ -173,7 +173,7 @@ class TestServiceSpecificationHelper:
         assert specs == expected
 
     @pytest.mark.parametrize(
-        "service_ssd_list, expected",
+        ("service_ssd_list", "expected"),
         [
             ([generate_ssd("version", recommended_value="1")], {"version": "1"}),
             (
@@ -212,14 +212,14 @@ class TestServiceSpecificationHelper:
         assert helper.get_recommended_spec() == expected
 
     @pytest.mark.parametrize(
-        "service_ssd_list, plans, expected",
+        ("service_ssd_list", "plans", "expected"),
         [
             ([generate_ssd("version")], [gen_plan("", {"version": "1"})], [["1"]]),
             ([generate_ssd("unexpected")], [gen_plan("", {"version": "1"})], [[None]]),
             (
                 [generate_ssd("foo"), generate_ssd("bar"), generate_ssd("baz")],
                 [gen_plan("", {"foo": "1", "bar": "2", "baz": "3"})],
-                [['1', '2', '3']],
+                [["1", "2", "3"]],
             ),
             (
                 [generate_ssd("foo"), generate_ssd("bar"), generate_ssd("baz")],
@@ -255,7 +255,7 @@ class TestServiceSpecificationHelper:
         assert helper.list_plans_spec_value() == expected
 
     @pytest.mark.parametrize(
-        "service_ssd_list, data, expected",
+        ("service_ssd_list", "data", "expected"),
         [
             ([generate_ssd("version")], {"version": "1"}, {"version": "1"}),
             ([generate_ssd("unexpected")], {}, {"unexpected": None}),
@@ -289,14 +289,14 @@ class TestServiceSpecificationHelper:
         assert helper._sanitize_specs(data) == expected
 
     @pytest.mark.parametrize(
-        "data, expected",
+        ("data", "expected"),
         [
-            ([["a", "b", "c", "e"]], {'a': {'b': {'c': {'e': None}}}}),
-            ([["a", "b"], ["a", "c"]], {'a': {'b': None, 'c': None}}),
-            ([["a", "b"], ["a", "c"], ["d", "c"]], {'a': {'b': None, 'c': None}, 'd': {'c': None}}),
+            ([["a", "b", "c", "e"]], {"a": {"b": {"c": {"e": None}}}}),
+            ([["a", "b"], ["a", "c"]], {"a": {"b": None, "c": None}}),
+            ([["a", "b"], ["a", "c"], ["d", "c"]], {"a": {"b": None, "c": None}, "d": {"c": None}}),
             # TODO: 确认以下测试用例是否符合预期?
-            ([["a", "b", "c", "e"], ["d"]], {'a': {'b': {'c': {'e': None}}}, "d": None}),
-            ([["a", "b"], ["a", None]], {'a': {'b': None, None: None}}),
+            ([["a", "b", "c", "e"], ["d"]], {"a": {"b": {"c": {"e": None}}}, "d": None}),
+            ([["a", "b"], ["a", None]], {"a": {"b": None, None: None}}),
         ],
     )
     def test_parse_spec_values_tree(self, data, expected):

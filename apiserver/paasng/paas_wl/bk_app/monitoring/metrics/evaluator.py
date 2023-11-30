@@ -140,7 +140,7 @@ class AppResQuotaEvaluator:
         proc_summaries = []
         try:
             for proc in ProcessManager(env).list_processes_specs():
-                mgr = get_resource_metric_manager(env.engine_app.to_wl_obj(), proc['name'])
+                mgr = get_resource_metric_manager(env.engine_app.to_wl_obj(), proc["name"])
                 result = mgr.get_all_instances_metrics(
                     resource_types=self.query_metrics,
                     time_range=self.time_range,
@@ -168,7 +168,7 @@ class AppResQuotaEvaluator:
                         mem_metrics.extend(msr.results)
 
         if not (cpu_metrics and mem_metrics):
-            return ProcSummary(name=proc_spec['name'])
+            return ProcSummary(name=proc_spec["name"])
 
         cpu_summary = self._calc_res_summary(cpu_metrics, trans_unit_func=lambda x: x * 1000)
         mem_summary = self._calc_res_summary(mem_metrics, trans_unit_func=lambda x: x / 1024 / 1024)
@@ -176,7 +176,7 @@ class AppResQuotaEvaluator:
         suitable, reasons = self._evaluate_quota_suitable(res_quota, cpu_summary, mem_summary)
         plan = self._recommend_resource_plan(cpu_summary, mem_summary)
         return ProcSummary(
-            name=proc_spec['name'],
+            name=proc_spec["name"],
             replicas=replicas,
             quota=res_quota,
             cpu=cpu_summary,
@@ -197,7 +197,7 @@ class AppResQuotaEvaluator:
                 # 转换单位，保留两位小数
                 round(trans_unit_func(float(metric)), 2)
                 for _, metric in metrics
-                if (metric and metric != 'None')
+                if (metric and metric != "None")
             ]
         )
         # 可能出现过滤后为空的情况
@@ -222,8 +222,8 @@ class AppResQuotaEvaluator:
     def _get_proc_res_quota(self, proc_spec: Dict) -> ResQuota:
         """获取应用的资源套餐方案"""
         if self.app.type == ApplicationType.CLOUD_NATIVE:
-            cpu_limit = self._format_cpu(proc_spec['cpu_limit'])
-            mem_limit = self._format_memory(proc_spec['memory_limit'])
+            cpu_limit = self._format_cpu(proc_spec["cpu_limit"])
+            mem_limit = self._format_memory(proc_spec["memory_limit"])
 
             # 目前云原生应用 requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
             cpu_request = int(cpu_limit / 4)
@@ -234,14 +234,14 @@ class AppResQuotaEvaluator:
                 requests=ResRequirement(cpu=cpu_request, memory=mem_request),
             )
 
-        res_limits = proc_spec.get('resource_limit', {})
-        res_requests = proc_spec.get('resource_requests', {})
+        res_limits = proc_spec.get("resource_limit", {})
+        res_requests = proc_spec.get("resource_requests", {})
         return ResQuota(
             limits=ResRequirement(
-                cpu=self._format_cpu(res_limits['cpu']), memory=self._format_memory(res_limits['memory'])
+                cpu=self._format_cpu(res_limits["cpu"]), memory=self._format_memory(res_limits["memory"])
             ),
             requests=ResRequirement(
-                cpu=self._format_cpu(res_requests['cpu']), memory=self._format_memory(res_requests['memory'])
+                cpu=self._format_cpu(res_requests["cpu"]), memory=self._format_memory(res_requests["memory"])
             ),
         )
 
@@ -252,7 +252,7 @@ class AppResQuotaEvaluator:
         :returns: 是否合适，不合适的原因
         """
         if not (cpu_summary.cnt and mem_summary.cnt):
-            return False, ['no metrics available']
+            return False, ["no metrics available"]
 
         cpu_req = res_quota.requests.cpu
         mem_req = res_quota.requests.memory
@@ -286,7 +286,7 @@ class AppResQuotaEvaluator:
         ]
 
         for v in validators:
-            if (abs(v['value'] - v['request']) / v['request']) > v['tolerance']:  # type: ignore
+            if (abs(v["value"] - v["request"]) / v["request"]) > v["tolerance"]:  # type: ignore
                 reasons.append(f"{v['name']} intolerable ({v['tolerance']})")
                 suitable = False
 
@@ -301,10 +301,10 @@ class AppResQuotaEvaluator:
 
         optimal_plan, min_dist = None, None
         for p in ProcessSpecPlan.objects.all():
-            cpu_req = self._format_cpu(p.requests['cpu'])
-            mem_req = self._format_memory(p.requests['memory'])
-            cpu_limit = self._format_cpu(p.limits['cpu'])
-            mem_limit = self._format_memory(p.limits['memory'])
+            cpu_req = self._format_cpu(p.requests["cpu"])
+            mem_req = self._format_memory(p.requests["memory"])
+            cpu_limit = self._format_cpu(p.limits["cpu"])
+            mem_limit = self._format_memory(p.limits["memory"])
 
             dist = abs(cpu_req - cpu_summary.avg) / cpu_req + abs(mem_req - mem_summary.avg) / mem_req
             exceed_limit = (cpu_summary.max > cpu_limit) or (mem_summary.max > mem_limit)

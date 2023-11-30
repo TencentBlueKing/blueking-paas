@@ -35,7 +35,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "slugbuilder_attrs, slugrunner_attrs, ok",
+    ("slugbuilder_attrs", "slugrunner_attrs", "ok"),
     [
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), False),
         (dict(region=generate_random_string()), dict(), False),
@@ -72,7 +72,7 @@ def test_bind_image(bk_module, slugbuilder, slugrunner, slugbuilder_attrs, slugr
 
 
 @pytest.mark.parametrize(
-    "slugbuilder_attrs, buildpack_attrs, linked, ok",
+    ("slugbuilder_attrs", "buildpack_attrs", "linked", "ok"),
     [
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), False, False),
         (dict(region=generate_random_string()), dict(), False, False),
@@ -118,7 +118,7 @@ def test_bind_buildpack(bk_module, slugbuilder, slugrunner, buildpack, slugbuild
         assert bk_module.build_config.buildpacks.count() == 1
 
     else:
-        with pytest.raises(BindError):
+        with pytest.raises(BindError):  # noqa: PT012
             binder.bind_image(slugrunner=slugrunner, slugbuilder=slugbuilder)
             binder.bind_buildpack(buildpack)
 
@@ -134,31 +134,31 @@ def test_get_module_clusters_engineless(bk_module):
 
 
 @pytest.mark.parametrize(
-    'exposed_url_type, ingress_config, include_reserved, expected_domains',
+    ("exposed_url_type", "ingress_config", "include_reserved", "expected_domains"),
     [
         (
             ExposedURLType.SUBDOMAIN,
-            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com'}]},
+            {"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]},
             False,
-            [Domain('foo.com'), Domain('bar.com')],
+            [Domain("foo.com"), Domain("bar.com")],
         ),
         (
             ExposedURLType.SUBDOMAIN,
-            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com', 'reserved': True}]},
+            {"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com", "reserved": True}]},
             False,
-            [Domain('foo.com')],
+            [Domain("foo.com")],
         ),
         (
             ExposedURLType.SUBDOMAIN,
-            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com', 'reserved': True}]},
+            {"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com", "reserved": True}]},
             True,
-            [Domain('foo.com'), Domain('bar.com', reserved=True)],
+            [Domain("foo.com"), Domain("bar.com", reserved=True)],
         ),
         (
             ExposedURLType.SUBPATH,
-            {'sub_path_domains': [{'name': 'foo.com'}, {'name': 'bar.com'}]},
+            {"sub_path_domains": [{"name": "foo.com"}, {"name": "bar.com"}]},
             False,
-            [Domain('foo.com'), Domain('bar.com')],
+            [Domain("foo.com"), Domain("bar.com")],
         ),
     ],
 )

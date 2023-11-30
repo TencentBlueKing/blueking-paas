@@ -20,4 +20,4 @@ from paasng.utils.addons import PlugableAppConfig
 
 
 class AppsConfig(PlugableAppConfig):
-    name = 'paasng.accessories.publish.market'
+    name = "paasng.accessories.publish.market"

@@ -36,7 +36,7 @@ from paasng.utils.es_log.search import SmartSearch
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def all_filters() -> Dict[str, FieldFilter]:
     return {
         "foo": FieldFilter(name="foo", key="foo.keyword"),
@@ -46,7 +46,7 @@ def all_filters() -> Dict[str, FieldFilter]:
 
 
 @pytest.mark.parametrize(
-    "aggregations, expected",
+    ("aggregations", "expected"),
     [
         (
             {"foo": {"buckets": [{"key": "example"}, {"key": "another example"}]}},
@@ -79,23 +79,23 @@ def test_count_filters_options_from_agg(all_filters, aggregations, expected):
 
 
 @pytest.mark.parametrize(
-    "logs, expected",
+    ("logs", "expected"),
     [
         ([], {}),
         (
             [{"foo": "1", "bar": "1", "b": {"a": {"z": "1"}}}],
             {
-                'foo': FieldFilter(name='foo', key='foo.keyword', options=[('1', '100.00%')], total=1),
-                'bar': FieldFilter(name='bar', key='bar', options=[('1', '100.00%')], total=1),
-                'b.a.z': FieldFilter(name='b.a.z', key='b.a.z', options=[('1', '100.00%')], total=1),
+                "foo": FieldFilter(name="foo", key="foo.keyword", options=[("1", "100.00%")], total=1),
+                "bar": FieldFilter(name="bar", key="bar", options=[("1", "100.00%")], total=1),
+                "b.a.z": FieldFilter(name="b.a.z", key="b.a.z", options=[("1", "100.00%")], total=1),
             },
         ),
         (
             [{"foo": "1", "bar": "1", "b": {"a": {"z": "1"}}}, {"foo": "1", "bar": "2"}],
             {
-                'foo': FieldFilter(name='foo', key='foo.keyword', options=[('1', '100.00%')], total=2),
-                'bar': FieldFilter(name='bar', key='bar', options=[('1', '50.00%'), ('2', '50.00%')], total=2),
-                'b.a.z': FieldFilter(name='b.a.z', key='b.a.z', options=[('1', '100.00%')], total=1),
+                "foo": FieldFilter(name="foo", key="foo.keyword", options=[("1", "100.00%")], total=2),
+                "bar": FieldFilter(name="bar", key="bar", options=[("1", "50.00%"), ("2", "50.00%")], total=2),
+                "b.a.z": FieldFilter(name="b.a.z", key="b.a.z", options=[("1", "100.00%")], total=1),
             },
         ),
     ],
@@ -115,26 +115,26 @@ def test_count_filters_options_from_logs_when_options_has_been_set(all_filters):
 
 
 # 设置 app code, module name, engine app name 以简化单测样例复杂度
-@pytest.fixture
+@pytest.fixture()
 def bk_app(bk_app):
     bk_app.code = "foo-app"
     bk_app.save()
     return bk_app
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_module(bk_module):
     bk_module.name = "foo-module"
     bk_module.save()
     return bk_module
 
 
-@pytest.fixture
+@pytest.fixture()
 def env(bk_stag_env):
     return bk_stag_env
 
 
-@pytest.fixture
+@pytest.fixture()
 def search():
     # 避免引入 time_range 相关的过滤语句
     search = SmartSearch.__new__(SmartSearch)
@@ -144,16 +144,16 @@ def search():
 
 class TestESFilter:
     @pytest.mark.parametrize(
-        "params, expected",
+        ("params", "expected"),
         [
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinFilters={"a": "a", "b": "b"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'a': 'a'}},
-                                {'term': {'b': 'b'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"a": "a"}},
+                                {"term": {"b": "b"}},
                             ]
                         }
                     }
@@ -162,11 +162,11 @@ class TestESFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinFilters={"a": "a", "b": ["b", "B"]}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'a': 'a'}},
-                                {'terms': {'b': ["b", "B"]}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"a": "a"}},
+                                {"terms": {"b": ["b", "B"]}},
                             ]
                         }
                     }
@@ -178,25 +178,25 @@ class TestESFilter:
         assert ESFilter(params).filter_by_builtin_filters(search).to_dict() == expected
 
     @pytest.mark.parametrize(
-        "params, expected",
+        ("params", "expected"),
         [
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinExcludes={"a": "a", "b": "b"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
+                    "query": {
+                        "bool": {
+                            "filter": [
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'a': 'a'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"a": "a"}},
                                         ]
                                     }
                                 },
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'b': 'b'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"b": "b"}},
                                         ]
                                     }
                                 },
@@ -208,20 +208,20 @@ class TestESFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={}, builtinExcludes={"a": "a", "b": ["b", "B"]}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
+                    "query": {
+                        "bool": {
+                            "filter": [
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'term': {'a': 'a'}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"term": {"a": "a"}},
                                         ]
                                     }
                                 },
                                 {
-                                    'bool': {
-                                        'must_not': [
-                                            {'terms': {'b': ['b', 'B']}},
+                                    "bool": {
+                                        "must_not": [
+                                            {"terms": {"b": ["b", "B"]}},
                                         ]
                                     }
                                 },
@@ -237,7 +237,7 @@ class TestESFilter:
 
 
 class TestEnvFilter:
-    @pytest.fixture
+    @pytest.fixture()
     def engine_app(self, env):
         engine_app = env.get_engine_app()
         # 测试下划线转换成 0us0 的逻辑
@@ -246,15 +246,15 @@ class TestEnvFilter:
         return engine_app
 
     @pytest.mark.parametrize(
-        "params, expected",
+        ("params", "expected"),
         [
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"app_code": "{{ app_code }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'app_code': 'foo-app'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"app_code": "foo-app"}},
                             ]
                         }
                     }
@@ -263,10 +263,10 @@ class TestEnvFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"module_name": "{{ module_name }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'module_name': 'foo-module'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"module_name": "foo-module"}},
                             ]
                         }
                     }
@@ -275,10 +275,10 @@ class TestEnvFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_name }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'engine_app_name': 'bkapp-foo0us0bar-stag'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"engine_app_name": "bkapp-foo0us0bar-stag"}},
                             ]
                         }
                     }
@@ -289,10 +289,10 @@ class TestEnvFilter:
                     indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_names | tojson }}"}
                 ),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'terms': {'engine_app_name': ['bkapp-foo0us0bar-stag']}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"terms": {"engine_app_name": ["bkapp-foo0us0bar-stag"]}},
                             ]
                         }
                     }
@@ -305,7 +305,7 @@ class TestEnvFilter:
 
 
 class TestModuleFilter:
-    @pytest.fixture
+    @pytest.fixture()
     def stag_engine_app(self, bk_stag_env):
         engine_app = bk_stag_env.get_engine_app()
         # 测试下划线转换成 0us0 的逻辑
@@ -313,7 +313,7 @@ class TestModuleFilter:
         engine_app.save()
         return engine_app
 
-    @pytest.fixture
+    @pytest.fixture()
     def prod_engine_app(self, bk_prod_env):
         engine_app = bk_prod_env.get_engine_app()
         # 测试下划线转换成 0us0 的逻辑
@@ -322,15 +322,15 @@ class TestModuleFilter:
         return engine_app
 
     @pytest.mark.parametrize(
-        "params, expected",
+        ("params", "expected"),
         [
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"app_code": "{{ app_code }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'app_code': 'foo-app'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"app_code": "foo-app"}},
                             ]
                         }
                     }
@@ -339,10 +339,10 @@ class TestModuleFilter:
             (
                 ElasticSearchParams(indexPattern="", termTemplate={"module_name": "{{ module_name }}"}),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'module_name': 'foo-module'}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"term": {"module_name": "foo-module"}},
                             ]
                         }
                     }
@@ -353,10 +353,10 @@ class TestModuleFilter:
                     indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_names | tojson }}"}
                 ),
                 {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'terms': {'engine_app_name': ['bkapp-foo0us0bar-prod', 'bkapp-foo0us0bar-stag']}},
+                    "query": {
+                        "bool": {
+                            "filter": [
+                                {"terms": {"engine_app_name": ["bkapp-foo0us0bar-prod", "bkapp-foo0us0bar-stag"]}},
                             ]
                         }
                     }
@@ -369,12 +369,12 @@ class TestModuleFilter:
 
     def test_render_failed(self, bk_module, stag_engine_app, prod_engine_app, search):
         params = ElasticSearchParams(indexPattern="", termTemplate={"engine_app_name": "{{ engine_app_name }}"})
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*template must be using.*"):
             ModuleFilter(bk_module, params).filter_by_module(search)
 
 
 @pytest.mark.parametrize(
-    "nested_name, mapping, expected",
+    ("nested_name", "mapping", "expected"),
     [
         (
             ["a"],

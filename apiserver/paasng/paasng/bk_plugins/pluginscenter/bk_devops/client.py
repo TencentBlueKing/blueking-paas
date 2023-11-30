@@ -67,14 +67,14 @@ class BkDevopsClient(BaseBkDevopsClient):
             resp = self.client.v4_app_metrics_summary(path_params=path_params)
         except (APIGatewayResponseError, ResponseError) as e:
             raise BkDevopsGatewayServiceError(
-                f'get stream ci metrics summary (id: {devops_project_id}) error, detail: {e}'
+                f"get stream ci metrics summary (id: {devops_project_id}) error, detail: {e}"
             )
 
-        if resp.get('status') != 0:
-            logger.error(f'get stream ci metrics summary (id: {devops_project_id}) error, resp:{resp}')
-            raise BkDevopsApiError(resp['message'])
+        if resp.get("status") != 0:
+            logger.error(f"get stream ci metrics summary (id: {devops_project_id}) error, resp:{resp}")
+            raise BkDevopsApiError(resp["message"])
 
-        return resp['data']['overview']
+        return resp["data"]["overview"]
 
 
 class PipelineController(BaseBkDevopsClient):
@@ -98,11 +98,11 @@ class PipelineController(BaseBkDevopsClient):
                 )
             )
 
-        if resp.get('status') != 0:
+        if resp.get("status") != 0:
             logger.error(
                 "start build for pipeline(%(pipeline)s) error, resp: %(resp)s", {"pipeline": pipeline, "resp": resp}
             )
-            raise BkDevopsApiError(resp['message'])
+            raise BkDevopsApiError(resp["message"])
 
         data = resp["data"]
         return cattrs.structure(data, definitions.PipelineBuild)
@@ -124,9 +124,9 @@ class PipelineController(BaseBkDevopsClient):
                 )
             )
 
-        if resp.get('status') != 0:
+        if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) detail error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp['message'])
+            raise BkDevopsApiError(resp["message"])
 
         data = resp["data"]
         return cattrs.structure(data, definitions.PipelineBuildDetail)
@@ -148,9 +148,9 @@ class PipelineController(BaseBkDevopsClient):
                 )
             )
 
-        if resp.get('status') != 0:
+        if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) status error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp['message'])
+            raise BkDevopsApiError(resp["message"])
 
         data = resp["data"]
         return cattrs.structure(data, definitions.PipelineBuildStatus)
@@ -172,9 +172,9 @@ class PipelineController(BaseBkDevopsClient):
                 )
             )
 
-        if resp.get('status') != 0:
+        if resp.get("status") != 0:
             logger.error("stop build(%(build)s) error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp['message'])
+            raise BkDevopsApiError(resp["message"])
 
         data = resp["data"]
         return data
@@ -209,9 +209,9 @@ class PipelineController(BaseBkDevopsClient):
                 )
             )
 
-        if resp.get('status') != 0:
+        if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) log error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp['message'])
+            raise BkDevopsApiError(resp["message"])
 
         data = resp["data"]
         return cattrs.structure(data, definitions.PipelineLogModel)
@@ -230,9 +230,9 @@ class PipelineController(BaseBkDevopsClient):
                 )
             )
 
-        if resp.get('status') != 0:
+        if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) log num error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp['message'])
+            raise BkDevopsApiError(resp["message"])
 
         data = resp["data"]
         return data["lastLineNum"]

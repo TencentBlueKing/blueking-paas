@@ -21,6 +21,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paasng.core.core.storages.redisdb import DefaultRediStore
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import (
     add_role_members,
@@ -28,9 +31,6 @@ from paasng.infras.iam.helpers import (
     fetch_role_members,
     remove_user_all_roles,
 )
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.platform.engine.constants import ClusterType
 from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -40,7 +40,7 @@ from paasng.platform.applications.models import Application, ApplicationFeatureF
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
-from paasng.core.core.storages.redisdb import DefaultRediStore
+from paasng.platform.engine.constants import ClusterType
 from paasng.utils.error_codes import error_codes
 
 
@@ -56,11 +56,11 @@ class ApplicationListView(GenericTemplateView):
 
     def get_context_data(self, **kwargs):
         self.paginator.default_limit = 10
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
 
         # 获取所有应用的资源使用总量
-        store = DefaultRediStore(rkey='quotas::app')
+        store = DefaultRediStore(rkey="quotas::app")
         app_resource_quotas = store.get()
         # 未获取到，则在在后台计算
         if not app_resource_quotas:
@@ -70,8 +70,8 @@ class ApplicationListView(GenericTemplateView):
             return self.get_app_resource_context_data(app_resource_quotas, **kwargs)
 
         data = self.list(self.request, *self.args, **self.kwargs)
-        kwargs['application_list'] = data
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["application_list"] = data
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
     def get_app_resource_context_data(self, app_resource_quotas, **kwargs):
@@ -80,7 +80,7 @@ class ApplicationListView(GenericTemplateView):
         limit = self.paginator.get_limit(self.request)
         queryset = self.filter_queryset(self.get_queryset())
 
-        if self.request.query_params.get('search_term'):
+        if self.request.query_params.get("search_term"):
             # 有查询参数则不按资源用量排序
             page = queryset[offset : offset + limit]
         else:
@@ -89,15 +89,15 @@ class ApplicationListView(GenericTemplateView):
             page = queryset.filter(code__in=page_app_code_list)
 
         data = self.get_serializer(page, many=True, context={"app_resource_quotas": app_resource_quotas}).data
-        data = sorted(data, key=lambda item: item['resource_quotas']['memory'], reverse=True)
-        kwargs['application_list'] = data
+        data = sorted(data, key=lambda item: item["resource_quotas"]["memory"], reverse=True)
+        kwargs["application_list"] = data
 
         # 没有调用默认的 paginate_queryset 方法，需要手动给 paginator 的参数赋值
         self.paginator.count = self.paginator.get_count(queryset)
         self.paginator.limit = limit
         self.paginator.offset = offset
         self.paginator.request = self.request
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
     def get(self, request, *args, **kwargs):
@@ -110,16 +110,16 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
     template_name = "admin42/applications/detail/base.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     # 描述当前高亮的导航栏
-    name: str = ''
+    name: str = ""
 
     def get_context_data(self, **kwargs):
-        if 'view' not in kwargs:
-            kwargs['view'] = self
+        if "view" not in kwargs:
+            kwargs["view"] = self
         application = ApplicationDetailSLZ(self.get_application()).data
-        kwargs['application'] = application
-        kwargs['cluster_choices'] = [
-            {'id': cluster.name, 'name': f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
-            for cluster in RegionClusterService(application['region']).list_clusters()
+        kwargs["application"] = application
+        kwargs["cluster_choices"] = [
+            {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
+            for cluster in RegionClusterService(application["region"]).list_clusters()
         ]
         return kwargs
 
@@ -137,7 +137,7 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
-        kwargs['USER_IS_ADMIN_IN_APP'] = self.request.user.username in fetch_role_members(
+        kwargs["USER_IS_ADMIN_IN_APP"] = self.request.user.username in fetch_role_members(
             self.get_application().code, ApplicationRole.ADMINISTRATOR
         )
         return kwargs
@@ -164,16 +164,16 @@ class ApplicationMembersManageView(ApplicationDetailBaseView):
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
-        kwargs['ROLE_PERMISSION_SPEC'] = {
-            ApplicationRole.ADMINISTRATOR.value: ['应用开发', '上线审核', '应用推广', '成员管理'],
-            ApplicationRole.DEVELOPER.value: ['应用开发', '应用推广'],
-            ApplicationRole.OPERATOR.value: ['上线审核', '应用推广'],
+        kwargs["ROLE_PERMISSION_SPEC"] = {
+            ApplicationRole.ADMINISTRATOR.value: ["应用开发", "上线审核", "应用推广", "成员管理"],
+            ApplicationRole.DEVELOPER.value: ["应用开发", "应用推广"],
+            ApplicationRole.OPERATOR.value: ["上线审核", "应用推广"],
         }
-        kwargs['PERMISSION_LIST'] = ['应用开发', '上线审核', '应用推广', '成员管理']
-        kwargs['ROLE_CHOICES'] = {
+        kwargs["PERMISSION_LIST"] = ["应用开发", "上线审核", "应用推广", "成员管理"]
+        kwargs["ROLE_CHOICES"] = {
             key: value
             for value, key in ApplicationRole.get_django_choices()
-            if value in kwargs['ROLE_PERMISSION_SPEC'].keys()
+            if value in kwargs["ROLE_PERMISSION_SPEC"]
         }
 
         return kwargs
@@ -200,7 +200,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
 
     def update(self, request, code):
         application = self.get_application()
-        username, role = request.data['username'], request.data['role']
+        username, role = request.data["username"], request.data["role"]
 
         try:
             remove_user_all_roles(application.code, username)

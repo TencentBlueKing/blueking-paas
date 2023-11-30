@@ -38,11 +38,14 @@ def make_response(data: Dict) -> Response:
 
 
 @pytest.mark.parametrize(
-    "exception, expected_exception",
+    ("exception", "expected_exception"),
     [
         (Exception(), APIError(code="UnknownError", message="system error")),
         (ResponseError(response=make_response({})), APIError(code="APIError", message="[invalid response body]")),
-        (ResponseError(response=make_response({"message": "错误信息"})), APIError(code="APIError", message="错误信息")),
+        (
+            ResponseError(response=make_response({"message": "错误信息"})),
+            APIError(code="APIError", message="错误信息"),
+        ),
         (
             ResponseError(
                 response=make_response({"message": "错误信息"}),

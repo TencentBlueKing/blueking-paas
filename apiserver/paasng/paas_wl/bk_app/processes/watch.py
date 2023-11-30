@@ -77,7 +77,7 @@ class ProcInstByEnvListWatcher:
 
     def watch(
         self, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None
-    ) -> Generator['WatchEvent', None, None]:
+    ) -> Generator["WatchEvent", None, None]:
         """Create a watch stream to track app's all process related changes
 
         :param timeout_seconds: timeout seconds for generated event stream, recommended value: less than 120 seconds
@@ -135,7 +135,7 @@ class ProcInstByModuleEnvListWatcher:
 
     def watch(
         self, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None
-    ) -> Generator['WatchEvent', None, None]:
+    ) -> Generator["WatchEvent", None, None]:
         """Create a watch stream to track app's all process related changes
 
         :param timeout_seconds: timeout seconds for generated event stream, recommended value: less than 120 seconds
@@ -194,11 +194,11 @@ class ParallelChainedGenerator:
         """Consumes generator and put result to queue"""
         try:
             for value in gen:
-                if value.type == 'ERROR':
-                    logger.warning('Watch resource error: %s', value.error_message)
+                if value.type == "ERROR":
+                    logger.warning("Watch resource error: %s", value.error_message)
                 self.queue.put(value)
         except Exception as e:
-            logger.exception('Error while consuming generator: %s', str(e))
+            logger.exception("Error while consuming generator: %s", str(e))
         finally:
             # Always close connection in every thread to avoid leaking of database connections
             logger.debug("generator stopped")
@@ -207,7 +207,7 @@ class ParallelChainedGenerator:
     def iter_results(self) -> Generator[WatchEvent[Any], None, None]:
         """yield results as a generator"""
         if not self._started:
-            raise ValueError('current generator is not started yet')
+            raise ValueError("current generator is not started yet")
 
         while True:
             try:

@@ -85,7 +85,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @property
     def paginator(self):
-        if not hasattr(self, '_paginator'):
+        if not hasattr(self, "_paginator"):
             from rest_framework.pagination import LimitOffsetPagination
 
             self._paginator = LimitOffsetPagination()
@@ -159,7 +159,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             source_type=module.source_type, environment=environment, status="successful"
         ).inc()
         return JsonResponse(
-            data={'deployment_id': deployment.id, 'stream_url': f'/streams/{deployment.id}'},
+            data={"deployment_id": deployment.id, "stream_url": f"/streams/{deployment.id}"},
             status=status.HTTP_201_CREATED,
         )
 
@@ -209,7 +209,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         logger.exception("Deploy request exception, please try again later")
 
         if isinstance(exception, DescriptionValidationError):
-            raise ValidationError(_('应用描述文件校验失败：{exception}').format(exception=exception))
+            raise ValidationError(_("应用描述文件校验失败：{exception}").format(exception=exception))
         elif isinstance(exception, DownloadFailedError):
             raise error_codes.CANNOT_DEPLOY_APP.f(_("对象存储服务异常, 请稍后再试"))
         raise error_codes.CANNOT_DEPLOY_APP.f(_("部署请求异常，请稍候再试"))
@@ -220,10 +220,10 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         deployment = _get_deployment(self.get_module_via_path(), uuid)
         hint = get_failure_hint(deployment)
         result = {
-            'status': deployment.status,
-            'logs': get_all_logs(deployment),
-            'error_detail': deployment.err_detail,
-            'error_tips': asdict(hint),
+            "status": deployment.status,
+            "logs": get_all_logs(deployment),
+            "error_detail": deployment.err_detail,
+            "error_tips": asdict(hint),
         }
         return JsonResponse(result)
 
@@ -239,12 +239,12 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
         params = serializer.data
 
-        deployments = Deployment.objects.owned_by_module(module, environment=params.get('environment')).order_by(
-            '-created'
+        deployments = Deployment.objects.owned_by_module(module, environment=params.get("environment")).order_by(
+            "-created"
         )
 
         # Filter by operator if provided
-        operator = params.get('operator')
+        operator = params.get("operator")
         if operator:
             operator = user_id_encoder.encode(settings.USER_TYPE, operator)
             deployments = deployments.filter(operator=operator)
@@ -263,7 +263,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = DeploymentSLZ(deployment)
         return Response(serializer.data)
 
-    @swagger_auto_schema(tags=['部署阶段'])
+    @swagger_auto_schema(tags=["部署阶段"])
     def user_interrupt(self, request, code, module_name, uuid):
         """由用户手动中断某次部署操作
 
@@ -287,7 +287,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    @swagger_auto_schema(tags=['部署阶段'], responses={'200': DeployFramePhaseSLZ(many=True)})
+    @swagger_auto_schema(tags=["部署阶段"], responses={"200": DeployFramePhaseSLZ(many=True)})
     def get_frame(self, request, code, module_name, environment):
         env = self.get_env_via_path()
         phases = DeployPhaseManager(env).get_or_create_all()
@@ -297,7 +297,7 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = DeployFramePhaseSLZ(phases, many=True).data
         return Response(data=data)
 
-    @swagger_auto_schema(tags=['部署阶段'], responses={'200': DeployPhaseSLZ(many=True)})
+    @swagger_auto_schema(tags=["部署阶段"], responses={"200": DeployPhaseSLZ(many=True)})
     def get_result(self, request, code, module_name, environment, uuid):
         try:
             deployment = Deployment.objects.get(pk=uuid)

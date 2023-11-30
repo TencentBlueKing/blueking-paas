@@ -106,7 +106,7 @@ def get_storage_by_bucket(bucket: str, store_type: Optional[str] = None):
         )
     else:
         s3 = boto3.resource(
-            's3',
+            "s3",
             aws_access_key_id=settings.RGW_ACCESS_KEY_ID,
             aws_secret_access_key=settings.RGW_SECRET_ACCESS_KEY,
             endpoint_url=settings.RGW_ENDPOINT_URL,
@@ -117,7 +117,7 @@ def get_storage_by_bucket(bucket: str, store_type: Optional[str] = None):
         except ClientError as e:
             # If a client error is thrown, then check that it was a 404 error.
             # If it was a 404 error, then the bucket does not exist.
-            error_code = int(e.response['Error']['Code'])
+            error_code = int(e.response["Error"]["Code"])
             if error_code == 404:
                 s3.create_bucket(Bucket=bucket)
             else:
@@ -136,7 +136,7 @@ def generate_s3cmd_conf(endpoint, access_key, secret_key, region_name, sig_versi
     Server.
     """
     ret = urllib.parse.urlparse(endpoint)
-    signature_v2 = not (sig_version == 's3v4')
+    signature_v2 = sig_version != "s3v4"
     return dedent(
         f"""\
         # Setup endpoint

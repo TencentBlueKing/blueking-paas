@@ -103,9 +103,11 @@ class Service(UuidAuditedModel):
         {'host': 'xxx', 'RABBITMQ_PORT': 80}
         """
         credentials = {}
-        for key, value in list(raw_credentials.items()):
-            if protected_keys is None or key not in protected_keys:
-                key = "{prefix}_{key}".format(prefix=prefix, key=key).upper()
+        for raw_key, value in list(raw_credentials.items()):
+            if protected_keys is None or raw_key not in protected_keys:
+                key = "{prefix}_{key}".format(prefix=prefix, key=raw_key).upper()
+            else:
+                key = raw_key
             credentials[key] = value
         return credentials
 

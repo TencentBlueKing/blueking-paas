@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db
 _NOW = arrow.now()
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_deployment(bk_module):
     deployment = create_fake_deployment(bk_module)
     deployment.build_process_id = uuid.uuid4()
@@ -50,7 +50,7 @@ class TestCountFrozenDeployments:
         assert count_frozen_deployments(edge_seconds=10, now=_NOW) == 1
 
     @pytest.mark.parametrize(
-        "log_lines,cnt",
+        ("log_lines", "cnt"),
         [
             # No log lines
             ([], 1),

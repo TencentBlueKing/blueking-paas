@@ -616,9 +616,8 @@ def _setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
     refresh_sourcectl_types(type_configs)
 
 
-# TODO: fix PT004
 @pytest.fixture()
-def init_tmpls():  # noqa: PT004
+def _init_tmpls():
     from paasng.platform.engine.constants import RuntimeType
     from paasng.platform.templates.constants import TemplateType
     from paasng.platform.templates.models import Template

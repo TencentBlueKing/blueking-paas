@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import pytest
 from django.test import TestCase
 
 from paasng.infras.accounts.oauth.constants import ScopeType
@@ -52,12 +53,8 @@ class TestScope(TestCase):
         assert scope.item == "user"
 
     def test_error_match(self):
-        with self.assertRaises(AttributeError):
-            scope = Scope.parse_from_str("asdfasdf")
-            assert scope.type == ScopeType.USER
-            assert scope.item == "user"
+        with pytest.raises(AttributeError):
+            _ = Scope.parse_from_str("asdfasdf")
 
-        with self.assertRaises(ValueError):
-            scope = Scope.parse_from_str("a:b")
-            assert scope.type == ScopeType.USER
-            assert scope.item == "user"
+        with pytest.raises(ValueError, match=r".*is not a valid ScopeType"):
+            _ = Scope.parse_from_str("a:b")

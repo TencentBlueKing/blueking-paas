@@ -99,14 +99,13 @@ def on_product_deploy_success(product, environment, auto_enable_market=False, **
     product_state = product.state
 
     if product_state != AppState.RELEASED.value:
-        logger.debug("product:%s state changed to %s" % (product.id, AppState.RELEASED.value))
+        logger.debug("product:%s state changed to %s", product.id, AppState.RELEASED.value)
         product.state = AppState.RELEASED.value
         product.save(update_fields=["state"])
 
     # no sync with not finished migration app
-    if application.migrationprocess_set.exists():
-        if application.migrationprocess_set.latest("id").is_active():
-            return
+    if application.migrationprocess_set.exists() and application.migrationprocess_set.latest("id").is_active():
+        return
 
     with console_db.session_scope() as session:
         manager = RemoteAppManager(product, session)
@@ -211,7 +210,6 @@ def validate_app_code_uniquely(sender, value: str, **kwargs):
         app = AppManger(session).get(code=value)
     if app:
         raise AppFieldValidationError("duplicated", "Application code=%s already exists" % value)
-    return None
 
 
 @receiver(prepare_use_application_name)
@@ -227,7 +225,6 @@ def validate_app_name_uniquely(sender, value: str, instance: Optional["Applicati
         is_unique = AppManger(session).verify_name_is_unique(value, code)
     if not is_unique:
         raise AppFieldValidationError("duplicated", "Application name=%s already exists" % value)
-    return None
 
 
 @receiver(before_finishing_application_creation)
@@ -250,9 +247,9 @@ def register_app_core_data(sender, application: Application, **kwargs):
             elif re.search("Duplicate entry '.*' for key '.*name'", error_msg):
                 raise IntegrityError(field="name")
             else:
-                raise e
+                raise
         else:
-            raise e
+            raise
 
 
 @receiver(prepare_change_application_name)
@@ -274,8 +271,6 @@ def on_change_application_name(sender, code: str, name: Optional[str] = None, na
             AppManger(session).update(code, update_fields)
         except SqlIntegrityError:
             raise IntegrityError(field="name")
-
-    return None
 
 
 def register_application_with_default(region, code, name):
@@ -312,9 +307,8 @@ def offline_handler(sender, offline_instance, environment, **kwargs):
     module = offline_instance.app_environment.module
 
     # no sync with not finished migration app
-    if application.migrationprocess_set.exists():
-        if application.migrationprocess_set.last().is_active():
-            return
+    if application.migrationprocess_set.exists() and application.migrationprocess_set.last().is_active():
+        return
 
     # 当且仅当下架`主模块`的`正式环境`时, 才会同步市场逻辑
     if not (module.is_default and offline_instance.app_environment.is_production()):
@@ -346,10 +340,9 @@ def market_config_update_handler(sender, instance: MarketConfig, created: bool, 
         return
 
     application = instance.application
-    if application.migrationprocess_set.exists():
-        if application.migrationprocess_set.last().is_active():
-            # 对于正在迁移至v3的应用，不同步市场配置
-            return
+    if application.migrationprocess_set.exists() and application.migrationprocess_set.last().is_active():
+        # 对于正在迁移至v3的应用，不同步市场配置
+        return
 
     product = application.get_product()
     if product is None:

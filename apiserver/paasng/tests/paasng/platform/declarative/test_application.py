@@ -100,7 +100,7 @@ class TestAppDeclarativeControllerCreation:
             controller.perform_action(get_app_description(app_json))
         assert field_name in exc_info.value.detail
 
-    @pytest.mark.parametrize("bk_app_code_len,is_valid", [(16, True), (20, False), (30, False)])
+    @pytest.mark.parametrize(("bk_app_code_len", "is_valid"), [(16, True), (20, False), (30, False)])
     def test_app_code_length(self, bk_user, random_name, bk_app_code_len, is_valid):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len-2))}"
@@ -134,7 +134,7 @@ class TestAppDeclarativeControllerCreation:
             get_app_description(app_json)
 
     @pytest.mark.parametrize(
-        "profile_regions,region,is_success",
+        ("profile_regions", "region", "is_success"),
         [
             (["r1"], "r1", True),
             (["r1"], "r2", False),
@@ -178,7 +178,7 @@ class TestAppDeclarativeControllerCreation:
 
 
 class TestAppDeclarativeControllerUpdate:
-    @pytest.fixture
+    @pytest.fixture()
     def existed_app(self, bk_user, random_name):
         """Create an application before to test update"""
         app_json = make_app_desc(random_name)
@@ -284,7 +284,7 @@ class TestMarketDisplayOptionsField:
 
 class TestServicesField:
     @pytest.fixture(autouse=True, params=["legacy-local", "newly-local"])
-    def default_services(self, request):
+    def _default_services(self, request):
         """Create local services in order by run unit tests"""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
         service_names = ["mysql", "rabbitmq"]
@@ -298,7 +298,7 @@ class TestServicesField:
             else:
                 G(Plan, name=generate_random_string(), service=svc, config="{}", is_active=True)
 
-    @pytest.fixture
+    @pytest.fixture()
     def app_desc(self, random_name, tag):
         return make_app_desc(
             random_name,

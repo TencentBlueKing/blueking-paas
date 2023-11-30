@@ -99,7 +99,7 @@ class ForTestNotMarkedAuthViewSet(viewsets.ViewSet):
 
 class TestAuthenticatedAppAsUserMiddleware:
     @pytest.mark.parametrize(
-        "app,marked_as_force_allow,expected_username",
+        ("app", "marked_as_force_allow", "expected_username"),
         [
             (SimpleApp(bk_app_code="foo", verified=True), False, "foo-user"),
             (SimpleApp(bk_app_code="foo", verified=False), False, ""),

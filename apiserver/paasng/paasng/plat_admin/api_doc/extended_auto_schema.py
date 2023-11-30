@@ -43,9 +43,8 @@ def registry_definitions(schema: openapi.Schema, global_components: openapi.Refe
         for value in properties.values():
             if isinstance(value, openapi.Schema):
                 registry_definitions(value, global_components)
-    if items := schema.get("items"):
-        if isinstance(items, openapi.Schema):
-            registry_definitions(items, global_components)
+    if (items := schema.get("items")) and isinstance(items, openapi.Schema):
+        registry_definitions(items, global_components)
 
 
 class ExtraDefinitionsInspectorMixin:

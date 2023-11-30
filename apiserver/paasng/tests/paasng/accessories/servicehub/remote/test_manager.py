@@ -62,13 +62,13 @@ class TestRemotePlanObj:
 
 class TestRemoteEngineAppInstanceRel:
     @pytest.fixture(autouse=True)
-    def setup_data(self, config, store, bk_app, bk_module):
+    def _setup_data(self, config, store, bk_app, bk_module):
         bk_app.region = "r1"
         bk_module.region = "r1"
         bk_app.save()
         bk_module.save()
 
-    @pytest.mark.parametrize("is_eager, env", [(True, "stag"), (False, "stag"), (True, "prod"), (False, "prod")])
+    @pytest.mark.parametrize(("is_eager", "env"), [(True, "stag"), (False, "stag"), (True, "prod"), (False, "prod")])
     def test_get_plan(self, bk_module, is_eager, env):
         env = bk_module.get_envs(env)
         plan_id = uuid.uuid4()
@@ -174,7 +174,7 @@ class TestRemoteMgrWithRealStore:
     """与 remote store 相关的集成测试(即不 mock store 的行为)"""
 
     @pytest.fixture(autouse=True)
-    def setup_data(
+    def _setup_data(
         self, config, store, bk_app, bk_module, bk_service_ver, bk_plan_r1_v1, bk_plan_r1_v2, bk_plan_r2_v1
     ):
         bk_app.region = "r1"
@@ -196,12 +196,12 @@ class TestRemoteMgrWithRealStore:
             yield
             store.empty()
 
-    @pytest.fixture
+    @pytest.fixture()
     def bk_service(self, request):
         return request.getfixturevalue(request.param)
 
     @pytest.mark.parametrize(
-        "bk_service, name, found",
+        ("bk_service", "name", "found"),
         [
             ("bk_service_ver", ..., True),
             ("bk_service_ver", "sth-wrong", False),
@@ -220,7 +220,7 @@ class TestRemoteMgrWithRealStore:
                 mgr.find_by_name(name=name, region=bk_module.region)
 
     @pytest.mark.parametrize(
-        "specs, ok",
+        ("specs", "ok"),
         [
             ({}, True),
             ({"version": "sth-wrong"}, False),
@@ -266,7 +266,7 @@ class TestRemoteMgrWithRealStore:
 
 class TestRemoteMgrWithMockedStore:
     @pytest.fixture(autouse=True)
-    def reset_region(self, config, store, bk_app, bk_module):
+    def _reset_region(self, config, store, bk_app, bk_module):
         bk_app.region = "r1"
         bk_module.region = "r1"
         bk_app.save()
@@ -300,7 +300,7 @@ class TestRemoteMgrWithMockedStore:
             mgr.bind_service(bk_service_ver, bk_module)
 
     @pytest.mark.parametrize(
-        "stag_plan, prod_plan",
+        ("stag_plan", "prod_plan"),
         [
             (
                 gen_plan(
@@ -331,7 +331,7 @@ class TestRemoteMgrWithMockedStore:
 
     @mock.patch("paasng.accessories.servicehub.services.get_application_cluster")
     @pytest.mark.parametrize(
-        "cluster_name, zone_name, plans, expected_zone_name, ok",
+        ("cluster_name", "zone_name", "plans", "expected_zone_name", "ok"),
         [
             (None, None, [gen_plan("r1", dict(app_zone="universal"), {})], "universal", True),
             ("A", "universal", [gen_plan("r1", dict(app_zone="universal"), {})], "universal", True),
@@ -401,14 +401,14 @@ class TestRemoteMgr:
     app_region = "r1"
 
     @pytest.fixture(autouse=True)
-    def setup_data(self, faked_remote_services, bk_app, bk_module):
+    def _setup_data(self, _faked_remote_services, bk_app, bk_module):
         # Update app and module fixture's region
         bk_app.region = self.app_region
         bk_app.save(update_fields=["region"])
         bk_module.region = self.app_region
         bk_module.save(update_fields=["region"])
 
-    @pytest.fixture
+    @pytest.fixture()
     def store(self):
         return get_remote_store()
 
@@ -505,12 +505,12 @@ class TestRemoteMgr:
                 if plan.is_eager:
                     with mock.patch(
                         "paasng.accessories.servicehub.remote.client.RemoteServiceClient"
-                    ) as RemoteServiceClient:
-                        RemoteServiceClient().provision_instance = mock.MagicMock()
+                    ) as mocked_client:
+                        mocked_client().provision_instance = mock.MagicMock()
                         rel.provision()
                         expect_obj[rel.db_obj.service_instance_id] = rel.db_obj
 
-        for service_instance_id in expect_obj.keys():
+        for service_instance_id in expect_obj:
             assert mgr.get_attachment_by_instance_id(svc, service_instance_id) == expect_obj[service_instance_id]
 
 
@@ -519,14 +519,14 @@ class TestLegacyRemoteMgr:
     uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[2]["uuid"]
 
     @pytest.fixture(autouse=True)
-    def setup_data(self, faked_remote_services, bk_app, bk_module):
+    def _setup_data(self, _faked_remote_services, bk_app, bk_module):
         # Update app and module fixture's region
         bk_app.region = self.app_region
         bk_app.save(update_fields=["region"])
         bk_module.region = self.app_region
         bk_module.save(update_fields=["region"])
 
-    @pytest.fixture
+    @pytest.fixture()
     def store(self):
         return get_remote_store()
 
@@ -591,7 +591,7 @@ class TestMetaInfo:
         assert MetaInfo(version=None).semantic_version_gte("0.0.1") is False
 
     @pytest.mark.parametrize(
-        "one, other, expected",
+        ("one", "other", "expected"),
         [
             ("0.13.3", "0.4.1", True),
             ("0.13.3", "0.0.1", True),

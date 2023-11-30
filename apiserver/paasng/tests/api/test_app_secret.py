@@ -30,7 +30,7 @@ from paasng.platform.applications.constants import ApplicationType
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def one_enabled_app_secret_list(bk_app):
     return [
         BkAppSecret(
@@ -43,7 +43,7 @@ def one_enabled_app_secret_list(bk_app):
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def two_enabled_app_secret_list(bk_app):
     # 默认 id 为 1 的为内置密钥
     return [
@@ -64,12 +64,12 @@ def two_enabled_app_secret_list(bk_app):
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def change_default_app_secret(bk_app):
     return G(BkAppSecretInEnvVar, bk_app_code=bk_app.code, bk_app_secret_id=2)
 
 
-@pytest.fixture
+@pytest.fixture()
 def two_disabled_app_secret_list(bk_app):
     # 默认 id 为 1 的为内置密钥
     return [
@@ -92,7 +92,7 @@ def two_disabled_app_secret_list(bk_app):
 
 class TestAppSecret:
     @pytest.mark.parametrize(
-        "has_app_permission, status_code",
+        ("has_app_permission", "status_code"),
         [(True, 200), (False, 403)],
     )
     def test_get_secret_perm(self, bk_app, api_client, two_enabled_app_secret_list, has_app_permission, status_code):
@@ -106,7 +106,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, existing_secret_num, status_code",
+        ("has_app_permission", "existing_secret_num", "status_code"),
         [(True, 1, 201), (True, 2, 400), (False, 1, 403), (False, 2, 403)],
     )
     def test_create_secret(
@@ -133,7 +133,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, toggle_secret_id, status_code",
+        ("has_app_permission", "toggle_secret_id", "status_code"),
         [
             (True, 1, 400),
             (True, 2, 204),
@@ -157,7 +157,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, is_engineless_app, toggle_secret_id, status_code",
+        ("has_app_permission", "is_engineless_app", "toggle_secret_id", "status_code"),
         [
             (True, False, 1, 204),
             (True, False, 2, 400),
@@ -196,7 +196,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, is_engineless_app, delete_secret_id, is_enabled, is_default, status_code",
+        ("has_app_permission", "is_engineless_app", "delete_secret_id", "is_enabled", "is_default", "status_code"),
         [
             (True, False, 1, True, False, 400),
             (True, False, 1, False, True, 400),
@@ -246,7 +246,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, is_enabled, status_code",
+        ("has_app_permission", "is_enabled", "status_code"),
         [
             (True, True, 204),
             (True, False, 400),
@@ -280,7 +280,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, status_code",
+        ("has_app_permission", "status_code"),
         [(True, 200), (False, 403)],
     )
     def test_get_default_secret_perm(
@@ -296,7 +296,7 @@ class TestAppSecret:
             assert response.status_code == status_code
 
     @pytest.mark.parametrize(
-        "has_app_permission, status_code",
+        ("has_app_permission", "status_code"),
         [(False, 403)],
     )
     def test_get_deployed_secret_perm(self, bk_app, api_client, has_app_permission, status_code):

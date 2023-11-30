@@ -51,10 +51,10 @@ def test_save_addresses(bk_prod_env, bk_prod_wl_app, settings):
     assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 3
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestToDomain:
     @pytest.mark.parametrize(
-        "host,https_enabled,secret_name_has_value",
+        ("host", "https_enabled", "secret_name_has_value"),
         [
             ("x-foo.example.com", False, False),
             ("not-match.example.com", True, False),
@@ -81,7 +81,7 @@ class TestToDomain:
             assert domain.tlsSecretName is None
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestToSharedTLSDomain:
     def test_normal(self, bk_stag_wl_app):
         d = MappingDomain(host="x-foo.example.com", pathPrefixList=["/"])

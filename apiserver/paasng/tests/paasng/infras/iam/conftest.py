@@ -41,12 +41,12 @@ def generate_apply_url(username: str, action_request_list: List[ActionResourcesR
 
 
 @pytest.fixture(autouse=True)
-def patch_generate_apply_url():
+def _patch_generate_apply_url():
     with mock.patch.object(ApplyURLGenerator, "generate_apply_url", new=generate_apply_url):
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def app_permission_obj():
     patcher = mock.patch.object(ApplicationPermission, "__bases__", (FakeApplicationPermission,))
     with patcher:

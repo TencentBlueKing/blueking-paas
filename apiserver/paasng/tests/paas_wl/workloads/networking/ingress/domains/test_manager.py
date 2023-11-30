@@ -34,7 +34,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(
-    "domain_cfg, domain_url, expected",
+    ("domain_cfg", "domain_url", "expected"),
     [
         ({"name": "foo.com", "path_prefix": "/"}, "https://bar.foo.com", False),
         ({"name": "bar.foo.com", "path_prefix": "/"}, "https://bar.foo.com", True),
@@ -73,16 +73,16 @@ class TestCNativeDftCustomDomainManager:
         assert domain is not None
 
     @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking", side_effect=ValueError("foo"))
-    def test_create_failed(self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
+    def test_create_failed(self, mocked_, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy
         create_cnative_deploy(bk_stag_env, bk_user)
         with pytest.raises(APIError):
             mgr.create(env=bk_stag_env, host="foo.example.com", path_prefix="/", https_enabled=False)
 
-    @pytest.fixture
+    @pytest.fixture()
     @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking")
-    def domain_foo_com(self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_prod_wl_app, bk_user) -> Domain:
+    def domain_foo_com(self, mocked_, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_prod_wl_app, bk_user) -> Domain:
         """Create a Domain fixture"""
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy

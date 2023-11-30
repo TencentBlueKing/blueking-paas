@@ -30,7 +30,7 @@ pytestmark = pytest.mark.django_db
 
 class TestCloudAPIViewSet:
     @pytest.mark.parametrize(
-        "app_code, path, mocked_result",
+        ("app_code", "path", "mocked_result"),
         [
             (
                 "test",
@@ -65,7 +65,7 @@ class TestCloudAPIViewSet:
         assert result == mocked_result
 
     @pytest.mark.parametrize(
-        "app_code, operation_type, path, mocked_result",
+        ("app_code", "operation_type", "path", "mocked_result"),
         [
             (
                 "test",
@@ -101,7 +101,7 @@ class TestCloudAPIViewSet:
         assert result == mocked_result
 
     @pytest.mark.parametrize(
-        "path, app_code, expected, will_error",
+        ("path", "app_code", "expected", "will_error"),
         [
             (
                 "/api/cloudapi/apps/test/apis/",

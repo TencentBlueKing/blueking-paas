@@ -122,7 +122,7 @@ class AppDescriptionSLZ(serializers.Serializer):
     modules = serializers.DictField(child=ModuleDescriptionSLZ())
 
     def validate_modules(self, modules: Dict[str, ModuleDesc]):
-        for module_name in modules.keys():
+        for module_name in modules:
             module_name_field.run_validation(module_name)
         return modules
 

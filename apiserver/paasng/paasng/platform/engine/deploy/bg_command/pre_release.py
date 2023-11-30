@@ -75,6 +75,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
         self.mark_step_start()
         params = {"command_id": command_id, "deployment_id": str(self.deployment.id)}
         CommandPoller.start(params, PreReleaseHookCompleteHandler)
+        return None
 
     def on_puller_complete(self, result: Dict):
         """Callback for a finished pre-release command"""

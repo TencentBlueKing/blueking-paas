@@ -24,7 +24,7 @@ from paasng.utils.datetime import get_time_delta
 
 
 @pytest.mark.parametrize(
-    "input, expected_output",
+    ("input", "expected_output"),
     [
         ("5s", datetime.timedelta(seconds=5)),
         ("12d", datetime.timedelta(days=12)),

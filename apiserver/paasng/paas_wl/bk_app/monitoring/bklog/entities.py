@@ -75,7 +75,7 @@ class BkAppLogConfigManager(AppEntityManager[BkAppLogConfig]):
             existed_one = self.get(app=res.app, name=config_name)
         except AppEntityNotFound:
             logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, config_name)
-            return
+            return None
         return super().delete(existed_one, non_grace_period)
 
 

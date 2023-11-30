@@ -58,7 +58,7 @@ AppQueryAlertsParams = partial(
 AppQueryAlarmStrategiesParams = partial(QueryAlarmStrategiesParams, app_code=FAKE_APP_CODE)
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_monitor_space():
     app = create_app()
     app.code = FAKE_APP_CODE
@@ -76,7 +76,7 @@ def bk_monitor_space():
 
 class TestQueryAlertsParams:
     @pytest.mark.parametrize(
-        "query_params, expected_query_string",
+        ("query_params", "expected_query_string"),
         [
             (
                 AppQueryAlertsParams(),
@@ -109,7 +109,7 @@ class TestQueryAlertsParams:
 
 class TestQueryAlarmStrategiesParams:
     @pytest.mark.parametrize(
-        "query_params, expected_query_string",
+        ("query_params", "expected_query_string"),
         [
             (
                 AppQueryAlarmStrategiesParams(),

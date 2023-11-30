@@ -32,14 +32,14 @@ from paas_wl.workloads.images.utils import make_image_pull_secret_name
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestImageCredentialsHandler:
-    @pytest.fixture
+    @pytest.fixture()
     def kube_res_name(self, wl_app):
         return make_image_pull_secret_name(wl_app=wl_app)
 
     @pytest.fixture(autouse=True)
-    def clear_builtin_auth(self, settings):
+    def _clear_builtin_auth(self, settings):
         settings.APP_DOCKER_REGISTRY_HOST = ""
 
     def test_create_empty(self, wl_app, kube_res_name, scheduler_client: K8sScheduler):

@@ -159,21 +159,21 @@ class TestModuleStructuredLogAPIView:
 
 
 class TestCustomCollectorConfigViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def cfg_maker(self, bk_module):
         def maker(**kwargs):
             return G(CustomCollectorConfig, module=bk_module, **kwargs)
 
         return maker
 
-    @pytest.fixture
+    @pytest.fixture()
     def builtin_json_cfg(self, bk_module, cfg_maker):
         return cfg_maker(
             name_en=build_custom_collector_config_name(bk_module, type="json"),
             log_type="json",
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def builtin_stdout_cfg(self, bk_module, cfg_maker):
         return cfg_maker(
             name_en=build_custom_collector_config_name(bk_module, type="stdout"),
@@ -194,7 +194,7 @@ class TestCustomCollectorConfigViewSet:
         assert resp.data[1]["is_builtin"]
         assert resp.data[2]["is_builtin"]
 
-    @pytest.fixture
+    @pytest.fixture()
     def apigw_client(self):
         with mock.patch("paasng.infras.bk_log.client.APIGWClient") as cls, override_settings(ENABLE_BK_LOG_APIGW=True):
             yield cls().api

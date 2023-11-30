@@ -23,7 +23,7 @@ from paasng.utils.text import calculate_percentage, camel_to_snake, remove_suffi
 
 class TestStripHTMLTags:
     @pytest.mark.parametrize(
-        "s,reserved_tags,result",
+        ("s", "reserved_tags", "result"),
         [
             ("foo", [], "foo"),
             ("foo<bold></bold>bar", [], "foobar"),
@@ -36,7 +36,7 @@ class TestStripHTMLTags:
 
 
 @pytest.mark.parametrize(
-    "input_,suffix,output",
+    ("input_", "suffix", "output"),
     [
         ("foo", "bar", "foo"),
         ("foobar", "bar", "foo"),
@@ -48,7 +48,7 @@ def test_remove_suffix(input_, suffix, output):
 
 
 @pytest.mark.parametrize(
-    "input_,output",
+    ("input_", "output"),
     [
         ("BkSvnSourceTypeSpec", "bk_svn_source_type_spec"),
         ("bk_svn", "bk_svn"),
@@ -59,7 +59,7 @@ def test_camel_to_snake(input_, output):
 
 
 @pytest.mark.parametrize(
-    "x, y, decimal_places, expected",
+    ("x", "y", "decimal_places", "expected"),
     [
         (1, 1, 2, "100.00%"),  # 1 / 1 = 1.00
         (1, 2, 2, "50.00%"),  # 1 / 2 = 0.50
@@ -81,9 +81,6 @@ def test_camel_to_snake(input_, output):
         (1, 1, 5, "100.00000%"),  # decimal_places = 5
         (1, 1, 4, "100.0000%"),  # decimal_places = 4
         (1, 1, 3, "100.000%"),  # decimal_places = 3
-        (1, 1, 2, "100.00%"),  # decimal_places = 2
-        (1, 1, 1, "100.0%"),  # decimal_places = 1
-        (1, 1, 0, "100%"),  # decimal_places = 0
         (1, 10**13, 10, "<0.0000000001%"),  # result = 0.0000000000001, result < min_precision
         (1, 10**12, 9, "<0.000000001%"),  # result = 0.000000000001, result < min_precision
         (1, 10**11, 8, "<0.00000001%"),  # result = 0.00000000001, result < min_precision
@@ -100,7 +97,7 @@ def test_camel_to_snake(input_, output):
 def test_calculate_percentage(x, y, decimal_places, expected):
     # 如果期望值为None，则应该抛出异常
     if expected is None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*"):
             calculate_percentage(x, y, decimal_places)
     else:
         # 否则，应该返回期望值

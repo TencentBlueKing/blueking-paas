@@ -22,11 +22,11 @@ from django_dynamic_fixture import G
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 
-@pytest.fixture
+@pytest.fixture()
 def proc_web(bk_module) -> ModuleProcessSpec:
     return G(ModuleProcessSpec, module=bk_module, name="web", command=["python"], args=["-m", "http.server"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def proc_celery(bk_module) -> ModuleProcessSpec:
     return G(ModuleProcessSpec, module=bk_module, name="worker", command=["celery"])

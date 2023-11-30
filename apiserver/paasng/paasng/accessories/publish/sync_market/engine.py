@@ -76,7 +76,7 @@ class RemoteAppManager:
     def sync_data(self, field_names):
         data = self.fields_hybrate(field_names)
         count = AppManger(self.session).update(self.product.code, data)
-        logger.info("成功更新应用%s的数据, 影响记录%s条，更新数据:%s" % (self.product.code, count, data))
+        logger.info("成功更新应用%s的数据, 影响记录%s条，更新数据:%s", self.product.code, count, data)
 
     def hybrate_app_cate(self):
         """
@@ -308,7 +308,6 @@ class RemoteAppManager:
         except ObjectDoesNotExist:
             # 当出现未关联标签时, 启动兼容方案
             logger.warning(f"`{self.product.tag.name}` 未关联桌面标签")
-            pass
         # 尝试关联桌面上的同名标签
         tag = AppTagManger(self.session).get_tag_by_name(self.product.tag.name)
         if not tag:
@@ -326,11 +325,12 @@ class RemoteAppManager:
     def get_mobile_config(self, env_name: str) -> Optional[MobileConfig]:
         try:
             env = self.application.envs.get(module__is_default=True, environment=env_name)
-            return env.mobile_config
         except SkipField:
             pass
         except Exception as e:
             logger.warning(f"fail to get mobile config status: {e}")
+        else:
+            return env.mobile_config
         return None
 
     def hybrate_use_mobile_online(self):

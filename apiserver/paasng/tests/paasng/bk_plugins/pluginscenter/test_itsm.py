@@ -28,21 +28,20 @@ from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def set_itsm_to_current_stage(release, itsm_online_stage):
+@pytest.fixture()
+def _set_itsm_to_current_stage(release, itsm_online_stage):
     release.current_stage = itsm_online_stage
     release.save(update_fields=["current_stage"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_client_session():
     with mock.patch("bkapi_client_core.session.Session.request") as mocked_request:
         yield mocked_request
 
 
-def test_execute_itsm_stage(
-    mock_client_session, set_itsm_to_current_stage, online_approval_service, pd, plugin, release, bk_user
-):
+@pytest.mark.usefixtures("_set_itsm_to_current_stage")
+def test_execute_itsm_stage(mock_client_session, online_approval_service, pd, plugin, release, bk_user):
     """测试执行 itsm 阶段"""
     response = requests.Response()
     response.status_code = 200
@@ -56,7 +55,8 @@ def test_execute_itsm_stage(
     assert release.current_stage.itsm_detail.sn == "sn1"
 
 
-def test_itsm_render(mock_client_session, set_itsm_to_current_stage):
+@pytest.mark.usefixtures("_set_itsm_to_current_stage")
+def test_itsm_render(mock_client_session):
     itsm_ticket_status_resp = {
         "code": 0,
         "message": "",

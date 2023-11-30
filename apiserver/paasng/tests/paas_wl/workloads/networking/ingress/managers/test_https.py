@@ -26,15 +26,15 @@ from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainCert
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestSubdomainAppIngressMgrWithHTTPS:
-    @pytest.fixture
+    @pytest.fixture()
     def cert(self, bk_stag_wl_app):
         return AppDomainCert.objects.create(
             region=bk_stag_wl_app.region, name="cert-foo.com", cert_data="faked", key_data="faked"
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def shared_cert(self, bk_stag_wl_app):
         return AppDomainSharedCert.objects.create(
             region=bk_stag_wl_app.region,
@@ -114,10 +114,10 @@ class TestSubdomainAppIngressMgrWithHTTPS:
         assert ingress.domains[0].tls_secret_name == ""
 
 
-@pytest.mark.auto_create_ns
-@pytest.mark.mock_get_structured_app
+@pytest.mark.auto_create_ns()
+@pytest.mark.mock_get_structured_app()
 class TestCustomDomainIngressWithHTTPS:
-    @pytest.fixture
+    @pytest.fixture()
     def shared_cert(self, bk_stag_wl_app):
         return AppDomainSharedCert.objects.create(
             region=bk_stag_wl_app.region,

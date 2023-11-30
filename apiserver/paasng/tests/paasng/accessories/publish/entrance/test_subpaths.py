@@ -47,7 +47,7 @@ class TestModuleEnvSubpaths:
         return bk_app
 
     @pytest.fixture(autouse=True)
-    def setup_cluster(self):
+    def _setup_cluster(self):
         # Enable USE_LEGACY_SUB_PATH_PATTERN by default
         with mock_cluster_service(
             ingress_config={"sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}]}
@@ -69,7 +69,8 @@ class TestModuleEnvSubpaths:
             "http://sub.example.cn/some-app-o/",
         ]
         p = ModuleEnvSubpaths(env).get_shortest()
-        assert p and p.as_url().as_address() == "http://sub.example.cn/some-app-o/"
+        assert p is not None
+        assert p.as_url().as_address() == "http://sub.example.cn/some-app-o/"
 
     def test_stag_default(self, bk_module):
         env = bk_module.envs.get(environment="stag")
@@ -111,7 +112,7 @@ class TestModuleEnvSubpaths:
 
 class TestModuleEnvSubpathsNotConfigured:
     @pytest.fixture(autouse=True)
-    def setup_cluster(self):
+    def _setup_cluster(self):
         with mock_cluster_service(ingress_config={"sub_path_domains": []}):
             yield
 
@@ -169,11 +170,11 @@ def test_get_legacy_compatible_path(bk_stag_env):
 
 
 class TestSubPathAllocator:
-    @pytest.fixture
+    @pytest.fixture()
     def allocator(self) -> SubPathAllocator:
         return SubPathAllocator("some-app", PortMap())
 
-    @pytest.fixture
+    @pytest.fixture()
     def domain_cfg(self) -> DomainCfg:
         return DomainCfg(name="example.com", https_enabled=True)
 

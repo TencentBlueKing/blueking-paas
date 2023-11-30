@@ -68,7 +68,7 @@ class TestOperationObj:
 
 class TestProcessOperationObj:
     @pytest.mark.parametrize(
-        "type_,extra_values,expected_text",
+        ("type_", "extra_values", "expected_text"),
         [
             (OperationType.PROCESS_START, {"process_type": "web"}, "启动 default 模块的 web 进程"),
             (OperationType.PROCESS_STOP, {"process_type": "web"}, "停止 default 模块的 web 进程"),
@@ -90,7 +90,7 @@ class TestProcessOperationObj:
 
 class TestAppDeploymentOperationObj:
     @pytest.mark.parametrize(
-        "status,expected_text",
+        ("status", "expected_text"),
         [
             (JobStatus.SUCCESSFUL, "成功部署 default 模块的生产环境"),
             (JobStatus.FAILED, "尝试部署 default 模块的生产环境失败"),
@@ -108,7 +108,7 @@ class TestAppDeploymentOperationObj:
 
 class TestCNativeAppDeployOperationObj:
     @pytest.mark.parametrize(
-        "status,expected_text",
+        ("status", "expected_text"),
         [
             (DeployStatus.READY, "成功部署 default 模块的预发布环境"),
             (DeployStatus.ERROR, "尝试部署 default 模块的预发布环境失败"),

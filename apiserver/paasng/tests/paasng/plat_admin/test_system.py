@@ -95,7 +95,7 @@ class TestQueryUniApps:
         assert results[legacy_app.code].type == ApplicationType.DEFAULT.value
 
     @pytest.mark.parametrize(
-        "keyword, expected_count, language,name_field",
+        ("keyword", "expected_count", "language", "name_field"),
         [
             ("", 2, "", "name"),
             ("bk_app", 1, "en", "name_en"),
@@ -129,7 +129,7 @@ class TestGetContactInfo:
         assert contact_info.recent_deployment_operators == []
 
     @pytest.mark.parametrize(
-        "deployment_infos,recent_deployment_operators",
+        ("deployment_infos", "recent_deployment_operators"),
         [
             # username, created_days_delta
             ([("user-a1", 1), ("user-b2", 10)], ["user-a1", "user-b2"]),
@@ -161,13 +161,13 @@ class TestGetContactInfo:
 
 
 class TestLessCodeSystemAPIViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def mixed_service_mgr(self):
         with mock.patch("paasng.plat_admin.system.views.mixed_service_mgr") as mgr:
             yield mgr
 
     @pytest.mark.parametrize(
-        "credentials, expected_code, expected_content",
+        ("credentials", "expected_code", "expected_content"),
         [
             (
                 {},
@@ -201,16 +201,16 @@ class TestLessCodeSystemAPIViewSet:
 
 
 class TestSysAddonsAPIViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def mixed_service_mgr(self):
         with mock.patch("paasng.plat_admin.system.views.mixed_service_mgr") as mgr:
             yield mgr
 
-    @pytest.fixture
+    @pytest.fixture()
     def service_name(self):
         return generate_random_string()
 
-    @pytest.fixture
+    @pytest.fixture()
     def service(self, bk_app):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
@@ -242,7 +242,7 @@ class TestSysAddonsAPIViewSet:
         )
         return svc
 
-    @pytest.fixture
+    @pytest.fixture()
     def url(self, bk_app, bk_module, bk_stag_env, service_name):
         url = f"/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service_name}/"
         return url
@@ -261,7 +261,7 @@ class TestSysAddonsAPIViewSet:
         assert response.status_code == 404
 
     @pytest.mark.parametrize(
-        "specs, expected_code",
+        ("specs", "expected_code"),
         [
             ({}, 200),
             ({"instance_type": "no-ha"}, 200),
@@ -281,7 +281,7 @@ class TestSysAddonsAPIViewSet:
 
 class TestClusterNamespaceInfoViewSet:
     @pytest.fixture(autouse=True)
-    def create_cluster_obj(self, bk_app, with_wl_apps):
+    def _create_cluster_obj(self, bk_app, with_wl_apps):
         wl_apps = [app.wl_app for app in bk_app.envs.all()]
         for wl_app in wl_apps:
             Cluster.objects.get_or_create(

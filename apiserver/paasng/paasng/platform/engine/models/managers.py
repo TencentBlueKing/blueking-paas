@@ -177,7 +177,7 @@ class ConfigVarManager:
     @transaction.atomic
     def batch_save(self, module: "Module", config_vars: List[ConfigVar]) -> ApplyResult:
         """Save environment variables in batches, including adding, updating, and deleting"""
-        instance_list = module.configvar_set.filter(is_builtin=False).select_related("environment")
+        instance_list = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         instance_mapping = {obj.id: obj for obj in instance_list}
 
         # Create new instance if id is not provided
@@ -202,7 +202,7 @@ class ConfigVarManager:
 
         # Perform deletions.
         deleted_num = len(instance_mapping)
-        for _, obj in instance_mapping.items():
+        for obj in instance_mapping.values():
             obj.delete()
 
         ConfigVar.objects.bulk_create(create_list)

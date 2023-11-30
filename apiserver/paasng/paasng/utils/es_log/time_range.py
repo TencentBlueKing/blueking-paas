@@ -80,14 +80,13 @@ def get_epoch_milliseconds(dt: datetime.datetime, ignore_timezone: bool = False)
     >>> get_epoch_milliseconds(dt=epoch_at_tz, ignore_timezone=False)
     3600000
     """
-    EPOCH = DEFAULT_EPOCH
+    epoch = DEFAULT_EPOCH
     if dt.tzinfo is not None:
         # respect tzinfo, if given
-        EPOCH = datetime.datetime(1970, 1, 1, tzinfo=dt.tzinfo)
-    timestamp = (dt - EPOCH).total_seconds()
-    if not ignore_timezone:
-        if utcoffset := dt.utcoffset():
-            timestamp -= utcoffset.total_seconds()
+        epoch = datetime.datetime(1970, 1, 1, tzinfo=dt.tzinfo)
+    timestamp = (dt - epoch).total_seconds()
+    if not ignore_timezone and (utcoffset := dt.utcoffset()):
+        timestamp -= utcoffset.total_seconds()
     return int(timestamp * 1000)
 
 

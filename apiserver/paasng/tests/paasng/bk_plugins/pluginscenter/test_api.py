@@ -41,24 +41,26 @@ CALLBACK_DATA = {
 
 @pytest.fixture(autouse=True)
 def thirdparty_client(thirdparty_client):
-    yield thirdparty_client
+    return thirdparty_client
 
 
 class TestArchived:
-    @pytest.fixture
+    @pytest.fixture()
     def plugin(self, plugin):
         plugin.status = PluginStatus.ARCHIVED
         plugin.save()
         return plugin
 
-    def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client, setup_bk_user):
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.get(url)
         data = resp.json()
         assert resp.status_code == 200
-        assert data['overview_page']['top_url'].find(str(plugin.id)) > 0
+        assert data["overview_page"]["top_url"].find(str(plugin.id)) > 0
 
-    def test_update_api(self, api_client, pd, plugin, release, iam_policy_client, setup_bk_user):
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_update_api(self, api_client, pd, plugin, release, iam_policy_client):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.post(url)
         assert resp.status_code == 400
@@ -68,7 +70,7 @@ class TestArchived:
 
 class TestSysApis:
     @pytest.mark.parametrize(
-        "current_status, approve_result, stage_status",
+        ("current_status", "approve_result", "stage_status"),
         [
             (ItsmTicketStatus.FINISHED.value, True, PluginReleaseStatus.SUCCESSFUL.value),
             (ItsmTicketStatus.FINISHED.value, False, PluginReleaseStatus.FAILED.value),
@@ -96,7 +98,7 @@ class TestSysApis:
         assert stage.status == stage_status
 
     @pytest.mark.parametrize(
-        "current_status, approve_result, plugin_status",
+        ("current_status", "approve_result", "plugin_status"),
         [
             (ItsmTicketStatus.FINISHED.value, False, PluginStatus.APPROVAL_FAILED.value),
             (ItsmTicketStatus.TERMINATED.value, False, PluginStatus.APPROVAL_FAILED.value),

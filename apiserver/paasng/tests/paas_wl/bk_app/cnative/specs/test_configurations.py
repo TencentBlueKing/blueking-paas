@@ -44,7 +44,7 @@ class TestEnvVarsReader:
             assert _var.environment_id == ENVIRONMENT_ID_FOR_GLOBAL
 
     @pytest.mark.parametrize(
-        "overlays, expected_env",
+        ("overlays", "expected_env"),
         [
             ([EnvVarOverlay(name="Foo", value="2", envName="prod")], "prod"),
             ([EnvVarOverlay(name="bar", value="2", envName="stag")], "stag"),

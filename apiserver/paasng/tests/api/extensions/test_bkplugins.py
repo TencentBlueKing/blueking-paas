@@ -48,9 +48,8 @@ class TestDistributorRels:
     """Test APIS of managing distributors of a single bk_plugin"""
 
     @pytest.fixture(autouse=True)
-    def do_preparations(self, bk_plugin_app, mock_apigw_api_client):
+    def _do_preparations(self, bk_plugin_app, mock_apigw_api_client):
         safe_sync_apigw(bk_plugin_app)
-        yield
 
     def test_update(self, bk_plugin_app, api_client):
         """Test updating a plugin's distributors"""

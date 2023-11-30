@@ -67,7 +67,7 @@ class Command(BaseCommand):
     def _patch_app_ingress(self, app: WlApp, dry_run, pattern, process_type, with_create):
         # Only process released apps
         if not Release.objects.filter(app=app, build__isnull=False).exists():
-            return False
+            return
 
         logger.info(f"checking ingress for app {app.name} with pattern {pattern}")
         logger.info(f"app was created at {app.created}")
@@ -97,5 +97,5 @@ class Command(BaseCommand):
             print(f"syncing ingress for app {app.name}")
             try:
                 mgr.sync(service_name)
-            except Exception as err:
-                logger.error("sync ingresses failed for app %s, err: %s", app.name, err)
+            except Exception:
+                logger.exception("sync ingresses failed for app %s", app.name)

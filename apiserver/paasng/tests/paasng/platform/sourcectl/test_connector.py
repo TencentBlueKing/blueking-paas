@@ -30,8 +30,9 @@ pytestmark = pytest.mark.django_db
 
 
 class TestIntegratedSvnAppRepoConnector:
+    @pytest.mark.usefixtures("_init_tmpls")
     @mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient")
-    def test_normal(self, mocked_client, bk_app, bk_module, init_tmpls):
+    def test_normal(self, mocked_client, bk_app, bk_module):
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 
         connector = IntegratedSvnAppRepoConnector(bk_module, get_sourcectl_types().names.bk_svn)
@@ -54,7 +55,8 @@ class TestIntegratedSvnAppRepoConnector:
 
 
 class TestExternalGitAppRepoConnector:
-    def test_normal(self, bk_app, bk_module, init_tmpls):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_normal(self, bk_app, bk_module):
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 
         connector = ExternalGitAppRepoConnector(bk_module, "--placeholder--")

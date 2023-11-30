@@ -53,12 +53,12 @@ def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
     return cattr.structure(obj, TypeProcesses)
 
 
-@pytest.mark.usefixtures("init_tmpls")
+@pytest.mark.usefixtures("_init_tmpls")
 class TestGetProcesses:
     """Test get_procfile()"""
 
     @pytest.mark.parametrize(
-        "file_content,error_pattern",
+        ("file_content", "error_pattern"),
         [
             (ValueError("trivial value error"), "Can not read Procfile file from repository"),
             ("invalid#$type: gunicorn\n", "pattern"),
@@ -97,7 +97,7 @@ class TestGetProcesses:
             )
 
     @pytest.mark.parametrize(
-        "extra_info, expected",
+        ("extra_info", "expected"),
         [
             (
                 {},
@@ -146,7 +146,7 @@ class TestGetProcesses:
         assert processes == expected
 
     @pytest.mark.parametrize(
-        "processes_desc, expected",
+        ("processes_desc", "expected"),
         [
             (
                 {"web": {"command": "start web;"}},
@@ -196,7 +196,7 @@ class TestGetProcesses:
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
                 "module": {
                     "is_default": True,
-                    "processes": {'web': {'command': 'start web', 'plan': 'default', 'replicas': 5}},
+                    "processes": {"web": {"command": "start web", "plan": "default", "replicas": 5}},
                     "language": "python",
                 },
             },
@@ -210,7 +210,7 @@ class TestGetProcesses:
 
         processes = get_processes(deployment=bk_deployment_full)
         assert processes == cast_to_processes(
-            {'web': {'name': 'web', 'command': 'start web', 'plan': 'default', 'replicas': 5}}
+            {"web": {"name": "web", "command": "start web", "plan": "default", "replicas": 5}}
         )
 
     def test_get_from_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
@@ -230,7 +230,7 @@ class TestGetProcesses:
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
                 "module": {
                     "is_default": True,
-                    "processes": {'web': {'command': 'start web', 'plan': 'default'}},
+                    "processes": {"web": {"command": "start web", "plan": "default"}},
                     "language": "python",
                 },
             },
@@ -313,12 +313,12 @@ class TestGetSourcePackagePath:
         )
 
 
-@pytest.mark.usefixtures("init_tmpls")
+@pytest.mark.usefixtures("_init_tmpls")
 class TestDownloadSourceToDir:
     """Test download_source_to_dir()"""
 
     @pytest.fixture(autouse=True)
-    def mocked_ctl(self):
+    def _mocked_ctl(self):
         with mock.patch("paasng.platform.engine.utils.source.get_repo_controller"), mock.patch(
             "paasng.platform.engine.utils.source.PackageController"
         ):
@@ -338,7 +338,7 @@ class TestDownloadSourceToDir:
             assert list(working_dir.iterdir()) == []
 
     @pytest.mark.parametrize(
-        "source_origin, processes, source_dir, target, expected",
+        ("source_origin", "processes", "source_dir", "target", "expected"),
         [
             (
                 SourceOrigin.AUTHORIZED_VCS.value,

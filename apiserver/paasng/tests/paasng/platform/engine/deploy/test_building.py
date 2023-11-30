@@ -36,24 +36,25 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     with mock_cluster_service():
         yield
 
 
+@pytest.mark.usefixtures("_init_tmpls")
 @pytest.mark.parametrize("builder_class", [ApplicationBuilder, DockerBuilder])
 class TestNormalApp:
     """Tests for ApplicationBuilder"""
 
-    @pytest.fixture
-    def mock_get_app_yaml(self):
+    @pytest.fixture(autouse=True)
+    def _mock_get_app_yaml(self):
         with mock.patch(
             "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_app_desc"
         ) as mocked_get_app_yaml:
             mocked_get_app_yaml.side_effect = GetAppYamlError("")
             yield
 
-    def test_failed_when_parsing_processes(self, builder_class, init_tmpls, bk_deployment_full, mock_get_app_yaml):
+    def test_failed_when_parsing_processes(self, builder_class, bk_deployment_full):
         with mock.patch(
             "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
         ) as mocked_get_procfile, mock.patch(
@@ -76,7 +77,7 @@ class TestNormalApp:
                 == "步骤 [解析应用进程信息] 出错了，原因：Procfile error: Invalid Procfile format。"
             )
 
-    def test_failed_when_upload_source(self, builder_class, init_tmpls, bk_deployment_full, mock_get_app_yaml):
+    def test_failed_when_upload_source(self, builder_class, bk_deployment_full):
         with mock.patch(
             "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
         ) as mocked_get_procfile, mock.patch(
@@ -100,7 +101,7 @@ class TestNormalApp:
             assert mocked_stream().write_message.called
             assert mocked_stream().write_message.call_args[0][0] == "步骤 [上传仓库代码] 出错了，请稍候重试。"
 
-    def test_start_normal(self, builder_class, init_tmpls, bk_deployment_full, mock_get_app_yaml):
+    def test_start_normal(self, builder_class, bk_deployment_full):
         with mock.patch(
             "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
         ) as mocked_get_procfile, mock.patch(
@@ -148,7 +149,7 @@ class TestNormalApp:
 @pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.mark.parametrize("builder_class", [ApplicationBuilder, DockerBuilder])
 class TestCloudNative:
-    @pytest.fixture
+    @pytest.fixture()
     def model_resource(self, bk_cnative_app, bk_module_full):
         """Initialize the app model resource"""
         resource = create_app_resource(
@@ -211,19 +212,19 @@ class TestBuildProcessResultHandler:
     """Tests for BuildProcessResultHandler"""
 
     @pytest.fixture(autouse=True)
-    def auto_binding_phases(self, bk_prod_env, deployment):
+    def _auto_binding_phases(self, bk_prod_env, deployment):
         manager = DeployPhaseManager(bk_prod_env)
         phases = manager.get_or_create_all()
         for p in phases:
             manager.attach(DeployPhaseTypes(p.type), deployment)
 
-    @pytest.fixture
+    @pytest.fixture()
     def deployment(self, bk_module, bk_deployment):
         bk_deployment.build_process_id = uuid.uuid4().hex
         return bk_deployment
 
     @pytest.mark.parametrize(
-        "result,status",
+        ("result", "status"),
         [
             (CallbackResult(status=CallbackStatus.EXCEPTION), JobStatus.FAILED.value),
             (CallbackResult(status=CallbackStatus.NORMAL), JobStatus.FAILED.value),

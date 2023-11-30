@@ -24,7 +24,7 @@ import pytest
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
 
 
-@pytest.fixture
+@pytest.fixture()
 def example_cluster_config():
     return {
         "ingress_config": {
@@ -70,7 +70,7 @@ def clusters():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def ca_data() -> str:
     return base64.b64encode(
         dedent(
@@ -81,7 +81,7 @@ def ca_data() -> str:
     ).decode()
 
 
-@pytest.fixture
+@pytest.fixture()
 def cert_data() -> str:
     return base64.b64encode(
         dedent(
@@ -91,7 +91,7 @@ def cert_data() -> str:
     ).decode()
 
 
-@pytest.fixture
+@pytest.fixture()
 def key_data() -> str:
     return base64.b64encode(
         dedent(

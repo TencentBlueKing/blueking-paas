@@ -32,7 +32,7 @@ class TestDeployStepPicker:
     """测试 DeployStep"""
 
     @pytest.fixture(autouse=True)
-    def setup_slugbuilder(self, bk_deployment):
+    def _setup_slugbuilder(self, bk_deployment):
         """测试 slug 池"""
         builders = []
         runners = []
@@ -46,11 +46,11 @@ class TestDeployStepPicker:
             builders.append(AppSlugBuilder.objects.create(**params))
             runners.append(AppSlugRunner.objects.create(**params))
 
-    @pytest.fixture
+    @pytest.fixture()
     def runtime_binder(self, bk_deployment):
         return ModuleRuntimeBinder(bk_deployment.app_environment.module)
 
-    @pytest.fixture
+    @pytest.fixture()
     def make_step_meta_set(self):
         """动态创建测试步骤集"""
 
@@ -68,7 +68,7 @@ class TestDeployStepPicker:
         return _make_step_meta_set
 
     @pytest.mark.parametrize(
-        "preset_step_meta_sets, bind_slug_name, expected",
+        ("preset_step_meta_sets", "bind_slug_name", "expected"),
         [
             # 正常的步骤集匹配
             (
@@ -134,7 +134,7 @@ class TestDeployStepPicker:
 class TestUpdateStepByLine:
     """Test update_step_by_line function"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def phase_factory(self, bk_deployment):
         """Return a factory function to create a phase"""
 
@@ -157,7 +157,7 @@ class TestUpdateStepByLine:
         return _make
 
     @pytest.mark.parametrize(
-        "lines,pattern_maps,expected",
+        ("lines", "pattern_maps", "expected"),
         [
             (
                 ["xxxx", "yyyy", "qqq"],

@@ -44,12 +44,12 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def metadata():
     return PollingMetadata(retries=0, query_started_at=time.time(), queried_count=0)
 
 
-@pytest.fixture
+@pytest.fixture()
 def poller_mocker():
     @contextmanager
     def core(poller, processes: "List[Process]", last_processes: "Optional[List[Process]]" = None):
@@ -57,7 +57,7 @@ def poller_mocker():
             poller, "_get_current_processes"
         ) as current:
             current.return_value = processes
-            last.return_value = processes if not last_processes else last_processes
+            last.return_value = last_processes if last_processes else processes
             yield
 
     return core
@@ -65,7 +65,7 @@ def poller_mocker():
 
 class TestDynamicReadyTimeoutPolicy:
     @pytest.mark.parametrize(
-        "desired_replicas,already_waited,desired_result",
+        ("desired_replicas", "already_waited", "desired_result"),
         [
             # small replicas
             (1, 60 * 3 - 1, False),
@@ -100,7 +100,7 @@ class TestWaitForAllStopped:
         assert status.status == PollingStatus.DONE
 
     @pytest.mark.parametrize(
-        "enabled, events_is_empty",
+        ("enabled", "events_is_empty"),
         [
             (True, False),
             (False, True),
@@ -159,7 +159,7 @@ class TestWaitForReleaseAllReady:
 
 class TestTooManyRestartsPolicy:
     @pytest.mark.parametrize(
-        "restart_count, instance_has_different_version, desired_result",
+        ("restart_count", "instance_has_different_version", "desired_result"),
         [
             (0, False, False),
             (3, False, False),
@@ -203,5 +203,5 @@ class TestAbortedDetails:
         assert v.dict() == {"aborted": False, "policy": None, "extra_data": "foo"}
 
     def test_invalid_value(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* can not be empty when aborted is .*"):
             _ = AbortedDetails(aborted=True)

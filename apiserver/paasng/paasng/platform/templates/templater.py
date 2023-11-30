@@ -88,7 +88,7 @@ class Templater:
             # Ceph RGW 不支持绝对路径
             path = path.relative_to("/")
 
-        store_type = {"s3": StoreType.S3, "bkrepo": StoreType.BKREPO}.get(scheme, None)
+        store_type = {"s3": StoreType.S3, "bkrepo": StoreType.BKREPO}.get(scheme)
         if not store_type:
             logger.warning("unknown protocol type: %s, url: %s", o.scheme, location)
 

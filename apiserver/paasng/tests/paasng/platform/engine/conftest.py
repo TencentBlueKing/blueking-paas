@@ -25,18 +25,18 @@ from tests.paas_wl.utils.build import create_build_proc
 
 
 @pytest.fixture(autouse=True, scope="session")
-def no_color():
+def _no_color():
     with override_settings(COLORFUL_TERMINAL_OUTPUT=False):
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def wl_app(bk_stag_env, with_wl_apps) -> WlApp:
     """A WlApp object"""
     return bk_stag_env.wl_app
 
 
-@pytest.fixture
+@pytest.fixture()
 def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
     env = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid)

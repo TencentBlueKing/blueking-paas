@@ -74,7 +74,7 @@ class LazyDiscoverer(_LazyDiscoverer):
                     return resourcePart
         else:
             matches = []
-            for key in resources:
+            for key in resources.keys():  # noqa: SIM118
                 matches.extend(self.__search([key] + parts[1:], resources, reqParams))
             return matches
 

@@ -36,17 +36,17 @@ from tests.utils.helpers import generate_random_string
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_app_code():
     return generate_random_string(8, string.ascii_lowercase)
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_app_name():
     return generate_random_string(8)
 
 
-@pytest.fixture
+@pytest.fixture()
 def lesscode_public_params():
     return {
         "type": "default",
@@ -58,8 +58,9 @@ def lesscode_public_params():
 class TestApiInAPIGW:
     """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        "is_lesscode_app_cloud_native, app_type",
+        ("is_lesscode_app_cloud_native", "app_type"),
         [(True, ApplicationType.CLOUD_NATIVE.value), (False, ApplicationType.DEFAULT.value)],
     )
     def test_create_lesscode_api(
@@ -70,7 +71,6 @@ class TestApiInAPIGW:
         lesscode_public_params,
         bk_app_code,
         bk_app_name,
-        init_tmpls,
         is_lesscode_app_cloud_native,
         app_type,
     ):
@@ -95,7 +95,7 @@ class TestApiInAPIGW:
 class TestModuleSourcePackageViewSet:
     """测试源码包上传的接口"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def contents(self):
         """The default contents for making tar file."""
         app_desc = {
@@ -104,7 +104,7 @@ class TestModuleSourcePackageViewSet:
         }
         return {"app.yaml": yaml.safe_dump(app_desc)}
 
-    @pytest.fixture
+    @pytest.fixture()
     def tar_path(self, contents):
         with generate_temp_file() as file_path:
             gen_tar(file_path, contents)

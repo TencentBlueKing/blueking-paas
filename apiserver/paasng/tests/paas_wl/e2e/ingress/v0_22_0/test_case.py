@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(
-    "request_path, original_path, x_script_name",
+    ("request_path", "original_path", "x_script_name"),
     [
         ("/", "/", "/"),
         ("/bar", "/bar", "/"),
@@ -65,7 +65,7 @@ def test_get(
 
 
 @pytest.mark.parametrize(
-    "request_path, original_path, x_script_name",
+    ("request_path", "original_path", "x_script_name"),
     [
         ("/", "/", "/"),
         ("/bar", "/bar", "/"),

@@ -61,7 +61,7 @@ class TestDocumentaryLinkAdvisor:
         )
 
     @pytest.mark.parametrize(
-        "tags,link_names",
+        ("tags", "link_names"),
         [
             # Normal match
             ([PlatPanelTag("app_processes")], ["what_is_processes", "python_processes", "celery_processes"]),

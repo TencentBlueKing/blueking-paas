@@ -34,12 +34,12 @@ from tests.paas_wl.utils.wl_app import create_wl_release
 pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.auto_create_ns]
 
 
-@pytest.fixture
+@pytest.fixture()
 def client(wl_app):
     return get_client_by_app(wl_app)
 
 
-@pytest.fixture
+@pytest.fixture()
 def release(wl_app, set_structure):
     set_structure(wl_app, {"web": 2})
     return create_wl_release(
@@ -49,12 +49,12 @@ def release(wl_app, set_structure):
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def process(release):
     return Process.from_release(type_="web", release=release)
 
 
-@pytest.fixture
+@pytest.fixture()
 def process_manager():
     return AppEntityManager(Process)
 
@@ -67,7 +67,7 @@ def v2_mapper(process):
 class TestProcInstManager:
     """TestCases for ProcInst"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def pod(self, wl_app, release, client, process_manager, process, v2_mapper):
         pod_name = v2_mapper.pod(process=process).name
         serializer = process_manager._make_serializer(wl_app)
@@ -80,8 +80,8 @@ class TestProcInstManager:
         pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
         return pod
 
-    @pytest.fixture
-    def terminated_pod(self, pod, client):
+    @pytest.fixture()
+    def _terminated_pod(self, pod, client):
         new_status = {
             "status": {
                 "phase": "Running",
@@ -101,7 +101,8 @@ class TestProcInstManager:
         assert insts[0].rich_status == "Pending"
         assert insts[0].envs
 
-    def test_query_instances_terminated(self, wl_app, terminated_pod):
+    @pytest.mark.usefixtures("_terminated_pod")
+    def test_query_instances_terminated(self, wl_app):
         inst = instance_kmodel.list_by_process_type(wl_app, "web")[0]
         assert inst.state == "Failed"
         assert inst.rich_status == "Terminated"
@@ -177,7 +178,7 @@ class TestProcInstManager:
 class TestProcSpecsManager:
     """TestCases for ProcSpecs"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def process(self, wl_app, release, process_manager, process, v2_mapper):
         process_manager.create(process, mapper_version=v2_mapper)
         return process
@@ -206,7 +207,7 @@ class TestProcSpecsManager:
 
 class TestExtractTypeFromName:
     @pytest.mark.parametrize(
-        "name,namespace,proc_type",
+        ("name", "namespace", "proc_type"),
         [
             (
                 f"{settings.DEFAULT_REGION_NAME}-bkapp-foo-prod-web-gunicorn-deployment",

@@ -34,8 +34,15 @@ from tests.utils.helpers import generate_random_string
 pytestmark = [mark_skip_if_console_not_configured(), pytest.mark.django_db]
 
 
+@pytest.mark.usefixtures("_init_tmpls")
 @pytest.mark.parametrize(
-    "confirm_required_when_publish, deployment_status, auto_enable_when_deploy, released_state, console_state",
+    (
+        "confirm_required_when_publish",
+        "deployment_status",
+        "auto_enable_when_deploy",
+        "released_state",
+        "console_state",
+    ),
     [
         (False, "failed", True, False, False),
         (False, "pending", True, False, False),
@@ -53,7 +60,6 @@ def test_create_then_release(
     deployment_status,
     released_state,
     console_state,
-    init_tmpls,
 ):
     # mock spec when creating application
     with patch(

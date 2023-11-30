@@ -32,13 +32,13 @@ pytestmark = pytest.mark.django_db
 
 class TestSceneApp:
     @pytest.fixture(autouse=True)
-    def init_scene_tmpls(self):
+    def _init_scene_tmpls(self):
         from tests.utils.helpers import create_scene_tmpls
 
         create_scene_tmpls()
 
     @pytest.mark.parametrize(
-        "query_params, result_count",
+        ("query_params", "result_count"),
         [
             ({"region": settings.DEFAULT_REGION_NAME}, 3),
             ({"region": "for_test"}, 0),
@@ -49,18 +49,19 @@ class TestSceneApp:
         response = api_client.get(url, data=query_params)
         assert len(response.data) >= result_count
 
-    @pytest.fixture
-    def mock_create_scene_app(self):
+    @pytest.fixture()
+    def _mock_create_scene_app(self):
         with mock.patch(
             "paasng.platform.applications.views.SourceOrigin.get_default_origins",
-            new=lambda *args, **kwargs: [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.SCENE],
+            return_value=[SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.SCENE],
         ), mock.patch("paasng.platform.declarative.application.controller.initialize_smart_module"), mock.patch(
             "paasng.platform.scene_app.initializer.get_oauth2_client_secret",
-            new=lambda *args, **kwargs: "test_app_secret",
+            return_value="test_app_secret",
         ):
             yield
 
-    def test_create(self, api_client, mock_create_scene_app):
+    @pytest.mark.usefixtures("_mock_create_scene_app")
+    def test_create(self, api_client):
         url = reverse("api.applications.create_v2")
         app_code = generate_random_string(8, string.ascii_lowercase)
         app_name = generate_random_string(8)

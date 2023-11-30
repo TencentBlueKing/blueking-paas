@@ -83,7 +83,7 @@ class TestDynamicJSONField:
         assert field.__module__ == __name__
 
     @pytest.mark.parametrize(
-        "value, expected, field",
+        ("value", "expected", "field"),
         [
             (FooType(foo="a"), '{"foo": "a", "bar": false}', FooTypeField()),
             (FooType(foo="a", bar=True), '{"foo": "a", "bar": true}', FooTypeField()),
@@ -105,7 +105,7 @@ class TestDynamicJSONField:
 
 class TestConvertKeyToCamel:
     @pytest.mark.parametrize(
-        "data, expected",
+        ("data", "expected"),
         [
             ({}, {}),
             ({"foo_bar": 1, "baz_qux": 2}, {"fooBar": 1, "bazQux": 2}),

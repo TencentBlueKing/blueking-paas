@@ -19,16 +19,16 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def gitlab_repo_url():
     return "http://fake-gitlab/owner/repo.git"
 
 
-@pytest.fixture
+@pytest.fixture()
 def github_repo_url():
     return "https://github.com/owner/repo.git"
 
 
-@pytest.fixture
+@pytest.fixture()
 def gitee_repo_url():
     return "https://gitee.com/owner/repo.git"

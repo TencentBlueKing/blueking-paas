@@ -30,7 +30,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(
-    "args, exception_type, expected_message",
+    ("args", "exception_type", "expected_message"),
     [
         ({}, CommandError, "can't get bkapp with given params"),
         (
@@ -75,7 +75,7 @@ def make_spec_updater(envs: Optional[List[EnvVar]] = None, env_overlay: Optional
 
 
 @pytest.mark.parametrize(
-    "spec_updator, expected",
+    ("spec_updator", "expected"),
     [
         (make_spec_updater(), []),
         (

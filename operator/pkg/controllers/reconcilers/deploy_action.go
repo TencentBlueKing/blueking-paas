@@ -31,6 +31,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
 // NewDeployActionReconciler returns a DeployActionReconciler.
@@ -88,6 +89,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	SetDefaultConditions(bkapp)
 
 	if err = r.Client.Status().Update(ctx, bkapp); err != nil {
+		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
 		log.Error(err, "Unable to update bkapp status when a new deploy action is detected")
 		return r.Result.WithError(err)
 	}

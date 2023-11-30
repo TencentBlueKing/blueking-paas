@@ -176,9 +176,9 @@ class AppAdaptor:
                 elif re.search("Duplicate entry '.*' for key '.*name'", error_msg):
                     raise IntegrityError(field="name")
                 else:
-                    raise e
+                    raise
             else:
-                raise e
+                raise
 
         # 注册应用完成后，同步 oauth 信息
         try:
@@ -324,7 +324,7 @@ class AppDeveloperAdaptor:
         app = AppAdaptor(self.session).get(code)
         if not app:
             logger.warning(f"App(code:{code}) does not exist, skip updating developers to console")
-            return None
+            return
 
         console_delelopers = self.get_developer_names(code)
         to_delete = set(console_delelopers) - set(target_developers)
@@ -335,7 +335,7 @@ class AppDeveloperAdaptor:
         if to_add:
             self._add_developers(app.id, to_add)
 
-        return None
+        return
 
     def _delete_developers(self, app_id: int, to_delete: set):
         delete_developers = (
@@ -348,14 +348,12 @@ class AppDeveloperAdaptor:
             legacy_models.LAppDeveloper.bkuser_id.in_(delete_developers_id),
         ).delete(synchronize_session=False)
         self.session.commit()
-        return None
 
     def _add_developers(self, app_id: int, to_add: set):
         developers_objs = self._get_developer_objs_by_usernames(to_add)
         objects = [legacy_models.LAppDeveloper(app_id=app_id, bkuser_id=developer.id) for developer in developers_objs]
         self.session.add_all(objects)
         self.session.commit()
-        return None
 
     def _create_developer_by_username(self, username: str) -> "legacy_models.LUser":
         """根据用户名创建一个 console 的 developer 对象"""

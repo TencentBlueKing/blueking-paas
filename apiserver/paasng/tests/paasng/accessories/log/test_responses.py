@@ -30,12 +30,12 @@ from paasng.accessories.log.utils import clean_logs
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def search_params():
     return ElasticSearchParams(indexPattern="foo-*", termTemplate={}, timeFormat="datetime")
 
 
-@pytest.fixture
+@pytest.fixture()
 def make_fake_hit():
     """一个用于测试的日志返回结果"""
 
@@ -126,13 +126,13 @@ class TestStructureLogLine:
     )
     def test_lacking_key_info(self, search_params, make_fake_hit, deleting_field):
         """针对一些字段缺失，能够正确抛出异常"""
+        hit = make_fake_hit(deleting_field=deleting_field)
         with pytest.raises(LogLineInfoBrokenError):
-            hit = make_fake_hit(deleting_field=deleting_field)
             cattr.structure(clean_logs([hit], search_params)[0], StructureLogLine)
 
 
 class TestIngressLogLine:
-    @pytest.fixture
+    @pytest.fixture()
     def make_fake_hit(self, make_fake_hit):
         def _make_fake_hit(force_source: dict, deleting_fields: List[str]):
             ingress_detail = {
@@ -152,7 +152,7 @@ class TestIngressLogLine:
         return _make_fake_hit
 
     @pytest.mark.parametrize(
-        "force_update, expected",
+        ("force_update", "expected"),
         [
             (
                 {"engine_app_name": "normal"},
@@ -233,6 +233,6 @@ class TestIngressLogLine:
     )
     def test_ingress_lacking_key_info(self, search_params, make_fake_hit, deleting_field):
         """针对一些字段缺失，能够正确抛出异常"""
+        hit = make_fake_hit({}, deleting_field)
         with pytest.raises(LogLineInfoBrokenError):
-            hit = make_fake_hit({}, deleting_field)
             cattr.structure(clean_logs([hit], search_params), List[IngressLogLine])

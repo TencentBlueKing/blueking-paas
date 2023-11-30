@@ -35,7 +35,7 @@ pytestmark = pytest.mark.django_db
 
 class TestAppYamlDetector:
     @pytest.mark.parametrize(
-        "spec_version, filepath, expected",
+        ("spec_version", "filepath", "expected"),
         [
             (AppSpecVersion.VER_1, "app.yaml", DetectResult("", AppSpecVersion.VER_1)),
             (AppSpecVersion.VER_1, "app.yml", DetectResult("", AppSpecVersion.VER_1)),
@@ -74,7 +74,7 @@ class TestAppYamlDetector:
 @pytest.mark.parametrize("package_root", ["untar_path", "zip_path"], indirect=["package_root"])
 class TestManifestDetector:
     @pytest.mark.parametrize(
-        "contents, error",
+        ("contents", "error"),
         [
             ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, KeyError("Procfile not found.")),
             ({"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, KeyError("Procfile not found.")),
@@ -90,7 +90,7 @@ class TestManifestDetector:
         assert str(e.value) == str(error)
 
     @pytest.mark.parametrize(
-        "contents, expected",
+        ("contents", "expected"),
         [
             ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, "./app.yaml"),
             ({"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, "./app.yaml"),
@@ -107,7 +107,7 @@ class TestManifestDetector:
         )
 
     @pytest.mark.parametrize(
-        "contents, expected",
+        ("contents", "expected"),
         [
             ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, None),
             (
@@ -128,7 +128,7 @@ class TestManifestDetector:
         )
 
     @pytest.mark.parametrize(
-        "contents, expected",
+        ("contents", "expected"),
         [
             ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, {}),
             (
@@ -156,7 +156,7 @@ class TestManifestDetector:
         )
 
     @pytest.mark.parametrize(
-        "contents, expected",
+        ("contents", "expected"),
         [
             ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, {}),
             (
@@ -182,7 +182,7 @@ class TestManifestDetector:
 
 class TestSourcePackageStatReader:
     @pytest.mark.parametrize(
-        "contents, expected_meta_info, expected_relative_path",
+        ("contents", "expected_meta_info", "expected_relative_path"),
         [
             # 我们的打包脚本会默认打成相对路径形式
             ({"app.yaml": yaml.dump({"version": "v1"})}, {"version": "v1"}, "./"),
@@ -206,7 +206,7 @@ class TestSourcePackageStatReader:
             SourcePackageStatReader(tar_path).get_meta_info()
 
     @pytest.mark.parametrize(
-        "contents, meta_info, version",
+        ("contents", "meta_info", "version"),
         [
             ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, EXAMPLE_APP_YAML, EXAMPLE_APP_YAML["version"]),
             (

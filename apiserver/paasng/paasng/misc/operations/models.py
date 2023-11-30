@@ -26,7 +26,7 @@ from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
-from paasng.misc.operations.constant import OperationType as OP
+from paasng.misc.operations.constant import OperationType as OpType
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName, JobStatus
 from paasng.platform.engine.models import Deployment
@@ -84,12 +84,13 @@ class OperationObj:
 
     def __init__(self, operation: Operation):
         self.operation = operation
-        self.op_type = OP(self.operation.type)
+        self.op_type = OpType(self.operation.type)
 
     def get_text_display(self):
-        for value, text in OP.get_choices():
+        for value, text in OpType.get_choices():
             if value == self.op_type.value:
                 return _(text)
+        return None
 
 
 class UnknownTypeOperationObj(OperationObj):
@@ -104,8 +105,8 @@ class ProcessOperationObj(OperationObj):
     """Operation object: processs start/stop"""
 
     _text_tmpls = {
-        OP.PROCESS_START: _("启动 {module_name} 模块的 {process_type} 进程"),
-        OP.PROCESS_STOP: _("停止 {module_name} 模块的 {process_type} 进程"),
+        OpType.PROCESS_START: _("启动 {module_name} 模块的 {process_type} 进程"),
+        OpType.PROCESS_STOP: _("停止 {module_name} 模块的 {process_type} 进程"),
     }
 
     def get_text_display(self):
@@ -124,7 +125,7 @@ class DeployOpValues:
 class AppDeploymentOperationObj(OperationObj):
     """Operation object: app deployment"""
 
-    default_op_type = OP.DEPLOY_APPLICATION
+    default_op_type = OpType.DEPLOY_APPLICATION
     values_type = DeployOpValues
 
     def __init__(self, *args, **kwargs):
@@ -179,7 +180,7 @@ class AppDeploymentOperationObj(OperationObj):
 class CNativeAppDeployOperationObj(OperationObj):
     """Operation object: paas_wl.bk_app.cnative.specs.models.AppModelDeploy"""
 
-    default_op_type = OP.DEPLOY_CNATIVE_APP
+    default_op_type = OpType.DEPLOY_CNATIVE_APP
     values_type = DeployOpValues
 
     def __init__(self, *args, **kwargs):
@@ -234,9 +235,10 @@ class AppOfflineOperationObj(OperationObj):
     @classmethod
     def get_operation_type(cls, offline_instance: "OfflineOperation"):
         if offline_instance.app_environment.environment == "stag":
-            return OP.OFFLINE_APPLICATION_STAG_ENVIRONMENT
+            return OpType.OFFLINE_APPLICATION_STAG_ENVIRONMENT
         elif offline_instance.app_environment.environment == "prod":
-            return OP.OFFLINE_APPLICATION_PROD_ENVIRONMENT
+            return OpType.OFFLINE_APPLICATION_PROD_ENVIRONMENT
+        return None
 
     @classmethod
     def assemble_operation_params(cls, offline_instance: "OfflineOperation") -> dict:
@@ -288,8 +290,8 @@ class ApplyCloudApiOperationObj(OperationObj):
     """Operation object: apply for or renew ApiGateway API permissions"""
 
     _text_tmpls = {
-        OP.APPLY_PERM_FOR_CLOUD_API: _("申请 {gateway_name} 网关的 API 权限"),
-        OP.RENEW_PERM_FOR_CLOUD_API: _("续期 {gateway_name} 网关的 API 权限"),
+        OpType.APPLY_PERM_FOR_CLOUD_API: _("申请 {gateway_name} 网关的 API 权限"),
+        OpType.RENEW_PERM_FOR_CLOUD_API: _("续期 {gateway_name} 网关的 API 权限"),
     }
 
     def get_text_display(self):
@@ -298,20 +300,20 @@ class ApplyCloudApiOperationObj(OperationObj):
 
 
 _operation_cls_map = {
-    OP.DEPLOY_APPLICATION: AppDeploymentOperationObj,
-    OP.DEPLOY_CNATIVE_APP: CNativeAppDeployOperationObj,
-    OP.PROCESS_START: ProcessOperationObj,
-    OP.PROCESS_STOP: ProcessOperationObj,
-    OP.CREATE_MODULE: CreateModuleOperationObj,
-    OP.OFFLINE_APPLICATION_STAG_ENVIRONMENT: AppOfflineOperationObj,
-    OP.OFFLINE_APPLICATION_PROD_ENVIRONMENT: AppOfflineOperationObj,
+    OpType.DEPLOY_APPLICATION: AppDeploymentOperationObj,
+    OpType.DEPLOY_CNATIVE_APP: CNativeAppDeployOperationObj,
+    OpType.PROCESS_START: ProcessOperationObj,
+    OpType.PROCESS_STOP: ProcessOperationObj,
+    OpType.CREATE_MODULE: CreateModuleOperationObj,
+    OpType.OFFLINE_APPLICATION_STAG_ENVIRONMENT: AppOfflineOperationObj,
+    OpType.OFFLINE_APPLICATION_PROD_ENVIRONMENT: AppOfflineOperationObj,
 }
 
 
 def get_operation_obj(operation: Operation) -> OperationObj:
     """Return an operation object by operation db object"""
     try:
-        op_type = OP(operation.type)
+        op_type = OpType(operation.type)
     except ValueError:
         return UnknownTypeOperationObj(operation)
 

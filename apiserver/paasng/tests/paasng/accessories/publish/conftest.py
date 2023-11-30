@@ -23,12 +23,12 @@ from paasng.core.core.storages.sqlalchemy import console_db
 from tests.utils.helpers import generate_random_string
 
 
-@pytest.fixture
+@pytest.fixture()
 def tag_name():
     return generate_random_string(length=6)
 
 
-@pytest.fixture
+@pytest.fixture()
 def create_default_tag(tag_name):
     with console_db.session_scope() as session:
         try:

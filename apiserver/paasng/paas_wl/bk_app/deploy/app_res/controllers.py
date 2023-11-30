@@ -117,7 +117,7 @@ class NamespacesHandler(ResourceHandlerBase):
         try:
             KNamespace(self.client).wait_for_default_sa(namespace, timeout=max_wait_seconds)
         except CreateServiceAccountTimeout:
-            logger.error("timeout while wating for the default sa of %s to be created", namespace)
+            logger.exception("timeout while waiting for the default sa of %s to be created", namespace)
             raise
 
 
@@ -180,7 +180,7 @@ class PodScheduleHandler(ResourceHandlerBase):
             # ignore the other pods
             if pod.status.phase == "Running" and not force:
                 logger.warning(f"trying to clean Pod<{namespace}/{pod_name}>, but it's still running.")
-                return
+                return None
 
             logger.debug(f"trying to clean pod<{namespace}/{pod_name}>.")
             # no matter the pod is completed or crash
@@ -404,7 +404,7 @@ class CommandHandler(PodScheduleHandler):
         try:
             existed = command_kmodel.get(command.app, command.name)
         except AppEntityNotFound:
-            logger.info("Command Pod<%s/%s> does not exist, will create one" % (namespace, pod_name))
+            logger.info("Command Pod<%s/%s> does not exist, will create one", namespace, pod_name)
             command_kmodel.save(command)
             return command.name
 
@@ -431,12 +431,12 @@ class CommandHandler(PodScheduleHandler):
         try:
             existed = command_kmodel.get(command.app, command.name)
         except AppEntityNotFound:
-            logger.info("Command Pod<%s/%s> does not exist, skip delete" % (namespace, command.name))
-            return
+            logger.info("Command Pod<%s/%s> does not exist, skip delete", namespace, command.name)
+            return None
 
         if existed.phase == "Running" and existed.main_container_exit_code is None:
             logger.warning(f"trying to clean Pod<{namespace}/{command.name}>, but it's still running.")
-            return
+            return None
 
         return command_kmodel.delete(existed)
 

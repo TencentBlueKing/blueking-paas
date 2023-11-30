@@ -43,6 +43,7 @@ class WhiteNoiseRespectPrefixMiddleware(WhiteNoiseMiddleware):
             static_file = self.files.get(path_info)
         if static_file is not None:
             return self.serve(static_file, request)
+        return None
 
 
 class AutoDisableCSRFMiddleware:
@@ -71,7 +72,6 @@ class AutoDisableCSRFMiddleware:
         # setting request._dont_enforce_csrf_checks = True.
         if getattr(view, "csrf_exempt", False):
             request._dont_enforce_csrf_checks = True
-        return None
 
 
 class APILanguageMiddleware(MiddlewareMixin):

@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestCreateAppResource:
-    @pytest.fixture
+    @pytest.fixture()
     def bkapp_manifest(self):
         return {
             "apiVersion": "paas.bk.tencent.com/v1alpha2",
@@ -86,7 +86,7 @@ class TestCreateAppResource:
         assert obj.dict() == bkapp_manifest
 
 
-@pytest.fixture
+@pytest.fixture()
 def spec_example():
     """An example spec"""
     return {
@@ -104,13 +104,13 @@ def spec_example():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def resource_name(bk_app):
     """Make a name which follows the constraints of metadata.name"""
     return "res-" + bk_app.code
 
 
-@pytest.fixture
+@pytest.fixture()
 def init_model_resource(bk_app, bk_module, resource_name):
     """Initialize the app model resource"""
     resource = create_app_resource(
@@ -127,7 +127,7 @@ def init_model_resource(bk_app, bk_module, resource_name):
 class TestUpdateAppResource:
     def test_uninitialized(self, bk_app, bk_module, spec_example, resource_name):
         payload = {"kind": "BkApp", "metadata": {"name": resource_name}, "spec": spec_example}
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* not initialized"):
             update_app_resource(bk_app, bk_module, payload)
 
     def test_change_envvars_wrong_format(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):

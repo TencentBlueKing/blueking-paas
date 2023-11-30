@@ -84,6 +84,8 @@ ignore = [
   # === 谨慎忽略 ===
   # pep8-naming: 忽略后，不强制 class 必须使用驼峰命名，部分单元测试代码中用下划线起名可能更方便
   "N801",
+  # flake8-logging-format: 忽略后，允许在打印日志时使用 .format() 方法，可能降低性能
+  "G001",
   # flake8-logging-format: 忽略后，允许在打印日志时使用 f-string 表达式，更可读但可能降低性能
   "G004",
 ]

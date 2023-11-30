@@ -30,8 +30,8 @@ from tests.utils.helpers import override_region_configs
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def setup_addrs(bk_app, mock_env_is_running, mock_get_builtin_addresses):
+@pytest.fixture()
+def _setup_addrs(bk_app, mock_env_is_running, mock_get_builtin_addresses):
     """Set up common mock and configs for testing functions related with addresses"""
 
     def update_region_hook(config):
@@ -60,8 +60,9 @@ class TestGetExposedUrl:
         mock_env_is_running[bk_prod_env] = False
         assert get_exposed_url(bk_prod_env) is None
 
+    @pytest.mark.usefixtures("_setup_addrs")
     @pytest.mark.parametrize(
-        "preferred_root, expected",
+        ("preferred_root", "expected"),
         [
             (None, "http://foo.example.com/"),
             ("example.org", "http://default-foo.example.org/"),
@@ -69,7 +70,7 @@ class TestGetExposedUrl:
             ("invalid-example.com", "http://foo.example.com/"),
         ],
     )
-    def test_preferred_root(self, preferred_root, expected, bk_module, bk_stag_env, setup_addrs):
+    def test_preferred_root(self, preferred_root, expected, bk_module, bk_stag_env):
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
         bk_module.user_preferred_root_domain = preferred_root
         bk_module.save()

@@ -22,7 +22,7 @@ from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
 
-@pytest.fixture
+@pytest.fixture()
 def scheduler_client() -> "K8sScheduler":
     """Scheduler client connecting to testing cluster"""
     return K8sScheduler.from_cluster_name(CLUSTER_NAME_FOR_TESTING)

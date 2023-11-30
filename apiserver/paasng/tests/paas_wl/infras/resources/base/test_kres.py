@@ -53,11 +53,10 @@ class TestNameBasedOps:
             KNamespace(k8s_client).delete(random_resource_name(), raise_if_non_exists=True)
 
     def test_delete_api_error(self, k8s_client):
-        with pytest.raises(ApiException), mock.patch(
-            "paas_wl.infras.resources.base.kube_client.CoreDynamicClient.get_preferred_resource"
-        ) as obj:
+        with mock.patch("paas_wl.infras.resources.base.kube_client.CoreDynamicClient.get_preferred_resource") as obj:
             obj().delete.side_effect = ApiException(status=400)
-            KNamespace(k8s_client).delete(random_resource_name(), raise_if_non_exists=True)
+            with pytest.raises(ApiException):
+                KNamespace(k8s_client).delete(random_resource_name(), raise_if_non_exists=True)
 
     def test_get_or_create(self, k8s_client, namespace_maker):
         namespace = random_resource_name()
@@ -113,7 +112,7 @@ class TestNameBasedOps:
         assert obj.metadata.annotations["age"] == "4"
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestLabelBasedOps:
     def test_create_watch_stream(self, k8s_client, wl_app):
         # Create a pod to generate event
@@ -237,7 +236,7 @@ class TestKNamespace:
         KNamespace(k8s_client).delete(namespace)
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestKPod:
     def test_wait_for_status_no_resource(self, k8s_client):
         time_started = time.time()

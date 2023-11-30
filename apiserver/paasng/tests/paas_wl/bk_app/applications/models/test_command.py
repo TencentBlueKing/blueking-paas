@@ -46,7 +46,7 @@ class TestPreReleaseHook:
         assert hook.version == 1
 
     @pytest.mark.parametrize(
-        "command, expected",
+        ("command", "expected"),
         [
             ("echo 1", ["echo", "1"]),
             ("echo 1;", ["echo", "1;"]),

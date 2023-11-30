@@ -21,7 +21,7 @@ from unittest import mock
 import pytest
 
 
-@pytest.fixture
-def mock_run_command():
+@pytest.fixture()
+def _mock_run_command():
     with mock.patch("paas_wl.bk_app.deploy.app_res.client.K8sScheduler.run_command"):
         yield

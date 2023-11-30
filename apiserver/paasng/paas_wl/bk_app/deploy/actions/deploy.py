@@ -133,7 +133,7 @@ class ZombieProcessesKiller:
 
         logger.debug("latest version: %s, last version: %s", self.release.version, self.last_release.version)
         logger.debug("latest procfile: %s, last procfile: %s", procfile, last_procfile)
-        for last_type, _ in last_procfile.items():
+        for last_type in last_procfile:
             last_process = AppProcessManager(app=self.release.app).assemble_process(
                 process_type=last_type, release=self.last_release
             )
@@ -145,7 +145,7 @@ class ZombieProcessesKiller:
             this_process = AppProcessManager(app=self.release.app).assemble_process(
                 process_type=last_type, release=self.release
             )
-            if not get_command_name(this_process.runtime.proc_command) == get_command_name(
+            if get_command_name(this_process.runtime.proc_command) != get_command_name(
                 last_process.runtime.proc_command
             ):
                 zombie_name_processes.append(last_process)

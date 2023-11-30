@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 @receiver(post_appenv_deploy)
 def start_ci_job(sender: "ApplicationEnvironment", deployment: "Deployment", **kwargs):
     """开始 CI 任务"""
-    if not deployment.status == JobStatus.SUCCESSFUL.value:
+    if deployment.status != JobStatus.SUCCESSFUL.value:
         logger.info("AppEnv<%s> deploy failed, skipping", sender)
         return
 

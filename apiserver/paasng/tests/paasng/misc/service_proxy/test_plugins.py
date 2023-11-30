@@ -32,10 +32,10 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def patch_list_app_perms():
+def _patch_list_app_perms():
     with mock.patch(
         "paasng.misc.service_proxy.plugins.list_application_permissions",
-        new=lambda *args, **kwargs: {action: True for action in AppAction},
+        return_value={action: True for action in AppAction},
     ):
         yield
 
@@ -51,7 +51,7 @@ def test_get_current_instances(bk_user, bk_app):
     assert isinstance(insts[1]["perms_map"], dict)
 
 
-@pytest.fixture
+@pytest.fixture()
 def site_permissions(bk_user):
     role = global_site_resource.get_role_of_user(bk_user, None)
     result = {}
@@ -67,7 +67,7 @@ def test_get_current_instances_none(bk_user, site_permissions):
 
 class TestApplicationInPathExtractor:
     @pytest.mark.parametrize(
-        "request_path,expected_result",
+        ("request_path", "expected_result"),
         [
             ("foo/bar", None),
             (
@@ -96,10 +96,14 @@ class TestApplicationInPathExtractor:
         request_path = f"applications/{bk_app.code}/modules/default/envs/stag/"
         ret = ApplicationInPathExtractor().extract_objects(request_path)
         assert ret is not None
-        assert ret.application and ret.application.code == bk_app.code
-        assert ret.module and ret.module.name == "default"
-        assert ret.module_env and ret.module_env.environment == "stag"
-        assert ret.engine_app and ret.engine_app.name is not None
+        assert ret.application is not None
+        assert ret.application.code == bk_app.code
+        assert ret.module is not None
+        assert ret.module.name == "default"
+        assert ret.module_env is not None
+        assert ret.module_env.environment == "stag"
+        assert ret.engine_app is not None
+        assert ret.engine_app.name is not None
 
 
 def test_list_site_permissions(bk_user, site_permissions):

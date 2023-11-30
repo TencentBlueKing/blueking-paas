@@ -48,7 +48,7 @@ class ExtraStubPlugin(IngressPlugin):
 
 class TestPlugins:
     @pytest.mark.parametrize(
-        "plugins,s_snippet, c_snippet",
+        ("plugins", "s_snippet", "c_snippet"),
         [
             ([FooStubPlugin], "foo-server", "foo-configuration"),
             ([FooStubPlugin, BarStubPlugin], "foo-server\nbar-server", "foo-configuration"),

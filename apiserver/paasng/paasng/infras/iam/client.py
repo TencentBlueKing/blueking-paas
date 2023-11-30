@@ -468,6 +468,7 @@ class BKIAMClient:
 
             logger.exception(f"update iam grade managers error, message:{resp['message']} \n data: {data}")
             raise BKIAMApiError(resp["message"], resp["code"])
+        return None
 
     def grant_user_group_policies_in_bk_monitor(self, bk_space_id: str, app_name: str, groups: List[Dict]):
         """

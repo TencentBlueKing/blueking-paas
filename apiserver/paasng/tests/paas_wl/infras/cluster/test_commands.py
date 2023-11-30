@@ -28,7 +28,7 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
 @pytest.fixture()
-def cluster_envs(monkeypatch):
+def _cluster_envs(monkeypatch):
     monkeypatch.setenv("PAAS_WL_CLUSTER_REGION", get_random_string(6))
     monkeypatch.setenv("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", "apps1.example.com")
     monkeypatch.setenv("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", "apps1.example.com")
@@ -45,14 +45,15 @@ def cluster_envs(monkeypatch):
     )
 
 
+@pytest.mark.usefixtures("_cluster_envs")
 @pytest.mark.parametrize(
-    "https_enabled, expect",
+    ("https_enabled", "expect"),
     [
         ("true", True),
         ("false", False),
     ],
 )
-def test_init_cluster(cluster_envs, https_enabled, expect):
+def test_init_cluster(https_enabled, expect):
     os.environ["PAAS_WL_CLUSTER_ENABLED_HTTPS_BY_DEFAULT"] = https_enabled
 
     call_command("initial_default_cluster")

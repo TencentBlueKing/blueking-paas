@@ -28,7 +28,7 @@ from tests.utils.mocks.bkmonitor import StubBKMonitorClient
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_monitor_space(bk_app):
     return BKMonitorSpace.objects.create(
         application=bk_app,

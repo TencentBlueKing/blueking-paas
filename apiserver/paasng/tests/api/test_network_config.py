@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestSvcDiscConfigViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def svc_disc(self, bk_app):
         """创建一个 SvcDiscConfig 对象"""
         svc_disc = SvcDiscConfig.objects.create(
@@ -64,7 +64,7 @@ class TestSvcDiscConfigViewSet:
 
 
 class TestDomainResolutionViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def domain_resolution(self, bk_app):
         """创建一个 DomainResolution 对象"""
         domain_resolution = DomainResolution.objects.create(
@@ -103,7 +103,7 @@ class TestDomainResolutionViewSet:
         assert response.status_code == 404
 
     @pytest.mark.parametrize(
-        "request_body, nameservers, host_aliases",
+        ("request_body", "nameservers", "host_aliases"),
         [
             (
                 {

@@ -56,7 +56,7 @@ def git_client(bk_module):
 
 class TestProductInfoCondition:
     @pytest.mark.parametrize(
-        "env, create_product, ok",
+        ("env", "create_product", "ok"),
         [("prod", False, False), ("prod", True, True), ("stag", False, True), ("stag", True, True)],
     )
     def test_validate(self, bk_user, bk_module, env, create_product, ok):
@@ -77,7 +77,7 @@ class TestProductInfoCondition:
 
 class TestPluginTagCondition:
     @pytest.mark.parametrize(
-        "env, create_tag, ok",
+        ("env", "create_tag", "ok"),
         [("prod", False, False), ("prod", True, True), ("stag", False, True), ("stag", True, True)],
     )
     def test_validate(self, bk_user, bk_plugin_app, env, create_tag, ok):
@@ -89,7 +89,7 @@ class TestPluginTagCondition:
 
         env = bk_plugin_app.get_default_module().envs.get(environment=env)
         if ok:
-            PluginTagValidationCondition(bk_user, env).validate
+            PluginTagValidationCondition(bk_user, env).validate()
         else:
             with pytest.raises(ConditionNotMatched) as exc_info:
                 PluginTagValidationCondition(bk_user, env).validate()
@@ -99,7 +99,7 @@ class TestPluginTagCondition:
 
 class TestEnvProtectionCondition:
     @pytest.mark.parametrize(
-        "user_role, allowed_roles, ok",
+        ("user_role", "allowed_roles", "ok"),
         [
             (ApplicationRole.ADMINISTRATOR, [], True),
             (ApplicationRole.ADMINISTRATOR, [ApplicationRole.ADMINISTRATOR], True),
@@ -136,7 +136,7 @@ class TestEnvProtectionCondition:
 
 class TestRepoAccessCondition:
     @pytest.mark.parametrize(
-        "source_type, create_user_profile, create_token_holder, ok, action_name",
+        ("source_type", "create_user_profile", "create_token_holder", "ok", "action_name"),
         [
             ("dft_gitlab", False, False, False, DeployConditions.NEED_TO_BIND_OAUTH_INFO),
             ("dft_gitlab", True, False, False, DeployConditions.NEED_TO_BIND_OAUTH_INFO),
@@ -174,7 +174,7 @@ class TestRepoAccessCondition:
 
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
-        "user_role, allowed_roles, create_token, create_product, expected",
+        ("user_role", "allowed_roles", "create_token", "create_product", "expected"),
         [
             (
                 ApplicationRole.DEVELOPER,

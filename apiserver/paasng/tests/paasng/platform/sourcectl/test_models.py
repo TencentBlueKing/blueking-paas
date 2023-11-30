@@ -31,7 +31,7 @@ def git_project_maker(url, sourcectl_type="dummy"):
 
 
 @pytest.mark.parametrize(
-    "repo_url, expected",
+    ("repo_url", "expected"),
     [
         ("https://foo.com/bar/baz/qux", "bar/baz/qux"),
         ("https://foo.com/bar/baz/qux.git", "bar/baz/qux"),
@@ -42,7 +42,7 @@ def test_git_alias_name(repo_url, expected):
 
 
 class TestGitProjectWithScope:
-    @pytest.fixture
+    @pytest.fixture()
     def projects(self):
         return [
             git_project_maker("http://fake-gitlab/namespace/project.git"),
@@ -87,7 +87,7 @@ class TestGitProjectWithScope:
         ),
     ],
 )
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_store_package(bk_module, bk_user, policy):
     package = SourcePackage.objects.store(bk_module, policy, operator=bk_user)
     assert package.module == bk_module
@@ -104,7 +104,7 @@ def test_store_package(bk_module, bk_user, policy):
 
 
 @pytest.mark.parametrize(
-    "policy, raised",
+    ("policy", "raised"),
     [
         (
             SPStoragePolicy(
@@ -127,7 +127,7 @@ def test_store_package(bk_module, bk_user, policy):
         ),
     ],
 )
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_overwrite_package(bk_user, bk_module, policy, raised):
     SourcePackage.objects.store(bk_module, policy, operator=bk_user)
     if raised:

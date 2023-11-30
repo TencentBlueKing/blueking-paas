@@ -28,7 +28,7 @@ from paasng.platform.sourcectl.git.client import GitClient, GitCloneCommand, Git
 
 
 class TestGitCloneCommand:
-    @pytest.fixture
+    @pytest.fixture()
     def command(self):
         return GitCloneCommand(
             git_filepath="/path/to/git",
@@ -59,7 +59,7 @@ class TestGitCloneCommand:
 
 
 class TestGitClient:
-    @pytest.fixture
+    @pytest.fixture()
     def client(self):
         return GitClient()
 
@@ -85,7 +85,7 @@ class TestGitClient:
             assert command.to_cmd() == expected
 
     @pytest.mark.parametrize(
-        "refs,expected",
+        ("refs", "expected"),
         [
             (["9n8b7u6y5t refs/remotes/origin/master", "9n8b7u6y5t refs/heads/HEAD"], {"branch": ["master"]}),
             (
@@ -120,7 +120,7 @@ class TestGitClient:
             assert command.to_cmd() == ["git", "show-ref"]
 
     @pytest.mark.parametrize(
-        "cmd_result,expected",
+        ("cmd_result", "expected"),
         [
             (
                 "0123456789   HEAD\n0123456789 refs/heads/master",
@@ -137,7 +137,7 @@ class TestGitClient:
             assert client.list_remote("http://example.com/foo.git") == expected
 
     @pytest.mark.parametrize(
-        "commits,expected",
+        ("commits", "expected"),
         [
             (
                 ["1583313687/add asdfas fasdfa"],

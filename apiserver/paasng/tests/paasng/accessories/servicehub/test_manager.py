@@ -39,11 +39,8 @@ from tests.utils.helpers import BaseTestCaseWithApp
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
+@pytest.mark.usefixtures("_faked_remote_services")
 class TestMixedMgr:
-    @pytest.fixture(autouse=True)
-    def setup_data(self, faked_remote_services):
-        pass
-
     def test_list_by_category(self):
         services = list(mixed_service_mgr.list_by_category("r1", category_id=Category.DATA_STORAGE))
         assert len(services) == 1
@@ -247,7 +244,7 @@ class TestLocalMgr(BaseTestCaseWithApp):
                     rel.provision()
                     expect_obj[rel.db_obj.service_instance_id] = rel.db_obj
 
-        for service_instance_id in expect_obj.keys():
+        for service_instance_id in expect_obj:
             assert mgr.get_attachment_by_instance_id(svc, service_instance_id) == expect_obj[service_instance_id]
 
 

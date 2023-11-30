@@ -109,7 +109,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def get_logging_operate_type(type_: str) -> Optional[int]:
         """Get the type of application operation"""
-        return {"start": OperationType.PROCESS_START.value, "stop": OperationType.PROCESS_STOP.value}.get(type_, None)
+        return {"start": OperationType.PROCESS_START.value, "stop": OperationType.PROCESS_STOP.value}.get(type_)
 
     def _perform_update(
         self,

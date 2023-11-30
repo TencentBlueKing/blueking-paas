@@ -118,41 +118,31 @@ class TestConfigVarAPIs:
         create_var({"key": "G1", "value": "foo", "environment_name": "_global_"})
 
     @pytest.mark.parametrize(
-        "order_by,keys",
+        ("order_by", "expected_keys"),
         [
             ("-created", ["G1", "S2", "P1", "S1"]),
             ("key", ["G1", "P1", "S1", "S2"]),
         ],
     )
-    def test_list_order_by(self, api_client, bk_app, bk_module, order_by, keys):
+    def test_list_order_by(self, api_client, bk_app, bk_module, order_by, expected_keys):
         self.create_var_fixtures(api_client, bk_app, bk_module)
 
         resp = api_client.get(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/?order_by={order_by}",
         )
         keys = [item["key"] for item in resp.data]
-        assert keys == keys
+        assert keys == expected_keys
 
     @pytest.mark.parametrize(
-        "environment_name,keys",
+        ("environment_name", "expected_keys"),
         [
             ("", ["G1", "S2", "P1", "S1"]),
             ("stag", ["S2", "S1"]),
-            (
-                "prod",
-                [
-                    "P1",
-                ],
-            ),
-            (
-                "_global_",
-                [
-                    "G1",
-                ],
-            ),
+            ("prod", ["P1"]),
+            ("_global_", ["G1"]),
         ],
     )
-    def test_list_filter_environment_name(self, api_client, bk_app, bk_module, environment_name, keys):
+    def test_list_filter_environment_name(self, api_client, bk_app, bk_module, environment_name, expected_keys):
         self.create_var_fixtures(api_client, bk_app, bk_module)
 
         resp = api_client.get(
@@ -162,7 +152,7 @@ class TestConfigVarAPIs:
             ),
         )
         keys = [item["key"] for item in resp.data]
-        assert keys == keys
+        assert keys == expected_keys
 
 
 class TestDeploymentViewSet:
@@ -187,7 +177,8 @@ class TestDeploymentViewSet:
         assert resp.status_code == 400
         assert resp.json() == {"code": "CANNOT_GET_REVISION", "detail": "无法获取代码版本"}
 
-    def test_deploy(self, api_client, init_tmpls, bk_app_full, bk_module_full):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_deploy(self, api_client, bk_app_full, bk_module_full):
         url = reverse("api.deploy", kwargs={"code": bk_app_full.code, "environment": "stag"})
         with mock.patch("paasng.platform.engine.views.deploy.DeployTaskRunner"):
             resp = api_client.post(url, data={"version_type": "foo", "version_name": "bar", "revision": "baz"})

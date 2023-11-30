@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 
 class TestUserSourceProviders:
     @pytest.mark.parametrize(
-        "flag,provider_in_results",
+        ("flag", "provider_in_results"),
         [
             (True, True),
             (False, False),
@@ -41,7 +41,8 @@ class TestUserSourceProviders:
         providers = user_providers.list_available()
         assert ("dft_bk_svn" in providers) == provider_in_results
 
-    def test_list_module_availables(self, bk_user, init_tmpls, bk_module_full):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_list_module_availables(self, bk_user, bk_module_full):
         user_providers = UserSourceProviders(bk_user)
         source_obj = bk_module_full.get_source_obj()
 

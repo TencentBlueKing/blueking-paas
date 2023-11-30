@@ -173,7 +173,7 @@ class ApplicationMembersManageView(ApplicationDetailBaseView):
         kwargs["ROLE_CHOICES"] = {
             key: value
             for value, key in ApplicationRole.get_django_choices()
-            if value in kwargs["ROLE_PERMISSION_SPEC"].keys()
+            if value in kwargs["ROLE_PERMISSION_SPEC"]
         }
 
         return kwargs

@@ -469,7 +469,10 @@
               active-name="process"
               collapse-item-name="process"
               :title="$t('进程配置')">
-              <deploy-process ref="processRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-process>
+              <deploy-process
+                ref="processRef"
+                :cloud-form-data="{url: mirrorData.url, imageCredentialName: imageCredentialsData.name}"
+                :is-create="isCreate"></deploy-process>
             </collapseContent>
 
             <collapseContent
@@ -477,7 +480,7 @@
               collapse-item-name="hook"
               :title="$t('钩子命令')"
               class="mt20">
-              <deploy-hook ref="hookRef" :cloud-app-data="cloudAppData" :is-create="isCreate"></deploy-hook>
+              <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>
             </collapseContent>
           </div>
 
@@ -545,8 +548,8 @@ import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
 import collapseContent from './comps/collapse-content.vue';
-import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process-creat';
-import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook-creat';
+import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
+import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 
 export default {
@@ -1014,7 +1017,6 @@ export default {
         }
       }
 
-      this.formLoading = true;
       // Remove all serverError error messages
       this.globalErrorMessage = '';
 
@@ -1028,7 +1030,6 @@ export default {
             const config = this.gitExtendConfig[this.sourceControlType];
             sourceRepoUrl = config.selectedRepoUrl;
             if (!sourceRepoUrl) {
-              this.formLoading = false;
               this.$paasMessage({
                 theme: 'error',
                 message: config.isAuth ? this.$t('请选择关联的远程仓库') : this.$t('请关联 git 账号'),
@@ -1053,8 +1054,11 @@ export default {
           source_origin: this.sourceOrigin,
           source_dir: this.sourceDirVal || '',
         },
-        build_config: {
-          build_method: this.formData.buildMethod,
+        bkapp_spec: {
+          // 构建方式
+          build_config: {
+            build_method: this.formData.buildMethod,
+          },
         },
       };
 
@@ -1068,7 +1072,7 @@ export default {
         if (this.dockerfileData.dockerfilePath === '') {
           this.dockerfileData.dockerfilePath = null;
         }
-        params.build_config = {
+        params.bkapp_spec.build_config = {
           build_method: 'dockerfile',
           dockerfile_path: this.dockerfileData.dockerfilePath,
           docker_build_args: dockerBuild,
@@ -1078,9 +1082,25 @@ export default {
 
       // 仅镜像
       if (this.structureType === 'mirror') {
-        params.build_config = {
+        params.bkapp_spec.build_config = {
           build_method: 'custom_image',
+          image_repository: this.mirrorData.url,
         };
+        // 镜像凭证
+        if (this.imageCredentialsData.name) {
+          if (!params.bkapp_spec.build_config.image_credential) {
+            params.bkapp_spec.build_config.image_credential = {};
+          }
+          params.bkapp_spec.build_config.image_credential.name = this.imageCredentialsData.name;
+        }
+        const processData = await this.$refs?.processRef?.handleSave();
+        const hookData = await this.$refs?.hookRef?.handleSave();
+        if (!processData || !hookData) return;
+        hookData.type = 'pre-release-hook';
+        params.bkapp_spec.processes = processData;
+        if (hookData.enabled) {
+          params.bkapp_spec.hook = hookData;
+        }
       }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
@@ -1101,18 +1121,17 @@ export default {
           source_repo_url: this.mirrorData.url,
           source_origin: this.sourceOrigin,
         };
-        params.manifest = { ...this.createCloudAppData };
+        // params.manifest = { ...this.createCloudAppData };
       }
 
-      // 空值端口过滤
-      if (params.manifest?.spec && params.manifest.spec?.processes) {
-        params.manifest.spec?.processes?.forEach((process) => {
-          if (process.targetPort === '' || process.targetPort === null) {
-            delete process.targetPort;
-          }
-        });
-      }
-
+      // // 空值端口过滤
+      // if (params.manifest?.spec && params.manifest.spec?.processes) {
+      //   params.manifest.spec?.processes?.forEach((process) => {
+      //     if (process.targetPort === '' || process.targetPort === null) {
+      //       delete process.targetPort;
+      //     }
+      //   });
+      // }
       try {
         this.formLoading = true;
 
@@ -1149,7 +1168,7 @@ export default {
       if (this.structureType === 'mirror') {      // 仅镜像
         await this.$refs.validate2?.validate();
         // 初始化
-        this.initCloudAppDataFunc();
+        // this.initCloudAppDataFunc();
       } else {      // 源码&镜像
         await this.$refs?.extend?.valid();    // 代码仓库检验
         // 构建参数校验

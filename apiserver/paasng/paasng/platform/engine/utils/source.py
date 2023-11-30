@@ -64,7 +64,7 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
             f"but got {len(processes)}"
         )
 
-    for proc_type in processes.keys():
+    for proc_type in processes:
         if not PROC_TYPE_PATTERN.match(proc_type):
             raise ValidationError(f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}")
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
@@ -105,7 +105,7 @@ def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
     return DockerIgnore(content, whitelist=[dockerfile_path])
 
 
-def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901
+def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901, PLR0912
     """Get the ProcessTmpl from SourceCode
     Declarative Processes is a dict containing a process type and its corresponding DeclarativeProcess
 

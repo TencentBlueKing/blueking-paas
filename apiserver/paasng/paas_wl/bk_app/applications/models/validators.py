@@ -37,7 +37,7 @@ def validate_app_structure(value: Dict):
     if any(int(v) < 0 for v in value.values()):
         raise ValidationError("number of replicas must be greater than or equal to zero")
 
-    for proc_type in value.keys():
+    for proc_type in value:
         if not re.match(settings.PROC_TYPE_PATTERN, proc_type):
             raise ValidationError(
                 f"process type '{proc_type}' is invalid," f" must match pattern '{settings.PROC_TYPE_PATTERN}"

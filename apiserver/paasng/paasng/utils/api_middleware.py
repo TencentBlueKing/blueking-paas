@@ -76,7 +76,7 @@ class ApiLogMiddleware:
 
     def get_api_data(self, request, response):
         if request.method in ["OPTIONS"]:
-            return
+            return None
 
         username = request.user.username
         user_id = request.user.get_username()
@@ -124,7 +124,7 @@ def save_redis(doc: Dict):
         return
 
     # Connect to redis and save the connection pool afterwards
-    global _redis_client
+    global _redis_client  # noqa: PLW0603
     if _redis_client is None:
         connection_options = getattr(settings, "REDIS_CONNECTION_OPTIONS", {})
         # TODO ee 版本如果开启, 再支持 sentinel 模式. 届时 PAAS_API_LOG_REDIS_HANDLER 参数也要适配调整

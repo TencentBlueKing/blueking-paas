@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestZombieProcessesKiller:
     @pytest.mark.parametrize(
-        "last_procfile,latest_procfile,diff",
+        ("last_procfile", "latest_procfile", "diff"),
         [
             ({"web": "command -x -z -y"}, {"web1": "command -x -z -y"}, {"types": ["web"], "names": []}),
             (

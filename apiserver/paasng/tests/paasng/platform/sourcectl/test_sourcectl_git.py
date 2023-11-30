@@ -34,18 +34,18 @@ pytestmark = pytest.mark.django_db
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_gitlab_client():
     with mock.patch("paasng.platform.sourcectl.controllers.gitlab.GitLabApiClient") as client_clz:
         yield client_clz()
 
 
 class TestGitlabRepoController:
-    @pytest.fixture
+    @pytest.fixture()
     def version(self):
         return VersionInfo("revision", "master", "branch")
 
-    @pytest.fixture
+    @pytest.fixture()
     def tarball_bytes(self):
         with generate_temp_dir() as tmp_dir, generate_temp_file(suffix=".tar.gz") as tmp_file:
             (tmp_dir / "foo").mkdir(0o755, parents=True, exist_ok=True)
@@ -134,7 +134,7 @@ class TestGitlabRepoController:
         assert controller.extract_version_info(version) == ("master", "revision")
 
     @pytest.mark.parametrize(
-        "smart_revision, expected",
+        ("smart_revision", "expected"),
         [
             ("revision", "revision"),
             ("branch:master", "fake-master-id"),
@@ -147,6 +147,7 @@ class TestGitlabRepoController:
                 return {"id": "fake-master-id"}
             elif branch_or_hash == "foo":
                 return {"id": "bar"}
+            return {}
 
         mock_gitlab_client.repo_last_commit.side_effect = mock_repo_last_commit
         controller = GitlabRepoController(repo_url=gitlab_repo_url, user_credentials={}, api_url="")
@@ -158,11 +159,11 @@ class TestGitlabRepoController:
 
 
 class TestGithubRepoController:
-    @pytest.fixture
+    @pytest.fixture()
     def version(self):
         return VersionInfo("revision", "master", "branch")
 
-    @pytest.fixture
+    @pytest.fixture()
     def user_credentials(self):
         return {"oauth_token": "this is a github access token"}
 
@@ -171,7 +172,7 @@ class TestGithubRepoController:
         assert controller.project.namespace == "owner"
         assert controller.project.name == "repo"
 
-    @pytest.fixture
+    @pytest.fixture()
     def client(self):
         with mock.patch("paasng.platform.sourcectl.controllers.github.GitHubApiClient") as client_clz:
             yield client_clz()
@@ -280,11 +281,11 @@ class TestGithubRepoController:
 
 
 class TestGiteebRepoController:
-    @pytest.fixture
+    @pytest.fixture()
     def version(self):
         return VersionInfo("revision", "master", "branch")
 
-    @pytest.fixture
+    @pytest.fixture()
     def user_credentials(self):
         return {"oauth_token": "this is a gitee access token"}
 
@@ -293,7 +294,7 @@ class TestGiteebRepoController:
         assert controller.project.namespace == "owner"
         assert controller.project.name == "repo"
 
-    @pytest.fixture
+    @pytest.fixture()
     def client(self):
         with mock.patch("paasng.platform.sourcectl.controllers.gitee.GiteeApiClient") as client_clz:
             yield client_clz()
@@ -387,7 +388,7 @@ class TestGiteebRepoController:
 
 
 class TestControllerUtils:
-    @pytest.fixture
+    @pytest.fixture()
     def branch_data(self):
         return {
             "name": "translation",
@@ -398,7 +399,7 @@ class TestControllerUtils:
             },
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def controller(self, gitlab_repo_url):
         with mock.patch("paasng.platform.sourcectl.controllers.gitlab.GitLabApiClient"):
             yield GitlabRepoController(repo_url=gitlab_repo_url, user_credentials={}, api_url="")

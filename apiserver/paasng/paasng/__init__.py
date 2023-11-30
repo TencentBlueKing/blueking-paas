@@ -31,7 +31,7 @@ from .celery import app as celery_app
 try:
     # prometheus 多进程时, metrics 存放的文件夹
     os.environ.setdefault("prometheus_multiproc_dir", "prometheus")
-    path = os.environ.get("prometheus_multiproc_dir")
+    path = os.environ.get("prometheus_multiproc_dir")  # noqa: SIM112
     if path is not None:
         os.mkdir(path)
 except Exception:
@@ -48,7 +48,7 @@ def warn(msg):
     """Ignore all useless warning messages"""
     # This warning message was caused by automap feature
     if msg.startswith("This declarative base already contains a class"):
-        return
+        return None
     return orig_warn(msg)
 
 

@@ -50,10 +50,10 @@ type WorkloadsMutator struct {
 	bkapp  *paasv1alpha2.BkApp
 }
 
-// ApplyToDeployments mutates the given deployment, it try to inject service discovery information
+// ApplyToDeployment mutates the given deployment, it try to inject service discovery information
 // to the env variables and volumes of the deployment, it mutate the deployments in-place.
 // return whether the mutation is performed.
-func (w *WorkloadsMutator) ApplyToDeployments(ctx context.Context, deploys []*appsv1.Deployment) bool {
+func (w *WorkloadsMutator) ApplyToDeployment(ctx context.Context, d *appsv1.Deployment) bool {
 	log := logf.FromContext(ctx)
 
 	if w.bkapp.Spec.SvcDiscovery == nil {
@@ -70,19 +70,17 @@ func (w *WorkloadsMutator) ApplyToDeployments(ctx context.Context, deploys []*ap
 		return false
 	}
 
-	for _, d := range deploys {
-		for i, container := range d.Spec.Template.Spec.Containers {
-			// Use the index to modify the container structure in-place
-			d.Spec.Template.Spec.Containers[i].Env = append(container.Env, v1.EnvVar{
-				Name: EnvKeyBkSaaS,
-				ValueFrom: &v1.EnvVarSource{
-					ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{Name: w.configMapResourceName()},
-						Key:                  DataKeyBkSaaS,
-					},
+	for i, container := range d.Spec.Template.Spec.Containers {
+		// Use the index to modify the container structure in-place
+		d.Spec.Template.Spec.Containers[i].Env = append(container.Env, v1.EnvVar{
+			Name: EnvKeyBkSaaS,
+			ValueFrom: &v1.EnvVarSource{
+				ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: w.configMapResourceName()},
+					Key:                  DataKeyBkSaaS,
 				},
-			})
-		}
+			},
+		})
 	}
 	return true
 }

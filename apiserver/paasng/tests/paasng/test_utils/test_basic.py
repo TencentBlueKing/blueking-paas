@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "data,default,ret",
+    ("data", "default", "ret"),
     [
         ([None, "foo"], None, "foo"),
         ([None, ""], None, None),

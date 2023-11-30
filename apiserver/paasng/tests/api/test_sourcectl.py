@@ -35,14 +35,14 @@ logger = logging.getLogger(__name__)
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def mocked_call_api():
     with mock.patch.object(BaseComponentAPIPlugin, "_call_api") as mocked_call:
         mocked_call.return_value = True
         yield mocked_call
 
 
-@pytest.fixture
+@pytest.fixture()
 def svn_account(bk_user):
     account, _ = SvnAccount.objects.update_or_create(defaults=dict(account=generate_random_string()), user=bk_user)
     return account

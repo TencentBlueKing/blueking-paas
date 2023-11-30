@@ -39,22 +39,22 @@ def get_database_conf(
     if encrypted_url_var in os.environ:
         return SecureEnv().db_url(encrypted_url_var)
 
-    DATABASE_NAME = settings.get(env_var_prefix + "DATABASE_NAME")
-    if DATABASE_NAME:
-        DATABASE_USER = settings.get(env_var_prefix + "DATABASE_USER", None)
-        DATABASE_PASSWORD = settings.get(env_var_prefix + "DATABASE_PASSWORD", None)
-        DATABASE_HOST = settings.get(env_var_prefix + "DATABASE_HOST", None)
-        DATABASE_PORT = settings.get(env_var_prefix + "DATABASE_PORT", None)
-        DATABASE_OPTIONS = settings.get(env_var_prefix + "DATABASE_OPTIONS", {})
+    database_name = settings.get(env_var_prefix + "DATABASE_NAME")
+    if database_name:
+        database_user = settings.get(env_var_prefix + "DATABASE_USER", None)
+        database_password = settings.get(env_var_prefix + "DATABASE_PASSWORD", None)
+        database_host = settings.get(env_var_prefix + "DATABASE_HOST", None)
+        database_port = settings.get(env_var_prefix + "DATABASE_PORT", None)
+        database_options = settings.get(env_var_prefix + "DATABASE_OPTIONS", {})
 
         result = {
             "ENGINE": "django.db.backends.mysql",
-            "NAME": DATABASE_NAME,
-            "USER": DATABASE_USER,
-            "PASSWORD": DATABASE_PASSWORD,
-            "HOST": DATABASE_HOST,
-            "PORT": DATABASE_PORT,
-            "OPTIONS": DATABASE_OPTIONS,
+            "NAME": database_name,
+            "USER": database_user,
+            "PASSWORD": database_password,
+            "HOST": database_host,
+            "PORT": database_port,
+            "OPTIONS": database_options,
         }
         # Use a test database name when running tests to avoid unexpected changes
         if for_tests:
@@ -184,7 +184,7 @@ def is_redis_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:
         return False
 
     value = backend[0] if isinstance(backend, (list, tuple)) else backend
-    return value.startswith("redis://") or value.startswith("sentinel://")
+    return value.startswith(("redis://", "sentinel://"))
 
 
 def is_redis_sentinel_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:

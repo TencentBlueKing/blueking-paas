@@ -74,7 +74,7 @@ class TestSourcePackagePatcher:
             assert str(patcher.module_dir.path).startswith(str(tmp_path))
 
     @pytest.mark.parametrize(
-        "contents, target, ctx, expected",
+        ("contents", "target", "ctx", "expected"),
         [
             # 我们的打包脚本会默认打成相对路径形式
             (
@@ -262,7 +262,7 @@ class TestSourcePackagePatcher:
             assert yaml.load(fp.read()) == expected
 
     @pytest.mark.parametrize(
-        "contents, target, ctx, expected",
+        ("contents", "target", "ctx", "expected"),
         [
             (
                 {

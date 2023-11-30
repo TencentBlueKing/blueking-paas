@@ -41,8 +41,8 @@ def _setup_deployed_statuses():
         yield
 
 
-@pytest.fixture
-def with_all_deployed():
+@pytest.fixture()
+def _with_all_deployed():
     """Make sure the application has completed deployment in all environments."""
     with mock.patch("paasng.accessories.publish.market.protections.env_is_deployed", return_value=True):
         yield
@@ -72,7 +72,8 @@ class TestAppPublishPreparer:
         assert "fill_product_info" not in action_names
         assert "deploy_prod_env" in action_names
 
-    def test_app_with_product_prod_env(self, bk_app, bk_module, with_all_deployed):
+    @pytest.mark.usefixtures("_with_all_deployed")
+    def test_app_with_product_prod_env(self, bk_app, bk_module):
         _ = G(Product, application=bk_app)
         deployment = create_fake_deployment(bk_module)
         deployment.status = JobStatus.SUCCESSFUL.value

@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 
 class TestEnvRoleProtectionCheck:
     @pytest.mark.parametrize(
-        "db_roles,forbidden_roles,allowed_roles",
+        ("db_roles", "forbidden_roles", "allowed_roles"),
         [
             ([], [], [AR.ADMINISTRATOR, AR.DEVELOPER, AR.OPERATOR]),
             ([AR.ADMINISTRATOR], [AR.DEVELOPER, AR.OPERATOR], [AR.ADMINISTRATOR]),
@@ -56,7 +56,7 @@ class TestEnvRoleProtectionCheck:
             env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=bk_prod_env, roles=[role])
 
     @pytest.mark.parametrize(
-        "db_envs,input_envs",
+        ("db_envs", "input_envs"),
         [
             ([], ["stag", "prod"]),
             (["stag"], ["prod"]),

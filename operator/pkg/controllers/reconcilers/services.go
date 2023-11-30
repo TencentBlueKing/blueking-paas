@@ -22,8 +22,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"bk.tencent.com/paas-app-operator/pkg/metrics"
-
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +31,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
 // NewServiceReconciler will return a ServiceReconciler with given k8s client

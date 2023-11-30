@@ -21,8 +21,6 @@ package reconcilers
 import (
 	"context"
 
-	"bk.tencent.com/paas-app-operator/pkg/metrics"
-
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -32,6 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
 // NewBkappFinalizer will return a BkappFinalizer with given k8s client

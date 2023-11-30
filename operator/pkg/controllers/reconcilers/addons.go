@@ -22,8 +22,6 @@ import (
 	"context"
 	"fmt"
 
-	"bk.tencent.com/paas-app-operator/pkg/metrics"
-
 	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +29,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 )

@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"time"
 
-	"bk.tencent.com/paas-app-operator/pkg/metrics"
-
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
 	"github.com/pkg/errors"
@@ -44,6 +42,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 

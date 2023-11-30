@@ -23,8 +23,6 @@ package reconcilers
 import (
 	"context"
 
-	"bk.tencent.com/paas-app-operator/pkg/metrics"
-
 	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +31,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
 // NewDeployActionReconciler returns a DeployActionReconciler.

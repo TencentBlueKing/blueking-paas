@@ -22,8 +22,6 @@ import (
 	"context"
 	"fmt"
 
-	"bk.tencent.com/paas-app-operator/pkg/metrics"
-
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,6 +33,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/svcdisc"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 

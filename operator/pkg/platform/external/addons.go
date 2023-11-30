@@ -26,10 +26,10 @@ import (
 	"io"
 	"time"
 
-	"bk.tencent.com/paas-app-operator/pkg/metrics"
-
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
 // AddonInstance define the structure return from QueryAddonInstance API

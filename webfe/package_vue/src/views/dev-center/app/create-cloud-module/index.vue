@@ -1098,7 +1098,6 @@ export default {
         if (!processData || !hookData) return;
         hookData.type = 'pre-release-hook';
         params.bkapp_spec.processes = processData;
-        params.bkapp_spec.hook = hookData;
         if (hookData.enabled) {
           params.bkapp_spec.hook = hookData;
         }

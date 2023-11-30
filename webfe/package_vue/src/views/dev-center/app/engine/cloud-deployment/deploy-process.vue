@@ -104,7 +104,6 @@
             :rules="rules"
             ext-cls="form-process"
           >
-            <!-- v1alpha2 镜像仓库不带tag -->
             <bk-form-item
               :label="$t('镜像仓库')"
               :label-width="labelWidth"
@@ -112,11 +111,11 @@
             >
               {{ formData.image || '--' }}
               <i
+                v-if="!isCreate"
                 class="paasng-icon paasng-edit-2 image-store-icon"
                 @click="handleToModuleInfo"
               />
             </bk-form-item>
-            <!-- v1alpha1 镜像地址 -->
             <bk-form-item
               :label="$t('镜像地址')"
               :required="true"
@@ -228,7 +227,7 @@
                 v-model="formData.args"
                 style="width: 500px"
                 ext-cls="tag-extra"
-                :placeholder="$t('请输入命令参数')"
+                :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
                 :allow-create="allowCreate"
                 :allow-auto-match="true"
                 :has-delete-icon="hasDeleteIcon"
@@ -348,7 +347,7 @@
                           :value="true"
                           :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
                           v-bk-tooltips="{
-                            content: $t('该环境暂不支持自动扩缩容'),
+                            content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
                             disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
                           }"
                         >
@@ -522,7 +521,7 @@
                           :value="true"
                           :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
                           v-bk-tooltips="{
-                            content: $t('该环境暂不支持自动扩缩容'),
+                            content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
                             disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
                           }"
                         >
@@ -852,6 +851,16 @@ export default {
       type: Boolean,
       default: false,
     },
+    // 创建应用镜像仓库
+    imageUrl: {
+      type: String,
+      default: '',
+    },
+    // 创建应用镜像凭证
+    imageCredentialName: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -859,7 +868,15 @@ export default {
       processNameActive: 'web', // 选中的进程名
       btnIndex: 0,
       panelActive: 0,
-      formData: {},
+      formData: {
+        name: 'web',
+        image: null,
+        image_credential_name: null,
+        command: [],
+        args: [],
+        port: 5000,
+        env_overlay: ENV_OVERLAY,
+      },
       formDataBackUp: {
         name: 'web',
         image: null,
@@ -1081,10 +1098,38 @@ export default {
       },
       deep: true,
     },
+    imageUrl: {
+      handler(v) {
+        // 创建应用且没有镜像仓库值 则设置
+        if (this.isCreate && !this.formData.image) {
+          this.$nextTick(() => {
+            this.$set(this.formData, 'image', v);
+          });
+        }
+      },
+      immediate: true,
+    },
+    imageCredentialName: {
+      handler(v) {
+        // 创建应用且没有镜像凭证值 则设置
+        if (this.isCreate && !this.formData.image_credential_name) {
+          this.$nextTick(() => {
+            this.$set(this.formData, 'image_credential_name', v);
+          });
+        }
+      },
+      immediate: true,
+    },
   },
   async created() {
-    // 非创建应用初始化为查看态
-    if (!this.isCreate) {
+    if (this.isCreate) {
+      if (!this.processData.length) {
+        this.processData.push(this.formData);
+        this.processDataBackUp = _.cloneDeep(this.processData);
+        this.panels = _.cloneDeep(this.processData);
+      }
+    } else {
+      // 非创建应用初始化为查看态
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
       // 扩缩容FeatureFlag
@@ -1092,9 +1137,12 @@ export default {
       this.getAutoScalFlag('prod');
     }
     // 镜像需要调用进程配置
+    console.log('this.isCustomImage', this.isCustomImage);
     if (this.isCustomImage) {
       this.init();
     }
+    // 获取资源配额数据
+    await this.getQuotaPlans();
   },
   mounted() {
   },
@@ -1114,6 +1162,10 @@ export default {
         this.processDataBackUp = _.cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
+          // 传入的镜像仓库示例
+          if (this.imageUrl) {
+            this.formData.image = this.imageUrl;
+          }
           if (!Object.keys(this.formData.env_overlay).length) {
             this.formData.env_overlay = ENV_OVERLAY;
           }
@@ -1126,8 +1178,6 @@ export default {
         });
       } finally {
         this.isLoading = false;
-        // 获取资源配额数据
-        await this.getQuotaPlans();
       }
     },
     // 将web放在第一个位置
@@ -1377,6 +1427,10 @@ export default {
       await this.$refs?.formStagEnv?.validate();
       await this.$refs?.formProdEnv?.validate();
       await this.$refs?.formDeploy?.validate();
+      // 创建应用或创建模块返回值
+      if (this.isCreate) {
+        return [...this.processData];
+      }
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,

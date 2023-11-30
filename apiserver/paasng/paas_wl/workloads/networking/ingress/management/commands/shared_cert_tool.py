@@ -120,4 +120,3 @@ class Command(BaseCommand):
 
         logger.info("Certificate updated.")
         logger.info('Run "refresh_cert" command to fresh related resources.')
-        return

@@ -53,12 +53,12 @@ def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
     return cattr.structure(obj, TypeProcesses)
 
 
-@pytest.mark.usefixtures("init_tmpls")
+@pytest.mark.usefixtures("_init_tmpls")
 class TestGetProcesses:
     """Test get_procfile()"""
 
     @pytest.mark.parametrize(
-        "file_content,error_pattern",
+        ("file_content", "error_pattern"),
         [
             (ValueError("trivial value error"), "Can not read Procfile file from repository"),
             ("invalid#$type: gunicorn\n", "pattern"),
@@ -97,7 +97,7 @@ class TestGetProcesses:
             )
 
     @pytest.mark.parametrize(
-        "extra_info, expected",
+        ("extra_info", "expected"),
         [
             (
                 {},
@@ -146,7 +146,7 @@ class TestGetProcesses:
         assert processes == expected
 
     @pytest.mark.parametrize(
-        "processes_desc, expected",
+        ("processes_desc", "expected"),
         [
             (
                 {"web": {"command": "start web;"}},
@@ -180,6 +180,7 @@ class TestGetProcesses:
         assert processes == expected
 
     def test_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
+        """s-mart case: 当处理 app_desc 后, 从源码包读取进程包含进程启动命令、方案、副本数等信息"""
         bk_module_full.source_origin = SourceOrigin.S_MART
         bk_module_full.save()
 
@@ -193,7 +194,11 @@ class TestGetProcesses:
                 "bk_app_code": bk_app_full.code,
                 "bk_app_name": bk_app_full.name,
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {"is_default": True, "processes": {"web": {"command": "start web"}}, "language": "python"},
+                "module": {
+                    "is_default": True,
+                    "processes": {"web": {"command": "start web", "plan": "default", "replicas": 5}},
+                    "language": "python",
+                },
             },
         )
 
@@ -204,9 +209,12 @@ class TestGetProcesses:
         handler.handle_deployment(bk_deployment_full)
 
         processes = get_processes(deployment=bk_deployment_full)
-        assert processes == cast_to_processes({"web": {"name": "web", "command": "start web"}})
+        assert processes == cast_to_processes(
+            {"web": {"name": "web", "command": "start web", "plan": "default", "replicas": 5}}
+        )
 
     def test_get_from_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
+        """lesscode case: 当未处理 app_desc 时, 从源码包读取进程仅包含进程启动命令信息"""
         bk_module_full.source_origin = SourceOrigin.S_MART
         bk_module_full.save()
 
@@ -220,7 +228,11 @@ class TestGetProcesses:
                 "bk_app_code": bk_app_full.code,
                 "bk_app_name": bk_app_full.name,
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {"is_default": True, "processes": {"web": {"command": "start web"}}, "language": "python"},
+                "module": {
+                    "is_default": True,
+                    "processes": {"web": {"command": "start web", "plan": "default"}},
+                    "language": "python",
+                },
             },
         )
 
@@ -301,12 +313,12 @@ class TestGetSourcePackagePath:
         )
 
 
-@pytest.mark.usefixtures("init_tmpls")
+@pytest.mark.usefixtures("_init_tmpls")
 class TestDownloadSourceToDir:
     """Test download_source_to_dir()"""
 
     @pytest.fixture(autouse=True)
-    def mocked_ctl(self):
+    def _mocked_ctl(self):
         with mock.patch("paasng.platform.engine.utils.source.get_repo_controller"), mock.patch(
             "paasng.platform.engine.utils.source.PackageController"
         ):
@@ -326,7 +338,7 @@ class TestDownloadSourceToDir:
             assert list(working_dir.iterdir()) == []
 
     @pytest.mark.parametrize(
-        "source_origin, processes, source_dir, target, expected",
+        ("source_origin", "processes", "source_dir", "target", "expected"),
         [
             (
                 SourceOrigin.AUTHORIZED_VCS.value,

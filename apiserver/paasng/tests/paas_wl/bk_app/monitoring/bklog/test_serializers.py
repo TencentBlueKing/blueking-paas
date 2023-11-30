@@ -30,7 +30,7 @@ from paas_wl.infras.resources.kube_res.base import GVKConfig
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def gvk_config():
     return GVKConfig(
         server_version="1.20",
@@ -40,7 +40,7 @@ def gvk_config():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def bklog_manifest(wl_app) -> Dict[str, Any]:
     return {
         "apiVersion": "bk.tencent.com/v1alpha1",

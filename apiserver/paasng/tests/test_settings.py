@@ -31,7 +31,7 @@ from paasng.settings.utils import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def settings():
     return LazySettings()
 
@@ -46,7 +46,7 @@ def test_get_database_from_url(settings):
 
 
 @pytest.mark.parametrize(
-    "for_tests,name",
+    ("for_tests", "name"),
     [(False, "foo"), (True, "test_foo")],
 )
 def test_get_database_for_tests(settings, for_tests, name):

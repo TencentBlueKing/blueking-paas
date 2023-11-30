@@ -38,7 +38,14 @@ class DomainEditableMixin(serializers.Serializer):
     - "valid_domain_suffixes": if given, validate domain_name with given suffixes
     """
 
-    path_prefix = serializers.RegexField(r"^/[^/]*/?$", default="/", help_text='支持一级子目录，格式: "/path/"')
+    path_prefix = serializers.RegexField(
+        r"^/[^/]*/?$",
+        default="/",
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        help_text='支持一级子目录，格式: "/path/"',
+    )
     domain_name = serializers.RegexField(
         re.compile(r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?$"),
         max_length=253,
@@ -66,11 +73,12 @@ class DomainEditableMixin(serializers.Serializer):
 
     def validate_domain_name(self, value: str):
         """Validate domain name field"""
-        if self.context.get("valid_domain_suffixes"):
-            if not any(value.endswith(suffix) for suffix in self.context["valid_domain_suffixes"]):
-                raise ValidationError(
-                    "当前域名后缀非法，合法后缀：{}".format(" / ".join(self.context["valid_domain_suffixes"]))
-                )
+        if self.context.get("valid_domain_suffixes") and not any(
+            value.endswith(suffix) for suffix in self.context["valid_domain_suffixes"]
+        ):
+            raise ValidationError(
+                "当前域名后缀非法，合法后缀：{}".format(" / ".join(self.context["valid_domain_suffixes"]))
+            )
         return value
 
 

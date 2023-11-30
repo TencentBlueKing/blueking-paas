@@ -45,10 +45,10 @@ class TestSubPathAppIngressMgr:
             assert len(domains) == 0
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestAssignSubpaths:
     @pytest.fixture(autouse=True)
-    def configure(self):
+    def _configure(self):
         with replace_cluster_service({"sub_path_domains": [{"name": "main.example.com"}]}):
             yield
 

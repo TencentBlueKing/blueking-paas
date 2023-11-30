@@ -24,13 +24,13 @@ import requests
 from tests.paasng.platform.sourcectl.packages.utils import MockAdapter
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_adapter():
     session = requests.session()
     adapter = MockAdapter()
     session.mount("http://", adapter)
-    with mock.patch("requests.sessions.Session") as Session:
-        Session.return_value = session
+    with mock.patch("requests.sessions.Session") as mocked_session:
+        mocked_session.return_value = session
         yield adapter
 
     adapter.close_fh()

@@ -112,7 +112,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         input_slz = ListConfigVarsSLZ(data=request.query_params)
         input_slz.is_valid(raise_exception=True)
 
-        config_vars = self.get_queryset().select_related("environment")
+        config_vars = self.get_queryset()
 
         # Filter by environment name
         environment_name = input_slz.data.get("environment_name")
@@ -129,8 +129,8 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """View the built-in environment variables of the app"""
 
-    def _get_enum_choices_dict(self, EnumObj) -> Dict[str, str]:
-        return {field[0]: field[1] for field in EnumObj.get_choices()}
+    def _get_enum_choices_dict(self, enum_obj) -> Dict[str, str]:
+        return {field[0]: field[1] for field in enum_obj.get_choices()}
 
     def get_builtin_envs_for_app(self, request, code):
         env_dict = self._get_enum_choices_dict(AppInfoBuiltinEnv)
@@ -204,7 +204,10 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         order_by = list_vars_slz.data["order_by"]
 
         queryset = (
-            self.get_queryset().filter(is_builtin=False).select_related("environment").order_by(order_by, "is_global")
+            self.get_queryset()
+            .filter(is_builtin=False)
+            .prefetch_related("environment")
+            .order_by(order_by, "is_global")
         )
 
         result = ExportedConfigVars.from_list(list(queryset))

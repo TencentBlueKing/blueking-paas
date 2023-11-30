@@ -139,7 +139,7 @@ class RepoProvider:
         try:
             list(self.rclient.list(rel_path=desired_name))
 
-            logger.info("Skip init, %s already exists in svn server." % desired_name)
+            logger.info("Skip init, %s already exists in svn server.", desired_name)
             raise AlreadyInitializedSvnRepo("Repo %s has already been initialized!" % desired_name)
         except SvnException as e:
             # Will raise svn: E200009 is directory does not exists

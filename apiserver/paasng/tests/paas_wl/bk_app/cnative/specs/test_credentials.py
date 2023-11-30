@@ -54,7 +54,7 @@ def build_manifest_v1alpha2(image: Optional[str] = None, credential_name: Option
 
 
 @pytest.mark.parametrize(
-    "manifest, expected",
+    ("manifest", "expected"),
     [
         # case for v1alpha1
         (build_manifest_v1alpha1({}, {}), []),

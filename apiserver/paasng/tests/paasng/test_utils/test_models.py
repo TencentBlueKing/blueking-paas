@@ -65,7 +65,7 @@ def test_make_legacy_json_field():
     class Dummy:
         a: str
 
-    DummyField = make_legacy_json_field("DummyField", Dummy)
+    DummyField = make_legacy_json_field("DummyField", Dummy)  # noqa: N806
     assert DummyField.__module__ == __name__
     assert DummyField.__name__ == "DummyField"
 
@@ -75,7 +75,7 @@ def test_make_json_field():
     class Dummy:
         a: str
 
-    DummyField = make_json_field("DummyField", Dummy)
+    DummyField = make_json_field("DummyField", Dummy)  # noqa: N806
     assert DummyField.__module__ == __name__
     assert DummyField.__name__ == "DummyField"
 
@@ -93,7 +93,7 @@ UnPickleAbleField = make_legacy_json_field("NotAPickleAbleField", Baz)
 
 
 @pytest.mark.parametrize(
-    "field, expected",
+    ("field", "expected"),
     [
         (PickleAbleField1, does_not_raise()),
         (PickleAbleField2, does_not_raise()),

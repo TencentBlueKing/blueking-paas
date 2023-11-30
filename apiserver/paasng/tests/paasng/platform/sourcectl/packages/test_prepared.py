@@ -25,7 +25,7 @@ from paasng.platform.smart_app.prepared import PreparedSourcePackage
 
 class TestPreparedSourcePackage:
     @pytest.mark.parametrize(
-        "file_path,expected_basename",
+        ("file_path", "expected_basename"),
         [
             ("/var/本地日志3.log", "3.log"),
             ("/var/app$3-.tar.gz", "app3.tar.gz"),

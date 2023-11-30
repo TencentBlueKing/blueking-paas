@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGeneration:
-    @pytest.fixture
+    @pytest.fixture()
     def release(self, wl_app):
         return create_wl_release(
             wl_app=wl_app,
@@ -39,19 +39,19 @@ class TestGeneration:
             release_params={"version": 2},
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def process(self, wl_app, release):
         return AppProcessManager(app=wl_app).assemble_process(process_type="web", release=release)
 
-    @pytest.fixture
+    @pytest.fixture()
     def client(self, wl_app):
         return get_client_by_app(wl_app)
 
-    @pytest.fixture
+    @pytest.fixture()
     def v1_mapper(self):
         return get_mapper_version("v1")
 
-    @pytest.fixture
+    @pytest.fixture()
     def v2_mapper(self):
         return get_mapper_version("v2")
 
@@ -74,7 +74,7 @@ class TestGeneration:
         )
 
     def test_v1_get(self, wl_app, process, client, v1_mapper):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"client is required.*"):
             v1_mapper.pod(process=process).get()
 
         mapper = v1_mapper.pod(process=process, client=client)

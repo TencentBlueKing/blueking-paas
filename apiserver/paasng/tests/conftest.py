@@ -114,13 +114,13 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def configure_default_region():
+def _configure_default_region():
     with configure_regions([DEFAULT_REGION]):
         yield
 
 
 @pytest.fixture(autouse=True, scope="session")
-def drop_legacy_db(request, django_db_keepdb: bool):
+def _drop_legacy_db(request, django_db_keepdb: bool):
     """在单元测试结束后, 自动摧毁测试数据库, 除非用户显示要求保留"""
     if django_db_keepdb:
         return
@@ -135,10 +135,17 @@ def drop_legacy_db(request, django_db_keepdb: bool):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def configure_docker_registry_config():
+def _configure_docker_registry_config():
     with override_settings(
         DOCKER_REGISTRY_CONFIG={"DEFAULT_REGISTRY": "127.0.0.1:5000", "ALLOW_THIRD_PARTY_REGISTRY": False}
     ):
+        yield
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _configure_remote_service():
+    # unittest should not configure any remote service endpoints
+    with override_settings(SERVICE_REMOTE_ENDPOINTS=None):
         yield
 
 
@@ -158,14 +165,14 @@ def pytest_sessionstart(session):
     get_storage_by_bucket(settings.APP_LOGO_BUCKET)
 
 
-@pytest.fixture
+@pytest.fixture()
 def legacy_app_code():
     """The legacy App code using for Unit test"""
     return getattr(settings, "FOR_TESTS_LEGACY_APP_CODE", "document")
 
 
 @pytest.fixture(autouse=True)
-def auto_init_legacy_app(request):
+def _auto_init_legacy_app(request):
     if "legacy_app_code" not in request.fixturenames:
         yield
         return
@@ -181,13 +188,13 @@ def auto_init_legacy_app(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def skip_iam_migrations():
+def _skip_iam_migrations():
     with override_settings(BK_IAM_SKIP=True):
         yield
 
 
-@pytest.fixture(autouse=True, scope="function")
-def sqlalchemy_transaction(request):
+@pytest.fixture(autouse=True)
+def _sqlalchemy_transaction(request):
     """为使用了 sqlalchemy 操作 legacy db 的单元测试提供自动回滚，保证单元测试前后的状态一致"""
     session = None
 
@@ -260,7 +267,7 @@ def sqlalchemy_transaction(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def init_test_app_repo(request):
+def _init_test_app_repo(request):
     """初始化测试应用仓库"""
     if not request.config.getvalue("init_test_app_repo"):
         return
@@ -301,7 +308,7 @@ def init_test_app_repo(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def init_s3_bucket(request):
+def _init_s3_bucket(request):
     if not request.config.getvalue("init_s3_bucket"):
         return
 
@@ -319,7 +326,7 @@ def init_s3_bucket(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def override_make_app_metadata():
+def _override_make_app_metadata():
     old_handler = make_app_metadata_stub.handler
     make_app_metadata_stub.use(lambda env: {}, force_replace=True)
     yield
@@ -327,13 +334,13 @@ def override_make_app_metadata():
         make_app_metadata_stub.use(old_handler, force_replace=True)
 
 
-@pytest.fixture
+@pytest.fixture()
 def random_name():
     """Generate an random name which can be used for app's code & name"""
     return "ut{}".format(generate_random_string(length=6))
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_user(request):
     """Generate a random user"""
     user = create_user()
@@ -341,7 +348,7 @@ def bk_user(request):
 
 
 @pytest.fixture(autouse=True)
-def mock_iam():
+def _mock_iam():
     def mock_user_has_app_action_perm(user, application, action) -> bool:
         from paasng.infras.iam.constants import APP_DEFAULT_ROLES
         from paasng.infras.iam.helpers import fetch_user_roles
@@ -349,10 +356,7 @@ def mock_iam():
         from paasng.utils.basic import get_username_by_bkpaas_user_id
 
         user_roles = fetch_user_roles(application.code, get_username_by_bkpaas_user_id(user.pk))
-        for role in APP_DEFAULT_ROLES:
-            if role in user_roles and action in get_app_actions_by_role(role):
-                return True
-        return False
+        return any(role in user_roles and action in get_app_actions_by_role(role) for role in APP_DEFAULT_ROLES)
 
     from tests.utils.mocks.iam import StubBKIAMClient
     from tests.utils.mocks.permissions import StubApplicationPermission
@@ -382,27 +386,31 @@ def mock_iam():
         yield
 
 
-@pytest.fixture
-def bk_app(request, bk_user) -> Application:
-    """Generate a random application owned by current user fixture
-
-    This result object is not fully functional in order to speed up fixture, if you want a full featured application.
-    use `bk_app_full` instead.
-    """
+@pytest.fixture()
+def _mock_after_created_action():
     # skip registry app core data to console
     before_finishing_application_creation.disconnect(register_app_core_data)
-    app = create_app(owner_username=bk_user.username)
+    yield
     before_finishing_application_creation.connect(register_app_core_data)
-    return app
 
 
-@pytest.fixture
-def bk_cnative_app(request, bk_user):
+@pytest.fixture()
+def bk_app(request, bk_user, _mock_after_created_action) -> Application:
+    """Generate a random application owned by current user fixture
+
+    This result object is not fully functional in order to speed up fixture, if you want a full featured applicƒsation.
+    use `bk_app_full` instead.
+    """
+    return create_app(owner_username=bk_user.username)
+
+
+@pytest.fixture()
+def bk_cnative_app(request, bk_user, _mock_after_created_action):
     """Generate a random cloud-native application owned by current user fixture"""
     return create_cnative_app(owner_username=bk_user.username, cluster_name=CLUSTER_NAME_FOR_TESTING)
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_plugin_app(bk_app):
     bk_app.type = ApplicationType.BK_PLUGIN
     bk_app.save(update_fields=["type"])
@@ -412,13 +420,13 @@ def bk_plugin_app(bk_app):
     return bk_app
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_app_full(request, bk_user) -> Application:
     """Generate a random *fully featured* application owned by current user fixture"""
     return create_app(owner_username=bk_user.username, additional_modules=["deploy_phases", "sourcectl"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_module(request) -> Module:
     """Return the default module if current application fixture"""
     if "bk_cnative_app" in request.fixturenames:
@@ -428,7 +436,7 @@ def bk_module(request) -> Module:
     return bk_app.get_default_module()
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_module_full(request) -> Module:
     """Return the *fully featured* default module"""
     if "bk_cnative_app" in request.fixturenames:
@@ -438,12 +446,12 @@ def bk_module_full(request) -> Module:
     return bk_app.get_default_module()
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_stag_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment="stag")
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_prod_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment="prod")
 
@@ -455,19 +463,19 @@ def bk_env(request):
     return request.getfixturevalue(request.param)
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_deployment(bk_module):
     """Generate a simple deployment object"""
     return create_fake_deployment(bk_module)
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_deployment_full(bk_module_full):
     """Generate a simple deployment object for bk_module_full(which have source_obj)"""
     return create_fake_deployment(bk_module_full)
 
 
-@pytest.fixture
+@pytest.fixture()
 def api_client(request, bk_user):
     """Return an authenticated client"""
     client = APIClient()
@@ -475,7 +483,7 @@ def api_client(request, bk_user):
     return client
 
 
-@pytest.fixture
+@pytest.fixture()
 def sys_api_client(bk_user):
     """Return an authenticated client which has an authenticated user with system API permissions"""
     client = APIClient()
@@ -487,7 +495,7 @@ def sys_api_client(bk_user):
     return client
 
 
-@pytest.fixture
+@pytest.fixture()
 def sys_light_api_client(bk_user):
     """Return an authenticated client which has an authenticated user with Light App permissions"""
     client = APIClient()
@@ -499,7 +507,7 @@ def sys_light_api_client(bk_user):
     return client
 
 
-@pytest.fixture
+@pytest.fixture()
 def sys_lesscode_api_client(bk_user):
     """Return an authenticated client which has an authenticated user with Lesscode permissions"""
     client = APIClient()
@@ -509,7 +517,7 @@ def sys_lesscode_api_client(bk_user):
     return client
 
 
-@pytest.fixture
+@pytest.fixture()
 def svn_repo_credentials():
     conf = getattr(settings, "FOR_TESTS_APP_SVN_INFO", None)
     if not conf:
@@ -517,7 +525,7 @@ def svn_repo_credentials():
     return conf
 
 
-@pytest.fixture
+@pytest.fixture()
 def dummy_svn_spec():
     """Local Svn address for running unittest"""
     return {
@@ -537,7 +545,7 @@ def dummy_svn_spec():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def dummy_gitlab_spec():
     """Local GitLab address for running unittest"""
     return {
@@ -557,7 +565,7 @@ def dummy_gitlab_spec():
 
 
 @pytest.fixture(autouse=True)
-def setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
+def _setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
     spec_cls_module_path = "paasng.platform.sourcectl.type_specs"
 
     dummy_oauth_config = {
@@ -608,8 +616,8 @@ def setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
     refresh_sourcectl_types(type_configs)
 
 
-@pytest.fixture
-def init_tmpls():
+@pytest.fixture()
+def _init_tmpls():
     from paasng.platform.engine.constants import RuntimeType
     from paasng.platform.templates.constants import TemplateType
     from paasng.platform.templates.models import Template
@@ -694,7 +702,7 @@ def init_tmpls():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def create_custom_app():
     def create(owner, **kwargs):
         random_name = generate_random_string(length=6)
@@ -729,7 +737,7 @@ def create_custom_app():
     return create
 
 
-@pytest.fixture
+@pytest.fixture()
 def create_module(bk_app):
     module = Module.objects.create(region=bk_app.region, application=bk_app, name=generate_random_string(length=8))
     initialize_module(module)
@@ -773,7 +781,7 @@ def mark_skip_if_console_not_configured():
     return pytest.mark.skipif(not check_console_enabled(), reason="Console db engine is not initialized")
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_env_is_running():
     status: Dict[Union[str, ModuleEnvironment], bool] = {}
 
@@ -791,7 +799,7 @@ def mock_env_is_running():
         yield status
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_get_builtin_addresses(mock_env_is_running):
     addresses: Dict[str, List] = {}
 
@@ -806,14 +814,16 @@ def mock_get_builtin_addresses(mock_env_is_running):
         yield addresses
 
 
-@pytest.fixture
-def with_empty_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
+# TODO: fix PT004
+@pytest.fixture()
+def with_empty_live_addrs(mock_env_is_running, mock_get_builtin_addresses):  # noqa: PT004
     """Always return empty addresses by patching `get_builtin_addresses` function"""
-    yield
+    return
 
 
-@pytest.fixture
-def with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
+# TODO: fix PT004
+@pytest.fixture()
+def with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):  # noqa: PT004
     """Always return valid addresses by patching `get_builtin_addresses` function"""
     mock_env_is_running["stag"] = True
     mock_env_is_running["prod"] = True
@@ -825,11 +835,10 @@ def with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
         Address(type=AddressType.SUBPATH, url="http://example.com/foo-prod/"),
         Address(type=AddressType.SUBDOMAIN, url="http://foo-prod.example.com"),
     ]
-    yield
 
 
-@pytest.fixture
-def with_wl_apps(request):
+@pytest.fixture()
+def with_wl_apps(request):  # noqa: PT004
     """Create all pending WlApp objects related with current bk_app, useful
     for tests which want to use `bk_app`, `bk_stag_env` fixtures.
     """
@@ -841,7 +850,7 @@ def with_wl_apps(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def mock_sync_developers_to_sentry():
+def _mock_sync_developers_to_sentry():
     # 避免单元测试时会往 celery 推送任务
     with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
         "paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
@@ -850,7 +859,7 @@ def mock_sync_developers_to_sentry():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def mock_delete_process_probe(request):
+def _mock_delete_process_probe(request):
     skip_patch = request.param if hasattr(request, "param") else False
 
     if not skip_patch:

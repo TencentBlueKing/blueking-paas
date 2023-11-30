@@ -9,17 +9,18 @@
       :mask-close="false"
       :loading="deployAppDialog.isLoading"
       :auto-close="false"
-      :ok-text="`${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境') }`"
+      :ok-text="`${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
       @confirm="handleConfirmValidate"
       @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
       <!-- 源码逻辑 -->
       <div v-if="isSourceCodeBuild">
-        <div class="code-depot mb10" v-if="deploymentInfoBackUp.repo_url">
-          <span class="pr20">
-            {{ $t('代码仓库') }}：
-          </span>
+        <div
+          class="code-depot mb10"
+          v-if="deploymentInfoBackUp.repo_url"
+        >
+          <span class="pr20">{{ $t('代码仓库') }}：</span>
           {{ deploymentInfoBackUp.repo_url }}
         </div>
         <div class="image-source">
@@ -40,15 +41,23 @@
             </bk-button>
           </div>
         </div>
-        <div class="image-source mt20" v-if="buttonActive === 'branch'">
+        <div
+          class="image-source mt20"
+          v-if="buttonActive === 'branch'"
+        >
           <div class="mb10 flex-row justify-content-between">
-            <div>{{$t('代码分支选择')}}</div>
-            <div class="version-code" @click="handleShowCommits">{{$t('查看代码版本差异')}}</div>
+            <div>{{ $t('代码分支选择') }}</div>
+            <div
+              class="version-code"
+              @click="handleShowCommits"
+            >
+              {{ $t('查看代码版本差异') }}
+            </div>
           </div>
           <bk-select
             v-model="branchValue"
             :placeholder="$t('请选择')"
-            style="width: 470px; display: inline-block; vertical-align: middle;"
+            style="width: 470px; display: inline-block; vertical-align: middle"
             :popover-min-width="420"
             :clearable="false"
             :searchable="true"
@@ -80,25 +89,32 @@
             <div
               v-if="curAppModule.repo && curAppModule.repo.type === 'bk_svn'"
               slot="extension"
-              style="cursor: pointer;"
+              style="cursor: pointer"
               @click="handleCreateBranch"
             >
-              <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署分支') }}
+              <i class="bk-icon icon-plus-circle mr5" />
+              {{ $t('新建部署分支') }}
             </div>
           </bk-select>
-          <p class="error-text mt5" v-if="branchErrorTips">
+          <p
+            class="error-text mt5"
+            v-if="branchErrorTips"
+          >
             {{ branchErrorTips }}
           </p>
         </div>
 
-        <div class="image-source mt20" v-if="buttonActive === 'image'">
+        <div
+          class="image-source mt20"
+          v-if="buttonActive === 'image'"
+        >
           <div class="mb10 mt10 flex-row justify-content-between">
-            <div>{{$t('镜像Tag')}}</div>
+            <div>{{ $t('镜像Tag') }}</div>
           </div>
           <bk-select
             v-model="tagData.tagValue"
             :placeholder="$t('请选择')"
-            style="width: 470px; display: inline-block; vertical-align: middle;"
+            style="width: 470px; display: inline-block; vertical-align: middle"
             :popover-min-width="420"
             :clearable="false"
             :searchable="true"
@@ -111,7 +127,12 @@
               :key="option.id"
               :name="option.tag"
             />
-            <div slot="extension" @click="handleNext" style="cursor: pointer;" v-if="isShowNext">
+            <div
+              slot="extension"
+              @click="handleNext"
+              style="cursor: pointer"
+              v-if="isShowNext"
+            >
               {{ $t('下一页') }}
             </div>
           </bk-select>
@@ -123,26 +144,29 @@
         <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
         <div v-if="!allowMultipleImage">
           <div class="code-depot mb15">
-            <span class="pr20">
-              {{ $t('镜像仓库') }}：
-            </span>
+            <span class="pr20">{{ $t('镜像仓库') }}：</span>
             {{ deploymentInfoBackUp.repo_url }}
           </div>
           <div>
-            <bk-form :model="tagData" ref="imageFormRef" form-type="vertical">
+            <bk-form
+              :model="tagData"
+              ref="imageFormRef"
+              form-type="vertical"
+            >
               <bk-form-item
                 :label="$t('镜像Tag')"
                 :rules="rules.tag"
                 :required="true"
                 :property="'tagValue'"
                 :error-display-type="'normal'"
+                ext-cls="image-tag-cls"
               >
                 <div
                   v-if="tagUrl"
                   class="image-list version-code"
                   @click="handleOpenUrl(tagUrl)"
                 >
-                  {{$t('查看镜像Tag列表')}}
+                  {{ $t('查看镜像Tag列表') }}
                 </div>
                 <bk-input
                   v-if="tagUrl"
@@ -154,7 +178,7 @@
                   v-else
                   v-model="tagData.tagValue"
                   :placeholder="$t('请选择下拉数据或手动填写')"
-                  style="width: 470px; display: inline-block; vertical-align: middle;"
+                  style="width: 470px; display: inline-block; vertical-align: middle"
                   :popover-min-width="420"
                   :clearable="false"
                   searchable
@@ -170,25 +194,55 @@
                     :name="option.name"
                   />
                 </bk-select>
-                <span v-if="errorTips" class="error-text">{{ errorTips }}</span>
+                <span
+                  v-if="errorTips"
+                  class="error-text"
+                >
+                  {{ errorTips }}
+                </span>
               </bk-form-item>
             </bk-form>
           </div>
         </div>
         <div v-else>
-          <div>{{$t('请确认模块下进程对应的镜像地址')}}</div>
-          <div class="mt10" v-for="item in processesData" :key="item.name">
+          <div>{{ $t('请确认模块下进程对应的镜像地址') }}</div>
+          <div
+            class="mt10"
+            v-for="item in processesData"
+            :key="item.name"
+          >
             <span class="name">{{ item.name }}：</span>
             <span class="value">{{ item.image }}</span>
           </div>
         </div>
       </div>
-      <div class="v1-container" v-if="isShowImagePullStrategy">
-        <div class="image-pull-strategy" :class="(isSourceCodeBuild || !allowMultipleImage) ? '' : 'flex-row'">
-          <label>{{ $t('镜像拉取策略') }}<span v-if="!isSourceCodeBuild && allowMultipleImage">：</span></label>
+      <div
+        class="v1-container"
+        v-if="isShowImagePullStrategy"
+      >
+        <div
+          class="image-pull-strategy"
+          :class="isSourceCodeBuild || !allowMultipleImage ? '' : 'flex-row'"
+        >
+          <div class="label">
+            {{ $t('镜像拉取策略') }}
+            <span v-if="!isSourceCodeBuild && allowMultipleImage">：</span>
+          </div>
           <bk-radio-group v-model="imagePullStrategy">
-            <bk-radio :value="'IfNotPresent'" v-bk-tooltips="ifNotPresentTooltipsConfig">IfNotPresent</bk-radio>
-            <bk-radio :value="'Always'" v-bk-tooltips="alwaysTooltipsConfig">Always</bk-radio>
+            <bk-radio :value="'IfNotPresent'">
+              IfNotPresent
+              <span class="last-selected" v-if="lastSelectedImagePullStrategy === 'IfNotPresent'">
+                ({{ $t('上次选择') }})
+              </span>
+            </bk-radio>
+            <p class="tip mb10">{{ $t('当本地不存在镜像时从远程仓库拉取') }}</p>
+            <bk-radio :value="'Always'">
+              Always
+              <span class="last-selected" v-if="lastSelectedImagePullStrategy === 'Always'">
+                ({{ $t('上次选择') }})
+              </span>
+            </bk-radio>
+            <p class="tip">{{ $t('总在容器启动时拉取最新的镜像') }}</p>
           </bk-radio-group>
         </div>
       </div>
@@ -247,7 +301,10 @@ export default {
         visiable: false,
         isLoading: false,
       },
-      imageSourceData: [{ value: 'branch', label: this.$t('从源码构建') }, { value: 'image', label: this.$t('已构建镜像') }],
+      imageSourceData: [
+        { value: 'branch', label: this.$t('从源码构建') },
+        { value: 'image', label: this.$t('已构建镜像') },
+      ],
       buttonActive: 'branch',
       branchList: [],
       branchesData: [],
@@ -268,7 +325,7 @@ export default {
       tagData: {
         tagValue: '',
       },
-      deploymentInfoBackUp: {},  // 模块信息备份
+      deploymentInfoBackUp: {}, // 模块信息备份
       imageTagListCount: 0,
       rules: {
         tag: [
@@ -284,15 +341,6 @@ export default {
       errorTips: '',
       branchErrorTips: '',
       imagePullStrategy: 'IfNotPresent',
-      alwaysTooltipsConfig: {
-        content: this.$t('总在启动容器时拉取镜像，每个镜像 Tag 默认仅拉取一次，如镜像 Tag 内容有更新，请勾选该选项'),
-        placements: ['right'],
-        width: 300,
-      },
-      ifNotPresentTooltipsConfig: {
-        content: this.$t('如果本地不存在指定的镜像，才会从远程仓库拉取'),
-        placements: ['bottom-start'],
-      },
       processesData: [],
       allowMultipleImage: false,
       curModulemirrorTag: '',
@@ -347,6 +395,11 @@ export default {
       }
       return !this.allowMultipleImage;
     },
+
+    // 上一次选择的镜像拉取策略
+    lastSelectedImagePullStrategy() {
+      return this.deploymentInfoBackUp.state.deployment.latest?.advanced_options?.image_pull_policy || '';
+    },
   },
   watch: {
     show: {
@@ -361,9 +414,13 @@ export default {
         // 仅镜像部署不需要获取分支数据
         console.log('this.deploymentInfoBackUp.build_method', this.deploymentInfoBackUp.build_method);
         if (this.deploymentInfoBackUp.build_method !== 'custom_image') {
-          this.getModuleBranches();   // 获取分支数据
+          this.getModuleBranches(); // 获取分支数据
         } else {
-          this.getAppProcessData();   // 获取镜像地址
+          this.getAppProcessData(); // 获取镜像地址
+        }
+        // 上次选择的镜像拉取策略
+        if (this.lastSelectedImagePullStrategy) {
+          this.imagePullStrategy = this.lastSelectedImagePullStrategy;
         }
       },
       immediate: true,
@@ -383,7 +440,7 @@ export default {
         this.processesData = res.proc_specs;
         this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
         if (!this.allowMultipleImage) {
-          this.getCustomImageTagList();   // 获取仅镜像下镜像tag
+          this.getCustomImageTagList(); // 获取仅镜像下镜像tag
         }
       } catch (e) {
         this.$paasMessage({
@@ -484,7 +541,6 @@ export default {
       }
     },
 
-
     async getModuleRuntimeOverview() {
       try {
         const res = await this.$store.dispatch('deploy/getModuleRuntimeOverview', {
@@ -499,7 +555,6 @@ export default {
         });
       }
     },
-
 
     handleAfterLeave() {
       this.branchValue = '';
@@ -516,7 +571,6 @@ export default {
       // }
       this.showCompare();
     },
-
 
     // 查看代码对比
     async showCompare() {
@@ -603,10 +657,10 @@ export default {
           data: params,
         });
         this.deployAppDialog.visiable = false;
-        this.deployAppDialog.isLoading = false;    // 成功之后关闭弹窗打开侧栏
+        this.deployAppDialog.isLoading = false; // 成功之后关闭弹窗打开侧栏
         this.deploymentId = res.deployment_id;
         this.handleAfterLeave(); // 关闭弹窗
-        this.isShowSideslider = true;  // 打开侧边栏
+        this.isShowSideslider = true; // 打开侧边栏
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -621,7 +675,7 @@ export default {
     async getImageTagList() {
       try {
         this.isTagLoading = true;
-        const res =  await this.$store.dispatch('deploy/getImageTagData', {
+        const res = await this.$store.dispatch('deploy/getImageTagData', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           data: {
@@ -649,7 +703,7 @@ export default {
         this.isTagLoading = true;
         this.tagUrl = '';
         this.errorTips = '';
-        const res =  await this.$store.dispatch('deploy/getCustomImageTagData', {
+        const res = await this.$store.dispatch('deploy/getCustomImageTagData', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
@@ -724,53 +778,63 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-.version-code{
-    cursor: pointer;
-    color: #3A84FF;
-    font-size: 12px;
-  }
-.option-group{
-    position: relative;
-  }
-.paas-branch-btn{
-    position: absolute;
-    right: 30px;
-    top: 0px;
-    font-size: 12px;
-  }
-.btn-container{
+.version-code {
+  cursor: pointer;
+  color: #3a84ff;
+  font-size: 12px;
+}
+.option-group {
+  position: relative;
+}
+.paas-branch-btn {
+  position: absolute;
+  right: 30px;
+  top: 0px;
+  font-size: 12px;
+}
+.btn-container {
   display: flex;
-  .btn-item{
+  .btn-item {
     flex: 1;
   }
 }
-.v1-container{
-  .name{
+.v1-container {
+  .name {
     color: #76787f;
   }
-  .value{
+  .value {
     color: #313238;
   }
 }
-.image-list{
+.image-list {
   position: absolute;
   top: -30px;
   right: 0;
 }
-.error-text{
+.error-text {
   font-size: 12px;
   color: #ea3636;
 }
 .image-pull-strategy {
   margin-top: 20px;
-  label {
+  &>.label {
+    line-height: 32px;
     white-space: nowrap;
   }
+  .tip {
+    margin: 5px 0 0 20px;
+    font-size: 12px;
+    color: #979ba5;
+  }
+  .last-selected {
+    font-size: 12px;
+    color: #C4C6CC;
+  }
 }
-.image-pull-strategy-form,
-.image-pull-strategy {
-  /deep/ .bk-radio-text {
-    border-bottom: 1px dashed;
+
+.image-tag-cls {
+  /deep/ .bk-label::after {
+    display: none;
   }
 }
 </style>

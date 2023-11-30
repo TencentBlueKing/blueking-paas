@@ -49,7 +49,7 @@ def make_process(wl_app: WlApp, process_type: str) -> Process:
     return process
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_reader():
     class setter:
         def __init__(self, list_processes, list_instances):

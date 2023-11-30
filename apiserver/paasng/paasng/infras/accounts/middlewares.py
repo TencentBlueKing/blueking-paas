@@ -54,17 +54,18 @@ class SiteAccessControlMiddleware(MiddlewareMixin):
             if not user_has_site_action_perm(request.user, SiteAction.VISIT_ADMIN42):
                 raise PermissionDenied("You are not allowed to visit this")
 
-            return
+            return None
 
         # Ignore anonymous user
         if not request.user.is_authenticated:
-            return
+            return None
 
         if not user_has_site_action_perm(request.user, SiteAction.VISIT_SITE):
             # Use a custom
             return JsonResponse(
                 {"code": "PRODUCT_NOT_READY", "detail": _("产品灰度测试中，尚未开放，敬请期待")}, status=404
             )
+        return None
 
 
 class PrivateTokenAuthenticationMiddleware:
@@ -160,7 +161,7 @@ class AuthenticatedAppAsUserMiddleware:
     def process_view(self, request, view_func, view_args, view_kwargs):
         # Ignore already authenticated requests
         if getattr(request, "user", None) and request.user.is_authenticated:
-            return None
+            return
 
         if user := self.get_user(request, view_func):
             logger.info(
@@ -170,7 +171,7 @@ class AuthenticatedAppAsUserMiddleware:
                 request.path_info,
             )
             set_database_user(request, user)
-        return None
+        return
 
     def get_user(self, request, view_func: Callable) -> Optional[User]:
         """Get an user object from current request, if no relation can be found by current
@@ -188,12 +189,13 @@ class AuthenticatedAppAsUserMiddleware:
 
         try:
             obj = AuthenticatedAppAsUser.objects.get(bk_app_code=request.app.bk_app_code, is_active=True)
-            return obj.user
         except AuthenticatedAppAsUser.DoesNotExist:
             if hasattr(view_func, "cls") and ForceAllowAuthedApp.check_marked(view_func.cls):
                 # Automatically create a new user and relation
                 return self.create_user(request.app.bk_app_code)
             return None
+        else:
+            return obj.user
 
     @staticmethod
     def create_user(bk_app_code: str) -> DatabaseUser:

@@ -103,7 +103,7 @@ class TestGetDeploymentTags:
             G(DeployFailurePattern, type=DeployFailurePatternType.REGULAR_EXPRESSION, value=value, tag_str=tag_str)
 
     @pytest.mark.parametrize(
-        "logs,tags",
+        ("logs", "tags"),
         [
             ("Procfile error: blabla", [DeploymentFailureTag("fix_procfile")]),
             ("ops, unable to install mysql-client, reason: unknown", [DeploymentFailureTag("fix_mysql_installation")]),

@@ -92,10 +92,7 @@ class BaseEnvAddresses:
 
     def has_custom_url(self, url: str) -> bool:
         """check whether the given url is a custom domain in the environment"""
-        for addr in self.list_custom():
-            if addr.url == url:
-                return True
-        return False
+        return any(addr.url == url for addr in self.list_custom())
 
     def _make_url(self, https_enabled: bool, host: str, path: str = "/") -> str:
         """Make URL address"""
@@ -184,7 +181,7 @@ def get_builtin_addr_preferred(env: ModuleEnvironment) -> Tuple[bool, Optional[A
 
     # Use the first address because the results is sorted already
     addr = addresses[0]
-    if module.exposed_url_type in [ExposedURLType.SUBPATH, ExposedURLType.SUBDOMAIN]:
+    if module.exposed_url_type in [ExposedURLType.SUBPATH, ExposedURLType.SUBDOMAIN]:  # noqa: SIM102
         if preferred_root := module.user_preferred_root_domain:
             # Find the first address ends with preferred root domain
             preferred_addr = next((a for a in addresses if a.hostname_endswith(preferred_root)), None)

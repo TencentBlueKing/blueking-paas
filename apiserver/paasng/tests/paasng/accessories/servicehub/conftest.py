@@ -51,7 +51,7 @@ def bk_plan_r2_v1():
 
 
 @pytest.fixture(autouse=True)
-def setup_mocks():
+def _setup_mocks():
     """
     - Setup regions which were used in mocked data
     - Mock ClusterService which will be used in bind_service
@@ -60,8 +60,8 @@ def setup_mocks():
         yield
 
 
-@pytest.fixture
-def faked_remote_services():
+@pytest.fixture()
+def _faked_remote_services():
     """Stores some faked remote services"""
     store = get_remote_store()
     config_json = {

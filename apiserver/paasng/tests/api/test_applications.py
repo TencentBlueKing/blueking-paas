@@ -48,7 +48,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture()
 def another_user(request):
     """Generate a random user"""
     user = create_user()
@@ -62,7 +62,7 @@ class TestMembershipViewset:
         assert len(response.data["results"]) == 1
 
     @pytest.mark.parametrize(
-        "role, status, ok",
+        ("role", "status", "ok"),
         [
             (..., 403, False),
             (ApplicationRole.ADMINISTRATOR, 200, True),
@@ -90,7 +90,7 @@ class TestMembershipViewset:
             assert test[another_user.username]["role"] == role.value
 
     @pytest.mark.parametrize(
-        "role, request_user_idx, to_create_user_idx, status",
+        ("role", "request_user_idx", "to_create_user_idx", "status"),
         [
             # success case
             (ApplicationRole.ADMINISTRATOR, 0, 1, 201),
@@ -119,7 +119,7 @@ class TestMembershipViewset:
         assert response.status_code == status
 
     @pytest.mark.parametrize(
-        "another_user_role, request_user_idx, be_deleted_idx, status",
+        ("another_user_role", "request_user_idx", "be_deleted_idx", "status"),
         [
             (ApplicationRole.ADMINISTRATOR, 0, 0, 204),
             (ApplicationRole.DEVELOPER, 0, 0, 400),
@@ -153,7 +153,7 @@ class TestMembershipViewset:
             assert len(fetch_application_members(bk_app.code)) == 2
 
     @pytest.mark.parametrize(
-        "another_user_role, request_user_idx, status, code",
+        ("another_user_role", "request_user_idx", "status", "code"),
         [
             # 创建者也可以离开应用
             (ApplicationRole.ADMINISTRATOR, 0, 204, ...),
@@ -199,8 +199,9 @@ class TestMembershipViewset:
 class TestApplicationCreateWithEngine:
     """Test application creation APIs with engine enabled"""
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        "type, desired_type, creation_succeeded",
+        ("type", "desired_type", "creation_succeeded"),
         [
             ("default", "default", True),
             ("bk_plugin", "bk_plugin", True),
@@ -216,7 +217,6 @@ class TestApplicationCreateWithEngine:
         mock_wl_services_in_creation,
         mock_initialize_vcs_with_template,
         settings,
-        init_tmpls,
     ):
         # Turn on "allow_creation" in bk_plugin configs
         settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
@@ -246,8 +246,9 @@ class TestApplicationCreateWithEngine:
                 assert response.status_code == 400
                 assert response.json()["detail"] == '已开启引擎，类型不能为 "engineless_app"'
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        "source_origin, source_repo_url, source_control_type, with_feature_flag, is_success",
+        ("source_origin", "source_repo_url", "source_control_type", "with_feature_flag", "is_success"),
         [
             (
                 SourceOrigin.BK_LESS_CODE,
@@ -277,7 +278,6 @@ class TestApplicationCreateWithEngine:
         source_control_type,
         with_feature_flag,
         is_success,
-        init_tmpls,
     ):
         # Set user feature flag
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
@@ -322,7 +322,7 @@ class TestApplicationCreateWithoutEngine:
 
     @pytest.mark.parametrize("url", ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/"])
     @pytest.mark.parametrize(
-        "profile_regions,region,creation_success",
+        ("profile_regions", "region", "creation_success"),
         [
             (["r1"], "r1", True),
             (["r1", "r2"], "r1", True),
@@ -427,7 +427,8 @@ class TestApplicationDeletion:
 class TestCreateBkPlugin:
     """Test 'bk_plugin' type application's creation"""
 
-    def test_normal(self, api_client, mock_wl_services_in_creation, settings, init_tmpls):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_normal(self, api_client, mock_wl_services_in_creation, settings):
         settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
         response = self._send_creation_request(api_client)
 
@@ -465,7 +466,7 @@ class TestCreateCloudNativeApp:
     """Test 'cloud_native' type application's creation"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, init_tmpls, bk_user, settings):
+    def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
@@ -519,16 +520,13 @@ class TestCreateCloudNativeApp:
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
     @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
-    def test_create_with_buildpack(
-        self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, init_tmpls
-    ):
+    def test_create_with_buildpack(self, mocked_binder, mocked_manager, api_client):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
-        MockedModuleRuntimeBinder().bind_bp_stack.return_value = None
-        MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
-            is_cnb_runtime=True, environments={}
-        )
+        mocked_binder().bind_bp_stack.return_value = None
+        mocked_manager().get_slug_builder.return_value = mock.MagicMock(is_cnb_runtime=True, environments={})
 
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
@@ -552,7 +550,8 @@ class TestCreateCloudNativeApp:
         assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
         assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
 
-    def test_create_with_dockerfile(self, api_client, init_tmpls):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_create_with_dockerfile(self, api_client):
         """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
         random_suffix = generate_random_string(length=6)
         response = api_client.post(

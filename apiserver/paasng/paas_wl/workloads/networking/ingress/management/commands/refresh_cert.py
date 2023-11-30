@@ -84,7 +84,6 @@ class Command(BaseCommand):
         # have a single copy of Secret in one namespace, although it may be shared
         # by multiple Ingresses, so this approach will do fine.
         self.update_secrets(apps, cert, options["dry_run"])
-        return
 
     def scan_and_update(self, cert: AppDomainSharedCert, dry_run: bool):
         """Scan all domains in the cert's region, update the cert related fields if needed."""

@@ -119,7 +119,6 @@ class Command(BaseCommand):
                     f"APP(code:{app_code})-module({module.name})-env({env}) unbundle the service<{service_id}>."
                 )
             )
-        return
 
     def handle(self, source: str, name: str, region: str, dry_run: bool, *args, **options):
         """

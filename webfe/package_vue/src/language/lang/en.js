@@ -2361,8 +2361,6 @@ export default {
   如何配置域名解析: 'How to configure domain name resolution',
   默认密钥更换成功: 'Default key changed successfully',
   镜像拉取策略: 'Image Pull Policy',
-  '如果本地不存在指定的镜像，才会从远程仓库拉取': 'This policy pulls the container image from the remote registry only if it is not already present locally.',
-  '总在启动容器时拉取镜像，每个镜像 Tag 默认仅拉取一次，如镜像 Tag 内容有更新，请勾选该选项': 'Always pull the image when starting a container, each image tag is pulled only once by default. If the content of the image tag is updated, please select this option.',
   '执行 ID': 'Execution ID',
   '镜像 tag': 'Image tag',
   触发信息: 'Trigger information',
@@ -2441,4 +2439,7 @@ export default {
   应用ID: 'Application ID',
   '请输入模块名称，不填则默认为主模块': 'Please enter the module name, leave it blank for the default main module.',
   '请输入 IP': 'Please enter the IP',
+  总在容器启动时拉取最新的镜像: 'Always pulls the latest image from the remote registry when starting the container.',
+  当本地不存在镜像时从远程仓库拉取: 'The image is pulled only if it is not already present locally.',
+  上次选择: 'Last selected',
 };

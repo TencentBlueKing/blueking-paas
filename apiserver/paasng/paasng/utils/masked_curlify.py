@@ -29,15 +29,12 @@ def scrub_data(data: Dict[str, Any]) -> Dict[str, Any]:
 
     :return: A new dict, with sensitive data masked as "******".
     """
-    if not (isinstance(data, dict) or isinstance(data, requests.structures.CaseInsensitiveDict)):
+    if not (isinstance(data, (dict, requests.structures.CaseInsensitiveDict))):
         return data
 
     def _key_is_sensitive(key: str) -> bool:
         """Check if given key is sensitive."""
-        for field in DEFAULT_SCRUBBED_FIELDS:
-            if field in key.lower():
-                return True
-        return False
+        return any(field in key.lower() for field in DEFAULT_SCRUBBED_FIELDS)
 
     result: Dict[str, Any] = {}
 

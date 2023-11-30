@@ -22,7 +22,7 @@ from paasng.platform.sourcectl.source_types import refresh_sourcectl_types
 from paasng.platform.sourcectl.svn.server_config import BkSvnServerConfig, get_bksvn_config
 
 
-@pytest.fixture
+@pytest.fixture()
 def server_config_factory():
     def _factory():
         return {
@@ -58,7 +58,7 @@ class TestBkSvnConfig:
 
 class TestGetBkSvnConfig:
     @pytest.mark.parametrize(
-        "region,base_url",
+        ("region", "base_url"),
         [
             ("r1", "svn://127.0.0.1:3690/r1_base"),
             ("r2", "svn://127.0.0.1:3690/r2_base"),

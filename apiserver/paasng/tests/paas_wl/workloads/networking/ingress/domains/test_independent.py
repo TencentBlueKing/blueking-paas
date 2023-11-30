@@ -33,10 +33,10 @@ class TestReplaceAppDomainService:
         with pytest.raises(ReplaceAppDomainFailed):
             ReplaceAppDomainService(bk_stag_env, "invalid-name.example.com", "/")
 
-    @pytest.mark.mock_get_structured_app
-    @pytest.mark.auto_create_ns
+    @pytest.mark.mock_get_structured_app()
+    @pytest.mark.auto_create_ns()
     @pytest.mark.parametrize(
-        "old_host,old_path_prefix,new_host,new_path_prefix",
+        ("old_host", "old_path_prefix", "new_host", "new_path_prefix"),
         [
             # From direct to subpath
             ("foo.example.com", "/", "bar.example.com", "/bar/"),

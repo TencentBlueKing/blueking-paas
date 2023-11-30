@@ -38,7 +38,7 @@ from tests.utils.helpers import generate_random_string
 
 
 class TestBinaryTarClient:
-    @pytest.fixture
+    @pytest.fixture()
     def tarball_maker(self):
         with ExitStack() as stack:
 
@@ -83,7 +83,7 @@ class TestBinaryTarClient:
 )
 class TestLocalClient:
     @pytest.mark.parametrize(
-        "contents, filename, ctx, expected",
+        ("contents", "filename", "ctx", "expected"),
         [
             (dict(Procfile="web: npm run dev\n"), "Procfile", does_not_raise(), b"web: npm run dev\n"),
             (dict(Procfile="web: npm run dev\n"), "./Procfile", does_not_raise(), b"web: npm run dev\n"),
@@ -98,7 +98,7 @@ class TestLocalClient:
                 assert cli.read_file(filename) == expected
 
     @pytest.mark.parametrize(
-        "contents, relative_path, filename, ctx, expected",
+        ("contents", "relative_path", "filename", "ctx", "expected"),
         [
             ({"foo": "1"}, "./", "foo", does_not_raise(), b"1"),
             ({"foo": "1"}, "./", "./foo", does_not_raise(), b"1"),
@@ -145,7 +145,7 @@ class TestLocalClient:
 @pytest.mark.parametrize("archive_maker", [gen_tar, gen_zip])
 class TestGenericRemoteClient:
     @pytest.mark.parametrize(
-        "url_tmpl, contents, filename, ctx, expected",
+        ("url_tmpl", "contents", "filename", "ctx", "expected"),
         [
             ("http://foo/{random}", dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
             ("http://foo/{random}", dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),
@@ -156,13 +156,13 @@ class TestGenericRemoteClient:
         url = url_tmpl.format(random=generate_random_string())
         with generate_temp_file() as file_path:
             archive_maker(file_path, contents)
-            mock_adapter.register(url, open(file_path, mode="rb"))
+            mock_adapter.register(url, open(file_path, mode="rb"))  # noqa: SIM115
             cli = GenericRemoteClient(url)
             with ctx:
                 assert cli.read_file(filename) == expected
 
     @pytest.mark.parametrize(
-        "contents, filename, ctx, expected",
+        ("contents", "filename", "ctx", "expected"),
         [
             (dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
             (dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),

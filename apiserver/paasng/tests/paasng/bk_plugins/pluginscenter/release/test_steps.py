@@ -28,8 +28,8 @@ from tests.paasng.bk_plugins.pluginscenter.conftest import make_api_resource
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def setup_release_stages(pd):
+@pytest.fixture()
+def _setup_release_stages(pd):
     pd.release_stages = [
         {
             "id": "market",
@@ -52,8 +52,8 @@ def setup_release_stages(pd):
     pd.refresh_from_db()
 
 
-@pytest.fixture
-def release(setup_release_stages, release) -> PluginRelease:
+@pytest.fixture()
+def release(_setup_release_stages, release) -> PluginRelease:
     release.initial_stage_set(force_refresh=True)
     return release
 
@@ -72,14 +72,14 @@ def test_render_base_info(release):
 
 
 class TestDeployAPIStage:
-    @pytest.fixture
+    @pytest.fixture()
     def stage(self, release):
         stage = release.all_stages.get(stage_id="deploy")
         release.current_stage = stage
         release.save()
         return stage
 
-    @pytest.fixture
+    @pytest.fixture()
     def stage_executor(self, stage):
         executor = stages.DeployAPIStage(stage)
         with mock.patch.object(executor, "_refresh_source_hash"):

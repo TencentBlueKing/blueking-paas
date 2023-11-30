@@ -22,7 +22,7 @@ from paasng.platform.bkapp_model.utils import MergeStrategy, merge_env_vars
 
 
 @pytest.mark.parametrize(
-    "x, y, strategy, z",
+    ("x", "y", "strategy", "z"),
     [
         ([], [], MergeStrategy.OVERRIDE, []),
         ([], [EnvVar(name="a", value="a")], MergeStrategy.OVERRIDE, [EnvVar(name="a", value="a")]),

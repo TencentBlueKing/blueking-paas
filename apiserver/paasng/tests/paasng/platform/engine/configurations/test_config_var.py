@@ -36,7 +36,7 @@ pytestmark = pytest.mark.django_db
 
 class TestGetEnvVariables:
     @pytest.fixture(autouse=True)
-    def setup_cluster(self):
+    def _setup_cluster(self):
         with mock_cluster_service():
             yield
 
@@ -51,7 +51,7 @@ class TestGetEnvVariables:
         assert env_vars["BKPAAS_APP_SECRET"] != ""
 
     @pytest.mark.parametrize(
-        "yaml_content, ctx",
+        ("yaml_content", "ctx"),
         [
             (
                 dedent(
@@ -126,7 +126,7 @@ class TestGetEnvVariables:
 
 
 class TestBuiltInEnvVars:
-    @pytest.mark.parametrize("provide_env_vars_platform, contain_bk_envs", [(True, True), (False, True)])
+    @pytest.mark.parametrize(("provide_env_vars_platform", "contain_bk_envs"), [(True, True), (False, True)])
     def test_bk_platform_envs(self, bk_app, provide_env_vars_platform, contain_bk_envs):
         def update_region_hook(config):
             config["provide_env_vars_platform"] = provide_env_vars_platform

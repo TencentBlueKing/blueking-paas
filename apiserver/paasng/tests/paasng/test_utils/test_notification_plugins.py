@@ -13,7 +13,7 @@ from paasng.utils.notification_plugins import (
 
 
 class TestPlugins:
-    @pytest.fixture
+    @pytest.fixture()
     def mocked_call_api(self):
         with mock.patch.object(BaseComponentAPIPlugin, "_call_api") as mocked_call:
             yield mocked_call

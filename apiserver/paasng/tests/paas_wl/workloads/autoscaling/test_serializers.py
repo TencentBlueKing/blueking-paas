@@ -33,7 +33,7 @@ from paas_wl.workloads.autoscaling.kres_slzs import ProcAutoscalingDeserializer,
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def gpa_gvk_config():
     return GVKConfig(
         server_version="1.20",
@@ -43,7 +43,7 @@ def gpa_gvk_config():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def gpa_manifest() -> Dict[str, Any]:
     return {
         "apiVersion": "autoscaling.tkex.tencent.com/v1alpha1",
@@ -89,7 +89,7 @@ def gpa_manifest() -> Dict[str, Any]:
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def scaling(wl_app) -> ProcAutoscaling:
     return ProcAutoscaling(
         app=wl_app,
@@ -123,7 +123,7 @@ def scaling(wl_app) -> ProcAutoscaling:
     )
 
 
-def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manifest, scaling):
+def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manifest, scaling):  # noqa: N802
     process = Process.from_release(type_="web", release=wl_release)
 
     serializer = ProcAutoscalingSerializer(ProcAutoscaling, gpa_gvk_config)
@@ -135,6 +135,6 @@ def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manif
     assert serializer.serialize(scaling, mapper_version=get_mapper_version(target="v2")) == excepted
 
 
-def test_ProcAutoscalingDeserializer(wl_app, gpa_gvk_config, gpa_manifest, scaling):
+def test_ProcAutoscalingDeserializer(wl_app, gpa_gvk_config, gpa_manifest, scaling):  # noqa: N802
     kube_data = ResourceInstance(None, gpa_manifest)
     assert ProcAutoscalingDeserializer(ProcAutoscaling, gpa_gvk_config).deserialize(wl_app, kube_data) == scaling

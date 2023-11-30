@@ -16,30 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
-import logging
+from blue_krill.async_utils.django_utils import apply_async_on_commit
+from django.dispatch import Signal, receiver
 
-import pytest
-from django.test import TestCase
-from rest_framework.test import APIRequestFactory
+from paasng.accessories.log.tasks import setup_module_log_model
+from paasng.platform.modules.models import Module
 
-from paasng.plat_admin.api_doc.views import FullSwaggerConfigurationView
-from tests.utils.auth import create_user
-
-logger = logging.getLogger(__name__)
+on_module_initialized = Signal()
 
 
-class TestSwaggerConfigurationGenerator(TestCase):
-    def setUp(self):
-        self.user = create_user()
-
-    @pytest.mark.skip(reason="don't know how to fix.")
-    def test_default(self):
-        factory = APIRequestFactory()
-        request = factory.get("/docs/swagger.full")
-        request.user = self.user
-        response = FullSwaggerConfigurationView.as_view()(request)
-        configuration_json = response.content
-        configuration_dict = json.loads(configuration_json)
-        assert response.status_code == 200
-        assert "swagger" in configuration_dict
+@receiver(on_module_initialized)
+def async_setup_module_log_model(sender, module: Module, **kwargs):
+    apply_async_on_commit(setup_module_log_model, args=(module.pk,))

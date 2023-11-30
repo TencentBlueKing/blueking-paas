@@ -38,7 +38,7 @@ def region():
     return get_random_string()
 
 
-@pytest.fixture
+@pytest.fixture()
 def default_cluster_creator(example_cluster_config):
     def creator(region: str):
         return Cluster.objects.register_cluster(
@@ -50,7 +50,7 @@ def default_cluster_creator(example_cluster_config):
 
 class TestCluster:
     @pytest.mark.parametrize(
-        "is_default, expectation",
+        ("is_default", "expectation"),
         [
             (True, does_not_raise()),
             (False, pytest.raises(NoDefaultClusterError)),
@@ -81,12 +81,12 @@ class TestCluster:
         region2 = get_random_string()
         name = get_random_string()
 
+        Cluster.objects.register_cluster(region=region1, name=name, is_default=True, **example_cluster_config)
         with pytest.raises(IntegrityError):
-            Cluster.objects.register_cluster(region=region1, name=name, is_default=True, **example_cluster_config)
             Cluster.objects.register_cluster(region=region2, name=name, is_default=True, **example_cluster_config)
 
     @pytest.mark.parametrize(
-        "name1, name2, target_cluster, expectation",
+        ("name1", "name2", "target_cluster", "expectation"),
         [
             ("default-cluster", "custom-cluster", "default-cluster", pytest.raises(SwitchDefaultClusterError)),
             ("default-cluster", "custom-cluster", "custom-cluster", does_not_raise()),
@@ -171,11 +171,11 @@ class TestEnhancedConfiguration:
         assert conf.resolver_records == {"kubernetes": "192.168.1.1"}
 
     def test_create_invalid_values(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"No IP address found in .*"):
             EnhancedConfiguration.create("https://example.com", "kubernetes", "", "", "", "")
 
     @pytest.mark.parametrize(
-        "host,ip",
+        ("host", "ip"),
         [
             ("https://192.168.1.100/", "192.168.1.100"),
             ("http://192.168.1.1:8080/", "192.168.1.1"),

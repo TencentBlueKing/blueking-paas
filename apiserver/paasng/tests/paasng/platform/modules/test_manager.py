@@ -39,7 +39,7 @@ from tests.utils.helpers import register_iam_after_create_application
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
-@pytest.fixture
+@pytest.fixture()
 def raw_module(bk_user) -> Module:
     """Raw application and module objects without initializing"""
     application = G(
@@ -61,7 +61,7 @@ class TestModuleInitializer:
         assert raw_module.envs.get(environment="stag").get_engine_app() is not None
 
     @pytest.mark.parametrize(
-        "services_in_template,services_in_type, is_default, expected_bind_service_cnt",
+        ("services_in_template", "services_in_type", "is_default", "expected_bind_service_cnt"),
         [
             ({}, {}, True, 0),
             ({"mysql": {"specs": {}}}, {}, True, 1),
@@ -144,7 +144,8 @@ class TestModuleInitializer:
             assert buildpacks[1].name == default_buildpack.name
             assert buildpacks[1].language == raw_module.language
 
-    def test_initialize_vcs(self, raw_module, init_tmpls):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_initialize_vcs(self, raw_module):
         with mock.patch("paasng.platform.sourcectl.svn.client.RepoProvider") as mocked_provider, mock.patch(
             "paasng.platform.sourcectl.connector.SvnRepositoryClient"
         ) as mocked_client, mock.patch(
@@ -165,7 +166,8 @@ class TestModuleInitializer:
             assert result["dest_type"] == "svn"
             assert "extra_info" in result
 
-    def test_external_package(self, raw_module, init_tmpls):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_external_package(self, raw_module):
         raw_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
         raw_module.source_origin = SourceOrigin.BK_LESS_CODE
         raw_module.save()

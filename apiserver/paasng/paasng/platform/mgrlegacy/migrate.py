@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 def _do_migrate(migration_process, migration, context):
     if migration.should_skip():
         logger.info("Skip migration %s...", migration.get_name())
-        return None
+        return
     migration_process.set_ongoing(migration)
 
     logger.info("Start migration %s for %s", migration.get_name(), migration.legacy_app.code)
@@ -134,7 +134,7 @@ def run_rollback(migration_process, session):
     # FIXME: is this ok?
     # 第二次进入的时候app是None
     if migration_process.app is None:
-        logger.critical("rollback app for %s is None \n %s" % (migration_process, "\n".join(traceback.format_stack())))
+        logger.critical("rollback app for %s is None \n %s", migration_process, "\n".join(traceback.format_stack()))
         raise MigrationFailed("rollback app for %s is None " % migration_process.id)
 
     legacy_app = AppManger(session).get_by_app_id(migration_process.legacy_app_id)
@@ -154,8 +154,7 @@ def run_rollback(migration_process, session):
             _do_rollback(migration_process=migration_process, migration=migration, context=context)
             # Use the new context
             context = migration.context
-        else:
-            migration_process.set_rollback_state()
+        migration_process.set_rollback_state()
 
 
 def run_single_rollback(migration_process, migration_class, session):

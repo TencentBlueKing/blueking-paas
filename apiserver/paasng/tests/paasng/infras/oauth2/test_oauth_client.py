@@ -32,10 +32,10 @@ pytestmark = pytest.mark.django_db
 @mock.patch("paasng.infras.oauth2.api.BkOauthClient")
 class TestBkOauthClient:
     @pytest.mark.parametrize(
-        "enable_bk_oauth, ctx", [(True, pytest.raises(BkOauthApiException)), (False, does_not_raise())]
+        ("enable_bk_oauth", "ctx"), [(True, pytest.raises(BkOauthApiException)), (False, does_not_raise())]
     )
-    def test_create_client(self, BkOauthClient, bk_oauth_client_id, bk_oauth_client_key, enable_bk_oauth, ctx):
-        BkOauthClient().get_default_app_secret.return_value = bk_oauth_client_key
+    def test_create_client(self, mocked_client, bk_oauth_client_id, bk_oauth_client_key, enable_bk_oauth, ctx):
+        mocked_client().get_default_app_secret.return_value = bk_oauth_client_key
 
         with override_settings(ENABLE_BK_OAUTH=enable_bk_oauth):
             region = "default"

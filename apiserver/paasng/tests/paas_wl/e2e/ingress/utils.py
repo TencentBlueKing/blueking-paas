@@ -140,16 +140,15 @@ class IngressNginxReloadChecker:
         for _ in range(self.retry_time):
             logs_resp = KPod(framework.client).get_log(name=framework.pod.metadata.name, namespace=framework.namespace)
             for idx, line in enumerate(logs_resp.readlines()):
-                if b"reloaded" in line:
-                    if idx > self.previous_flags:
-                        # Q: why should check twice?
-                        # - should ignore first discovered, because this should be invoked by setup
-                        if self.previous_flags == 0:
-                            self.previous_flags = idx
-                            continue
+                if b"reloaded" in line and idx > self.previous_flags:
+                    # Q: why should check twice?
+                    # - should ignore first discovered, because this should be invoked by setup
+                    if self.previous_flags == 0:
                         self.previous_flags = idx
-                        time.sleep(0.2)
-                        return
+                        continue
+                    self.previous_flags = idx
+                    time.sleep(0.2)
+                    return
             time.sleep(1)
 
 

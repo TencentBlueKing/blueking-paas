@@ -8,7 +8,7 @@ from paasng.platform.sourcectl.utils import DockerIgnore, compress_directory_ext
 
 class TestDockerIgnore:
     @pytest.mark.parametrize(
-        "content, expected",
+        ("content", "expected"),
         [
             (
                 # test case from
@@ -33,7 +33,7 @@ class TestDockerIgnore:
         assert DockerIgnore(content).content == expected
 
     @pytest.mark.parametrize(
-        "content, cases, expected",
+        ("content", "cases", "expected"),
         # All case are from https://docs.docker.com/engine/reference/builder/#dockerignore-file
         [
             (

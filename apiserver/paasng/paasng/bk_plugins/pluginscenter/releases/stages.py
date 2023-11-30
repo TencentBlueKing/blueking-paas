@@ -216,7 +216,13 @@ class PipelineStage(BaseStageController):
 
     def __init__(self, stage: PluginReleaseStage):
         super().__init__(stage)
-        self.ctl = PipelineController(bk_username="admin")
+
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        pipeline_env = "prod"
+        if stage_definition and stage_definition.pipelineEnv:
+            pipeline_env = stage_definition.pipelineEnv
+        self.ctl = PipelineController(bk_username="admin", stage=pipeline_env)
+
         if stage.status == constants.PluginReleaseStatus.INITIAL or stage.pipeline_detail is None:
             self.build = None
         else:

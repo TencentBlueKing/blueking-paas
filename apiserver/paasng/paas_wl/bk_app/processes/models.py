@@ -35,7 +35,7 @@ from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.platform.declarative.deployment.resources import ProbeHandler
-from paasng.utils.models import make_json_field
+from paasng.utils.models import make_json_field, make_legacy_json_field
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 PROC_DEFAULT_REPLICAS = 1
-AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
+AutoscalingConfigField = make_legacy_json_field("AutoscalingConfigField", AutoscalingConfig)
 
 
 class ProcessSpecPlanManager(models.Manager):

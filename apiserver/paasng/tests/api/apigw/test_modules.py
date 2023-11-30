@@ -73,7 +73,7 @@ class TestApiInAPIGW:
         create_module_params["name"] = module_name
         create_module_params["source_config"]["source_init_template"] = template_name
         response = api_client.post(
-            f"/apigw/api/bkapps/applications/{bk_app.code}/modules/",
+            f"/api/bkapps/cloud-native/{bk_app.code}/modules/",
             data=create_module_params,
         )
         assert response.status_code == 201

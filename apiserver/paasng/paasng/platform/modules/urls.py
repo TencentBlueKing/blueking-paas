@@ -93,16 +93,6 @@ urlpatterns = [
     ),
 ]
 
-
-# 注册在 APIGW 网关上的 API, 输入、输出参数不能变更需走运营侧变更流程
-urlpatterns += [
-    url(
-        r"^apigw/api/bkapps/applications/(?P<code>[^/]+)/modules/$",
-        views.ModuleViewSet.as_view({"post": "create_cloud_native_module"}),
-        name="api.applications.apigw.create_module",
-    ),
-]
-
 # Multi-editions specific start
 
 try:

@@ -426,8 +426,7 @@
         :title="$t('进程配置')"
       >
         <deploy-process
-          ref="processRef" :image-url="formData.url"
-          :image-credential-name="formData.imageCredentialName" :is-create="isCreate"></deploy-process>
+          ref="processRef" :cloud-form-data="formData" :is-create="isCreate"></deploy-process>
       </collapseContent>
 
       <collapseContent
@@ -1054,7 +1053,9 @@ export default {
         if (!processData || !hookData) return;
         hookData.type = 'pre-release-hook';
         params.bkapp_spec.processes = processData;
-        params.bkapp_spec.hook = hookData;
+        if (hookData.enabled) {
+          params.bkapp_spec.hook = hookData;
+        }
       }
 
       // 集群名称

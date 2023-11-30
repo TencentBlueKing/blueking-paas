@@ -644,8 +644,6 @@
 # BKMONITOR_METRIC_RELABELINGS: {}
 ## 蓝鲸监控的API是否已经注册在 APIGW
 # ENABLE_BK_MONITOR_APIGW: false
-## 同步告警策略到监控的配置
-# MONITOR_AS_CODE_CONF: {}
 ## 蓝鲸监控网关的环境
 # BK_MONITOR_APIGW_SERVICE_STAGE: prod
 ## 监控 RabbitMQ 的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
@@ -653,6 +651,17 @@
 #    enabled: true
 #    metric_name_prefix: ''
 #    service_name: 'rabbitmq'
+
+## ------------------------------------ 蓝鲸日志配置 ------------------------------------
+# 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
+# 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
+# LOG_COLLECTOR_TYPE: "ELK"
+# 蓝鲸日志平台的API是否已经注册在 APIGW
+# ENABLE_BK_LOG_APIGW: True
+# 蓝鲸日志平台网关的环境
+# BK_LOG_APIGW_SERVICE_STAGE: stag
+# 蓝鲸日志平台相关的配置项
+# BKLOG_CONFIG = {}
 
 ## ---------------------------------------- 运行时默认配置 ----------------------------------------
 

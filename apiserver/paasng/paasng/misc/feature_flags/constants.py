@@ -22,7 +22,7 @@ from django.conf import settings
 
 class PlatformFeatureFlag(FeatureFlag):  # type: ignore
     RESOURCE_METRICS = FeatureFlagField(label="应用资源使用率")
-    PHALANX = FeatureFlagField(label="监控告警")
+    PHALANX = FeatureFlagField(label="监控告警", default=settings.ENABLE_BK_MONITOR)
     ANALYTICS = FeatureFlagField(label="访问统计")
     MGRLEGACY = FeatureFlagField(label="应用迁移")
     API_GATEWAY = FeatureFlagField(label="云 API 管理")

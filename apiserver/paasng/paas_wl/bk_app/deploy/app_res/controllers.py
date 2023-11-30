@@ -560,7 +560,7 @@ class ProcAutoscalingHandler(ResourceHandlerBase):
 class BkAppHookLogFetcher:
     """Log Fetcher for BkApp Hook Pod"""
 
-    def __init__(self, app: WlApp):
+    def __init__(self, app: "WlApp"):
         self.client = get_client_by_app(app)
 
     def wait_for_logs_readiness(self, namespace: str, pod_name: str, timeout: float = 300):

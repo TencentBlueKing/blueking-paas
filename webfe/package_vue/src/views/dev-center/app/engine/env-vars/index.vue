@@ -542,7 +542,7 @@
       @confirm="updateRuntimeInfo"
       @cancel="handleHideRuntimeDialog"
     >
-      <bk-form :label-width="95">
+      <bk-form :label-width="localLanguage === 'en' ? 105 : 95">
         <bk-form-item :label="$t('基础镜像:')">
           <bk-select
             v-model="runtimeDialogConf.image"
@@ -977,6 +977,9 @@ export default {
     },
     canModifyEnvVariable() {
       return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {

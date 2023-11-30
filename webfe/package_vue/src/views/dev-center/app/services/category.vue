@@ -134,6 +134,7 @@
                     <a
                       v-else
                       class="ps-btn ps-btn-default"
+                      v-bk-overflow-tips
                       @click="enableService(item)"
                     >
                       <template v-if="item.specifications.length">
@@ -421,6 +422,9 @@ export default {
             font-size: 14px;
 
             &:not(.ps-btn-disabled) {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
                 &:hover {
                     color: white;
                     background: #3A84FF;

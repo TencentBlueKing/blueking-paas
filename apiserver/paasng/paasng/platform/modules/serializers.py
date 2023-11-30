@@ -27,7 +27,6 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.serializers import ClusterSLZ
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paas_wl.workloads.images.serializers import ImageCredentialSLZ
 from paasng.platform.bkapp_model.serializers import ModuleDeployHookSLZ as CNativeModuleDeployHookSLZ
 from paasng.platform.bkapp_model.serializers import ModuleProcessSpecSLZ
 from paasng.platform.engine.constants import RuntimeType
@@ -308,6 +307,14 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
                 detail={param: _("This field is required.") for param in missed_params}, code="required"
             )
         return attrs
+
+
+class ImageCredentialSLZ(serializers.Serializer):
+    """镜像凭证相关参数"""
+
+    name = serializers.CharField(required=True)
+    username = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
 
 
 class CreateModuleBuildConfigSLZ(serializers.Serializer):

@@ -33,11 +33,3 @@ class UsernamePasswordPairSLZ(serializers.ModelSerializer):
     class Meta:
         model = AppUserCredential
         fields = "__all__"
-
-
-class ImageCredentialSLZ(serializers.Serializer):
-    """镜像凭证相关参数"""
-
-    name = serializers.CharField(required=True)
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True)

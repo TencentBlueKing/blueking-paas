@@ -38,6 +38,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/svcdisc"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
@@ -66,7 +67,6 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	if err != nil {
 		return r.Result.WithError(err)
 	}
-
 	// Clean up the deployments which are not in the new deploys
 	newDeployNames := []string{}
 	for _, d := range newDeployMap {
@@ -195,6 +195,7 @@ func (r *DeploymentReconciler) cleanUpDeployments(ctx context.Context,
 			continue
 		}
 		if err := r.Client.Delete(ctx, d); err != nil {
+			metrics.IncDeleteOutdatedDeployFailures(bkapp, d.Name)
 			return errors.Wrapf(err, "error cleaning up deployments")
 		}
 	}

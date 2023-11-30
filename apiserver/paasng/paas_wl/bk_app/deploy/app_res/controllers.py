@@ -63,10 +63,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ResourceHandlerBase:
-    client: 'EnhancedApiClient'
+    client: "EnhancedApiClient"
     default_connect_timeout: int
     default_request_timeout: tuple
-    mapper_version: 'MapperPack'
+    mapper_version: "MapperPack"
 
 
 class ProcessesHandler(ResourceHandlerBase):
@@ -89,14 +89,14 @@ class ProcessesHandler(ResourceHandlerBase):
         self.mapper_version.replica_set(process=process).delete_collection()
         self.mapper_version.pod(process=process).delete_individual()
 
-    def scale(self, app: 'WlApp', process_type: str, replicas: int):
+    def scale(self, app: "WlApp", process_type: str, replicas: int):
         """Scale a process's replicas to given value.
 
         :param app: The application object.
         :param process_type: The type of process, such as "web".
         :param replicas: The replicas value, such as 2.
         """
-        patch_body = {'spec': {'replicas': replicas}}
+        patch_body = {"spec": {"replicas": replicas}}
         res_name = get_proc_deployment_name(app, process_type)
         KDeployment(self.client).patch(res_name, namespace=app.namespace, body=patch_body)
 
@@ -117,14 +117,14 @@ class NamespacesHandler(ResourceHandlerBase):
         try:
             KNamespace(self.client).wait_for_default_sa(namespace, timeout=max_wait_seconds)
         except CreateServiceAccountTimeout:
-            logger.error("timeout while wating for the default sa of %s to be created", namespace)
+            logger.exception("timeout while waiting for the default sa of %s to be created", namespace)
             raise
 
 
 class WaitPodDelete:
     _check_interval = 1
 
-    def __init__(self, namespace: str, name: str, client: 'EnhancedApiClient'):
+    def __init__(self, namespace: str, name: str, client: "EnhancedApiClient"):
         self.namespace = namespace
         self.name = name
         self.client = client
@@ -180,7 +180,7 @@ class PodScheduleHandler(ResourceHandlerBase):
             # ignore the other pods
             if pod.status.phase == "Running" and not force:
                 logger.warning(f"trying to clean Pod<{namespace}/{pod_name}>, but it's still running.")
-                return
+                return None
 
             logger.debug(f"trying to clean pod<{namespace}/{pod_name}>.")
             # no matter the pod is completed or crash
@@ -258,7 +258,7 @@ class PodScheduleHandler(ResourceHandlerBase):
 class BuildHandler(PodScheduleHandler):
     """Handler for slugbuilder pod."""
 
-    def build_slug(self, template: 'SlugBuilderTemplate'):
+    def build_slug(self, template: "SlugBuilderTemplate"):
         """Start a Pod for building slug
 
         :param template: the template to run builder
@@ -274,7 +274,7 @@ class BuildHandler(PodScheduleHandler):
                 # 如果 slug 超过了最长执行时间，尝试删除并重新创建，否则取消本次创建
                 if not self.check_pod_timeout(slug_pod):
                     raise ResourceDuplicate(
-                        'Pod', pod_name, extra_value=self.get_pod_timeout(slug_pod).humanize(locale="zh")
+                        "Pod", pod_name, extra_value=self.get_pod_timeout(slug_pod).humanize(locale="zh")
                     )
 
                 logger.info(
@@ -290,31 +290,31 @@ class BuildHandler(PodScheduleHandler):
             env_list.append(dict(name=str(key), value=str(value)))
 
         slug_pod_body: Dict = {
-            'metadata': {
-                'name': pod_name,
-                'namespace': template.namespace,
-                'labels': {'pod_selector': pod_name, 'category': 'slug-builder'},
+            "metadata": {
+                "name": pod_name,
+                "namespace": template.namespace,
+                "labels": {"pod_selector": pod_name, "category": "slug-builder"},
             },
-            'spec': {
-                'containers': [
+            "spec": {
+                "containers": [
                     {
-                        'env': env_list,
-                        'image': template.runtime.image,
-                        'name': pod_name,
-                        'imagePullPolicy': template.runtime.image_pull_policy,
-                        'resources': settings.SLUGBUILDER_RESOURCES_SPEC,
+                        "env": env_list,
+                        "image": template.runtime.image,
+                        "name": pod_name,
+                        "imagePullPolicy": template.runtime.image_pull_policy,
+                        "resources": settings.SLUGBUILDER_RESOURCES_SPEC,
                     },
                 ],
-                'restartPolicy': 'Never',
-                'nodeSelector': template.schedule.node_selector,
-                'imagePullSecrets': template.runtime.image_pull_secrets,
+                "restartPolicy": "Never",
+                "nodeSelector": template.schedule.node_selector,
+                "imagePullSecrets": template.runtime.image_pull_secrets,
             },
-            'apiVersion': 'v1',
-            'kind': 'Pod',
+            "apiVersion": "v1",
+            "kind": "Pod",
         }
 
         if template.schedule.tolerations:
-            slug_pod_body['spec']['tolerations'] = template.schedule.tolerations
+            slug_pod_body["spec"]["tolerations"] = template.schedule.tolerations
 
         pod_info, _ = KPod(self.client).create_or_update(
             name=pod_name, namespace=template.namespace, body=slug_pod_body
@@ -404,7 +404,7 @@ class CommandHandler(PodScheduleHandler):
         try:
             existed = command_kmodel.get(command.app, command.name)
         except AppEntityNotFound:
-            logger.info("Command Pod<%s/%s> does not exist, will create one" % (namespace, pod_name))
+            logger.info("Command Pod<%s/%s> does not exist, will create one", namespace, pod_name)
             command_kmodel.save(command)
             return command.name
 
@@ -412,7 +412,7 @@ class CommandHandler(PodScheduleHandler):
             # 如果 slug 超过了最长执行时间，尝试删除并重新创建，否则取消本次创建
             if not self.check_pod_timeout(existed):
                 raise ResourceDuplicate(
-                    'Pod', pod_name, extra_value=self.get_pod_timeout(existed).humanize(locale="zh")
+                    "Pod", pod_name, extra_value=self.get_pod_timeout(existed).humanize(locale="zh")
                 )
 
             logger.info(
@@ -431,12 +431,12 @@ class CommandHandler(PodScheduleHandler):
         try:
             existed = command_kmodel.get(command.app, command.name)
         except AppEntityNotFound:
-            logger.info("Command Pod<%s/%s> does not exist, skip delete" % (namespace, command.name))
-            return
+            logger.info("Command Pod<%s/%s> does not exist, skip delete", namespace, command.name)
+            return None
 
         if existed.phase == "Running" and existed.main_container_exit_code is None:
             logger.warning(f"trying to clean Pod<{namespace}/{command.name}>, but it's still running.")
-            return
+            return None
 
         return command_kmodel.delete(existed)
 
@@ -549,7 +549,7 @@ class ProcAutoscalingHandler(ResourceHandlerBase):
         except AppEntityNotFound:
             self.manager.create(scaling)
         else:
-            self.manager.update(scaling, "patch", allow_not_concrete=True, content_type='application/merge-patch+json')
+            self.manager.update(scaling, "patch", allow_not_concrete=True, content_type="application/merge-patch+json")
 
     def delete(self, scaling: ProcAutoscaling):
         """删除集群中的 GPA"""

@@ -18,4 +18,4 @@ to the current version of the project delivered to anyone in the future.
 """
 from .deploy import DeployAction, ZombieProcessesKiller
 
-__all__ = ['DeployAction', 'ZombieProcessesKiller']
+__all__ = ["DeployAction", "ZombieProcessesKiller"]

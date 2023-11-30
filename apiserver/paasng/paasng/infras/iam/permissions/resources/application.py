@@ -39,33 +39,33 @@ class AppAction(str, StructuredEnum):
     """蓝鲸 PaaS 应用相关权限"""
 
     # 应用基础信息查看
-    VIEW_BASIC_INFO = EnumField('view_basic_info', label=_('基础信息查看'))
+    VIEW_BASIC_INFO = EnumField("view_basic_info", label=_("基础信息查看"))
     # 应用基础信息编辑（含文档管理）s
-    EDIT_BASIC_INFO = EnumField('edit_basic_info', label=_('基础信息编辑'))
+    EDIT_BASIC_INFO = EnumField("edit_basic_info", label=_("基础信息编辑"))
     # 应用删除/下架
-    DELETE_APPLICATION = EnumField('delete_application', label=_('应用删除'))
+    DELETE_APPLICATION = EnumField("delete_application", label=_("应用删除"))
     # 成员管理
-    MANAGE_MEMBERS = EnumField('manage_members', label=_('成员管理'))
+    MANAGE_MEMBERS = EnumField("manage_members", label=_("成员管理"))
     # 访问控制（用户白名单限制）
-    MANAGE_ACCESS_CONTROL = EnumField('manage_access_control', label=_('访问控制管理'))
+    MANAGE_ACCESS_CONTROL = EnumField("manage_access_control", label=_("访问控制管理"))
     # 应用市场管理
-    MANAGE_APP_MARKET = EnumField('manage_app_market', label=_('应用市场管理'))
+    MANAGE_APP_MARKET = EnumField("manage_app_market", label=_("应用市场管理"))
     # 数据统计（网站访问，访问日志，自定义事件等）
-    DATA_STATISTICS = EnumField('data_statistics', label=_('数据统计'))
+    DATA_STATISTICS = EnumField("data_statistics", label=_("数据统计"))
     # 基础开发（部署应用，进程管理，日志查看，镜像凭证，代码库，环境配置，访问入口，增强服务基础等）
-    BASIC_DEVELOP = EnumField('basic_develop', label=_('基础开发'))
+    BASIC_DEVELOP = EnumField("basic_develop", label=_("基础开发"))
     # 云 API 管理（查看/申请等）
-    MANAGE_CLOUD_API = EnumField('manage_cloud_api', label=_('云 API 管理'))
+    MANAGE_CLOUD_API = EnumField("manage_cloud_api", label=_("云 API 管理"))
     # 告警记录查看
-    VIEW_ALERT_RECORDS = EnumField('view_alert_records', label=_('告警记录查看'))
+    VIEW_ALERT_RECORDS = EnumField("view_alert_records", label=_("告警记录查看"))
     # 告警策略配置
-    EDIT_ALERT_POLICY = EnumField('edit_alert_policy', label=_('告警策略配置'))
+    EDIT_ALERT_POLICY = EnumField("edit_alert_policy", label=_("告警策略配置"))
     # 增强服务管理（启用/删除等）
-    MANAGE_ADDONS_SERVICES = EnumField('manage_addons_services', label=_('增强服务管理'))
+    MANAGE_ADDONS_SERVICES = EnumField("manage_addons_services", label=_("增强服务管理"))
     # 部署环境限制管理
-    MANAGE_ENV_PROTECTION = EnumField('manage_env_protection', label=_('部署环境限制管理'))
+    MANAGE_ENV_PROTECTION = EnumField("manage_env_protection", label=_("部署环境限制管理"))
     # 模块管理（新建/删除等）
-    MANAGE_MODULE = EnumField('manage_module', label=_('模块管理'))
+    MANAGE_MODULE = EnumField("manage_module", label=_("模块管理"))
 
 
 @define
@@ -76,7 +76,7 @@ class AppCreatorAction(ResCreatorAction):
 
     def to_data(self) -> Dict:
         data = super().to_data()
-        return {'id': self.code, 'name': self.name, **data}
+        return {"id": self.code, "name": self.name, **data}
 
 
 @define
@@ -94,8 +94,8 @@ class AppRequest(ResourceRequest):
     resource_type = field(init=False, default=ResourceType.Application)
 
     @classmethod
-    def from_dict(cls, init_data: Dict) -> 'AppRequest':
-        return cls(code=init_data['code'])
+    def from_dict(cls, init_data: Dict) -> "AppRequest":
+        return cls(code=init_data["code"])
 
 
 class ApplicationPermission(Permission):
@@ -105,7 +105,7 @@ class ApplicationPermission(Permission):
     resource_request_cls: Type[ResourceRequest] = AppRequest
 
     def get_method_by_action(self, action: AppAction):
-        return getattr(self, f'can_{action.value}')
+        return getattr(self, f"can_{action.value}")
 
     def can_view_basic_info(self, perm_ctx: AppPermCtx, raise_exception: bool = True) -> bool:
         perm_ctx.validate_resource_id()

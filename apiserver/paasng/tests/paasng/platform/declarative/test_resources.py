@@ -51,23 +51,13 @@ def diff_result(param) -> ModuleDiffResult:
     )
 
 
-@pytest.fixture()
-def mock_service_mgr(request):
-    def fake_list_binded(module):
-        return [type("", (), dict(name=name)) for name in request.param[1]]
-
-    with mock.patch.object(mixed_service_mgr, "list_binded") as list_binded:
-        list_binded.side_effect = fake_list_binded
-        yield
-
-
 def make_modules(services: List[ServiceSpec], module_name: str = "default"):
     return {"modules": {module_name: {"is_default": True, "services": services}}}
 
 
 class TestApplicationDescDiffDog:
     @pytest.mark.parametrize(
-        "mock_service_mgr, services, expected",
+        ("service_names", "services", "expected"),
         [
             (
                 (["a"], ["a"]),
@@ -90,8 +80,15 @@ class TestApplicationDescDiffDog:
                 [["b", "c"], [], ["a", "d"]],
             ),
         ],
-        indirect=["mock_service_mgr"],
     )
-    def test_diff_module(self, bk_app, bk_module, mock_service_mgr, services, expected):
-        desc = ApplicationDesc(**APP_DESC_INFO, **make_modules(services))
-        assert ApplicationDescDiffDog(application=bk_app, desc=desc).diff() == {bk_module.name: diff_result(expected)}
+    def test_diff_module(self, bk_app, bk_module, service_names, services, expected):
+        def fake_list_binded(module):
+            return [type("", (), dict(name=name)) for name in service_names[1]]
+
+        with mock.patch.object(mixed_service_mgr, "list_binded") as list_binded:
+            list_binded.side_effect = fake_list_binded
+
+            desc = ApplicationDesc(**APP_DESC_INFO, **make_modules(services))
+            assert ApplicationDescDiffDog(application=bk_app, desc=desc).diff() == {
+                bk_module.name: diff_result(expected)
+            }

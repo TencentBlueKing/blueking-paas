@@ -22,8 +22,8 @@ from . import views
 
 urlpatterns = [
     re_path(
-        make_app_pattern('/accessories/advised_documentary_links/$', include_envs=False),
-        views.AdvisedDocumentaryLinksViewSet.as_view({'get': 'list'}),
-        name='api.advisor.advised_links',
+        make_app_pattern("/accessories/advised_documentary_links/$", include_envs=False),
+        views.AdvisedDocumentaryLinksViewSet.as_view({"get": "list"}),
+        name="api.advisor.advised_links",
     ),
 ]

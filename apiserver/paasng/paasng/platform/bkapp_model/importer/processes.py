@@ -52,7 +52,11 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
         }
         if autoscaling := process.autoscaling:
             defaults["autoscaling"] = True
-            defaults["scaling_config"] = autoscaling.dict()
+            defaults["scaling_config"] = {
+                "min_replicas": autoscaling.minReplicas,
+                "max_replicas": autoscaling.maxReplicas,
+                "policy": autoscaling.policy,
+            }
 
         # 兼容使用 v1alpha1 支持多镜像的场景
         if process.image:

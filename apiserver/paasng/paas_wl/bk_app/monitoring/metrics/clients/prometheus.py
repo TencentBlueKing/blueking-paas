@@ -39,17 +39,17 @@ class PrometheusMetricClient:
         self.host = host
 
     def general_query(
-        self, queries: List['MetricQuery'], container_name: str
-    ) -> Generator['MetricSeriesResult', None, None]:
+        self, queries: List["MetricQuery"], container_name: str
+    ) -> Generator["MetricSeriesResult", None, None]:
         """查询指定的各个指标数据"""
         for query in queries:
             try:
                 if not query.is_ranged or not query.time_range:
-                    raise ValueError("for security reasons, query metric without time range isn't allowed!")
+                    raise ValueError("for security reasons, query metric without time range isn't allowed!")  # noqa: TRY301
 
                 results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
-            except Exception as e:
-                logger.exception("fetch metrics failed, query: %s, reason: %s", query.query, e)
+            except Exception:
+                logger.exception("fetch metrics failed, query: %s", query.query)
                 # 某些 metrics 如果失败，不影响其他数据
                 results = []
 
@@ -70,10 +70,10 @@ class PrometheusMetricClient:
         :param step: 步长
         :param container_name: 容器名称
         """
-        path = 'api/v1/query_range'
-        params = {'query': query, 'start': start, 'end': end, 'step': step}
-        logger.info('prometheus query_range: %s', params)
-        result = self._request(method='GET', path=path, params=params, timeout=30)
+        path = "api/v1/query_range"
+        params = {"query": query, "start": start, "end": end, "step": step}
+        logger.info("prometheus query_range: %s", params)
+        result = self._request(method="GET", path=path, params=params, timeout=30)
         try:
             ret = PromResult.from_resp(result).get_raw_by_container_name(container_name)
             if ret:
@@ -100,12 +100,12 @@ class PrometheusMetricClient:
         # long time range may cause timeout
         resp = requests.request(method, url, **kwargs)
 
-        if not resp.status_code == desired_code:
+        if resp.status_code != desired_code:
             logger.warning("fetch<%s> metrics failed", url)
             raise RequestMetricBackendError(resp)
 
         result = resp.json()
-        if not result.get('status'):
+        if not result.get("status"):
             logger.warning("fetch<%s> metrics failed", url)
             raise RequestMetricBackendError(resp)
 
@@ -118,7 +118,7 @@ class PromRangeSingleMetric:
         container_name: str
 
         def __init__(self, *args, **kwargs):
-            _name = kwargs.get('container_name') or kwargs.get('container')
+            _name = kwargs.get("container_name") or kwargs.get("container")
             self.container_name = str(_name)
 
         def to_raw(self):
@@ -142,8 +142,8 @@ class PromRangeSingleMetric:
     @classmethod
     def from_raw(cls, raw):
         return cls(
-            metric=cls.MetricResult(**raw['metric']),
-            values=[cls.ValuePair(timestamp=i[0], value=i[1]) for i in raw['values']],
+            metric=cls.MetricResult(**raw["metric"]),
+            values=[cls.ValuePair(timestamp=i[0], value=i[1]) for i in raw["values"]],
         )
 
     def to_raw(self) -> dict:
@@ -158,17 +158,17 @@ class PromResult:
     results: List[PromRangeSingleMetric]
 
     @classmethod
-    def from_resp(cls, raw_resp: dict) -> 'PromResult':
+    def from_resp(cls, raw_resp: dict) -> "PromResult":
         if not raw_resp:
             raise ValueError("No valid results")
 
-        if not raw_resp.get('data', {}).get('result', []):
-            if raw_resp.get('warnings'):
-                raise ValueError(raw_resp.get('warnings'))
+        if not raw_resp.get("data", {}).get("result", []):
+            if raw_resp.get("warnings"):
+                raise ValueError(raw_resp.get("warnings"))
             else:
                 raise ValueError("empty results")
 
-        return cls(results=[PromRangeSingleMetric.from_raw(r) for r in raw_resp.get('data', {}).get('result', [])])
+        return cls(results=[PromRangeSingleMetric.from_raw(r) for r in raw_resp.get("data", {}).get("result", [])])
 
     def get_raw_by_container_name(self, container_name: str = "") -> Optional[dict]:
         """通过 container name 获取结果"""

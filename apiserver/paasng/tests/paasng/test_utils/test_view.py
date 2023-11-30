@@ -31,10 +31,10 @@ from paasng.utils.views import permission_classes as _permission_classes
 
 
 @pytest.mark.parametrize(
-    'error,expected',
+    ("error", "expected"),
     [
-        (ValidationError('foo'), 'foo'),
-        (ValidationError({'foo': [ErrorDetail('err1'), ErrorDetail('err2')]}), 'foo: err1'),
+        (ValidationError("foo"), "foo"),
+        (ValidationError({"foo": [ErrorDetail("err1"), ErrorDetail("err2")]}), "foo: err1"),
     ],
 )
 def test_one_line_error(error, expected):
@@ -50,7 +50,7 @@ def dummy_hook(key, value):
 
 
 @pytest.mark.parametrize(
-    "hooks, expected",
+    ("hooks", "expected"),
     [
         (
             [
@@ -79,7 +79,7 @@ def test_hook_chain(hooks, expected):
 
 class TestBkStandardApiJSONRenderer:
     @pytest.mark.parametrize(
-        'resp,result',
+        ("resp", "result"),
         [
             # Successful response
             (Response([0, 1, 2], status=200), {"result": True, "data": [0, 1, 2], "code": 0, "message": ""}),
@@ -93,7 +93,7 @@ class TestBkStandardApiJSONRenderer:
                 Response(
                     {"code": "FOO", "detail": "foo error with num"},
                     status=400,
-                    headers={ERROR_CODE_NUM_HEADER: '4987'},
+                    headers={ERROR_CODE_NUM_HEADER: "4987"},
                 ),
                 {"result": False, "data": {}, "code": 4987, "message": "foo error with num", "code_slug": "FOO"},
             ),
@@ -105,7 +105,7 @@ class TestBkStandardApiJSONRenderer:
         ],
     )
     def test_render(self, resp, result):
-        raw_result = BkStandardApiJSONRenderer().render(resp.data, renderer_context={'response': resp})
+        raw_result = BkStandardApiJSONRenderer().render(resp.data, renderer_context={"response": resp})
         assert json.loads(raw_result) == result
 
 

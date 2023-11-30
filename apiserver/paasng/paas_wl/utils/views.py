@@ -32,11 +32,11 @@ def one_line_error(detail):
             return detail[0]
         else:
             key, (first_error, *_) = next(iter(detail.items()))
-            if key == 'non_field_errors':
+            if key == "non_field_errors":
                 return first_error
-            return f'{key}: {first_error}'
+            return f"{key}: {first_error}"
     except Exception:
-        return '参数格式错误'
+        return "参数格式错误"
 
 
 def custom_exception_handler(exc, context):
@@ -54,11 +54,11 @@ def custom_exception_handler(exc, context):
         data = {"detail": "Current request is unauthorized", "code": "UNAUTHORIZED"}
         return Response(data, status=status.HTTP_401_UNAUTHORIZED, headers={})
     if isinstance(exc, ValidationError):
-        data = {'code': 'VALIDATION_ERROR', 'detail': one_line_error(exc.detail), 'fields_detail': exc.detail}
+        data = {"code": "VALIDATION_ERROR", "detail": one_line_error(exc.detail), "fields_detail": exc.detail}
         set_rollback()
         return Response(data, status=exc.status_code, headers={})
     elif isinstance(exc, APIError):
-        data = {'code': exc.code, 'detail': exc.message}
+        data = {"code": exc.code, "detail": exc.message}
         set_rollback()
         return Response(data, status=exc.status_code, headers={})
 
@@ -66,7 +66,7 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     # Use a default error code
     if response is not None:
-        response.data.update(code='ERROR')
+        response.data.update(code="ERROR")
     return response
 
 

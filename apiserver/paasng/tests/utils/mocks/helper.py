@@ -27,7 +27,7 @@ _default_whitelist: Set[str] = {"__init__", "__class__", "__dict__", "__new__"}
 def patch_class_with_stub(
     class_: Type, stub: Any, default_filling: Callable = mock.MagicMock, whitelist: Optional[Set[str]] = None
 ):
-    """patch a class with a """
+    """patch a class with a"""
     stack = ExitStack()
     whitelist = whitelist or _default_whitelist
     for attr_name in dir(class_):

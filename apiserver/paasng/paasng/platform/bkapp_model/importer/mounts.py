@@ -42,7 +42,7 @@ def import_mounts(module: Module, mounts: List[MountSpec], overlay_mounts: List[
             module_id=module.id,
             mount_path=mount.mountPath,
             environment_name=MountEnvName.GLOBAL.value,
-            defaults={'source_config': mount.source},
+            defaults={"source_config": mount.source},
         )
         ret.incr_by_created_flag(created)
         # Remove it from index if it already exists
@@ -53,7 +53,7 @@ def import_mounts(module: Module, mounts: List[MountSpec], overlay_mounts: List[
             module_id=module.id,
             mount_path=overlay_mount.mountPath,
             environment_name=overlay_mount.envName,
-            defaults={'source_config': overlay_mount.source},
+            defaults={"source_config": overlay_mount.source},
         )
         ret.incr_by_created_flag(created)
         # Remove it from index if it already exists

@@ -39,20 +39,20 @@ class ApplicationDescription(OwnerTimestampedModel):
     """Application description object"""
 
     application = models.ForeignKey(
-        Application, on_delete=models.CASCADE, db_constraint=False, related_name='declarative_config'
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="declarative_config"
     )
-    code = models.CharField(verbose_name='ID of application', max_length=20, db_index=True)
-    name = TranslatedFieldWithFallback(models.CharField(verbose_name='application name', max_length=20))
-    basic_info = JSONField(verbose_name='basic information', blank=True, default={})
-    market = JSONField(verbose_name='market specs', blank=True, default={})
-    modules = JSONField(verbose_name='modules specs', blank=True, default=[])
-    plugins = JSONField(verbose_name='extra plugins', blank=True, default=[])
-    is_creation = models.BooleanField(verbose_name='whether current description creates an application', default=False)
+    code = models.CharField(verbose_name="ID of application", max_length=20, db_index=True)
+    name = TranslatedFieldWithFallback(models.CharField(verbose_name="application name", max_length=20))
+    basic_info = JSONField(verbose_name="basic information", blank=True, default={})
+    market = JSONField(verbose_name="market specs", blank=True, default={})
+    modules = JSONField(verbose_name="modules specs", blank=True, default=[])
+    plugins = JSONField(verbose_name="extra plugins", blank=True, default=[])
+    is_creation = models.BooleanField(verbose_name="whether current description creates an application", default=False)
 
     def get_plugin(self, plugin_type: AppDescPluginType) -> Optional[Dict]:
         """Return the first plugin in given type"""
         for plugin in self.plugins:
-            if plugin['type'] == plugin_type.value:
+            if plugin["type"] == plugin_type.value:
                 return plugin
         return None
 
@@ -61,13 +61,13 @@ class DeploymentDescription(TimestampedModel):
     """Config objects which describes deployment objects"""
 
     deployment = models.OneToOneField(
-        Deployment, on_delete=models.CASCADE, db_constraint=False, related_name='declarative_config'
+        Deployment, on_delete=models.CASCADE, db_constraint=False, related_name="declarative_config"
     )
-    env_variables = JSONField(verbose_name='environment variables', blank=True, default=[])
-    runtime = JSONField(verbose_name='runtime config', blank=True, default={})
-    scripts = JSONField(verbose_name='scripts', blank=True, default={})
-    environments = JSONField(verbose_name='environment specified configs', blank=True, default={})
-    plugins = JSONField(verbose_name='extra plugins', blank=True, default=[])
+    env_variables = JSONField(verbose_name="environment variables", blank=True, default=[])
+    runtime = JSONField(verbose_name="runtime config", blank=True, default={})
+    scripts = JSONField(verbose_name="scripts", blank=True, default={})
+    environments = JSONField(verbose_name="environment specified configs", blank=True, default={})
+    plugins = JSONField(verbose_name="extra plugins", blank=True, default=[])
 
     def get_procfile(self) -> Dict[str, str]:
         """[Deprecated] get Procfile, should only be used to generate Procfile for buildpack
@@ -82,7 +82,7 @@ class DeploymentDescription(TimestampedModel):
 
         ProcessesTmpl is a dict containing a process type and its corresponding ProcessTmpl"""
         processes = self.runtime.get("processes", {})
-        return {key: process for key, process in processes.items()}
+        return dict(processes.items())
 
     def get_deploy_hooks(self) -> HookList:
         hooks = HookList()
@@ -97,7 +97,7 @@ class DeploymentDescription(TimestampedModel):
 
     def get_svc_discovery(self) -> Optional[SvcDiscovery]:
         try:
-            return cattr.structure(self.runtime['svc_discovery'], SvcDiscovery)
+            return cattr.structure(self.runtime["svc_discovery"], SvcDiscovery)
         except KeyError:
             return None
         except TypeError:

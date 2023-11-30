@@ -17,6 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
-APP_CODE_FIELD = 'bk_app_code'
-APP_NAME_FIELD = 'bk_app_name'
+APP_CODE_FIELD = "bk_app_code"
+APP_NAME_FIELD = "bk_app_name"
 APP_NAME_FIELD_EN = "bk_app_name_en"

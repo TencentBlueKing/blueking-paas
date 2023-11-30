@@ -52,7 +52,7 @@ class ProtectionStatus:
     def reason(self) -> str:
         """the detailed reason of why resource is protected,
         if there are multiple reasons, only return the first one."""
-        return str(self.failed_conditions[0].message) if self.activated else ''
+        return str(self.failed_conditions[0].message) if self.activated else ""
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, ProtectionStatus):

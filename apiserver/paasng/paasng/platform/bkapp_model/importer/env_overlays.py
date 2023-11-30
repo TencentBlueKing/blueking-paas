@@ -50,8 +50,8 @@ def _upsert_autoacaling(proc_spec: ModuleProcessSpec, input_p: AutoscalingOverla
         defaults={
             "autoscaling": True,
             "scaling_config": {
-                "minReplicas": input_p.minReplicas,
-                "maxReplicas": input_p.maxReplicas,
+                "min_replicas": input_p.minReplicas,
+                "max_replicas": input_p.maxReplicas,
                 "policy": input_p.policy,
             },
         },
@@ -97,7 +97,7 @@ def import_env_overlays(
         items = cast(list, items)
         for input_p in items:
             if not (proc_spec := existing_specs.get(input_p.process)):
-                logger.info('Process spec not found, ignore, name: %s', input_p.process)
+                logger.info("Process spec not found, ignore, name: %s", input_p.process)
                 continue
 
             # Remove duplicates by setdefault

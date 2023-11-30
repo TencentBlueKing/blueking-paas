@@ -75,6 +75,7 @@ from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.importer.importer import import_manifest
 from paasng.platform.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
@@ -154,12 +155,12 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(responses={"200": DeploySerializer(many=True)}, query_serializer=QueryDeploysSerializer)
     def list(self, request, code, module_name, environment):
         """查询历史部署对象"""
-        qs = self.get_queryset().order_by('-created')
+        qs = self.get_queryset().order_by("-created")
 
         # Filter QuerySet
         serializer = QueryDeploysSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
-        if operator := serializer.validated_data.get('operator'):
+        if operator := serializer.validated_data.get("operator"):
             qs = qs.filter(operator=user_id_encoder.encode(settings.USER_TYPE, operator))
 
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
@@ -186,6 +187,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # TODO: 当 manifest 提供时，检查 manifest 是否有变化
         if manifest := serializer.validated_data.get("manifest"):
             update_app_resource(application, module, manifest)
+            import_manifest(module, manifest)
 
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
@@ -241,7 +243,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(to_error_string(e))
 
         changes = get_online_replicas_diff(env, new_res)
-        return Response(DeployPrepResultSLZ({'proc_replicas_changes': changes}).data)
+        return Response(DeployPrepResultSLZ({"proc_replicas_changes": changes}).data)
 
     def get_queryset(self) -> models.QuerySet:
         """Get the AppModelDeploy QuerySet object"""
@@ -402,11 +404,11 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mounts = Mount.objects.filter(module_id=module.id).order_by("-created")
 
         # Filter by environment_name if provided
-        environment_name = params.get('environment_name')
+        environment_name = params.get("environment_name")
         if environment_name:
             mounts = mounts.filter(environment_name=environment_name)
         # Filter by source_type if provided
-        source_type = params.get('source_type')
+        source_type = params.get("source_type")
         if source_type:
             mounts = mounts.filter(source_type=source_type)
 
@@ -423,7 +425,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def create(self, request, code, module_name):
         application = self.get_application()
         module = self.get_module_via_path()
-        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id})
+        slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
@@ -432,17 +434,17 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             mount_instance = Mount.objects.new(
                 module_id=module.id,
                 app_code=application.code,
-                name=validated_data['name'],
-                environment_name=validated_data['environment_name'],
-                mount_path=validated_data['mount_path'],
-                source_type=validated_data['source_type'],
+                name=validated_data["name"],
+                environment_name=validated_data["environment_name"],
+                mount_path=validated_data["mount_path"],
+                source_type=validated_data["source_type"],
                 region=application.region,
             )
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 创建或更新 Mount source
-        Mount.objects.upsert_source(mount_instance, validated_data['source_config_data'])
+        Mount.objects.upsert_source(mount_instance, validated_data["source_config_data"])
 
         try:
             slz = MountSLZ(mount_instance)
@@ -456,21 +458,21 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        slz = UpsertMountSLZ(data=request.data, context={'module_id': module.id, 'mount_id': mount_instance.id})
+        slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id, "mount_id": mount_instance.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
         # 更新 Mount
-        mount_instance.name = validated_data['name']
-        mount_instance.environment_name = validated_data['environment_name']
-        mount_instance.mount_path = validated_data['mount_path']
+        mount_instance.name = validated_data["name"]
+        mount_instance.environment_name = validated_data["environment_name"]
+        mount_instance.mount_path = validated_data["mount_path"]
         try:
-            mount_instance.save(update_fields=['name', 'environment_name', 'mount_path'])
+            mount_instance.save(update_fields=["name", "environment_name", "mount_path"])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 创建或更新 Mount source
-        Mount.objects.upsert_source(mount_instance, validated_data['source_config_data'])
+        Mount.objects.upsert_source(mount_instance, validated_data["source_config_data"])
 
         # 需要删除对应的 k8s volume 资源
         if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):

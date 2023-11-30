@@ -32,7 +32,6 @@
             >
               <bk-button
                 theme="primary"
-                style="width: 101px;"
                 :outline="curEnv !== 'stag'"
                 @click="curEnv = 'stag'"
               >
@@ -40,7 +39,6 @@
               </bk-button>
               <bk-button
                 theme="primary"
-                style="width: 101px;"
                 :outline="curEnv !== 'prod'"
                 @click="curEnv = 'prod'"
               >
@@ -236,7 +234,7 @@
   </div>
 </template>
 
-<script> import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
 import moment from 'moment';

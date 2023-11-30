@@ -25,9 +25,9 @@ class MethodType(str, StructuredEnum):
     字段协议说明 https://bk.tencent.com/docs/document/6.0/160/8427?r=1
     """
 
-    LIST_ATTR = 'list_attr'
-    LIST_ATTR_VALUE = 'list_attr_value'
-    LIST_INSTANCE = 'list_instance'
-    FETCH_INSTANCE_INFO = 'fetch_instance_info'
-    LIST_INSTANCE_BY_POLICY = 'list_instance_by_policy'
-    SEARCH_INSTANCE = 'search_instance'
+    LIST_ATTR = "list_attr"
+    LIST_ATTR_VALUE = "list_attr_value"
+    LIST_INSTANCE = "list_instance"
+    FETCH_INSTANCE_INFO = "fetch_instance_info"
+    LIST_INSTANCE_BY_POLICY = "list_instance_by_policy"
+    SEARCH_INSTANCE = "search_instance"

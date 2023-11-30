@@ -23,16 +23,18 @@ from paasng.utils.validators import Base64Validator
 
 class LightAppCreateSLZ(serializers.Serializer):
     parent_app_code = serializers.CharField(required=True, help_text="父应用ID")
-    app_name = serializers.CharField(required=True, allow_blank=False, max_length=20, help_text="轻应用名称", source="name")
+    app_name = serializers.CharField(
+        required=True, allow_blank=False, max_length=20, help_text="轻应用名称", source="name"
+    )
     app_url = serializers.URLField(required=True, allow_blank=False, help_text="应用链接", source="external_url")
     developers = serializers.ListField(
         required=True, min_length=1, child=serializers.CharField(allow_blank=False), help_text="应用开发者用户名"
     )
     app_tag = serializers.CharField(
         required=False,
-        default='Other',
+        default="Other",
         help_text=(
-            '应用分类，可选分类： '
+            "应用分类，可选分类： "
             '"OpsTools"（运维工具），'
             '"MonitorAlarm"（监控告警），'
             '"ConfManage"（配置管理），'
@@ -66,9 +68,9 @@ class LightAppEditSLZ(serializers.Serializer):
     )
     app_tag = serializers.CharField(
         required=False,
-        default='Other',
+        default="Other",
         help_text=(
-            '应用分类，可选分类： '
+            "应用分类，可选分类： "
             '"OpsTools"（运维工具），'
             '"MonitorAlarm"（监控告警），'
             '"ConfManage"（配置管理），'

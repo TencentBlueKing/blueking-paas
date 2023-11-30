@@ -64,7 +64,7 @@ def _proxied_svc_dispatcher(method_name: str):
             if isinstance(service, mgr.service_obj_cls):
                 method = getattr(mgr, method_name)
                 return method(service, *args, **kwargs)
-        raise ValueError(f'{service} is an invalid service')
+        raise ValueError(f"{service} is an invalid service")
 
     return func
 
@@ -97,7 +97,7 @@ def get_db_properties(service: ServiceObj) -> ServiceDBProperties:
         return RemoteServiceDBProperties()
     elif isinstance(service, LocalServiceObj):
         return LocalServiceDBProperties()
-    raise ValueError(f'Unknown service obj type: {type(service)}')
+    raise ValueError(f"Unknown service obj type: {type(service)}")
 
 
 def get_db_properties_by_service_type(service_type: str) -> ServiceDBProperties:
@@ -106,10 +106,10 @@ def get_db_properties_by_service_type(service_type: str) -> ServiceDBProperties:
         return RemoteServiceDBProperties()
     elif service_type == ServiceType.LOCAL:
         return LocalServiceDBProperties()
-    raise ValueError(f'Unknown service type: {service_type}')
+    raise ValueError(f"Unknown service type: {service_type}")
 
 
-T = TypeVar('T', bound='MixedServiceMgr')
+T = TypeVar("T", bound="MixedServiceMgr")
 
 
 class MixedServiceMgr:
@@ -139,7 +139,7 @@ class MixedServiceMgr:
 
     def get_without_region(self, uuid: str) -> ServiceObj:
         """Get a service without any region info"""
-        for region in get_all_regions().keys():
+        for region in get_all_regions():
             try:
                 return self.get(uuid, region)
             except ServiceObjNotFound:
@@ -172,17 +172,17 @@ class MixedServiceMgr:
     def bind_service(self, service: ServiceObj, module: Module, specs: Optional[Dict[str, str]] = None) -> str:
         """Create bind relationship for given module and service object"""
         DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
-        return _proxied_svc_dispatcher('bind_service')(self, service, module, specs=specs)
+        return _proxied_svc_dispatcher("bind_service")(self, service, module, specs=specs)
 
     # Dispatch via service type start
 
-    get_attachment_by_instance_id = _proxied_svc_dispatcher('get_attachment_by_instance_id')
+    get_attachment_by_instance_id = _proxied_svc_dispatcher("get_attachment_by_instance_id")
     get_instance_rel_by_instance_id = cast(
-        Callable[..., EngineAppInstanceRel], _proxied_svc_dispatcher('get_instance_rel_by_instance_id')
+        Callable[..., EngineAppInstanceRel], _proxied_svc_dispatcher("get_instance_rel_by_instance_id")
     )
-    get_provisioned_queryset = _proxied_svc_dispatcher('get_provisioned_queryset')
-    get_provisioned_envs = _proxied_svc_dispatcher('get_provisioned_envs')
-    module_is_bound_with = _proxied_svc_dispatcher('module_is_bound_with')
+    get_provisioned_queryset = _proxied_svc_dispatcher("get_provisioned_queryset")
+    get_provisioned_envs = _proxied_svc_dispatcher("get_provisioned_envs")
+    module_is_bound_with = _proxied_svc_dispatcher("module_is_bound_with")
     update = _proxied_svc_dispatcher("update")
     destroy = _proxied_svc_dispatcher("destroy")
 
@@ -199,26 +199,26 @@ class MixedServiceMgr:
             else:
                 joined_qs = joined_qs.union(qs)
         if joined_qs is None:
-            raise ValueError(f'{services} is an invalid service list')
+            raise ValueError(f"{services} is an invalid service list")
         return joined_qs
 
     # Dispatch via service type end
 
     # Proxied generator methods start
 
-    list_by_category = _proxied_chained_generator('list_by_category')
-    list_binded: Callable[..., Iterable['ServiceObj']] = _proxied_chained_generator('list_binded')
+    list_by_category = _proxied_chained_generator("list_by_category")
+    list_binded: Callable[..., Iterable["ServiceObj"]] = _proxied_chained_generator("list_binded")
     list_all_rels = cast(
-        Callable[..., Generator[EngineAppInstanceRel, None, None]], _proxied_chained_generator('list_all_rels')
+        Callable[..., Generator[EngineAppInstanceRel, None, None]], _proxied_chained_generator("list_all_rels")
     )
     list_unprovisioned_rels = cast(
-        Callable[..., Iterator[EngineAppInstanceRel]], _proxied_chained_generator('list_unprovisioned_rels')
+        Callable[..., Iterator[EngineAppInstanceRel]], _proxied_chained_generator("list_unprovisioned_rels")
     )
     list_provisioned_rels = cast(
-        Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator('list_provisioned_rels')
+        Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_provisioned_rels")
     )
-    list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator('list_by_region')
-    list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator('list'))
+    list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
+    list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
 
     # Proxied generator methods end
 
@@ -232,7 +232,7 @@ class MixedServiceMgr:
         """
         instances = [rel.get_instance() for rel in self.list_provisioned_rels(engine_app, service=service)]
         # 新的覆盖旧的
-        instances.sort(key=operator.attrgetter('create_time'))
+        instances.sort(key=operator.attrgetter("create_time"))
 
         result = {}
         for i in instances:
@@ -280,7 +280,7 @@ class DuplicatedBindingValidator:
 
     def _check_duplicated_normal(self, service: ServiceObj):
         if service in mixed_service_mgr.list_binded(self.module):
-            raise DuplicatedServiceBoundError(f'Module: {self.module.name} already bound with service {service.name}')
+            raise DuplicatedServiceBoundError(f"Module: {self.module.name} already bound with service {service.name}")
 
     def _check_duplicated_sharing(self, service: ServiceObj):
         from .sharing import ServiceSharingManager
@@ -289,5 +289,5 @@ class DuplicatedBindingValidator:
         for info in infos:
             if info.service == service:
                 raise DuplicatedServiceBoundError(
-                    f'Module: {self.module.name} already shared an attachment in service: {service.name}'
+                    f"Module: {self.module.name} already shared an attachment in service: {service.name}"
                 )

@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class TestMresConditionDetector:
     @pytest.mark.parametrize(
-        "mres, expected_status",
+        ("mres", "expected_status"),
         [
             (create_res_with_conds([]), DeployStatus.PENDING),
             (
@@ -76,11 +76,12 @@ class TestMresConditionDetector:
         assert s.status == expected_status
 
 
-@pytest.mark.skip_when_no_crds
+@pytest.mark.skip_when_no_crds()
 class TestBkAppClusterOperator:
     """测试在集群中操作 bkapp 资源"""
 
-    def test_deploy_and_get_status_v1alpha1(self, bk_app, bk_stag_env, bk_stag_wl_app, mock_knamespace):
+    @pytest.mark.usefixtures("_with_stag_ns")
+    def test_deploy_and_get_status_v1alpha1(self, bk_app, bk_stag_env, bk_stag_wl_app):
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha1",
             "kind": "BkApp",
@@ -113,7 +114,8 @@ class TestBkAppClusterOperator:
             ret = deploy(bk_stag_env, manifest)
         assert ret["spec"]["processes"][1]["name"] == "worker"
 
-    def test_deploy_and_get_status_v1alpha2(self, bk_app, bk_stag_env, bk_stag_wl_app, mock_knamespace):
+    @pytest.mark.usefixtures("_with_stag_ns")
+    def test_deploy_and_get_status_v1alpha2(self, bk_app, bk_stag_env, bk_stag_wl_app):
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha2",
             "kind": "BkApp",

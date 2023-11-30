@@ -31,7 +31,7 @@ from paasng.utils.rate_limit.token_bucket import UserActionRateLimiter as UserAc
 from tests.utils.auth import create_user
 
 
-@pytest.mark.parametrize('RateLimiter', [UserActionTokenBucketRateLimiter, UserActionFixedWindowRateLimiter])
+@pytest.mark.parametrize("RateLimiter", [UserActionTokenBucketRateLimiter, UserActionFixedWindowRateLimiter])
 def test_UserActionRateLimiter(RateLimiter):
     window_size, threshold = 3, 2
     user = create_user()

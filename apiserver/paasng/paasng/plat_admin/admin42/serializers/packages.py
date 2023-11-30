@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paasng.platform.sourcectl.models import SourcePackage
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
+from paasng.platform.sourcectl.models import SourcePackage
 from paasng.utils.serializers import UserNameField
 
 
@@ -30,4 +30,4 @@ class SourcePackageSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = SourcePackage
-        fields = '__all__'
+        fields = "__all__"

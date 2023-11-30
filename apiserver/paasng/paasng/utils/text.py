@@ -21,7 +21,7 @@ import re
 import uuid
 from typing import Collection
 
-UNICODE_ASCII_CHARACTER_SET = 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' '0123456789'
+UNICODE_ASCII_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789"
 
 
 # From oauthlib.common
@@ -34,10 +34,10 @@ def generate_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
     why SystemRandom is used instead of the default random.choice method.
     """
     rand = random.SystemRandom()
-    return ''.join(rand.choice(chars) for x in range(length))
+    return "".join(rand.choice(chars) for x in range(length))
 
 
-RE_TAG = re.compile('<.*?>')
+RE_TAG = re.compile("<.*?>")
 
 
 def strip_html_tags(s: str, reserved_tags: Collection[str] = []) -> str:  # noqa: B006
@@ -52,7 +52,7 @@ def strip_html_tags(s: str, reserved_tags: Collection[str] = []) -> str:  # noqa
         s = s.replace(tag, placeholder)
         performed_tag_pairs.append((tag, placeholder))
 
-    result = re.sub(RE_TAG, '', s)
+    result = re.sub(RE_TAG, "", s)
 
     # Restore reserved tags
     # NOTE: Current approach's time complexity is O(length_of_string*length_of_reserved_tags), which means it may
@@ -91,8 +91,8 @@ def camel_to_snake(name: str) -> str:
     >>> camel_to_snake("FBI")
     fbi
     """
-    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+    name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
 
 
 def calculate_percentage(x: float, y: float, decimal_places: int = 2) -> str:
@@ -116,7 +116,7 @@ def calculate_percentage(x: float, y: float, decimal_places: int = 2) -> str:
         raise ValueError("decimal cannot be negative")
     result = x / y
     # 最小精度
-    min_precision = 1 / 100 / 10 ** decimal_places
+    min_precision = 1 / 100 / 10**decimal_places
     # 如果结果小于最小精度，则返回 "<最小精度%"
     if result < min_precision:
         return "<{:.{decimal_places}%}".format(min_precision, decimal_places=decimal_places)

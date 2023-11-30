@@ -34,11 +34,11 @@ def get_response(request):
 
 class TestSysUserFromVerifiedClientMiddleware:
     def test_normal(self):
-        request = request_factory.get('/')
+        request = request_factory.get("/")
         middleware = SysUserFromVerifiedClientMiddleware(get_response)
-        assert not hasattr(request, 'user')
+        assert not hasattr(request, "user")
 
         # Trigger middleware with a verified client object
-        request.client = Client('test-client', role='internal-sys')
+        request.client = Client("test-client", role="internal-sys")
         middleware(request)
         assert request.user is not None

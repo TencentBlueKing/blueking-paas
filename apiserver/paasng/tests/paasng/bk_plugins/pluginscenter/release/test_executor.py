@@ -16,9 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import time
 from unittest import mock
 
 import pytest
+from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, TaskPoller
 from blue_krill.web.std_error import APIError
 from django.utils.translation import gettext_lazy as _
 
@@ -30,7 +32,25 @@ from paasng.bk_plugins.pluginscenter.releases.executor import PluginReleaseExecu
 pytestmark = pytest.mark.django_db
 
 
-def build_stage_controller(target_status: PluginReleaseStatus):
+class FakeTaskPoller(TaskPoller):
+    """A task poller for testing"""
+
+    def query(self) -> PollingResult:
+        stage_controller = build_stage_controller(
+            self.params["target_status"], post_command_result=self.params["post_command_result"]
+        )
+        # 当前步骤执行结束后，执行后置命令
+        is_success = stage_controller(self.params["stage"]).execute_post_command()
+        if not is_success:
+            self.params["stage"].update_status(PluginReleaseStatus.FAILED, "execute post command error")
+            return PollingResult.done()
+
+        return PollingResult.done()
+
+
+def build_stage_controller(
+    target_status: PluginReleaseStatus, pre_command_result: bool = True, post_command_result: bool = True
+):
     class StageStatusSetter:
         def __init__(self, stage: PluginReleaseStage):
             self.release = stage.release
@@ -40,13 +60,22 @@ def build_stage_controller(target_status: PluginReleaseStatus):
 
         def execute(self, operator: str):
             self.stage.update_status(target_status)
+            metadata = PollingMetadata(retries=0, query_started_at=time.time(), queried_count=0)
+            params = {"stage": self.stage, "target_status": target_status, "post_command_result": post_command_result}
+            FakeTaskPoller(params, metadata).query()
+
+        def execute_pre_command(self, operator: str):
+            return pre_command_result
+
+        def execute_post_command(self):
+            return post_command_result
 
     return StageStatusSetter
 
 
 class TestPluginReleaseExecutor:
-    @pytest.fixture
-    def setup_release_stages(self, pd):
+    @pytest.fixture()
+    def _setup_release_stages(self, pd):
         pd.release_stages = [
             {
                 "id": "stage1",
@@ -72,12 +101,12 @@ class TestPluginReleaseExecutor:
         pd.save()
         pd.refresh_from_db()
 
-    @pytest.fixture
-    def release(self, setup_release_stages, release) -> PluginRelease:
+    @pytest.fixture()
+    def release(self, _setup_release_stages, release) -> PluginRelease:
         release.initial_stage_set(force_refresh=True)
         return release
 
-    @pytest.fixture
+    @pytest.fixture()
     def stage_class_setter(self):
         with mock.patch(
             "paasng.bk_plugins.pluginscenter.releases.stages.BaseStageController.get_stage_class"
@@ -91,7 +120,9 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.enter_next_stage("")
         assert exc.value.code == error_codes.EXECUTE_STAGE_ERROR.code
-        assert exc.value.message == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message
+        assert (
+            exc.value.message == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段未执行成功, 不允许进入下一阶段")).message
+        )
 
         # 测试成功进入下一步, 同时下一步执行失败
         stage_class_setter.return_value = build_stage_controller(PluginReleaseStatus.INTERRUPTED)
@@ -133,7 +164,10 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.execute_current_stage("")
         assert exc.value.code == error_codes.EXECUTE_STAGE_ERROR.code
-        assert exc.value.message == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段已被执行, 不能重复触发已执行的阶段")).message
+        assert (
+            exc.value.message
+            == error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段已被执行, 不能重复触发已执行的阶段")).message
+        )
 
         # 测试设置 status 为成功
         release.current_stage.reset()
@@ -166,7 +200,10 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.back_to_previous_stage("")
         assert exc.value.code == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.code
-        assert exc.value.message == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回审批单据, 再返回上一步")).message
+        assert (
+            exc.value.message
+            == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回审批单据, 再返回上一步")).message
+        )
 
     def test_rollback_current_stage(self, release):
         executor = PluginReleaseExecutor(release)
@@ -192,7 +229,9 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.reset_release("")
         assert exc.value.code == error_codes.CANNOT_RESET_RELEASE.code
-        assert exc.value.message == error_codes.CANNOT_RESET_RELEASE.f(_("状态异常: {}").format(release.status)).message
+        assert (
+            exc.value.message == error_codes.CANNOT_RESET_RELEASE.f(_("状态异常: {}").format(release.status)).message
+        )
 
         release.all_stages.update(status=PluginReleaseStatus.SUCCESSFUL)
         release.current_stage = release.all_stages.get(stage_id="stage4")
@@ -224,3 +263,39 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.cancel_release("")
         assert exc.value.code == error_codes.CANNOT_CANCEL_RELEASE.code
+
+    @pytest.mark.parametrize(
+        ("pre_command_result", "stage_status", "raise_exception"),
+        [(True, PluginReleaseStatus.SUCCESSFUL, False), (False, PluginReleaseStatus.FAILED, True)],
+    )
+    def test_pre_command(self, release, stage_class_setter, pre_command_result, stage_status, raise_exception):
+        executor = PluginReleaseExecutor(release)
+        release.current_stage.reset()
+        stage_class_setter.return_value = build_stage_controller(PluginReleaseStatus.SUCCESSFUL, pre_command_result)
+        assert release.current_stage.stage_id == "stage1"
+        if raise_exception:
+            with pytest.raises(APIError) as exc:
+                executor.execute_current_stage("")
+            assert exc.value.code == error_codes.THIRD_PARTY_API_ERROR.code
+        else:
+            executor.execute_current_stage("")
+            assert release.current_stage.stage_id == "stage1"
+            assert release.current_stage.status == stage_status
+
+    @pytest.mark.parametrize(
+        ("post_command_result", "stage_status"),
+        [
+            (True, PluginReleaseStatus.SUCCESSFUL),
+            (False, PluginReleaseStatus.FAILED),
+        ],
+    )
+    def test_post_command(self, release, stage_class_setter, post_command_result, stage_status):
+        executor = PluginReleaseExecutor(release)
+        release.current_stage.reset()
+        stage_class_setter.return_value = build_stage_controller(
+            PluginReleaseStatus.SUCCESSFUL, post_command_result=post_command_result
+        )
+        assert release.current_stage.stage_id == "stage1"
+        executor.execute_current_stage("")
+        assert release.current_stage.stage_id == "stage1"
+        assert release.current_stage.status == stage_status

@@ -20,4 +20,4 @@ from django.apps import AppConfig
 
 
 class HooksConfig(AppConfig):
-    name = 'paas_wl.workloads.release_controller.hooks'
+    name = "paas_wl.workloads.release_controller.hooks"

@@ -25,8 +25,8 @@ import requests
 
 from paasng.accessories.services.utils import gen_unique_id, generate_password
 
-from ..base import BaseProvider, InstanceData
 from .exceptions import CreateRabbitMQFail
+from ..base import BaseProvider, InstanceData
 
 
 class RabbitMQProvider(BaseProvider):
@@ -36,45 +36,45 @@ class RabbitMQProvider(BaseProvider):
     """
 
     def __init__(self, config):
-        self._host = config['host']
-        self._port = config['port']
-        self._user = config['user']
-        self._password = config['password']
+        self._host = config["host"]
+        self._port = config["port"]
+        self._user = config["user"]
+        self._password = config["password"]
 
         # the port which user will connect on
-        self.port = config['http_port']
+        self.port = config["http_port"]
         self.url_prefix = "http://%s:%s" % (self._host, self._port)
         self.auth = (self._user, self._password)
-        self.headers = {'content-type': 'application/json'}
+        self.headers = {"content-type": "application/json"}
 
     def test_connection(self):
-        url = '%s/api/overview' % self.url_prefix
+        url = "%s/api/overview" % self.url_prefix
         r = requests.get(url, auth=self.auth)
         if r.status_code == 200:
             return
         if r.status_code == 401:
-            raise CreateRabbitMQFail(u"管理员账户信息有误")
+            raise CreateRabbitMQFail("管理员账户信息有误")
         else:
-            raise CreateRabbitMQFail(u"rabbitmq服务异常")
+            raise CreateRabbitMQFail("rabbitmq服务异常")
 
     def put_request(self, path, json=None):
-        url = '%s%s' % (self.url_prefix, path)
+        url = "%s%s" % (self.url_prefix, path)
         r = requests.put(url=url, headers=self.headers, auth=self.auth, json=json)
         return r.status_code in [201, 204]
 
     def del_request(self, path, json=None):
-        url = '%s%s' % (self.url_prefix, path)
+        url = "%s%s" % (self.url_prefix, path)
         return requests.delete(url=url, headers=self.headers, auth=self.auth, json=json).status_code in [201, 204]
 
     def get_request(self, path, json=None):
-        url = '%s%s' % (self.url_prefix, path)
+        url = "%s%s" % (self.url_prefix, path)
         return requests.get(url=url, headers=self.headers, auth=self.auth, json=json).json()
 
     def create(self, params) -> InstanceData:
         """
         create rabbitmq user and vhost
         """
-        preferred_name = params.get('engine_app_name')
+        preferred_name = params.get("engine_app_name")
         # get_unique_id
         uid = gen_unique_id(preferred_name)
         rabbitmq_vhost = uid
@@ -86,24 +86,24 @@ class RabbitMQProvider(BaseProvider):
         self.test_connection()
 
         # 1. 创建vhost
-        path = '/api/vhosts/%s' % rabbitmq_vhost
+        path = "/api/vhosts/%s" % rabbitmq_vhost
         is_success = self.put_request(path)
         if not is_success:
-            raise CreateRabbitMQFail(u"创建vhost失败")
+            raise CreateRabbitMQFail("创建vhost失败")
 
         # 2. 创建账户
-        path = '/api/users/%s' % rabbitmq_user
+        path = "/api/users/%s" % rabbitmq_user
         json = {"password": rabbitmq_password, "tags": "management"}
         is_success = self.put_request(path, json)
         if not is_success:
-            raise CreateRabbitMQFail(u"创建账户失败")
+            raise CreateRabbitMQFail("创建账户失败")
 
         # 3. vhost 授权
-        path = '/api/permissions/%s/%s' % (rabbitmq_vhost, rabbitmq_user)
+        path = "/api/permissions/%s/%s" % (rabbitmq_vhost, rabbitmq_user)
         json = {"configure": ".*", "write": ".*", "read": ".*"}
         is_success = self.put_request(path, json)
         if not is_success:
-            raise CreateRabbitMQFail(u"vhost授权失败")
+            raise CreateRabbitMQFail("vhost授权失败")
 
         credentials = {
             "host": self._host,
@@ -120,25 +120,25 @@ class RabbitMQProvider(BaseProvider):
         return True, message
         """
         option = instance_data.credentials
-        rabbitmq_vhost = option['RABBITMQ_VHOST']
-        rabbitmq_user = option['RABBITMQ_USER']
+        rabbitmq_vhost = option["RABBITMQ_VHOST"]
+        rabbitmq_user = option["RABBITMQ_USER"]
 
         self.test_connection()
 
         # 1. 删除vhost
-        path = '/api/vhosts/%s' % rabbitmq_vhost
+        path = "/api/vhosts/%s" % rabbitmq_vhost
         is_success = self.del_request(path)
         if not is_success:
-            return False, u"删除vhost失败"
+            return False, "删除vhost失败"
 
         # 2. 删除账户
-        path = '/api/users/%s' % rabbitmq_user
+        path = "/api/users/%s" % rabbitmq_user
         json: Dict = {}
         is_success = self.del_request(path, json)
         if not is_success:
-            return False, u"删除账户失败"
+            return False, "删除账户失败"
 
-        return
+        return None
 
     def patch(self, params):
         """

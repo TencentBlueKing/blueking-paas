@@ -27,7 +27,7 @@ from paasng.platform.engine import serializers as slzs
 from paasng.platform.engine.models.config_var import ConfigVar
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 @pytest.mark.parametrize(
     "environment_name, bk_env",
     [("stag", "bk_stag_env"), ("prod", "bk_prod_env"), ("_global_", None)],
@@ -35,7 +35,7 @@ from paasng.platform.engine.models.config_var import ConfigVar
 )
 class TestConfigVar:
     @pytest.mark.parametrize(
-        "data, expected",
+        ("data", "expected"),
         [
             (dict(key="FOO", value="bar", description="baz"), {}),
             pytest.param(
@@ -53,7 +53,7 @@ class TestConfigVar:
             module=bk_module,
             environment_id=getattr(bk_env, "pk", -1),
             is_global=bk_env is None,
-            **data
+            **data,
         )
 
     @pytest.mark.parametrize(
@@ -65,7 +65,7 @@ class TestConfigVar:
         assert v.data == dict(environment_name=environment_name, module=bk_module.pk, **data)
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 class TestConfigVarImportSLZ:
     @pytest.fixture()
     def expected(self, request):
@@ -75,7 +75,7 @@ class TestConfigVarImportSLZ:
         return [ConfigVar(**item) for item in request.param]
 
     @pytest.mark.parametrize(
-        "file_content, expected",
+        ("file_content", "expected"),
         [
             (dict(env_variables=[]), []),
             (
@@ -180,7 +180,7 @@ class TestConfigVarImportSLZ:
         assert ctx.value.get_codes()["error"] == "ERROR_FILE_FORMAT"
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 class TestConfigVarFormatSLZ:
     @pytest.fixture()
     def expected(self, request):
@@ -191,7 +191,7 @@ class TestConfigVarFormatSLZ:
         return ConfigVar(**request.param)
 
     @pytest.mark.parametrize(
-        "data, expected",
+        ("data", "expected"),
         [
             (
                 dict(key="FOO", value="bar", environment_name="stag", description="baz"),

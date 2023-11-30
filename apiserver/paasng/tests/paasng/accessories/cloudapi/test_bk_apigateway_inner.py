@@ -25,7 +25,7 @@ from paasng.accessories.cloudapi.components.bk_apigateway_inner import BkApigate
 
 class TestBkApigatewayInnerComponent:
     @pytest.mark.parametrize(
-        "fake_language, expected",
+        ("fake_language", "expected"),
         [
             (
                 None,

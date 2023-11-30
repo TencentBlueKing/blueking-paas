@@ -20,7 +20,7 @@ to the current version of the project delivered to anyone in the future.
 
 class KubeException(Exception):
     def __init__(self, *args, **kwargs):
-        self.extra_value = kwargs.get('extra_value', None)
+        self.extra_value = kwargs.get("extra_value", None)
         super().__init__(*args)
 
 
@@ -68,7 +68,7 @@ class ResourceMissing(KubeException):
 
 class ResourceDeleteTimeout(KubeException):
     def __init__(self, resource_type, namespace, name, *args, **kwargs):
-        if name != '':
+        if name != "":
             msg = f"{resource_type}<{namespace}/{name}> delete timeout"
         else:
             msg = f"{resource_type}<{namespace}> delete timeout"

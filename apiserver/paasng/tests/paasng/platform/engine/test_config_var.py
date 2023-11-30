@@ -70,8 +70,8 @@ class TestGetConfigVars:
             environment_name="prod", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="proj.settings"
         )
         config_var_maker(environment_name="_global_", module=bk_module, key="NAME", value="global")
-        result = get_config_vars(bk_module, 'prod')
-        assert result == {'DJANGO_SETTINGS_MODULE': 'proj.settings', 'NAME': 'global'}
+        result = get_config_vars(bk_module, "prod")
+        assert result == {"DJANGO_SETTINGS_MODULE": "proj.settings", "NAME": "global"}
 
     def test_get_config_vars_conflict_name(self, bk_module, config_var_maker):
         config_var_maker(
@@ -81,29 +81,29 @@ class TestGetConfigVars:
             environment_name="_global_", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="global.settings"
         )
 
-        result = get_config_vars(bk_module, 'prod')
-        assert result == {u'DJANGO_SETTINGS_MODULE': u'proj.settings'}
+        result = get_config_vars(bk_module, "prod")
+        assert result == {"DJANGO_SETTINGS_MODULE": "proj.settings"}
 
-        result = get_config_vars(bk_module, 'stag')
-        assert result == {u'DJANGO_SETTINGS_MODULE': u'global.settings'}
+        result = get_config_vars(bk_module, "stag")
+        assert result == {"DJANGO_SETTINGS_MODULE": "global.settings"}
 
     def test_invalid_env_name(self, bk_module):
-        with pytest.raises(ValueError):
-            get_config_vars(bk_module, '__invalid_env_name')
+        with pytest.raises(ValueError, match=r"^Invalid env_name given.*"):
+            get_config_vars(bk_module, "__invalid_env_name")
 
     def test_empty(self, bk_module):
-        assert get_config_vars(bk_module, 'prod') == {}
+        assert get_config_vars(bk_module, "prod") == {}
 
 
 class TestFilterByEnvironmentName:
     """TestCases for ConfigVar.objects.filter_by_environment_name"""
 
     @pytest.mark.parametrize(
-        'environment_name,length,keys',
+        ("environment_name", "length", "keys"),
         [
-            (ConfigVarEnvName.GLOBAL, 1, {'G1'}),
-            (ConfigVarEnvName.STAG, 2, {'S1', 'S2'}),
-            (ConfigVarEnvName.PROD, 1, {'P1'}),
+            (ConfigVarEnvName.GLOBAL, 1, {"G1"}),
+            (ConfigVarEnvName.STAG, 2, {"S1", "S2"}),
+            (ConfigVarEnvName.PROD, 1, {"P1"}),
         ],
     )
     def test_global(self, bk_module, config_var_maker, environment_name: ConfigVarEnvName, length: int, keys: List):
@@ -117,7 +117,7 @@ class TestFilterByEnvironmentName:
         assert {x.key for x in qs} == keys
 
 
-@pytest.fixture
+@pytest.fixture()
 def dest_module(bk_app):
     """Return another module if current application fixture"""
     module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
@@ -125,9 +125,9 @@ def dest_module(bk_app):
     return module
 
 
-@pytest.fixture
+@pytest.fixture()
 def dest_prod_env(dest_module):
-    return dest_module.envs.get(environment='prod')
+    return dest_module.envs.get(environment="prod")
 
 
 @pytest.fixture()
@@ -144,12 +144,12 @@ def random_config_var_maker():
 
 class TestConfigVarManager:
     @pytest.mark.parametrize(
-        "source_vars, dest_vars, expected_result, expected_vars",
+        ("source_vars", "dest_vars", "expected_result", "expected_vars"),
         [
             (
                 [
                     dict(
-                        key='A',
+                        key="A",
                         value=2,
                     )
                 ],
@@ -157,34 +157,34 @@ class TestConfigVarManager:
                 (1, 0, 0),
                 {"A": "2"},
             ),
-            ([dict(key='A', value=2)], [dict(key='B', value=2)], (1, 0, 0), {"A": "2", "B": "2"}),
+            ([dict(key="A", value=2)], [dict(key="B", value=2)], (1, 0, 0), {"A": "2", "B": "2"}),
             (
-                [dict(key='B', value=1)],
-                [dict(key='B', value=2)],
+                [dict(key="B", value=1)],
+                [dict(key="B", value=2)],
                 (0, 1, 0),
                 {"B": "1"},
             ),
             (
-                [dict(key='B', value=2, description="???")],
-                [dict(key='B', value=2, description="!!!")],
+                [dict(key="B", value=2, description="???")],
+                [dict(key="B", value=2, description="!!!")],
                 (0, 1, 0),
                 {"B": "2"},
             ),
             (
-                [dict(key='B', value=2, description="")],
-                [dict(key='B', value=2, description="???")],
+                [dict(key="B", value=2, description="")],
+                [dict(key="B", value=2, description="???")],
                 (0, 1, 0),
                 {"B": "2"},
             ),
             (
-                [dict(key='B', value=2, description='aa')],
-                [dict(key='B', value=2, description='aa')],
+                [dict(key="B", value=2, description="aa")],
+                [dict(key="B", value=2, description="aa")],
                 (0, 0, 1),
                 {"B": "2"},
             ),
             (
-                [dict(key='A', value=2, description='A'), dict(key='B', value='d'), dict(key='C', value='d')],
-                [dict(key='A', value=2, description='A'), dict(key='B', description='s')],
+                [dict(key="A", value=2, description="A"), dict(key="B", value="d"), dict(key="C", value="d")],
+                [dict(key="A", value=2, description="A"), dict(key="B", description="s")],
                 (1, 1, 1),
                 {"A": "2", "B": "d", "C": "d"},
             ),
@@ -199,13 +199,13 @@ class TestConfigVarManager:
             config_var_maker(environment_name="prod", module=dest_module, **var)
         ret = ConfigVarManager().clone_vars(bk_module, dest_module)
         assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == expected_result
-        assert get_config_vars(dest_module, 'prod') == expected_vars
+        assert get_config_vars(dest_module, "prod") == expected_vars
 
     @pytest.mark.parametrize("maker_params", [{}, {"description": None}])
     def test_apply_vars_to_module(self, bk_module, random_config_var_maker, maker_params):
         serializer = ConfigVarFormatSLZ(
             data=[random_config_var_maker(environment_name="prod", **maker_params) for i in range(10)],
-            context={'module': bk_module},
+            context={"module": bk_module},
             many=True,
         )
         serializer.is_valid(raise_exception=True)
@@ -229,7 +229,7 @@ class TestConfigVarManager:
             )
             for var in config_vars
         ]
-        serializer = ConfigVarFormatSLZ(data=another_list, context={'module': bk_module}, many=True)
+        serializer = ConfigVarFormatSLZ(data=another_list, context={"module": bk_module}, many=True)
         serializer.is_valid(raise_exception=True)
         another_config_vars = serializer.validated_data
 
@@ -237,45 +237,45 @@ class TestConfigVarManager:
         assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == (0, 10, 0)
 
     @pytest.mark.parametrize(
-        "config_vars, order_by, expected",
+        ("config_vars", "order_by", "expected"),
         [
             (
                 [
-                    dict(key='A', value='1', environment_name='prod', description='first'),
-                    dict(key='B', value='2', environment_name='stag', description='second'),
-                    dict(key='C', value='3', environment_name='stag', description=None),
+                    dict(key="A", value="1", environment_name="prod", description="first"),
+                    dict(key="B", value="2", environment_name="stag", description="second"),
+                    dict(key="C", value="3", environment_name="stag", description=None),
                 ],
                 "-created",
                 [
-                    PlainConfigVar(key="C", value="3", environment_name='stag', description=''),
-                    PlainConfigVar(key="B", value="2", environment_name='stag', description='second'),
-                    PlainConfigVar(key="A", value="1", environment_name='prod', description='first'),
+                    PlainConfigVar(key="C", value="3", environment_name="stag", description=""),
+                    PlainConfigVar(key="B", value="2", environment_name="stag", description="second"),
+                    PlainConfigVar(key="A", value="1", environment_name="prod", description="first"),
                 ],
             ),
             (
                 [
-                    dict(key='C', value='3', environment_name='stag', description=None),
-                    dict(key='B', value='2', environment_name='stag', description='second'),
-                    dict(key='A', value='1', environment_name='prod', description='first'),
+                    dict(key="C", value="3", environment_name="stag", description=None),
+                    dict(key="B", value="2", environment_name="stag", description="second"),
+                    dict(key="A", value="1", environment_name="prod", description="first"),
                 ],
                 "-created",
                 [
-                    PlainConfigVar(key="A", value="1", environment_name='prod', description='first'),
-                    PlainConfigVar(key="B", value="2", environment_name='stag', description='second'),
-                    PlainConfigVar(key="C", value="3", environment_name='stag', description=''),
+                    PlainConfigVar(key="A", value="1", environment_name="prod", description="first"),
+                    PlainConfigVar(key="B", value="2", environment_name="stag", description="second"),
+                    PlainConfigVar(key="C", value="3", environment_name="stag", description=""),
                 ],
             ),
             (
                 [
-                    dict(key='A', value='1', environment_name='prod', description='first'),
-                    dict(key='B', value='2', environment_name='stag', description='second'),
-                    dict(key='C', value='3', environment_name='stag', description=None),
+                    dict(key="A", value="1", environment_name="prod", description="first"),
+                    dict(key="B", value="2", environment_name="stag", description="second"),
+                    dict(key="C", value="3", environment_name="stag", description=None),
                 ],
                 "-key",
                 [
-                    PlainConfigVar(key="C", value="3", environment_name='stag', description=''),
-                    PlainConfigVar(key="B", value="2", environment_name='stag', description='second'),
-                    PlainConfigVar(key="A", value="1", environment_name='prod', description='first'),
+                    PlainConfigVar(key="C", value="3", environment_name="stag", description=""),
+                    PlainConfigVar(key="B", value="2", environment_name="stag", description="second"),
+                    PlainConfigVar(key="A", value="1", environment_name="prod", description="first"),
                 ],
             ),
         ],
@@ -289,33 +289,33 @@ class TestConfigVarManager:
         assert exported.env_variables == expected
 
     @pytest.mark.parametrize(
-        "vars_in_db, new_vars, expected_result",
+        ("vars_in_db", "new_vars", "expected_result"),
         [
             (
                 # 更新已有数据
-                [dict(id=1, key='A', value=2, description='A', environment_name='stag')],
-                [dict(id=1, key='A1', value=2, description='A', environment_name='_global_')],
+                [dict(id=1, key="A", value=2, description="A", environment_name="stag")],
+                [dict(id=1, key="A1", value=2, description="A", environment_name="_global_")],
                 (0, 1, 0),
             ),
             (
                 # 修改、删除、新增数据
                 [
-                    dict(id=1, key='A', value=2, description='A', environment_name='stag'),
-                    dict(id=2, key='B', value=2, description='A', environment_name='stag'),
+                    dict(id=1, key="A", value=2, description="A", environment_name="stag"),
+                    dict(id=2, key="B", value=2, description="A", environment_name="stag"),
                 ],
                 [
-                    dict(id=1, key='A1', value=2, description='A', environment_name='_global_'),
-                    dict(key='C', value=2, description='B', environment_name='prod'),
+                    dict(id=1, key="A1", value=2, description="A", environment_name="_global_"),
+                    dict(key="C", value=2, description="B", environment_name="prod"),
                 ],
                 (1, 1, 1),
             ),
             (
                 # 修改(但 id 不在 db 内)、删除数据
                 [
-                    dict(id=1, key='A', value=2, description='A', environment_name='stag'),
-                    dict(id=2, key='B', value=2, description='A', environment_name='stag'),
+                    dict(id=1, key="A", value=2, description="A", environment_name="stag"),
+                    dict(id=2, key="B", value=2, description="A", environment_name="stag"),
                 ],
-                [dict(id=3, key='A1', value=2, description='A', environment_name='_global_')],
+                [dict(id=3, key="A1", value=2, description="A", environment_name="_global_")],
                 (1, 0, 2),
             ),
         ],
@@ -326,7 +326,7 @@ class TestConfigVarManager:
 
         serializer = ConfigVarFormatWithIdSLZ(
             data=new_vars,
-            context={'module': bk_module},
+            context={"module": bk_module},
             many=True,
         )
         serializer.is_valid(raise_exception=True)
@@ -337,11 +337,11 @@ class TestConfigVarManager:
         assert (ret.create_num, ret.overwrited_num, ret.deleted_num) == expected_result
 
         # 验证保存后的数据，是否与新输入的数据完全一致
-        var_in_db = bk_module.configvar_set.all().order_by('key')
+        var_in_db = bk_module.configvar_set.all().order_by("key")
         var_list_in_db = [model_to_dict(_d, fields=CONFIG_VAR_INPUT_FIELDS) for _d in var_in_db]
 
         valid_new_vars_list = [model_to_dict(_d, fields=CONFIG_VAR_INPUT_FIELDS) for _d in valid_new_vars]
-        sorted_valid_new_vars = sorted(valid_new_vars_list, key=lambda x: x['key'])
+        sorted_valid_new_vars = sorted(valid_new_vars_list, key=lambda x: x["key"])
         assert var_list_in_db == sorted_valid_new_vars
 
     def test_remove_bulk(self, bk_module, config_var_maker):
@@ -350,9 +350,9 @@ class TestConfigVarManager:
         config_var_maker(key="KEY3", value="foo", environment_name="prod", module=bk_module)
         assert bk_module.configvar_set.count() == 3
 
-        assert ConfigVarManager().remove_bulk(bk_module, exclude_keys=['KEY1', 'KEY4']) == 2
+        assert ConfigVarManager().remove_bulk(bk_module, exclude_keys=["KEY1", "KEY4"]) == 2
         assert bk_module.configvar_set.count() == 1
-        assert bk_module.configvar_set.first().key == 'KEY1'
+        assert bk_module.configvar_set.first().key == "KEY1"
 
 
 class TestConfigVarFormatSLZ:
@@ -362,7 +362,7 @@ class TestConfigVarFormatSLZ:
     )
     def test_key_error(self, bk_module, random_config_var_maker, params):
         serializer = ConfigVarFormatSLZ(
-            data=random_config_var_maker(**params, environment_name="stag"), context={'module': bk_module}
+            data=random_config_var_maker(**params, environment_name="stag"), context={"module": bk_module}
         )
         with pytest.raises(ValidationError):
             serializer.is_valid(raise_exception=True)
@@ -370,7 +370,7 @@ class TestConfigVarFormatSLZ:
 
 class TestExportedConfigVars:
     @pytest.mark.parametrize(
-        "env_variables, expected",
+        ("env_variables", "expected"),
         [
             (
                 [],

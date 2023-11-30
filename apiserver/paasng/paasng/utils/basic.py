@@ -60,31 +60,31 @@ class ChoicesEnum(Enum):
         return dict(cls.get_choices()).get(value, value)
 
 
-RE_SHA256SUM = re.compile(r'[0-9a-f]{64}')
+RE_SHA256SUM = re.compile(r"[0-9a-f]{64}")
 
 
 def sha256_checksum(file_path):
     """Calculate sha256sum of file"""
-    possible_names = ['sha256sum', 'gsha256sum']
+    possible_names = ["sha256sum", "gsha256sum"]
     for sha256_bin in possible_names:
         p = subprocess.Popen(
-            '%s %s' % (sha256_bin, file_path),
+            "%s %s" % (sha256_bin, file_path),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            encoding='utf-8',
+            encoding="utf-8",
         )
         stdout, stderr = p.communicate()
         # PY3 compatibility
         stdout, stderr = force_text(stdout), force_text(stderr)
-        if 'command not found' in stderr:
+        if "command not found" in stderr:
             continue
         else:
             searched_obj = RE_SHA256SUM.search(stdout)
             if searched_obj:
                 return searched_obj.group()
     raise RuntimeError(
-        ('Can not calculate sha256sum of file %s, no available command ' 'found(sha256sum|gsha256sum)') % file_path
+        ("Can not calculate sha256sum of file %s, no available command " "found(sha256sum|gsha256sum)") % file_path
     )
 
 
@@ -96,30 +96,30 @@ def get_username_by_bkpaas_user_id(bkpaas_user_id):
 def make_app_pattern(
     suffix,
     include_envs=True,
-    support_envs: Tuple = ('stag', 'prod'),
-    app_field_type='code',
-    prefix: str = 'api/bkapps/applications/',
+    support_envs: Tuple = ("stag", "prod"),
+    app_field_type="code",
+    prefix: str = "api/bkapps/applications/",
 ) -> str:
     """Make an application URL path prefix
 
     :param app_field_type: app identifier type, possible values: 'code', 'uuid'
     :param prefix: default prefix of url, default to "api/bkapps/applications/"
     """
-    if app_field_type == 'code':
-        part_app = '(?P<code>[^/]+)'
-    elif app_field_type == 'uuid':
-        part_app = '(?P<application_id>[0-9a-f-]{32,36})'
+    if app_field_type == "code":
+        part_app = "(?P<code>[^/]+)"
+    elif app_field_type == "uuid":
+        part_app = "(?P<application_id>[0-9a-f-]{32,36})"
     else:
         raise ValueError('Invalid app_field_type, only "code/uuid" are supported')
 
-    if not prefix.endswith('/'):
+    if not prefix.endswith("/"):
         raise ValueError('prefix path must ends with "/"')
-    part_before = f'^{prefix}{part_app}'
+    part_before = f"^{prefix}{part_app}"
 
-    part_module = r'(/modules/(?P<module_name>[^/]+))?'
+    part_module = r"(/modules/(?P<module_name>[^/]+))?"
 
     envs = "|".join(support_envs)
-    part_envs = f'/envs/(?P<environment>{envs})'
+    part_envs = f"/envs/(?P<environment>{envs})"
 
     result = part_before + part_module
     if include_envs:
@@ -128,20 +128,20 @@ def make_app_pattern(
 
 
 # Create a shortcut function form workloads module
-make_app_pattern_with_applications_prefix = partial(make_app_pattern, prefix='applications/')
+make_app_pattern_with_applications_prefix = partial(make_app_pattern, prefix="applications/")
 
 
 def make_app_pattern_with_global_envs(suffix):
-    return make_app_pattern(suffix, support_envs=('stag', 'prod', '_global_'))
+    return make_app_pattern(suffix, support_envs=("stag", "prod", "_global_"))
 
 
 def get_client_ip(request):
     """获取客户端IP"""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(",")[0]
     else:
-        ip = request.META.get('REMOTE_ADDR', '')
+        ip = request.META.get("REMOTE_ADDR", "")
     return ip
 
 
@@ -180,7 +180,7 @@ class LegacyRegexPattern(RegexPattern):
     def match(self, path):
         match = (
             self.regex.fullmatch(path)
-            if self._is_endpoint and self.regex.pattern.endswith('$')
+            if self._is_endpoint and self.regex.pattern.endswith("$")
             else self.regex.search(path)
         )
         if match:
@@ -211,14 +211,14 @@ def re_path(route, view, kwargs=None, name=None):
         pattern = LegacyRegexPattern(route, name=name, is_endpoint=True)
         return URLPattern(pattern, view, kwargs, name)
     else:
-        raise TypeError('view must be a callable or a list/tuple in the case of include().')
+        raise TypeError("view must be a callable or a list/tuple in the case of include().")
 
 
 # Make a global session object to turn on connection pooling
 _requests_session = requests.Session()
 _adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
-_requests_session.mount('http://', _adapter)
-_requests_session.mount('https://', _adapter)
+_requests_session.mount("http://", _adapter)
+_requests_session.mount("https://", _adapter)
 
 
 def get_requests_session() -> requests.Session:
@@ -227,7 +227,7 @@ def get_requests_session() -> requests.Session:
 
 
 class UniqueIDGenerator(Protocol):
-    def __call__(self, name: str, max_length: int = 16, namespace: str = 'default') -> str:
+    def __call__(self, name: str, max_length: int = 16, namespace: str = "default") -> str:
         """Generate an meaningful and unique ID.
 
         :param name: The name, it will be included in the ID result.
@@ -237,7 +237,7 @@ class UniqueIDGenerator(Protocol):
         """
 
 
-def unique_id_generator(name: str, max_length: int = 16, namespace: str = 'default') -> str:
+def unique_id_generator(name: str, max_length: int = 16, namespace: str = "default") -> str:
     """The function which generates unique ID."""
     func: UniqueIDGenerator = import_string(settings.UNIQUE_ID_GEN_FUNC)
     return func(name, max_length=max_length, namespace=namespace)

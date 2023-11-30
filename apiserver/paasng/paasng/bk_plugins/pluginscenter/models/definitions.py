@@ -30,6 +30,7 @@ from paasng.bk_plugins.pluginscenter.definitions import (
     PluginCreateApproval,
     PluginFeature,
     PluginLogConfig,
+    PluginoverviewPage,
     ReleaseRevisionDefinition,
     ReleaseStageDefinition,
 )
@@ -48,6 +49,7 @@ PluginConfigColumnDefinitionField = make_json_field(
     "PluginConfigColumnDefinitionField", List[PluginConfigColumnDefinition]
 )
 PluginFeaturesField = make_json_field("PluginFeaturesField", List[PluginFeature])
+PluginoverviewPageField = make_json_field("PluginoverviewPageField", PluginoverviewPage)
 
 
 class PluginDefinition(UuidAuditedModel):
@@ -55,6 +57,7 @@ class PluginDefinition(UuidAuditedModel):
     name = TranslatedFieldWithFallback(models.CharField(max_length=64))
     description = TranslatedFieldWithFallback(models.TextField())
     docs = models.CharField(max_length=255)
+    # 插件类型的 LOGO，仅用在创建插件页面辅助插件类型的选择
     logo = models.CharField(max_length=255)
 
     administrator = models.JSONField()
@@ -78,13 +81,15 @@ class PluginBasicInfoDefinition(AuditedModel):
     api: PluginBackendAPI = PluginBackendAPIField()
     sync_members: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields_order = models.JSONField(default=list)
+    overview_page = PluginoverviewPageField(null=True)
 
     @classmethod
     def get_languages(cls) -> List[str]:
         """get languages declared in all plugin templates"""
         language_list = []
 
-        plugin_templates = cls.objects.values_list('init_templates', flat=True)
+        plugin_templates = cls.objects.values_list("init_templates", flat=True)
         for templates in plugin_templates:
             languages = [t.language for t in templates]
             language_list.extend(languages)
@@ -100,6 +105,7 @@ class PluginMarketInfoDefinition(AuditedModel):
     category: PluginBackendAPIResource = PluginBackendAPIResourceField()
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields_order = models.JSONField(default=list)
 
 
 class PluginConfigInfoDefinition(AuditedModel):

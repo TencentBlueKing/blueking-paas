@@ -36,10 +36,10 @@ class TestSwaggerConfigurationGenerator(TestCase):
     @pytest.mark.skip(reason="don't know how to fix.")
     def test_default(self):
         factory = APIRequestFactory()
-        request = factory.get('/docs/swagger.full')
+        request = factory.get("/docs/swagger.full")
         request.user = self.user
         response = FullSwaggerConfigurationView.as_view()(request)
         configuration_json = response.content
         configuration_dict = json.loads(configuration_json)
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue("swagger" in configuration_dict)
+        assert response.status_code == 200
+        assert "swagger" in configuration_dict

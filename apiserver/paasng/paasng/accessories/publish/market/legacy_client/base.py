@@ -19,12 +19,12 @@ to the current version of the project delivered to anyone in the future.
 from paasng.core.core.storages.sqlalchemy import legacy_db
 
 # TODO: 直接从 legacydb 模块里拿
-LApplication = legacy_db.get_model('app_app')
-LAppDevelopTimeRecored = legacy_db.get_model('app_develop_time_record')
-LAppReleaseRecored = legacy_db.get_model('paas_app_release_record')
-LAppBizCC = legacy_db.get_model('app_business_cc')
-LAppBizCCRel = legacy_db.get_model('app_app_business_cc')
-LAppGroup = legacy_db.get_model('app_app_group')
+LApplication = legacy_db.get_model("app_app")
+LAppDevelopTimeRecored = legacy_db.get_model("app_develop_time_record")
+LAppReleaseRecored = legacy_db.get_model("paas_app_release_record")
+LAppBizCC = legacy_db.get_model("app_business_cc")
+LAppBizCCRel = legacy_db.get_model("app_app_business_cc")
+LAppGroup = legacy_db.get_model("app_app_group")
 # 权限审批相关
 LPlatformApprovalAdmin = legacy_db.get_model("bk_approval_approval_admin")
 LPlatformApprovalApplyRecord = legacy_db.get_model("bk_approval_apply_record")

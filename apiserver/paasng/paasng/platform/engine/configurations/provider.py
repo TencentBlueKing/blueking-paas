@@ -20,12 +20,12 @@ to the current version of the project delivered to anyone in the future.
 from collections import OrderedDict
 from typing import Callable, Dict, Optional
 
-from paasng.platform.engine.models import Deployment
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.models import Deployment
 
 
 def _make_id(target):
-    if hasattr(target, '__func__'):
+    if hasattr(target, "__func__"):
         return (id(target.__self__), id(target.__func__))
     return id(target)
 

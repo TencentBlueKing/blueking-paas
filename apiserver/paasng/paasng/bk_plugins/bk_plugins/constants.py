@@ -20,4 +20,4 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
 class PluginTagIdType(int, StructuredEnum):
-    UNTAGGED = EnumField(-1, label='未分类')
+    UNTAGGED = EnumField(-1, label="未分类")

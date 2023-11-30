@@ -40,10 +40,10 @@ class BaseAppInfo:
 
 
 class Command(BaseCommand):
-    help = 'Bulk Unbundling Addon Services'
+    help = "Bulk Unbundling Addon Services"
 
     def add_arguments(self, parser):
-        parser.add_argument('--source', type=str, dest="source")
+        parser.add_argument("--source", type=str, dest="source")
         parser.add_argument(
             "--name",
             required=True,
@@ -51,7 +51,7 @@ class Command(BaseCommand):
             help=("specify a service name"),
         )
         parser.add_argument("--region", required=False, type=str, default=settings.DEFAULT_REGION_NAME)
-        parser.add_argument('--dry_run', dest="dry_run", action='store_true')
+        parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
     def handle_input_data(self, source: str) -> Dict[str, Dict[str, List[str]]]:
         """
@@ -62,7 +62,7 @@ class Command(BaseCommand):
         :return: 一个包含处理后数据的字典
         """
         data: Dict[str, Dict[str, List[str]]] = {}
-        with open(source, 'r', encoding='utf-8') as csvfile:
+        with open(source, "r", encoding="utf-8") as csvfile:
             csv_reader = csv.reader(csvfile)
             for row in csv_reader:
                 app_code, _, module_name, env = row
@@ -119,7 +119,6 @@ class Command(BaseCommand):
                     f"APP(code:{app_code})-module({module.name})-env({env}) unbundle the service<{service_id}>."
                 )
             )
-        return
 
     def handle(self, source: str, name: str, region: str, dry_run: bool, *args, **options):
         """

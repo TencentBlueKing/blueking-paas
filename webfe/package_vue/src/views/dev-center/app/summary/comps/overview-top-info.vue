@@ -36,7 +36,7 @@
         </div>
       </div>
       <div
-        v-if="!isCloud && userFeature.PHALANX"
+        v-if="userFeature.PHALANX"
         class="alarm"
       >
         <div class="icon-box mr8">

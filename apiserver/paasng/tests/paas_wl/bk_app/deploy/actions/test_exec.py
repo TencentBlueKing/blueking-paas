@@ -23,19 +23,19 @@ from unittest import mock
 import pytest
 from django.test.utils import override_settings
 
-from paas_wl.bk_app.deploy.actions.exec import AppCommandExecutor
 from paas_wl.bk_app.applications.models.config import Config
-from paas_wl.workloads.release_controller.hooks.models import Command
+from paas_wl.bk_app.deploy.actions.exec import AppCommandExecutor
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType
+from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.platform.engine.utils.output import ConsoleStream
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppCommandExecutor:
-    @pytest.fixture
+    @pytest.fixture()
     def stream(self):
         return ConsoleStream()
 
@@ -53,31 +53,35 @@ class TestAppCommandExecutor:
         return core
 
     @pytest.fixture(autouse=True)
-    def disable_termcolor(self):
+    def _disable_termcolor(self):
         with override_settings(COLORFUL_TERMINAL_OUTPUT=False):
             yield
 
-    def test_perform_successful(self, hook_maker, mock_run_command, stream, capsys):
-        hook = hook_maker('echo 1;echo 2;')
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_successful(self, hook_maker, stream, capsys):
+        hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
         with mock.patch(
             "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness",
         ), mock.patch(
             "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
-        ), mock.patch("paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_succeeded", return_value=None):
+        ), mock.patch(
+            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_succeeded", return_value=None
+        ):
             executor.perform()
 
         out, err = capsys.readouterr()
         assert (
-            out == 'Starting pre-release phase\n[TITLE]: executing...\n'
-            '1\n2\npre-release phase execution succeed.\n[TITLE]: Cleaning up pre-release phase container\n'
+            out == "Starting pre-release phase\n[TITLE]: executing...\n"
+            "1\n2\npre-release phase execution succeed.\n[TITLE]: Cleaning up pre-release phase container\n"
         )
         assert hook.status == CommandStatus.SUCCESSFUL
         assert hook.exit_code == 0
 
-    def test_perform_logs_unready(self, hook_maker, mock_run_command, stream, capsys, caplog):
-        hook = hook_maker('echo 1;echo 2;')
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_logs_unready(self, hook_maker, stream, capsys, caplog):
+        hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
         with mock.patch("paas_wl.bk_app.deploy.actions.exec._WAIT_FOR_READINESS_TIMEOUT", 1):
@@ -86,14 +90,15 @@ class TestAppCommandExecutor:
         out, err = capsys.readouterr()
         assert (
             out
-            == 'Starting pre-release phase\nPod is not created normally, please contact the cluster administrator.\n'
-            '[TITLE]: Cleaning up pre-release phase container\n'
+            == "Starting pre-release phase\nPod is not created normally, please contact the cluster administrator.\n"
+            "[TITLE]: Cleaning up pre-release phase container\n"
         )
         assert hook.status == CommandStatus.FAILED
         assert hook.exit_code is None
 
-    def test_perform_but_pod_dead(self, hook_maker, mock_run_command, stream, capsys, caplog):
-        hook = hook_maker('echo 1;echo 2;')
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_but_pod_dead(self, hook_maker, stream, capsys, caplog):
+        hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
         with mock.patch(
@@ -113,15 +118,16 @@ class TestAppCommandExecutor:
 
         out, err = capsys.readouterr()
         assert (
-            out == 'Starting pre-release phase\n[TITLE]: executing...\n'
-            '1\n2\nfailed with exit code 1\n[TITLE]: Cleaning up pre-release phase container\n'
+            out == "Starting pre-release phase\n[TITLE]: executing...\n"
+            "1\n2\nfailed with exit code 1\n[TITLE]: Cleaning up pre-release phase container\n"
         )
         assert hook.status == CommandStatus.FAILED
         assert hook.exit_code == 1
         assert f"Pod<{hook.app.namespace}/pre-release-hook> ends unsuccessfully" in caplog.text
 
-    def test_perform_but_be_interrupt(self, hook_maker, mock_run_command, stream, capsys, caplog):
-        hook = hook_maker('echo 1;echo 2;')
+    @pytest.mark.usefixtures("_mock_run_command")
+    def test_perform_but_be_interrupt(self, hook_maker, stream, capsys, caplog):
+        hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
 
@@ -130,7 +136,9 @@ class TestAppCommandExecutor:
             hook.save(update_fields=["int_requested_at", "updated"])
             return HealthStatus(reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY)
 
-        with mock.patch("paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness"), mock.patch(
+        with mock.patch(
+            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness"
+        ), mock.patch(
             "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
         ), mock.patch(
             "paas_wl.bk_app.deploy.app_res.controllers.command_kmodel.get",
@@ -145,8 +153,8 @@ class TestAppCommandExecutor:
 
         out, err = capsys.readouterr()
         assert (
-            out == 'Starting pre-release phase\n[TITLE]: executing...\n'
-            '1\n2\npre-release phase aborted.\n[TITLE]: Cleaning up pre-release phase container\n'
+            out == "Starting pre-release phase\n[TITLE]: executing...\n"
+            "1\n2\npre-release phase aborted.\n[TITLE]: Cleaning up pre-release phase container\n"
         )
         assert hook.status == CommandStatus.INTERRUPTED
         assert hook.exit_code == 1

@@ -95,26 +95,26 @@ class TestTaggingLocalPath(TestCase):
 class TestGetDeploymentTags:
     def setup_data(self):
         pattern_data = [
-            ('Procfile error:', 'deploy-failure:fix_procfile'),
-            ('Unable to install mysql-client', 'deploy-failure:fix_mysql_installation'),
-            ('中文错误', 'deploy-failure:ch-err'),
+            ("Procfile error:", "deploy-failure:fix_procfile"),
+            ("Unable to install mysql-client", "deploy-failure:fix_mysql_installation"),
+            ("中文错误", "deploy-failure:ch-err"),
         ]
         for value, tag_str in pattern_data:
             G(DeployFailurePattern, type=DeployFailurePatternType.REGULAR_EXPRESSION, value=value, tag_str=tag_str)
 
     @pytest.mark.parametrize(
-        'logs,tags',
+        ("logs", "tags"),
         [
-            ('Procfile error: blabla', [DeploymentFailureTag('fix_procfile')]),
-            ('ops, unable to install mysql-client, reason: unknown', [DeploymentFailureTag('fix_mysql_installation')]),
-            ('foo 中文错误 bar', [DeploymentFailureTag('ch-err')]),
-            ('no errors', []),
+            ("Procfile error: blabla", [DeploymentFailureTag("fix_procfile")]),
+            ("ops, unable to install mysql-client, reason: unknown", [DeploymentFailureTag("fix_mysql_installation")]),
+            ("foo 中文错误 bar", [DeploymentFailureTag("ch-err")]),
+            ("no errors", []),
         ],
     )
     def test_normal(self, bk_module, logs, tags):
         self.setup_data()
 
         deployment = create_fake_deployment(bk_module)
-        with mock.patch('paasng.accessories.smart_advisor.tagging.get_all_logs', return_value=logs):
+        with mock.patch("paasng.accessories.smart_advisor.tagging.get_all_logs", return_value=logs):
             results = get_deployment_tags(deployment)
             assert results == tags

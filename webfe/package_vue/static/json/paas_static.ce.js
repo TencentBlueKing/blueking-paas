@@ -85,7 +85,6 @@ export const PLATFORM_CONFIG = {
         // MagicBox
         MAGICBOX_INDEX: 'https://magicbox.bk.tencent.com/static_api/v3/main/index.html',
 
-        // 可视化开发平台
         LESSCODE_INDEX: BK_LESSCODE_URL,
 
         // 前端jQuery组件库
@@ -145,6 +144,9 @@ export const PLATFORM_CONFIG = {
 
     // 文档
     DOC: {
+        // 产品文档，导航右上角展示的文档总入口
+        PRODUCT_DOC: BK_DOCS_URL_PREFIX + '/markdown/PaaS/UserGuide/Overview/README.md',
+    
         // 配置蓝鲸应用访问入口
         APP_ENTRY_INTRO: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#section-3',
 
@@ -238,7 +240,6 @@ export const PLATFORM_CONFIG = {
         // APIGW API调用指引
         APIGW_FAQ: BK_APIGW_DOC_URL + '/guide/faq.html',
 
-        // 可视化开发平台 - START
         LESSCODE_START: BK_LESSCODE_URL + '/help/start',
 
         // Python 开发规范
@@ -291,7 +292,7 @@ export const PLATFORM_CONFIG = {
         // 镜像地址
         MIRROR_PREFIX: '',
         // 镜像示例
-        MIRROR_EXAMPLE: 'nginx:latest',
+        MIRROR_EXAMPLE: 'nginx',
         // region
         REGION_CHOOSE: 'default',
         // 市场信息
@@ -360,9 +361,9 @@ export const PAAS_STATIC_CONFIG = {
                             "explain": staticI18n.$t("蓝鲸前端组件样例库")
                         },
                         {
-                            "text": staticI18n.$t("可视化开发"),
+                            "text": staticI18n.$t("运维开发工具"),
                             "url": "lesscode",
-                            "explain": staticI18n.$t("蓝鲸智云可视化开发平台提供了前端页面在线可视化拖拽组装、配置编辑、源码生成、二次开发等能力。旨在帮助用户通过尽量少的手写代码的方式快速设计和开发 SaaS")
+                            "explain": staticI18n.$t("蓝鲸智云运维开发工具平台提供了前端页面在线可视化拖拽组装、配置编辑、源码生成、二次开发等能力。旨在帮助用户通过尽量少的手写代码的方式快速设计和开发 SaaS")
                         }
                     ]
                 },
@@ -683,7 +684,8 @@ export const PAAS_STATIC_CONFIG = {
                             'appServiceInnerShared',
                             'appServiceInner',
                             'cloudAppServiceInnerShared',
-                            'cloudAppServiceInner'
+                            'cloudAppServiceInner',
+                            'networkConfig'
                         ],
                         "iconfontName": "squares",
                         "supportModule": false,
@@ -1041,7 +1043,7 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     },
                     {
-                        "name": staticI18n.$t("可视化开发"),
+                        "name": staticI18n.$t("运维开发工具"),
                         "destRoute": {
                           "name": "serviceLesscode"
                         }

@@ -23,7 +23,7 @@ from paasng.platform.sourcectl.validators import validate_image_url
 
 
 @pytest.mark.parametrize(
-    "url, repo_info",
+    ("url", "repo_info"),
     [
         pytest.param(
             "127.0.0.1:5000/library/python",

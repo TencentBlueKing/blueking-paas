@@ -82,7 +82,7 @@ class AppDefaultIngresses:
             try:
                 mgr.update_target(service_name, service_port_name)
             except AppEntityNotFound:
-                logger.info('Ingress resource not found, skip updating target, manager: %s', mgr)
+                logger.info("Ingress resource not found, skip updating target, manager: %s", mgr)
                 num_of_nonexistent += 1
                 continue
             else:
@@ -113,7 +113,7 @@ class LegacyAppIngressMgr(AppIngressMgr):
     set_header_x_script_name: bool = False
 
     def make_ingress_name(self) -> str:
-        return f'{self.app.region}-{self.app.scheduler_safe_name}'
+        return f"{self.app.region}-{self.app.scheduler_safe_name}"
 
     def list_desired_domains(self) -> List[PIngressDomain]:
         """List all desired domains for current app"""

@@ -189,3 +189,5 @@ export const THRESHOLD_MAP = {
 };
 
 export const LEVEL_MAP = ['致命', '预警', '提醒'];
+
+export const TE_MIRROR_EXAMPLE = 'mirrors.tencent.com/bkpaas/django-helloworld';

@@ -38,35 +38,35 @@ class Module(OwnerTimestampedModel):
     can create multiple modules to achieve a micro-services architecture
     """
 
-    id = models.UUIDField('UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
-    application = models.ForeignKey('applications.Application', on_delete=models.CASCADE, related_name='modules')
+    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    application = models.ForeignKey("applications.Application", on_delete=models.CASCADE, related_name="modules")
 
-    name = models.CharField(verbose_name=u'模块名称', max_length=20)
-    is_default = models.BooleanField(verbose_name=u'是否为默认模块', default=False)
+    name = models.CharField(verbose_name="模块名称", max_length=20)
+    is_default = models.BooleanField(verbose_name="是否为默认模块", default=False)
 
-    language = models.CharField(verbose_name=u'编程语言', max_length=32)
-    source_init_template = models.CharField(verbose_name=u'初始化模板类型', max_length=32)
-    source_origin = models.SmallIntegerField(verbose_name=u'源码来源', null=True)
-    source_type = models.CharField(verbose_name=u'源码托管类型', max_length=16, null=True)
-    source_repo_id = models.IntegerField(verbose_name=u'源码 ID', null=True)
-    exposed_url_type = models.IntegerField(verbose_name='访问 URL 版本', null=True)
+    language = models.CharField(verbose_name="编程语言", max_length=32)
+    source_init_template = models.CharField(verbose_name="初始化模板类型", max_length=32)
+    source_origin = models.SmallIntegerField(verbose_name="源码来源", null=True)
+    source_type = models.CharField(verbose_name="源码托管类型", max_length=16, null=True)
+    source_repo_id = models.IntegerField(verbose_name="源码 ID", null=True)
+    exposed_url_type = models.IntegerField(verbose_name="访问 URL 版本", null=True)
     user_preferred_root_domain = models.CharField(max_length=255, verbose_name="用户偏好的根域名", null=True)
 
-    last_deployed_date = models.DateTimeField(verbose_name=u'最近部署时间', null=True)  # 范围：模块下的所有环境
+    last_deployed_date = models.DateTimeField(verbose_name="最近部署时间", null=True)  # 范围：模块下的所有环境
     creator = BkUserField(null=True)
 
     class Meta:
-        unique_together = ('application', 'name')
+        unique_together = ("application", "name")
 
     @property
     def has_deployed(self) -> bool:
         """If current module has been SUCCESSFULLY deployed"""
         return bool(self.last_deployed_date)
 
-    def get_source_obj(self) -> 'RepositoryInstance':
+    def get_source_obj(self) -> "RepositoryInstance":
         """获取 Module 对应的源码 Repo 对象"""
         if not _source_obj_finder_func:
-            raise RuntimeError('The function for getting source obj is not registered')
+            raise RuntimeError("The function for getting source obj is not registered")
         return _source_obj_finder_func(self)
 
     def get_source_origin(self) -> SourceOrigin:
@@ -82,7 +82,7 @@ class Module(OwnerTimestampedModel):
 
 
 # The function for finding source object by module, should be registered by other modules
-_source_obj_finder_func: 'Optional[Callable[[Module], RepositoryInstance]]' = None
+_source_obj_finder_func: "Optional[Callable[[Module], RepositoryInstance]]" = None
 
 
 def set_source_obj_finder_func(func):

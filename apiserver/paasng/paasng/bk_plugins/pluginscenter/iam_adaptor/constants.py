@@ -54,7 +54,7 @@ class PluginPermissionActions(str, StructuredEnum):
     MANAGE_CONFIGURATION = EnumField("manage_configuration", label=_("插件配置管理"))
 
     @classmethod
-    def get_choices_by_role(cls, role: PluginRole) -> List['PluginPermissionActions']:
+    def get_choices_by_role(cls, role: PluginRole) -> List["PluginPermissionActions"]:
         if role == PluginRole.ADMINISTRATOR:
             return [
                 PluginPermissionActions.BASIC_DEVELOPMENT,

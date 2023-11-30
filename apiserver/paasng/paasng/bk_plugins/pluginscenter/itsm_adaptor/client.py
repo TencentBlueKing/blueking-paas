@@ -24,7 +24,6 @@ from typing import List, Optional
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
-from paasng.infras.iam.apigw.client import Group as ItsmGroup
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.apigw.client import Client
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.exceptions import (
@@ -34,6 +33,7 @@ from paasng.bk_plugins.pluginscenter.itsm_adaptor.exceptions import (
     ItsmServiceNotExistsError,
 )
 from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
+from paasng.infras.iam.apigw.client import Group as ItsmGroup
 
 # from paasng.bk_plugins.pluginscenter.thirdparty.utils import registry_i18n_hook
 
@@ -51,8 +51,8 @@ class ItsmClient:
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_PLUGIN_APIGW_SERVICE_STAGE)
         client.update_bkapi_authorization(
             **{
-                'bk_app_code': settings.BK_APP_CODE,
-                'bk_app_secret': settings.BK_APP_SECRET,
+                "bk_app_code": settings.BK_APP_CODE,
+                "bk_app_secret": settings.BK_APP_SECRET,
                 self.login_cookie_name: login_cookie,
             }
         )
@@ -67,20 +67,20 @@ class ItsmClient:
                 data={},
             )
         except APIGatewayResponseError as e:
-            raise ItsmGatewayServiceError(f'get service catalogs from itsm error: {e}')
+            raise ItsmGatewayServiceError(f"get service catalogs from itsm error: {e}")
 
-        if resp.get('code') != 0:
-            logger.exception(f'search service catalogs from itsm error, message:{resp}')
-            raise ItsmApiError(resp['message'])
-        return resp.get('data', {})
+        if resp.get("code") != 0:
+            logger.exception(f"search service catalogs from itsm error, message:{resp}")
+            raise ItsmApiError(resp["message"])
+        return resp.get("data", {})
 
     def get_root_catalog_id(self) -> int:
         """获取根目录ID"""
         catalogs = self.search_service_catalogs()
         for d in catalogs:
             # key=='root' && level==0 则为根目录
-            if d['key'] == 'root' and d['level'] == 0:
-                return d['id']
+            if d["key"] == "root" and d["level"] == 0:
+                return d["id"]
 
         # 如果没有找到根目录抛出异常
         logger.exception(f"the root catalog information cannot be queried from itsm, catalogs: {catalogs}")
@@ -94,12 +94,11 @@ class ItsmClient:
         catalogs = self.search_service_catalogs()
         for d in catalogs:
             # key=='root' && level==0 则为根目录
-            if d['key'] == 'root' and d['level'] == 0:
-
+            if d["key"] == "root" and d["level"] == 0:
                 # 从根目录的二级目录(children)中根据 name 匹配过滤，根目录下的服务目录名一定是唯一的
-                for c in d['children']:
-                    if c['name'] == self.catalog_name:
-                        return c['id']
+                for c in d["children"]:
+                    if c["name"] == self.catalog_name:
+                        return c["id"]
 
         # 如果没有找到根目录抛出异常
         logger.exception(f"the plugin_center catalog information cannot be queried from itsm, catalogs: {catalogs}")
@@ -118,14 +117,14 @@ class ItsmClient:
                 data=data,
             )
         except APIGatewayResponseError as e:
-            raise ItsmGatewayServiceError(f'create plugin_center catalog at itsm error: {e}')
+            raise ItsmGatewayServiceError(f"create plugin_center catalog at itsm error: {e}")
 
-        if resp.get('code') != 0:
-            logger.exception(f'create plugin_center catalog at itsm error, message:{resp} \ndata: {data}')
-            raise ItsmApiError(resp['message'])
+        if resp.get("code") != 0:
+            logger.exception(f"create plugin_center catalog at itsm error, message:{resp} \ndata: {data}")
+            raise ItsmApiError(resp["message"])
 
         # 返回“插件开发者中心”的服务目录 ID
-        return resp.get('data', {}).get('id')
+        return resp.get("data", {}).get("id")
 
     def get_service_id_by_name(self, catalog_id: int, service_name: str) -> int:
         """查询指定目录下, 服务名对应的服务ID"""
@@ -135,15 +134,15 @@ class ItsmClient:
             )
         except APIGatewayResponseError as e:
             raise ItsmGatewayServiceError(
-                f'Failed to query the services under the catalog(id:{catalog_id}) on itsm error: {e}'
+                f"Failed to query the services under the catalog(id:{catalog_id}) on itsm error: {e}"
             )
 
-        if resp.get('code') != 0:
-            logger.exception(f'Failed to query the services under the catalog(id:{catalog_id}) on itsm error:{resp}')
-            raise ItsmApiError(resp['message'])
+        if resp.get("code") != 0:
+            logger.exception(f"Failed to query the services under the catalog(id:{catalog_id}) on itsm error:{resp}")
+            raise ItsmApiError(resp["message"])
 
-        resp_data = resp.get('data', {})
-        service_dict = {d['name']: d['id'] for d in resp_data}
+        resp_data = resp.get("data", {})
+        service_dict = {d["name"]: d["id"] for d in resp_data}
 
         # itsm 中返回的服务名是中文名
         service_id = service_dict.get(ApprovalServiceName.get_choice_label(service_name))
@@ -153,31 +152,31 @@ class ItsmClient:
 
     def import_service(self, catalog_id: int, service_name: str) -> int:
         """导入流程服务"""
-        service_path = Path(settings.BASE_DIR) / 'support-files' / 'itsm' / f'plugins_{service_name}.json'
-        with open(service_path, 'r', encoding='utf-8') as f:
+        service_path = Path(settings.BASE_DIR) / "support-files" / "itsm" / f"plugins_{service_name}.json"
+        with open(service_path, "r", encoding="utf-8") as f:
             service_data = json.loads(f.read())
 
         # 流程数据中添加要导入的服务目录ID信息
-        service_data['catalog_id'] = catalog_id
+        service_data["catalog_id"] = catalog_id
         try:
             resp = self.client.import_service(
                 data=service_data,
             )
         except APIGatewayResponseError as e:
-            raise ItsmGatewayServiceError(f'import service({service_path}) to itsm error: {e}')
+            raise ItsmGatewayServiceError(f"import service({service_path}) to itsm error: {e}")
 
-        resp_code = resp.get('code')
+        resp_code = resp.get("code")
         if resp_code == 3900035:
             # 3900035 代表服务已经在 itsm 上存在，则直接从 itsm 上查询服务 id
             service_id = self.get_service_id_by_name(catalog_id, service_name)
             return service_id
 
         if resp_code != 0:
-            logger.exception(f'import service({service_path}) to itsm error, message:{resp}')
-            raise ItsmApiError(resp['message'])
+            logger.exception(f"import service({service_path}) to itsm error, message:{resp}")
+            raise ItsmApiError(resp["message"])
 
         # 返回导入的服务ID
-        return resp.get('data', {}).get('id')
+        return resp.get("data", {}).get("id")
 
     def create_ticket(self, service_id: int, creator: str, callback_url: str, fields: List[dict]) -> ItsmDetail:
         """创建申请单据"""
@@ -195,15 +194,15 @@ class ItsmClient:
                 data=data,
             )
         except APIGatewayResponseError as e:
-            raise ItsmGatewayServiceError(f'create application ticket at itsm  error: {e}')
+            raise ItsmGatewayServiceError(f"create application ticket at itsm  error: {e}")
 
-        if resp.get('code') != 0:
-            logger.exception(f'create application ticket at itsm  error, message:{resp} \ndata: {data}')
-            raise ItsmApiError(resp['message'])
+        if resp.get("code") != 0:
+            logger.exception(f"create application ticket at itsm  error, message:{resp} \ndata: {data}")
+            raise ItsmApiError(resp["message"])
 
         # 返回创建流程的单号
-        resp_data = resp.get('data', {})
-        return ItsmDetail(fields=fields, sn=resp_data.get('sn', ""), ticket_url=resp_data.get('ticket_url', ''))
+        resp_data = resp.get("data", {})
+        return ItsmDetail(fields=fields, sn=resp_data.get("sn", ""), ticket_url=resp_data.get("ticket_url", ""))
 
     def get_ticket_status(self, sn: str) -> dict:
         try:
@@ -213,14 +212,14 @@ class ItsmClient:
                 },
             )
         except APIGatewayResponseError as e:
-            raise ItsmGatewayServiceError(f'get application ticket status from itsm error: {e}')
+            raise ItsmGatewayServiceError(f"get application ticket status from itsm error: {e}")
 
-        if resp.get('code') != 0:
-            logger.exception(f'get application ticket status from itsm error, message:{resp} \nsn: {sn}')
-            raise ItsmApiError(resp['message'])
+        if resp.get("code") != 0:
+            logger.exception(f"get application ticket status from itsm error, message:{resp} \nsn: {sn}")
+            raise ItsmApiError(resp["message"])
 
         # 返回单据详情
-        return resp.get('data', {})
+        return resp.get("data", {})
 
     def withdraw_ticket(self, sn: str, action_type: str, operator: str) -> bool:
         """撤销单据"""
@@ -236,14 +235,14 @@ class ItsmClient:
                 data=data,
             )
         except APIGatewayResponseError as e:
-            raise ItsmGatewayServiceError(f'withdraw application ticket status from itsm error: {e}')
+            raise ItsmGatewayServiceError(f"withdraw application ticket status from itsm error: {e}")
 
-        if resp.get('code') != 0:
-            logger.exception(f'withdraw application ticket status from itsm error, message:{resp} \ndata: {data}')
-            raise ItsmApiError(resp['message'])
+        if resp.get("code") != 0:
+            logger.exception(f"withdraw application ticket status from itsm error, message:{resp} \ndata: {data}")
+            raise ItsmApiError(resp["message"])
 
         # 是否操作成功
-        return resp.get('result')
+        return resp.get("result")
 
     def verify_token(self, token: str) -> bool:
         """验证回调链接中返回的 token
@@ -254,13 +253,13 @@ class ItsmClient:
                 data={"token": token},
             )
         except APIGatewayResponseError as e:
-            raise ItsmGatewayServiceError(f'verify token from itsm error: {e}')
+            raise ItsmGatewayServiceError(f"verify token from itsm error: {e}")
 
-        if resp.get('code') != 0:
-            logger.exception(f'verify token from itsm error, resp:{resp} \ntoken: {token}')
-            raise ItsmApiError(resp['message'])
+        if resp.get("code") != 0:
+            logger.exception(f"verify token from itsm error, resp:{resp} \ntoken: {token}")
+            raise ItsmApiError(resp["message"])
 
-        if not (is_passed := resp.get('data', {}).get('is_passed')):
-            logging.exception(f'itsm token checksum fails, resp:{resp} \ntoken: {token}')
+        if not (is_passed := resp.get("data", {}).get("is_passed")):
+            logging.exception(f"itsm token checksum fails, resp:{resp} \ntoken: {token}")
 
         return is_passed

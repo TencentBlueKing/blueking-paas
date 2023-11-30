@@ -16,18 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest import mock
-
 import pytest
 
 
-@pytest.fixture
-def mock_knamespace(namespace_maker):
-    """Mock KNamespace.get_or_create to make sure namespace will auto recycle by `namespace_maker`"""
-
-    def get_or_create(name: str):
-        return namespace_maker.make(name)
-
-    with mock.patch("paas_wl.bk_app.cnative.specs.resource.KNamespace") as mocked:
-        mocked().get_or_create.side_effect = get_or_create
-        yield
+@pytest.fixture()
+def _with_stag_ns(namespace_maker, bk_stag_wl_app):
+    """Create and auto-recycle namespace for stag environment"""
+    namespace_maker.make(bk_stag_wl_app.namespace)

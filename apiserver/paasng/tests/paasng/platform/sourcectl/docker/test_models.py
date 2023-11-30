@@ -25,8 +25,8 @@ pytestmark = pytest.mark.django_db
 
 
 def test_init_image_repo(bk_module):
-    init_image_repo(bk_module, 'https://example.com/image', '.', {'username': 'foo'})
-    assert bk_module.source_type == 'docker'
+    init_image_repo(bk_module, "https://example.com/image", ".", {"username": "foo"})
+    assert bk_module.source_type == "docker"
 
     auth_obj = RepoBasicAuthHolder.objects.get(repo_id=bk_module.source_repo_id)
-    assert auth_obj.username == 'foo'
+    assert auth_obj.username == "foo"

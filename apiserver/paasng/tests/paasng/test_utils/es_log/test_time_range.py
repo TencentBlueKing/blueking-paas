@@ -25,7 +25,7 @@ from paasng.utils.es_log.time_range import SmartTimeRange, get_epoch_millisecond
 
 
 @pytest.mark.parametrize(
-    "dt, ignore_timezone, expected",
+    ("dt", "ignore_timezone", "expected"),
     [
         (datetime.datetime(2023, 4, 20, 15, 40, 51, 997557), True, 1682005251997),
         (datetime.datetime(2023, 4, 20, 15, 40, 51, 997557), False, 1682005251997),
@@ -59,7 +59,7 @@ def test_get_epoch_milliseconds(dt, ignore_timezone, expected):
 
 class TestSmartTimeRange:
     @pytest.mark.parametrize(
-        "time_range, expected_start, expected_end",
+        ("time_range", "expected_start", "expected_end"),
         [
             ("5m", "now-5m", "now"),
             ("1h", "now-1h", "now"),
@@ -79,7 +79,7 @@ class TestSmartTimeRange:
         }
 
     @pytest.mark.parametrize(
-        "start_time, end_time, expected_start, expected_end",
+        ("start_time", "end_time", "expected_start", "expected_end"),
         [
             # datetime without timezone
             (
@@ -125,13 +125,13 @@ class TestSmartTimeRange:
         ],
     )
     def test_absolute_time(self, start_time, end_time, expected_start, expected_end):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*is necessary if time_range is customized"):
             SmartTimeRange(time_range="customized")
 
         smart_time_range = SmartTimeRange(time_range="customized", start_time=start_time, end_time=end_time)
         start_time_stamp, end_time_stamp = smart_time_range.get_head_and_tail()
         assert start_time_stamp == expected_start
         assert end_time_stamp == expected_end
-        assert smart_time_range.get_time_range_filter('@timestamp') == {
+        assert smart_time_range.get_time_range_filter("@timestamp") == {
             "@timestamp": {"gte": expected_start, "lte": expected_end, "format": "epoch_millis"}
         }

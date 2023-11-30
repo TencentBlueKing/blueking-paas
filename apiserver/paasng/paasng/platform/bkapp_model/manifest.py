@@ -46,6 +46,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     AutoscalingOverlay,
+    AutoscalingSpec,
     BkAppAddon,
     BkAppBuildConfig,
     BkAppHooks,
@@ -56,17 +57,27 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     EnvVar,
     EnvVarOverlay,
     Hook,
+    MountOverlay,
+    ObjectMetadata,
+    ReplicasOverlay,
+    ResQuotaOverlay,
 )
+from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import MountOverlay, ObjectMetadata, ReplicasOverlay, ResQuotaOverlay
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
 from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import (
+    DomainResolution,
+    ModuleProcessSpec,
+    ProcessSpecEnvOverlay,
+    SvcDiscConfig,
+)
 from paasng.platform.bkapp_model.utils import merge_env_vars
-from paasng.platform.engine.configurations.config_var import get_builtin_env_variables
+from paasng.platform.engine.configurations.config_var import get_cnative_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.constants import DeployHookType
@@ -75,9 +86,8 @@ from paasng.platform.modules.models import BuildConfig, Module
 
 logger = logging.getLogger(__name__)
 
-
 # legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ['bash', '/runner/init']
+DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
 
 class ManifestConstructor(ABC):
@@ -176,6 +186,13 @@ class ProcessesManifestConstructor(ManifestConstructor):
             except ValueError:
                 logger.warning("模块<%s>的 %s 进程 未定义启动命令, 将使用镜像默认命令运行", module, process_spec.name)
                 command, args = [], []
+
+            autoscaling_spec = None
+            if process_spec.autoscaling and (_c := process_spec.scaling_config):
+                autoscaling_spec = AutoscalingSpec(
+                    minReplicas=_c.min_replicas, maxReplicas=_c.max_replicas, policy=_c.policy
+                )
+
             processes.append(
                 BkAppProcess(
                     name=process_spec.name,
@@ -185,7 +202,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     targetPort=process_spec.port,
                     # TODO?: 是否需要使用 LEGACY_PROC_RES_ANNO_KEY 存储不支持的 plan
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
-                    autoscaling=process_spec.scaling_config if process_spec.autoscaling else None,
+                    autoscaling=autoscaling_spec,
                 )
             )
             # deprecated: support v1alpha1
@@ -219,21 +236,25 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 # Only include item that have different values
                 if item.target_replicas is not None and item.target_replicas != proc_spec.target_replicas:
                     overlay.append_item(
-                        'replicas',
+                        "replicas",
                         ReplicasOverlay(
                             envName=item.environment_name, process=proc_spec.name, count=item.target_replicas
                         ),
                     )
                 if item.scaling_config and item.autoscaling and item.scaling_config != proc_spec.scaling_config:
                     overlay.append_item(
-                        'autoscaling',
+                        "autoscaling",
                         AutoscalingOverlay(
-                            envName=item.environment_name, process=proc_spec.name, **item.scaling_config
+                            envName=item.environment_name,
+                            process=proc_spec.name,
+                            minReplicas=item.scaling_config.min_replicas,
+                            maxReplicas=item.scaling_config.max_replicas,
+                            policy=item.scaling_config.policy,
                         ),
                     )
                 if item.plan_name and item.plan_name != proc_spec.plan_name:
                     overlay.append_item(
-                        'resQuotas',
+                        "resQuotas",
                         ResQuotaOverlay(
                             envName=item.environment_name,
                             process=proc_spec.name,
@@ -259,7 +280,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
             return ResQuotaPlan.P_DEFAULT
 
         # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-        limits = spec_plan.get_resource_summary()['limits']
+        limits = spec_plan.get_resource_summary()["limits"]
         expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
         quota_plan_memory = sorted(
             ((parse_quantity(limit.memory), quota_plan) for quota_plan, limit in PLAN_TO_LIMIT_QUOTA_MAP.items()),
@@ -290,7 +311,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         if mgr.build_config.build_method == RuntimeType.DOCKERFILE:
             o = self._sanitize_args(shlex.split(process_spec.proc_command))
             return [o[0]], o[1:]
-        raise ValueError('Error getting command and args')
+        raise ValueError("Error getting command and args")
 
     @staticmethod
     def _sanitize_args(input: List[str]) -> List[str]:
@@ -299,7 +320,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         """
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
-        return [s.replace('${PORT:-5000}', '${PORT}') for s in input]
+        return [s.replace("${PORT:-5000}", "${PORT}") for s in input]
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):
@@ -307,7 +328,7 @@ class EnvVarsManifestConstructor(ManifestConstructor):
 
     def apply_to(self, model_res: BkAppResource, module: Module):
         # The global variables
-        for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by('key'):
+        for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by("key"):
             model_res.spec.configuration.env.append(EnvVar(name=var.key, value=var.value))
 
         # The environment specific variables
@@ -315,8 +336,8 @@ class EnvVarsManifestConstructor(ManifestConstructor):
         if not overlay:
             overlay = EnvOverlay()
         for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
-            for var in ConfigVar.objects.filter(module=module, environment=module.get_envs(env)).order_by('key'):
-                overlay.append_item('envVariables', EnvVarOverlay(envName=env, name=var.key, value=var.value))
+            for var in ConfigVar.objects.filter(module=module, environment=module.get_envs(env)).order_by("key"):
+                overlay.append_item("envVariables", EnvVarOverlay(envName=env, name=var.key, value=var.value))
 
         model_res.spec.envOverlay = overlay
 
@@ -355,13 +376,39 @@ class MountsManifestConstructor(ManifestConstructor):
         for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
             for config in Mount.objects.filter(module_id=module.pk, environment_name=env):
                 overlay.append_item(
-                    'mounts',
+                    "mounts",
                     MountOverlay(
                         envName=env, name=config.name, mountPath=config.mount_path, source=config.source_config
                     ),
                 )
 
         model_res.spec.envOverlay = overlay
+
+
+class SvcDiscoveryManifestConstructor(ManifestConstructor):
+    """Construct the svc discovery part."""
+
+    def apply_to(self, model_res: BkAppResource, module: Module):
+        try:
+            svc_disc_config = SvcDiscConfig.objects.get(application=module.application)
+        except SvcDiscConfig.DoesNotExist:
+            return
+
+        model_res.spec.svcDiscovery = SvcDiscConfigSpec(bkSaaS=svc_disc_config.bk_saas)
+
+
+class DomainResolutionManifestConstructor(ManifestConstructor):
+    """Construct the domain resolution part."""
+
+    def apply_to(self, model_res: BkAppResource, module: Module):
+        try:
+            domain_res = DomainResolution.objects.get(application=module.application)
+        except DomainResolution.DoesNotExist:
+            return
+
+        model_res.spec.domainResolution = DomainResolutionSpec(
+            nameservers=domain_res.nameservers, hostAliases=domain_res.host_aliases
+        )
 
 
 def get_manifest(module: Module) -> List[Dict]:
@@ -386,6 +433,8 @@ def get_bkapp_resource(module: Module) -> BkAppResource:
         BuildConfigManifestConstructor(),
         EnvVarsManifestConstructor(),
         MountsManifestConstructor(),
+        SvcDiscoveryManifestConstructor(),
+        DomainResolutionManifestConstructor(),
     ]
     obj = BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2,
@@ -458,7 +507,7 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     :param env: The environment object.
     """
     env_vars = [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
-    for name, value in get_builtin_env_variables(env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX).items():
+    for name, value in get_cnative_builtin_env_variables(env).items():
         env_vars.append(EnvVar(name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones

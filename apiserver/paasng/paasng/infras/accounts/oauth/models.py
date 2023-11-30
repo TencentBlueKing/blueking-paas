@@ -45,7 +45,7 @@ class Scope:
     item: str
 
     @classmethod
-    def parse_from_str(cls, scope_str) -> 'Scope':
+    def parse_from_str(cls, scope_str) -> "Scope":
         """
         example:
             ["user:user"]
@@ -57,7 +57,7 @@ class Scope:
             return cls(type=ScopeType.USER, item="user")
 
         try:
-            parse_result = re.match(r'(?P<type>\w+):(?P<item>[a-zA-Z0-9_/-]+)', scope_str).groupdict()  # type: ignore
+            parse_result = re.match(r"(?P<type>\w+):(?P<item>[a-zA-Z0-9_/-]+)", scope_str).groupdict()  # type: ignore
             return cls(type=ScopeType(parse_result["type"]), item=parse_result["item"])
         except (KeyError, ValueError):
             logger.warning(f"scope<{scope_str}> does not match regex")

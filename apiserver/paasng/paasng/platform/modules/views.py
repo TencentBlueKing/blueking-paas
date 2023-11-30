@@ -90,21 +90,21 @@ logger = logging.getLogger(__name__)
 class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @transaction.atomic
     @swagger_auto_schema(request_body=CreateModuleSLZ, tags=["创建模块"])
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
     def create(self, request, *args, **kwargs):
         """创建一个新模块, 创建 lesscode 模块时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供"""
         application = self.get_application()
         self._ensure_allow_create_module(application)
 
-        serializer = CreateModuleSLZ(data=request.data, context={'application': application})
+        serializer = CreateModuleSLZ(data=request.data, context={"application": application})
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        source_init_template = data['source_init_template']
+        source_init_template = data["source_init_template"]
         tmpl = Template.objects.get(name=source_init_template, type=TemplateType.NORMAL)
 
         # Permission check for non-default source origin
-        source_origin = SourceOrigin(data['source_origin'])
+        source_origin = SourceOrigin(data["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
 
         # lesscode app needs to create an application on the bk_lesscode platform first
@@ -112,7 +112,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
             try:
                 make_bk_lesscode_client(login_cookie=bk_token).create_app(
-                    application.code, application.name, data['name']
+                    application.code, application.name, data["name"]
                 )
             except (LessCodeApiError, LessCodeGatewayServiceError) as e:
                 raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
@@ -122,9 +122,9 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             application=application,
             is_default=False,
             region=application.region,
-            name=data['name'],
+            name=data["name"],
             language=tmpl.language,
-            source_origin=data['source_origin'],
+            source_origin=data["source_origin"],
             source_init_template=source_init_template,
             owner=application.owner,
             creator=request.user.pk,
@@ -135,7 +135,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         ret = init_module_in_view(
             module,
-            data['source_control_type'],
+            data["source_control_type"],
             data["source_repo_url"],
             data["source_repo_auth_info"],
             source_dir=data["source_dir"],
@@ -143,26 +143,26 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
         return Response(
-            data={'module': ModuleSLZ(module).data, 'source_init_result': ret.source_init_result},
+            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
             status=status.HTTP_201_CREATED,
         )
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def list(self, request, code):
         """查看所有应用模块"""
         slz = ListModulesSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
         application = self.get_application()
-        modules = application.modules.all().order_by('-is_default', 'name')
+        modules = application.modules.all().order_by("-is_default", "name")
 
         # Filter modules by source_type
-        if slz.data.get('source_origin'):
-            modules = modules.filter(source_origin=slz.data['source_origin'])
+        if slz.data.get("source_origin"):
+            modules = modules.filter(source_origin=slz.data["source_origin"])
         return Response(data=MinimalModuleSLZ(modules, many=True).data)
 
-    @swagger_auto_schema(tags=['应用模块'], response_serializer=ModuleSLZ)
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    @swagger_auto_schema(tags=["应用模块"], response_serializer=ModuleSLZ)
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def retrieve(self, request, code, module_name):
         """查看应用模块信息
 
@@ -174,7 +174,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = application.get_module(module_name)
         return Response(data=ModuleSLZ(module).data, status=status.HTTP_200_OK)
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
     def destroy(self, request, code, module_name):
         """
         删除蓝鲸应用模块
@@ -206,7 +206,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     # [deprecated] use `api.applications.entrances.set_default_entrance` instead
     @transaction.atomic
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
     def set_as_default(self, request, code, module_name):
         """设置某个模块为主模块"""
         application = self.get_application()
@@ -227,12 +227,14 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         else:
             if market_enabled and not ModulePublishPreparer(module).all_matched:
                 raise error_codes.CANNOT_SET_DEFAULT.f(
-                    _("目标 {module_name} 模块未满足应用市场服务开启条件，切换主模块会导致应用在市场中访问异常").format(module_name=module_name)
+                    _(
+                        "目标 {module_name} 模块未满足应用市场服务开启条件，切换主模块会导致应用在市场中访问异常"
+                    ).format(module_name=module_name)
                 )
 
         logger.info(
-            f'Switching default module for application[{application.code}], '
-            f'{default_module.name} -> {module.name}...'
+            f"Switching default module for application[{application.code}], "
+            f"{default_module.name} -> {module.name}..."
         )
         default_module.is_default = False
         module.is_default = True
@@ -245,38 +247,34 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_200_OK)
 
     @transaction.atomic
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
     @swagger_auto_schema(request_body=CreateCNativeModuleSLZ, tags=["创建模块"])
     def create_cloud_native_module(self, request, code):
         """创建云原生应用模块（非默认）"""
         application = self.get_application()
         self._ensure_allow_create_module(application)
 
-        serializer = CreateCNativeModuleSLZ(data=request.data, context={'application': application})
+        serializer = CreateCNativeModuleSLZ(data=request.data, context={"application": application})
         serializer.is_valid(raise_exception=True)
-        data = serializer.data
+        data = serializer.validated_data
 
         module_src_cfg: Dict[str, Any] = {}
         source_config = data["source_config"]
         # 检查当前用户能否使用指定的 source_origin
-        source_origin = SourceOrigin(source_config['source_origin'])
+        source_origin = SourceOrigin(source_config["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
 
-        # 初始化应用镜像凭证信息
-        if image_credentials := data.get('image_credentials'):
-            self._init_image_credentials(application, image_credentials)
-
-        module_src_cfg['source_origin'] = source_origin
+        module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
-        if tmpl_name := source_config['source_init_template']:
+        if tmpl_name := source_config["source_init_template"]:
             tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
-            module_src_cfg.update({'language': tmpl.language, 'source_init_template': tmpl_name})
+            module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
 
         module = Module.objects.create(
             application=application,
             is_default=False,
             region=application.region,
-            name=data['name'],
+            name=data["name"],
             owner=application.owner,
             creator=request.user.pk,
             exposed_url_type=get_region(application.region).entrance_config.exposed_url_type,
@@ -287,17 +285,16 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         cluster = get_application_cluster(application)
         ret = init_module_in_view(
             module,
-            repo_type=source_config.get('source_control_type'),
-            repo_url=source_config.get('source_repo_url'),
-            repo_auth_info=source_config.get('source_repo_auth_info'),
-            source_dir=source_config.get('source_dir', ''),
+            repo_type=source_config.get("source_control_type"),
+            repo_url=source_config.get("source_repo_url"),
+            repo_auth_info=source_config.get("source_repo_auth_info"),
+            source_dir=source_config.get("source_dir", ""),
             cluster_name=cluster.name,
-            manifest=data.get('manifest'),
-            build_config=serializer.validated_data['build_config'],
+            bkapp_spec=data["bkapp_spec"],
         )
 
         return Response(
-            data={'module': ModuleSLZ(module).data, 'source_init_result': ret.source_init_result},
+            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
             status=status.HTTP_201_CREATED,
         )
 
@@ -314,13 +311,14 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
         """对使用非默认源码来源的，需要检查是否有权限"""
-        if source_origin not in SourceOrigin.get_default_origins():
-            if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-                raise ValidationError(_('你无法使用非默认的源码来源'))
+        if source_origin in SourceOrigin.get_default_origins():
+            return
+        if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
+            raise ValidationError(_("你无法使用非默认的源码来源"))
 
-    def _init_image_credentials(self, application: Application, image_credentials: Dict):
+    def _init_image_credential(self, application: Application, image_credential: Dict):
         try:
-            AppUserCredential.objects.create(application_id=application.id, **image_credentials)
+            AppUserCredential.objects.create(application_id=application.id, **image_credential)
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 
@@ -569,7 +567,7 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             module.deploy_hooks.disable_hook(DeployHookType(type_))
         except ValueError:
-            raise ValidationError(detail={"type": f'“{type_}” 不是合法选项。'}, code="invalid_choice")
+            raise ValidationError(detail={"type": f"“{type_}” 不是合法选项。"}, code="invalid_choice")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(

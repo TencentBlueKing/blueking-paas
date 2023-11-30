@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db
 _NOW = arrow.now()
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_deployment(bk_module):
     deployment = create_fake_deployment(bk_module)
     deployment.build_process_id = uuid.uuid4()
@@ -50,7 +50,7 @@ class TestCountFrozenDeployments:
         assert count_frozen_deployments(edge_seconds=10, now=_NOW) == 1
 
     @pytest.mark.parametrize(
-        'log_lines,cnt',
+        ("log_lines", "cnt"),
         [
             # No log lines
             ([], 1),
@@ -81,7 +81,7 @@ class TestCountFrozenDeployments:
         ],
     )
     def test_different_log_lines(self, bk_deployment, log_lines, cnt):
-        with mock.patch('paasng.platform.engine.monitoring.EngineDeployClient') as mocked_client:
+        with mock.patch("paasng.platform.engine.monitoring.EngineDeployClient") as mocked_client:
             mocked_client().list_build_proc_logs.return_value = log_lines
             assert count_frozen_deployments(edge_seconds=10, now=_NOW.datetime) == cnt
 

@@ -24,12 +24,12 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.decorators import method_decorator
 
-from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.infras.oauth2.utils import get_random_secret_key
 from paasng.accessories.publish.sync_market.constant import RegionConverter
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger, AppTagManger
 from paasng.accessories.publish.sync_market.models import TagMap, market_models
 from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
+from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.oauth2.utils import get_random_secret_key
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +45,10 @@ class Command(BaseCommand):
     """
 
     def add_arguments(self, parser: ArgumentParser):
-        parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true", default=False)
-        parser.add_argument('--username', dest="username", help="username of legacy app developer", required=True)
+        parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true", default=False)
+        parser.add_argument("--username", dest="username", help="username of legacy app developer", required=True)
         parser.add_argument(
-            '--framework-version',
+            "--framework-version",
             dest="framework_version",
             help="source code template version",
             choices=["django1.8", "django1.3"],
@@ -56,14 +56,14 @@ class Command(BaseCommand):
             default="django1.8",
         )
         parser.add_argument(
-            '--svn-repo',
+            "--svn-repo",
             dest="svn_repo",
             required=False,
             default="no svn repo",
             help="url of svn repo, should be not None if using to test mgrlegacy",
         )
         parser.add_argument(
-            '--code',
+            "--code",
             type=str,
             dest="code",
             help="legacy app code, if missing, will generate by random",
@@ -71,7 +71,7 @@ class Command(BaseCommand):
             default=None,
         )
         parser.add_argument(
-            '--name',
+            "--name",
             type=str,
             dest="name",
             help="legacy app name, if missing, will generate by random",
@@ -79,27 +79,27 @@ class Command(BaseCommand):
             default=None,
         )
         parser.add_argument(
-            '--region',
+            "--region",
             type=str,
             dest="deploy_ver",
             help="legacy region for app",
             required=False,
-            default='ied',
-            choices=['ied', 'tencent', 'oversea', 'local-test'],
+            default="ied",
+            choices=["ied", "tencent", "oversea", "local-test"],
         )
         parser.add_argument(
-            '--deploy-to-stag', dest="is_already_test", type=bool, help="deploy to stag in v3", default=False
+            "--deploy-to-stag", dest="is_already_test", type=bool, help="deploy to stag in v3", default=False
         )
         parser.add_argument(
-            '--deploy-to-prod', dest="is_already_online", type=bool, help="deploy to prod in v3", default=True
+            "--deploy-to-prod", dest="is_already_online", type=bool, help="deploy to prod in v3", default=True
         )
         parser.add_argument(
-            '--use-celery', dest="use_celery", type=bool, help="is this app use celery ?", default=False
+            "--use-celery", dest="use_celery", type=bool, help="is this app use celery ?", default=False
         )
         parser.add_argument(
-            '--use-celery-beat', dest="use_celery_beat", type=bool, help="is this app use celery beat?", default=False
+            "--use-celery-beat", dest="use_celery_beat", type=bool, help="is this app use celery beat?", default=False
         )
-        parser.add_argument('--silence', dest="silence", help="keep silence?", action="store_true", default=False)
+        parser.add_argument("--silence", dest="silence", help="keep silence?", action="store_true", default=False)
 
     @method_decorator(run_required_db_console_config)
     def handle(self, *args, **options):
@@ -109,7 +109,7 @@ class Command(BaseCommand):
         name = options["name"] or "本地迁移测试-" + self.random_str()
         framework_version = options["framework_version"]
         svn_repo = options["svn_repo"]
-        deploy_env = 101 if framework_version == 'django1.3' else 102
+        deploy_env = 101 if framework_version == "django1.3" else 102
         deploy_ver = options["deploy_ver"]
         is_already_test = options["is_already_test"]
         is_already_online = options["is_already_online"]
@@ -168,17 +168,17 @@ class Command(BaseCommand):
             AppManger(session).update(
                 code,
                 {
-                    'language': "python",
+                    "language": "python",
                     # 借用 `description` 表示 svn repo url, 用于本地迁移测试
-                    'description': svn_repo,
-                    'tags_id': tagmap.remote_id,
-                    'state': 4,  # 待发布
-                    'deploy_env': deploy_env,
-                    'deploy_ver': deploy_ver,
-                    'is_already_online': int(is_already_online),
-                    'is_already_test': int(is_already_test),
-                    'use_celery': int(use_celery),  # app是否使用celery，确定一下是否需要
-                    'use_celery_beat': int(use_celery_beat),  # app是否使用celery beat，确定一下是否需要
+                    "description": svn_repo,
+                    "tags_id": tagmap.remote_id,
+                    "state": 4,  # 待发布
+                    "deploy_env": deploy_env,
+                    "deploy_ver": deploy_ver,
+                    "is_already_online": int(is_already_online),
+                    "is_already_test": int(is_already_test),
+                    "use_celery": int(use_celery),  # app是否使用celery，确定一下是否需要
+                    "use_celery_beat": int(use_celery_beat),  # app是否使用celery beat，确定一下是否需要
                 },
             )
         return app
@@ -197,12 +197,12 @@ class Command(BaseCommand):
             with console_db.session_scope() as session:
                 try:
                     legacy_tag = AppTagManger(session).create_tag(
-                        {'code': Command.random_str(), 'name': "测试标签", 'is_select': 1, 'deploy_ver': deploy_ver}
+                        {"code": Command.random_str(), "name": "测试标签", "is_select": 1, "deploy_ver": deploy_ver}
                     )
                 except TypeError:
                     # 兼容企业版桌面没有 is_select 的情况
                     legacy_tag = AppTagManger(session).create_tag(
-                        {'code': Command.random_str(), 'name': "测试标签", 'index': 100}
+                        {"code": Command.random_str(), "name": "测试标签", "index": 100}
                     )
             tag, _ = market_models.Tag.objects.get_or_create(name="测试子标签", enabled=True)
             return TagMap.objects.create(tag=tag, remote_id=legacy_tag.id)

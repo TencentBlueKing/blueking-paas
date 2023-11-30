@@ -26,8 +26,8 @@ class UserProfileAdmin(admin.ModelAdmin):
     # so it is easier to search by command+f in browser when listing enough items
     # (almost 1000+ user, command+f up to 2 times)
     list_per_page = 500
-    list_display = ['username', 'user', 'role', 'feature_flags', 'enable_regions']
-    search_fields = ['user', 'role', 'feature_flags', 'enable_regions']
+    list_display = ["username", "user", "role", "feature_flags", "enable_regions"]
+    search_fields = ["user", "role", "feature_flags", "enable_regions"]
 
 
 admin.site.register(UserProfile, UserProfileAdmin)

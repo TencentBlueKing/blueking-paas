@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class DeployPhaseManager:
     """Common manager for DeployPhase model"""
 
-    def __init__(self, env: 'ModuleEnvironment'):
+    def __init__(self, env: "ModuleEnvironment"):
         self.env = env
 
     def list_phase_types(self) -> List[DeployPhaseTypes]:
@@ -67,7 +67,7 @@ class DeployPhaseManager:
         picked_step_set = DeployStepPicker.pick(self.env.engine_app)
         logger.debug("choosing step set<%s>...", picked_step_set.name)
 
-        existing_names = list(phase.steps.all().values_list('name', flat=True))
+        existing_names = list(phase.steps.all().values_list("name", flat=True))
         if set(existing_names) == set(picked_step_set.list_sorted_step_names(DeployPhaseTypes(phase.type))):
             # 修复存量数据可能存在的异常
             _try_bind_meta_to_step_of_phase(phase)

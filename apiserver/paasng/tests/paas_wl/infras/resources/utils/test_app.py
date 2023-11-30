@@ -30,8 +30,8 @@ class TestProcessScheduler:
     def setUp(self):
         self.app = create_wl_app(
             force_app_info={"name": "bkapp-fakeme-stag"},
-            paas_app_code='fakeme',
-            environment='stag',
+            paas_app_code="fakeme",
+            environment="stag",
         )
         self.release = create_wl_release(wl_app=self.app)
 
@@ -40,7 +40,7 @@ class TestProcessScheduler:
     ):
         region = settings.DEFAULT_REGION_NAME
         self.release.config.node_selector = {"non": "xxx"}
-        self.release.config.tolerations = [{'key': 'key-1', 'operator': 'Equal'}]
+        self.release.config.tolerations = [{"key": "key-1", "operator": "Equal"}]
         self.release.config.domain = "sdfsdfsdf"
         self.release.config.save()
 
@@ -50,6 +50,6 @@ class TestProcessScheduler:
 
         assert process.schedule.node_selector == {"non": "xxx"}
         # "tolerations" should be transform to kubernetes native
-        assert process.schedule.tolerations == [{'key': 'key-1', 'operator': 'Equal'}]
+        assert process.schedule.tolerations == [{"key": "key-1", "operator": "Equal"}]
         assert process.runtime.envs["BKPAAS_LOG_NAME_PREFIX"] == f"{region}-bkapp-fakeme-stag-web"
         assert process.runtime.envs["aaaa"] == "bbbb"

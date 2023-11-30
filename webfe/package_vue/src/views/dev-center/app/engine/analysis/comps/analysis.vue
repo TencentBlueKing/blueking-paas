@@ -11,7 +11,6 @@
           >
             <bk-button
               theme="primary"
-              style="width: 101px;"
               :outline="curEnv !== 'stag'"
               @click="curEnv = 'stag'"
             >
@@ -19,7 +18,6 @@
             </bk-button>
             <bk-button
               theme="primary"
-              style="width: 101px;"
               :outline="curEnv !== 'prod'"
               @click="curEnv = 'prod'"
             >
@@ -292,7 +290,7 @@ import chartOption from '@/json/analysis-chart-option';
 import { formatDate } from '@/common/tools';
 
 export default {
-  components : {
+  components: {
     chart: ECharts,
     RenderSideslider,
   },

@@ -50,6 +50,7 @@ class FieldSchema(BaseModel):
     default: Optional[Any] = Field(description="默认值")
     maxlength: Optional[int] = Field(description="最大长度")
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
+    uiRules: Optional[List] = Field(alias="ui:rules")
     uiValidator: Optional[List] = Field(alias="ui:validator")
     uiProps: Optional[UIProps] = Field(alias="ui:props")
     uiReactions: Optional[List] = Field(alias="ui:reactions")
@@ -75,6 +76,7 @@ class PluginBackendAPI(BaseModel):
     read: Optional[PluginBackendAPIResource]
     update: Optional[PluginBackendAPIResource]
     delete: Optional[PluginBackendAPIResource]
+    reactivate: Optional[PluginBackendAPIResource]
 
 
 @register
@@ -84,7 +86,9 @@ class PluginReleaseAPI(BaseModel):
     release: Optional[PluginBackendAPIResource] = Field(description="部署/构建操作")
     result: Optional[PluginBackendAPIResource] = Field(description="查询是否可进入下一步")
     log: Optional[PluginBackendAPIResource] = Field(description="日志接口")
-    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令")
+    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令，当前阶段状态为成功即会执行")
+    # 例如测试阶段完成进入到下一个阶段的时候，希望能先回收测试阶段的资源
+    preCommand: Optional[PluginBackendAPIResource] = Field(description="前置命令，进入当前阶段后会先执行")
 
 
 @register
@@ -105,6 +109,12 @@ class PluginCodeTemplate(BaseModel):
 
 
 @register
+class PluginoverviewPage(BaseModel):
+    topUrl: Optional[str] = Field(default=None, description="概览页面顶部嵌入地址")
+    bottomUrl: Optional[str] = Field(default=None, description="概览页面底部嵌入地址")
+
+
+@register
 class PluginFeature(BaseModel):
     name: str = Field(description="功能特性名称")
     value: bool = Field(default=False, description="功能特性开关")
@@ -120,8 +130,12 @@ class PluginBasicInfoDefinition(BaseModel):
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsOrder: List[str] = Field(
+        default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
+    )
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
+    overviewPage: Optional[PluginoverviewPage] = Field(description="概览页面嵌入地址")
 
 
 @register
@@ -156,6 +170,9 @@ class PluginMarketInfoDefinition(BaseModel):
     category: PluginBackendAPIResource = Field(description="市场类型分类查询接口")
     api: Optional[PluginBackendAPI] = Field(description="插件市场信息操作接口集")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsOrder: List[str] = Field(
+        default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
+    )
     # TODO: visibleRange
 
 
@@ -163,14 +180,24 @@ class PluginMarketInfoDefinition(BaseModel):
 class ReleaseRevisionDefinition(BaseModel):
     """发布版本定义"""
 
-    revisionType: Literal["all", "master", "tag"] = Field(description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)")
+    revisionType: Literal["all", "master", "tag"] = Field(
+        description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)"
+    )
     revisionPattern: Optional[str] = Field(description="代码版本正则表达式模板, 留空则不校验")
+    allowDuplicateSourVersion: bool = Field(
+        default=True, description="是否允许选择已经发布过的代码分支, 不填则默认为 True"
+    )
     docs: Optional[str] = Field(description="代码版本校验失败的指引文档")
     versionNo: Literal["automatic", "revision", "commit-hash", "self-fill"] = Field(
-        description="版本号生成规则, 自动生成(automatic)," "与代码版本一致(revision)," "与提交哈希一致(commit-hash)," "用户自助填写(self-fill)"
+        description="版本号生成规则, 自动生成(automatic),"
+        "与代码版本一致(revision),"
+        "与提交哈希一致(commit-hash),"
+        "用户自助填写(self-fill)"
     )
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
-    api: Optional[PluginBackendAPI] = Field(description="发布版本-操作接口集, 如需要回调至第三方系统, 则需要提供 create 接口")
+    api: Optional[PluginBackendAPI] = Field(
+        description="发布版本-操作接口集, 如需要回调至第三方系统, 则需要提供 create 接口"
+    )
 
 
 @register
@@ -184,8 +211,11 @@ class ReleaseStageDefinition(BaseModel):
     pipelineId: Optional[str] = Field(description="类型为 pipeline 时必填")
     pageUrl: Optional[str] = Field(description="类型为 subpage 时必填")
     pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")
+    pipelineEnv: Optional[str] = Field(default="prod", description="蓝盾流水线环境，默认为正式环境")
     itsmServiceName: Optional[str] = Field(description="itsm 服务名称, 类型为 itsm 时必填")
-    builtinParams: Optional[Dict] = Field(description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)")
+    builtinParams: Optional[Dict] = Field(
+        description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)"
+    )
     nextStepDisabledTips: Optional[str] = Field(description="下一步按钮 Disabled 时的提示，用于辅助展示")
 
 

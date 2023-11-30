@@ -32,7 +32,11 @@ from jsonfield import JSONField
 from kubernetes.client import Configuration
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
-from paas_wl.infras.cluster.exceptions import DuplicatedDefaultClusterError, NoDefaultClusterError, SwitchDefaultClusterError
+from paas_wl.infras.cluster.exceptions import (
+    DuplicatedDefaultClusterError,
+    NoDefaultClusterError,
+    SwitchDefaultClusterError,
+)
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.dns import custom_resolver
 from paas_wl.utils.models import UuidAuditedModel, make_json_field
@@ -78,14 +82,14 @@ class IngressConfig:
     # 资源。配合其他负载均衡器，可完成复杂的请求转发逻辑。
     #
     # 该配置仅供特殊环境中使用，大部分情况下，请直接使用 app_roo_domains 和 sub_path_domains。
-    default_ingress_domain_tmpl: str = ''
+    default_ingress_domain_tmpl: str = ""
 
     # 支持的子域名的根域列表, 在需要获取单个值的地方, 会优先使用第一个配置的根域名.
     app_root_domains: List[Domain] = Factory(list)
     # 支持的子路径的根域列表, 在需要获取单个值的地方, 会优先使用第一个配置的根域名.
     sub_path_domains: List[Domain] = Factory(list)
     # Ip address of frontend ingress controller
-    frontend_ingress_ip: str = ''
+    frontend_ingress_ip: str = ""
     port_map: PortMap = Factory(PortMap)
 
     def __attrs_post_init__(self):
@@ -149,7 +153,7 @@ class ClusterManager(models.Manager):
         feature_flags: Optional[Dict] = None,
         pk: Optional[str] = None,
         **kwargs,
-    ) -> 'Cluster':
+    ) -> "Cluster":
         """Register a cluster to db, work Like update_or_create, but will validate some-attr
 
         Auth type: client-side cert
@@ -192,7 +196,7 @@ class ClusterManager(models.Manager):
         }
         if token_value:
             _token_type = token_type or ClusterTokenType.SERVICE_ACCOUNT
-            defaults.update({'token_value': token_value, 'token_type': _token_type})
+            defaults.update({"token_value": token_value, "token_type": _token_type})
 
         # We use `None` to mark this fields is unset, so we should pop it from defaults.
         defaults = {k: v for k, v in defaults.items() if v is not None}
@@ -204,7 +208,7 @@ class ClusterManager(models.Manager):
         return cluster
 
     @transaction.atomic
-    def switch_default_cluster(self, region: str, cluster_name: str) -> 'Cluster':
+    def switch_default_cluster(self, region: str, cluster_name: str) -> "Cluster":
         """Switch the default cluster to the cluster called `cluster_name`.
 
         :raise SwitchDefaultClusterException: if the cluster called `cluster_name` is already the default cluster.
@@ -236,7 +240,7 @@ class Cluster(UuidAuditedModel):
 
     region = models.CharField(max_length=32, db_index=True)
     name = models.CharField(max_length=32, help_text="name of the cluster", unique=True)
-    type = models.CharField(max_length=32, help_text='cluster type', default=ClusterType.NORMAL)
+    type = models.CharField(max_length=32, help_text="cluster type", default=ClusterType.NORMAL)
     description = models.TextField(help_text="描述信息", blank=True)
     is_default = models.NullBooleanField(default=False)
 
@@ -261,12 +265,12 @@ class Cluster(UuidAuditedModel):
     @property
     def bcs_cluster_id(self) -> Optional[str]:
         """集群在 bcs 中注册的集群 ID，若没有配置，则返回 None"""
-        return self.annotations.get('bcs_cluster_id', None)
+        return self.annotations.get("bcs_cluster_id", None)
 
     @property
     def bcs_project_id(self) -> Optional[str]:
         """集群在 bcs 中注册的集群所属的项目 ID，若没有配置，则返回 None"""
-        return self.annotations.get('bcs_project_id', None)
+        return self.annotations.get("bcs_project_id", None)
 
     @property
     def bk_biz_id(self) -> Optional[str]:
@@ -275,7 +279,7 @@ class Cluster(UuidAuditedModel):
         if not self.bcs_cluster_id:
             return None
 
-        return self.annotations.get('bk_biz_id', None)
+        return self.annotations.get("bk_biz_id", None)
 
     def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
         """检查当前集群是否支持某个特性"""
@@ -331,7 +335,7 @@ class EnhancedConfiguration(Configuration):
         if forced_hostname:
             ip = self.extract_ip(host)
             if not ip:
-                raise ValueError(f'No IP address found in {host}')
+                raise ValueError(f"No IP address found in {host}")
             self.host = host.replace(ip, forced_hostname, 1)
             self.resolver_records = {forced_hostname: ip}
         else:
@@ -352,14 +356,14 @@ class EnhancedConfiguration(Configuration):
 
         # Auth type: Bearer token
         if token:
-            token = f'Bearer {token}'
-            self.api_key['authorization'] = token
+            token = f"Bearer {token}"
+            self.api_key["authorization"] = token
 
     @contextlib.contextmanager
     def activate_resolver(self):
         """Activate this context manager when sending any API requests to make "hostname-override" works"""
         if self.resolver_records:
-            logger.debug('Custom resolver record: %s', self.resolver_records)
+            logger.debug("Custom resolver record: %s", self.resolver_records)
             with custom_resolver(self.resolver_records):
                 yield
         else:
@@ -379,4 +383,4 @@ class EnhancedConfiguration(Configuration):
         return val
 
     def __repr__(self) -> str:
-        return f'EnhancedConfiguration(host={self.host!r})'
+        return f"EnhancedConfiguration(host={self.host!r})"

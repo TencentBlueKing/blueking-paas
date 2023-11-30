@@ -51,7 +51,7 @@ from paasng.utils.serializers import UserField, field_env_var_key
 
 
 class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
-    dev_hours_spent = serializers.FloatField(help_text=u"开发时长", required=False)
+    dev_hours_spent = serializers.FloatField(help_text="开发时长", required=False)
     image_pull_policy = serializers.ChoiceField(
         help_text="镜像拉取策略",
         required=False,
@@ -59,7 +59,9 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
         default=ImagePullPolicy.IF_NOT_PRESENT,
     )
     build_only = serializers.BooleanField(help_text="是否仅构建, 不发布", default=False)
-    special_tag = serializers.CharField(help_text="指定构建的镜像 tag", required=False, allow_null=True, allow_blank=True)
+    special_tag = serializers.CharField(
+        help_text="指定构建的镜像 tag", required=False, allow_null=True, allow_blank=True
+    )
     build_id = serializers.CharField(
         help_text="构建产物ID, 提供该ID时将跳过构建", required=False, allow_null=True, allow_blank=True
     )
@@ -70,7 +72,9 @@ class CreateDeploymentSLZ(serializers.Serializer):
     """创建部署"""
 
     version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
-    version_name = serializers.CharField(required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name")
+    version_name = serializers.CharField(
+        required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"
+    )
     revision = serializers.CharField(
         required=False,
         help_text="版本信息, 如 hash(git版本)/version(源码包); 如果根据 smart_revision 能查询到 revision, 则不使用该值",
@@ -85,12 +89,12 @@ class CreateDeploymentResponseSLZ(serializers.Serializer):
 
 
 class QueryDeploymentsSLZ(serializers.Serializer):
-    environment = serializers.ChoiceField(choices=('stag', 'prod'), required=False)
+    environment = serializers.ChoiceField(choices=("stag", "prod"), required=False)
     operator = serializers.CharField(required=False)
 
 
 class QueryOperationsSLZ(serializers.Serializer):
-    environment = serializers.ChoiceField(choices=('stag', 'prod'), required=False)
+    environment = serializers.ChoiceField(choices=("stag", "prod"), required=False)
     operator = serializers.CharField(required=False)
 
 
@@ -105,17 +109,17 @@ class DeploymentSLZ(serializers.ModelSerializer):
     class Meta:
         model = Deployment
         fields = [
-            'id',
-            'status',
-            'operator',
-            'created',
-            'start_time',
-            'complete_time',
-            'finished_status',
-            'build_int_requested_at',
-            'release_int_requested_at',
-            'has_requested_int',
-            'bkapp_revision_id',
+            "id",
+            "status",
+            "operator",
+            "created",
+            "start_time",
+            "complete_time",
+            "finished_status",
+            "build_int_requested_at",
+            "release_int_requested_at",
+            "has_requested_int",
+            "bkapp_revision_id",
         ]
 
     def get_repo_info(self, obj: Deployment) -> dict:
@@ -126,12 +130,12 @@ class DeploymentSLZ(serializers.ModelSerializer):
         version_name = version_info.version_name
 
         return {
-            'source_type': obj.source_type,
-            'type': version_type,
-            'name': version_name,
-            'url': obj.source_location,
-            'revision': revision,
-            'comment': obj.source_comment,
+            "source_type": obj.source_type,
+            "type": version_type,
+            "name": version_name,
+            "url": obj.source_location,
+            "revision": revision,
+            "comment": obj.source_comment,
         }
 
     def to_representation(self, obj):
@@ -169,8 +173,8 @@ class BuildProcessSLZ(serializers.Serializer):
     start_at = serializers.DateTimeField(help_text="开始时间", source="created")
     completed_at = serializers.DateTimeField(help_text="结束时间", allow_null=True)
 
-    module = serializers.SerializerMethodField(help_text='所属模块')
-    environment = serializers.SerializerMethodField(help_text='部署环境')
+    module = serializers.SerializerMethodField(help_text="所属模块")
+    environment = serializers.SerializerMethodField(help_text="部署环境")
     deployment_id = serializers.SerializerMethodField(help_text="用于查询详情日志")
     build_id = serializers.CharField(source="build.uuid", allow_null=True)
 
@@ -221,7 +225,12 @@ class ConfigVarFormatSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="环境变量值")
     environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
     description = serializers.CharField(
-        allow_blank=True, allow_null=True, max_length=200, required=False, default='', help_text='变量描述，不超过 200 个字符'
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        required=False,
+        default="",
+        help_text="变量描述，不超过 200 个字符",
     )
 
     def to_internal_value(self, data):
@@ -232,14 +241,14 @@ class ConfigVarFormatSLZ(serializers.Serializer):
         - return a non-persistent ConfigVar
         """
         data = super().to_internal_value(data)
-        module = self.context.get('module')
+        module = self.context.get("module")
         env_name = data.pop("environment_name")
         if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            data['is_global'] = True
-            data['environment_id'] = ENVIRONMENT_ID_FOR_GLOBAL
+            data["is_global"] = True
+            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
         else:
-            data['is_global'] = False
-            data['environment_id'] = module.envs.get(environment=env_name).pk
+            data["is_global"] = False
+            data["environment_id"] = module.envs.get(environment=env_name).pk
         return ConfigVar(**data, module=module)
 
 
@@ -272,8 +281,8 @@ class ConfigVarImportSLZ(serializers.Serializer):
 class EnvironmentSlugFieldSupportGlobal(serializers.RelatedField):
     queryset = ModuleEnvironment.objects.all()
     default_error_messages = {
-        'does_not_exist': _('Object with {slug_name}={value} does not exist.'),
-        'invalid': _('Invalid value.'),
+        "does_not_exist": _("Object with {slug_name}={value} does not exist."),
+        "invalid": _("Invalid value."),
     }
 
     def get_choices(self, cutoff=None):
@@ -296,9 +305,9 @@ class EnvironmentSlugFieldSupportGlobal(serializers.RelatedField):
         try:
             return self.queryset.get(environment=name, module=self.context["module"])
         except ModuleEnvironment.DoesNotExist:
-            self.fail('does_not_exist', slug_name="environment", value=str(name))
+            self.fail("does_not_exist", slug_name="environment", value=str(name))
         except (TypeError, ValueError):
-            self.fail('invalid')
+            self.fail("invalid")
 
 
 class ConfigVarUniqueTogetherValidator(UniqueTogetherValidator):
@@ -313,10 +322,10 @@ class ConfigVarUniqueTogetherValidator(UniqueTogetherValidator):
         checked_values = [value for field, value in attrs.items() if field in self.fields]
         if None not in checked_values and qs_exists(queryset):
             if serializer.instance is not None:
-                message = _("该环境下同名变量 {key} 已存在。").format(key=attrs['key'])
+                message = _("该环境下同名变量 {key} 已存在。").format(key=attrs["key"])
             else:
-                message = _("该环境下名称为 {key} 的变量已经存在，不能重复添加。").format(key=attrs['key'])
-            raise ValidationError(message, code='unique')
+                message = _("该环境下名称为 {key} 的变量已经存在，不能重复添加。").format(key=attrs["key"])
+            raise ValidationError(message, code="unique")
 
 
 class ConfigVarSLZ(serializers.ModelSerializer):
@@ -328,7 +337,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
     key = field_env_var_key()
     value = serializers.CharField(required=True)
     description = serializers.CharField(
-        allow_blank=True, max_length=200, required=False, default='', help_text='变量描述，不超过 200 个字符'
+        allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
     is_global = serializers.BooleanField(required=False, help_text="是否全局有效, 该字段由 slz 补充.")
     # 只读字段, 仅序列化时 ConfigVar 对象时生效
@@ -343,10 +352,10 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         validators = [
             ConfigVarUniqueTogetherValidator(
                 queryset=ConfigVar.objects.all(),
-                fields=('module', 'is_global', 'environment_id', 'key'),
+                fields=("module", "is_global", "environment_id", "key"),
             )
         ]
-        exclude = ('region', 'environment')
+        exclude = ("region", "environment")
 
     def to_internal_value(self, data):
         """Do following things:
@@ -354,27 +363,27 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         - Query for environment_id for validator.
         - Add Module field from context.
         """
-        module = self.context.get('module')
+        module = self.context.get("module")
         env_name = data["environment_name"]
         if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            data['is_global'] = True
-            data['environment_id'] = ENVIRONMENT_ID_FOR_GLOBAL
+            data["is_global"] = True
+            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
         else:
-            data['is_global'] = False
-            data['environment_id'] = module.get_envs(env_name).pk
-        data['module'] = module.pk
+            data["is_global"] = False
+            data["environment_id"] = module.get_envs(env_name).pk
+        data["module"] = module.pk
         return super().to_internal_value(data)
 
 
 class ListConfigVarsSLZ(serializers.Serializer):
     """Serializer for listing ConfigVars"""
 
-    valid_order_by_fields = {'created', 'key'}
+    valid_order_by_fields = {"created", "key"}
 
     environment_name = serializers.ChoiceField(
-        choices=ConfigVarEnvName.get_choices(), required=False, help_text='按生效环境过滤'
+        choices=ConfigVarEnvName.get_choices(), required=False, help_text="按生效环境过滤"
     )
-    order_by = serializers.CharField(default='-created', help_text='排序方式，可选："-created", "key"')
+    order_by = serializers.CharField(default="-created", help_text='排序方式，可选："-created", "key"')
 
     def validate_environment_name(self, value: str) -> ConfigVarEnvName:
         return ConfigVarEnvName(value)
@@ -382,7 +391,7 @@ class ListConfigVarsSLZ(serializers.Serializer):
     def validate_order_by(self, field: str) -> str:
         f = OrderByField.from_string(field)
         if f.name not in self.valid_order_by_fields:
-            raise ValidationError(_('无效的排序选项：%s') % f)
+            raise ValidationError(_("无效的排序选项：%s") % f)
         return field
 
 
@@ -395,7 +404,7 @@ class OfflineOperationSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = OfflineOperation
-        fields = ['id', 'status', 'operator', 'created', 'log', 'err_detail']
+        fields = ["id", "status", "operator", "created", "log", "err_detail"]
 
     def get_repo_info(self, obj: OfflineOperation) -> dict:
         """Get deployment's repo info as dict"""
@@ -405,12 +414,12 @@ class OfflineOperationSLZ(serializers.ModelSerializer):
         version_name = version_info.version_name
 
         return {
-            'source_type': obj.source_type,
-            'type': version_type,
-            'name': version_name,
-            'url': obj.source_location,
-            'revision': revision,
-            'comment': obj.source_comment,
+            "source_type": obj.source_type,
+            "type": version_type,
+            "name": version_name,
+            "url": obj.source_location,
+            "revision": revision,
+            "comment": obj.source_comment,
         }
 
     def to_representation(self, obj):
@@ -426,12 +435,12 @@ class OperationSLZ(serializers.ModelSerializer):
     """This serializer is only for presentation purpose"""
 
     operator = UserField(read_only=True)
-    offline_operation = OfflineOperationSLZ(source='get_offline_obj')
-    deployment = DeploymentSLZ(source='get_deployment_obj')
+    offline_operation = OfflineOperationSLZ(source="get_offline_obj")
+    deployment = DeploymentSLZ(source="get_deployment_obj")
 
     class Meta:
         model = ModuleEnvironmentOperations
-        fields = ['id', 'status', 'operator', 'created', 'operation_type', 'offline_operation', 'deployment']
+        fields = ["id", "status", "operator", "created", "operation_type", "offline_operation", "deployment"]
 
 
 #####################
@@ -449,14 +458,14 @@ class ResourceMetricsSLZ(serializers.Serializer):
     query_metrics = serializers.SerializerMethodField()
 
     def validate(self, attrs):
-        if attrs.get('time_range_str'):
+        if attrs.get("time_range_str"):
             return attrs
 
-        if not (attrs.get('start_time') and attrs.get('end_time')):
+        if not (attrs.get("start_time") and attrs.get("end_time")):
             raise serializers.ValidationError("start & end not allowed to be null if no time_range_str pass in")
 
-        start_time = datetime.fromisoformat(attrs['start_time'])
-        end_time = datetime.fromisoformat(attrs['end_time'])
+        start_time = datetime.fromisoformat(attrs["start_time"])
+        end_time = datetime.fromisoformat(attrs["end_time"])
 
         if start_time > end_time:
             raise serializers.ValidationError("start time should earlier than end time")
@@ -465,24 +474,26 @@ class ResourceMetricsSLZ(serializers.Serializer):
 
     def get_step(self, attrs) -> str:
         # default min interval of metrics is 15s, get step automatically instead of choosing by user
-        if attrs.get('time_range_str'):
-            return calculate_gap_seconds_interval(get_time_delta(attrs.get('time_range_str')).total_seconds())
+        if attrs.get("time_range_str"):
+            return calculate_gap_seconds_interval(get_time_delta(attrs.get("time_range_str")).total_seconds())
 
-        time_delta = datetime.fromisoformat(attrs.get('end_time')) - datetime.fromisoformat(attrs.get('start_time'))
+        time_delta = datetime.fromisoformat(attrs.get("end_time")) - datetime.fromisoformat(attrs.get("start_time"))
         return calculate_gap_seconds_interval(time_delta.total_seconds())
 
     def get_query_metrics(self, attrs):
         """根据 metric_type 注入 query_metrics 字段"""
-        if 'metric_type' in attrs and attrs['metric_type'] != "__all__":
+        if "metric_type" in attrs and attrs["metric_type"] != "__all__":
             return [MetricsResourceType(attrs["metric_type"]).value]
 
         return [MetricsResourceType.MEM.value, MetricsResourceType.CPU.value]
 
 
 class CustomDomainsConfigSLZ(serializers.Serializer):
-    module = serializers.CharField(help_text='所属模块')
-    environment = serializers.CharField(help_text='部署环境')
-    frontend_ingress_ip = serializers.CharField(help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能')
+    module = serializers.CharField(help_text="所属模块")
+    environment = serializers.CharField(help_text="部署环境")
+    frontend_ingress_ip = serializers.CharField(
+        help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能'
+    )
 
 
 class ConditionNotMatchedSLZ(serializers.Serializer):
@@ -592,7 +603,9 @@ class ModuleEnvOverviewSLZ(serializers.Serializer):
     build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
     # 版本相关信息
     version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
-    version_name = serializers.CharField(required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name")
+    version_name = serializers.CharField(
+        required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"
+    )
     revision = serializers.CharField(
         required=False,
         help_text="版本信息, 如 hash(git版本)/version(源码包); 如果根据 smart_revision 能查询到 revision, 则不使用该值",

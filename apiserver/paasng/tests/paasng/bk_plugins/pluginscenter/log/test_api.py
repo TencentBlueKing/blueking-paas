@@ -39,7 +39,7 @@ from paasng.utils.es_log.time_range import SmartTimeRange
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def log_client():
     with mock.patch(
         "paasng.bk_plugins.pluginscenter.log.instantiate_log_client", spec=LogClientProtocol, new=mock.MagicMock()
@@ -47,7 +47,7 @@ def log_client():
         yield mock_client_factory()
 
 
-@pytest.fixture
+@pytest.fixture()
 def time_range():
     return SmartTimeRange(time_range="1h")
 
@@ -57,51 +57,94 @@ def make_hit(fields: Dict) -> Hit:
 
 
 def test_query_standard_output_logs(pd, plugin, log_client, time_range):
-    log_client.execute_search.return_value = [
-        make_hit({"@timestamp": 1, "json": {"message": "foo"}, "other": "FOO"}),
-        make_hit({"@timestamp": 2, "json": {"message": "bar"}, "other": "BAR"}),
-    ], 20
+    log_client.execute_search.return_value = (
+        [
+            make_hit({"@timestamp": 1, "json": {"message": "foo"}, "other": "FOO"}),
+            make_hit({"@timestamp": 2, "json": {"message": "bar"}, "other": "BAR"}),
+        ],
+        20,
+    )
 
     logs = query_standard_output_logs(pd, plugin, "nobody", time_range, "", 100, 0)
     assert cattr.unstructure(logs.logs) == [
-        {'timestamp': 1, 'message': 'foo', 'raw': {'@timestamp': 1, 'json.message': 'foo', 'other': 'FOO'}},
-        {'timestamp': 2, 'message': 'bar', 'raw': {'@timestamp': 2, 'json.message': 'bar', 'other': 'BAR'}},
+        {"timestamp": 1, "message": "foo", "raw": {"@timestamp": 1, "json.message": "foo", "other": "FOO"}},
+        {"timestamp": 2, "message": "bar", "raw": {"@timestamp": 2, "json.message": "bar", "other": "BAR"}},
     ]
     assert logs.total == 20
     assert json.loads(logs.dsl) == {
-        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}]}},
-        'sort': [{'@timestamp': {'order': 'desc'}}],
-        'size': 100,
-        'from': 0,
+        "query": {"bool": {"filter": [{"range": {"@timestamp": {"gte": "now-1h", "lte": "now"}}}]}},
+        "sort": [{"@timestamp": {"order": "desc"}}],
+        "size": 100,
+        "from": 0,
     }
 
 
 def test_query_structure_logs(pd, plugin, log_client, time_range):
-    log_client.execute_search.return_value = [
-        make_hit({"@timestamp": 1, "json": {"message": "foo"}, "other": "FOO"}),
-        make_hit({"@timestamp": 2, "json": {"message": "bar"}, "other": "BAR"}),
-    ], 20
+    log_client.execute_search.return_value = (
+        [
+            make_hit({"@timestamp": 1, "json": {"message": "foo"}, "other": "FOO"}),
+            make_hit({"@timestamp": 2, "json": {"message": "bar"}, "other": "BAR"}),
+        ],
+        20,
+    )
 
     logs = query_structure_logs(pd, plugin, "nobody", time_range, "", 100, 0)
     assert cattr.unstructure(logs.logs) == [
-        {'timestamp': 1, 'message': 'foo', 'raw': {'@timestamp': 1, 'json.message': 'foo', 'other': 'FOO'}},
-        {'timestamp': 2, 'message': 'bar', 'raw': {'@timestamp': 2, 'json.message': 'bar', 'other': 'BAR'}},
+        {"timestamp": 1, "message": "foo", "raw": {"@timestamp": 1, "json.message": "foo", "other": "FOO"}},
+        {"timestamp": 2, "message": "bar", "raw": {"@timestamp": 2, "json.message": "bar", "other": "BAR"}},
     ]
     assert logs.total == 20
     assert json.loads(logs.dsl) == {
-        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}]}},
-        'sort': [{'@timestamp': {'order': 'desc'}}],
-        'size': 100,
-        'from': 0,
+        "query": {"bool": {"filter": [{"range": {"@timestamp": {"gte": "now-1h", "lte": "now"}}}]}},
+        "sort": [{"@timestamp": {"order": "desc"}}],
+        "size": 100,
+        "from": 0,
     }
 
 
 def test_query_ingress_logs(pd, plugin, log_client, time_range):
-    log_client.execute_search.return_value = [
-        make_hit(
-            {
+    log_client.execute_search.return_value = (
+        [
+            make_hit(
+                {
+                    "@timestamp": 1,
+                    "json": {"message": "foo"},
+                    "method": "GET",
+                    "path": "/example",
+                    "status_code": 200,
+                    "response_time": 1.12,
+                    "client_ip": "localhost",
+                    "bytes_sent": 77777,
+                    "user_agent": "foo client",
+                    "http_version": "1.1",
+                }
+            ),
+            make_hit(
+                {
+                    "@timestamp": 1,
+                    "json": {"message": "foo"},
+                    "method": "GET",
+                    "path": "/example",
+                    "status_code": "200",
+                    "response_time": "1.12",
+                    "client_ip": "localhost",
+                    "bytes_sent": "77777",
+                    "user_agent": "foo client",
+                    "http_version": "1.1",
+                }
+            ),
+        ],
+        20,
+    )
+
+    logs = query_ingress_logs(pd, plugin, "nobody", time_range, "", 100, 0)
+    assert cattr.unstructure(logs.logs) == [
+        {
+            "timestamp": 1,
+            "message": "foo",
+            "raw": {
                 "@timestamp": 1,
-                'json': {"message": "foo"},
+                "json.message": "foo",
                 "method": "GET",
                 "path": "/example",
                 "status_code": 200,
@@ -110,12 +153,22 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
                 "bytes_sent": 77777,
                 "user_agent": "foo client",
                 "http_version": "1.1",
-            }
-        ),
-        make_hit(
-            {
+            },
+            "method": "GET",
+            "path": "/example",
+            "status_code": 200,
+            "response_time": 1.12,
+            "client_ip": "localhost",
+            "bytes_sent": 77777,
+            "user_agent": "foo client",
+            "http_version": "1.1",
+        },
+        {
+            "timestamp": 1,
+            "message": "foo",
+            "raw": {
                 "@timestamp": 1,
-                'json': {"message": "foo"},
+                "json.message": "foo",
                 "method": "GET",
                 "path": "/example",
                 "status_code": "200",
@@ -124,59 +177,15 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
                 "bytes_sent": "77777",
                 "user_agent": "foo client",
                 "http_version": "1.1",
-            }
-        ),
-    ], 20
-
-    logs = query_ingress_logs(pd, plugin, "nobody", time_range, "", 100, 0)
-    assert cattr.unstructure(logs.logs) == [
-        {
-            'timestamp': 1,
-            'message': 'foo',
-            'raw': {
-                '@timestamp': 1,
-                'json.message': 'foo',
-                'method': 'GET',
-                'path': '/example',
-                'status_code': 200,
-                'response_time': 1.12,
-                'client_ip': 'localhost',
-                'bytes_sent': 77777,
-                'user_agent': 'foo client',
-                'http_version': '1.1',
             },
-            'method': 'GET',
-            'path': '/example',
-            'status_code': 200,
-            'response_time': 1.12,
-            'client_ip': 'localhost',
-            'bytes_sent': 77777,
-            'user_agent': 'foo client',
-            'http_version': '1.1',
-        },
-        {
-            'timestamp': 1,
-            'message': 'foo',
-            'raw': {
-                '@timestamp': 1,
-                'json.message': 'foo',
-                'method': 'GET',
-                'path': '/example',
-                'status_code': "200",
-                'response_time': "1.12",
-                'client_ip': 'localhost',
-                'bytes_sent': "77777",
-                'user_agent': 'foo client',
-                'http_version': '1.1',
-            },
-            'method': 'GET',
-            'path': '/example',
-            'status_code': 200,
-            'response_time': 1.12,
-            'client_ip': 'localhost',
-            'bytes_sent': 77777,
-            'user_agent': 'foo client',
-            'http_version': '1.1',
+            "method": "GET",
+            "path": "/example",
+            "status_code": 200,
+            "response_time": 1.12,
+            "client_ip": "localhost",
+            "bytes_sent": 77777,
+            "user_agent": "foo client",
+            "http_version": "1.1",
         },
     ]
 

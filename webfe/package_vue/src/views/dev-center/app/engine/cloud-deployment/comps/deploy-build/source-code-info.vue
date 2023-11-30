@@ -5,7 +5,7 @@
       <div class="info-wrapper">
         <bk-alert
           type="info"
-          :title="$t('该模块部署版本包由“蓝鲸可视化开发平台”提供')"
+          :title="$t('该模块部署版本包由“蓝鲸运维开发平台”提供')"
         />
         <a
           v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"

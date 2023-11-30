@@ -116,7 +116,9 @@ class PluginReleaseLogsResponseSLZ(serializers.Serializer):
     """插件发布日志的返回体格式"""
 
     finished = serializers.BooleanField(help_text="日志是否结束", default=False)
-    logs = serializers.ListSerializer(child=serializers.CharField(help_text="日志内容", allow_null=True, allow_blank=True))
+    logs = serializers.ListSerializer(
+        child=serializers.CharField(help_text="日志内容", allow_null=True, allow_blank=True)
+    )
 
 
 class PluginRoleSLZ(serializers.Serializer):
@@ -136,5 +138,5 @@ class PluginConfigSLZ(serializers.Serializer):
     key = field_env_var_key()
     value = serializers.CharField(help_text="环境变量值", required=True, allow_blank=True)
     description = serializers.CharField(
-        allow_blank=True, max_length=200, required=False, default='', help_text='变量描述，不超过 200 个字符'
+        allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )

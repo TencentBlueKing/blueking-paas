@@ -20,22 +20,22 @@ package resources
 
 import (
 	"fmt"
-	"hash/fnv"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
+	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kuberuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/rand"
-
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
-	"bk.tencent.com/paas-app-operator/pkg/utils/hash"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
@@ -53,89 +53,101 @@ const (
 // log is for logging in this package.
 var log = logf.Log.WithName("controllers-resources")
 
-// GetWantedDeploys 根据应用生成对应的 Deployment 配置列表
-func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
+// BuildProcDeployment build a deployment resource according to a bkapp's process declaration.
+func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Deployment, error) {
 	deployID := app.Status.DeployId
 	if deployID == "" {
 		deployID = DefaultDeployID
 	}
 
-	annotations := map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID}
+	// Prepare data
 	envs := GetAppEnvs(app)
 	volMountMap := GetVolumeMountMap(app)
 	replicasGetter := NewReplicasGetter(app)
-	deployList := []*appsv1.Deployment{}
 	useCNB, _ := strconv.ParseBool(app.Annotations[paasv1alpha2.UseCNBAnnoKey])
-	for _, proc := range app.Spec.Processes {
-		selector := labels.PodSelector(app, proc.Name)
-		objLabels := labels.Deployment(app, proc.Name)
 
-		// TODO: Add error handling
-		image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(app).Get(proc.Name)
-		if err != nil {
-			log.Info("Failed to get image for process %s: %v, use default values.", proc.Name, err)
-			image = DefaultImage
-			pullPolicy = corev1.PullIfNotPresent
-		}
-
-		resGetter := NewProcResourcesGetter(app)
-		resReq, err := resGetter.GetByProc(proc.Name)
-		if err != nil {
-			log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)
-			resReq = resGetter.Default()
-		}
-
-		deployment := &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       "Deployment",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        names.Deployment(app, proc.Name),
-				Namespace:   app.Namespace,
-				Labels:      objLabels,
-				Annotations: annotations,
-				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(app, schema.GroupVersionKind{
-						Group:   paasv1alpha2.GroupVersion.Group,
-						Version: paasv1alpha2.GroupVersion.Version,
-						Kind:    paasv1alpha2.KindBkApp,
-					}),
-				},
-			},
-			Spec: appsv1.DeploymentSpec{
-				Selector:             &metav1.LabelSelector{MatchLabels: selector},
-				RevisionHistoryLimit: lo.ToPtr(DeployRevisionHistoryLimit),
-				Replicas:             replicasGetter.GetByProc(proc.Name),
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels:      objLabels,
-						Annotations: map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID},
-					},
-					Spec: corev1.PodSpec{
-						DNSConfig:        buildDNSConfig(app),
-						HostAliases:      buildHostAliases(app),
-						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq, useCNB),
-						ImagePullSecrets: buildImagePullSecrets(app),
-						// 不默认向 Pod 中挂载 ServiceAccount Token
-						AutomountServiceAccountToken: lo.ToPtr(false),
-					},
-				},
-			},
-		}
-
-		for _, mount := range volMountMap {
-			err = mount.ApplyToDeployment(deployment, mount.Name, mount.MountPath)
-			if err != nil {
-				log.Error(err, "Failed to inject mounts info to process", proc.Name)
-			}
-		}
-
-		// Calculate a hash value for the deployment and set it as the annotation
-		deployment.Annotations[paasv1alpha2.DeployContentHashAnnoKey] = ComputeDeploymentHash(deployment)
-		deployList = append(deployList, deployment)
+	// Find the process spec object
+	proc, found := lo.Find(app.Spec.Processes, func(p paasv1alpha2.Process) bool { return p.Name == procName })
+	if !found {
+		return nil, fmt.Errorf("process %s not found", procName)
 	}
-	return deployList
+
+	// Start to build the deployment resource and return
+	selector := labels.PodSelector(app, proc.Name)
+	objLabels := labels.Deployment(app, proc.Name)
+
+	// TODO: Add error handling
+	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(app).Get(proc.Name)
+	if err != nil {
+		log.Info("Failed to get image for process %s: %v, use default values.", proc.Name, err)
+		image = DefaultImage
+		pullPolicy = corev1.PullIfNotPresent
+	}
+
+	// Get resource requirements
+	resGetter := NewProcResourcesGetter(app)
+	resReq, err := resGetter.GetByProc(proc.Name)
+	if err != nil {
+		log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)
+		resReq = resGetter.Default()
+	}
+
+	// Build annotations
+	bkAppJson, err := getSerializedBkApp(app)
+	if err != err {
+		return nil, errors.Wrapf(err, "serialize bkapp %s error", app.Name)
+	}
+	annotations := map[string]string{
+		paasv1alpha2.DeployIDAnnoKey:                  deployID,
+		paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: string(bkAppJson),
+	}
+
+	deployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        names.Deployment(app, proc.Name),
+			Namespace:   app.Namespace,
+			Labels:      objLabels,
+			Annotations: annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   paasv1alpha2.GroupVersion.Group,
+					Version: paasv1alpha2.GroupVersion.Version,
+					Kind:    paasv1alpha2.KindBkApp,
+				}),
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector:             &metav1.LabelSelector{MatchLabels: selector},
+			RevisionHistoryLimit: lo.ToPtr(DeployRevisionHistoryLimit),
+			Replicas:             replicasGetter.GetByProc(proc.Name),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      objLabels,
+					Annotations: map[string]string{paasv1alpha2.DeployIDAnnoKey: deployID},
+				},
+				Spec: corev1.PodSpec{
+					DNSConfig:        buildDNSConfig(app),
+					HostAliases:      buildHostAliases(app),
+					Containers:       buildContainers(proc, envs, image, pullPolicy, resReq, useCNB),
+					ImagePullSecrets: buildImagePullSecrets(app),
+					// 不默认向 Pod 中挂载 ServiceAccount Token
+					AutomountServiceAccountToken: lo.ToPtr(false),
+				},
+			},
+		},
+	}
+
+	for _, mount := range volMountMap {
+		err = mount.ApplyToDeployment(deployment, mount.Name, mount.MountPath)
+		if err != nil {
+			log.Error(err, "Failed to inject mounts info to process", proc.Name)
+		}
+	}
+	return deployment, nil
 }
 
 // buildContainers 根据配置生产对应容器配置列表（目前设计单个 proc 只会有单个容器）
@@ -222,9 +234,16 @@ func buildHostAliases(app *paasv1alpha2.BkApp) (results []corev1.HostAlias) {
 	return nil
 }
 
-// ComputeDeploymentHash computes the hash value for the deployment object
-func ComputeDeploymentHash(obj *appsv1.Deployment) string {
-	deployHasher := fnv.New32a()
-	hash.DeepHashObject(deployHasher, obj)
-	return rand.SafeEncodeString(fmt.Sprint(deployHasher.Sum32()))
+// Get the serialized bkapp object, use JSON format, some fields such as status are removed.
+func getSerializedBkApp(bkapp *paasv1alpha2.BkApp) (string, error) {
+	bkAppJson, err := kuberuntime.Encode(unstructured.UnstructuredJSONScheme, bkapp)
+	if err != nil {
+		return "", err
+	}
+
+	// Remove some field because it's not part of the specification
+	data := string(bkAppJson)
+	data, _ = sjson.Delete(data, "status")
+	data, _ = sjson.Delete(data, "metadata.managedFields")
+	return data, nil
 }

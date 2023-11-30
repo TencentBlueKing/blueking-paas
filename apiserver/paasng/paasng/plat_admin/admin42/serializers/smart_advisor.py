@@ -26,10 +26,10 @@ class DocumentaryLinkSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = DocumentaryLink
-        fields = '__all__'
+        fields = "__all__"
 
 
 class DeployFailurePatternSLZ(serializers.ModelSerializer):
     class Meta:
         model = DeployFailurePattern
-        fields = '__all__'
+        fields = "__all__"

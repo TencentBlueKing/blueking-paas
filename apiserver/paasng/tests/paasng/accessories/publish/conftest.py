@@ -18,34 +18,34 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.accessories.publish.sync_market.managers import AppTagManger
+from paasng.core.core.storages.sqlalchemy import console_db
 from tests.utils.helpers import generate_random_string
 
 
-@pytest.fixture
+@pytest.fixture()
 def tag_name():
     return generate_random_string(length=6)
 
 
-@pytest.fixture
+@pytest.fixture()
 def create_default_tag(tag_name):
     with console_db.session_scope() as session:
         try:
             AppTagManger(session).create_tag(
                 {
-                    'code': generate_random_string(length=6),
-                    'name': tag_name,
-                    'is_select': 1,
+                    "code": generate_random_string(length=6),
+                    "name": tag_name,
+                    "is_select": 1,
                 }
             )
         except TypeError:
             # 兼容企业版桌面没有 is_select 的情况
             AppTagManger(session).create_tag(
                 {
-                    'code': generate_random_string(length=6),
-                    'name': tag_name,
-                    'index': 100,
+                    "code": generate_random_string(length=6),
+                    "name": tag_name,
+                    "index": 100,
                 }
             )
 

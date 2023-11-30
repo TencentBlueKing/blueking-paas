@@ -60,7 +60,7 @@ class ApplicationQuerySet(models.QuerySet):
 
     @staticmethod
     def get_user_id(user):
-        if hasattr(user, 'pk'):
+        if hasattr(user, "pk"):
             return user.pk
         return user
 
@@ -71,7 +71,7 @@ class ApplicationQuerySet(models.QuerySet):
 
         :param user:  User Object or user_id
         """
-        if hasattr(user, 'username'):
+        if hasattr(user, "username"):
             return user.username
 
         return get_username_by_bkpaas_user_id(user)
@@ -144,7 +144,7 @@ class BaseApplicationFilter:
         include_inactive=False,
         regions=None,
         languages=None,
-        search_term='',
+        search_term="",
         has_deployed: Optional[bool] = None,
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
@@ -186,10 +186,11 @@ class BaseApplicationFilter:
             f = OrderByField.from_string(field)
             # If order_by field is "latest_operated_at", replace it with original field which has
             # related_name prefix.
-            if f.name == 'latest_operated_at':
-                f.name = 'latest_op__latest_operated_at'
-                queryset = queryset.select_related('latest_op')
-                field = str(f)
+            if f.name == "latest_operated_at":
+                f.name = "latest_op__latest_operated_at"
+                queryset = queryset.select_related("latest_op")
+                fields.append(str(f))
+                continue
 
             fields.append(field)
         return queryset.order_by(*fields)
@@ -207,7 +208,7 @@ class UserApplicationFilter:
         include_inactive=False,
         regions=None,
         languages=None,
-        search_term='',
+        search_term="",
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
@@ -228,7 +229,7 @@ class UserApplicationFilter:
         )
 
 
-def rename_logo_with_extra_prefix(instance: 'Application', filename: str) -> str:
+def rename_logo_with_extra_prefix(instance: "Application", filename: str) -> str:
     """Generate uploaded logo filename with extra prefix"""
     dirname = os.path.dirname(filename)
     ext = os.path.splitext(filename)[-1]
@@ -239,28 +240,30 @@ def rename_logo_with_extra_prefix(instance: 'Application', filename: str) -> str
 class Application(OwnerTimestampedModel):
     """蓝鲸应用"""
 
-    id = models.UUIDField('UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
-    code = models.CharField(verbose_name='应用代号', max_length=20, unique=True)
-    name = models.CharField(verbose_name='应用名称', max_length=20, unique=True)
-    name_en = models.CharField(verbose_name='应用名称(英文)', max_length=20, help_text="目前仅用于 S-Mart 应用")
+    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
+    code = models.CharField(verbose_name="应用代号", max_length=20, unique=True)
+    name = models.CharField(verbose_name="应用名称", max_length=20, unique=True)
+    name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
-    type = models.CharField(verbose_name='应用类型', max_length=16, default=ApplicationType.DEFAULT.value, db_index=True)
-    is_smart_app = models.BooleanField(verbose_name='是否为 S-Mart 应用', default=False)
-    is_scene_app = models.BooleanField(verbose_name='是否为场景 SaaS 应用', default=False)
-    language = models.CharField(verbose_name='编程语言', max_length=32)
+    type = models.CharField(
+        verbose_name="应用类型", max_length=16, default=ApplicationType.DEFAULT.value, db_index=True
+    )
+    is_smart_app = models.BooleanField(verbose_name="是否为 S-Mart 应用", default=False)
+    is_scene_app = models.BooleanField(verbose_name="是否为场景 SaaS 应用", default=False)
+    language = models.CharField(verbose_name="编程语言", max_length=32)
 
     creator = BkUserField()
-    is_active = models.BooleanField(verbose_name='是否活跃', default=True)
-    is_deleted = models.BooleanField('是否删除', default=False)
-    last_deployed_date = models.DateTimeField(verbose_name='最近部署时间', null=True)  # 范围：应用下所有模块的所有环境
+    is_active = models.BooleanField(verbose_name="是否活跃", default=True)
+    is_deleted = models.BooleanField("是否删除", default=False)
+    last_deployed_date = models.DateTimeField(verbose_name="最近部署时间", null=True)  # 范围：应用下所有模块的所有环境
 
     logo = ProcessedImageField(
-        verbose_name='应用 Logo 图片',
+        verbose_name="应用 Logo 图片",
         storage=app_logo_storage,
         upload_to=rename_logo_with_extra_prefix,
         processors=[ResizeToFill(*LOGO_SIZE)],
-        format='PNG',
-        options={'quality': 95},
+        format="PNG",
+        options={"quality": 95},
         null=True,
     )
 
@@ -290,7 +293,7 @@ class Application(OwnerTimestampedModel):
 
         return AppSpecs(self).engine_enabled
 
-    def get_source_obj(self) -> 'RepositoryInstance':
+    def get_source_obj(self) -> "RepositoryInstance":
         """获取 Application 对应的源码 Repo 对象"""
         return self.get_default_module().get_source_obj()
 
@@ -380,7 +383,7 @@ class Application(OwnerTimestampedModel):
         self.save()
 
     def __str__(self):
-        return u'{name}[{code}]'.format(name=self.name, code=self.code)
+        return "{name}[{code}]".format(name=self.name, code=self.code)
 
 
 class ApplicationMembership(TimestampedModel):
@@ -394,10 +397,10 @@ class ApplicationMembership(TimestampedModel):
     role = models.IntegerField(default=ApplicationRole.DEVELOPER.value)
 
     class Meta:
-        unique_together = ('user', 'application', 'role')
+        unique_together = ("user", "application", "role")
 
     def __str__(self):
-        return u"{app_code}-{user}-{role}".format(
+        return "{app_code}-{user}-{role}".format(
             app_code=self.application.code, user=self.user, role=ApplicationRole.get_choice_label(self.role)
         )
 
@@ -405,17 +408,17 @@ class ApplicationMembership(TimestampedModel):
 class ApplicationEnvironment(TimestampedModel):
     """记录蓝鲸应用在不同部署环境下对应的 Engine App"""
 
-    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name='envs')
-    module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, related_name='envs', null=True)
-    engine_app = models.OneToOneField('engine.EngineApp', on_delete=models.CASCADE, related_name='env')
-    environment = models.CharField(verbose_name=u'部署环境', max_length=16)
-    is_offlined = models.BooleanField(default=False, help_text=u'是否已经下线，仅成功下线后变为False')
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name="envs")
+    module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, related_name="envs", null=True)
+    engine_app = models.OneToOneField("engine.EngineApp", on_delete=models.CASCADE, related_name="env")
+    environment = models.CharField(verbose_name="部署环境", max_length=16)
+    is_offlined = models.BooleanField(default=False, help_text="是否已经下线，仅成功下线后变为False")
 
     class Meta:
-        unique_together = ('module', 'environment')
+        unique_together = ("module", "environment")
 
     def __str__(self):
-        return u"{app_code}-{env}".format(app_code=self.application.code, env=self.environment)
+        return "{app_code}-{env}".format(app_code=self.application.code, env=self.environment)
 
     def get_engine_app(self):
         return self.engine_app
@@ -427,7 +430,7 @@ class ApplicationEnvironment(TimestampedModel):
 
     def is_production(self) -> bool:
         """判断当前环境是否用于生产"""
-        return self.environment == 'prod'
+        return self.environment == "prod"
 
     def is_running(self) -> bool:
         """Check if current environment is up and running"""
@@ -440,16 +443,17 @@ class ApplicationEnvironment(TimestampedModel):
         # Check if latest deployment has been succeeded
         try:
             Deployment.objects.filter_by_env(self).latest_succeeded()
-            return True
         except Deployment.DoesNotExist:
             return False
+        else:
+            return True
 
 
 # Make an alias name to descrease misunderstanding
 ModuleEnvironment = ApplicationEnvironment
 
 
-def get_default_feature_flags(application: 'Application') -> Dict[str, bool]:
+def get_default_feature_flags(application: "Application") -> Dict[str, bool]:
     """get default_feature_flags mapping for an application
 
     default features are controlled by different region or type of the application
@@ -472,6 +476,7 @@ def get_default_feature_flags(application: 'Application') -> Dict[str, bool]:
 
 class ApplicationFeatureFlagManager(models.Manager):
     """所有方法均同时兼容两种调用方式:
+
     - 通过外键对象查询, 例如 application.feature_flag.get_application_features()
     - 通过 objects 对象查询, 例如 ApplicationFeatureFlag.objects.get_application_features(application)
     """
@@ -510,7 +515,7 @@ class ApplicationFeatureFlagManager(models.Manager):
             application = self.instance
 
         if not isinstance(application, Application):
-            raise ValueError(f"params<{application}> is not an Application")
+            raise TypeError(f"params<{application}> is not an Application")
 
         return application, qs
 
@@ -521,8 +526,8 @@ class ApplicationFeatureFlag(TimestampedModel):
     """
 
     application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name="feature_flag")
-    effect = models.BooleanField(u"是否允许(value)", default=True)
-    name = models.CharField(u"特性名称(key)", max_length=30)
+    effect = models.BooleanField("是否允许(value)", default=True)
+    name = models.CharField("特性名称(key)", max_length=30)
 
     objects = ApplicationFeatureFlagManager()
 

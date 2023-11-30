@@ -31,11 +31,11 @@ from jsonfield import JSONField
 from pilkit.processors import ResizeToFill
 from translated_fields import TranslatedFieldWithFallback
 
+from paasng.accessories.publish.market import constant
+from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.specs import AppSpecs
-from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.platform.modules.models import Module
-from paasng.accessories.publish.market import constant
 from paasng.utils.models import OwnerTimestampedModel, ProcessedImageField, TimestampedModel, WithOwnerManager
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 class TagManager(models.Manager):
     def get_query_set(self):
-        return super(TagManager, self).get_query_set().filter(region__in=[settings.RUN_VER, 'all'])
+        return super(TagManager, self).get_query_set().filter(region__in=[settings.RUN_VER, "all"])
 
     def get_default_tag(self):
         """自动给应用创建市场信息时,使用默认分类"""
@@ -57,27 +57,32 @@ class Tag(models.Model):
     """
 
     parent = models.ForeignKey(
-        'self', on_delete=models.CASCADE, blank=True, null=True, verbose_name=u"APP一级分类", help_text=u"对于一级分类，该字段为空"
+        "self",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        verbose_name="APP一级分类",
+        help_text="对于一级分类，该字段为空",
     )  # 一级分类，则该字段可为空
-    name = models.CharField(u"分类名称", max_length=64, help_text=u"分类名称")
-    remark = models.CharField(u"备注", blank=True, null=True, max_length=255, help_text=u"备注")
-    index = models.IntegerField(u"排序", default=0, help_text=u"显示排序字段")
-    enabled = models.BooleanField(u"是否可选", default=True, help_text=u"创建应用时是否可选择该分类")
-    region = models.CharField(u"部署环境", max_length=32, help_text=u"部署区域")
+    name = models.CharField("分类名称", max_length=64, help_text="分类名称")
+    remark = models.CharField("备注", blank=True, null=True, max_length=255, help_text="备注")
+    index = models.IntegerField("排序", default=0, help_text="显示排序字段")
+    enabled = models.BooleanField("是否可选", default=True, help_text="创建应用时是否可选择该分类")
+    region = models.CharField("部署环境", max_length=32, help_text="部署区域")
 
     objects = TagManager()
 
     class Meta:
-        ordering = ('index', 'id')
+        ordering = ("index", "id")
 
     def get_name_display(self):
         if self.parent:
-            return u"%s-%s" % (self.parent.name, self.name)
+            return "%s-%s" % (self.parent.name, self.name)
         else:
             return _(self.name)
 
     def __str__(self):
-        return '{}:{} region={} parent={}'.format(self.id, self.name, self.region, self.parent)
+        return "{}:{} region={} parent={}".format(self.id, self.name, self.region, self.parent)
 
 
 class ProductManager(WithOwnerManager):
@@ -85,7 +90,7 @@ class ProductManager(WithOwnerManager):
         application_ids = Application.objects.filter_by_user(user).values_list("id", flat=True)
         return self.filter(application__id__in=application_ids)
 
-    def create_default_product(self, application: Application) -> 'Product':
+    def create_default_product(self, application: Application) -> "Product":
         product, created = self.get_or_create(
             application=application,
             code=application.code,
@@ -104,7 +109,7 @@ class ProductManager(WithOwnerManager):
         return product
 
 
-def upload_renamed_to_app_code(instance: 'Product', filename: str):
+def upload_renamed_to_app_code(instance: "Product", filename: str):
     """Generate uploaded logo filename"""
     name = filename
 
@@ -119,33 +124,43 @@ class Product(OwnerTimestampedModel):
     """蓝鲸应用: 开发者中心的编辑属性"""
 
     application = models.OneToOneField(
-        Application, on_delete=models.CASCADE, verbose_name=u"PAAS 应用", blank=True, null=True, help_text=u"PAAS应用"
+        Application, on_delete=models.CASCADE, verbose_name="PAAS 应用", blank=True, null=True, help_text="PAAS应用"
     )
 
     # 基本属性
-    code = models.CharField(u'应用编码', max_length=64, unique=True, help_text=u"应用编码")
+    code = models.CharField("应用编码", max_length=64, unique=True, help_text="应用编码")
     name = TranslatedFieldWithFallback(
-        models.CharField('应用在市场中的名称', max_length=64, help_text="目前与应用名称保持一致，在 2 个表中修改时都需要相互同步数据，不能超过20个字符")
+        models.CharField(
+            "应用在市场中的名称",
+            max_length=64,
+            help_text="目前与应用名称保持一致，在 2 个表中修改时都需要相互同步数据，不能超过20个字符",
+        )
     )
     logo = ProcessedImageField(
         storage=app_logo_storage,
         upload_to=upload_renamed_to_app_code,
         processors=[ResizeToFill(144, 144)],
-        format='PNG',
-        options={'quality': 95},
+        format="PNG",
+        options={"quality": 95},
     )
     introduction = TranslatedFieldWithFallback(models.TextField("应用简介", help_text="应用简介"))
     description = TranslatedFieldWithFallback(models.TextField("应用描述", help_text="应用描述", default=""))
     tag = models.ForeignKey(
-        Tag, verbose_name=u"app分类", blank=True, null=True, default=None, on_delete=models.SET_NULL, help_text=u"按用途分类"
+        Tag,
+        verbose_name="app分类",
+        blank=True,
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+        help_text="按用途分类",
     )  # 永远绑定到二级 tag
-    type = models.SmallIntegerField(u"应用类型", choices=constant.AppType.get_choices(), help_text=u"按实现方式分类")
-    state = models.SmallIntegerField(u"状态", choices=constant.AppState.get_choices(), default=1, help_text=u"应用状态")
+    type = models.SmallIntegerField("应用类型", choices=constant.AppType.get_choices(), help_text="按实现方式分类")
+    state = models.SmallIntegerField("状态", choices=constant.AppState.get_choices(), default=1, help_text="应用状态")
     # 要为 “所属业务” 取一个抽象的字段名字很难，一个业务代表着应用的一类理想目标用户群体
     # 想了半天，取 related corpration product（相关联的公司产品）
-    related_corp_products = JSONField(default=[], help_text='所属业务')
+    related_corp_products = JSONField(default=[], help_text="所属业务")
     # 可见范围
-    visiable_labels = JSONField(u"可见范围标签", blank=True, null=True)
+    visiable_labels = JSONField("可见范围标签", blank=True, null=True)
 
     objects = ProductManager()
 
@@ -193,24 +208,29 @@ class DisplayOptions(models.Model):
 
     product = models.OneToOneField(Product, on_delete=models.CASCADE)
 
-    visible = models.BooleanField(u"是否显示在桌面", default=True, help_text=u"选项: true(是)，false(否)")
+    visible = models.BooleanField("是否显示在桌面", default=True, help_text="选项: true(是)，false(否)")
 
-    width = models.IntegerField(u"app页面宽度", help_text=u"应用页面宽度，必须为整数，单位为px", default=890)
-    height = models.IntegerField(u"app页面高度", help_text=u"应用页面高度，必须为整数，单位为px", default=550)
+    width = models.IntegerField("app页面宽度", help_text="应用页面宽度，必须为整数，单位为px", default=890)
+    height = models.IntegerField("app页面高度", help_text="应用页面高度，必须为整数，单位为px", default=550)
 
-    is_win_maximize = models.BooleanField(u"是否默认窗口最大化", default=False)
-    win_bars = models.BooleanField(u"窗口是否显示评分和介绍按钮", default=True, help_text=u"选项: true(on)，false(off)")
-    resizable = models.BooleanField(u"是否能对窗口进行拉伸", default=True, help_text=u"选项：true(可以拉伸)，false(不可以拉伸)")
+    is_win_maximize = models.BooleanField("是否默认窗口最大化", default=False)
+    win_bars = models.BooleanField("窗口是否显示评分和介绍按钮", default=True, help_text="选项: true(on)，false(off)")
+    resizable = models.BooleanField(
+        "是否能对窗口进行拉伸", default=True, help_text="选项：true(可以拉伸)，false(不可以拉伸)"
+    )
 
     # App 右下角展示联系人，以;分割
-    contact = models.CharField(u"联系人", null=True, blank=True, max_length=128)
+    contact = models.CharField("联系人", null=True, blank=True, max_length=128)
     open_mode = models.CharField(
-        "打开方式", max_length=20, choices=constant.OpenMode.get_django_choices(), default=constant.OpenMode.NEW_TAB.value
+        "打开方式",
+        max_length=20,
+        choices=constant.OpenMode.get_django_choices(),
+        default=constant.OpenMode.NEW_TAB.value,
     )
 
 
 class MarketConfigManager(models.Manager):
-    def get_or_create_by_app(self, application: Application) -> Tuple['MarketConfig', bool]:
+    def get_or_create_by_app(self, application: Application) -> Tuple["MarketConfig", bool]:
         """Get or create a MarketConfig object by application"""
         try:
             return application.market_config, False
@@ -233,10 +253,10 @@ class MarketConfigManager(models.Manager):
             )
             return obj, True
 
-    def update_enabled(self, application: Application, status: bool) -> 'MarketConfig':
+    def update_enabled(self, application: Application, status: bool) -> "MarketConfig":
         obj, _ = self.get_or_create_by_app(application)
         obj.enabled = status
-        obj.save(update_fields=['enabled'])
+        obj.save(update_fields=["enabled"])
         return obj
 
     def enable_app(self, application: Application):
@@ -250,14 +270,14 @@ class MarketConfig(TimestampedModel):
     """应用市场相关功能配置"""
 
     application = models.OneToOneField(
-        Application, on_delete=models.CASCADE, verbose_name="蓝鲸应用", related_name='market_config'
+        Application, on_delete=models.CASCADE, verbose_name="蓝鲸应用", related_name="market_config"
     )
-    enabled = models.BooleanField(verbose_name='是否开启')
+    enabled = models.BooleanField(verbose_name="是否开启")
     auto_enable_when_deploy = models.BooleanField(null=True, verbose_name="成功部署主模块正式环境后, 是否自动打开市场")
-    source_url_type = models.SmallIntegerField(verbose_name='访问地址类型')
-    source_module = models.ForeignKey(Module, on_delete=models.CASCADE, null=True, verbose_name='访问目标模块')
-    source_tp_url = models.URLField(verbose_name='第三方访问地址', blank=True, null=True)
-    custom_domain_url = models.URLField(verbose_name='绑定的独立域名访问地址', blank=True, null=True)
+    source_url_type = models.SmallIntegerField(verbose_name="访问地址类型")
+    source_module = models.ForeignKey(Module, on_delete=models.CASCADE, null=True, verbose_name="访问目标模块")
+    source_tp_url = models.URLField(verbose_name="第三方访问地址", blank=True, null=True)
+    custom_domain_url = models.URLField(verbose_name="绑定的独立域名访问地址", blank=True, null=True)
     prefer_https = models.BooleanField(
         null=True, verbose_name="[deprecated] 仅为 False 时强制使用 http, 否则保持与集群 https_enabled 状态一致"
     )
@@ -272,7 +292,7 @@ class MarketConfig(TimestampedModel):
         if self.auto_enable_when_deploy:
             self.enabled = True
             self.auto_enable_when_deploy = False
-            self.save(update_fields=['auto_enable_when_deploy', 'enabled'])
+            self.save(update_fields=["auto_enable_when_deploy", "enabled"])
 
     def on_offline(self):
         """应用主模块正式环境下线 handler (关闭应用市场)
@@ -281,7 +301,7 @@ class MarketConfig(TimestampedModel):
         if self.enabled:
             self.auto_enable_when_deploy = True
             self.enabled = False
-            self.save(update_fields=['auto_enable_when_deploy', 'enabled'])
+            self.save(update_fields=["auto_enable_when_deploy", "enabled"])
 
 
 @dataclass
@@ -295,10 +315,10 @@ class AvailableAddress:
         self.hostname = parse_result.hostname
 
 
-CorpProduct = namedtuple('CorpProduct', 'id display_name')
+CorpProduct = namedtuple("CorpProduct", "id display_name")
 
 DEFAULT_CORP_PRODUCTS = [
-    CorpProduct('-1', "全业务"),
+    CorpProduct("-1", "全业务"),
 ]
 
 try:

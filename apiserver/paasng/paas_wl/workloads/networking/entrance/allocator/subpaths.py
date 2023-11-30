@@ -29,8 +29,8 @@ from paas_wl.infras.cluster.models import IngressConfig, PortMap
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance.addrs import URL
 from paas_wl.workloads.networking.entrance.utils import to_dns_safe
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
 
 
 class SubpathPriorityType(int, StructuredEnum):
@@ -60,17 +60,17 @@ class Subpath:
         )
 
     def as_dict(self) -> Dict:
-        return {'subpath': self.subpath, 'host': self.host, 'https_enabled': self.https_enabled}
+        return {"subpath": self.subpath, "host": self.host, "https_enabled": self.https_enabled}
 
     @staticmethod
-    def sort_by_len(subpath: 'Subpath'):
+    def sort_by_len(subpath: "Subpath"):
         # ignore protocol size
         url = subpath.as_url()
         url.protocol = "http"
         return len(url.as_address())
 
     @staticmethod
-    def sort_by_type(subpath: 'Subpath'):
+    def sort_by_type(subpath: "Subpath"):
         return subpath.type
 
 
@@ -131,7 +131,7 @@ def get_legacy_compatible_path(env: ModuleEnvironment) -> str:
     See LegacyAppIngressMgr in Workload service for more details.
     """
     name = env.engine_app.name
-    return f'/{env.module.region}-{name}/'
+    return f"/{env.module.region}-{name}/"
 
 
 class SubPathAllocator:
@@ -141,7 +141,7 @@ class SubPathAllocator:
     """
 
     # Reserved word of application code, safe for concatenating address
-    sep = '--'
+    sep = "--"
 
     def __init__(self, app_code: str, port_map: PortMap):
         self.app_code = app_code
@@ -218,4 +218,4 @@ class SubPathAllocator:
     def _make_subpath(cls, *parts: str) -> str:
         """Make a subpath"""
         safe_parts = [to_dns_safe(p) for p in parts]
-        return '/{}/'.format(cls.sep.join(safe_parts).lower())
+        return "/{}/".format(cls.sep.join(safe_parts).lower())

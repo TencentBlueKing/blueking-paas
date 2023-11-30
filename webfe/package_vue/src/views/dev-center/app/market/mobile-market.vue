@@ -270,8 +270,7 @@
   </div>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import wxQiyeQrcode from '@/components/ui/Qrcode';
 
 export default {
@@ -343,10 +342,10 @@ export default {
           appCode: this.appCode,
         });
         this.mobileConfig = Object.assign(this.mobileConfig, res, { canReleaseToMobile: true });
-      } catch (err) {
+      } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: err.detail,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
         this.mobileConfig.canReleaseToMobile = false;
       } finally {
@@ -417,10 +416,10 @@ export default {
         });
         this.dialogConfig.visiable = false;
         this.mobileConfig[env] = res;
-      } catch (err) {
+      } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: err.detail,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.dialogConfig.isLoading = false;
@@ -460,10 +459,10 @@ export default {
         };
         this.disableDialogConfig.visiable = false;
         this.disableDialogConfig.enableConfirm = false;
-      } catch (err) {
+      } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: err.detail,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.disableDialogConfig.isLoading = false;

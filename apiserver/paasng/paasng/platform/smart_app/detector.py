@@ -102,7 +102,7 @@ class SourcePackageStatReader:
                 # 根据约定, application description file 应当在应用的外层目录, 排序后可以更快地找到 application description file
                 existed_filenames = sorted(archive.list())
             except RuntimeError:
-                logger.warning('file: %s is not a valid tar file.', self.path)
+                logger.warning("file: %s is not a valid tar file.", self.path)
                 return relative_path, {}
 
             for spec_version, filename in product([AppSpecVersion.VER_2, AppSpecVersion.VER_1], existed_filenames):
@@ -117,13 +117,13 @@ class SourcePackageStatReader:
 
             meta_file = archive.read_file(app_filename)
             if not meta_file:
-                raise RuntimeError('file: {} can not be extracted'.format(app_filename))
+                raise RuntimeError("file: {} can not be extracted".format(app_filename))
 
             try:
                 meta_info = yaml.load(meta_file)
             except YAMLError:
-                logger.exception(_('应用描述文件内容不是有效 YAML 格式'))
-                raise ValidationError(_('应用描述文件内容不是有效 YAML 格式'))
+                logger.exception(_("应用描述文件内容不是有效 YAML 格式"))
+                raise ValidationError(_("应用描述文件内容不是有效 YAML 格式"))
 
             logo_b64data = self._load_logo(archive=archive, relative_path=relative_path)
             if logo_b64data:
@@ -143,7 +143,7 @@ class SourcePackageStatReader:
             return None
         # smart version was stored as one of app's plugin
         plugin = desc.get_plugin(AppDescPluginType.APP_VERSION)
-        return plugin['data'] if plugin else None
+        return plugin["data"] if plugin else None
 
     def compute_sha256_digest(self) -> str:
         """Compute package's sha256 digest"""
@@ -159,7 +159,7 @@ class SourcePackageStatReader:
         logger.debug("parsing source package's stats object.")
         relative_path, meta_info = self.get_meta_info()
         # 当从源码包解析 app version 失败时, 需要由其他途径保证能获取到 version. 例如上传源码包的接口中的 version 参数
-        version = self._try_extract_version(meta_info) or ''
+        version = self._try_extract_version(meta_info) or ""
         return SPStat(
             name=self.path.name,
             version=version,

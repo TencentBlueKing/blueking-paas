@@ -104,11 +104,11 @@ export default {
             category_id: this.$route.params.category_id,
           },
         });
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.loading = false;
@@ -132,11 +132,11 @@ export default {
         });
         this.definitions = [...res.definitions];
         this.values = [...res.values];
-      } catch (res) {
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: e.detail || e.message || this.$t('接口异常'),
         });
         this.$router.push({
           name: 'appService',

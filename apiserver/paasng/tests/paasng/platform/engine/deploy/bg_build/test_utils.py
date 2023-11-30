@@ -34,14 +34,14 @@ from paasng.platform.engine.deploy.bg_build.utils import (
 )
 
 urllib3.disable_warnings()
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestEnvVars:
     def test_generate_env_vars_without_metadata(self, build_proc, wl_app):
         env_vars = generate_builder_env_vars(build_proc, {})
         bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
-        cache_path = f'{wl_app.region}/home/{wl_app.name}/cache'
+        cache_path = f"{wl_app.region}/home/{wl_app.name}/cache"
         assert env_vars.pop("TAR_PATH") == f"{bucket}/{build_proc.source_tar_path}", "TAR_PATH 与预期不符"
         assert env_vars.pop("PUT_PATH") == f"{bucket}/{generate_slug_path(build_proc)}", "PUT_PATH 与预期不符"
         assert env_vars.pop("CACHE_PATH") == f"{bucket}/{cache_path}", "CACHE_PATH 与预期不符"
@@ -66,37 +66,41 @@ class TestEnvVars:
         update_env_vars_with_metadata(env, metadata)
 
         assert metadata["extra_envs"]["a"] == env["a"]
-        assert "git x https://github.com/x.git 1.1;tar x https://rgw.com/x.tar 1.2" == env["REQUIRED_BUILDPACKS"]
+        assert env["REQUIRED_BUILDPACKS"] == "git x https://github.com/x.git 1.1;tar x https://rgw.com/x.tar 1.2"
 
 
 class TestUtils:
     def test_generate_slug_path(self, wl_app, build_proc):
         slug_path = generate_slug_path(build_proc)
-        assert f'{wl_app.region}/home/{wl_app.name}:{build_proc.branch}:{build_proc.revision}/push' == slug_path
+        assert f"{wl_app.region}/home/{wl_app.name}:{build_proc.branch}:{build_proc.revision}/push" == slug_path
 
     # `get_schedule_config` requires a valid cluster, mock it at this moment
     @mock.patch(
-        'paasng.platform.engine.deploy.bg_build.utils.get_schedule_config',
+        "paasng.platform.engine.deploy.bg_build.utils.get_schedule_config",
         return_value=SimpleNamespace(
-            cluster_name='foo-cluster',
+            cluster_name="foo-cluster",
             node_selector={},
             tolerations=[],
         ),
     )
-    def test_prepare_slugbuilder_template_without_metadata(self, _, wl_app, build_proc):
+    def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
         env_vars = generate_builder_env_vars(build_proc, {})
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
-        assert slug_tmpl.name == f"slug-builder--{wl_app.module_name}", "slugbuilder_template 的 name 与app的 name 不一致"
+        assert (
+            slug_tmpl.name == f"slug-builder--{wl_app.module_name}"
+        ), "slugbuilder_template 的 name 与app的 name 不一致"
         assert slug_tmpl.namespace == wl_app.namespace, "slugbuilder_template 的namespace 与 app 的 namespace 不一致"
-        assert slug_tmpl.runtime.image == settings.DEFAULT_SLUGBUILDER_IMAGE, "slugbuilder_template 的镜像与默认镜像不一致"
+        assert (
+            slug_tmpl.runtime.image == settings.DEFAULT_SLUGBUILDER_IMAGE
+        ), "slugbuilder_template 的镜像与默认镜像不一致"
         assert slug_tmpl.runtime.envs == env_vars, "slugbuilder_template 的 ConfigVars 与生成的环境变量不一致"
 
-        assert slug_tmpl.schedule.cluster_name == 'foo-cluster'
+        assert slug_tmpl.schedule.cluster_name == "foo-cluster"
         assert slug_tmpl.schedule.tolerations == []
         assert slug_tmpl.schedule.node_selector == {}
 
 
 def test_get_envs_from_pypi_url():
-    ret = get_envs_from_pypi_url('http://pypi.douban.com')
-    assert ret['PIP_INDEX_URL'] == 'http://pypi.douban.com'
-    assert ret['PIP_INDEX_HOST'] == 'pypi.douban.com'
+    ret = get_envs_from_pypi_url("http://pypi.douban.com")
+    assert ret["PIP_INDEX_URL"] == "http://pypi.douban.com"
+    assert ret["PIP_INDEX_HOST"] == "pypi.douban.com"

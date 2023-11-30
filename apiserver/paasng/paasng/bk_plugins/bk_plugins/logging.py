@@ -24,13 +24,13 @@ import cattr
 from attrs import converters, define, field
 from django.conf import settings
 
-from paasng.bk_plugins.bk_plugins.models import BkPlugin
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.accessories.log.client import LogClientProtocol, instantiate_log_client
 from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE
 from paasng.accessories.log.filters import EnvFilter
 from paasng.accessories.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
 from paasng.accessories.log.utils import clean_logs, get_es_term
+from paasng.bk_plugins.bk_plugins.models import BkPlugin
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.es_log.models import LogLine, Logs, extra_field
 from paasng.utils.es_log.search import SmartSearch
@@ -65,11 +65,10 @@ class StructureLogLine(LogLine):
 
 
 class PluginLoggingClient:
-
     # Query logs in last 14 days by default
-    _default_time_range = '14d'
+    _default_time_range = "14d"
     # Query "default" module because it is the only module bk_plugin applications have
-    _module_name = 'default'
+    _module_name = "default"
 
     def __init__(self, bk_plugin: BkPlugin):
         """Create a logging client from bk_plugin object
@@ -134,7 +133,7 @@ class PluginLoggingClient:
         search = self._make_base_search(
             env=env, search_params=query_config.search_params, mappings=mappings, time_range=smart_time_range
         )
-        return search.filter("term", **{get_es_term(query_term='json.trace_id', mappings=mappings): trace_id})
+        return search.filter("term", **{get_es_term(query_term="json.trace_id", mappings=mappings): trace_id})
 
     def _make_base_search(
         self,

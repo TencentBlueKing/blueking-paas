@@ -53,16 +53,16 @@ def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
     return cattr.structure(obj, TypeProcesses)
 
 
-@pytest.mark.usefixtures("init_tmpls")
+@pytest.mark.usefixtures("_init_tmpls")
 class TestGetProcesses:
     """Test get_procfile()"""
 
     @pytest.mark.parametrize(
-        'file_content,error_pattern',
+        ("file_content", "error_pattern"),
         [
-            (ValueError("trivial value error"), 'Can not read Procfile file from repository'),
-            ('invalid#$type: gunicorn\n', 'pattern'),
-            ('{}: gunicorn\n'.format('p' * 13), 'longer than'),
+            (ValueError("trivial value error"), "Can not read Procfile file from repository"),
+            ("invalid#$type: gunicorn\n", "pattern"),
+            ("{}: gunicorn\n".format("p" * 13), "longer than"),
         ],
     )
     def test_invalid_procfile_cases(self, file_content, error_pattern, bk_module_full, bk_deployment_full):
@@ -73,7 +73,7 @@ class TestGetProcesses:
                 return file_content
             raise DoesNotExistsOnServer
 
-        with mock.patch('paasng.platform.sourcectl.type_specs.SvnRepoController.read_file') as mocked_read_file:
+        with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
             mocked_read_file.side_effect = fake_read_file
             with pytest.raises(DeployShouldAbortError) as exc_info:
                 get_processes(deployment=bk_deployment_full)
@@ -83,10 +83,10 @@ class TestGetProcesses:
     def test_valid_procfile_cases(self, bk_module_full, bk_deployment_full):
         def fake_read_file(key, version):
             if "Procfile" in key:
-                return 'WEB: gunicorn wsgi -w 4\nworker: celery'
+                return "WEB: gunicorn wsgi -w 4\nworker: celery"
             raise DoesNotExistsOnServer
 
-        with mock.patch('paasng.platform.sourcectl.type_specs.SvnRepoController.read_file') as mocked_read_file:
+        with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
             mocked_read_file.side_effect = fake_read_file
             processes = get_processes(bk_deployment_full)
             assert processes == cast_to_processes(
@@ -97,14 +97,14 @@ class TestGetProcesses:
             )
 
     @pytest.mark.parametrize(
-        'extra_info, expected',
+        ("extra_info", "expected"),
         [
             (
                 {},
                 cast_to_processes({"web": {"name": "web", "command": WEB_PROCESS}}),
             ),
             (
-                {'is_use_celery': True},
+                {"is_use_celery": True},
                 cast_to_processes(
                     {
                         "web": {"name": "web", "command": WEB_PROCESS},
@@ -113,7 +113,7 @@ class TestGetProcesses:
                 ),
             ),
             (
-                {'is_use_celery': True, 'is_use_celery_beat': True},
+                {"is_use_celery": True, "is_use_celery_beat": True},
                 cast_to_processes(
                     {
                         "web": {
@@ -132,13 +132,13 @@ class TestGetProcesses:
     )
     def test_v1_app_desc_cases(self, extra_info, expected, bk_app_full, bk_module_full, bk_deployment_full):
         app_desc = {
-            'app_code': bk_app_full.code,
-            'app_name': bk_app_full.name,
-            'author': 'blueking',
-            'introduction': 'blueking app',
-            'is_use_celery': False,
-            'version': '0.0.1',
-            'env': [],
+            "app_code": bk_app_full.code,
+            "app_name": bk_app_full.name,
+            "author": "blueking",
+            "introduction": "blueking app",
+            "is_use_celery": False,
+            "version": "0.0.1",
+            "env": [],
             **extra_info,
         }
         get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
@@ -146,21 +146,21 @@ class TestGetProcesses:
         assert processes == expected
 
     @pytest.mark.parametrize(
-        'processes_desc, expected',
+        ("processes_desc", "expected"),
         [
             (
-                {'web': {'command': 'start web;'}},
-                cast_to_processes({'web': {'name': 'web', 'command': 'start web;'}}),
+                {"web": {"command": "start web;"}},
+                cast_to_processes({"web": {"name": "web", "command": "start web;"}}),
             ),
             (
                 {
-                    'web': {'command': 'start web;', 'replicas': 5, 'plan': '1C2G5R'},
-                    'celery': {'command': 'start celery;', 'replicas': 5},
+                    "web": {"command": "start web;", "replicas": 5, "plan": "1C2G5R"},
+                    "celery": {"command": "start celery;", "replicas": 5},
                 },
                 cast_to_processes(
                     {
-                        'web': {'name': 'web', 'command': 'start web;', 'replicas': 5, 'plan': '1C2G5R'},
-                        'celery': {'name': 'celery', 'command': 'start celery;', 'replicas': 5},
+                        "web": {"name": "web", "command": "start web;", "replicas": 5, "plan": "1C2G5R"},
+                        "celery": {"name": "celery", "command": "start celery;", "replicas": 5},
                     }
                 ),
             ),
@@ -168,10 +168,10 @@ class TestGetProcesses:
     )
     def test_v2_app_desc_cases(self, processes_desc, expected, bk_app_full, bk_module_full, bk_deployment_full):
         app_desc = {
-            'spec_version': 2,
-            'region': settings.DEFAULT_REGION_NAME,
-            'bk_app_code': bk_app_full.code,
-            'bk_app_name': bk_app_full.name,
+            "spec_version": 2,
+            "region": settings.DEFAULT_REGION_NAME,
+            "bk_app_code": bk_app_full.code,
+            "bk_app_name": bk_app_full.name,
             "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
             "module": {"is_default": True, "processes": processes_desc, "language": "python"},
         }
@@ -180,6 +180,7 @@ class TestGetProcesses:
         assert processes == expected
 
     def test_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
+        """s-mart case: 当处理 app_desc 后, 从源码包读取进程包含进程启动命令、方案、副本数等信息"""
         bk_module_full.source_origin = SourceOrigin.S_MART
         bk_module_full.save()
 
@@ -188,12 +189,16 @@ class TestGetProcesses:
             module=bk_module_full,
             version=bk_deployment_full.version_info.revision,
             meta_info={
-                'spec_version': 2,
-                'region': settings.DEFAULT_REGION_NAME,
-                'bk_app_code': bk_app_full.code,
-                'bk_app_name': bk_app_full.name,
+                "spec_version": 2,
+                "region": settings.DEFAULT_REGION_NAME,
+                "bk_app_code": bk_app_full.code,
+                "bk_app_name": bk_app_full.name,
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {"is_default": True, "processes": {'web': {'command': 'start web'}}, "language": "python"},
+                "module": {
+                    "is_default": True,
+                    "processes": {"web": {"command": "start web", "plan": "default", "replicas": 5}},
+                    "language": "python",
+                },
             },
         )
 
@@ -204,9 +209,12 @@ class TestGetProcesses:
         handler.handle_deployment(bk_deployment_full)
 
         processes = get_processes(deployment=bk_deployment_full)
-        assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
+        assert processes == cast_to_processes(
+            {"web": {"name": "web", "command": "start web", "plan": "default", "replicas": 5}}
+        )
 
     def test_get_from_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
+        """lesscode case: 当未处理 app_desc 时, 从源码包读取进程仅包含进程启动命令信息"""
         bk_module_full.source_origin = SourceOrigin.S_MART
         bk_module_full.save()
 
@@ -215,25 +223,29 @@ class TestGetProcesses:
             module=bk_module_full,
             version=bk_deployment_full.version_info.revision,
             meta_info={
-                'spec_version': 2,
-                'region': settings.DEFAULT_REGION_NAME,
-                'bk_app_code': bk_app_full.code,
-                'bk_app_name': bk_app_full.name,
+                "spec_version": 2,
+                "region": settings.DEFAULT_REGION_NAME,
+                "bk_app_code": bk_app_full.code,
+                "bk_app_name": bk_app_full.name,
                 "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {"is_default": True, "processes": {'web': {'command': 'start web'}}, "language": "python"},
+                "module": {
+                    "is_default": True,
+                    "processes": {"web": {"command": "start web", "plan": "default"}},
+                    "language": "python",
+                },
             },
         )
 
         processes = get_processes(deployment=bk_deployment_full)
-        assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
+        assert processes == cast_to_processes({"web": {"name": "web", "command": "start web"}})
 
     def test_both_app_description_and_procfile(self, bk_app_full, bk_module_full, bk_deployment_full):
         """应用描述文件和 Procfile 同时定义, 以 Procfile 为准"""
         app_desc = {
-            'spec_version': 2,
-            'region': settings.DEFAULT_REGION_NAME,
-            'bk_app_code': bk_app_full.code,
-            'bk_app_name': bk_app_full.name,
+            "spec_version": 2,
+            "region": settings.DEFAULT_REGION_NAME,
+            "bk_app_code": bk_app_full.code,
+            "bk_app_name": bk_app_full.name,
             "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
             "module": {
                 "is_default": True,
@@ -245,18 +257,18 @@ class TestGetProcesses:
 
         def fake_read_file(key, version):
             if "Procfile" in key:
-                return 'WEB: gunicorn wsgi -w 4\nworker: celery'
+                return "WEB: gunicorn wsgi -w 4\nworker: celery"
             raise DoesNotExistsOnServer
 
-        with mock.patch('paasng.platform.sourcectl.type_specs.SvnRepoController.read_file') as mocked_read_file:
+        with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
             mocked_read_file.side_effect = fake_read_file
 
             processes = get_processes(deployment=bk_deployment_full)
 
         assert processes == cast_to_processes(
             {
-                'web': {'name': 'web', 'command': 'gunicorn wsgi -w 4'},
-                'worker': {'name': 'worker', 'command': 'celery'},
+                "web": {"name": "web", "command": "gunicorn wsgi -w 4"},
+                "worker": {"name": "worker", "command": "celery"},
             }
         )
 
@@ -268,12 +280,12 @@ class TestGetSourcePackagePath:
         deployment = Deployment.objects.create(
             region=bk_module.region,
             operator=bk_module.owner,
-            app_environment=bk_module.get_envs('prod'),
+            app_environment=bk_module.get_envs("prod"),
             source_type=bk_module.source_type,
-            source_location='svn://local-svn/app/trunk',
-            source_revision='1000',
-            source_version_type='trunk',
-            source_version_name='trunk',
+            source_location="svn://local-svn/app/trunk",
+            source_revision="1000",
+            source_version_type="trunk",
+            source_version_name="trunk",
             advanced_options={},
         )
         # not use module in engine app
@@ -286,12 +298,12 @@ class TestGetSourcePackagePath:
         deployment = Deployment.objects.create(
             region=bk_module.region,
             operator=bk_module.owner,
-            app_environment=bk_module.get_envs('prod'),
+            app_environment=bk_module.get_envs("prod"),
             source_type=bk_module.source_type,
-            source_location='http://git.bking.com/node-spa-demo.git',
-            source_revision='6f3bfa8adf8be3',
-            source_version_type='branch',
-            source_version_name='dev',
+            source_location="http://git.bking.com/node-spa-demo.git",
+            source_revision="6f3bfa8adf8be3",
+            source_version_type="branch",
+            source_version_name="dev",
             advanced_options={},
         )
         # not use module in engine app
@@ -301,14 +313,14 @@ class TestGetSourcePackagePath:
         )
 
 
-@pytest.mark.usefixtures("init_tmpls")
+@pytest.mark.usefixtures("_init_tmpls")
 class TestDownloadSourceToDir:
     """Test download_source_to_dir()"""
 
     @pytest.fixture(autouse=True)
-    def mocked_ctl(self):
-        with mock.patch('paasng.platform.engine.utils.source.get_repo_controller'), mock.patch(
-            'paasng.platform.engine.utils.source.PackageController'
+    def _mocked_ctl(self):
+        with mock.patch("paasng.platform.engine.utils.source.get_repo_controller"), mock.patch(
+            "paasng.platform.engine.utils.source.PackageController"
         ):
             yield
 
@@ -322,11 +334,11 @@ class TestDownloadSourceToDir:
     def test_no_patch(self, bk_module, bk_deployment):
         with generate_temp_dir() as working_dir:
             self.make_deploy_desc(bk_deployment)
-            download_source_to_dir(bk_module, 'user_id:100', bk_deployment, working_dir)
+            download_source_to_dir(bk_module, "user_id:100", bk_deployment, working_dir)
             assert list(working_dir.iterdir()) == []
 
     @pytest.mark.parametrize(
-        "source_origin, processes, source_dir, target, expected",
+        ("source_origin", "processes", "source_dir", "target", "expected"),
         [
             (
                 SourceOrigin.AUTHORIZED_VCS.value,
@@ -351,7 +363,7 @@ class TestDownloadSourceToDir:
         bk_module_full.source_origin = source_origin
         with generate_temp_dir() as working_dir:
             self.make_deploy_desc(bk_deployment_full, source_dir, processes)
-            download_source_to_dir(bk_module_full, 'user_id:100', bk_deployment_full, working_dir)
+            download_source_to_dir(bk_module_full, "user_id:100", bk_deployment_full, working_dir)
             procfile = working_dir / target
             assert procfile.exists()
             assert procfile.is_file()
@@ -369,7 +381,7 @@ class TestDownloadSourceToDir:
             (working_dir / "./foo/bar/baz").touch()
             procfile = working_dir / "./Procfile"
 
-            download_source_to_dir(bk_module, 'user_id:100', bk_deployment, working_dir)
+            download_source_to_dir(bk_module, "user_id:100", bk_deployment, working_dir)
             assert procfile.exists()
             assert procfile.is_file()
             assert yaml.load(procfile.read_text()) == {"hello": "echo 'Hello World'"}
@@ -381,17 +393,17 @@ class TestCheckSourcePackage:
     @override_settings(ENGINE_APP_SOURCE_SIZE_WARNING_THRESHOLD_MB=100)
     def test_normal(self, bk_module, capsys):
         stream = ConsoleStream()
-        with generate_temp_file(suffix='.tar.gz') as package_path:
+        with generate_temp_file(suffix=".tar.gz") as package_path:
             pathlib.Path(package_path).write_text("Hello")
             check_source_package(bk_module.get_envs("prod").engine_app, package_path, stream)
 
             out, err = capsys.readouterr()
-            assert out == ''
+            assert out == ""
 
     @override_settings(ENGINE_APP_SOURCE_SIZE_WARNING_THRESHOLD_MB=0)
     def test_big_package(self, bk_module, capsys):
         stream = ConsoleStream()
-        with generate_temp_file(suffix='.tar.gz') as package_path:
+        with generate_temp_file(suffix=".tar.gz") as package_path:
             pathlib.Path(package_path).write_text("Hello")
             check_source_package(bk_module.get_envs("prod").engine_app, package_path, stream)
 

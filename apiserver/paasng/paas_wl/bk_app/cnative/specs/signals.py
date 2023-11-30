@@ -19,4 +19,4 @@ to the current version of the project delivered to anyone in the future.
 from django.dispatch import Signal
 
 # 云原生应用部署完成后触发的信号，会执行操作记录等后续步骤
-post_cnative_env_deploy = Signal(providing_args=['deploy'])
+post_cnative_env_deploy = Signal(providing_args=["deploy"])

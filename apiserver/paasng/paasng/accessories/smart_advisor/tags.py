@@ -33,7 +33,7 @@ class Tag:
         self.tag_value = force_text(tag_value)
 
     def __str__(self):
-        return u"{}:{}".format(self.tag_type, self.tag_value)
+        return "{}:{}".format(self.tag_type, self.tag_value)
 
     def __repr__(self):
         return str(self)
@@ -52,7 +52,7 @@ class Tag:
 
 
 class BaseFixedTypeTag(Tag):
-    tag_type: str = ''
+    tag_type: str = ""
 
     def __init__(self, tag_value):
         super(BaseFixedTypeTag, self).__init__(self.tag_type, tag_value)
@@ -154,7 +154,7 @@ def get_dynamic_tag(tag_str: str) -> Tag:
     :raises: ValueError when given string is not a valid tag string
     """
     try:
-        tag_type, tag_value = tag_str.split(':')
+        tag_type, tag_value = tag_str.split(":")
         tag_cls = TAG_TYPES_MAP[tag_type]
     except (ValueError, KeyError):
         raise ValueError(f'"{tag_str}" is not a valid tag string')

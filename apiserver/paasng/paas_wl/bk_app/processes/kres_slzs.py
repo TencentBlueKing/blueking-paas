@@ -55,10 +55,10 @@ def extract_type_from_name(name: str, namespace: str) -> Optional[str]:
         return None
 
 
-class ProcessDeserializer(AppEntityDeserializer['Process']):
+class ProcessDeserializer(AppEntityDeserializer["Process"]):
     """Deserializer for Process"""
 
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Process":
         """Get meta info from pod template
         :param app: workloads app
         :param kube_data: k8s Deployment
@@ -72,20 +72,20 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
         # failed should never be negative
         process.fulfill_runtime(
             replicas=kube_data.spec.replicas,
-            success=kube_data.status.get('availableReplicas') or 0,
+            success=kube_data.status.get("availableReplicas") or 0,
             metadata=kube_data.metadata,
         )
 
         return process
 
-    def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
+    def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> "Process":
         """deserialize process info for default type(Heroku) app"""
         from paas_wl.bk_app.processes.kres_entities import Schedule
 
         main_container = self._get_main_container(app, kube_data)
         pod_spec = kube_data.spec.template.spec
         pod_labels = kube_data.spec.template.metadata.labels
-        version = int(pod_labels.get('release_version', 0))
+        version = int(pod_labels.get("release_version", 0))
         process_type = self._get_process_type(kube_data)
 
         try:
@@ -124,7 +124,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
         )
         return process
 
-    def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
+    def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> "Process":
         """deserialize process info for cloud native type app"""
         from paas_wl.bk_app.processes.kres_entities import Schedule
 
@@ -165,7 +165,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
             return process_type
 
         # label `process_id` is deprecated, should use `PROCESS_NAME_KEY` instead
-        process_type = deployment.spec.template.metadata.labels.get('process_id')
+        process_type = deployment.spec.template.metadata.labels.get("process_id")
         if process_type:
             return process_type
 
@@ -188,10 +188,10 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
         raise RuntimeError("No main container found in resource")
 
 
-class InstanceDeserializer(AppEntityDeserializer['Instance']):
+class InstanceDeserializer(AppEntityDeserializer["Instance"]):
     """Deserializer for Instance"""
 
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'Instance':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Instance":
         """Generate a ProcInstance by given Pod object"""
         pod = kube_data
         health_status = check_pod_health_status(parse_pod(kube_data))
@@ -199,7 +199,7 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
 
         # Use first container's status
         c_status = None
-        if pod.status.get('containerStatuses'):
+        if pod.status.get("containerStatuses"):
             c_status = pod.status.containerStatuses[0]
 
         process_type = self.get_process_type(pod)
@@ -214,7 +214,7 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
                     envs[name] = value
 
         if app.type == WlAppType.DEFAULT:
-            version = int(pod.metadata.labels.get('release_version', 0))
+            version = int(pod.metadata.labels.get("release_version", 0))
         else:
             annotations = pod.metadata.annotations or {}
             version = int(annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY, 0))
@@ -223,10 +223,11 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
             app=app,
             name=pod.metadata.name,
             process_type=process_type,
-            host_ip=pod.status.get('hostIP', None),
-            start_time=pod.status.get('startTime', None),
+            host_ip=pod.status.get("hostIP", None),
+            start_time=pod.status.get("startTime", None),
             state=instance_state,
             state_message=state_message,
+            rich_status=self.extract_rich_status(pod.status.phase, c_status),
             image=target_container.image if target_container else "",
             envs=envs,
             ready=health_status.status == HealthStatusType.HEALTHY,
@@ -256,7 +257,7 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
             return process_type
 
         # label `process_id` is deprecated, should use `PROCESS_NAME_KEY` instead
-        process_type = labels.get('process_id')
+        process_type = labels.get("process_id")
         if process_type:
             return process_type
 
@@ -265,6 +266,26 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
             return process_type
 
         raise UnknownProcessTypeError(res=pod, msg="No process_type found in resource")
+
+    @staticmethod
+    def extract_rich_status(pod_phase: str, first_container_status: Optional[ResourceField] = None) -> str:
+        """Extracts the status of a instance based on the pod's phase and the first container's
+        status. The result string is not enumerable and should only be used for display.
+
+        :param pod_phase: The phase of the pod.
+        :param first_container_status: The status of the first container in the pod, defaults to None.
+        :return: The rich status of the pod.
+        """
+        if pod_phase == "Pending" or not first_container_status:
+            return "Pending"
+        c_status = first_container_status
+        if c_status.state.get("running"):
+            return "Running"
+        if c_status.state.get("terminated"):
+            return c_status.state.terminated.get("reason", "Terminated")
+        if c_status.state.get("waiting"):
+            return c_status.state.waiting.get("reason", "Waiting")
+        return "UnknownStatus"
 
     @staticmethod
     def parse_instance_state(pod_phase: str, health_status: HealthStatus) -> Tuple[str, str]:
@@ -279,48 +300,48 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
         return health_status.reason or "Unknown", health_status.message
 
 
-class ProcessSerializer(AppEntitySerializer['Process']):
+class ProcessSerializer(AppEntitySerializer["Process"]):
     """Serializer for process"""
 
-    def serialize(self, obj: 'Process', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
-        mapper_version: Optional['MapperPack'] = kwargs.get("mapper_version")
+    def serialize(self, obj: "Process", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+        mapper_version: Optional["MapperPack"] = kwargs.get("mapper_version")
         if mapper_version is None:
             raise ValueError("mapper_version is required")
 
         deployment_body: Dict[str, Any] = {
-            'metadata': {
-                'labels': mapper_version.deployment(process=obj).labels,
-                'name': obj.name,
-                'annotations': {PROCESS_MAPPER_VERSION_KEY: mapper_version.version},
+            "metadata": {
+                "labels": mapper_version.deployment(process=obj).labels,
+                "name": obj.name,
+                "annotations": {PROCESS_MAPPER_VERSION_KEY: mapper_version.version},
             },
-            'spec': {
-                'revisionHistoryLimit': settings.MAX_RS_RETAIN,
+            "spec": {
+                "revisionHistoryLimit": settings.MAX_RS_RETAIN,
                 # add rolling update strategy to avoid 502 when redeploy or rolling update app
-                'strategy': {
-                    'type': 'RollingUpdate',
-                    'rollingUpdate': {
-                        'maxUnavailable': 0,
+                "strategy": {
+                    "type": "RollingUpdate",
+                    "rollingUpdate": {
+                        "maxUnavailable": 0,
                         # speed up for those processes which own multiple replicas
-                        'maxSurge': '75%',
+                        "maxSurge": "75%",
                     },
                 },
-                'selector': {'matchLabels': mapper_version.deployment(process=obj).match_labels},
-                'minReadySeconds': 1,
-                'template': {
-                    'spec': self._construct_pod_body_specs(obj),
-                    'metadata': {
-                        'labels': mapper_version.pod(process=obj).labels,
-                        'name': mapper_version.pod(process=obj).name,
+                "selector": {"matchLabels": mapper_version.deployment(process=obj).match_labels},
+                "minReadySeconds": 1,
+                "template": {
+                    "spec": self._construct_pod_body_specs(obj),
+                    "metadata": {
+                        "labels": mapper_version.pod(process=obj).labels,
+                        "name": mapper_version.pod(process=obj).name,
                     },
                 },
-                'replicas': obj.replicas,
+                "replicas": obj.replicas,
             },
-            'apiVersion': self.get_apiversion(),
-            'kind': 'Deployment',
+            "apiVersion": self.get_apiversion(),
+            "kind": "Deployment",
         }
         return deployment_body
 
-    def _construct_pod_body_specs(self, process: 'Process') -> Dict:
+    def _construct_pod_body_specs(self, process: "Process") -> Dict:
         addon_mgr = AddonManager(process.app)
         process_probe_mgr = ProcessProbeManager(app=process.app, process_type=process.type)
         readiness_probe = cattr.unstructure(process_probe_mgr.get_readiness_probe())
@@ -329,35 +350,35 @@ class ProcessSerializer(AppEntitySerializer['Process']):
         liveness_probe = cattr.unstructure(process_probe_mgr.get_liveness_probe())
         startup_probe = cattr.unstructure(process_probe_mgr.get_startup_probe())
         main_container = {
-            'env': [{"name": str(key), "value": str(value)} for key, value in process.runtime.envs.items()],
+            "env": [{"name": str(key), "value": str(value)} for key, value in process.runtime.envs.items()],
             # add preStop to avoid 502 when redeploy or rolling update app
-            'lifecycle': {'pre_stop': {'_exec': {'command': ["sleep", "15"]}}},
-            'image': process.runtime.image,
+            "lifecycle": {"pre_stop": {"_exec": {"command": ["sleep", "15"]}}},
+            "image": process.runtime.image,
             # TODO: 与 cnative 应用统一主容器名字
-            'name': process.main_container_name,
-            'command': process.runtime.command,
-            'args': process.runtime.args,
-            'imagePullPolicy': process.runtime.image_pull_policy,
-            'resources': {
-                'limits': process.resources.limits if process.resources else {},
-                'requests': process.resources.requests if process.resources else {},
+            "name": process.main_container_name,
+            "command": process.runtime.command,
+            "args": process.runtime.args,
+            "imagePullPolicy": process.runtime.image_pull_policy,
+            "resources": {
+                "limits": process.resources.limits if process.resources else {},
+                "requests": process.resources.requests if process.resources else {},
             },
             # TODO: 重构「主入口」时, 允许用户自行填写 containerPort
-            'ports': [{'containerPort': settings.CONTAINER_PORT}],
-            'volumeMounts': cattr.unstructure(
+            "ports": [{"containerPort": settings.CONTAINER_PORT}],
+            "volumeMounts": cattr.unstructure(
                 get_app_logging_volume_mounts(process.app) + addon_mgr.get_volume_mounts()
             ),
-            'readinessProbe': readiness_probe,
-            'livenessProbe': liveness_probe,
-            'startupProbe': startup_probe,
+            "readinessProbe": readiness_probe,
+            "livenessProbe": liveness_probe,
+            "startupProbe": startup_probe,
         }
 
         return {
-            'containers': [main_container] + cattr.unstructure(addon_mgr.get_sidecars()),
-            'volumes': cattr.unstructure(get_app_logging_volume(process.app) + addon_mgr.get_volumes()),
-            'imagePullSecrets': process.runtime.image_pull_secrets,
-            'nodeSelector': process.schedule.node_selector or None,
-            'tolerations': process.schedule.tolerations or None,
+            "containers": [main_container] + cattr.unstructure(addon_mgr.get_sidecars()),
+            "volumes": cattr.unstructure(get_app_logging_volume(process.app) + addon_mgr.get_volumes()),
+            "imagePullSecrets": process.runtime.image_pull_secrets,
+            "nodeSelector": process.schedule.node_selector or None,
+            "tolerations": process.schedule.tolerations or None,
             # 不默认向 Pod 中挂载 ServiceAccount Token
-            'automountServiceAccountToken': False,
+            "automountServiceAccountToken": False,
         }

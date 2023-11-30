@@ -24,8 +24,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
@@ -36,6 +34,9 @@ from paasng.accessories.services.providers import (
     get_plan_schema_by_provider_name,
     get_provider_choices,
 )
+from paasng.core.region.models import get_all_regions
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.services import (
     PlanObjSLZ,
     PlanWithPreCreatedInstanceSLZ,
@@ -46,7 +47,6 @@ from paasng.plat_admin.admin42.serializers.services import (
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.core.region.models import get_all_regions
 from paasng.utils.error_codes import error_codes
 
 
@@ -299,7 +299,7 @@ class PreCreatedInstanceView(GenericTemplateView):
             str(plan["uuid"]): get_instance_schema_by_service_name(plan["service_name"].lower()) for plan in data
         }
 
-        kwargs['pagination'] = self.get_pagination_context(self.request)
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         kwargs["region_list"] = [
             dict(value=region.name, text=region.display_name) for region in get_all_regions().values()
         ]

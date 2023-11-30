@@ -33,26 +33,26 @@ pytestmark = pytest.mark.django_db
 
 class TestApplicationPreReleaseExecutor:
     @pytest.fixture()
-    def setup_hook(self, bk_module_full):
+    def _setup_hook(self, bk_module_full):
         bk_module_full.deploy_hooks.enable_hook(
             type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=generate_random_string()
         )
 
-    @pytest.fixture
-    def setup_hook_disable(self, bk_module_full, setup_hook):
+    @pytest.fixture()
+    def _setup_hook_disable(self, bk_module_full, _setup_hook):
         bk_module_full.deploy_hooks.disable_hook(type_=DeployHookType.PRE_RELEASE_HOOK)
 
-    @pytest.fixture
-    def setup_empty_command_hook(self, bk_module_full):
+    @pytest.fixture()
+    def _setup_empty_command_hook(self, bk_module_full):
         bk_module_full.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="")
 
-    @pytest.fixture
+    @pytest.fixture()
     def hook(self, request, bk_module_full):
         if request.param:
             request.getfixturevalue(request.param)
         return bk_module_full.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
 
-    @pytest.mark.parametrize("hook", ["setup_hook_disable", "setup_empty_command_hook", ""], indirect=["hook"])
+    @pytest.mark.parametrize("hook", ["_setup_hook_disable", "_setup_empty_command_hook", ""], indirect=["hook"])
     def test_hook_not_found(self, bk_module_full, hook):
         deployment = create_fake_deployment(bk_module_full)
         if not hook or not hook.enabled:
@@ -66,14 +66,12 @@ class TestApplicationPreReleaseExecutor:
 
         with mock.patch(
             "paasng.platform.engine.deploy.bg_command.pre_release.ApplicationReleaseMgr"
-        ) as ApplicationReleaseMgr, mock.patch(
-            'paasng.platform.engine.utils.output.RedisChannelStream'
-        ) as mocked_stream:
+        ) as mocked_release_mgr, mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream:
             attach_all_phases(sender=deployment.app_environment, deployment=deployment)
             ApplicationPreReleaseExecutor.from_deployment_id(deployment.pk).start()
 
-        assert ApplicationReleaseMgr.from_deployment_id.called
-        assert ApplicationReleaseMgr.from_deployment_id().start.called
+        assert mocked_release_mgr.from_deployment_id.called
+        assert mocked_release_mgr.from_deployment_id().start.called
         assert mocked_stream().write_message.call_args[0][0] == Style.Warning(
             "The Pre-release command is not configured, skip the Pre-release phase."
         )

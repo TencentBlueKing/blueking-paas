@@ -34,7 +34,7 @@
                 <i
                   v-if="$index === rowIndex"
                   class="row-icon paasng-icon paasng-page-fill pl5 mt5"
-                  v-bk-tooltips="{content: '使用指南'}"
+                  v-bk-tooltips="{content: $t('使用指南')}"
                   @click="handleShowGuideDialog(row)" />
               </div>
             </template>
@@ -75,7 +75,7 @@
               <span v-if="row.isStartUp && row.specifications && row.specifications.length">
                 <bk-tag v-for="(item) in row.specifications" :key="item.recommended_value">
                   <span>
-                    {{ $t(item.display_name) }} {{getVersionValue(item.name, row.specificationsData)}}
+                    {{ $t(item.display_name) }} {{ getVersionValue(item.name, row?.specificationsData || []) }}
                   </span>
                 </bk-tag>
               </span>
@@ -175,7 +175,7 @@
       <bk-dialog
         v-model="delAppDialog.visiable"
         width="540"
-        :title="$t(`确认停用${curData.display_name}`)"
+        :title="`${$t('确认停用')} ${curData.display_name}`"
         :theme="'primary'"
         :mask-close="false"
         :header-position="'left'"
@@ -378,7 +378,7 @@ export default {
     getVersionValue() {
       return function (name, data) {
         const versionData = data.find(e => e.name === name) || {};
-        return versionData.value;
+        return versionData?.value || '';
       };
     },
   },
@@ -532,7 +532,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.isLoading = false;
@@ -565,7 +565,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.loading = false;
@@ -641,7 +641,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       }
     },
@@ -776,12 +776,6 @@ export default {
         }
       .tippy-tooltip{
         padding: 0 !important;
-      }
-    }
-
-    .services-table-cloumn{
-      .cell {
-        width: 60px !important;
       }
     }
 

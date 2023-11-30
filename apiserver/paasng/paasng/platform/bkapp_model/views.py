@@ -22,31 +22,37 @@ import logging
 import yaml
 from django.db.transaction import atomic
 from django.http.response import HttpResponse
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.manifest import get_manifest
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import DomainResolution, ModuleProcessSpec, SvcDiscConfig
 from paasng.platform.bkapp_model.serializers import (
+    DomainResolutionSLZ,
     GetManifestInputSLZ,
     ModuleDeployHookSLZ,
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
-    default_scaling_config,
+    SvcDiscConfigSLZ,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 
 logger = logging.getLogger(__name__)
+
+# The default scaling config value object when autoscaling config is absent.
+default_scaling_config = AutoscalingConfig(min_replicas=1, max_replicas=1, policy="default")
 
 
 # TODO: Remove this API entirely because if become stale
@@ -65,7 +71,7 @@ class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin)
         try:
             from paasng.security.access_control.models import ApplicationAccessControlSwitch
         except ImportError:
-            logger.info('access control only supported in te region, skip...')
+            logger.info("access control only supported in te region, skip...")
         else:
             if ApplicationAccessControlSwitch.objects.is_enabled(self.get_application()):
                 manifest_ext["metadata"]["annotations"][ACCESS_CONTROL_ANNO_KEY] = "true"
@@ -85,12 +91,12 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         module = self.get_module_via_path()
 
-        output_format = slz.validated_data['output_format']
-        if output_format == 'yaml':
+        output_format = slz.validated_data["output_format"]
+        if output_format == "yaml":
             manifests = get_manifest(module)
             response = yaml.safe_dump_all(manifests)
             # Use django's response to ignore DRF's renders
-            return HttpResponse(response, content_type='application/yaml')
+            return HttpResponse(response, content_type="application/yaml")
         else:
             return Response(get_manifest(module))
 
@@ -130,7 +136,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                         "plan_name": proc_spec.get_plan_name(environment_name),
                         "target_replicas": proc_spec.get_target_replicas(environment_name),
                         "autoscaling": bool(proc_spec.get_autoscaling(environment_name)),
-                        "scaling_config": proc_spec.get_scaling_config(environment_name) or default_scaling_config(),
+                        "scaling_config": proc_spec.get_scaling_config(environment_name) or default_scaling_config,
                     }
                     for environment_name in AppEnvName
                 },
@@ -218,3 +224,63 @@ class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         else:
             module.deploy_hooks.disable_hook(type_=data["type"])
         return Response(ModuleDeployHookSLZ(module.deploy_hooks.get_by_type(data["type"])).data)
+
+
+class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()})
+    def retrieve(self, request, code):
+        application = self.get_application()
+
+        svc_disc = get_object_or_404(SvcDiscConfig, application_id=application.id)
+        return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()}, request_body=SvcDiscConfigSLZ)
+    def upsert(self, request, code):
+        application = self.get_application()
+
+        slz = SvcDiscConfigSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        svc_disc, _ = SvcDiscConfig.objects.update_or_create(
+            application_id=application.id,
+            defaults={
+                "bk_saas": validated_data["bk_saas"],
+            },
+        )
+        svc_disc.refresh_from_db()
+        return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
+
+
+class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(responses={200: DomainResolutionSLZ()})
+    def retrieve(self, request, code):
+        application = self.get_application()
+
+        domain_res = get_object_or_404(DomainResolution, application_id=application.id)
+        return Response(DomainResolutionSLZ(domain_res).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(responses={200: DomainResolutionSLZ()}, request_body=DomainResolutionSLZ)
+    def upsert(self, request, code):
+        application = self.get_application()
+
+        slz = DomainResolutionSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        defaults = {}
+        nameservers = validated_data.get("nameservers")
+        if nameservers is not None:
+            defaults["nameservers"] = nameservers
+        host_aliases = validated_data.get("host_aliases")
+        if host_aliases is not None:
+            defaults["host_aliases"] = host_aliases
+
+        domain_resolution, _ = DomainResolution.objects.update_or_create(application=application, defaults=defaults)
+
+        domain_resolution.refresh_from_db()
+        return Response(DomainResolutionSLZ(domain_resolution).data, status=status.HTTP_200_OK)

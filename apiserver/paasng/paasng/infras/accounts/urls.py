@@ -21,35 +21,35 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^api/user/$', views.UserInfoViewSet.as_view(), name='api.accounts.user'),
+    url(r"^api/user/$", views.UserInfoViewSet.as_view(), name="api.accounts.user"),
     url(
-        r'^api/accounts/feature_flags/$',
+        r"^api/accounts/feature_flags/$",
         views.AccountFeatureFlagViewSet.as_view({"get": "list"}),
-        name='api.accounts.feature_flags',
+        name="api.accounts.feature_flags",
     ),
-    url(r'^api/accounts/userinfo/$', views.UserInfoViewSet.as_view(), name='api.accounts.userinfo'),
+    url(r"^api/accounts/userinfo/$", views.UserInfoViewSet.as_view(), name="api.accounts.userinfo"),
     url(
-        r'^api/accounts/verification/generation/$',
+        r"^api/accounts/verification/generation/$",
         views.UserVerificationGenerationView.as_view(),
-        name='api.accounts.verification.generation',
+        name="api.accounts.verification.generation",
     ),
     url(
-        r'^api/accounts/verification/validation/$',
+        r"^api/accounts/verification/validation/$",
         views.UserVerificationValidationView.as_view(),
-        name='api.accounts.verification.validation',
+        name="api.accounts.verification.validation",
     ),
     url(
-        r'^api/accounts/oauth/token/$',
+        r"^api/accounts/oauth/token/$",
         views.OauthTokenViewSet.as_view({"get": "fetch_paasv3cli_token"}),
-        name='api.accounts.oauth.token',
+        name="api.accounts.oauth.token",
     ),
-    url(r'^api/oauth/backends/$', views.Oauth2BackendsViewSet.as_view({"get": "list"})),
+    url(r"^api/oauth/backends/$", views.Oauth2BackendsViewSet.as_view({"get": "list"})),
     url(
-        r'^api/oauth/backends/(?P<backend>[^/]+)/(?P<pk>[^/]+)/$',
+        r"^api/oauth/backends/(?P<backend>[^/]+)/(?P<pk>[^/]+)/$",
         views.Oauth2BackendsViewSet.as_view({"delete": "disconnect"}),
     ),
     # for provider call back
-    url(r'^api/oauth/complete/(?P<backend>[^/]+)/?$', views.Oauth2BackendsViewSet.as_view({"get": "bind"})),
+    url(r"^api/oauth/complete/(?P<backend>[^/]+)/?$", views.Oauth2BackendsViewSet.as_view({"get": "bind"})),
     # specs APIs
-    url(r'^api/bkapps/regions/specs', views.RegionSpecsViewSet.as_view({'get': 'retrieve'}), name='api.region.specs'),
+    url(r"^api/bkapps/regions/specs", views.RegionSpecsViewSet.as_view({"get": "retrieve"}), name="api.region.specs"),
 ]

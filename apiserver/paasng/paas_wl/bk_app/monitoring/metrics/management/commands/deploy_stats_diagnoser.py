@@ -27,9 +27,9 @@ from django.core.management.base import BaseCommand
 from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KNode, KPod
+from paas_wl.workloads.networking.egress.models import RegionClusterState
 
 logger = logging.getLogger("commands")
 
@@ -42,7 +42,7 @@ class Command(BaseCommand):
     - (node-state-mismatch) Node's state labels does not match records in database
     """
 
-    help = 'show problematic deploy stats'
+    help = "show problematic deploy stats"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -53,7 +53,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        cluster_name = options.get('cluster_name')
+        cluster_name = options.get("cluster_name")
         clusters = Cluster.objects.all()
         if cluster_name:
             clusters = clusters.filter(name=cluster_name)
@@ -67,7 +67,7 @@ class Command(BaseCommand):
         report_node_state_mismatch(records)
 
 
-BatchProcessStats = Dict['AppProcess', 'ProcessStat']
+BatchProcessStats = Dict["AppProcess", "ProcessStat"]
 
 
 def build_process_stats(clusters: Iterable[Cluster]) -> BatchProcessStats:
@@ -78,7 +78,7 @@ def build_process_stats(clusters: Iterable[Cluster]) -> BatchProcessStats:
         try:
             client = get_client_by_cluster_name(cluster_name=cluster.name)
         except ValueError:
-            logger.warning(f'Unable to make client for {cluster.name}')
+            logger.warning(f"Unable to make client for {cluster.name}")
             continue
 
         pods = KPod(client).ops_label.list(labels={})
@@ -102,7 +102,7 @@ def report_same_host(process_stats: BatchProcessStats):
     """Find and report all "prod" processes whose instances were assigned to one single host"""
     results = []
     for proc, stat in process_stats.items():
-        if proc.env != 'prod':
+        if proc.env != "prod":
             continue
 
         for cstat in stat.cluster_stats:
@@ -111,13 +111,13 @@ def report_same_host(process_stats: BatchProcessStats):
 
     # Print stats to console
     print()
-    print('> SAME HOST')
+    print("> SAME HOST")
     print('> ("prod" process\'s pods have been assigned to one single same host)')
     print()
-    cols_tmpl = '{0:<20}{1:<8}{2:<18}{3:<18}{4:<14}{5}'
-    print(cols_tmpl.format('App Code', 'Env', 'Process', 'Cluster', 'Num of Pods', 'Hosts'))
+    cols_tmpl = "{0:<20}{1:<8}{2:<18}{3:<18}{4:<14}{5}"
+    print(cols_tmpl.format("App Code", "Env", "Process", "Cluster", "Num of Pods", "Hosts"))
     for proc, cstat in results:
-        hosts = ','.join(cstat.assigned_hosts)
+        hosts = ",".join(cstat.assigned_hosts)
         num_of_pods = len(cstat.assigned_hosts)
         print(cols_tmpl.format(proc.app_code, proc.env, proc.process_id, cstat.cluster_name, num_of_pods, hosts))
 
@@ -127,16 +127,16 @@ def report_mul_clusters(process_stats: BatchProcessStats):
     results = []
     for proc, stat in process_stats.items():
         if len(stat.cluster_stats) > 1:
-            cluster_names = ','.join(cstat.cluster_name for cstat in stat.cluster_stats)
+            cluster_names = ",".join(cstat.cluster_name for cstat in stat.cluster_stats)
             results.append((proc, cluster_names))
 
     # Print stats to console
     print()
-    print('> MULTIPLE CLUSTERS')
-    print('> (A single process was deployed on multiple clusters)')
+    print("> MULTIPLE CLUSTERS")
+    print("> (A single process was deployed on multiple clusters)")
     print()
-    cols_tmpl = '{0:<20}{1:<8}{2:<18}{3:<18}'
-    print(cols_tmpl.format('App Code', 'Env', 'Process', 'Clusters'))
+    cols_tmpl = "{0:<20}{1:<8}{2:<18}{3:<18}"
+    print(cols_tmpl.format("App Code", "Env", "Process", "Clusters"))
     for proc, cluster_names in results:
         print(cols_tmpl.format(proc.app_code, proc.env, proc.process_id, cluster_names))
 
@@ -176,7 +176,7 @@ class NodeStateMismatch:
     def _get_desired_labels(self) -> Dict:
         """Get nodes' desired state labels from database records, results were grouped by cluster_name"""
         results: Dict[str, Dict] = defaultdict(dict)
-        for state in RegionClusterState.objects.all().order_by('created'):
+        for state in RegionClusterState.objects.all().order_by("created"):
             c_data = results[state.cluster_name]
             for node_name in state.nodes_name:
                 c_data.setdefault(node_name, set()).add(state.name)
@@ -186,7 +186,7 @@ class NodeStateMismatch:
         """Get nodes's current state labels by querying apiserver"""
         results: Dict[str, Dict] = defaultdict(dict)
         # Get all region stated related names, used for filtering labels later
-        all_state_names = set(RegionClusterState.objects.all().values_list('name', flat=True))
+        all_state_names = set(RegionClusterState.objects.all().values_list("name", flat=True))
         for cluster in self.clusters:
             c_data = results[cluster.name]
             client = get_client_by_cluster_name(cluster_name=cluster.name)
@@ -202,18 +202,18 @@ def report_node_state_mismatch(records: Iterable[NodeMismatchRecord]):
     """Report nodes with wrong state labels"""
     # Print stats to console
     print()
-    print('> NODE STATE MISMATCH')
-    print('> (Node\'s state labels does not match records in database)')
+    print("> NODE STATE MISMATCH")
+    print("> (Node's state labels does not match records in database)")
     print()
-    cols_tmpl = '{0:<20}{1:<32}{2:<40}{3:<40}'
-    print(cols_tmpl.format('Cluster', 'Node', 'Labels(desired)', 'Labels(current)'))
+    cols_tmpl = "{0:<20}{1:<32}{2:<40}{3:<40}"
+    print(cols_tmpl.format("Cluster", "Node", "Labels(desired)", "Labels(current)"))
     for record in records:
         print(
             cols_tmpl.format(
                 record.cluster_name,
                 record.node_name,
-                ', '.join(record.desired_labels),
-                ', '.join(record.current_labels),
+                ", ".join(record.desired_labels),
+                ", ".join(record.current_labels),
             )
         )
 
@@ -236,16 +236,16 @@ class AppProcess:
 
         :raises ValueError: when given manifest was not managed by engine app
         """
-        labels = pod.metadata.get('labels', {})
-        app_code = labels.get('app_code')
+        labels = pod.metadata.get("labels", {})
+        app_code = labels.get("app_code")
         if not app_code:
             raise ValueError("Pod isn't a valid app resource, no 'app_code' can be found in metadata.labels")
 
         return cls(
             app_code=app_code,
-            region=labels.get('region', ''),
-            env=labels.get('env', ''),
-            process_id=labels.get('process_id', ''),
+            region=labels.get("region", ""),
+            env=labels.get("env", ""),
+            process_id=labels.get("process_id", ""),
         )
 
 

@@ -646,409 +646,398 @@
   </div>
 </template>
 
-<script>
-    import _ from 'lodash';
-    import FallbackImage from '@/components/ui/fallback-image';
-    import defaultLogo from '../../../../static/images/default_logo.png';
+<script>import _ from 'lodash';
+import FallbackImage from '@/components/ui/fallback-image';
+import defaultLogo from '../../../../static/images/default_logo.png';
 
-    export default {
-        components: {
-            FallbackImage
+export default {
+  components: {
+    FallbackImage,
+  },
+  data() {
+    return {
+      loading: true,
+      currentEnv: '',
+      currentResult: '',
+      processTitle: '',
+      todoAppList: [],
+      doneAppList: [],
+      cannotAppList: [],
+      migrationState: 'DEFAULT', // 参考 valueToStatusCode 方法
+      taskConfirmed: false,
+      minHeight: 550,
+      bAllPreConfirmChecked: false,
+      noOutterAuthorize: false,
+      noOutterDb: false,
+      noStacklessPython: false,
+      noNfsOrFileupload: false,
+      noApiGateway: false,
+      noOutterLink: false,
+      finshedMigrationReadme: false,
+      confirmBtnEnabled: true,
+      currentLegacyAppID: 0,
+      currentMigrationID: 0,
+      currentApp: {},
+      migrateType: this.$t('迁移'),
+      migrationStatus: {
+        name: '',
+        status: 0,
+        ongoing_migration: {
+          name: '',
         },
-        data () {
-            return {
-                loading: true,
-                currentEnv: '',
-                currentResult: '',
-                processTitle: '',
-                todoAppList: [],
-                doneAppList: [],
-                cannotAppList: [],
-                migrationState: 'DEFAULT', // 参考 valueToStatusCode 方法
-                taskConfirmed: false,
-                minHeight: 550,
-                bAllPreConfirmChecked: false,
-                noOutterAuthorize: false,
-                noOutterDb: false,
-                noStacklessPython: false,
-                noNfsOrFileupload: false,
-                noApiGateway: false,
-                noOutterLink: false,
-                finshedMigrationReadme: false,
-                confirmBtnEnabled: true,
-                currentLegacyAppID: 0,
-                currentMigrationID: 0,
-                currentApp: {},
-                migrateType: this.$t('迁移'),
-                migrationStatus: {
-                    name: '',
-                    status: 0,
-                    ongoing_migration: {
-                        name: ''
-                    },
-                    finished_migration: []
-                },
-                confirmDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                delAppDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                formRemoveConfirmId: '',
-                currentMigrationId: '',
-                migrationFlagObj: {
-                    'is_prod_deployed': false,
-                    'is_stag_deployed': false,
-                    'offline_url': '',
-                    'is_third_app': false
-                },
-                defaultLogo: defaultLogo
-            };
-        },
-        computed: {
-            formRemoveValidated () {
-                return this.currentMigrationId.toString() === this.formRemoveConfirmId.toString();
-            }
-        },
-        created () {
-            this.init();
-        },
-        mounted () {
-            const HEADER_HEIGHT = 50;
-            const FOOTER_HEIGHT = 70;
-            const winHeight = window.innerHeight;
-            const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
-            if (contentHeight > this.minHeight) {
-                this.minHeight = contentHeight;
-            }
-        },
-        methods: {
-            appLegacy () {
-                window.open(this.GLOBAL.DOC.LEGACY_MIGRATION);
-            },
-            submitMigrateApp () {
-                this.delAppDialog.visiable = false;
-                this.confirmBtnEnabled = false;
-                // 切换接入层
-                this.migrateType = this.$t('切接入层');
-                const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${this.currentMigrationID}/confirm/`;
-                this.$http.post(url, {}).then((response) => {
-                    this.pollMigration();
-                }).catch(e => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                });
-            },
-            hookAfterClose () {
-                this.formRemoveConfirmId = '';
-            },
-            reset () {
-                this.currentResult = '';
-                this.noOutterAuthorize = false;
-                this.noOutterDb = false;
-                this.noStacklessPython = false;
-                this.noNfsOrFileupload = false;
-                this.noApiGateway = false;
-                this.noOutterLink = false;
-                this.finshedMigrationReadme = false;
-                this.currentLegacyAppID = 0;
-                this.migrationState = 'DEFAULT';
-                this.bAllPreConfirmChecked = false;
-                this.confirmBtnEnabled = true;
-
-                this.currentApp = null;
-                this.currentMigrationId = '';
-                this.currentMigrationID = 0;
-                this.currentApp = {};
-                this.migrateType = this.$t('迁移');
-                this.migrationStatus = {
-                    name: '',
-                    status: 0,
-                    ongoing_migration: {
-                        name: ''
-                    },
-                    finished_migration: []
-                };
-            },
-            init () {
-                this.currentEnv = this.$route.query.focus || 'todoMigrate';
-                this.initAppList();
-            },
-            initAppList () {
-                this.loading = true;
-                this.loadAppList();
-            },
-            loadAppList (type) {
-                // TODO 更新应用列表的数据
-                const url = `${BACKEND_URL}/api/mgrlegacy/applications/?result_type=all`;
-                this.$http.get(url).then((response) => {
-                    this.loading = false;
-                    const resData = response;
-                    this.todoAppList = _.filter(resData.data, (item) => {
-                        return item.category === 'todoMigrate';
-                    });
-                    this.doneAppList = _.filter(resData.data, (item) => {
-                        return item.category === 'doneMigrate';
-                    });
-                    this.cannotAppList = _.filter(resData.data, (item) => {
-                        return item.category === 'cannotMigrate';
-                    });
-
-                    // 加载正在活跃操作
-                    for (let i = 0; i < this.todoAppList.length; i++) {
-                        if (this.todoAppList[i].is_active) {
-                            const migrationProcessId = this.todoAppList[i].latest_migration_id;
-                            if (migrationProcessId === undefined) {
-                                continue;
-                            }
-                            if (this.currentMigrationID !== migrationProcessId) {
-                                this.currentApp = this.todoAppList[i];
-
-                                this.currentMigrationId = this.todoAppList[i].code;
-
-                                this.currentMigrationID = migrationProcessId;
-                                // this.migrationState = "ON_MIGRATION"
-                                if (this.migrationState === 'ON_ROLLBACK') {
-                                    this.migrateType = this.$t('回滚');
-                                }
-                                this.processTitle = this.$t(`应用[{name}] 正在进行{type}...`, { name: this.currentApp.name, type: this.migrateType });
-                                this.pollMigration();
-                                this.fetchMigrationFlag();
-                                break;
-                            }
-                        }
-                    }
-                });
-            },
-            changeTabList (type) {
-                this.currentEnv = type;
-            },
-            valueToStatusCode (value) {
-                // PRE_MIGRATION_CONFIRM 为前端状态
-                const valueMap = {
-                    0: 'DEFAULT',
-                    1: 'ON_MIGRATION',
-                    2: 'FAILED',
-                    3: 'DONE_MIGRATION',
-                    4: 'ON_ROLLBACK',
-                    5: 'ROLLBACKED',
-                    6: 'ON_CONFIRMING',
-                    7: 'CONFIRMED'
-                };
-                return valueMap[value];
-            },
-            viewMigrationStatus (appItem) {
-                this.reset();
-                this.currentLegacyAppID = appItem.legacy_app_id;
-
-                this.currentMigrationId = appItem.code;
-
-                this.currentApp = _.find(this.todoAppList, (item) => {
-                    return item.legacy_app_id === this.currentLegacyAppID;
-                });
-                this.currentMigrationID = this.currentApp.latest_migration_id;
-                this.migrationState = this.currentApp.tag;
-                this.pollMigration();
-            },
-            startMigration () {
-                if (!this.bAllPreConfirmChecked) {
-                    return;
-                }
-
-                this.processTitle = this.$t(`应用[{name}] 正在进行{type}...`, { name: this.currentApp.name, type: this.migrateType });
-                // TODO: show loading icon
-                // this.$refs.confirmModal.close()
-                this.confirmDialog.visiable = true;
-
-                this.migrateType = this.$t('迁移');
-                this.migrationState = 'ON_MIGRATION';
-                const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/`;
-                this.$http.post(url, { legacy_app_id: this.currentLegacyAppID }).then((response) => {
-                    // 提示迁移任务创建成功
-                    const resData = response;
-                    this.currentMigrationID = resData.id;
-                    this.confirmDialog.visiable = false;
-                    this.pollMigration();
-                    this.fetchMigrationFlag();
-                });
-            },
-            fetchMigrationFlag () {
-                const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${this.currentMigrationID}/old_state/`;
-                this.$http.get(url).then((response) => {
-                    this.migrationFlagObj = Object.assign({}, response);
-                });
-            },
-            pollMigration () {
-                if (this.$route.name !== 'appLegacyMigration') {
-                    return;
-                }
-                // 初始化任务状态
-                this.taskConfirmed = false;
-                // 轮询任务
-                // get status
-                const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${this.currentMigrationID}/state/`;
-                this.$http.get(url).then((response) => {
-                    // 更新迁移状态
-                    const resData = response;
-                    this.migrationStatus = resData;
-
-                    // 防止来回切换导致混乱情况
-                    if (this.migrationStatus.id !== this.currentMigrationID) {
-                        return;
-                    }
-
-                    // update front end status
-                    this.migrationState = this.valueToStatusCode(this.migrationStatus.status);
-
-                    // NOTE: pull
-                    // ON_MIGRATION = 1
-                    // ON_ROLLBACK = 4
-                    // ON_CONFIRMING = 6
-
-                    // NOTE: not pull
-                    // DEFAULT = 0
-                    // FAILED = 2
-                    // DONE_MIGRATION = 3
-                    // ROLLBACKED = 5
-                    // CONFIRMED = 7
-                    // # 回滚失败, 需要人工介入
-                    // ROLLBACK_FAILED = 8
-
-                    const status = this.migrationState;
-                    if (status === 'DONE_MIGRATION') {
-                        // 成功 - DONE_MIGRATION
-                        const msg = this.$t('信息同步完成！');
-                        this.currentResult = msg;
-                        this.confirmBtnEnabled = true;
-                        return;
-                    } else if (status === 'FAILED') {
-                        // 失败并自动回滚完成
-                        const lastIdx = this.migrationStatus.finished_migrations.length - 1;
-                        const msg = this.$t('迁移步骤: ') + '<' + resData.finished_migrations[lastIdx].description + '> ' + this.$t('执行失败, 回滚完成！');
-
-                        const msgWithDoc = msg + `<br>${this.$t('失败原因请参考')}<a href="" class="ps-btn ps-btn-l ps-btn-link">${this.$t('相关文档')}</a>`;
-                        this.currentResult = msgWithDoc;
-                        this.processTitle = this.$t('应用迁移失败！');
-                        this.$bkInfo({
-                            theme: 'error',
-                            title: msg
-                        });
-                    } else if (status === 'ROLLBACKED') {
-                        // 人工点回滚执行完成
-                        this.currentResult = this.$t('迁移失败需要回滚，回滚完成！');
-                        this.processTitle = this.$t('应用回滚完成！');
-                        this.initAppList();
-                        this.confirmBtnEnabled = true;
-                        return;
-                    } else if (status === 'CONFIRMED') {
-                        this.taskConfirmed = true;
-                        // 已结束的, 不继续拉
-                        this.currentResult = this.$t('恭喜您，应用迁移到新版开发者中心完成了！');
-                        this.processTitle = this.$t('应用迁移完成！');
-                        this.initAppList();
-                        this.confirmBtnEnabled = true;
-                        return;
-                    } else if (status === 'ROLLBACK_FAILED') {
-                        this.currentResult = `${this.$t('回滚失败，请联系')}${this.GLOBAL.HELPER.name}！}`;
-                        this.processTitle = this.$t('应用回滚失败！');
-                        this.confirmBtnEnabled = true;
-                        return;
-                    }
-
-                    if (status === 'ON_ROLLBACK') {
-                        this.currentResult = this.$t('迁移失败需要回滚，执行回滚！');
-                    }
-
-                    // polling next
-                    setTimeout(this.pollMigration, 3000);
-                });
-            },
-            readmeCheckboxChanged () {
-                // 迁移须知文档中的checkbox有变动时需要对应修改页面迁移按钮的可用状态
-                if (this.noOutterAuthorize && this.noOutterDb && this.noStacklessPython && this.noNfsOrFileupload && this.noApiGateway && this.finshedMigrationReadme && this.noOutterLink) {
-                    this.bAllPreConfirmChecked = true;
-                } else {
-                    this.bAllPreConfirmChecked = false;
-                }
-            },
-            cancelMigration () {
-                // this.$refs.confirmModal.close()
-                this.confirmDialog.visiable = false;
-            },
-            afterDialogClose () {
-                this.reset();
-            },
-            makeMigration (appItem) {
-                // legacy_app_id
-                this.reset();
-
-                // 显示确认框
-                this.migrationState = 'PRE_MIGRATION_CONFIRM';
-
-                this.currentMigrationId = appItem.code;
-
-                this.currentLegacyAppID = appItem.legacy_app_id;
-                this.currentApp = _.find(this.todoAppList, (item) => {
-                    return item.legacy_app_id === this.currentLegacyAppID;
-                });
-
-                this.confirmDialog.visiable = true;
-            },
-            confirmMigrationFinished () {
-                this.delAppDialog.visiable = true;
-            },
-            rollbackCurrent () {
-                this.$bkInfo({
-                    title: this.$t('取消本次迁移？'),
-                    subTitle: this.$t('取消后将下架并删除在新版开发者中心创建的应用'),
-                    extCls: 'paas-roll-back-info-cls',
-                    closeIcon: false,
-                    confirmFn: () => {
-                        // 回滚当前的迁移
-                        this.migrateType = this.$t('回滚');
-                        this.rollbackMigration(this.currentMigrationID);
-                    }
-                });
-            },
-            rollbackMigration (migrationProcessID) {
-                this.processTitle = this.$t(`应用[{name}] 正在进行{type}...`, { name: this.currentApp.name, type: this.migrateType });
-                // 迁移完成列表中的回滚，这时已经切换接入层
-                const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${migrationProcessID}/rollback/`;
-                this.$http.post(url, {}).then((response) => {
-                    this.currentMigrationID = migrationProcessID;
-                    this.migrationState = 'ON_MIGRATION';
-                    this.pollMigration();
-                }).catch(e => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || this.$t('接口异常')
-                    });
-                });
-            },
-            rollbackMigrationBtnClick (appItem) {
-                if (this.migrationStatus.is_active || !appItem.has_prod_deployed_before_migration) {
-                    return false;
-                }
-                const migrationProcessID = appItem.latest_migration_id;
-                // 加载当前app
-                this.currentApp = _.find(this.doneAppList, (item) => {
-                    return item.latest_migration_id === migrationProcessID;
-                });
-                const self = this;
-                this.$bkInfo({
-                    title: this.$t('确认要回滚至旧版本？'),
-                    confirmFn () {
-                        // 启动回滚
-                        self.rollbackMigration(migrationProcessID);
-                    }
-                });
-            }
-        }
+        finished_migration: [],
+      },
+      confirmDialog: {
+        visiable: false,
+        isLoading: false,
+      },
+      delAppDialog: {
+        visiable: false,
+        isLoading: false,
+      },
+      formRemoveConfirmId: '',
+      currentMigrationId: '',
+      migrationFlagObj: {
+        is_prod_deployed: false,
+        is_stag_deployed: false,
+        offline_url: '',
+        is_third_app: false,
+      },
+      defaultLogo,
     };
+  },
+  computed: {
+    formRemoveValidated() {
+      return this.currentMigrationId.toString() === this.formRemoveConfirmId.toString();
+    },
+  },
+  created() {
+    this.init();
+  },
+  mounted() {
+    const HEADER_HEIGHT = 50;
+    const FOOTER_HEIGHT = 70;
+    const winHeight = window.innerHeight;
+    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+    if (contentHeight > this.minHeight) {
+      this.minHeight = contentHeight;
+    }
+  },
+  methods: {
+    appLegacy() {
+      window.open(this.GLOBAL.DOC.LEGACY_MIGRATION);
+    },
+    submitMigrateApp() {
+      this.delAppDialog.visiable = false;
+      this.confirmBtnEnabled = false;
+      // 切换接入层
+      this.migrateType = this.$t('切接入层');
+      const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${this.currentMigrationID}/confirm/`;
+      this.$http.post(url, {}).then((response) => {
+        this.pollMigration();
+      })
+        .catch((e) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('接口异常'),
+          });
+        });
+    },
+    hookAfterClose() {
+      this.formRemoveConfirmId = '';
+    },
+    reset() {
+      this.currentResult = '';
+      this.noOutterAuthorize = false;
+      this.noOutterDb = false;
+      this.noStacklessPython = false;
+      this.noNfsOrFileupload = false;
+      this.noApiGateway = false;
+      this.noOutterLink = false;
+      this.finshedMigrationReadme = false;
+      this.currentLegacyAppID = 0;
+      this.migrationState = 'DEFAULT';
+      this.bAllPreConfirmChecked = false;
+      this.confirmBtnEnabled = true;
+
+      this.currentApp = null;
+      this.currentMigrationId = '';
+      this.currentMigrationID = 0;
+      this.currentApp = {};
+      this.migrateType = this.$t('迁移');
+      this.migrationStatus = {
+        name: '',
+        status: 0,
+        ongoing_migration: {
+          name: '',
+        },
+        finished_migration: [],
+      };
+    },
+    init() {
+      this.currentEnv = this.$route.query.focus || 'todoMigrate';
+      this.initAppList();
+    },
+    initAppList() {
+      this.loading = true;
+      this.loadAppList();
+    },
+    loadAppList(type) {
+      // TODO 更新应用列表的数据
+      const url = `${BACKEND_URL}/api/mgrlegacy/applications/?result_type=all`;
+      this.$http.get(url).then((response) => {
+        this.loading = false;
+        const resData = response;
+        this.todoAppList = _.filter(resData.data, item => item.category === 'todoMigrate');
+        this.doneAppList = _.filter(resData.data, item => item.category === 'doneMigrate');
+        this.cannotAppList = _.filter(resData.data, item => item.category === 'cannotMigrate');
+
+        // 加载正在活跃操作
+        for (let i = 0; i < this.todoAppList.length; i++) {
+          if (this.todoAppList[i].is_active) {
+            const migrationProcessId = this.todoAppList[i].latest_migration_id;
+            if (migrationProcessId === undefined) {
+              continue;
+            }
+            if (this.currentMigrationID !== migrationProcessId) {
+              this.currentApp = this.todoAppList[i];
+
+              this.currentMigrationId = this.todoAppList[i].code;
+
+              this.currentMigrationID = migrationProcessId;
+              // this.migrationState = "ON_MIGRATION"
+              if (this.migrationState === 'ON_ROLLBACK') {
+                this.migrateType = this.$t('回滚');
+              }
+              this.processTitle = this.$t('应用[{name}] 正在进行{type}...', { name: this.currentApp.name, type: this.migrateType });
+              this.pollMigration();
+              this.fetchMigrationFlag();
+              break;
+            }
+          }
+        }
+      });
+    },
+    changeTabList(type) {
+      this.currentEnv = type;
+    },
+    valueToStatusCode(value) {
+      // PRE_MIGRATION_CONFIRM 为前端状态
+      const valueMap = {
+        0: 'DEFAULT',
+        1: 'ON_MIGRATION',
+        2: 'FAILED',
+        3: 'DONE_MIGRATION',
+        4: 'ON_ROLLBACK',
+        5: 'ROLLBACKED',
+        6: 'ON_CONFIRMING',
+        7: 'CONFIRMED',
+      };
+      return valueMap[value];
+    },
+    viewMigrationStatus(appItem) {
+      this.reset();
+      this.currentLegacyAppID = appItem.legacy_app_id;
+
+      this.currentMigrationId = appItem.code;
+
+      this.currentApp = _.find(this.todoAppList, item => item.legacy_app_id === this.currentLegacyAppID);
+      this.currentMigrationID = this.currentApp.latest_migration_id;
+      this.migrationState = this.currentApp.tag;
+      this.pollMigration();
+    },
+    startMigration() {
+      if (!this.bAllPreConfirmChecked) {
+        return;
+      }
+
+      this.processTitle = this.$t('应用[{name}] 正在进行{type}...', { name: this.currentApp.name, type: this.migrateType });
+      // TODO: show loading icon
+      // this.$refs.confirmModal.close()
+      this.confirmDialog.visiable = true;
+
+      this.migrateType = this.$t('迁移');
+      this.migrationState = 'ON_MIGRATION';
+      const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/`;
+      this.$http.post(url, { legacy_app_id: this.currentLegacyAppID }).then((response) => {
+        // 提示迁移任务创建成功
+        const resData = response;
+        this.currentMigrationID = resData.id;
+        this.confirmDialog.visiable = false;
+        this.pollMigration();
+        this.fetchMigrationFlag();
+      });
+    },
+    fetchMigrationFlag() {
+      const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${this.currentMigrationID}/old_state/`;
+      this.$http.get(url).then((response) => {
+        this.migrationFlagObj = Object.assign({}, response);
+      });
+    },
+    pollMigration() {
+      if (this.$route.name !== 'appLegacyMigration') {
+        return;
+      }
+      // 初始化任务状态
+      this.taskConfirmed = false;
+      // 轮询任务
+      // get status
+      const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${this.currentMigrationID}/state/`;
+      this.$http.get(url).then((response) => {
+        // 更新迁移状态
+        const resData = response;
+        this.migrationStatus = resData;
+
+        // 防止来回切换导致混乱情况
+        if (this.migrationStatus.id !== this.currentMigrationID) {
+          return;
+        }
+
+        // update front end status
+        this.migrationState = this.valueToStatusCode(this.migrationStatus.status);
+
+        // NOTE: pull
+        // ON_MIGRATION = 1
+        // ON_ROLLBACK = 4
+        // ON_CONFIRMING = 6
+
+        // NOTE: not pull
+        // DEFAULT = 0
+        // FAILED = 2
+        // DONE_MIGRATION = 3
+        // ROLLBACKED = 5
+        // CONFIRMED = 7
+        // # 回滚失败, 需要人工介入
+        // ROLLBACK_FAILED = 8
+
+        const status = this.migrationState;
+        if (status === 'DONE_MIGRATION') {
+          // 成功 - DONE_MIGRATION
+          const msg = this.$t('信息同步完成！');
+          this.currentResult = msg;
+          this.confirmBtnEnabled = true;
+          return;
+        } if (status === 'FAILED') {
+          // 失败并自动回滚完成
+          const lastIdx = this.migrationStatus.finished_migrations.length - 1;
+          const msg = `${this.$t('迁移步骤: ')}<${resData.finished_migrations[lastIdx].description}> ${this.$t('执行失败, 回滚完成！')}`;
+
+          const msgWithDoc = `${msg}<br>${this.$t('失败原因请参考')}<a href="" class="ps-btn ps-btn-l ps-btn-link">${this.$t('相关文档')}</a>`;
+          this.currentResult = msgWithDoc;
+          this.processTitle = this.$t('应用迁移失败！');
+          this.$bkInfo({
+            theme: 'error',
+            title: msg,
+          });
+        } else if (status === 'ROLLBACKED') {
+          // 人工点回滚执行完成
+          this.currentResult = this.$t('迁移失败需要回滚，回滚完成！');
+          this.processTitle = this.$t('应用回滚完成！');
+          this.initAppList();
+          this.confirmBtnEnabled = true;
+          return;
+        } else if (status === 'CONFIRMED') {
+          this.taskConfirmed = true;
+          // 已结束的, 不继续拉
+          this.currentResult = this.$t('恭喜您，应用迁移到新版开发者中心完成了！');
+          this.processTitle = this.$t('应用迁移完成！');
+          this.initAppList();
+          this.confirmBtnEnabled = true;
+          return;
+        } else if (status === 'ROLLBACK_FAILED') {
+          this.currentResult = `${this.$t('回滚失败，请联系')}${this.GLOBAL.HELPER.name}！}`;
+          this.processTitle = this.$t('应用回滚失败！');
+          this.confirmBtnEnabled = true;
+          return;
+        }
+
+        if (status === 'ON_ROLLBACK') {
+          this.currentResult = this.$t('迁移失败需要回滚，执行回滚！');
+        }
+
+        // polling next
+        setTimeout(this.pollMigration, 3000);
+      });
+    },
+    readmeCheckboxChanged() {
+      // 迁移须知文档中的checkbox有变动时需要对应修改页面迁移按钮的可用状态
+      if (this.noOutterAuthorize && this.noOutterDb && this.noStacklessPython && this.noNfsOrFileupload && this.noApiGateway && this.finshedMigrationReadme && this.noOutterLink) {
+        this.bAllPreConfirmChecked = true;
+      } else {
+        this.bAllPreConfirmChecked = false;
+      }
+    },
+    cancelMigration() {
+      // this.$refs.confirmModal.close()
+      this.confirmDialog.visiable = false;
+    },
+    afterDialogClose() {
+      this.reset();
+    },
+    makeMigration(appItem) {
+      // legacy_app_id
+      this.reset();
+
+      // 显示确认框
+      this.migrationState = 'PRE_MIGRATION_CONFIRM';
+
+      this.currentMigrationId = appItem.code;
+
+      this.currentLegacyAppID = appItem.legacy_app_id;
+      this.currentApp = _.find(this.todoAppList, item => item.legacy_app_id === this.currentLegacyAppID);
+
+      this.confirmDialog.visiable = true;
+    },
+    confirmMigrationFinished() {
+      this.delAppDialog.visiable = true;
+    },
+    rollbackCurrent() {
+      this.$bkInfo({
+        title: this.$t('取消本次迁移？'),
+        subTitle: this.$t('取消后将下架并删除在新版开发者中心创建的应用'),
+        extCls: 'paas-roll-back-info-cls',
+        closeIcon: false,
+        confirmFn: () => {
+          // 回滚当前的迁移
+          this.migrateType = this.$t('回滚');
+          this.rollbackMigration(this.currentMigrationID);
+        },
+      });
+    },
+    rollbackMigration(migrationProcessID) {
+      this.processTitle = this.$t('应用[{name}] 正在进行{type}...', { name: this.currentApp.name, type: this.migrateType });
+      // 迁移完成列表中的回滚，这时已经切换接入层
+      const url = `${BACKEND_URL}/api/mgrlegacy/migrations/progress/${migrationProcessID}/rollback/`;
+      this.$http.post(url, {}).then((response) => {
+        this.currentMigrationID = migrationProcessID;
+        this.migrationState = 'ON_MIGRATION';
+        this.pollMigration();
+      })
+        .catch((e) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('接口异常'),
+          });
+        });
+    },
+    rollbackMigrationBtnClick(appItem) {
+      if (this.migrationStatus.is_active || !appItem.has_prod_deployed_before_migration) {
+        return false;
+      }
+      const migrationProcessID = appItem.latest_migration_id;
+      // 加载当前app
+      this.currentApp = _.find(this.doneAppList, item => item.latest_migration_id === migrationProcessID);
+      const self = this;
+      this.$bkInfo({
+        title: this.$t('确认要回滚至旧版本？'),
+        confirmFn() {
+          // 启动回滚
+          self.rollbackMigration(migrationProcessID);
+        },
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

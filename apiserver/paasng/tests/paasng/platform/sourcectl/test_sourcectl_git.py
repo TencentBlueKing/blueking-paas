@@ -34,18 +34,18 @@ pytestmark = pytest.mark.django_db
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_gitlab_client():
     with mock.patch("paasng.platform.sourcectl.controllers.gitlab.GitLabApiClient") as client_clz:
         yield client_clz()
 
 
 class TestGitlabRepoController:
-    @pytest.fixture
+    @pytest.fixture()
     def version(self):
         return VersionInfo("revision", "master", "branch")
 
-    @pytest.fixture
+    @pytest.fixture()
     def tarball_bytes(self):
         with generate_temp_dir() as tmp_dir, generate_temp_file(suffix=".tar.gz") as tmp_file:
             (tmp_dir / "foo").mkdir(0o755, parents=True, exist_ok=True)
@@ -134,7 +134,7 @@ class TestGitlabRepoController:
         assert controller.extract_version_info(version) == ("master", "revision")
 
     @pytest.mark.parametrize(
-        "smart_revision, expected",
+        ("smart_revision", "expected"),
         [
             ("revision", "revision"),
             ("branch:master", "fake-master-id"),
@@ -147,6 +147,7 @@ class TestGitlabRepoController:
                 return {"id": "fake-master-id"}
             elif branch_or_hash == "foo":
                 return {"id": "bar"}
+            return {}
 
         mock_gitlab_client.repo_last_commit.side_effect = mock_repo_last_commit
         controller = GitlabRepoController(repo_url=gitlab_repo_url, user_credentials={}, api_url="")
@@ -158,20 +159,20 @@ class TestGitlabRepoController:
 
 
 class TestGithubRepoController:
-    @pytest.fixture
+    @pytest.fixture()
     def version(self):
         return VersionInfo("revision", "master", "branch")
 
-    @pytest.fixture
+    @pytest.fixture()
     def user_credentials(self):
         return {"oauth_token": "this is a github access token"}
 
     def test_get_project(self, user_credentials, github_repo_url):
-        controller = GitHubRepoController('', github_repo_url, user_credentials)
-        assert controller.project.namespace == 'owner'
-        assert controller.project.name == 'repo'
+        controller = GitHubRepoController("", github_repo_url, user_credentials)
+        assert controller.project.namespace == "owner"
+        assert controller.project.name == "repo"
 
-    @pytest.fixture
+    @pytest.fixture()
     def client(self):
         with mock.patch("paasng.platform.sourcectl.controllers.github.GitHubApiClient") as client_clz:
             yield client_clz()
@@ -250,7 +251,7 @@ class TestGithubRepoController:
 
         client.repo_list_branches = mock_repo_list_branches
         client.repo_list_tags = mock_repo_list_tags
-        controller = GitHubRepoController('', github_repo_url, user_credentials)
+        controller = GitHubRepoController("", github_repo_url, user_credentials)
         versions = controller.list_alternative_versions()
         assert versions[0].name == "master"
         assert versions[0].revision == "fake_hash_id_0"
@@ -263,11 +264,11 @@ class TestGithubRepoController:
             return {"sha": "fake_hash_id"}
 
         client.repo_last_commit.side_effect = mock_repo_last_commit
-        controller = GitHubRepoController('', github_repo_url, user_credentials)
+        controller = GitHubRepoController("", github_repo_url, user_credentials)
         assert controller.extract_smart_revision("branch:master") == "fake_hash_id"
 
     def test_build_url(self, github_repo_url, user_credentials, version):
-        controller = GitHubRepoController('', github_repo_url, user_credentials)
+        controller = GitHubRepoController("", github_repo_url, user_credentials)
         assert controller.build_url(version) == github_repo_url
 
     def test_read_file(self, client, github_repo_url, user_credentials, version):
@@ -275,25 +276,25 @@ class TestGithubRepoController:
             return b"file content..."
 
         client.repo_get_raw_file.side_effect = mock_repo_get_raw_file
-        controller = GitHubRepoController('', github_repo_url, user_credentials)
+        controller = GitHubRepoController("", github_repo_url, user_credentials)
         assert controller.read_file("/fake_path", version) == b"file content..."
 
 
 class TestGiteebRepoController:
-    @pytest.fixture
+    @pytest.fixture()
     def version(self):
         return VersionInfo("revision", "master", "branch")
 
-    @pytest.fixture
+    @pytest.fixture()
     def user_credentials(self):
         return {"oauth_token": "this is a gitee access token"}
 
     def test_get_project(self, user_credentials, gitee_repo_url):
-        controller = GiteeRepoController('', gitee_repo_url, user_credentials)
-        assert controller.project.namespace == 'owner'
-        assert controller.project.name == 'repo'
+        controller = GiteeRepoController("", gitee_repo_url, user_credentials)
+        assert controller.project.namespace == "owner"
+        assert controller.project.name == "repo"
 
-    @pytest.fixture
+    @pytest.fixture()
     def client(self):
         with mock.patch("paasng.platform.sourcectl.controllers.gitee.GiteeApiClient") as client_clz:
             yield client_clz()
@@ -357,7 +358,7 @@ class TestGiteebRepoController:
 
         client.repo_list_branches = mock_repo_list_branches
         client.repo_list_tags = mock_repo_list_tags
-        controller = GiteeRepoController('', gitee_repo_url, user_credentials)
+        controller = GiteeRepoController("", gitee_repo_url, user_credentials)
         versions = controller.list_alternative_versions()
         assert versions[0].name == "master"
         assert versions[0].revision == "fake_hash_id_0"
@@ -370,11 +371,11 @@ class TestGiteebRepoController:
             return {"sha": "fake_hash_id"}
 
         client.repo_last_commit.side_effect = mock_repo_last_commit
-        controller = GiteeRepoController('', gitee_repo_url, user_credentials)
+        controller = GiteeRepoController("", gitee_repo_url, user_credentials)
         assert controller.extract_smart_revision("branch:master") == "fake_hash_id"
 
     def test_build_url(self, gitee_repo_url, user_credentials, version):
-        controller = GiteeRepoController('', gitee_repo_url, user_credentials)
+        controller = GiteeRepoController("", gitee_repo_url, user_credentials)
         assert controller.build_url(version) == gitee_repo_url
 
     def test_read_file(self, client, gitee_repo_url, user_credentials, version):
@@ -382,32 +383,32 @@ class TestGiteebRepoController:
             return b"file content..."
 
         client.repo_get_raw_file.side_effect = mock_repo_get_raw_file
-        controller = GiteeRepoController('', gitee_repo_url, user_credentials)
+        controller = GiteeRepoController("", gitee_repo_url, user_credentials)
         assert controller.read_file("/fake_path", version) == b"file content..."
 
 
 class TestControllerUtils:
-    @pytest.fixture
+    @pytest.fixture()
     def branch_data(self):
         return {
-            'name': 'translation',
-            'commit': {
-                'id': 'da8e366ca6ed81e987410b97472fb827c4335ff4',
-                'message': 'msg',
-                'committed_date': '2018-07-25T19:46:51.000+08:00',
+            "name": "translation",
+            "commit": {
+                "id": "da8e366ca6ed81e987410b97472fb827c4335ff4",
+                "message": "msg",
+                "committed_date": "2018-07-25T19:46:51.000+08:00",
             },
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def controller(self, gitlab_repo_url):
         with mock.patch("paasng.platform.sourcectl.controllers.gitlab.GitLabApiClient"):
             yield GitlabRepoController(repo_url=gitlab_repo_url, user_credentials={}, api_url="")
 
     def test_branch_data_to_version_normal(self, branch_data, controller):
-        ver = controller._branch_data_to_version('branch', branch_data)
+        ver = controller._branch_data_to_version("branch", branch_data)
         assert isinstance(ver.last_update, datetime.datetime)
 
     def test_branch_data_to_version_other_timezone(self, branch_data, controller):
-        data = {**branch_data, 'committed_date': '2018-07-25T19:46:51.000-07:00'}
-        ver = controller._branch_data_to_version('branch', data)
+        data = {**branch_data, "committed_date": "2018-07-25T19:46:51.000-07:00"}
+        ver = controller._branch_data_to_version("branch", data)
         assert isinstance(ver.last_update, datetime.datetime)

@@ -24,11 +24,11 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    'data,default,ret',
+    ("data", "default", "ret"),
     [
-        ([None, 'foo'], None, 'foo'),
-        ([None, ''], None, None),
-        ([None, ()], 'bar', 'bar'),
+        ([None, "foo"], None, "foo"),
+        ([None, ""], None, None),
+        ([None, ()], "bar", "bar"),
     ],
 )
 def test_first_true(data, default, ret):
@@ -36,6 +36,6 @@ def test_first_true(data, default, ret):
 
 
 def test_unique_id_generator():
-    val = unique_id_generator('foo')
-    assert val != ''
-    assert val.startswith('foo')
+    val = unique_id_generator("foo")
+    assert val != ""
+    assert val.startswith("foo")

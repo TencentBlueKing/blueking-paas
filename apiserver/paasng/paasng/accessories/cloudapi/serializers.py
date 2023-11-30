@@ -52,7 +52,7 @@ class APIGWPermissionApplySLZ(serializers.Serializer):
         allow_empty=True,
         required=False,
     )
-    reason = serializers.CharField(max_length=512, allow_blank=True, required=False, default='')
+    reason = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
     expire_days = serializers.ChoiceField(
         choices=constants.PermissionApplyExpireDaysEnum.get_django_choices(),
     )
@@ -132,7 +132,7 @@ class ESBPermissionApplySLZ(serializers.Serializer):
     component_ids = serializers.ListField(
         child=serializers.IntegerField(),
     )
-    reason = serializers.CharField(max_length=512, allow_blank=True, required=False, default='')
+    reason = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
     expire_days = serializers.ChoiceField(
         choices=constants.PermissionApplyExpireDaysEnum.get_django_choices(),
     )

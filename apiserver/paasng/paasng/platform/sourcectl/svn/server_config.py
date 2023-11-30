@@ -69,12 +69,12 @@ def get_bksvn_config(region: str, name: Optional[str] = None) -> BkSvnServerConf
     if name:
         sourcectl_type = sourcectl_types.get(name)
         if not isinstance(sourcectl_type, BkSvnSourceTypeSpec):
-            raise RuntimeError(f'Only bk_svn sourcectl type spec was supported, current type: {type(sourcectl_type)}')
+            raise RuntimeError(f"Only bk_svn sourcectl type spec was supported, current type: {type(sourcectl_type)}")
     else:
         try:
             sourcectl_type = sourcectl_types.find_by_type(BkSvnSourceTypeSpec)
         except ValueError:
-            raise RuntimeError(f'No sourcectl type spec can be found, region: {region}, name: {name}')
+            raise RuntimeError(f"No sourcectl type spec can be found, region: {region}, name: {name}")
 
     # Return a default server config value when requested region was not configured,
     # which might happens when running mgrlegacy's unit tests

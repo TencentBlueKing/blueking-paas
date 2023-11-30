@@ -48,108 +48,109 @@
 </template>
 
 <script>
-    import _ from 'lodash';
-    import selectEventMixin from '@/components/searching/selectEventMixin';
+import _ from 'lodash';
+import selectEventMixin from '@/components/searching/selectEventMixin';
 
-    export default {
-        mixins: [selectEventMixin],
-        props: {
-            theme: {
-                type: [Object, String]
-            },
-            filterKey: {
-                type: String
-            },
-            max: {
-                type: Number
-            },
-            searchAppsRouterName: {
-                type: String
-            },
-            params: {
-                type: Object
-            }
-        },
-        data: function () {
-            return {
-                isLoading: false,
-                appList: []
-            };
-        },
-        watch: {
-            filterKey () {
-                this.curActiveIndex = -1;
-                if (this.$route.path.indexOf('/plugin-center') === -1) {
-                    this.fetchObj();
-                }
-            }
-        },
-        created () {
-            if (this.$route.path.indexOf('/plugin-center') === -1) {
-                this.init();
-            }
-        },
-        methods: {
-            // 拼接当前页新路由地址
-            getTarget (appCode, moduleId) {
-                const target = {
-                    name: '',
-                    params: {
-                        ...this.$route.params,
-                        id: appCode,
-                        moduleId: moduleId
-                    },
-                    query: {
-                        ...this.$route.query
-                    }
-                };
-                target['name'] = (this.searchAppsRouterName === 'customed' ? this.$route.name : 'appSummary');
-                if (['monitorAlarm', 'appLog'].includes(this.$route.name)) {
-                    target['query'] = {};
-                }
-
-                return target;
-            },
-            init () {
-                this.fetchObj();
-            },
-            getSelectListLength () {
-                return this.appList.length;
-            },
-            handlerSelectApp (app) {
-                const params = this.getTarget(app.code, app.moduleId);
-                console.log('app-quick-search', params);
-                // 更新nav
-                this.$store.commit('updateNavType', app);
-                // 刷新左侧导航(applogo\appname\appcode)
-                this.$emit('selectAppCallback');
-                this.$router.push(params);
-            },
-            enterSelect () {
-                if (this.appList.length === 0 || this.curActiveIndex < 0) {
-                    return;
-                }
-                const app = this.appList[this.curActiveIndex];
-                // 切换应用后的操作
-                this.handlerSelectApp(app);
-            },
-            handleFetch (res) {
-                return this.max ? res.splice(0, this.max) : res;
-            },
-            fetchObj: _.debounce(function () {
-                this.isLoading = true;
-                this.$store.dispatch('search/fetchSearchApp', {
-                    filterKey: this.filterKey,
-                    params: this.params
-                }).then(appList => {
-                    this.appList = this.max ? appList.splice(0, this.max) : appList;
-                }).finally(res => {
-                    this.isLoading = false;
-                    this.$emit('search-ready', this.appList);
-                });
-            }, 350)
-        }
+export default {
+  mixins: [selectEventMixin],
+  props: {
+    theme: {
+      type: [Object, String],
+    },
+    filterKey: {
+      type: String,
+    },
+    max: {
+      type: Number,
+    },
+    searchAppsRouterName: {
+      type: String,
+    },
+    params: {
+      type: Object,
+    },
+  },
+  data() {
+    return {
+      isLoading: false,
+      appList: [],
     };
+  },
+  watch: {
+    filterKey() {
+      this.curActiveIndex = -1;
+      if (this.$route.path.indexOf('/plugin-center') === -1) {
+        this.fetchObj();
+      }
+    },
+  },
+  created() {
+    if (this.$route.path.indexOf('/plugin-center') === -1) {
+      this.init();
+    }
+  },
+  methods: {
+    // 拼接当前页新路由地址
+    getTarget(appCode, moduleId) {
+      const target = {
+        name: '',
+        params: {
+          ...this.$route.params,
+          id: appCode,
+          moduleId,
+        },
+        query: {
+          ...this.$route.query,
+        },
+      };
+      target.name = (this.searchAppsRouterName === 'customed' ? this.$route.name : 'appSummary');
+      if (['monitorAlarm', 'appLog'].includes(this.$route.name)) {
+        target.query = {};
+      }
+
+      return target;
+    },
+    init() {
+      this.fetchObj();
+    },
+    getSelectListLength() {
+      return this.appList.length;
+    },
+    handlerSelectApp(app) {
+      const params = this.getTarget(app.code, app.moduleId);
+      console.log('app-quick-search', params);
+      // 更新nav
+      this.$store.commit('updateNavType', app);
+      // 刷新左侧导航(applogo\appname\appcode)
+      this.$emit('selectAppCallback');
+      this.$router.push(params);
+    },
+    enterSelect() {
+      if (this.appList.length === 0 || this.curActiveIndex < 0) {
+        return;
+      }
+      const app = this.appList[this.curActiveIndex];
+      // 切换应用后的操作
+      this.handlerSelectApp(app);
+    },
+    handleFetch(res) {
+      return this.max ? res.splice(0, this.max) : res;
+    },
+    fetchObj: _.debounce(function () {
+      this.isLoading = true;
+      this.$store.dispatch('search/fetchSearchApp', {
+        filterKey: this.filterKey,
+        params: this.params,
+      }).then((appList) => {
+        this.appList = this.max ? appList.splice(0, this.max) : appList;
+      })
+        .finally(() => {
+          this.isLoading = false;
+          this.$emit('search-ready', this.appList);
+        });
+    }, 350),
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -163,6 +164,7 @@
         li {
             line-height: 32px;
             padding: 0 20px;
+            font-size: 14px;
 
             a {
                 color: $appMainFontColor;

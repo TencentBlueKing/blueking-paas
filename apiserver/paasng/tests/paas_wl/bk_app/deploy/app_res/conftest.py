@@ -24,22 +24,22 @@ from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
 
-@pytest.fixture
-def scheduler_client() -> 'K8sScheduler':
+@pytest.fixture()
+def scheduler_client() -> "K8sScheduler":
     """Scheduler client connecting to testing cluster"""
     return K8sScheduler.from_cluster_name(CLUSTER_NAME_FOR_TESTING)
 
 
 def construct_foo_pod(name: str, labels: Optional[Dict] = None, restart_policy: str = "Always") -> Dict:
     return {
-        'apiVersion': 'v1',
-        'kind': 'Pod',
-        'metadata': {'name': name, 'labels': labels or {}},
-        'spec': {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {"name": name, "labels": labels or {}},
+        "spec": {
             # Set "schedulerName", so the pod won't be processed by the default
             # scheduler.
-            'schedulerName': 'no-running-scheduler',
-            'containers': [{'name': "main", 'image': "busybox:latest", "imagePullPolicy": "IfNotPresent"}],
+            "schedulerName": "no-running-scheduler",
+            "containers": [{"name": "main", "image": "busybox:latest", "imagePullPolicy": "IfNotPresent"}],
             "restartPolicy": restart_policy,
             "automountServiceAccountToken": False,
         },

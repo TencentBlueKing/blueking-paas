@@ -26,10 +26,10 @@ from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import check_application_perm
-from paasng.platform.applications.models import Application
 from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.infras.accounts.permissions.application import check_application_perm
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 
 try:
@@ -37,6 +37,8 @@ try:
 except ImportError:
     from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
+from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
 from paasng.platform.mgrlegacy.models import MigrationProcess
 from paasng.platform.mgrlegacy.serializers import (
     ApplicationMigrationInfoSLZ,
@@ -54,8 +56,6 @@ from paasng.platform.mgrlegacy.tasks import (
     rollback_migration_process,
 )
 from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms
-from paasng.accessories.publish.entrance.exposer import get_exposed_url
-from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -73,8 +73,8 @@ class LegacyAppViewset(viewsets.ViewSet):
             applications = AppDeveloperManger(session).get_apps_by_developer(username=request.user.username)
             legacy_apps = [LegacyAppManager(legacy_app, session) for legacy_app in applications]
 
-            if params['result_type'] in ['todoMigrate', 'doneMigrate', 'cannotMigrate']:
-                result_list = list(filter(lambda app: app.category == params['result_type'], legacy_apps))
+            if params["result_type"] in ["todoMigrate", "doneMigrate", "cannotMigrate"]:
+                result_list = list(filter(lambda app: app.category == params["result_type"], legacy_apps))
             else:
                 result_list = legacy_apps
 
@@ -82,7 +82,7 @@ class LegacyAppViewset(viewsets.ViewSet):
 
             serializer_data = [legacy_app.serialize_data() for legacy_app in result_list]
             serializer = LegacyAppSLZ(serializer_data, many=True)
-            return Response({'count': len(result_list), 'data': serializer.data})
+            return Response({"count": len(result_list), "data": serializer.data})
 
     def exposed_url_info(self, request, code, module_name=None):
         """根据 app code 查询应用的访问地址"""
@@ -93,7 +93,7 @@ class LegacyAppViewset(viewsets.ViewSet):
         return Response(
             {
                 "exposed_link": {
-                    env.environment: getattr(get_exposed_url(env), 'address', None) for env in module.envs.all()
+                    env.environment: getattr(get_exposed_url(env), "address", None) for env in module.envs.all()
                 }
             }
         )
@@ -110,9 +110,9 @@ class MigrationCreateViewset(viewsets.ModelViewSet):
             serializer = self.serializer_class(context=context, data=request.data)
             serializer.is_valid(raise_exception=True)
             data = serializer.validated_data
-            data['owner'] = data['owner'].pk
-            data['session'] = session
-            check_operation_perms(username=request.user.username, legacy_app_id=data['legacy_app_id'], session=session)
+            data["owner"] = data["owner"].pk
+            data["session"] = session
+            check_operation_perms(username=request.user.username, legacy_app_id=data["legacy_app_id"], session=session)
             migration_process, _ = MigrationProcess.objects.get_or_create_migration_process_for_legacy(**data)
             migrate_with_rollback_on_failure.apply_async(args=(migration_process.id,))
             response_serializer = MigrationProcessDetailSLZ(migration_process)
@@ -123,7 +123,7 @@ class MigrationDetailViewset(viewsets.ModelViewSet):
     serializer_class = MigrationProcessOperateSLZ
 
     def get_queryset(self):
-        return MigrationProcess.objects.all().order_by('-id')
+        return MigrationProcess.objects.all().order_by("-id")
 
     def list(self, request, *args, **kwargs):
         migration_processes = self.get_queryset()
@@ -150,19 +150,19 @@ class MigrationDetailViewset(viewsets.ModelViewSet):
             legacy_app = AppManger(session).get_by_app_id(migration_process.legacy_app_id)
             legacy_app_proxy = LegacyAppProxy(legacy_app=legacy_app, session=session)
         response_data = {
-            'is_prod_deployed': legacy_app_proxy.is_prod_deployed(),
-            'is_stag_deployed': legacy_app_proxy.is_stag_deployed(),
+            "is_prod_deployed": legacy_app_proxy.is_prod_deployed(),
+            "is_stag_deployed": legacy_app_proxy.is_stag_deployed(),
             # 应用下架链接，应用未下架时需要指引用户去下架
-            'offline_url': legacy_app_proxy.offline_url(),
+            "offline_url": legacy_app_proxy.offline_url(),
             # 是否为第三方应用
-            'is_third_app': legacy_app_proxy.is_third_app(),
+            "is_third_app": legacy_app_proxy.is_third_app(),
         }
         response_serializer = LegacyAppStateSLZ(response_data)
         return Response(data=response_serializer.data)
 
     def rollback(self, request, id):
         """手动点击回滚"""
-        force = request.data.get('force')
+        force = request.data.get("force")
         with console_db.session_scope() as session:
             migration_process = MigrationProcess.objects.get(id=id)
             check_operation_perms(
@@ -170,9 +170,8 @@ class MigrationDetailViewset(viewsets.ModelViewSet):
             )
 
             # 只要确认迁移完成的应用就不允许回滚
-            if not force:
-                if migration_process.status == MigrationStatus.CONFIRMED.value:
-                    return JsonResponse(data={'message': _('已确认后的应用无法回滚'), 'result': False}, status=403)
+            if not force and migration_process.status == MigrationStatus.CONFIRMED.value:
+                return JsonResponse(data={"message": _("已确认后的应用无法回滚"), "result": False}, status=403)
 
             # 应用必须在 PaaS3.0 全部下架后，才能回滚。否则会出现在 PaaS3.0 页面上看不到应用，但是应用进程还在的情况
             if migration_process.is_v3_prod_available() or migration_process.is_v3_stag_available():
@@ -188,7 +187,7 @@ class MigrationConfirmViewset(viewsets.GenericViewSet):
     serializer_class = MigrationProcessConfirmSLZ
 
     def get_queryset(self):
-        return MigrationProcess.objects.all().order_by('-id')
+        return MigrationProcess.objects.all().order_by("-id")
 
     def confirm(self, request, id):
         migration_process: MigrationProcess = self.get_object()
@@ -221,13 +220,13 @@ class ApplicationMigrationInfoAPIView(viewsets.ViewSet):
         has_migration_record = migration_process_qs.exists()
         is_need_alert_migration_timeout = False
         if has_migration_record:
-            migration_process = migration_process_qs.latest('id')
+            migration_process = migration_process_qs.latest("id")
             if migration_process.is_active():
                 is_migration_timeout = (django_timezone.now() - migration_process.created) > datetime.timedelta(
                     days=settings.MIGRATION_REMIND_DAYS
                 )
                 is_need_alert_migration_timeout = is_migration_timeout
 
-        data = {'is_need_alert_migration_timeout': is_need_alert_migration_timeout}
+        data = {"is_need_alert_migration_timeout": is_need_alert_migration_timeout}
         slz = ApplicationMigrationInfoSLZ(instance=data)
         return Response(data=slz.data)

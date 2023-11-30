@@ -30,13 +30,13 @@ from paasng.utils.i18n.serializers import TranslatedCharField
 class SearchTemplateSLZ(serializers.Serializer):
     """获取可用模板列表"""
 
-    region = serializers.CharField(required=True, max_length=16, help_text='应用版本')
-    tags = serializers.CharField(required=False, max_length=128, default='', help_text='标签，多个则以英文逗号拼接')
-    fuzzy_name = serializers.CharField(required=False, max_length=64, help_text='名称（模糊匹配）')
+    region = serializers.CharField(required=True, max_length=16, help_text="应用版本")
+    tags = serializers.CharField(required=False, max_length=128, default="", help_text="标签，多个则以英文逗号拼接")
+    fuzzy_name = serializers.CharField(required=False, max_length=64, help_text="名称（模糊匹配）")
 
     def validate_tags(self, tags):
         # 转换成 Set 类型
-        return {t for t in tags.split(',') if t}
+        return {t for t in tags.split(",") if t}
 
 
 class TemplateSLZ(serializers.Serializer):

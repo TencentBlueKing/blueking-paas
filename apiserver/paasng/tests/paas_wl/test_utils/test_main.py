@@ -33,7 +33,7 @@ class TestConstants:
             RED = 1
             BLUE = 2
 
-        assert make_enum_choices(FooEnum) == [(1, 'RED'), (2, 'BLUE')]
+        assert make_enum_choices(FooEnum) == [(1, "RED"), (2, "BLUE")]
 
 
 class TestDigestIfLengthExceeded:
@@ -83,7 +83,7 @@ class TestDynamicJSONField:
         assert field.__module__ == __name__
 
     @pytest.mark.parametrize(
-        "value, expected, field",
+        ("value", "expected", "field"),
         [
             (FooType(foo="a"), '{"foo": "a", "bar": false}', FooTypeField()),
             (FooType(foo="a", bar=True), '{"foo": "a", "bar": true}', FooTypeField()),
@@ -105,12 +105,12 @@ class TestDynamicJSONField:
 
 class TestConvertKeyToCamel:
     @pytest.mark.parametrize(
-        'data, expected',
+        ("data", "expected"),
         [
             ({}, {}),
-            ({'foo_bar': 1, 'baz_qux': 2}, {'fooBar': 1, 'bazQux': 2}),
-            ({'foo_bar': {'baz_qux': 1}}, {'fooBar': {'bazQux': 1}}),
-            ({'foo_bar': 'foo_bar', 'baz_qux': 'baz_qux'}, {'fooBar': 'foo_bar', 'bazQux': 'baz_qux'}),
+            ({"foo_bar": 1, "baz_qux": 2}, {"fooBar": 1, "bazQux": 2}),
+            ({"foo_bar": {"baz_qux": 1}}, {"fooBar": {"bazQux": 1}}),
+            ({"foo_bar": "foo_bar", "baz_qux": "baz_qux"}, {"fooBar": "foo_bar", "bazQux": "baz_qux"}),
             (
                 {"foo_bar": [{"baz_qux": 1, "qux_quux": 2}, {"baz_qux": 3, "qux_quux": 4}]},
                 {"fooBar": [{"bazQux": 1, "quxQuux": 2}, {"bazQux": 3, "quxQuux": 4}]},

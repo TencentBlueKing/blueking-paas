@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.managers.subpath import SubPathAppIngressMgr, assign_subpaths
 from paas_wl.workloads.networking.ingress.models import AppSubpath
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -28,70 +28,70 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestSubPathAppIngressMgr:
     def test_list_desired_domains_configured(self, bk_stag_wl_app):
-        AppSubpath.objects.create_obj(bk_stag_wl_app, '/foo/')
-        AppSubpath.objects.create_obj(bk_stag_wl_app, '/bar/')
+        AppSubpath.objects.create_obj(bk_stag_wl_app, "/foo/")
+        AppSubpath.objects.create_obj(bk_stag_wl_app, "/bar/")
 
         ingress_mgr = SubPathAppIngressMgr(bk_stag_wl_app)
-        with replace_cluster_service({'sub_path_domains': [{"name": 'main.example.com'}]}):
+        with replace_cluster_service({"sub_path_domains": [{"name": "main.example.com"}]}):
             domains = ingress_mgr.list_desired_domains()
             assert len(domains) == 1
-            assert domains[0].host == 'main.example.com'
-            assert domains[0].path_prefix_list == ['/foo/', '/bar/']
+            assert domains[0].host == "main.example.com"
+            assert domains[0].path_prefix_list == ["/foo/", "/bar/"]
 
     def test_list_desired_domains_not_configured(self, bk_stag_wl_app):
         ingress_mgr = SubPathAppIngressMgr(bk_stag_wl_app)
-        with replace_cluster_service({'sub_path_domains': []}):
+        with replace_cluster_service({"sub_path_domains": []}):
             domains = ingress_mgr.list_desired_domains()
             assert len(domains) == 0
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestAssignSubpaths:
     @pytest.fixture(autouse=True)
-    def configure(self):
-        with replace_cluster_service({'sub_path_domains': [{"name": 'main.example.com'}]}):
+    def _configure(self):
+        with replace_cluster_service({"sub_path_domains": [{"name": "main.example.com"}]}):
             yield
 
     def test_brand_new_paths(self, bk_stag_wl_app):
-        paths = ['/foo/', '/bar/']
-        assign_subpaths(bk_stag_wl_app, paths, 'foo-service')
+        paths = ["/foo/", "/bar/"]
+        assign_subpaths(bk_stag_wl_app, paths, "foo-service")
 
         ingress_mgr = SubPathAppIngressMgr(bk_stag_wl_app)
         ingress = ingress_mgr.get()
 
         assert len(ingress.domains) == 1
-        assert ingress.domains[0].path_prefix_list == ['/foo/', '/bar/']
+        assert ingress.domains[0].path_prefix_list == ["/foo/", "/bar/"]
 
     def test_subpath_transfer_partally(self, bk_stag_wl_app, bk_prod_wl_app):
-        paths = ['/foo/', '/bar/']
-        assign_subpaths(bk_stag_wl_app, paths, 'foo-service')
+        paths = ["/foo/", "/bar/"]
+        assign_subpaths(bk_stag_wl_app, paths, "foo-service")
 
         ingress = SubPathAppIngressMgr(bk_stag_wl_app).get()
         assert len(ingress.domains) == 1
-        assert ingress.domains[0].path_prefix_list == ['/foo/', '/bar/']
+        assert ingress.domains[0].path_prefix_list == ["/foo/", "/bar/"]
 
         # Transfer "/bar/" to bk_prod_wl_app
-        paths_app2 = ['/bar/', '/foobar/']
-        assign_subpaths(bk_prod_wl_app, paths_app2, 'foo-service')
+        paths_app2 = ["/bar/", "/foobar/"]
+        assign_subpaths(bk_prod_wl_app, paths_app2, "foo-service")
 
         ingress = SubPathAppIngressMgr(bk_stag_wl_app).get()
         assert len(ingress.domains) == 1
-        assert ingress.domains[0].path_prefix_list == ['/foo/']
+        assert ingress.domains[0].path_prefix_list == ["/foo/"]
 
         ingress = SubPathAppIngressMgr(bk_prod_wl_app).get()
         assert len(ingress.domains) == 1
-        assert ingress.domains[0].path_prefix_list == ['/bar/', '/foobar/']
+        assert ingress.domains[0].path_prefix_list == ["/bar/", "/foobar/"]
 
     def test_subpath_transfer_fully(self, bk_stag_wl_app, bk_prod_wl_app):
-        paths = ['/foo/']
-        assign_subpaths(bk_stag_wl_app, paths, 'foo-service')
+        paths = ["/foo/"]
+        assign_subpaths(bk_stag_wl_app, paths, "foo-service")
 
-        assert SubPathAppIngressMgr(bk_stag_wl_app).get().domains[0].path_prefix_list == ['/foo/']
+        assert SubPathAppIngressMgr(bk_stag_wl_app).get().domains[0].path_prefix_list == ["/foo/"]
         with pytest.raises(AppEntityNotFound):
             SubPathAppIngressMgr(bk_prod_wl_app).get()
 
         # Transfer all paths to bk_prod_wl_app
-        assign_subpaths(bk_prod_wl_app, paths, 'foo-service')
+        assign_subpaths(bk_prod_wl_app, paths, "foo-service")
         with pytest.raises(AppEntityNotFound):
             SubPathAppIngressMgr(bk_stag_wl_app).get()
         ingress = SubPathAppIngressMgr(bk_prod_wl_app).get()

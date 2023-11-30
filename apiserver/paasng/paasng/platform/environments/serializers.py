@@ -36,7 +36,7 @@ class EnvRoleProtectionSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = EnvRoleProtection
-        fields = ('allowed_role', 'operation', 'module', 'environment')
+        fields = ("allowed_role", "operation", "module", "environment")
 
 
 class EnvRoleProtectionListSLZ(serializers.Serializer):
@@ -46,9 +46,9 @@ class EnvRoleProtectionListSLZ(serializers.Serializer):
 
 
 class EnvRoleProtectionCreateSLZ(EnvRoleProtectionListSLZ):
-    env = serializers.ChoiceField(choices=['stag', 'prod'])
+    env = serializers.ChoiceField(choices=["stag", "prod"])
 
 
 class BatchEnvRoleProtectionSLZ(serializers.Serializer):
-    envs = serializers.ListField(child=serializers.ChoiceField(choices=['stag', 'prod']))
+    envs = serializers.ListField(child=serializers.ChoiceField(choices=["stag", "prod"]))
     operation = serializers.ChoiceField(choices=EnvRoleOperation.get_choices())

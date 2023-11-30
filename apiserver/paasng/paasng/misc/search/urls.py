@@ -21,17 +21,17 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^api/document/search/$', views.MixDocumentSearch.as_view({"get": "search"}), name='document-search'),
+    url(r"^api/document/search/$", views.MixDocumentSearch.as_view({"get": "search"}), name="document-search"),
     # API: search results in each categories
     url(
-        r'^api/search/applications/$',
+        r"^api/search/applications/$",
         views.ApplicationsSearchViewset.as_view({"get": "search"}),
-        name='search.applications',
+        name="search.applications",
     ),
     url(
-        r'^api/search/bk_docs/$',
+        r"^api/search/bk_docs/$",
         views.BkDocsSearchViewset.as_view({"get": "search"}),
-        name='search.bk_docs',
+        name="search.bk_docs",
     ),
 ]
 

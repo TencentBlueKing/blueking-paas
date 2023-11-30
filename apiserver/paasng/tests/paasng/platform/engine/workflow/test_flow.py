@@ -33,13 +33,13 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     with mock_cluster_service():
         yield
 
 
 class TestDeployProcedure:
-    @pytest.fixture
+    @pytest.fixture()
     def phases(self, bk_prod_env, bk_deployment):
         manager = DeployPhaseManager(bk_prod_env)
         phases = manager.get_or_create_all()
@@ -51,53 +51,53 @@ class TestDeployProcedure:
         stream = ConsoleStream()
         stream.write_title = mock.Mock()  # type: ignore
 
-        with DeployProcedure(stream, None, 'doing nothing', phases[0]):
+        with DeployProcedure(stream, None, "doing nothing", phases[0]):
             pass
 
         assert stream.write_title.call_count == 1
-        assert stream.write_title.call_args == ((DeployProcedure.TITLE_PREFIX + 'doing nothing',),)
+        assert stream.write_title.call_args == ((DeployProcedure.TITLE_PREFIX + "doing nothing",),)
 
     def test_with_expected_error(self, phases):
         stream = ConsoleStream()
         stream.write_message = mock.Mock()  # type: ignore
 
         try:
-            with DeployProcedure(stream, None, 'doing nothing', phases[0]):
-                raise DeployShouldAbortError('oops')
+            with DeployProcedure(stream, None, "doing nothing", phases[0]):
+                raise DeployShouldAbortError("oops")  # noqa: TRY301
         except DeployShouldAbortError:
             pass
 
         assert stream.write_message.call_count == 1
-        assert stream.write_message.call_args[0][0].endswith('oops。')
+        assert stream.write_message.call_args[0][0].endswith("oops。")
 
     def test_with_unexpected_error(self, phases):
         stream = ConsoleStream()
         stream.write_message = mock.Mock()  # type: ignore
 
         try:
-            with DeployProcedure(stream, None, 'doing nothing', phases[0]):
-                raise ValueError('oops')
+            with DeployProcedure(stream, None, "doing nothing", phases[0]):
+                raise ValueError("oops")  # noqa: TRY301
         except ValueError:
             pass
 
         assert stream.write_message.call_count == 1
         # The error message should not contains the original exception message
-        assert 'oops' not in stream.write_message.call_args[0][0]
+        assert "oops" not in stream.write_message.call_args[0][0]
 
     def test_with_deployment(self, bk_deployment, phases):
         stream = ConsoleStream()
         stream.write_message = mock.Mock()  # type: ignore
 
         # 手动标记该阶段的开启, 但 title 未知
-        with DeployProcedure(stream, bk_deployment, 'doing nothing', phases[0]) as d:
+        with DeployProcedure(stream, bk_deployment, "doing nothing", phases[0]) as d:
             assert not d.step_obj
 
         # title 已知，但是阶段不匹配
-        with DeployProcedure(stream, bk_deployment, '检测部署结果', phases[0]) as d:
+        with DeployProcedure(stream, bk_deployment, "检测部署结果", phases[0]) as d:
             assert not d.step_obj
 
         # 正常
-        with DeployProcedure(stream, bk_deployment, '配置资源实例', phases[0]) as d:
+        with DeployProcedure(stream, bk_deployment, "配置资源实例", phases[0]) as d:
             assert d.step_obj
 
 
@@ -150,7 +150,7 @@ class TestDeploymentCoordinator:
 
         deployment = create_fake_deployment(bk_module)
         env_mgr = DeploymentCoordinator(bk_stag_env)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"deployment lock holder mismatch.*"):
             env_mgr.release_lock(deployment)
 
         assert env_mgr.get_current_deployment() == bk_deployment

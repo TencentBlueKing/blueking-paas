@@ -40,7 +40,7 @@ def make_view(plugin, actions: List[PluginPermissionActions]):
     return DummyView.as_view()
 
 
-@pytest.fixture
+@pytest.fixture()
 def drf_request(bk_user):
     request = APIRequestFactory().request()
     request.user = bk_user
@@ -64,7 +64,7 @@ class TestPermission:
         assert response.status_code == 200
 
     @pytest.mark.parametrize(
-        "actions_permission, status_code",
+        ("actions_permission", "status_code"),
         [
             (
                 {

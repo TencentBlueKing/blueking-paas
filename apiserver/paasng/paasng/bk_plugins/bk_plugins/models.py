@@ -29,13 +29,13 @@ from django.db.models import QuerySet
 from django.utils import timezone
 from pydantic import BaseModel, PrivateAttr
 
-from paasng.infras.accounts.utils import id_to_username
-from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.bk_plugins.bk_plugins.constants import PluginTagIdType
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
 from paasng.accessories.publish.entrance.exposer import env_is_deployed
 from paasng.accessories.publish.market.utils import ModuleEnvAvailableAddressHelper
+from paasng.bk_plugins.bk_plugins.constants import PluginTagIdType
+from paasng.infras.accounts.utils import id_to_username
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
+from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 class BkPluginProfileManager(models.Manager):
     """Custom manager for `BkPluginProfile`"""
 
-    def get_or_create_by_application(self, plugin_app: Application) -> Tuple['BkPluginProfile', bool]:
+    def get_or_create_by_application(self, plugin_app: Application) -> Tuple["BkPluginProfile", bool]:
         """Get the profile object or create a new one
 
         :return: (<profile object>, created)
@@ -58,19 +58,19 @@ class BkPluginProfileManager(models.Manager):
         except ObjectDoesNotExist:
             # Use application's creator as contact by default
             creator = id_to_username(plugin_app.creator)
-            return super().create(application=plugin_app, introduction='', contact=creator), True
+            return super().create(application=plugin_app, introduction="", contact=creator), True
 
 
 class BkPluginProfile(OwnerTimestampedModel):
     """Profile which storing extra information for BkPlugins"""
 
     application = models.OneToOneField(
-        Application, on_delete=models.CASCADE, db_constraint=False, related_name='bk_plugin_profile'
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="bk_plugin_profile"
     )
-    introduction = models.CharField('插件简介', help_text='插件简介', null=True, blank=True, max_length=512)
-    contact = models.CharField('联系人', help_text='使用 ; 分隔的用户名', null=True, blank=True, max_length=128)
+    introduction = models.CharField("插件简介", help_text="插件简介", null=True, blank=True, max_length=512)
+    contact = models.CharField("联系人", help_text="使用 ; 分隔的用户名", null=True, blank=True, max_length=128)
     tag = models.ForeignKey(
-        'BkPluginTag',
+        "BkPluginTag",
         verbose_name="插件分类",
         help_text="选填",
         on_delete=models.SET_NULL,
@@ -81,14 +81,14 @@ class BkPluginProfile(OwnerTimestampedModel):
 
     # Field related API Gateway resource
     api_gw_name = models.CharField(
-        '已绑定的 API 网关名称',
-        help_text='为空时表示从未成功同步过，暂无已绑定网关',
+        "已绑定的 API 网关名称",
+        help_text="为空时表示从未成功同步过，暂无已绑定网关",
         null=True,
         blank=True,
         max_length=32,
     )
-    api_gw_id = models.IntegerField('已绑定的 API 网关 ID', null=True)
-    api_gw_last_synced_at = models.DateTimeField('最近一次同步网关的时间', null=True)
+    api_gw_id = models.IntegerField("已绑定的 API 网关 ID", null=True)
+    api_gw_last_synced_at = models.DateTimeField("最近一次同步网关的时间", null=True)
 
     # 预设的插件使用方，创建插件时指定的插件使用方
     # 在插件部署、或者用户手动在基本信息页面修改插件使用方信息时，才会在 APIGW 上创建网关并给插件使用方授权
@@ -134,12 +134,16 @@ class BkPluginDistributor(TimestampedModel):
     A plugin's developers can decide that whether the plugin was accessable from a distributor.
     """
 
-    name = models.CharField('名称', help_text='插件使用方名称', max_length=32, unique=True)
-    code_name = models.CharField('英文代号', help_text='插件使用方的英文代号，可替代主键使用', max_length=32, unique=True)
-    bk_app_code = models.CharField('蓝鲸应用代号', help_text='插件使用方所绑定的蓝鲸应用代号', max_length=20, unique=True)
-    introduction = models.CharField('使用方简介', null=True, blank=True, max_length=512)
+    name = models.CharField("名称", help_text="插件使用方名称", max_length=32, unique=True)
+    code_name = models.CharField(
+        "英文代号", help_text="插件使用方的英文代号，可替代主键使用", max_length=32, unique=True
+    )
+    bk_app_code = models.CharField(
+        "蓝鲸应用代号", help_text="插件使用方所绑定的蓝鲸应用代号", max_length=20, unique=True
+    )
+    introduction = models.CharField("使用方简介", null=True, blank=True, max_length=512)
 
-    plugins = models.ManyToManyField(Application, db_constraint=False, related_name='distributors')
+    plugins = models.ManyToManyField(Application, db_constraint=False, related_name="distributors")
 
     def __str__(self) -> str:
         return f"{self.name} - [{self.code_name}]{self.bk_app_code}"
@@ -148,18 +152,18 @@ class BkPluginDistributor(TimestampedModel):
 class BkPluginTag(AuditedModel):
     """Plugins and applications use different markets, and plugins should have their own separate tags"""
 
-    name = models.CharField('分类名称', help_text='插件使用方名称', max_length=32, unique=True)
-    code_name = models.CharField('分类英文名称', help_text='分类英文名称，可替代主键使用', max_length=32, unique=True)
-    priority = models.IntegerField("优先级", default=0, help_text='数字越大，优先级越高')
+    name = models.CharField("分类名称", help_text="插件使用方名称", max_length=32, unique=True)
+    code_name = models.CharField("分类英文名称", help_text="分类英文名称，可替代主键使用", max_length=32, unique=True)
+    priority = models.IntegerField("优先级", default=0, help_text="数字越大，优先级越高")
 
     def __str__(self) -> str:
         return f"{self.name} - [{self.code_name}]"
 
     def to_dict(self) -> dict:
-        return {'id': self.id, 'name': self.name, 'code_name': self.code_name, 'priority': self.priority}
+        return {"id": self.id, "name": self.name, "code_name": self.code_name, "priority": self.priority}
 
     class Meta:
-        ordering = ['-priority', 'name']
+        ordering = ["-priority", "name"]
 
 
 # Database models end
@@ -174,7 +178,7 @@ def get_plugin_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
 
     profile = application.bk_plugin_profile
     # Don't forget the system env-var prefix
-    return {settings.CONFIGVAR_SYSTEM_PREFIX + 'BK_PLUGIN_APIGW_NAME': profile.api_gw_name or ''}
+    return {settings.CONFIGVAR_SYSTEM_PREFIX + "BK_PLUGIN_APIGW_NAME": profile.api_gw_name or ""}
 
 
 class BkPlugin(BaseModel):
@@ -198,7 +202,7 @@ class BkPlugin(BaseModel):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_application(cls, application: Application) -> 'BkPlugin':
+    def from_application(cls, application: Application) -> "BkPlugin":
         creator = get_user_by_user_id(application.creator, username_only=True).username
         try:
             bk_plugin_profile = application.bk_plugin_profile
@@ -303,7 +307,7 @@ class BkPluginAppQuerySet:
         applications = (
             BaseApplicationFilter()
             .filter_queryset(applications, search_term=search_term, has_deployed=has_deployed, order_by=order_by)
-            .prefetch_related('bk_plugin_profile')
+            .prefetch_related("bk_plugin_profile")
         )
         if distributor_code_name:
             applications = applications.filter(distributors__code_name=distributor_code_name)

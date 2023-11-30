@@ -56,12 +56,12 @@ from paas_wl.workloads.release_controller.hooks.models import Command as Command
 logger = logging.getLogger(__name__)
 
 
-class CommandDeserializer(AppEntityDeserializer['Command']):
+class CommandDeserializer(AppEntityDeserializer["Command"]):
     api_version = "v1"
 
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'Command':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Command":
         main_container = self._get_main_container(kube_data)
-        annotations = kube_data.metadata.get('annotations', {})
+        annotations = kube_data.metadata.get("annotations", {})
 
         pod_status = kube_data.status
         health_status = check_pod_health_status(parse_pod(kube_data))
@@ -132,50 +132,50 @@ class CommandDeserializer(AppEntityDeserializer['Command']):
         return None
 
 
-class CommandSerializer(AppEntitySerializer['Command']):
+class CommandSerializer(AppEntitySerializer["Command"]):
     api_version = "v1"
 
-    def serialize(self, obj: 'Command', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+    def serialize(self, obj: "Command", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         addon_mgr = AddonManager(obj.app)
         containers = [
             {
-                'command': obj.runtime.command,
-                'args': obj.runtime.args,
-                'env': encode_envs(obj.runtime.envs),
-                'image': obj.runtime.image,
-                'name': obj.name,
-                'imagePullPolicy': obj.runtime.image_pull_policy,
-                'resources': self._get_pod_resources(obj),
-                'volumeMounts': cattr.unstructure(
+                "command": obj.runtime.command,
+                "args": obj.runtime.args,
+                "env": encode_envs(obj.runtime.envs),
+                "image": obj.runtime.image,
+                "name": obj.name,
+                "imagePullPolicy": obj.runtime.image_pull_policy,
+                "resources": self._get_pod_resources(obj),
+                "volumeMounts": cattr.unstructure(
                     get_app_logging_volume_mounts(obj.app) + addon_mgr.get_volume_mounts()
                 ),
             }
         ] + cattr.unstructure(addon_mgr.get_sidecars())
 
         pod_template = {
-            'apiVersion': self.api_version,
-            'kind': 'Pod',
-            'metadata': {
-                'name': obj.name,
-                'namespace': obj.app.namespace,
-                'labels': self._get_kube_labels(obj),
-                'annotations': self._get_kube_annotations(obj),
+            "apiVersion": self.api_version,
+            "kind": "Pod",
+            "metadata": {
+                "name": obj.name,
+                "namespace": obj.app.namespace,
+                "labels": self._get_kube_labels(obj),
+                "annotations": self._get_kube_annotations(obj),
             },
-            'spec': {
-                'containers': containers,
-                'volumes': cattr.unstructure(get_app_logging_volume(obj.app) + addon_mgr.get_volumes()),
-                'restartPolicy': 'Never',
-                'nodeSelector': obj.schedule.node_selector,
-                'tolerations': obj.schedule.tolerations,
-                'imagePullSecrets': obj.runtime.image_pull_secrets,
+            "spec": {
+                "containers": containers,
+                "volumes": cattr.unstructure(get_app_logging_volume(obj.app) + addon_mgr.get_volumes()),
+                "restartPolicy": "Never",
+                "nodeSelector": obj.schedule.node_selector,
+                "tolerations": obj.schedule.tolerations,
+                "imagePullSecrets": obj.runtime.image_pull_secrets,
             },
         }
         return pod_template
 
-    def _get_kube_labels(self, obj: 'Command') -> Dict:
-        return {'pod_selector': obj.name, 'category': "command"}
+    def _get_kube_labels(self, obj: "Command") -> Dict:
+        return {"pod_selector": obj.name, "category": "command"}
 
-    def _get_kube_annotations(self, obj: 'Command') -> Dict:
+    def _get_kube_annotations(self, obj: "Command") -> Dict:
         return {
             "type": obj.type_,
             "version": str(obj.version),
@@ -183,7 +183,7 @@ class CommandSerializer(AppEntitySerializer['Command']):
             "cluster_name": obj.schedule.cluster_name,
         }
 
-    def _get_pod_resources(self, obj: 'Command'):
+    def _get_pod_resources(self, obj: "Command"):
         return settings.SLUGBUILDER_RESOURCES_SPEC
 
 
@@ -225,7 +225,7 @@ class Command(AppEntity):
         serializer = CommandSerializer
 
     @classmethod
-    def from_db_obj(cls, command: 'CommandModel', extra_envs: Optional[Dict] = None) -> 'Command':
+    def from_db_obj(cls, command: "CommandModel", extra_envs: Optional[Dict] = None) -> "Command":
         envs = command.get_envs()
         envs.update(AppConfigVarManager(command.app).get_envs())
         envs.update(extra_envs or {})

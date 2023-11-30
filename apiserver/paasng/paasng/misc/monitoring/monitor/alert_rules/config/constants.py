@@ -25,33 +25,33 @@ from .entities import AlertCode
 
 RUN_ENVS = AppEnvironment.get_values()
 
-RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get('service_name', 'rabbitmq')
+RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get("service_name", "rabbitmq")
 
 
 DEFAULT_RULE_CONFIGS = {
     AlertCode.HIGH_CPU_USAGE.value: {
-        'display_name': _('CPU 使用率过高'),
-        'metric_label_names': ['namespace', 'bcs_cluster_id'],
-        'threshold_expr': '>= 0.8',  # 使用率 80%
+        "display_name": _("CPU 使用率过高"),
+        "metric_label_names": ["namespace", "bcs_cluster_id"],
+        "threshold_expr": ">= 0.8",  # 使用率 80%
     },
     AlertCode.HIGH_MEM_USAGE.value: {
-        'display_name': _('内存使用率过高'),
-        'metric_label_names': ['namespace', 'bcs_cluster_id'],
-        'threshold_expr': '>= 0.95',  # 使用率 95%
+        "display_name": _("内存使用率过高"),
+        "metric_label_names": ["namespace", "bcs_cluster_id"],
+        "threshold_expr": ">= 0.95",  # 使用率 95%
     },
     AlertCode.POD_RESTART.value: {
-        'display_name': _('异常重启'),
-        'metric_label_names': ['namespace', 'bcs_cluster_id'],
-        'threshold_expr': '>= 1',  # 出现至少 1 次
+        "display_name": _("异常重启"),
+        "metric_label_names": ["namespace", "bcs_cluster_id"],
+        "threshold_expr": ">= 1",  # 出现至少 1 次
     },
     AlertCode.OOM_KILLED.value: {
-        'display_name': _('OOMKilled 退出'),
-        'metric_label_names': ['namespace', 'bcs_cluster_id'],
-        'threshold_expr': '>= 1',  # 出现至少 1 次
+        "display_name": _("OOMKilled 退出"),
+        "metric_label_names": ["namespace", "bcs_cluster_id"],
+        "threshold_expr": ">= 1",  # 出现至少 1 次
     },
     AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value: {
-        'display_name': _('队列消息数过多'),
-        'metric_label_names': ['vhost'],
-        'threshold_expr': '>= 2000',  # 超过 2000 条
+        "display_name": _("队列消息数过多"),
+        "metric_label_names": ["vhost"],
+        "threshold_expr": ">= 2000",  # 超过 2000 条
     },
 }

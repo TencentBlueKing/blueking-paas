@@ -30,88 +30,88 @@ pytestmark = pytest.mark.django_db
 
 class TestCloudAPIViewSet:
     @pytest.mark.parametrize(
-        'app_code, path, mocked_result',
+        ("app_code", "path", "mocked_result"),
         [
             (
-                'test',
-                '/api/cloudapi/apps/test/apis/',
-                {'code': 0},
+                "test",
+                "/api/cloudapi/apps/test/apis/",
+                {"code": 0},
             ),
         ],
     )
     def test_get(self, request_factory, mocker, app_code, path, mocked_result):
         mocker.patch(
-            'paasng.accessories.cloudapi.views.CloudAPIViewSet.permission_classes',
+            "paasng.accessories.cloudapi.views.CloudAPIViewSet.permission_classes",
             new_callback=mock.PropertyMock(return_value=None),
         )
         mocker.patch(
-            'paasng.accessories.cloudapi.views.CloudAPIViewSet._get_app_region',
-            return_value='',
+            "paasng.accessories.cloudapi.views.CloudAPIViewSet._get_app_region",
+            return_value="",
         )
         mocker.patch(
-            'paasng.accessories.cloudapi.views.get_user_auth_type',
-            return_value='test',
+            "paasng.accessories.cloudapi.views.get_user_auth_type",
+            return_value="test",
         )
         mocker.patch(
-            'paasng.accessories.cloudapi.views.bk_apigateway_inner_component.get',
+            "paasng.accessories.cloudapi.views.bk_apigateway_inner_component.get",
             return_value=mocked_result,
         )
 
-        request = request_factory.get(path, params={'test': 1})
+        request = request_factory.get(path, params={"test": 1})
 
-        view = views.CloudAPIViewSet.as_view({'get': '_get'})
+        view = views.CloudAPIViewSet.as_view({"get": "_get"})
         response = view(request, app_code=app_code)
         result = get_response_json(response)
         assert result == mocked_result
 
     @pytest.mark.parametrize(
-        'app_code, operation_type, path, mocked_result',
+        ("app_code", "operation_type", "path", "mocked_result"),
         [
             (
-                'test',
+                "test",
                 OperationType.APPLY_PERM_FOR_CLOUD_API.value,
-                '/api/cloudapi/apps/test/apis/',
-                {'code': 0},
+                "/api/cloudapi/apps/test/apis/",
+                {"code": 0},
             ),
         ],
     )
     def test_post(self, request_factory, mocker, app_code, operation_type, path, mocked_result):
         mocker.patch(
-            'paasng.accessories.cloudapi.views.CloudAPIViewSet.permission_classes',
+            "paasng.accessories.cloudapi.views.CloudAPIViewSet.permission_classes",
             new_callback=mock.PropertyMock(return_value=None),
         )
         mocker.patch(
-            'paasng.accessories.cloudapi.views.CloudAPIViewSet._get_app_region',
-            return_value='',
+            "paasng.accessories.cloudapi.views.CloudAPIViewSet._get_app_region",
+            return_value="",
         )
         mocker.patch(
-            'paasng.accessories.cloudapi.views.get_user_auth_type',
-            return_value='test',
+            "paasng.accessories.cloudapi.views.get_user_auth_type",
+            return_value="test",
         )
         mocker.patch(
-            'paasng.accessories.cloudapi.views.bk_apigateway_inner_component.post',
+            "paasng.accessories.cloudapi.views.bk_apigateway_inner_component.post",
             return_value=mocked_result,
         )
 
-        request = request_factory.post(path, params={'test': 1})
+        request = request_factory.post(path, params={"test": 1})
 
-        view = views.CloudAPIViewSet.as_view({'post': '_post'})
+        view = views.CloudAPIViewSet.as_view({"post": "_post"})
         response = view(request, app_code=app_code, operation_type=operation_type)
         result = get_response_json(response)
         assert result == mocked_result
 
     @pytest.mark.parametrize(
-        'path, app_code, expected, will_error',
+        ("path", "app_code", "expected", "will_error"),
         [
             (
-                '/api/cloudapi/apps/test/apis/',
-                'test',
-                '/api/v1/apis/',
+                "/api/cloudapi/apps/test/apis/",
+                "test",
+                "/api/v1/apis/",
                 False,
             ),
             (
-                '/api/apps/test/apis/',
-                'test',
+                "/api/apps/test/apis/",
+                "test",
                 None,
                 True,
             ),

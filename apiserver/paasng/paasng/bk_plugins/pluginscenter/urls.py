@@ -33,6 +33,10 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/extra_fields/",
+        views.PluginInstanceViewSet.as_view({"post": "update_extra_fields"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logo/",
         views.PluginInstanceViewSet.as_view({"put": "update_logo"}),
     ),
@@ -43,6 +47,10 @@ urlpatterns = [
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/archive/",
         views.PluginInstanceViewSet.as_view({"post": "archive"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/reactivate/",
+        views.PluginInstanceViewSet.as_view({"post": "reactivate"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/repo/commit-diff-external/"

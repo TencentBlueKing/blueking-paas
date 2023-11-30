@@ -54,7 +54,7 @@ def _loads(dumped: bytes) -> Dict:
 
 def get_remote_store():
     """Get the single instanced remote services database object"""
-    global _g_services_store
+    global _g_services_store  # noqa: PLW0603
     if _g_services_store is None:
         _g_services_store = RemoteServiceStore()
     return _g_services_store
@@ -94,17 +94,14 @@ class StoreMixin:
             try:
                 items.append(self.get(uuid, region))
             except ServiceNotFound:
-                logger.error(f'bulk_get: can not find a service by uuid {uuid}')
+                logger.warning(f"bulk_get: can not find a service by uuid {uuid}")
                 items.append(None)
         return items
 
     @staticmethod
     def _svc_supports_region(svc_data: Dict, region: str) -> bool:
         """Check if a service supports given region"""
-        for plan in svc_data['plans']:
-            if plan['properties'].get('region') == region:
-                return True
-        return False
+        return any(plan["properties"].get("region") == region for plan in svc_data["plans"])
 
 
 class MemoryStore(StoreMixin):
@@ -120,16 +117,16 @@ class MemoryStore(StoreMixin):
         :raises ValueError: When services with the same uuid and different names in the service configuration.
         """
         for service in services:
-            service['_meta_info'] = meta_info
+            service["_meta_info"] = meta_info
 
-            legacy_svc = self._map_id_to_service.get(service['uuid'])
+            legacy_svc = self._map_id_to_service.get(service["uuid"])
             if legacy_svc:
-                legacy_config = self._map_id_to_config[service['uuid']]
-                if legacy_config['name'] != source_config.name:
+                legacy_config = self._map_id_to_config[service["uuid"]]
+                if legacy_config["name"] != source_config.name:
                     raise ValueError(f'Service uuid={service["uuid"]} with a different source name already exists')
 
-            self._map_id_to_service[service['uuid']] = service
-            self._map_id_to_config[service['uuid']] = source_config
+            self._map_id_to_service[service["uuid"]] = service
+            self._map_id_to_config[service["uuid"]] = source_config
 
     def get_source_config(self, uuid: str) -> RemoteSvcConfig:
         """Get the source remote svc config by service uuid"""
@@ -140,10 +137,11 @@ class MemoryStore(StoreMixin):
         try:
             item = copy.deepcopy(self._map_id_to_service[uuid])
             if not self._svc_supports_region(item, region):
-                raise RuntimeError('service does not contains a plan in given region')
-            return item
+                raise RuntimeError("service does not contains a plan in given region")
+            else:
+                return item
         except KeyError:
-            raise ServiceNotFound(f'remote service with id={uuid} not found')
+            raise ServiceNotFound(f"remote service with id={uuid} not found")
 
     def all(self) -> List[Dict]:
         """List all services"""
@@ -156,13 +154,13 @@ class MemoryStore(StoreMixin):
 
 
 class RedisStore(StoreMixin):
-    cache_key = 'REDIS_'
+    cache_key = "REDIS_"
 
     # Namespace for redis keys, when there are multiple running paas instances. If you modified the core logic of Store
     # class, it's required to update namespace to avoid data conflicts.
-    namespace = '1'
-    encoding = 'utf-8'
-    registered_services_key = namespace + 'remote:registered:service:uuid'
+    namespace = "1"
+    encoding = "utf-8"
+    registered_services_key = namespace + "remote:registered:service:uuid"
     expires = settings.REMOTE_SERVICES_UPDATE_INTERVAL_MINUTES * 60 * 10
 
     def __init__(self):
@@ -188,15 +186,15 @@ class RedisStore(StoreMixin):
         redis_client = self.redis
         config = source_config.to_json()
         for service in services:
-            service['_meta_info'] = meta_info
+            service["_meta_info"] = meta_info
 
-            sid = service['uuid']
+            sid = service["uuid"]
             info_key = self._make_svc_info_key(sid)
             config_key = self._make_svc_config_key(sid)
 
             legacy_config = redis_client.get(config_key)
             # 如果新的配置项中的服务名 与 缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
-            if legacy_config and _loads(legacy_config)['name'] != config['name']:
+            if legacy_config and _loads(legacy_config)["name"] != config["name"]:
                 raise ValueError(f'Service uuid={service["uuid"]} with a different source  name already exists')
 
             pipe = redis_client.pipeline()
@@ -216,11 +214,11 @@ class RedisStore(StoreMixin):
         """Get a service instance by uuid"""
         result = self.redis.get(self._make_svc_info_key(uuid))
         if result is None:
-            raise ServiceNotFound(f'remote service with id={uuid} not found')
+            raise ServiceNotFound(f"remote service with id={uuid} not found")
 
         item = _loads(result)
         if not self._svc_supports_region(item, region):
-            raise RuntimeError('service does not contains a plan in given region')
+            raise RuntimeError("service does not contains a plan in given region")
         return item
 
     def all(self) -> List[Dict]:

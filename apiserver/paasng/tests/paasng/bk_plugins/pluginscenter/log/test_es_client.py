@@ -23,7 +23,7 @@ from paasng.utils.es_log.models import FieldFilter
 
 
 @pytest.mark.parametrize(
-    "nested_name, mapping, expected",
+    ("nested_name", "mapping", "expected"),
     [
         (
             ["a"],

@@ -377,7 +377,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.$emit('data-ready', 'visit-config');
@@ -402,7 +402,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.isTableLoading = false;
@@ -426,7 +426,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.isLoading = false;
@@ -445,7 +445,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -466,7 +466,7 @@ export default {
     //   } catch (e) {
     //     this.$paasMessage({
     //       theme: 'error',
-    //       message: e.message || e.detail || this.$t('接口异常'),
+    //       message: e.detail || e.message || this.$t('接口异常'),
     //     });
     //   } finally {
     //     this.isEdited = false;
@@ -494,7 +494,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: res.message,
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.setModuleLoading = false;
@@ -617,7 +617,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },

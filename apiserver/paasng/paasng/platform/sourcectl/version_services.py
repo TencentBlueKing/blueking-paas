@@ -20,10 +20,10 @@ from typing import TYPE_CHECKING, List, Optional
 
 from typing_extensions import Protocol
 
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.models import AlternativeVersion, VersionInfo
 from paasng.platform.sourcectl.repo_controller import RepoController, get_repo_controller
-from paasng.platform.modules.constants import SourceOrigin
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models.module import Module
@@ -96,7 +96,7 @@ class RepoVersionService:
         raise NotImplementedError
 
 
-def get_version_service(module: 'Module', operator: Optional[str] = None) -> DeployableVersionService:
+def get_version_service(module: "Module", operator: Optional[str] = None) -> DeployableVersionService:
     source_origin = module.get_source_origin()
 
     if source_origin in [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.SCENE]:

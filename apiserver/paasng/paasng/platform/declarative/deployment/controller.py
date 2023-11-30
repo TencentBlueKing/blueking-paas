@@ -45,21 +45,21 @@ class DeploymentDeclarativeController:
 
         :param desc: deployment specification
         """
-        logger.debug('Update related deployment description object.')
+        logger.debug("Update related deployment description object.")
 
         # Save given description config into database
         DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
-                'env_variables': desc.get_env_variables(ConfigVarEnvName(self.deployment.app_environment.environment)),
-                'runtime': {
+                "env_variables": desc.get_env_variables(ConfigVarEnvName(self.deployment.app_environment.environment)),
+                "runtime": {
                     # TODO: Only save desc.processes into DeploymentDescription
                     # The synchronization of processes_spec should be delayed until the RELEASE stage
-                    'processes': cattr.unstructure(desc.processes),
-                    'svc_discovery': cattr.unstructure(desc.svc_discovery),
+                    "processes": cattr.unstructure(desc.processes),
+                    "svc_discovery": cattr.unstructure(desc.svc_discovery),
                     "source_dir": desc.source_dir,
                 },
-                'scripts': cattr.unstructure(desc.scripts),
+                "scripts": cattr.unstructure(desc.scripts),
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )

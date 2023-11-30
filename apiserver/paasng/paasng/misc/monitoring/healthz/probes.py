@@ -53,29 +53,29 @@ class BKConsoleProbe(MySQLProbe):
 
 class PlatformMysqlProbe(MySQLProbe):
     name = "platform-mysql-ng"
-    config = transfer_django_db_settings(settings.DATABASES['default'])
+    config = transfer_django_db_settings(settings.DATABASES["default"])
 
 
 class WorkloadsMysqlProbe(MySQLProbe):
     name = "platform-mysql-wl"
-    config = transfer_django_db_settings(settings.DATABASES['workloads'])
+    config = transfer_django_db_settings(settings.DATABASES["workloads"])
 
 
 class ESBProbe(BKHttpProbe):
-    name = 'esb'
+    name = "esb"
     url = settings.COMPONENT_SYSTEM_HEALTHZ_URL
     params = {"token": get_default_healthz_token()}
 
 
 class APIGWProbe(BKHttpProbe):
-    name = 'apigw'
+    name = "apigw"
     url = settings.APIGW_HEALTHZ_URL
     params = {"token": get_default_healthz_token()}
     is_core = False
 
 
 class BKDocsProbe(HttpProbe):
-    name = 'bkdocs'
+    name = "bkdocs"
     url = settings.BKDOC_URL
     is_core = False
 
@@ -90,7 +90,7 @@ class _BkRepoProbe(HttpProbe):
 
     bkrepo_endpoint = ""
     if isinstance(settings.BLOBSTORE_BKREPO_CONFIG, dict):
-        bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG.get('ENDPOINT', '')
+        bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG.get("ENDPOINT", "")
     url = f"{bkrepo_endpoint}/generic/actuator/info"
 
 
@@ -100,7 +100,7 @@ class BKIAMProbe(HttpProbe):
     iam_host = settings.BK_IAM_V3_INNER_URL
     if getattr(settings, "BK_IAM_USE_APIGATEWAY", False):
         iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
-    url = f'{iam_host}/ping'
+    url = f"{iam_host}/ping"
     is_core = True
 
 
@@ -135,29 +135,33 @@ class ServiceHubProbe(VirtualProbe):
                 issues.append(
                     Issue(
                         fatal=True,
-                        description=_("远程增强服务「{config_name}」状态异常, 请检查服务可用性。").format(config_name=config.name),
+                        description=_("远程增强服务「{config_name}」状态异常, 请检查服务可用性。").format(
+                            config_name=config.name
+                        ),
                     )
                 )
             except Exception:
                 issues.append(
                     Issue(
                         fatal=True,
-                        description=_("探测远程增强服务「{config_name}」时发生未知异常, 请检查配置情况。").format(config_name=config.name),
+                        description=_("探测远程增强服务「{config_name}」时发生未知异常, 请检查配置情况。").format(
+                            config_name=config.name
+                        ),
                     )
                 )
         return issues
 
 
 class _RedisProbe(RedisProbe):
-    name = 'platform-redis'
+    name = "platform-redis"
     redis_url = settings.REDIS_URL
 
 
 class _RedisSentinelProbe(RedisSentinelProbe):
-    name = 'platform-redis'
+    name = "platform-redis"
     redis_url = settings.REDIS_URL
     master_name = settings.SENTINEL_MASTER_NAME
-    sentinel_kwargs = {'password': settings.SENTINEL_PASSWORD}
+    sentinel_kwargs = {"password": settings.SENTINEL_PASSWORD}
 
 
 def _get_redis_probe_cls() -> Union[Type[_RedisSentinelProbe], Type[_RedisProbe]]:

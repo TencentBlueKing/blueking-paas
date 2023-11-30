@@ -77,7 +77,7 @@
           <bk-tag-input
             v-model="preFormData.command"
             style="width: 500px"
-            :placeholder="$t('请输入启动命令')"
+            :placeholder="$t('请输入启动命令，并按 Enter 键结束')"
             :allow-create="allowCreate"
             :allow-auto-match="true"
             :has-delete-icon="hasDeleteIcon"
@@ -94,13 +94,13 @@
           v-if="preFormData.enabled"
           :label="$t('命令参数')"
           class="pt20 hook-form-cls"
-          style="width: 510px; position: relative;"
+          style="position: relative;"
         >
           <bk-tag-input
             v-model="preFormData.args"
             style="width: 500px"
             ext-cls="tag-extra"
-            :placeholder="$t('请输入命令参数')"
+            :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
             :allow-create="allowCreate"
             :allow-auto-match="true"
             :has-delete-icon="hasDeleteIcon"
@@ -232,7 +232,7 @@ export default {
       },
       allowCreate: true,
       hasDeleteIcon: true,
-      isLoading: true,
+      isLoading: false,
       hooks: null,
       cloudInfoTip: i18n.t('web进程的容器镜像地址'),
       rawData: {},
@@ -276,15 +276,15 @@ export default {
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
+      this.init();
     }
-
-    this.init();
   },
 
   methods: {
     // 获取hooks信息
     async init() {
       try {
+        this.isLoading = true;
         const res = await this.$store.dispatch('deploy/getAppReleaseHook', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -374,7 +374,15 @@ export default {
     // 保存
     async handleSave() {
       if (this.$refs.commandRef) {
-        await this.$refs.commandRef.validate();
+        try {
+          await this.$refs.commandRef.validate();
+        } catch (error) {
+          return false;
+        }
+      }
+      // 如果是创建
+      if (this.isCreate) {
+        return { ...this.preFormData };
       }
       try {
         await this.$store.dispatch('deploy/saveAppReleaseHook', {

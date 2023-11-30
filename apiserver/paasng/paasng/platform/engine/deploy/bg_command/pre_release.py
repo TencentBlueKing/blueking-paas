@@ -54,10 +54,10 @@ class ApplicationPreReleaseExecutor(DeployStep):
             # Start release process
             return ApplicationReleaseMgr.from_deployment_id(self.deployment.id).start()
 
-        with self.procedure('更新应用配置'):
+        with self.procedure("更新应用配置"):
             update_image_runtime_config(deployment=self.deployment)
 
-        with self.procedure('初始化指令执行环境'):
+        with self.procedure("初始化指令执行环境"):
             extra_envs = get_env_variables(self.engine_app.env, deployment=self.deployment)
             command_id = exec_command(
                 self.engine_app.env,
@@ -75,11 +75,12 @@ class ApplicationPreReleaseExecutor(DeployStep):
         self.mark_step_start()
         params = {"command_id": command_id, "deployment_id": str(self.deployment.id)}
         CommandPoller.start(params, PreReleaseHookCompleteHandler)
+        return None
 
     def on_puller_complete(self, result: Dict):
         """Callback for a finished pre-release command"""
         try:
-            status = JobStatus(result['command_status'])
+            status = JobStatus(result["command_status"])
         except KeyError:
             self.state_mgr.finish(JobStatus.FAILED, "An unexpected error occurred while running pre-release hook")
             return
@@ -117,7 +118,7 @@ class CommandPoller(DeployPoller):
     overall_timeout_seconds = 30 * 60
 
     def query(self) -> PollingResult:
-        deployment = Deployment.objects.get(pk=self.params['deployment_id'])
+        deployment = Deployment.objects.get(pk=self.params["deployment_id"])
 
         command = Command.objects.get(pk=self.params["command_id"])
         command_status = CommandStatus(command.status)
@@ -142,7 +143,7 @@ class PreReleaseHookCompleteHandler(CallbackHandler):
     """Result handler for a finished pre-release-hook"""
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
-        deployment_id = poller.params['deployment_id']
+        deployment_id = poller.params["deployment_id"]
         state_mgr = DeploymentStateMgr.from_deployment_id(
             deployment_id=deployment_id, phase_type=DeployPhaseTypes.RELEASE
         )

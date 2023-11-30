@@ -28,7 +28,7 @@ pytestmark = pytest.mark.django_db
 
 
 class TestPluginConfigManager:
-    @pytest.fixture
+    @pytest.fixture()
     def mgr(self, pd, plugin):
         return PluginConfigManager(pd, plugin)
 

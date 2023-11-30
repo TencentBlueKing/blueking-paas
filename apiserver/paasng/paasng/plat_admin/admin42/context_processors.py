@@ -23,7 +23,7 @@ from paasng.core.region.states import RegionType
 
 def admin_config(request):
     return {
-        'USER_SELECTOR_LIST_API': getattr(settings, 'USER_SELECTOR_LIST_API', '').replace("http://", "//"),
+        "USER_SELECTOR_LIST_API": getattr(settings, "USER_SELECTOR_LIST_API", "").replace("http://", "//"),
         "BKPAAS_URL": settings.BKPAAS_URL,
         "REGION_CHOICES": dict(RegionType.get_choices()),
     }

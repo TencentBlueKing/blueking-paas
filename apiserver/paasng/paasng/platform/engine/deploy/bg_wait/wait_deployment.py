@@ -28,11 +28,11 @@ from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, Pol
 
 from paas_wl.bk_app.processes.processes import PlainProcess
 from paas_wl.bk_app.processes.shim import ProcessManager
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.processes.events import ProcEventsProducer
 from paasng.platform.engine.processes.utils import ProcessesSnapshotStore
 from paasng.platform.engine.signals import processes_updated
-from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def wait_for_all_stopped(env: ModuleEnvironment, result_handler: Type, extra_par
     :param extra_params: extra params, use it to provide data for result handler
     """
     extra_params = extra_params or {}
-    params = {'env_id': env.pk, 'extra_params': extra_params}
+    params = {"env_id": env.pk, "extra_params": extra_params}
     WaitForAllStopped.start(params, result_handler)
 
 
@@ -61,10 +61,10 @@ def wait_for_release(
     """
     extra_params = extra_params or {}
     params = {
-        'env_id': env.pk,
-        'broadcast_enabled': True,
-        'release_version': release_version,
-        'extra_params': extra_params,
+        "env_id": env.pk,
+        "broadcast_enabled": True,
+        "release_version": release_version,
+        "extra_params": extra_params,
     }
     WaitForReleaseAllReady.start(params, result_handler)
 
@@ -111,10 +111,10 @@ class WaitProcedurePoller(TaskPoller):
 
     def __init__(self, params: Dict, metadata: PollingMetadata):
         super().__init__(params, metadata)
-        self.env = ModuleEnvironment.objects.get(pk=self.params['env_id'])
+        self.env = ModuleEnvironment.objects.get(pk=self.params["env_id"])
 
-        self.broadcast_enabled = bool(self.params.get('broadcast_enabled'))
-        self.extra_params = self.params.get('extra_params', {})
+        self.broadcast_enabled = bool(self.params.get("broadcast_enabled"))
+        self.extra_params = self.params.get("extra_params", {})
         self.store = ProcessesSnapshotStore(self.env)
 
     def query(self) -> PollingResult:
@@ -122,12 +122,12 @@ class WaitProcedurePoller(TaskPoller):
         current_processes = self._get_current_processes()
 
         already_waited = time.time() - self.metadata.query_started_at
-        logger.info(f'wait procedure started {already_waited} seconds, env: {self.env}')
+        logger.info(f"wait procedure started {already_waited} seconds, env: {self.env}")
         # Check all abort policies
         for policy in self.abort_policies:
             if policy.evaluate(current_processes, already_waited, self.extra_params):
                 policy_name = policy.__class__.__name__
-                logger.info(f'AbortPolicy: {policy_name} evaluated, got positive result, abort current procedure')
+                logger.info(f"AbortPolicy: {policy_name} evaluated, got positive result, abort current procedure")
                 return PollingResult(
                     PollingStatus.DONE,
                     data=AbortedDetails(
@@ -170,7 +170,7 @@ class WaitProcedurePoller(TaskPoller):
         try:
             return self.store.get()
         except Exception as e:
-            logger.warning('Failed to get last processes, error: %s', e)
+            logger.warning("Failed to get last processes, error: %s", e)
             return None
 
     def get_status(self, processes: List[PlainProcess]) -> PollingResult:
@@ -183,7 +183,7 @@ class DynamicReadyTimeoutPolicy(AbortPolicy):
     max_overall_timeout_seconds = 60 * 15
 
     def get_reason(self) -> str:
-        return 'release took too long to complete'
+        return "release took too long to complete"
 
     def evaluate(self, processes: List[PlainProcess], already_waited: float, extra_params: Dict) -> bool:
         total_desired_replicas = sum(p.replicas for p in processes)
@@ -200,7 +200,7 @@ class TooManyRestartsPolicy(AbortPolicy):
     maximum_count = 3
 
     def get_reason(self) -> str:
-        return f'instance restarted more than {self.maximum_count} times'
+        return f"instance restarted more than {self.maximum_count} times"
 
     def evaluate(self, processes: List[PlainProcess], already_waited: float, extra_params: Dict) -> bool:
         for p in processes:
@@ -219,22 +219,22 @@ class UserInterruptedPolicy(AbortPolicy):
     """Abort procedure when user requested an interruption"""
 
     def get_reason(self) -> str:
-        return 'User interrupted release'
+        return "User interrupted release"
 
     @property
     def is_interrupted(self) -> bool:
         return True
 
     def evaluate(self, processes: List[PlainProcess], already_waited: float, extra_params: Dict) -> bool:
-        deployment_id = extra_params.get('deployment_id')
+        deployment_id = extra_params.get("deployment_id")
         if not deployment_id:
-            logger.warning('Deployment was not provided for UserInterruptedPolicy, will not proceed.')
+            logger.warning("Deployment was not provided for UserInterruptedPolicy, will not proceed.")
             return False
 
         try:
             deployment = Deployment.objects.get(pk=deployment_id)
         except Deployment.DoesNotExist:
-            logger.warning('Deployment not exists for UserInterruptedPolicy, will not proceed.')
+            logger.warning("Deployment not exists for UserInterruptedPolicy, will not proceed.")
             return False
         return bool(deployment.release_int_requested_at)
 
@@ -249,10 +249,10 @@ class WaitForAllStopped(WaitProcedurePoller):
         for process in processes:
             count = len(process.instances)
             if count != 0:
-                logger.info(f'Process {process.type} still have {count} instances')
+                logger.info(f"Process {process.type} still have {count} instances")
                 return PollingResult.doing()
 
-        logger.info(f'No instances found, all processes has been stopped for env: {self.env}')
+        logger.info(f"No instances found, all processes has been stopped for env: {self.env}")
         return PollingResult.done()
 
 
@@ -264,14 +264,14 @@ class WaitForReleaseAllReady(WaitProcedurePoller):
 
     def __init__(self, params: Dict, metadata: PollingMetadata):
         super().__init__(params, metadata)
-        self.release_version = int(self.params['release_version'])
+        self.release_version = int(self.params["release_version"])
 
     def get_status(self, processes: List[PlainProcess]) -> PollingResult:
         """Check if all where processes was updated to given release_version"""
         for process in processes:
             if not process.is_all_ready(self.release_version):
-                logger.info(f'Process {process.type} was not updated to {self.release_version}, env: {self.env}')
+                logger.info(f"Process {process.type} was not updated to {self.release_version}, env: {self.env}")
                 return PollingResult.doing()
 
-        logger.info(f'All processes has been updated to {self.release_version}, env: {self.env}')
+        logger.info(f"All processes has been updated to {self.release_version}, env: {self.env}")
         return PollingResult.done()

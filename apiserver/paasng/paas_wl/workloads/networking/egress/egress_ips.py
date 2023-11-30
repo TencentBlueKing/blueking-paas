@@ -41,5 +41,5 @@ def get_cluster_egress_ips(cluster: Cluster) -> ClusterEgressIps:
 
     nodes_data = [node.to_dict() for node in get_nodes(client)]
     nodes_digest = get_digest_of_nodes_name(nodes_name)
-    egress_ips = [n['internal_ip_address'] for n in format_nodes_data(nodes_data)]
+    egress_ips = [n["internal_ip_address"] for n in format_nodes_data(nodes_data)]
     return ClusterEgressIps(digest_version=nodes_digest, egress_ips=egress_ips)

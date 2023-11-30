@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class EntranceConfig(AppConfig):
-    name = 'paas_wl.workloads.networking.entrance'
+    name = "paas_wl.workloads.networking.entrance"
 
     def ready(self):
         from . import handlers  # noqa

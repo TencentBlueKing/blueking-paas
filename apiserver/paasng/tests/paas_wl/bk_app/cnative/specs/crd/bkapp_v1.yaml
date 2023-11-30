@@ -2,10 +2,10 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: bkapps.paas.bk.tencent.com
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
-    helm.sh/resource-policy: keep
+  creationTimestamp: null
+  name: bkapps.paas.bk.tencent.com
 spec:
   group: paas.bk.tencent.com
   names:
@@ -57,8 +57,8 @@ spec:
                       description: Specifies of the add-on service, if not set, recommended
                         specifies will be used
                       items:
-                        description: 'AddonSpec is used to specify add-on service, e.g.
-                          version: 6.0'
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
                         properties:
                           name:
                             description: Name of the spec.
@@ -87,24 +87,25 @@ spec:
                       used to build image by Dockerfile
                     type: object
                   buildTarget:
-                    description: BuildTarget, when multiple stages are defined in Dockerfile,
-                      this field is used to specify the target stage.
+                    description: BuildTarget, when multiple stages are defined in
+                      Dockerfile, this field is used to specify the target stage.
                     type: string
                   dockerfile:
                     description: '*2. Remote build by Dockerfile* Dockerfile is the
                       name of target Dockerfile, it will be used to build.'
                     type: string
                   image:
-                    description: '*1. Build by image* Image is the container image name
-                      of current application, tag and container registry address can
-                      be included.'
+                    description: '*1. Build by image* Image is the container image
+                      name of current application, tag and container registry address
+                      can be included.'
                     type: string
                   imageCredentialsName:
                     description: ImageCredentialsName is the name of image credentials,
                       required for pulling images stores in private registry.
                     type: string
                   imagePullPolicy:
-                    description: ImagePullPolicy is the image pull policy of given image.
+                    description: ImagePullPolicy is the image pull policy of given
+                      image.
                     type: string
                 type: object
               configuration:
@@ -117,7 +118,8 @@ spec:
                       description: AppEnvVar defines the environment variable of bkapp
                       properties:
                         name:
-                          description: Name of the environment variable. Must be a C_IDENTIFIER.
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
                           type: string
                         value:
                           description: Value of the environment variable
@@ -132,6 +134,46 @@ spec:
                 description: EnvOverlay holds environment specified configurations,
                   includes replica count and environment variables.
                 properties:
+                  autoscaling:
+                    description: Autoscaling overwrite process's autoscaling config
+                    items:
+                      description: AutoscalingOverlay overwrite or add application's
+                        autoscaling config by environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        maxReplicas:
+                          description: maxReplicas is the upper limit for the number
+                            of replicas to which the autoscaler can scale up. It cannot
+                            be less that minReplicas.
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          description: minReplicas is the lower limit for the number
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
+                          format: int32
+                          type: integer
+                        policy:
+                          description: Policy defines the policy for autoscaling,
+                            its optional values depend on the policies supported by
+                            the operator.
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - envName
+                      - maxReplicas
+                      - minReplicas
+                      - policy
+                      - process
+                      type: object
+                    type: array
                   envVariables:
                     description: EnvVariables overwrite BkApp's environment vars
                     items:
@@ -142,7 +184,8 @@ spec:
                           description: EnvName is app environment name
                           type: string
                         name:
-                          description: Name of the environment variable. Must be a C_IDENTIFIER.
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
                           type: string
                         value:
                           description: Value of the environment variable
@@ -156,7 +199,8 @@ spec:
                   replicas:
                     description: Replicas overwrite process's replicas count
                     items:
-                      description: ReplicasOverlay overwrite process's replicas by environment.
+                      description: ReplicasOverlay overwrite process's replicas by
+                        environment.
                       properties:
                         count:
                           description: Count is the desired replicas for current process
@@ -174,13 +218,34 @@ spec:
                       - process
                       type: object
                     type: array
+                  resQuotas:
+                    description: ResQuotas overwrite BkApp's process resource quota
+                    items:
+                      description: ResQuotaOverlay overwrite process's resQuota by
+                        environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        plan:
+                          description: Plan is used to specify process resource quota
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - envName
+                      - plan
+                      - process
+                      type: object
+                    type: array
                 type: object
               hooks:
                 description: Hook commands of current BkApp resource
                 properties:
                   preRelease:
-                    description: Hook is a set of commands to execute during bkapp deployment,
-                      running, and termination
+                    description: Hook is a set of commands to execute during bkapp
+                      deployment, running, and termination
                     properties:
                       args:
                         description: Arguments to the entrypoint.
@@ -206,9 +271,6 @@ spec:
                     autoscaling:
                       description: Autoscaling specifies the autoscaling configuration
                       properties:
-                        enabled:
-                          description: Enabled indicates whether autoscaling is enabled
-                          type: boolean
                         maxReplicas:
                           description: maxReplicas is the upper limit for the number
                             of replicas to which the autoscaler can scale up. It cannot
@@ -217,20 +279,19 @@ spec:
                           type: integer
                         minReplicas:
                           description: minReplicas is the lower limit for the number
-                            of replicas to which the autoscaler can scale down. It defaults
-                            to 1 pod. minReplicas is allowed to be 0 if the alpha feature
-                            gate GPAScaleToZero is enabled and at least one Object or
-                            External metric is configured. Scaling is active as long
-                            as at least one metric value is available
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
                           format: int32
                           type: integer
                         policy:
-                          description: Policy defines the policy for autoscaling, its
-                            optional values depend on the policies supported by the
-                            operator.
+                          description: Policy defines the policy for autoscaling,
+                            its optional values depend on the policies supported by
+                            the operator.
                           type: string
                       required:
-                      - enabled
                       - maxReplicas
                       - minReplicas
                       - policy
@@ -260,8 +321,8 @@ spec:
                       format: int32
                       type: integer
                     resQuotaPlan:
-                      description: ResQuotaPlan is the name of plan which defines how
-                        much resources current process can consume.
+                      description: ResQuotaPlan is the name of plan which defines
+                        how much resources current process can consume.
                       type: string
                     targetPort:
                       description: The containerPort to expose server
@@ -281,20 +342,21 @@ spec:
             description: AppStatus defines the observed state of BkApp
             properties:
               addonStatuses:
-                description: AddonStatuses is the status of add-on service include specifications
+                description: AddonStatuses is the status of add-on service include
+                  specifications
                 items:
                   description: AddonStatus is the status of add-on service
                   properties:
                     message:
-                      description: if add-on service state is failed, message will be
-                        the fail message
+                      description: if add-on service state is failed, message will
+                        be the fail message
                       type: string
                     name:
                       type: string
                     specs:
                       items:
-                        description: 'AddonSpec is used to specify add-on service, e.g.
-                          version: 6.0'
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
                         properties:
                           name:
                             description: Name of the spec.
@@ -319,14 +381,15 @@ spec:
                   type: object
                 type: array
               addresses:
-                description: Addresses holds all addressable locations of current BkApp,
-                  user may visit app via these locations, includes all domain source
-                  types.
+                description: Addresses holds all addressable locations of current
+                  BkApp, user may visit app via these locations, includes all domain
+                  source types.
                 items:
                   description: Addressable includes URL and other related properties
                   properties:
                     sourceType:
-                      description: SourceType, see CRD DomainGroupMapping for more details
+                      description: SourceType, see CRD DomainGroupMapping for more
+                        details
                       type: string
                     url:
                       description: URL generally has the form "http[s]://{hostname}/{subpath}/"
@@ -358,8 +421,8 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating details
-                        about the transition. This may be an empty string.
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
@@ -373,11 +436,11 @@ spec:
                       type: integer
                     reason:
                       description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers of
-                        specific condition types may define expected values and meanings
-                        for this field, and whether the values are considered a guaranteed
-                        API. The value should be a CamelCase string. This field may
-                        not be empty.
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -415,8 +478,8 @@ spec:
                   description: HookStatus define the status of Hook execution
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the status transitioned
-                        from one status to another.
+                      description: lastTransitionTime is the last time the status
+                        transitioned from one status to another.
                       format: date-time
                       type: string
                     message:
@@ -455,8 +518,8 @@ spec:
                 format: int64
                 type: integer
               phase:
-                description: The phase of a BkApp is a simple, high-level summary of
-                  where the BkApp is in its lifecycle.
+                description: The phase of a BkApp is a simple, high-level summary
+                  of where the BkApp is in its lifecycle.
                 type: string
               revision:
                 description: Revision of the BkApp configuration it generates
@@ -518,8 +581,8 @@ spec:
                       description: Specifies of the add-on service, if not set, recommended
                         specifies will be used
                       items:
-                        description: 'AddonSpec is used to specify add-on service, e.g.
-                          version: 6.0'
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
                         properties:
                           name:
                             description: Name of the spec.
@@ -548,24 +611,25 @@ spec:
                       used to build image by Dockerfile
                     type: object
                   buildTarget:
-                    description: BuildTarget, when multiple stages are defined in Dockerfile,
-                      this field is used to specify the target stage.
+                    description: BuildTarget, when multiple stages are defined in
+                      Dockerfile, this field is used to specify the target stage.
                     type: string
                   dockerfile:
                     description: '*2. Remote build by Dockerfile* Dockerfile is the
                       name of target Dockerfile, it will be used to build.'
                     type: string
                   image:
-                    description: '*1. Build by image* Image is the container image name
-                      of current application, tag and container registry address can
-                      be included.'
+                    description: '*1. Build by image* Image is the container image
+                      name of current application, tag and container registry address
+                      can be included.'
                     type: string
                   imageCredentialsName:
                     description: ImageCredentialsName is the name of image credentials,
                       required for pulling images stores in private registry.
                     type: string
                   imagePullPolicy:
-                    description: ImagePullPolicy is the image pull policy of given image.
+                    description: ImagePullPolicy is the image pull policy of given
+                      image.
                     type: string
                 type: object
               configuration:
@@ -578,7 +642,8 @@ spec:
                       description: AppEnvVar defines the environment variable of bkapp
                       properties:
                         name:
-                          description: Name of the environment variable. Must be a C_IDENTIFIER.
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
                           type: string
                         value:
                           description: Value of the environment variable
@@ -587,6 +652,35 @@ spec:
                       - name
                       - value
                       type: object
+                    type: array
+                type: object
+              domainResolution:
+                description: Domain name resolution config
+                properties:
+                  hostAliases:
+                    description: 'HostAliases is an optional list of hosts and IPs
+                      that will be injected into the pod''s hosts file if specified.
+                      This is only valid for non-hostNetwork pods. NOTE: Copied from
+                      Kubernetes PodSpec API.'
+                    items:
+                      description: HostAlias holds the mapping between IP and hostnames
+                        that will be injected as an entry in the pod's hosts file.
+                      properties:
+                        hostnames:
+                          description: Hostnames for the above IP address.
+                          items:
+                            type: string
+                          type: array
+                        ip:
+                          description: IP address of the host file entry.
+                          type: string
+                      type: object
+                    type: array
+                  nameservers:
+                    description: Nameservers specifies the IP addresses of the name
+                      servers
+                    items:
+                      type: string
                     type: array
                 type: object
               envOverlay:
@@ -602,16 +696,33 @@ spec:
                         envName:
                           description: EnvName is app environment name
                           type: string
+                        maxReplicas:
+                          description: maxReplicas is the upper limit for the number
+                            of replicas to which the autoscaler can scale up. It cannot
+                            be less that minReplicas.
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          description: minReplicas is the lower limit for the number
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
+                          format: int32
+                          type: integer
                         policy:
-                          description: Policy defines the policy for autoscaling, its
-                            optional values depend on the policies supported by the
-                            operator.
+                          description: Policy defines the policy for autoscaling,
+                            its optional values depend on the policies supported by
+                            the operator.
                           type: string
                         process:
                           description: Process is the name of process
                           type: string
                       required:
                       - envName
+                      - maxReplicas
+                      - minReplicas
                       - policy
                       - process
                       type: object
@@ -626,7 +737,8 @@ spec:
                           description: EnvName is app environment name
                           type: string
                         name:
-                          description: Name of the environment variable. Must be a C_IDENTIFIER.
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
                           type: string
                         value:
                           description: Value of the environment variable
@@ -637,10 +749,48 @@ spec:
                       - value
                       type: object
                     type: array
-                  replicas:
-                    description: Replicas overwrite processes's replicas count
+                  mounts:
+                    description: Mounts overwrite BkApp's mounts by environment
                     items:
-                      description: ReplicasOverlay overwrite process's replicas by environment.
+                      description: MountOverlay overwrite or add application's mounts
+                        by environment
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        mountPath:
+                          description: Path of the mount
+                          type: string
+                        name:
+                          description: Name of the mount
+                          type: string
+                        source:
+                          description: Source of the mount
+                          properties:
+                            configMap:
+                              description: ConfigMapSource represents a configMap
+                                that should populate this volume
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                          required:
+                          - configMap
+                          type: object
+                      required:
+                      - envName
+                      - mountPath
+                      - name
+                      - source
+                      type: object
+                    type: array
+                  replicas:
+                    description: Replicas overwrite process's replicas count
+                    items:
+                      description: ReplicasOverlay overwrite process's replicas by
+                        environment.
                       properties:
                         count:
                           description: Count is the desired replicas for current process
@@ -658,13 +808,34 @@ spec:
                       - process
                       type: object
                     type: array
+                  resQuotas:
+                    description: ResQuotas overwrite BkApp's process resource quota
+                    items:
+                      description: ResQuotaOverlay overwrite process's resQuota by
+                        environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        plan:
+                          description: Plan is used to specify process resource quota
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - envName
+                      - plan
+                      - process
+                      type: object
+                    type: array
                 type: object
               hooks:
                 description: Hook commands of current BkApp resource
                 properties:
                   preRelease:
-                    description: Hook is a set of commands to execute during bkapp deployment,
-                      running, and termination
+                    description: Hook is a set of commands to execute during bkapp
+                      deployment, running, and termination
                     properties:
                       args:
                         description: Arguments to the entrypoint.
@@ -678,6 +849,38 @@ spec:
                         type: array
                     type: object
                 type: object
+              mounts:
+                description: Mounts is a list of mount volume
+                items:
+                  description: Mount is used to specify mount volume
+                  properties:
+                    mountPath:
+                      description: Path of the mount
+                      type: string
+                    name:
+                      description: Name of the mount
+                      type: string
+                    source:
+                      description: Source of the mount
+                      properties:
+                        configMap:
+                          description: ConfigMapSource represents a configMap that
+                            should populate this volume
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                      required:
+                      - configMap
+                      type: object
+                  required:
+                  - mountPath
+                  - name
+                  - source
+                  type: object
+                type: array
               processes:
                 items:
                   description: Process defines the process of BkApp
@@ -690,9 +893,6 @@ spec:
                     autoscaling:
                       description: Autoscaling specifies the autoscaling configuration
                       properties:
-                        enabled:
-                          description: Enabled indicates whether autoscaling is enabled
-                          type: boolean
                         maxReplicas:
                           description: maxReplicas is the upper limit for the number
                             of replicas to which the autoscaler can scale up. It cannot
@@ -701,20 +901,19 @@ spec:
                           type: integer
                         minReplicas:
                           description: minReplicas is the lower limit for the number
-                            of replicas to which the autoscaler can scale down. It defaults
-                            to 1 pod. minReplicas is allowed to be 0 if the alpha feature
-                            gate GPAScaleToZero is enabled and at least one Object or
-                            External metric is configured. Scaling is active as long
-                            as at least one metric value is available
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
                           format: int32
                           type: integer
                         policy:
-                          description: Policy defines the policy for autoscaling, its
-                            optional values depend on the policies supported by the
-                            operator.
+                          description: Policy defines the policy for autoscaling,
+                            its optional values depend on the policies supported by
+                            the operator.
                           type: string
                       required:
-                      - enabled
                       - maxReplicas
                       - minReplicas
                       - policy
@@ -732,8 +931,8 @@ spec:
                       format: int32
                       type: integer
                     resQuotaPlan:
-                      description: ResQuotaPlan is the name of plan which defines how
-                        much resources current process can consume.
+                      description: ResQuotaPlan is the name of plan which defines
+                        how much resources current process can consume.
                       type: string
                     targetPort:
                       description: The containerPort to expose server
@@ -744,6 +943,27 @@ spec:
                   - replicas
                   type: object
                 type: array
+              svcDiscovery:
+                description: The application's service discovery config
+                properties:
+                  bkSaaS:
+                    description: A list of entries that contain SaaS module info
+                    items:
+                      description: SvcDiscEntryBkSaaS is an entry that represents
+                        an application and an optional module.
+                      properties:
+                        bkAppCode:
+                          description: BkAppCode is the code of the application.
+                          type: string
+                        moduleName:
+                          description: ModuleName is the name of the module, when
+                            absent, the "main" module will be used.
+                          type: string
+                      required:
+                      - bkAppCode
+                      type: object
+                    type: array
+                type: object
             required:
             - build
             - configuration
@@ -753,20 +973,21 @@ spec:
             description: AppStatus defines the observed state of BkApp
             properties:
               addonStatuses:
-                description: AddonStatuses is the status of add-on service include specifications
+                description: AddonStatuses is the status of add-on service include
+                  specifications
                 items:
                   description: AddonStatus is the status of add-on service
                   properties:
                     message:
-                      description: if add-on service state is failed, message will be
-                        the fail message
+                      description: if add-on service state is failed, message will
+                        be the fail message
                       type: string
                     name:
                       type: string
                     specs:
                       items:
-                        description: 'AddonSpec is used to specify add-on service, e.g.
-                          version: 6.0'
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
                         properties:
                           name:
                             description: Name of the spec.
@@ -791,14 +1012,15 @@ spec:
                   type: object
                 type: array
               addresses:
-                description: Addresses holds all addressable locations of current BkApp,
-                  user may visit app via these locations, includes all domain source
-                  types.
+                description: Addresses holds all addressable locations of current
+                  BkApp, user may visit app via these locations, includes all domain
+                  source types.
                 items:
                   description: Addressable includes URL and other related properties
                   properties:
                     sourceType:
-                      description: SourceType, see CRD DomainGroupMapping for more details
+                      description: SourceType, see CRD DomainGroupMapping for more
+                        details
                       type: string
                     url:
                       description: URL generally has the form "http[s]://{hostname}/{subpath}/"
@@ -830,8 +1052,8 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating details
-                        about the transition. This may be an empty string.
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
@@ -845,11 +1067,11 @@ spec:
                       type: integer
                     reason:
                       description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers of
-                        specific condition types may define expected values and meanings
-                        for this field, and whether the values are considered a guaranteed
-                        API. The value should be a CamelCase string. This field may
-                        not be empty.
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -887,8 +1109,8 @@ spec:
                   description: HookStatus define the status of Hook execution
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the status transitioned
-                        from one status to another.
+                      description: lastTransitionTime is the last time the status
+                        transitioned from one status to another.
                       format: date-time
                       type: string
                     message:
@@ -927,11 +1149,14 @@ spec:
                 format: int64
                 type: integer
               phase:
-                description: The phase of a BkApp is a simple, high-level summary of
-                  where the BkApp is in its lifecycle.
+                description: The phase of a BkApp is a simple, high-level summary
+                  of where the BkApp is in its lifecycle.
                 type: string
               revision:
-                description: Revision of the BkApp configuration it generates
+                description: 'Deprecated: The Revision field was designed to save
+                  the revision of the BkApp resource, controls how the reconcile works.
+                  But it doesn''t have any effects now because we switched to using
+                  "DeployID" field. Revision of the BkApp configuration it generates'
                 properties:
                   revision:
                     description: BkApp's version

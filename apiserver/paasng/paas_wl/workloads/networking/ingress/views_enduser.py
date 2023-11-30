@@ -62,7 +62,7 @@ class ProcessServicesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except AppEntityNotFound:
             default_ingress_json = None
 
-        return Response({'default_ingress': default_ingress_json, 'proc_services': proc_services_json})
+        return Response({"default_ingress": default_ingress_json, "proc_services": proc_services_json})
 
     def update(self, request, code, module_name, environment, service_name):
         """更新某个服务下的端口配置信息"""
@@ -74,7 +74,7 @@ class ProcessServicesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             proc_service = service_kmodel.get(wl_app, service_name)
         except AppEntityNotFound:
-            raise error_codes.ERROR_UPDATING_PROC_SERVICE.f('未找到服务')
+            raise error_codes.ERROR_UPDATING_PROC_SERVICE.f("未找到服务")
 
         proc_service.ports = serializer.validated_data["ports"]
         service_kmodel.update(proc_service)
@@ -91,18 +91,18 @@ class ProcessIngressesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         env = self.get_env_via_path()
         wl_app = WlApp.objects.get(pk=env.engine_app_id)
 
-        serializer = ProcIngressSLZ(data=request.data, context={'app': wl_app})
+        serializer = ProcIngressSLZ(data=request.data, context={"app": wl_app})
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
         # 更新默认域名
         try:
-            ret = AppDefaultIngresses(wl_app).safe_update_target(data['service_name'], data['service_port_name'])
+            ret = AppDefaultIngresses(wl_app).safe_update_target(data["service_name"], data["service_port_name"])
         except Exception:
-            logger.exception('unable to update ingresses from view')
-            raise error_codes.ERROR_UPDATING_PROC_INGRESS.f('请稍候重试')
+            logger.exception("unable to update ingresses from view")
+            raise error_codes.ERROR_UPDATING_PROC_INGRESS.f("请稍候重试")
         if ret.num_of_successful == 0:
-            raise error_codes.ERROR_UPDATING_PROC_INGRESS.f('未找到任何访问入口')
+            raise error_codes.ERROR_UPDATING_PROC_INGRESS.f("未找到任何访问入口")
 
         # Return the legacy default ingress data for compatibility reason
         serializer = ProcIngressSLZ(LegacyAppIngressMgr(wl_app).get())

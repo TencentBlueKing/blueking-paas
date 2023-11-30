@@ -25,10 +25,10 @@ from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from typing_extensions import Protocol
 
 from paasng.infras.accounts.models import Oauth2TokenHolder, PrivateTokenHolder, UserProfile
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
-from paasng.platform.modules.constants import SourceOrigin
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
@@ -44,7 +44,7 @@ class RepoController(Protocol):
     """
 
     @classmethod
-    def init_by_module(cls, module: 'Module', operator: Optional[str] = None):
+    def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         """Return a RepoController object from given module and repo_url
 
         :param module: Module
@@ -116,7 +116,7 @@ class BaseGitRepoController:
         raise NotImplementedError
 
     @classmethod
-    def init_by_module(cls, module: 'Module', operator: Optional[str] = None):
+    def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         repo_info = get_sourcectl_type(module.source_type).config_as_arguments(module.region)
         repo_url = module.get_source_obj().get_repo_url()
         if not repo_url:
@@ -157,11 +157,13 @@ def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_cont
     source_origin = SourceOrigin(source_origin)
     if source_origin not in [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.SCENE]:
         raise NotImplementedError
+    if not source_control_type:
+        raise NotImplementedError("empty source control type")
 
     return get_sourcectl_type(source_control_type).repo_controller_class
 
 
-def get_repo_controller(module: 'Module', operator: Optional[str] = None) -> RepoController:
+def get_repo_controller(module: "Module", operator: Optional[str] = None) -> RepoController:
     cls = get_repo_controller_cls(module.get_source_origin(), module.source_type)
     return cls.init_by_module(module, operator)
 

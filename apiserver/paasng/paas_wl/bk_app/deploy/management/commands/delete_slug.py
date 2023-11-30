@@ -47,7 +47,7 @@ class AppBucket:
 
 
 class Command(BaseCommand):
-    help = 'A batch to delete expired S3 slug/tar package'
+    help = "A batch to delete expired S3 slug/tar package"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -88,7 +88,7 @@ class Command(BaseCommand):
             # 顺序入队
             bucket_dict[str(build.app.name)].append(build)
 
-        for _, bucket in bucket_dict.items():
+        for bucket in bucket_dict.values():
             # 按创建时间倒序查询, 并顺序入队后, 目前队列则是按时间顺序排列,
             # 因此这里只需要保留前 max_reserved_num_per_env 个.
             for build in bucket.builds[max_reserved_num_per_env:]:
@@ -98,7 +98,7 @@ class Command(BaseCommand):
                 deleted_size += result[1]
 
         self.stdout.write(
-            self.style.SUCCESS(f'\nSuccessfully to delete {deleted_count} slug package, total {deleted_size} bytes')
+            self.style.SUCCESS(f"\nSuccessfully to delete {deleted_count} slug package, total {deleted_size} bytes")
         )
 
 
@@ -143,7 +143,7 @@ def delete_from_blob_store(build: Build, dry_run: bool = True, pattern: Optional
 
 
 def get_store():
-    global _store
+    global _store  # noqa: PLW0603
     if _store is None:
         _store = make_blob_store(settings.BLOBSTORE_BUCKET_APP_SOURCE)
     return _store

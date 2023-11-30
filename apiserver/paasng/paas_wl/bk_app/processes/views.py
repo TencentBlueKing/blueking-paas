@@ -22,6 +22,7 @@ from operator import attrgetter
 from typing import Dict, Optional
 
 from django.http import StreamingHttpResponse
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -46,6 +47,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.version import get_env_deployed_version_info
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 from paasng.platform.modules.models import Module
 from paasng.utils.rate_limit.constants import UserAction
@@ -62,7 +64,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(response_serializer=NamespaceScopedListWatchRespSLZ)
     def list(self, request, code, environment):
-        """获取当前进程与进程实例"""
+        """获取当前进程与进程实例, 支持通过 deployment_id 参数过滤结果"""
         application = self.get_application()
         module_envs = application.envs.filter(environment=environment)
 
@@ -105,11 +107,22 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 proc_specs=grouped_proc_specs.get(module_name) or [],
             )
 
+        bkapp_release_id = None
+        if deployment_id := request.query_params.get("deployment_id"):
+            deployment_obj = get_object_or_404(Deployment, id=deployment_id)
+            bkapp_release_id = deployment_obj.bkapp_release_id
+
         for process in processes_status.processes:
             module_name = process.app.module_name
             container = grouped_data[module_name]
             container.processes.append(process)
-            container.instances.extend(process.instances)
+            if deployment_id:
+                if bkapp_release_id:
+                    container.instances.extend(
+                        [inst for inst in process.instances if inst.version == bkapp_release_id]
+                    )
+            else:
+                container.instances.extend(process.instances)
 
         return Response(
             NamespaceScopedListWatchRespSLZ(
@@ -131,32 +144,32 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         def resp():
             logger.debug(
-                'Start watching process, app code=%s, environment=%s, params=%s',
+                "Start watching process, app code=%s, environment=%s, params=%s",
                 application.code,
                 environment,
                 dict(data),
             )
             # 发送初始 ping 事件
             # 避免 stream 无新事件时, 前端请求表现为服务端长时间挂起(无法查看响应头)
-            yield 'event: ping\n'
-            yield 'data: \n\n'
+            yield "event: ping\n"
+            yield "data: \n\n"
 
             stream = ProcInstByEnvListWatcher(application, environment).watch(
                 timeout_seconds=data["timeout_seconds"], rv_proc=data["rv_proc"], rv_inst=data["rv_inst"]
             )
             for event in stream:
                 e = self.process_event(event)
-                yield 'event: message\n'
-                yield 'data: {}\n\n'.format(json.dumps(e))
+                yield "event: message\n"
+                yield "data: {}\n\n".format(json.dumps(e))
 
-            yield 'id: -1\n'
-            yield 'event: EOF\n'
-            yield 'data: \n\n'
+            yield "id: -1\n"
+            yield "event: EOF\n"
+            yield "data: \n\n"
             logger.info(
-                'Watching finished, app code=%s, environment=%s, params=%s', application.code, environment, dict(data)
+                "Watching finished, app code=%s, environment=%s, params=%s", application.code, environment, dict(data)
             )
 
-        return StreamingHttpResponse(resp(), content_type='text/event-stream')
+        return StreamingHttpResponse(resp(), content_type="text/event-stream")
 
     @staticmethod
     def process_event(event: WatchEvent) -> Dict:

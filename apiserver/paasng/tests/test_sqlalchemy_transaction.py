@@ -30,7 +30,7 @@ except ImportError:
     from paasng.infras.legacydb.models import LApplication
 
 
-@pytest.fixture
+@pytest.fixture()
 def legacy_app():
     if not check_legacy_enabled():
         raise pytest.skip("Legacy db engine is not initialized")
@@ -38,9 +38,9 @@ def legacy_app():
         code="test_rollback",
         name="test_rollback",
         from_paasv3=1,
-        logo='',
-        introduction='',
-        creater='',
+        logo="",
+        introduction="",
+        creater="",
         created_date=datetime.datetime.now(),
         created_state=0,
         app_type=1,
@@ -73,7 +73,7 @@ def legacy_app():
         is_default=0,
         is_open=0,
         is_max=0,
-        display_type='app',
+        display_type="app",
         issetbar=1,
         isflash=0,
         isresize=1,

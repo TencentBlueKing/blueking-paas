@@ -63,13 +63,13 @@ class Templater:
 
         # 渲染模板用的配置上下文
         self.context = {
-            'region': region,
-            'app_code': app_code,
-            'app_secret': app_secret,
-            'app_name': app_name,
-            'owner_username': owner_username,
-            'BK_URL': settings.COMPONENT_SYSTEM_HOST_IN_TEST,
-            'BK_LOGIN_URL': settings.LOGIN_FULL,
+            "region": region,
+            "app_code": app_code,
+            "app_secret": app_secret,
+            "app_name": app_name,
+            "owner_username": owner_username,
+            "BK_URL": settings.COMPONENT_SYSTEM_HOST_IN_TEST,
+            "BK_LOGIN_URL": settings.LOGIN_FULL,
         }
 
     def download_tmpl(self) -> Path:
@@ -88,7 +88,7 @@ class Templater:
             # Ceph RGW 不支持绝对路径
             path = path.relative_to("/")
 
-        store_type = {'s3': StoreType.S3, 'bkrepo': StoreType.BKREPO}.get(scheme, None)
+        store_type = {"s3": StoreType.S3, "bkrepo": StoreType.BKREPO}.get(scheme)
         if not store_type:
             logger.warning("unknown protocol type: %s, url: %s", o.scheme, location)
 

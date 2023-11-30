@@ -23,15 +23,15 @@ from django.apps import AppConfig
 from django.conf import settings
 
 IAM_CONTEXT = {
-    'IAM_PAAS_V3_SYSTEM_ID': settings.IAM_PAAS_V3_SYSTEM_ID,
-    'APP_CODE': settings.BK_APP_CODE,
+    "IAM_PAAS_V3_SYSTEM_ID": settings.IAM_PAAS_V3_SYSTEM_ID,
+    "APP_CODE": settings.BK_APP_CODE,
 }
 
 
 def render_migrate_json():
     """根据模板生成最终的 migrate json 文件"""
-    iam_tpl_path = Path(settings.BASE_DIR) / 'support-files' / 'iam_tpl'
-    iam_tpl = Path(settings.BASE_DIR) / 'support-files' / 'iam'
+    iam_tpl_path = Path(settings.BASE_DIR) / "support-files" / "iam_tpl"
+    iam_tpl = Path(settings.BASE_DIR) / "support-files" / "iam"
     iam_tpl.mkdir(exist_ok=True)
 
     j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(iam_tpl_path)), trim_blocks=True)
@@ -40,8 +40,8 @@ def render_migrate_json():
 
 
 class BKPaaSIAMMigrationConfig(AppConfig):
-    name = 'paasng.infras.iam.bkpaas_iam_migration'
-    label = 'bkpaas_iam_migration'
+    name = "paasng.infras.iam.bkpaas_iam_migration"
+    label = "bkpaas_iam_migration"
 
     def ready(self):
         render_migrate_json()

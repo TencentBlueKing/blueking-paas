@@ -46,9 +46,9 @@ class Command(BaseCommand):
     """
 
     def add_arguments(self, parser):
-        parser.add_argument('--dry-run', help='dry run only', action='store_true')
-        parser.add_argument('--apps', nargs='*', help='specified app code list')
-        parser.add_argument('--exclude-users', nargs='*', help='user skip add as grade manager')
+        parser.add_argument("--dry-run", help="dry run only", action="store_true")
+        parser.add_argument("--apps", nargs="*", help="specified app code list")
+        parser.add_argument("--exclude-users", nargs="*", help="user skip add as grade manager")
         parser.set_defaults(is_enabled=True)
 
     def handle(self, dry_run, apps, exclude_users, *args, **options):
@@ -63,12 +63,12 @@ class Command(BaseCommand):
 
     def _prepare(self):
         """中间态数据准备"""
-        print('------------------ start data preparation -----------------')
+        print("------------------ start data preparation -----------------")
 
         applications = Application.objects.filter(is_deleted=False)
         grade_managers = ApplicationGradeManager.objects.all()
         user_groups = ApplicationUserGroup.objects.all()
-        memberships = ApplicationMembership.objects.select_related('application').all()
+        memberships = ApplicationMembership.objects.select_related("application").all()
 
         if self.apps:
             applications = applications.filter(code__in=self.apps)
@@ -79,10 +79,10 @@ class Command(BaseCommand):
         # 待迁移应用数据
         self.applications = [
             {
-                'id': str(app.id),
-                'code': app.code,
-                'name': app.name,
-                'creator': get_username_by_bkpaas_user_id(app.creator),
+                "id": str(app.id),
+                "code": app.code,
+                "name": app.name,
+                "creator": get_username_by_bkpaas_user_id(app.creator),
             }
             for app in applications
         ]
@@ -97,54 +97,54 @@ class Command(BaseCommand):
 
         self.total_count = len(self.applications)
 
-        print(f'{self.total_count} applications waiting for migrate:')
+        print(f"{self.total_count} applications waiting for migrate:")
 
         for start_at in range(0, self.total_count, PRE_LINE_LIMIT):
             end_at = start_at + PRE_LINE_LIMIT
             end_at = end_at if end_at < self.total_count else self.total_count
             print(
-                f'{start_at+1} - {end_at}:'.rjust(11),
-                ' '.join([app['code'] for app in self.applications[start_at:end_at]]),
+                f"{start_at+1} - {end_at}:".rjust(11),
+                " ".join([app["code"] for app in self.applications[start_at:end_at]]),
             )
 
-        print('---------------- data preparation finished ----------------')
+        print("---------------- data preparation finished ----------------")
 
     def _migrate(self):
         """迁移权限数据"""
         if self.dry_run:
-            print('------------------------- DRY-RUN -------------------------')
+            print("------------------------- DRY-RUN -------------------------")
             return
 
-        print('---------------- start migrate applications role data ----------------')
+        print("---------------- start migrate applications role data ----------------")
 
         self.success_records = []
         self.failed_records = []
 
         for idx, app in enumerate(self.applications, start=1):
-            status, flag = 'success', '.'
+            status, flag = "success", "."
             try:
                 logs = self._migrate_single(idx, app)
             except Exception as e:
                 self.failed_records.append(
                     {
-                        'idx': idx,
-                        'app': app,
-                        'exception': str(e),
-                        'traceback': traceback.format_exc(),
+                        "idx": idx,
+                        "app": app,
+                        "exception": str(e),
+                        "traceback": traceback.format_exc(),
                     }
                 )
-                status, flag = 'failed', 'F'
+                status, flag = "failed", "F"
             else:
-                self.success_records.append({'idx': idx, 'app': app, 'logs': logs})
+                self.success_records.append({"idx": idx, "app": app, "logs": logs})
 
             print(f"{flag} {idx}/{self.total_count} migrate app [{app['name']}/{app['code']}] user roles {status}")
 
-        print(f'---------------- migrate {self.total_count} applications role data finished! ----------------')
-        print(f'-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------')
+        print(f"---------------- migrate {self.total_count} applications role data finished! ----------------")
+        print(f"-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------")
 
     def _migrate_single(self, idx: int, app: Dict) -> List:  # noqa: C901
         """迁移单个应用权限数据"""
-        app_code, app_name, creator = app['code'], app['name'], app['creator']
+        app_code, app_name, creator = app["code"], app["name"], app["creator"]
         migrate_logs = []
 
         administrator_key = (app_code, ApplicationRole.ADMINISTRATOR)
@@ -153,7 +153,7 @@ class Command(BaseCommand):
         all_role_keys = [administrator_key, developer_key, operator_key]
 
         migrate_logs.append(
-            f'start migrate application [{app_name}/{app_code}] user roles... {idx}/{self.total_count}'
+            f"start migrate application [{app_name}/{app_code}] user roles... {idx}/{self.total_count}"
         )
 
         administrators = self.members_map[administrator_key]
@@ -184,18 +184,18 @@ class Command(BaseCommand):
 
         # 2. 获取具有管理员身份的用户名，如果没有，则默认将创建者添加为分级管理员（拥有审批加入用户组权限）
         migrate_logs.append(
-            f'add grade manager (id: {grade_manager_id}) members: '
-            f'count: {len(administrators)}, users: {administrators}'
+            f"add grade manager (id: {grade_manager_id}) members: "
+            f"count: {len(administrators)}, users: {administrators}"
         )
         # 由于数据库中会存在已经离职的用户，无法加入到权限中心，按权限中心建议，使用 for 循环单个单个添加，忽略但记录异常
         for username in administrators:
             if username in self.exclude_users:
-                migrate_logs.append(f'user {username} in exclude user list, skip add as grade manager')
+                migrate_logs.append(f"user {username} in exclude user list, skip add as grade manager")
                 continue
             try:
                 self.cli.add_grade_manager_members(grade_manager_id, [username])
             except Exception as e:
-                migrate_logs.append(f'failed to add grade manager: {username}, maybe was resigned: {str(e)}')
+                migrate_logs.append(f"failed to add grade manager: {username}, maybe was resigned: {str(e)}")
 
         # 3. 检查该应用现有的的用户组，是否是默认的三个，如果不是，则删除后重建
         exists_user_group_ids = [
@@ -203,15 +203,15 @@ class Command(BaseCommand):
         ]
         if len(exists_user_group_ids) < len(all_role_keys):
             if exists_user_group_ids:
-                migrate_logs.append(f'user groups {exists_user_group_ids} exists, clean them and recreate...')
+                migrate_logs.append(f"user groups {exists_user_group_ids} exists, clean them and recreate...")
                 self.cli.delete_user_groups(exists_user_group_ids)
                 ApplicationUserGroup.objects.filter(app_code=app_code).delete()
 
             groups = self.cli.create_builtin_user_groups(grade_manager_id, app_code)
             for group in groups:
-                role, group_id, group_name = group['role'], group['id'], group['name']
+                role, group_id, group_name = group["role"], group["id"], group["name"]
                 migrate_logs.append(
-                    f'create user group id: {group_id}, role: {ApplicationRole(role).name}, name: {group_name}'
+                    f"create user group id: {group_id}, role: {ApplicationRole(role).name}, name: {group_name}"
                 )
 
                 # 更新用户组映射表信息 & ApplicationUserGroup 数据
@@ -224,43 +224,43 @@ class Command(BaseCommand):
         # 4. 将各类角色同步到权限中心用户组，迁移的权限都是永不过期
         user_group_id = self.user_group_map[administrator_key]
         migrate_logs.append(
-            f'try add user_group (id: {user_group_id}, role: {ApplicationRole.ADMINISTRATOR.name}) members...'
-            f'count: {len(administrators)}, users: {administrators}'
+            f"try add user_group (id: {user_group_id}, role: {ApplicationRole.ADMINISTRATOR.name}) members..."
+            f"count: {len(administrators)}, users: {administrators}"
         )
 
         for username in administrators:
             try:
                 self.cli.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
             except Exception as e:
-                migrate_logs.append(f'failed to add app administrator: {username}, maybe was resigned: {str(e)}')
+                migrate_logs.append(f"failed to add app administrator: {username}, maybe was resigned: {str(e)}")
 
         if developers := self.members_map[developer_key]:
             user_group_id = self.user_group_map[developer_key]
             migrate_logs.append(
-                f'try add user_group (id: {user_group_id}, role: {ApplicationRole.DEVELOPER.name}) members...'
-                f'count: {len(developers)}, users: {developers}'
+                f"try add user_group (id: {user_group_id}, role: {ApplicationRole.DEVELOPER.name}) members..."
+                f"count: {len(developers)}, users: {developers}"
             )
 
             for username in developers:
                 try:
                     self.cli.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:
-                    migrate_logs.append(f'failed to add app developer: {username}, maybe was resigned: {str(e)}')
+                    migrate_logs.append(f"failed to add app developer: {username}, maybe was resigned: {str(e)}")
 
         if operators := self.members_map[operator_key]:
             user_group_id = self.user_group_map[operator_key]
             migrate_logs.append(
-                f'try add user_group (id: {user_group_id}, role: {ApplicationRole.OPERATOR.name}) members...'
-                f'count: {len(operators)}, users: {operators}'
+                f"try add user_group (id: {user_group_id}, role: {ApplicationRole.OPERATOR.name}) members..."
+                f"count: {len(operators)}, users: {operators}"
             )
 
             for username in operators:
                 try:
                     self.cli.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:
-                    migrate_logs.append(f'failed to add app operator: {username}, maybe was resigned: {str(e)}')
+                    migrate_logs.append(f"failed to add app operator: {username}, maybe was resigned: {str(e)}")
 
-        migrate_logs.append(f'migrate application [{app_name}/{app_code}] user role success! {idx}/{self.total_count}')
+        migrate_logs.append(f"migrate application [{app_name}/{app_code}] user role success! {idx}/{self.total_count}")
 
         return migrate_logs
 
@@ -268,12 +268,12 @@ class Command(BaseCommand):
         if self.dry_run:
             return
 
-        print('---------------- store records to local files ----------------')
+        print("---------------- store records to local files ----------------")
 
-        with open('./migrate_success_records.json', 'w') as fw:
+        with open("./migrate_success_records.json", "w") as fw:
             fw.write(json.dumps(self.success_records, indent=4, ensure_ascii=False))
 
-        with open('./migrate_failed_records.json', 'w') as fw:
+        with open("./migrate_failed_records.json", "w") as fw:
             fw.write(json.dumps(self.failed_records, indent=4, ensure_ascii=False))
 
-        print('---------------- store records finished! ----------------')
+        print("---------------- store records finished! ----------------")

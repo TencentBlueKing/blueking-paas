@@ -21,10 +21,10 @@ import logging
 from blue_krill.data_types.enum import StructuredEnum
 from django.core.management.base import BaseCommand
 
+from paasng.accessories.publish.sync_market.managers import AppManger
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.platform.applications.models import Application
-from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.accessories.publish.sync_market.managers import AppManger
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--type",
             dest="filter_key",
-            default='code',
+            default="code",
             required=False,
             type=str,
             help=("删除 key 的类型, code 或 name"),
@@ -57,7 +57,7 @@ class Command(BaseCommand):
             required=True,
             help="The code or name to delete",
         )
-        parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true")
+        parser.add_argument("--dry-run", dest="dry_run", help="dry run", action="store_true")
 
     def handle(self, filter_key, filter_value, dry_run, *args, **options):
         """根据 code 或 name 强制删除应用鉴权信息。页面上删除应用时，会保留鉴权信息"""

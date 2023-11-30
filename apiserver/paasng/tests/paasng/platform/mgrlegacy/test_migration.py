@@ -23,14 +23,14 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.test import TestCase
 
+from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
 from paasng.infras.iam.helpers import fetch_application_members
-from paasng.platform.sourcectl.models import SvnRepository
 from paasng.platform.mgrlegacy.app_migrations.basic import BaseMigration, BaseObjectMigration, MainInfoMigration
 from paasng.platform.mgrlegacy.app_migrations.product import ProductMigration
 from paasng.platform.mgrlegacy.exceptions import MigrationFailed
 from paasng.platform.mgrlegacy.models import MigrationContext
 from paasng.platform.modules.manager import ModuleInitializer
-from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
+from paasng.platform.sourcectl.models import SvnRepository
 from tests.conftest import skip_if_legacy_not_configured
 from tests.paasng.platform.mgrlegacy.utils import get_legacy_app, get_migration_instance, global_mock
 from tests.utils import mock
@@ -94,7 +94,7 @@ class TestBaseMigration(BaseTestCaseForMigration):
     def test_update_ongoing(self):
         # clear context.migration_process.ongoing_migration
         self.context.migration_process.ongoing_migration = "stub"
-        self.context.migration_process.save(update_fields=['ongoing_migration'])
+        self.context.migration_process.save(update_fields=["ongoing_migration"])
         assert self.context.migration_process.ongoing_migration == "stub", "修改数据失败"
         self.migration.update_ongoing()
         assert self.context.migration_process.ongoing_migration != "stub", "update_ongoing does not change ongoing"
@@ -134,7 +134,7 @@ class TestBaseMigration(BaseTestCaseForMigration):
         self.migration.apply_rollback()
         assert self.migration.apply_type == "rollback", "执行 apply_rollback 后, migration类型未改成 rollback"
         assert self.migration.successful is False, "执行 apply_rollback 失败但未报错"
-        assert self.migration.failed_reason == '', "异常信息未被捕获"
+        assert self.migration.failed_reason == "", "异常信息未被捕获"
         assert self.migration.finished, "执行 apply_rollback 后, migration 未标记为完成"
 
 
@@ -230,7 +230,7 @@ class TestProductMigration(BaseTestCaseForMigration):
         display_options = DisplayOptions.objects.get(product=product)
         assert display_options.contact is None, "# 写该单元测试时, 未同步contact"
 
-    @pytest.mark.usefixtures('init_tmpls')
+    @pytest.mark.usefixtures("_init_tmpls")
     def test_migrate_when_released_to_market(self):
         """模拟应用迁移前已发布至市场, 市场功能需在同步 Product 才能正常访问"""
         self.context.legacy_app.is_display = 1
@@ -249,7 +249,7 @@ class TestProductMigration(BaseTestCaseForMigration):
         assert legacy_app.is_display == 1, "迁移时, 应用被错误下架"
         assert legacy_app.is_already_online == 1, "迁移时, 应用被错误下架"
 
-    @pytest.mark.usefixtures('init_tmpls')
+    @pytest.mark.usefixtures("_init_tmpls")
     def test_migrate_before_release_to_market(self):
         """模拟应用迁移前已发布至市场, 市场功能需在同步 Product 才能正常访问"""
         self.context.legacy_app.is_display = 0
@@ -267,5 +267,7 @@ class TestProductMigration(BaseTestCaseForMigration):
     def test_rollback(self):
         self.test_migrate()
         self.migration.rollback()
-        assert DisplayOptions.objects.filter(product__code=self.context.app.code).count() == 0, "DisplayOptions 删除异常"
+        assert (
+            DisplayOptions.objects.filter(product__code=self.context.app.code).count() == 0
+        ), "DisplayOptions 删除异常"
         assert Product.objects.filter(code=self.context.app.code).count() == 0, "Product 删除异常"

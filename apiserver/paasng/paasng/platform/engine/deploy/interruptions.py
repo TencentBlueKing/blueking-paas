@@ -24,14 +24,14 @@ def interrupt_deployment(deployment: Deployment, user: User):
     :raises: DeployInterruptionFailed
     """
     if deployment.operator != user.pk:
-        raise DeployInterruptionFailed(_('无法中断由他人发起的部署'))
+        raise DeployInterruptionFailed(_("无法中断由他人发起的部署"))
     if deployment.status in JobStatus.get_finished_states():
-        raise DeployInterruptionFailed(_('无法中断，部署已处于结束状态'))
+        raise DeployInterruptionFailed(_("无法中断，部署已处于结束状态"))
 
     now = timezone.now()
     deployment.build_int_requested_at = now
     deployment.release_int_requested_at = now
-    deployment.save(update_fields=['build_int_requested_at', 'release_int_requested_at', 'updated'])
+    deployment.save(update_fields=["build_int_requested_at", "release_int_requested_at", "updated"])
 
     if deployment.build_process_id:
         try:
@@ -39,4 +39,4 @@ def interrupt_deployment(deployment: Deployment, user: User):
         except DeployInterruptionFailed:
             # This exception means that build has not been started yet, transform
             # the error message.
-            raise DeployInterruptionFailed('任务正处于预备执行状态，无法中断，请稍候重试')
+            raise DeployInterruptionFailed("任务正处于预备执行状态，无法中断，请稍候重试")

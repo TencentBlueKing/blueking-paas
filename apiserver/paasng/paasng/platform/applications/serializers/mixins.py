@@ -37,7 +37,7 @@ class AppBasicInfoMixin(serializers.Serializer):
 class MarketParamsMixin(serializers.Serializer):
     """蓝鲸市场相关参数"""
 
-    source_tp_url = serializers.URLField(required=False, allow_blank=True, help_text='第三方访问地址')
+    source_tp_url = serializers.URLField(required=False, allow_blank=True, help_text="第三方访问地址")
 
 
 class AdvancedCreationParamsMixin(serializers.Serializer):
@@ -47,7 +47,7 @@ class AdvancedCreationParamsMixin(serializers.Serializer):
 
     def validate_cluster_name(self, value: str) -> str:
         # Get region value from parent serializer
-        region = self.parent.initial_data['region']
+        region = self.parent.initial_data["region"]
         if not RegionClusterService(region).has_cluster(value):
-            raise ValidationError(_('集群名称错误，无法找到名为 {value} 的集群').format(value=value))
+            raise ValidationError(_("集群名称错误，无法找到名为 {value} 的集群").format(value=value))
         return value

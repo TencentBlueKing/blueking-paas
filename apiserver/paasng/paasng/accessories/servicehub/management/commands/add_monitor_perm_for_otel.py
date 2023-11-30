@@ -21,22 +21,22 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.infras.iam.tasks import add_monitoring_space_permission
-from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
-    help = 'Add BK Monitoring space permissions to apps that have enabled the Otel service.'
+    help = "Add BK Monitoring space permissions to apps that have enabled the Otel service."
 
     def add_arguments(self, parser):
         parser.add_argument("--region", required=False, type=str, default=settings.DEFAULT_REGION_NAME)
         parser.add_argument("--dry-run", default=False, action="store_true", help="dry run")
 
     def handle(self, region, dry_run, *args, **options):
-        service = mixed_service_mgr.find_by_name('otel', region)
-        application_ids = list(Application.objects.all().values_list('id', flat=True))
+        service = mixed_service_mgr.find_by_name("otel", region)
+        application_ids = list(Application.objects.all().values_list("id", flat=True))
         # 查询所有以开启 otel 增强服务的应用信息
         service_instances = mixed_service_mgr.get_provisioned_queryset(service, application_ids)
         for ins in service_instances:

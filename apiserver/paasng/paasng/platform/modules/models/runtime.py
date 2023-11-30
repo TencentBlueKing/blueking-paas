@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class BuildpackManager(models.Manager):
-    def filter_module_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
+    def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """查询模块可用的构建工具
 
         规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
@@ -74,21 +74,21 @@ class BuildpackManager(models.Manager):
 class AppBuildPack(TimestampedModel):
     """buildpack 配置"""
 
-    language = models.CharField(verbose_name='编程语言', max_length=32)
-    type = models.CharField(verbose_name='引用类型', max_length=32, choices=BuildPackType.get_choices())
-    name = models.CharField(verbose_name='名称', max_length=64)
+    language = models.CharField(verbose_name="编程语言", max_length=32)
+    type = models.CharField(verbose_name="引用类型", max_length=32, choices=BuildPackType.get_choices())
+    name = models.CharField(verbose_name="名称", max_length=64)
     display_name = TranslatedFieldWithFallback(
-        models.CharField(verbose_name='展示名称', max_length=64, default="", blank=True)
+        models.CharField(verbose_name="展示名称", max_length=64, default="", blank=True)
     )
-    address = models.CharField(verbose_name='地址', max_length=2048)
+    address = models.CharField(verbose_name="地址", max_length=2048)
     # 如果是 git 的话需要保证存在对应版本的 tag
-    version = models.CharField(verbose_name='版本', max_length=32)
-    environments = JSONField(verbose_name='环境变量', default=dict, blank=True)
+    version = models.CharField(verbose_name="版本", max_length=32)
+    environments = JSONField(verbose_name="环境变量", default=dict, blank=True)
     # 这个影响用户能否在设置中看见，处理当前版本未就绪/不建议使用/私有定制的情况
-    is_hidden = models.BooleanField(verbose_name='是否隐藏', default=False)
-    description = TranslatedFieldWithFallback(models.CharField(verbose_name='描述', max_length=1024, blank=True))
+    is_hidden = models.BooleanField(verbose_name="是否隐藏", default=False)
+    description = TranslatedFieldWithFallback(models.CharField(verbose_name="描述", max_length=1024, blank=True))
     # Deprecated: 使用 build_config 代替该字段
-    modules = models.ManyToManyField('modules.Module', related_name="buildpacks")
+    modules = models.ManyToManyField("modules.Module", related_name="buildpacks")
 
     objects = BuildpackManager()
 
@@ -110,7 +110,7 @@ class AppBuildPack(TimestampedModel):
 
 
 class AppImageStackQuerySet(models.QuerySet):
-    def filter_module_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
+    def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """过滤模块可用的镜像
 
         规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
@@ -177,20 +177,20 @@ class AppImageStackQuerySet(models.QuerySet):
 class AppImageStackManager(models.Manager):
     _queryset_class = AppImageStackQuerySet
 
-    def filter_module_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
+    def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """过滤模块可用的镜像
 
         规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         return self.get_queryset().filter_module_available(module=module, contain_hidden=contain_hidden)
 
-    def filter_by_full_image(self, module: 'Module', full_image: str, contain_hidden: bool = False) -> models.QuerySet:
+    def filter_by_full_image(self, module: "Module", full_image: str, contain_hidden: bool = False) -> models.QuerySet:
         """通过镜像全名过滤"""
         return self.filter_module_available(module, contain_hidden=contain_hidden).filter_by_full_image(
             full_image=full_image
         )
 
     def filter_by_labels(
-        self, module: 'Module', labels: Dict[str, str], contain_hidden: bool = False
+        self, module: "Module", labels: Dict[str, str], contain_hidden: bool = False
     ) -> models.QuerySet:
         """根据label查询可用的镜像"""
         return self.filter_module_available(module, contain_hidden).filter_by_labels(labels)
@@ -200,9 +200,7 @@ class AppImageStackManager(models.Manager):
 
         :raise ObjectDoesNotExist: when no available runtime
         """
-        original_qs = self.get_queryset().filter_by_region(
-            region, contain_hidden=contain_hidden
-        )  # type: AppImageStackQuerySet
+        original_qs = self.get_queryset().filter_by_region(region, contain_hidden=contain_hidden)  # type: AppImageStackQuerySet
 
         # firstly, try to select default runtime by labels
         if labels and (available_runtimes := original_qs.filter_by_labels(labels)).exists():
@@ -219,7 +217,7 @@ class AppImageStackManager(models.Manager):
             image = settings.DEFAULT_RUNTIME_IMAGES[region]
         except KeyError:
             image = list(settings.DEFAULT_RUNTIME_IMAGES.values())[0]
-            logger.warning('Unable to get default image for region: %s, will use %s by default', region, image)
+            logger.warning("Unable to get default image for region: %s, will use %s by default", region, image)
         try:
             return original_qs.get(name=image)
         except self.model.DoesNotExist:
@@ -231,18 +229,18 @@ class AppImageStackManager(models.Manager):
 
 class AppImage(TimestampedModel):
     # 代表其基础镜像,如 ceder14 或 heroku18,相同的名称表示运行环境一致
-    name = models.CharField(verbose_name='名称', max_length=64, unique=True)
+    name = models.CharField(verbose_name="名称", max_length=64, unique=True)
     display_name = TranslatedFieldWithFallback(
-        models.CharField(verbose_name='展示名称', max_length=64, default="", blank=True)
+        models.CharField(verbose_name="展示名称", max_length=64, default="", blank=True)
     )
-    image = models.CharField(verbose_name='镜像', max_length=256)
-    tag = models.CharField(verbose_name='标签', max_length=32)
+    image = models.CharField(verbose_name="镜像", max_length=256)
+    tag = models.CharField(verbose_name="标签", max_length=32)
     # 这个影响用户能否在设置中看见，处理当前版本未就绪/不建议使用/私有定制的情况
-    is_hidden = models.BooleanField(verbose_name='是否隐藏', default=False)
-    is_default = models.BooleanField(null=True, verbose_name='是否为默认运行时', default=False)
-    description = TranslatedFieldWithFallback(models.CharField(verbose_name='描述', max_length=1024, blank=True))
-    environments = JSONField(verbose_name='环境变量', default=dict, blank=True)
-    labels = JSONField(verbose_name='镜像标记', default=dict, blank=True)
+    is_hidden = models.BooleanField(verbose_name="是否隐藏", default=False)
+    is_default = models.BooleanField(null=True, verbose_name="是否为默认运行时", default=False)
+    description = TranslatedFieldWithFallback(models.CharField(verbose_name="描述", max_length=1024, blank=True))
+    environments = JSONField(verbose_name="环境变量", default=dict, blank=True)
+    labels = JSONField(verbose_name="镜像标记", default=dict, blank=True)
 
     def set_label(self, key: str, value: str):
         """设置标签，默认覆盖原有内容"""
@@ -275,7 +273,7 @@ class AppSlugRunner(AppImage):
     """应用运行环境"""
 
     # Deprecated: 使用 build_config 代替该字段
-    modules = models.ManyToManyField('modules.Module', related_name="slugrunners")
+    modules = models.ManyToManyField("modules.Module", related_name="slugrunners")
 
     objects = AppImageStackManager()
 
@@ -284,13 +282,13 @@ class AppSlugBuilder(AppImage):
     """应用构建环境"""
 
     # 字段指示该环境可用的 buildpacks
-    buildpacks = models.ManyToManyField(AppBuildPack, related_name='slugbuilders')
+    buildpacks = models.ManyToManyField(AppBuildPack, related_name="slugbuilders")
     # Deprecated: 使用 build_config 代替该字段
-    modules = models.ManyToManyField('modules.Module', related_name="slugbuilders")
+    modules = models.ManyToManyField("modules.Module", related_name="slugbuilders")
 
     objects = AppImageStackManager()
 
-    def get_buildpack_choices(self, module: 'Module', *args, **kwargs) -> List[AppBuildPack]:
+    def get_buildpack_choices(self, module: "Module", *args, **kwargs) -> List[AppBuildPack]:
         """查询模块可用的构建工具
 
         :param args: other filter params

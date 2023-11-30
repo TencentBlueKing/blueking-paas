@@ -35,18 +35,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HasRegionPermission(permissions.BasePermission):
-    getter: Callable[['Request', 'View'], str]
+    getter: Callable[["Request", "View"], str]
 
     @classmethod
     def from_url_var(cls, name="region"):
         """Get region from url vars"""
 
-        def get_region_by_url_var(request: 'Request', view: 'View') -> 'str':
+        def get_region_by_url_var(request: "Request", view: "View") -> "str":
             return view.kwargs[name]
 
         return partial(cls, getter=get_region_by_url_var)
 
-    def has_permission(self, request: 'Request', view: 'View'):
+    def has_permission(self, request: "Request", view: "View"):
         try:
             region = self.getter(request, view)
         except Exception:
@@ -62,7 +62,7 @@ class HasPostRegionPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
         # only check post request, let other requests go
-        if request.method != 'POST':
+        if request.method != "POST":
             return True
 
         # 如果在渲染 openapi 文档, 那么跳过权限校验.
@@ -70,7 +70,7 @@ class HasPostRegionPermission(permissions.BasePermission):
             return True
 
         try:
-            region = request.data['region']
+            region = request.data["region"]
         except KeyError:
             return False
 

@@ -18,12 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 import django.dispatch
 
-prepare_use_application_code = django.dispatch.Signal(providing_args=['value'])
-prepare_use_application_name = django.dispatch.Signal(providing_args=['value', 'instance'])
-post_create_application = django.dispatch.Signal(providing_args=['application'])
-before_finishing_application_creation = django.dispatch.Signal(providing_args=['application'])
+prepare_use_application_code = django.dispatch.Signal(providing_args=["value"])
+prepare_use_application_name = django.dispatch.Signal(providing_args=["value", "instance"])
+post_create_application = django.dispatch.Signal(providing_args=["application"])
+before_finishing_application_creation = django.dispatch.Signal(providing_args=["application"])
 
-prepare_change_application_name = django.dispatch.Signal(providing_args=["region", "code", 'name', 'name_en'])
+prepare_change_application_name = django.dispatch.Signal(providing_args=["region", "code", "name", "name_en"])
 
 
 online_market_success = django.dispatch.Signal(providing_args=["deployment_instance"])

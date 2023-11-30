@@ -24,11 +24,11 @@ from fnmatch import fnmatch
 import arrow
 from django.core.management.base import BaseCommand
 
+from paas_wl.bk_app.applications.models import Release, WlApp
 from paas_wl.workloads.networking.ingress.managers import LegacyAppIngressMgr
 from paas_wl.workloads.networking.ingress.utils import make_service_name
-from paas_wl.bk_app.applications.models import Release, WlApp
 
-logger = logging.getLogger('commands')
+logger = logging.getLogger("commands")
 
 
 class Command(BaseCommand):
@@ -39,20 +39,20 @@ class Command(BaseCommand):
         - `nginx.ingress.kubernetes.io/server-snippet`
     """
 
-    help = 'Patch legacy app ingresses'
+    help = "Patch legacy app ingresses"
 
     def add_arguments(self, parser):
-        parser.add_argument('--dry-run', help="dry run", action="store_true")
-        parser.add_argument('-p', '--pattern', default="", help="domain pattern")
-        parser.add_argument('-t', '--process_type', default="web", help="app process type")
-        parser.add_argument('--with-create', action="store_true", help="create ingress when not exists")
-        parser.add_argument('--app-created-after', default=None, help="filter applications by created field")
+        parser.add_argument("--dry-run", help="dry run", action="store_true")
+        parser.add_argument("-p", "--pattern", default="", help="domain pattern")
+        parser.add_argument("-t", "--process_type", default="web", help="app process type")
+        parser.add_argument("--with-create", action="store_true", help="create ingress when not exists")
+        parser.add_argument("--app-created-after", default=None, help="filter applications by created field")
         parser.add_argument(
-            '-a', '--app', dest="apps", default=None, nargs="+", help="legacy app name which need to patch"
+            "-a", "--app", dest="apps", default=None, nargs="+", help="legacy app name which need to patch"
         )
 
     def handle(self, apps, dry_run, pattern, process_type, with_create, app_created_after, *args, **options):
-        qs = WlApp.objects.all().order_by('created')
+        qs = WlApp.objects.all().order_by("created")
         if apps:
             qs = qs.filter(name__in=apps)
 
@@ -67,7 +67,7 @@ class Command(BaseCommand):
     def _patch_app_ingress(self, app: WlApp, dry_run, pattern, process_type, with_create):
         # Only process released apps
         if not Release.objects.filter(app=app, build__isnull=False).exists():
-            return False
+            return
 
         logger.info(f"checking ingress for app {app.name} with pattern {pattern}")
         logger.info(f"app was created at {app.created}")
@@ -97,5 +97,5 @@ class Command(BaseCommand):
             print(f"syncing ingress for app {app.name}")
             try:
                 mgr.sync(service_name)
-            except Exception as err:
-                logger.error("sync ingresses failed for app %s, err: %s", app.name, err)
+            except Exception:
+                logger.exception("sync ingresses failed for app %s", app.name)

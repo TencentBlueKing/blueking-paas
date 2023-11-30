@@ -18,4 +18,4 @@ to the current version of the project delivered to anyone in the future.
 """
 from .app_configvar import AppConfigVarManager
 
-__all__ = ['AppConfigVarManager']
+__all__ = ["AppConfigVarManager"]

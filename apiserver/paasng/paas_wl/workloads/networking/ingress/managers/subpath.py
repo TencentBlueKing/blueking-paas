@@ -59,7 +59,7 @@ def save_subpaths(app: WlApp, subpaths: List[str]) -> Set[WlApp]:
 
     for subpath in subpaths:
         AppSubpath.objects.update_or_create(
-            region=app.region, subpath=subpath, defaults={'app': app, 'source': AppSubpathSource.DEFAULT}
+            region=app.region, subpath=subpath, defaults={"app": app, "source": AppSubpathSource.DEFAULT}
         )
     # Remove subpaths which are no longer bound with app
     AppSubpath.objects.filter(app=app, source=AppSubpathSource.DEFAULT).exclude(subpath__in=subpaths).delete()
@@ -79,17 +79,17 @@ class SubPathAppIngressMgr(AppIngressMgr):
     """
 
     def make_ingress_name(self) -> str:
-        return f'{self.app.region}-{self.app.scheduler_safe_name}--subpath'
+        return f"{self.app.region}-{self.app.scheduler_safe_name}--subpath"
 
     def list_desired_domains(self) -> List[PIngressDomain]:
         """List all desired domains for current app"""
         cluster = get_cluster_by_app(self.app)
         domains = cluster.ingress_config.sub_path_domains
         if not domains:
-            logger.info('sub-path domain was not configured for cluster, return empty result')
+            logger.info("sub-path domain was not configured for cluster, return empty result")
             return []
 
-        path_objs = AppSubpath.objects.filter(app=self.app).order_by('created')
+        path_objs = AppSubpath.objects.filter(app=self.app).order_by("created")
         paths = [obj.subpath for obj in path_objs]
         if not paths:
             return []
@@ -124,5 +124,5 @@ class SubPathAppIngressMgr(AppIngressMgr):
             )
         else:
             # Disable HTTPS and write a warning message
-            logger.warning('no valid cert can be found for domain: %s, disable HTTPS.', host)
+            logger.warning("no valid cert can be found for domain: %s, disable HTTPS.", host)
             return PIngressDomain(host=host, path_prefix_list=path_prefix_list, tls_enabled=False)

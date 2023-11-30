@@ -59,7 +59,7 @@ class DeployStepMeta(AuditedModel):
     # NOTE: 2022-03-10 已确认现网字段 buildpack_provider 并没有使用.
     # TODO: 删除 `buildpack_provider` 和 `builder_provider` 字段
     buildpack_provider = models.ForeignKey(
-        'modules.AppBuildPack',
+        "modules.AppBuildPack",
         on_delete=models.CASCADE,
         verbose_name=_("由 BuildPack 提供"),
         null=True,
@@ -67,7 +67,7 @@ class DeployStepMeta(AuditedModel):
         related_name="step_metas",
     )
     builder_provider = models.ForeignKey(
-        'modules.AppSlugBuilder',
+        "modules.AppSlugBuilder",
         on_delete=models.CASCADE,
         verbose_name=_("由 SlugBuild 提供"),
         null=True,
@@ -83,7 +83,7 @@ class DeployStepMeta(AuditedModel):
         return f"{self.phase}-{self.name}"
 
     class Meta:
-        ordering = ['id']
+        ordering = ["id"]
 
     def natural_key(self):
         return (self.phase, self.name)
@@ -113,7 +113,7 @@ class StepMetaSet(AuditedModel):
     def natural_key(self):
         return (self.name,)
 
-    def create_step_instances(self, phase: 'DeployPhase') -> List['DeployStep']:
+    def create_step_instances(self, phase: "DeployPhase") -> List["DeployStep"]:
         instances = []
         for step_meta in self.list_metas_by_phase(DeployPhaseTypes(phase.type)):
             attrs = {"name": step_meta.name, "phase": phase, "meta": step_meta}
@@ -141,7 +141,7 @@ class StepMetaSet(AuditedModel):
         )
 
     class Meta:
-        ordering = ['id']
+        ordering = ["id"]
 
 
 # 声明要求确保了所有 DeployStepMeta 对象在任何 StepMetaSet 对象之前序列化
@@ -164,7 +164,7 @@ class DeployStep(UuidAuditedModel, MarkStatusMixin):
     )
 
     class Meta:
-        ordering = ['created']
+        ordering = ["created"]
 
     def ensure_start_before_complete(self):
         """保证事件的开始事件不晚于结束时间

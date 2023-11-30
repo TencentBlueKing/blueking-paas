@@ -25,23 +25,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_403_FORBIDDEN
 
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.bk_app.processes.shim import ProcessManager
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tags import get_dynamic_tag
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.user import user_has_feature
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.feature_flags.constants import PlatformFeatureFlag as PFF
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.processes import serializers as slzs
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag as PFF
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.platform.modules.models import AppSlugRunner
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.error_codes import error_codes
 
@@ -59,14 +56,15 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     def _is_whitelisted_user(self, request):
         return user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self)
 
-    def _is_cloud_native_app(self, application):
-        return application.type == ApplicationType.CLOUD_NATIVE
-
-    def _is_s_mart_app(self, module):
-        return module.get_source_origin() == SourceOrigin.S_MART
-
-    def _is_buildpack_app(self, module):
-        return ModuleSpecs(module).runtime_type == RuntimeType.BUILDPACK
+    def _get_webconsole_docs_from_advisor(self):
+        """从智能顾问中获取 web-console 相关的文档"""
+        tag = get_dynamic_tag("app-feature:web-console")
+        links = DocumentaryLinkAdvisor().search_by_tags([tag])
+        if not links:
+            # 如果数据库无文章记录, 就只能抛异常了
+            raise error_codes.CANNOT_OPERATE_PROCESS.f(_("当前运行镜像不支持 WebConsole 功能，请尝试绑定最新运行时"))
+        link = links[0]
+        return DocumentaryLinkSLZ(link).data
 
     @swagger_auto_schema(
         query_serializer=slzs.WebConsoleOpenSLZ, responses={200: slzs.WebConsoleResultSLZ}, tags=["获取控制台入口"]
@@ -75,7 +73,8 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
         slz = slzs.WebConsoleOpenSLZ(data=request.query_params)
         slz.is_valid(True)
 
-        application = self.get_application()
+        # 必须调用 get_application() 方法才能触发权限校验
+        application = self.get_application()  # noqa: F841
         module = self.get_module_via_path()
         env = self.get_env_via_path()
         manager = ProcessManager(env)
@@ -84,35 +83,20 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
             # 平台不支持 WebConsole 功能
             raise error_codes.FEATURE_FLAG_DISABLED
 
-        if self._is_whitelisted_user(request) or self._is_cloud_native_app(application) or self._is_s_mart_app(module):
-            logger.debug("Allow to open the WebConsole")
-        elif ModuleSpecs(module).runtime_type == RuntimeType.BUILDPACK:
-            try:
-                image = manager.get_running_image()
-            except RuntimeError as e:
-                raise error_codes.CANNOT_OPERATE_PROCESS.format(str(e))
+        # 进入 WebConsole 的默认命令
+        command = "sh"
+        if ModuleSpecs(module).runtime_type == RuntimeType.BUILDPACK:
+            runtime_manager = ModuleRuntimeManager(module)
+            is_encrypted_image = runtime_manager.is_secure_encrypted_runtime
 
-            is_encrypted_image = any(
-                runner.get_label(ModuleRuntimeManager.SECURE_ENCRYPTED_LABEL)
-                # 升级镜像时会导致旧镜像无法打开 web-console (因为镜像的全名发生了变化)
-                # 解决方案: 到管理端创建与旧镜像信息一样的隐藏镜像
-                for runner in AppSlugRunner.objects.filter_by_full_image(module, image, contain_hidden=True)
-            )
-            if not is_encrypted_image:
-                tag = get_dynamic_tag("app-feature:web-console")
-                links = DocumentaryLinkAdvisor().search_by_tags([tag])
-                if not links:
-                    # 如果数据库无文章记录, 就只能抛异常了
-                    raise error_codes.CANNOT_OPERATE_PROCESS.f(_("当前运行镜像不支持 WebConsole 功能，请尝试绑定最新运行时"))
-                link = links[0]
+            # 如果绑定的镜像未加密，则只有白名单中的用户才能访问
+            if (not is_encrypted_image) and (not self._is_whitelisted_user(request)):
+                docs = self._get_webconsole_docs_from_advisor()
+                return Response(data=docs, status=HTTP_403_FORBIDDEN)
 
-                return Response(
-                    data=DocumentaryLinkSLZ(link).data,
-                    status=HTTP_403_FORBIDDEN,
-                )
+            # 在 CNB 中，构建阶段会产生一个叫做 launcher 的可执行文件，这个 launcher 用于在启动应用时设置正确的环境并执行启动命令。
+            command = "launcher bash" if runtime_manager.is_cnb_runtime else "bash"
 
-        # 云原生应用、镜像应用使用等非平台指定的镜像，使用 sh 命令
-        command = "sh" if self._is_cloud_native_app(application) or self._is_s_mart_app(module) else "bash"
         try:
             result = manager.create_webconsole(
                 request.user.username,
@@ -122,7 +106,7 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
                 command,
             )
         except AppEntityNotFound:
-            raise error_codes.ERROR_UPDATING_PROC_SERVICE.f('未找到服务')
+            raise error_codes.ERROR_UPDATING_PROC_SERVICE.f("未找到服务")
 
         data = result.get("data") or {}
         return Response(

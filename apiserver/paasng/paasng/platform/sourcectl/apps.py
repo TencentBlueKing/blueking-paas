@@ -20,7 +20,7 @@ from django.apps import AppConfig
 
 
 class SourceCtlConfig(AppConfig):
-    name = 'paasng.platform.sourcectl'
+    name = "paasng.platform.sourcectl"
 
     def ready(self):
         # Trigger register code

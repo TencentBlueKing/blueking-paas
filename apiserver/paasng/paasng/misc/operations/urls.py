@@ -22,13 +22,13 @@ from . import views
 
 urlpatterns = [
     re_path(
-        r'^api/bkapps/applications/lists/latest/',
+        r"^api/bkapps/applications/lists/latest/",
         views.LatestApplicationsViewSet.as_view(),
-        name='api.applications.latest',
+        name="api.applications.latest",
     ),
     re_path(
-        make_app_pattern(r'/operations/', include_envs=False),
-        views.ApplicationOperationsViewSet.as_view({'get': 'list'}),
-        name='api.bkapps.application.operations',
+        make_app_pattern(r"/operations/", include_envs=False),
+        views.ApplicationOperationsViewSet.as_view({"get": "list"}),
+        name="api.bkapps.application.operations",
     ),
 ]

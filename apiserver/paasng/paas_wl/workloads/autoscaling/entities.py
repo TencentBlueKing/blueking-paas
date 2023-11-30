@@ -19,7 +19,10 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import List, Optional
 
-from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
+import cattr
+
+from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
+from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS, ScalingMetric, ScalingMetricSourceType
 
 
 @dataclass
@@ -46,6 +49,15 @@ class MetricSpec:
 
 
 @dataclass
+class ProcAutoscalingSpec:
+    """The specification for ProcAutoscaling kres entity."""
+
+    min_replicas: int
+    max_replicas: int
+    metrics: List[MetricSpec]
+
+
+@dataclass
 class AutoscalingConfig:
     """自动扩缩容配置"""
 
@@ -53,5 +65,16 @@ class AutoscalingConfig:
     min_replicas: int
     # 最大副本数量
     max_replicas: int
-    # 扩缩容指标
-    metrics: List[MetricSpec]
+    # 扩缩容策略
+    policy: str
+
+    def to_autoscaling_spec(self) -> ProcAutoscalingSpec:
+        """Transform current config into the autoscaling spec object."""
+        if self.policy == ScalingPolicy.DEFAULT.value:
+            metrics = cattr.structure(DEFAULT_METRICS, List[MetricSpec])
+            return ProcAutoscalingSpec(
+                min_replicas=self.min_replicas,
+                max_replicas=self.max_replicas,
+                metrics=metrics,
+            )
+        raise ValueError("Unable to get metrics, policy: {}".format(self.policy))

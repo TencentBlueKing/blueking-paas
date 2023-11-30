@@ -21,8 +21,8 @@ from django.conf import settings
 from django.core.management import call_command
 
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations, standardize_tolerations
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -33,14 +33,14 @@ class TestGetFullNodeSelector:
 
     def test_integrated(self, wl_app):
         config = wl_app.config_set.latest()
-        config.node_selector = {'key1': 'value1', 'key-c': 'value-new'}
+        config.node_selector = {"key1": "value1", "key-c": "value-new"}
         config.save()
 
         cluster = get_cluster_by_app(wl_app)
-        cluster.default_node_selector = {'key-c': 'value-c', 'key-c2': 'value-c2'}
+        cluster.default_node_selector = {"key-c": "value-c", "key-c2": "value-c2"}
         cluster.save()
 
-        assert get_full_node_selector(wl_app) == {'key1': 'value1', 'key-c': 'value-new', 'key-c2': 'value-c2'}
+        assert get_full_node_selector(wl_app) == {"key1": "value1", "key-c": "value-new", "key-c2": "value-c2"}
 
     def test_with_cluster_state(self, wl_app):
         assert get_full_node_selector(wl_app) == {}
@@ -61,17 +61,17 @@ class TestGetFullTolerations:
 
     def test_integrated(self, wl_app):
         config = wl_app.config_set.latest()
-        config.tolerations = [{'key': 'app', 'operator': 'Equal', 'value': 'value1', 'effect': 'NoExecute'}]
+        config.tolerations = [{"key": "app", "operator": "Equal", "value": "value1", "effect": "NoExecute"}]
         config.save()
 
         cluster = get_cluster_by_app(wl_app)
         cluster.default_tolerations = [
-            {'key': 'app-c', 'operator': 'Equal', 'value': 'value-c', 'effect': 'NoSchedule'}
+            {"key": "app-c", "operator": "Equal", "value": "value-c", "effect": "NoSchedule"}
         ]
         cluster.save()
         assert get_full_tolerations(wl_app) == [
-            {'key': 'app', 'operator': 'Equal', 'value': 'value1', 'effect': 'NoExecute'},
-            {'key': 'app-c', 'operator': 'Equal', 'value': 'value-c', 'effect': 'NoSchedule'},
+            {"key": "app", "operator": "Equal", "value": "value1", "effect": "NoExecute"},
+            {"key": "app-c", "operator": "Equal", "value": "value-c", "effect": "NoSchedule"},
         ]
 
 
@@ -80,10 +80,10 @@ class TestStandardizeTolerations:
 
     def test_condensed_list_valid(self):
         tolerations = [
-            {'key': 'app', 'operator': 'Equal', 'value': 'value1', 'effect': 'NoExecute'},
-            {'key': 'system-only', 'operator': 'Exists', 'effect': 'NoSchedule', 'foo': 'bar'},  # extra key
+            {"key": "app", "operator": "Equal", "value": "value1", "effect": "NoExecute"},
+            {"key": "system-only", "operator": "Exists", "effect": "NoSchedule", "foo": "bar"},  # extra key
         ]
         assert standardize_tolerations(tolerations) == [
-            {'key': 'app', 'operator': 'Equal', 'value': 'value1', 'effect': 'NoExecute'},
-            {'key': 'system-only', 'operator': 'Exists', 'effect': 'NoSchedule'},
+            {"key": "app", "operator": "Equal", "value": "value1", "effect": "NoExecute"},
+            {"key": "system-only", "operator": "Exists", "effect": "NoSchedule"},
         ]

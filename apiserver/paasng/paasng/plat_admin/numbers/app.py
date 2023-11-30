@@ -36,21 +36,21 @@ from rest_framework.fields import get_attribute
 from sqlalchemy import func
 from sqlalchemy.orm import Query, Session
 
-from paasng.infras.iam.permissions.resources.application import ApplicationPermission
+from paasng.accessories.publish.market.models import MarketConfig, Tag
+from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.core.region.models import get_region
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
+from paasng.infras.iam.permissions.resources.application import ApplicationPermission
+from paasng.plat_admin.system.constants import SimpleAppSource
+from paasng.plat_admin.system.legacy import LegacyAppNormalizer, query_concrete_apps
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.controllers.bk_svn import SvnRepoController
 from paasng.platform.sourcectl.models import GitProject
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names, get_sourcectl_type
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
-from paasng.plat_admin.system.constants import SimpleAppSource
-from paasng.plat_admin.system.legacy import LegacyAppNormalizer, query_concrete_apps
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application
-from paasng.core.core.storages.sqlalchemy import legacy_db
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.core.region.models import get_region
-from paasng.accessories.publish.market.models import MarketConfig, Tag
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationUseRecord
@@ -66,7 +66,7 @@ except ImportError:
         return -1, -1
 
 
-RE_QQ = re.compile(r'^\d{5,}$')
+RE_QQ = re.compile(r"^\d{5,}$")
 
 PV_UV_COUNT_PERIOD_LENGTH = 90
 
@@ -169,8 +169,8 @@ class DefaultAppDataBuilder(AppDataBuilder):
         """Return app's deploy status"""
         # TODO: respect multiple modules
         module = app.get_default_module()
-        stag_env = module.envs.get(environment='stag')
-        prod_env = module.envs.get(environment='prod')
+        stag_env = module.envs.get(environment="stag")
+        prod_env = module.envs.get(environment="prod")
 
         if prod_env.is_offlined:
             return DeployStatus.OFFLINED
@@ -183,8 +183,8 @@ class DefaultAppDataBuilder(AppDataBuilder):
     @staticmethod
     def get_pv_uv(app: Application) -> Tuple[int, int]:
         module = app.get_default_module()
-        stag_env = module.envs.get(environment='stag')
-        prod_env = module.envs.get(environment='prod')
+        stag_env = module.envs.get(environment="stag")
+        prod_env = module.envs.get(environment="prod")
 
         end_date = date.today()
         start_date = end_date - timedelta(days=PV_UV_COUNT_PERIOD_LENGTH)
@@ -225,7 +225,7 @@ class DefaultAppDataBuilder(AppDataBuilder):
 
         if app_filters:
             filters = reduce(lambda x, y: x | y, app_filters)
-            app_ids = Application.objects.filter(filters).values_list('id', flat=True)
+            app_ids = Application.objects.filter(filters).values_list("id", flat=True)
 
         # Enable filter flag
         self.filter_developers_enabled = True
@@ -249,21 +249,21 @@ class DefaultAppDataBuilder(AppDataBuilder):
 
     def get_results(self) -> Generator[SimpleApp, None, None]:
         """Return simple apps as result"""
-        for app in self.exclude_unqualified(self.apps.order_by('created')):
+        for app in self.exclude_unqualified(self.apps.order_by("created")):
             engine_enabled = app.engine_enabled
             if engine_enabled:
                 deploy_status = self.get_deploy_status(app)
                 source_obj = app.get_source_obj()
                 if not source_obj:
-                    logger.warning('No source object found for application %s', app.code)
+                    logger.warning("No source object found for application %s", app.code)
                     continue
 
                 source_repo_type: Optional[str] = source_obj.get_source_type()
-                source_location = source_obj.get_repo_url() or ''
+                source_location = source_obj.get_repo_url() or ""
             else:
                 deploy_status = DeployStatus.DEVELOPING
                 source_repo_type = None
-                source_location = ''
+                source_location = ""
 
             creator = get_user_by_user_id(app.creator, username_only=True).username
 
@@ -279,7 +279,7 @@ class DefaultAppDataBuilder(AppDataBuilder):
                 _source=SimpleAppSource.DEFAULT,
                 name=app.name,
                 type=app.type,
-                region=app.region or 'unknown',
+                region=app.region or "unknown",
                 code=app.code,
                 created=app.created,
                 deploy_status=deploy_status,
@@ -330,8 +330,8 @@ class LegacyAppDataBuilder(AppDataBuilder):
     @staticmethod
     def get_market_address(region: str, app_code: str):
         context = {
-            'code': app_code,
-            'region': region,
+            "code": app_code,
+            "region": region,
         }
         return get_region(region).basic_info.link_production_app.format(**context)
 
@@ -360,7 +360,7 @@ class LegacyAppDataBuilder(AppDataBuilder):
             if not region:
                 continue
             # Skip collections type app
-            if app.code.startswith('collection_'):
+            if app.code.startswith("collection_"):
                 continue
 
             developers = normalizer.get_developers()
@@ -369,26 +369,26 @@ class LegacyAppDataBuilder(AppDataBuilder):
             if self.filter_developers_enabled and not (self.filter_developers_devs & set(developers)):
                 continue
 
-            if hasattr(app, 'svn_domain'):
+            if hasattr(app, "svn_domain"):
                 source_location = f"svn://{app.svn_domain}:80/apps/{app.code}"
             else:
-                source_location = ''
+                source_location = ""
 
             market_address = market_tag = None
             if self.include_market_info:
                 market_address = self.get_market_address(region=region, app_code=app.code)
                 market_tag = self.get_tag_display_name(app.tags_id)
 
-            app = SimpleApp(
+            sim_app = SimpleApp(
                 _source=SimpleAppSource.LEGACY,
                 name=app.name,
-                type='legacy',
+                type="legacy",
                 region=region,
                 code=app.code,
                 created=app.created_date,
                 deploy_status=deploy_status,
                 source_origin=SourceOrigin.AUTHORIZED_VCS.value,
-                source_repo_type='bk_svn',
+                source_repo_type="bk_svn",
                 source_location=source_location,
                 engine_enabled=True,
                 creator=normalizer.get_creator(),
@@ -396,13 +396,13 @@ class LegacyAppDataBuilder(AppDataBuilder):
                 market_address=market_address,
                 market_tag=market_tag,
             )
-            yield app
+            yield sim_app
 
 
 class Table:
     """Table for data representation"""
 
-    def __init__(self, columns: List['Column']):
+    def __init__(self, columns: List["Column"]):
         self.columns = columns
         self.rows: List[Any] = []
         self._indented = 0
@@ -430,7 +430,7 @@ class Table:
 
             # If current column should be indented, set the value to empty string
             if i < self._indented:
-                row_value = ''
+                row_value = ""
 
             row_data.append(row_value)
         self.rows.append(row_data)
@@ -449,72 +449,72 @@ class AutoMapperColumn(Column):
 
 
 class AppColumn(AutoMapperColumn):
-    row_attr_name = 'app'
+    row_attr_name = "app"
 
 
 class ColUsername(Column):
-    display_name = '用户名'
+    display_name = "用户名"
 
 
 class ColCreatedAppsCnt(Column):
-    display_name = '创建应用个数'
+    display_name = "创建应用个数"
 
 
 class ColDevAppsCnt(Column):
-    display_name = '参与研发应用个数'
+    display_name = "参与研发应用个数"
 
 
 class ColAppName(AppColumn):
-    field_name = 'name'
-    display_name = '应用名称'
+    field_name = "name"
+    display_name = "应用名称"
 
 
 class ColAppType(AppColumn):
-    field_name = 'type'
-    display_name = '应用类型'
+    field_name = "type"
+    display_name = "应用类型"
 
 
 class ColAppCode(AppColumn):
-    field_name = 'code'
-    display_name = 'Code'
+    field_name = "code"
+    display_name = "Code"
 
 
 class ColAppSource(AppColumn):
-    field_name = '_source'
-    display_name = '平台版本'
+    field_name = "_source"
+    display_name = "平台版本"
 
     def format_value(self, value: Any) -> str:
         _text_map = {
-            SimpleAppSource.LEGACY: '旧版',
-            SimpleAppSource.DEFAULT: 'v3',
+            SimpleAppSource.LEGACY: "旧版",
+            SimpleAppSource.DEFAULT: "v3",
         }
         return _text_map[value]
 
 
 class ColAppRegion(AppColumn):
-    field_name = 'region'
-    display_name = '部署环境'
+    field_name = "region"
+    display_name = "部署环境"
 
 
 class ColAppEngineEnabled(AppColumn):
-    field_name = 'engine_enabled'
-    display_name = '是否开启应用引擎'
+    field_name = "engine_enabled"
+    display_name = "是否开启应用引擎"
 
     def format_value(self, value: Any) -> str:
-        return '是' if value else '否'
+        return "是" if value else "否"
 
 
 class ColAppSourceOrigin(AppColumn):
-    field_name = 'source_origin'
-    display_name = '源码来源'
+    field_name = "source_origin"
+    display_name = "源码来源"
 
     def format_value(self, value: Any) -> str:
         return SourceOrigin.get_choice_label(value)
 
 
 class ColAppSourceRepoType(AppColumn):
-    field_name = 'source_repo_type'
-    display_name = '源码类型'
+    field_name = "source_repo_type"
+    display_name = "源码类型"
 
     def format_value(self, value: Any) -> str:
         try:
@@ -525,68 +525,68 @@ class ColAppSourceRepoType(AppColumn):
 
 
 class ColAppSourceUrl(AppColumn):
-    field_name = 'source_location'
-    display_name = '源码地址'
+    field_name = "source_location"
+    display_name = "源码地址"
 
 
 class ColAppDeployStatus(AppColumn):
-    field_name = 'deploy_status'
-    display_name = '部署状态'
+    field_name = "deploy_status"
+    display_name = "部署状态"
 
     def format_value(self, value: Any) -> str:
         _text_map = {
-            DeployStatus.DEVELOPING: _('未上线'),
-            DeployStatus.PRODUCTION: _('已上线'),
-            DeployStatus.OFFLINED: _('已下架'),
-            DeployStatus.STAGING: _('测试中'),
+            DeployStatus.DEVELOPING: _("未上线"),
+            DeployStatus.PRODUCTION: _("已上线"),
+            DeployStatus.OFFLINED: _("已下架"),
+            DeployStatus.STAGING: _("测试中"),
         }
         return _text_map[value]
 
 
 class ColAppMarketAddress(AppColumn):
-    field_name = 'market_address'
-    display_name = '市场地址'
+    field_name = "market_address"
+    display_name = "市场地址"
 
 
 class ColAppMarketTag(AppColumn):
-    field_name = 'market_tag'
-    display_name = '市场标签'
+    field_name = "market_tag"
+    display_name = "市场标签"
 
 
 class ColAppCreator(AppColumn):
-    field_name = 'creator'
-    display_name = '创建者'
+    field_name = "creator"
+    display_name = "创建者"
 
 
 class ColAppDevelopers(AppColumn):
-    field_name = 'developers'
-    display_name = '开发者'
+    field_name = "developers"
+    display_name = "开发者"
 
     def format_value(self, value: Any) -> str:
-        return ', '.join(sorted(value))
+        return ", ".join(sorted(value))
 
 
 class ColAppCreatedAt(AppColumn):
-    field_name = 'created'
-    display_name = '创建时间'
+    field_name = "created"
+    display_name = "创建时间"
 
     def format_value(self, value: Optional[datetime]) -> str:
-        return value.strftime('%Y-%m-%d %H:%M') if value else '-'
+        return value.strftime("%Y-%m-%d %H:%M") if value else "-"
 
 
 class ColAppUseRecord(AppColumn):
-    field_name = 'app_visit_count_30days'
-    display_name = '30d 桌面累积访问次数'
+    field_name = "app_visit_count_30days"
+    display_name = "30d 桌面累积访问次数"
 
 
 class ColAppPV(AppColumn):
-    field_name = 'pv'
-    display_name = f'{PV_UV_COUNT_PERIOD_LENGTH} 天内访问数（PV）'
+    field_name = "pv"
+    display_name = f"{PV_UV_COUNT_PERIOD_LENGTH} 天内访问数（PV）"
 
 
 class ColAppUV(AppColumn):
-    field_name = 'uv'
-    display_name = f'{PV_UV_COUNT_PERIOD_LENGTH} 天内独立访客数（UV）'
+    field_name = "uv"
+    display_name = f"{PV_UV_COUNT_PERIOD_LENGTH} 天内独立访客数（UV）"
 
 
 class ColAppLastDeployTime(AppColumn):
@@ -595,8 +595,8 @@ class ColAppLastDeployTime(AppColumn):
 
     def format_value(self, value: datetime) -> str:
         if value is None:
-            return '--'
-        return value.strftime('%Y-%m-%d %H:%M')
+            return "--"
+        return value.strftime("%Y-%m-%d %H:%M")
 
 
 class ContributionColumn(AutoMapperColumn):
@@ -628,7 +628,7 @@ def uniq_apps(apps: Iterable[SimpleApp]) -> Generator[SimpleApp, None, None]:
     seen_app_codes = set()
     for app in apps:
         if app.code in seen_app_codes:
-            logger.warning('app %s was duplicated', app.code)
+            logger.warning("app %s was duplicated", app.code)
             continue
 
         seen_app_codes.add(app.code)
@@ -662,15 +662,15 @@ def group_apps_by_developers(
 
         for user in users:
             g_apps[user].append(app)
-            g_infos.setdefault(user, {'created_count': 0, 'count': 0})['count'] += 1
+            g_infos.setdefault(user, {"created_count": 0, "count": 0})["count"] += 1
 
             if app.creator == user:
-                g_infos[user]['created_count'] += 1
+                g_infos[user]["created_count"] += 1
 
     def app_sort_key(app):
         return (app._source, app.deploy_status.value, app.code)
 
-    for user, info in sorted(g_infos.items(), key=lambda item: item[1]['count'], reverse=True):
+    for user, info in sorted(g_infos.items(), key=lambda item: item[1]["count"], reverse=True):
         # Respect filter_developers settings
         if filter_developers and user not in filter_developers:
             continue
@@ -683,12 +683,12 @@ def group_apps_by_developers(
 def calculate_user_contribution_in_app(username: str, app: SimpleApp):
     # None type check
     if not app.source_repo_type:
-        raise RuntimeError('No repo provided')
+        raise RuntimeError("No repo provided")
 
     repo_admin_credentials = get_bksvn_config(app.region, name=app.source_repo_type).get_admin_credentials()
     user_credentials = {}
 
-    if app.source_repo_type in get_sourcectl_names().filter_by_basic_type('git'):
+    if app.source_repo_type in get_sourcectl_names().filter_by_basic_type("git"):
         project = GitProject.parse_from_repo_url(app.source_location, sourcectl_type=app.source_repo_type)
         profile = UserProfile.objects.get(user=user_id_encoder.encode(settings.USER_TYPE, username))
         token_holder = profile.token_holder.get_by_project(project)
@@ -704,7 +704,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
         svn_cls = cast(Type[SvnRepoController], type_spec.repo_controller_class)
         svn_ctl = svn_cls(repo_admin_credentials=repo_admin_credentials, repo_url=app.source_location)
         return svn_ctl.get_client().rclient.calculate_user_contribution(username)
-    elif app.source_repo_type in get_sourcectl_names().filter_by_basic_type('git'):
+    elif app.source_repo_type in get_sourcectl_names().filter_by_basic_type("git"):
         git_cls = cast(Type[BaseGitRepoController], type_spec.repo_controller_class)
         git_ctl = git_cls(
             repo_url=app.source_location, user_credentials=user_credentials, api_url=repo_info["api_url"]
@@ -712,6 +712,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
         return git_ctl.get_client().calculate_user_contribution(
             username, GitProject.parse_from_repo_url(app.source_location, sourcectl_type=app.source_repo_type)
         )
+    return None
 
 
 def make_table_apps_grouped_by_developer(filter_developers: Optional[List[str]] = None) -> Table:
@@ -744,7 +745,7 @@ def make_table_apps_grouped_by_developer(filter_developers: Optional[List[str]] 
     )
 
     for user, info, apps in group_apps_by_developers(filter_developers=filter_developers):
-        row_data = [user, info['count']]
+        row_data = [user, info["count"]]
         for app in apps:
             contribution = Contribution("--", "--", "--", "--")
             try:
@@ -753,8 +754,8 @@ def make_table_apps_grouped_by_developer(filter_developers: Optional[List[str]] 
                 logger.info("finish calculate_user_contribution_in_app for user:%s, app:%s", user, app.code)
             except (Oauth2TokenHolder.DoesNotExist, UserProfile.DoesNotExist):
                 logger.exception("Can't find Oauth2TokenHolder for user: %s", user)
-            except Exception as e:
-                logger.exception("Unexpected Exception is raised, detail: %s", e)
+            except Exception:
+                logger.exception("Unexpected exception")
             table.add_row(row_data, app=app, contribution=contribution)
             # Hide first two columns after the first row was added
             table.set_indent(2)
@@ -790,9 +791,9 @@ def make_table_apps_grouped_by_developer_simple(filter_developers: Optional[List
     users_cnt_developed = 0
 
     for user, info, apps in group_apps_by_developers(filter_developers=filter_developers):
-        row_data = [user, info['created_count'], info['count']]
+        row_data = [user, info["created_count"], info["count"]]
         users_cnt_developed += 1
-        if info['created_count'] > 0:
+        if info["created_count"] > 0:
             users_cnt_created += 1
 
         for app in apps:
@@ -802,9 +803,9 @@ def make_table_apps_grouped_by_developer_simple(filter_developers: Optional[List
         table.set_indent(0)
 
     table.metadata = {
-        'users_cnt_total': len(filter_developers) if filter_developers else -1,
-        'users_cnt_created': users_cnt_created,
-        'users_cnt_developed': users_cnt_developed,
+        "users_cnt_total": len(filter_developers) if filter_developers else -1,
+        "users_cnt_created": users_cnt_created,
+        "users_cnt_developed": users_cnt_developed,
     }
     return table
 
@@ -817,7 +818,7 @@ def make_table_apps_basic_info(
     :param filter_app_codes: 指定需要导出的应用 Code 列表，为 None 时获取所有应用
     :param include_pv_uv: 结果是否包含 PV 与 UV 数据
     """
-    columns: List['Column'] = [
+    columns: List["Column"] = [
         ColAppName(),
         ColAppCode(),
         ColAppType(),
@@ -854,12 +855,12 @@ def make_table_apps_basic_info(
     if filter_app_codes is not None:
         missing_app_codes = set(filter_app_codes) - app_codes_with_data
     table.metadata = {
-        'missing_app_codes': missing_app_codes,
+        "missing_app_codes": missing_app_codes,
     }
     return table
 
 
-def print_table(table: Table, sep: str = '\t', stream=sys.stdout):
+def print_table(table: Table, sep: str = "\t", stream=sys.stdout):
     """Print table to console"""
     titles = [str(col.display_name) for col in table.columns]
     print(sep.join(titles), file=stream)

@@ -38,23 +38,23 @@
               </div>
               <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
-                <!-- 源码&镜像 -->
-                <div v-if="deploymentInfo.build_method === 'dockerfile'">
+                <!-- buildpack、dockerfile 展示版本/分支 -->
+                <div v-if="deploymentInfo.build_method !== 'custom_image'">
                   <!-- 源码分支 -->
                   <div
                     class="flex-row"
-                    v-if="deploymentInfo.state.deployment.latest_succeeded.version_info.version_type === 'branch'">
+                    v-if="deploymentInfo.version_info.version_type === 'branch'">
                     <div class="version">
                       <span class="label">{{$t('版本：')}}</span>
                       <span class="value">
-                        {{ deploymentInfo.state.deployment.latest_succeeded.version_info.revision.substring(0,8) }}
+                        {{ deploymentInfo.version_info.revision.substring(0,8) }}
                       </span>
                     </div>
                     <div class="line"></div>
                     <div class="branch">
                       <span class="label">{{$t('分支：')}}</span>
                       <span class="value">
-                        {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name }}
+                        {{ deploymentInfo.version_info.version_name }}
                       </span>
                     </div>
                   </div>
@@ -67,7 +67,7 @@
                   </div>
                 </div>
                 <!-- 仅镜像 -->
-                <div class="flex-row" v-if="deploymentInfo.build_method === 'custom_image'">
+                <div class="flex-row" v-else>
                   <div class="version">
                     <span class="label">{{$t('镜像Tag：')}}</span>
                     <span class="value">
@@ -270,7 +270,7 @@ export default {
 
   watch: {
     modelName(value) {
-      if (value === '全部模块' || value === '') {
+      if (value === this.$t('全部模块') || value === '') {
         this.deploymentInfoData = this.deploymentInfoDataBackUp;
       } else {
         this.deploymentInfoData = this.deploymentInfoDataBackUp
@@ -286,14 +286,15 @@ export default {
       }
     },
 
-    isWatctDeploying(value) {
-      if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
-        this.$paasMessage({
-          theme: 'primary',
-          message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
-        });
-      }
-    },
+    // 云原生应用不会默认展示部署进程
+    // isWatctDeploying(value) {
+    //   if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
+    //     this.$paasMessage({
+    //       theme: 'primary',
+    //       message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
+    //     });
+    //   }
+    // },
   },
 
   created() {
@@ -394,7 +395,7 @@ export default {
         });
         this.$nextTick(() => {
           this.$set(this, 'deploymentInfoData', res.data);
-          if (this.modelName && this.modelName !== '全部模块') {
+          if (this.modelName && this.modelName !== this.$t('全部模块')) {
             this.deploymentInfoData = this.deploymentInfoData
               .filter(module => module.module_name === this.modelName);
           }

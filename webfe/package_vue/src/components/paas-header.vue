@@ -144,33 +144,33 @@
                 slot="content"
                 class="header-search-result"
               >
-              <div v-if="isShowInput && isFocus">
-                <div
-                  v-if="filterKey !== ''"
-                  class="paas-search-trigger"
-                  @click.stop="handleToSearchPage"
-                >
-                  <span> {{ $t('查看更多结果') }} </span>
+                <div v-if="isShowInput && isFocus">
+                  <div
+                    v-if="filterKey !== ''"
+                    class="paas-search-trigger"
+                    @click.stop="handleToSearchPage"
+                  >
+                    <span> {{ $t('查看更多结果') }} </span>
+                  </div>
+                  <div
+                    v-for="(searchComponent, index) of searchComponentList"
+                    v-show="filterKey"
+                    :key="index"
+                  >
+                    <h3>{{ searchComponent.title }}</h3>
+                    <component
+                      :is="searchComponent.component"
+                      ref="searchPanelList"
+                      :theme="'ps-header-search'"
+                      :max="searchComponent.max"
+                      :filter-key="filterKey"
+                      :params="searchComponent.params"
+                      @selectAppCallback="selectAppCallback"
+                      @key-up-overflow="onKeyUp(), emitChildKeyUp()"
+                      @key-down-overflow="onKeyDown(), emitChildKeyDown()"
+                    />
+                  </div>
                 </div>
-                <div
-                  v-for="(searchComponent, index) of searchComponentList"
-                  v-show="filterKey"
-                  :key="index"
-                >
-                  <h3>{{ searchComponent.title }}</h3>
-                  <component
-                    :is="searchComponent.component"
-                    ref="searchPanelList"
-                    :theme="'ps-header-search'"
-                    :max="searchComponent.max"
-                    :filter-key="filterKey"
-                    :params="searchComponent.params"
-                    @selectAppCallback="selectAppCallback"
-                    @key-up-overflow="onKeyUp(), emitChildKeyUp()"
-                    @key-down-overflow="onKeyDown(), emitChildKeyDown()"
-                  />
-                </div>
-              </div>
               </div>
             </dropdown>
           </li>
@@ -240,7 +240,7 @@
               <ul class="monitor-navigation-admin">
                 <li class="nav-item">
                   <a
-                    :href="GLOBAL.LINK.BK_APP_DOC"
+                    :href="GLOBAL.DOC.PRODUCT_DOC"
                     target="_blank"
                   > {{ $t('产品文档') }} </a>
                 </li>
@@ -409,8 +409,7 @@
   </div>
 </template>
 
-<script>
-import auth from '@/auth';
+<script>import auth from '@/auth';
 import { bus } from '@/common/bus';
 import { bk_logout as bkLogout } from '../../static/js/bklogout';
 import selectEventMixin from '@/components/searching/selectEventMixin';
@@ -419,7 +418,7 @@ import Dropdown from '@/components/ui/Dropdown';
 import { psHeaderInfo } from '@/mixins/ps-static-mixin';
 import defaultUserLogo from '../../static/images/default-user.png';
 import logVersion from './log-version.vue';
-import { ajaxRequest, uuid } from '@/common/utils'
+import { ajaxRequest, uuid } from '@/common/utils';
 
 export default {
   components: {
@@ -561,12 +560,12 @@ export default {
     },
 
     handleFocus() {
-      this.isFocus = true
+      this.isFocus = true;
     },
 
     handleBlur() {
       setTimeout(() => {
-        this.isFocus = false
+        this.isFocus = false;
       }, 500);
     },
 
@@ -724,14 +723,14 @@ export default {
         this.$i18n.locale = language;
         this.$store.commit('updateLocalLanguage', language);
         // 设置cookies持续化
-        if(window.BK_COMPONENT_API_URL) {
+        if (window.BK_COMPONENT_API_URL) {
           ajaxRequest({
             url: `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`,
-            jsonp: 'callback' + uuid(),
+            jsonp: `callback${uuid()}`,
             data: Object.assign({ language }),
             success: () => {
               this.$router.go(0);
-            }
+            },
           });
         } else {
           this.$router.go(0);
@@ -739,7 +738,7 @@ export default {
       }, (e) => {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       });
     },

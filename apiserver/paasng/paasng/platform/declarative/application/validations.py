@@ -44,12 +44,12 @@ module_name_field = ModuleNameField()
 class DisplayOptionsSLZ(serializers.Serializer):
     """Serializer for describing application's market.display_options properties"""
 
-    width = serializers.IntegerField(required=False, default=1280, help_text='窗口宽度')
-    height = serializers.IntegerField(required=False, default=600, help_text='窗口高度')
+    width = serializers.IntegerField(required=False, default=1280, help_text="窗口宽度")
+    height = serializers.IntegerField(required=False, default=600, help_text="窗口高度")
     is_maximized = serializers.BooleanField(
-        required=False, default=False, source='is_win_maximize', help_text='窗口是否最大化'
+        required=False, default=False, source="is_win_maximize", help_text="窗口是否最大化"
     )
-    is_visible = serializers.BooleanField(required=False, default=True, source='visible', help_text='是否展示')
+    is_visible = serializers.BooleanField(required=False, default=True, source="visible", help_text="是否展示")
     open_mode = serializers.CharField(required=False, help_text="打开方式")
 
     @classmethod
@@ -68,23 +68,23 @@ class MarketSLZ(serializers.Serializer):
     """Serializer for describing application's market properties"""
 
     category = ProductTagByNameField(required=False, source="tag")
-    introduction = I18NExtend(serializers.CharField(required=True, help_text='简介'))
-    description = I18NExtend(serializers.CharField(required=False, default='', help_text='描述'))
+    introduction = I18NExtend(serializers.CharField(required=True, help_text="简介"))
+    description = I18NExtend(serializers.CharField(required=False, default="", help_text="描述"))
     display_options = DisplayOptionsSLZ(required=False, default=DisplayOptionsSLZ.gen_default_value)
     logo_b64data = Base64FileField(required=False, help_text="应用logo", source="logo")
 
     def to_internal_value(self, data) -> MarketDesc:
         attrs = super().to_internal_value(data)
-        tag = attrs.pop('tag', None)
+        tag = attrs.pop("tag", None)
         if tag:
-            attrs['tag_id'] = tag.pk
+            attrs["tag_id"] = tag.pk
         return MarketDesc(**attrs)
 
 
 class ServiceSLZ(serializers.Serializer):
     """Describes a service object, plan & detailed specs requirements are not supported yet"""
 
-    name = serializers.CharField(required=True, help_text='增强服务名称')
+    name = serializers.CharField(required=True, help_text="增强服务名称")
     shared_from = serializers.CharField(required=False, allow_null=True, help_text="从哪个模块共享该增强服务")
     specs = serializers.DictField(required=False, allow_null=True, default=dict, help_text="声明的增强服务规格")
 
@@ -113,16 +113,16 @@ class AppDescriptionSLZ(serializers.Serializer):
         max_length=20,
         regex="^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-_]{,63}(?<!-)$",
         validators=[ReservedWordValidator("应用 ID"), AppIDUniqueValidator()],
-        error_messages={'invalid': _('格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)')},
-        source='code',
+        error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)")},
+        source="code",
     )
-    bk_app_name = AppNameField(source='name_zh_cn')
-    bk_app_name_en = AppNameField(source='name_en', required=False)
+    bk_app_name = AppNameField(source="name_zh_cn")
+    bk_app_name_en = AppNameField(source="name_en", required=False)
     market = MarketSLZ(required=False, default=None)
     modules = serializers.DictField(child=ModuleDescriptionSLZ())
 
     def validate_modules(self, modules: Dict[str, ModuleDesc]):
-        for module_name in modules.keys():
+        for module_name in modules:
             module_name_field.run_validation(module_name)
         return modules
 
@@ -147,7 +147,7 @@ class AppDescriptionSLZ(serializers.Serializer):
 
         attrs.setdefault("plugins", [])
         if self.context.get("app_version"):
-            attrs["plugins"].append({'type': AppDescPluginType.APP_VERSION, 'data': self.context.get("app_version")})
+            attrs["plugins"].append({"type": AppDescPluginType.APP_VERSION, "data": self.context.get("app_version")})
 
         if self.context.get("spec_version"):
             attrs["spec_version"] = self.context["spec_version"]

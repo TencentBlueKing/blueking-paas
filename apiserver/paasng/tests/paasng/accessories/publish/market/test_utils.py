@@ -22,22 +22,22 @@ import pytest
 
 from paas_wl.workloads.networking.entrance.addrs import Address
 from paas_wl.workloads.networking.entrance.constants import AddressType
-from paasng.platform.modules.constants import ExposedURLType
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import AvailableAddress, MarketConfig
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
+from paasng.platform.modules.constants import ExposedURLType
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def set_custom_domain():
     """Allow to set custom domains by mocking"""
-    with mock.patch('paasng.accessories.publish.market.utils.LiveEnvAddresses.list_custom') as mocker:
+    with mock.patch("paasng.accessories.publish.market.utils.LiveEnvAddresses.list_custom") as mocker:
 
         def _set_hostname(hostname):
             """Set mocker to return given hostname as return value"""
-            mocker.return_value = [Address(type=AddressType.CUSTOM, url=f'http://{hostname}')]
+            mocker.return_value = [Address(type=AddressType.CUSTOM, url=f"http://{hostname}")]
 
         yield _set_hostname
 
@@ -50,13 +50,12 @@ class TestMarketAvailableAddressHelper:
             Address(type=AddressType.SUBDOMAIN, url="https://foo.example.com"),
             Address(type=AddressType.SUBPATH, url="https://example.org/foo/"),
         ]
-        yield
 
     @pytest.mark.parametrize(
-        'filter_domain,results',
+        ("filter_domain", "results"),
         [
-            ('http://test.example.com', AvailableAddress(address="http://test.example.com", type=4)),
-            ('http://404.bking.com', None),
+            ("http://test.example.com", AvailableAddress(address="http://test.example.com", type=4)),
+            ("http://404.bking.com", None),
         ],
     )
     def test_filter_domain_address_not_found(self, filter_domain, results, bk_app, bk_module, set_custom_domain):
@@ -66,7 +65,7 @@ class TestMarketAvailableAddressHelper:
 
         helper = MarketAvailableAddressHelper(market_config)
 
-        set_custom_domain('test.example.com')
+        set_custom_domain("test.example.com")
         assert helper.filter_domain_address(filter_domain) == results
 
     def test_access_entrance(self, bk_app, mock_get_builtin_addresses):
@@ -107,10 +106,10 @@ class TestMarketAvailableAddressHelper:
         set_custom_domain("test.example.com")
         entrance = helper.access_entrance
         assert entrance
-        assert entrance.address == 'http://test.example.com'
+        assert entrance.address == "http://test.example.com"
 
     @pytest.mark.parametrize(
-        'source_url_type,address',
+        ("source_url_type", "address"),
         [
             (ProductSourceUrlType.THIRD_PARTY.value, "http://test.example.com"),
             (ProductSourceUrlType.DISABLED.value, None),

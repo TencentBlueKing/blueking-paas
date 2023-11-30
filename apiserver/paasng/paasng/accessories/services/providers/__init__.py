@@ -45,7 +45,7 @@ instance_schema_maps: Dict[str, Dict] = {
     "redis": schemas.RedisInstanceSchema.schema(),
 }
 
-_default_schema = {'title': 'EmptySchema', 'type': 'object', 'properties': {}}
+_default_schema = {"title": "EmptySchema", "type": "object", "properties": {}}
 
 
 def get_provider_cls_by_provider_name(name: str) -> Type[BaseProvider]:

@@ -26,17 +26,17 @@ from paasng.platform.modules.models import Module
 class ModuleAttrFromID:
     """A descriptor which make `{owner}.module` available by reading from "_structured_app" property."""
 
-    key_field = 'module_id'
+    key_field = "module_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> 'ModuleAttrFromID':
+    def __get__(self, instance: None, owner: None) -> "ModuleAttrFromID":
         ...
 
     @overload
     def __get__(self, instance: object, owner: Type) -> Module:
         ...
 
-    def __get__(self, instance, owner: Optional[Type] = None) -> Union['ModuleAttrFromID', Module]:
+    def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleAttrFromID", Module]:
         """Read module value
 
         :raise: ValueError when instance was not initialized with structured data
@@ -52,17 +52,17 @@ class ModuleAttrFromID:
 class ModuleEnvAttrFromID:
     """A descriptor which make `{owner}.environment` available by reading from "_structured_app" property."""
 
-    key_field = 'environment_id'
+    key_field = "environment_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> 'ModuleEnvAttrFromID':
+    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromID":
         ...
 
     @overload
     def __get__(self, instance: object, owner: Type) -> ModuleEnvironment:
         ...
 
-    def __get__(self, instance, owner: Optional[Type] = None) -> Union['ModuleEnvAttrFromID', ModuleEnvironment]:
+    def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleEnvAttrFromID", ModuleEnvironment]:
         """Read environment value
 
         :raise: ValueError when instance was not initialized with structured data
@@ -81,18 +81,18 @@ class ModuleEnvAttrFromName:
     - both `module_id` and `environment_name` fields are required.
     """
 
-    key_field = 'environment_name'
-    module_key_field = 'module_id'
+    key_field = "environment_name"
+    module_key_field = "module_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> 'ModuleEnvAttrFromName':
+    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromName":
         ...
 
     @overload
     def __get__(self, instance: object, owner: Type) -> ModuleEnvironment:
         ...
 
-    def __get__(self, instance, owner: Optional[Type] = None) -> Union['ModuleEnvAttrFromName', ModuleEnvironment]:
+    def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleEnvAttrFromName", ModuleEnvironment]:
         """Read environment value
 
         :raise: ValueError when instance was not initialized with structured data

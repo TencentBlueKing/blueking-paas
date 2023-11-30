@@ -98,7 +98,7 @@ class UserActionRateLimiter(RedisFixedWindowRateLimiter):
         self.action = action
 
     def _gen_key(self, cur_window: int) -> str:
-        return f'bk_paas3:rate_limits:{self.username}:{self.action}:{cur_window}'
+        return f"bk_paas3:rate_limits:{self.username}:{self.action}:{cur_window}"
 
 
 def rate_limits_by_user(action: UserAction, window_size: int, threshold: int):

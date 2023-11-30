@@ -28,6 +28,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.apis.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
 from paas_wl.bk_app.monitoring.metrics.exceptions import (
     AppInstancesNotFoundError,
     AppMetricNotSupportedError,
@@ -35,10 +36,10 @@ from paas_wl.bk_app.monitoring.metrics.exceptions import (
 )
 from paas_wl.bk_app.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
 from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
-from paas_wl.apis.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models.deployment import Deployment
@@ -52,7 +53,6 @@ from paasng.platform.engine.serializers import (
     ResourceMetricsSLZ,
 )
 from paasng.platform.engine.utils.query import OfflineOperationGetter
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
@@ -103,7 +103,7 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_OFFLINE_APP.f(str(e))
         else:
             result = {
-                'offline_operation_id': offline_operation.id,
+                "offline_operation_id": offline_operation.id,
             }
             return JsonResponse(data=result, status=status.HTTP_201_CREATED)
 
@@ -147,7 +147,7 @@ class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @property
     def paginator(self):
-        if not hasattr(self, '_paginator'):
+        if not hasattr(self, "_paginator"):
             from rest_framework.pagination import LimitOffsetPagination
 
             self._paginator = LimitOffsetPagination()
@@ -171,11 +171,11 @@ class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         params = serializer.data
 
         operations = ModuleEnvironmentOperations.objects.owned_by_module(
-            module, environment=params.get('environment')
-        ).order_by('-created')
+            module, environment=params.get("environment")
+        ).order_by("-created")
 
         # Filter by operator if provided
-        operator = params.get('operator')
+        operator = params.get("operator")
         if operator:
             operator = user_id_encoder.encode(settings.USER_TYPE, operator)
             operations = operations.filter(operator=operator)
@@ -205,14 +205,14 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
         data = serializer.data
 
         params = {
-            'wl_app': wl_app,
-            'process_type': data['process_type'],
-            'query_metrics': data['query_metrics'],
-            'time_range': MetricSmartTimeRange.from_request_data(data),
+            "wl_app": wl_app,
+            "process_type": data["process_type"],
+            "query_metrics": data["query_metrics"],
+            "time_range": MetricSmartTimeRange.from_request_data(data),
         }
 
-        if data.get('instance_name'):
-            params['instance_name'] = data['instance_name']
+        if data.get("instance_name"):
+            params["instance_name"] = data["instance_name"]
             get_metrics_method = list_app_proc_metrics
             ResultSLZ = ResourceMetricsResultSerializer
         else:
@@ -228,4 +228,4 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
         except AppMetricNotSupportedError as e:
             raise error_codes.APP_METRICS_UNSUPPORTED.f(str(e))
 
-        return Response(data={'result': ResultSLZ(instance=result, many=True).data})
+        return Response(data={"result": ResultSLZ(instance=result, many=True).data})

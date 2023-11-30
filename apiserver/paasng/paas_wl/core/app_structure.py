@@ -31,7 +31,7 @@ def set_global_get_structure(func: Callable[[WlApp], Dict]):
 def get_structure(app: WlApp) -> Dict:
     """This function provide compatibility with the field `App.structure`"""
     if _get_structure_func is None:
-        raise RuntimeError('The function for getting app structure is not set.')
+        raise RuntimeError("The function for getting app structure is not set.")
     return _get_structure_func(app)
 
 

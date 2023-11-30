@@ -14,6 +14,7 @@
             style="width: 180px;"
             class="mr10"
             ext-cls="module-select-custom"
+            prefix-icon="paasng-icon paasng-project"
             @change="handleChangeModule">
             <bk-option
               v-for="option in curAppModuleList"
@@ -283,6 +284,10 @@ export default {
 .module-select-custom,
 .env-select-custom {
   background: #FFF;
+
+  /deep/ i.paasng-project {
+    color: #a3c5fd;
+  }
 }
 
 .process-config-table-cls {

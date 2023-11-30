@@ -156,11 +156,11 @@
           show-overflow-tooltip
         />
         <bk-table-column
-          width="150"
+          :width="localLanguage === 'en' ? 200 : 180"
           :label="$t('操作')"
         >
           <template slot-scope="{ row }">
-            <bk-button :text="true" class="mr10" @click="handleShowLogSideslider(row)">
+            <bk-button :text="true" class="mr15" @click="handleShowLogSideslider(row)">
               {{$t('部署日志')}}
             </bk-button>
             <bk-button :text="true" @click="handleShowYamlSideslider(row)">
@@ -253,6 +253,9 @@ export default {
         { text: this.$t('生产环境'), value: 'prod' },
         { text: this.$t('预发布环境'), value: 'stag' },
       ];
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
 
@@ -474,7 +477,6 @@ export default {
     handleShowYamlSideslider(row) {
       // this.$refs.logSidesliderRef?.handleShowLog(row);
       this.yamlSidesliderConfig.isShow = true;
-      console.log('row', row, this.curModuleId);
       this.getDeployVersionDetails(row);
     },
 
@@ -488,7 +490,7 @@ export default {
           environment: data.environment,
           revisionId: data.deployment.bkapp_revision_id,
         });
-        this.yamlData = res.manifest;
+        this.yamlData = res.deployed_value;
       } catch (error) {
         this.$paasMessage({
           theme: 'error',

@@ -26,10 +26,10 @@ from iam.apply import models
 
 
 class ResourceRequest(ABC):
-    resource_type = ''
+    resource_type = ""
 
     @classmethod
-    def from_dict(cls, init_data: Dict) -> 'ResourceRequest':
+    def from_dict(cls, init_data: Dict) -> "ResourceRequest":
         """从字典构建对象"""
         raise NotImplementedError
 
@@ -51,7 +51,7 @@ class ResourceRequest(ABC):
         return {}
 
 
-IAMResource = namedtuple('IAMResource', 'resource_type resource_id')
+IAMResource = namedtuple("IAMResource", "resource_type resource_id")
 
 
 class ActionResourcesRequest:

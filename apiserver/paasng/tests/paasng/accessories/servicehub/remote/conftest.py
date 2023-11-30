@@ -43,10 +43,10 @@ def raw_store():
 def config():
     return RemoteSvcConfig.from_json(
         {
-            'name': 'obj_store_remote',
-            'endpoint_url': 'http://faked-host',
-            'provision_params_tmpl': {'username': '{engine_app.name}'},
-            'jwt_auth_conf': {'iss': 'foo', 'key': 's1'},
+            "name": "obj_store_remote",
+            "endpoint_url": "http://faked-host",
+            "provision_params_tmpl": {"username": "{engine_app.name}"},
+            "jwt_auth_conf": {"iss": "foo", "key": "s1"},
         }
     )
 

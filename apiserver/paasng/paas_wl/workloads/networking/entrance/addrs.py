@@ -34,19 +34,19 @@ class URL:
     hostname: str
     port: int
     path: str
-    query: str = ''
+    query: str = ""
 
     def as_address(self):
-        query = f"?{self.query}" if self.query else ''
+        query = f"?{self.query}" if self.query else ""
         if default_port_map.get_port_num(self.protocol) == self.port:
             return f"{self.protocol}://{self.hostname}{self.path}{query}"
         else:
             return f"{self.protocol}://{self.hostname}:{self.port}{self.path}{query}"
 
     @classmethod
-    def from_address(cls, address: str) -> 'URL':
+    def from_address(cls, address: str) -> "URL":
         parsed = urlparse(address)
-        protocol = parsed.scheme or 'http'
+        protocol = parsed.scheme or "http"
         port = parsed.port or default_port_map.get_port_num(protocol)
         assert parsed.hostname
         return URL(protocol=protocol, hostname=parsed.hostname, port=port, path=parsed.path, query=parsed.query)

@@ -26,11 +26,11 @@ from django_dynamic_fixture import G
 from dynaconf.utils.parse_conf import parse_conf_data
 from kubernetes.client.exceptions import ApiException
 
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.monitoring.app_monitor import constants
 from paas_wl.bk_app.monitoring.app_monitor.managers import build_service_monitor, service_monitor_kmodel
 from paas_wl.bk_app.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.infras.resources.base.kres import KCustomResourceDefinition
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestBuilder:
-    @pytest.fixture
+    @pytest.fixture()
     def builtin_relabelings(self, bk_stag_wl_app):
         metadata = get_metadata(bk_stag_wl_app)
         return [
@@ -79,18 +79,18 @@ class TestBuilder:
 
         assert (
             svc_monitor.endpoint.metric_relabelings
-            == [{'action': 'replace', 'replacement': 'bkop.example.com', 'targetLabel': 'bk_domain'}]
+            == [{"action": "replace", "replacement": "bkop.example.com", "targetLabel": "bk_domain"}]
             + builtin_relabelings
         )
 
 
 class TestAppMonitorController:
     @pytest.fixture(autouse=True)
-    def setup(self, settings):
+    def _setup(self, settings):
         settings.ENABLE_BK_MONITOR = True
 
-    @pytest.fixture
-    def setup_crd(self, k8s_client, k8s_version, settings):
+    @pytest.fixture()
+    def _setup_crd(self, k8s_client, k8s_version, settings):
         name = "servicemonitors.monitoring.coreos.com"
 
         if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 16):
@@ -114,8 +114,9 @@ class TestAppMonitorController:
     def monitor(self, bk_stag_wl_app):
         return G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_wl_app)
 
-    @pytest.mark.auto_create_ns
-    def test_normal(self, monitor, bk_stag_wl_app, setup_crd):
+    @pytest.mark.usefixtures("_setup_crd")
+    @pytest.mark.auto_create_ns()
+    def test_normal(self, monitor, bk_stag_wl_app):
         controller = make_bk_monitor_controller(bk_stag_wl_app)
         assert controller.app_monitor is not None
         controller.create_or_patch()

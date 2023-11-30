@@ -104,23 +104,22 @@
             :rules="rules"
             ext-cls="form-process"
           >
-            <!-- v1alpha2 镜像仓库不带tag -->
             <bk-form-item
               :label="$t('镜像仓库')"
-              :label-width="120"
+              :label-width="labelWidth"
               v-if="!allowMultipleImage"
             >
               {{ formData.image || '--' }}
               <i
+                v-if="!isCreate"
                 class="paasng-icon paasng-edit-2 image-store-icon"
                 @click="handleToModuleInfo"
               />
             </bk-form-item>
-            <!-- v1alpha1 镜像地址 -->
             <bk-form-item
               :label="$t('镜像地址')"
               :required="true"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'image'"
               :rules="rules.image"
               v-else-if="isCustomImage && allowMultipleImage"
@@ -157,7 +156,7 @@
 
             <bk-form-item
               :label="$t('镜像凭证')"
-              :label-width="120"
+              :label-width="labelWidth"
               v-if="!allowMultipleImage"
             >
               {{ formData.image_credential_name || '--' }}
@@ -167,7 +166,7 @@
             <bk-form-item
               v-if="panels[panelActive] && allowMultipleImage"
               :label="$t('镜像凭证')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'command'"
             >
               <bk-select
@@ -200,7 +199,7 @@
 
             <bk-form-item
               :label="$t('启动命令')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'command'"
             >
               <bk-tag-input
@@ -221,14 +220,14 @@
 
             <bk-form-item
               :label="$t('命令参数')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'args'"
             >
               <bk-tag-input
                 v-model="formData.args"
                 style="width: 500px"
                 ext-cls="tag-extra"
-                :placeholder="$t('请输入命令参数')"
+                :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
                 :allow-create="allowCreate"
                 :allow-auto-match="true"
                 :has-delete-icon="hasDeleteIcon"
@@ -241,7 +240,7 @@
 
             <bk-form-item
               :label="$t('容器端口')"
-              :label-width="120"
+              :label-width="labelWidth"
               :property="'port'"
             >
               <bk-input
@@ -277,7 +276,7 @@
             <bk-form-item
               v-if="ifopen"
               :label="$t('配置环境')"
-              :label-width="120"
+              :label-width="labelWidth"
             >
               <!-- <bk-radio-group v-model="envName">
                 <bk-radio-button
@@ -302,7 +301,7 @@
                 >
                   <bk-form-item
                     :label="$t('资源配额方案')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
@@ -329,7 +328,7 @@
                   </bk-form-item>
                   <bk-form-item
                     :label="$t('扩缩容方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <section :class="{ 'flex-row': localLanguage !== 'en' }">
                       <bk-radio-group
@@ -348,7 +347,7 @@
                           :value="true"
                           :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
                           v-bk-tooltips="{
-                            content: $t('该环境暂不支持自动扩缩容'),
+                            content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
                             disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
                           }"
                         >
@@ -378,7 +377,7 @@
                   <bk-form-item
                     v-if="formData.env_overlay.stag.autoscaling"
                     :label="$t('触发方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                     class="desc-form-item"
                   >
                     <div class="desc-container flex-row">
@@ -411,7 +410,7 @@
                   >
                     <bk-form-item
                       :label="$t('最小副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.min_replicas'"
                       :rules="rules.stagMinReplicas"
@@ -426,7 +425,7 @@
                     </bk-form-item>
                     <bk-form-item
                       :label="$t('最大副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.max_replicas'"
                       :rules="rules.stagMaxReplicas"
@@ -446,7 +445,7 @@
                   >
                     <bk-form-item
                       :label="$t('副本数量')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'target_replicas'"
                       :rules="rules.formReplicas"
@@ -476,7 +475,7 @@
                 >
                   <bk-form-item
                     :label="$t('资源配额方案')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <div class="flex-row align-items-center">
                       <bk-select
@@ -503,7 +502,7 @@
                   </bk-form-item>
                   <bk-form-item
                     :label="$t('扩缩容方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                   >
                     <section :class="{ 'flex-row': localLanguage !== 'en' }">
                       <bk-radio-group
@@ -522,7 +521,7 @@
                           :value="true"
                           :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
                           v-bk-tooltips="{
-                            content: $t('该环境暂不支持自动扩缩容'),
+                            content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
                             disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
                           }"
                         >
@@ -552,7 +551,7 @@
                   <bk-form-item
                     v-if="formData.env_overlay.prod.autoscaling"
                     :label="$t('触发方式')"
-                    :label-width="120"
+                    :label-width="labelWidth"
                     class="desc-form-item"
                   >
                     <div class="desc-container flex-row">
@@ -585,7 +584,7 @@
                   >
                     <bk-form-item
                       :label="$t('最小副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.min_replicas'"
                       :rules="rules.prodMinReplicas"
@@ -600,7 +599,7 @@
                     </bk-form-item>
                     <bk-form-item
                       :label="$t('最大副本数')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'scaling_config.max_replicas'"
                       :rules="rules.prodMaxReplicas"
@@ -620,7 +619,7 @@
                   >
                     <bk-form-item
                       :label="$t('副本数量')"
-                      :label-width="120"
+                      :label-width="labelWidth"
                       :required="true"
                       :property="'target_replicas'"
                       :rules="rules.formReplicas"
@@ -646,7 +645,7 @@
         class="form-detail mt20"
         v-else
       >
-        <bk-form :model="formData">
+        <bk-form :model="formData" :label-width="viewLabelWidth">
           <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
           <bk-form-item
             v-if="!allowMultipleImage"
@@ -852,6 +851,16 @@ export default {
       type: Boolean,
       default: false,
     },
+    // 创建应用镜像仓库
+    imageUrl: {
+      type: String,
+      default: '',
+    },
+    // 创建应用镜像凭证
+    imageCredentialName: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -859,7 +868,15 @@ export default {
       processNameActive: 'web', // 选中的进程名
       btnIndex: 0,
       panelActive: 0,
-      formData: {},
+      formData: {
+        name: 'web',
+        image: null,
+        image_credential_name: null,
+        command: [],
+        args: [],
+        port: 5000,
+        env_overlay: ENV_OVERLAY,
+      },
       formDataBackUp: {
         name: 'web',
         image: null,
@@ -1066,6 +1083,12 @@ export default {
     isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 190 : 120;
+    },
+    viewLabelWidth() {
+      return this.localLanguage === 'en' ? 190 : 150;
+    },
   },
   watch: {
     formData: {
@@ -1075,10 +1098,38 @@ export default {
       },
       deep: true,
     },
+    imageUrl: {
+      handler(v) {
+        // 创建应用且没有镜像仓库值 则设置
+        if (this.isCreate && !this.formData.image) {
+          this.$nextTick(() => {
+            this.$set(this.formData, 'image', v);
+          });
+        }
+      },
+      immediate: true,
+    },
+    imageCredentialName: {
+      handler(v) {
+        // 创建应用且没有镜像凭证值 则设置
+        if (this.isCreate && !this.formData.image_credential_name) {
+          this.$nextTick(() => {
+            this.$set(this.formData, 'image_credential_name', v);
+          });
+        }
+      },
+      immediate: true,
+    },
   },
   async created() {
-    // 非创建应用初始化为查看态
-    if (!this.isCreate) {
+    if (this.isCreate) {
+      if (!this.processData.length) {
+        this.processData.push(this.formData);
+        this.processDataBackUp = _.cloneDeep(this.processData);
+        this.panels = _.cloneDeep(this.processData);
+      }
+    } else {
+      // 非创建应用初始化为查看态
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
       // 扩缩容FeatureFlag
@@ -1086,9 +1137,12 @@ export default {
       this.getAutoScalFlag('prod');
     }
     // 镜像需要调用进程配置
+    console.log('this.isCustomImage', this.isCustomImage);
     if (this.isCustomImage) {
       this.init();
     }
+    // 获取资源配额数据
+    await this.getQuotaPlans();
   },
   mounted() {
   },
@@ -1108,6 +1162,10 @@ export default {
         this.processDataBackUp = _.cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
+          // 传入的镜像仓库示例
+          if (this.imageUrl) {
+            this.formData.image = this.imageUrl;
+          }
           if (!Object.keys(this.formData.env_overlay).length) {
             this.formData.env_overlay = ENV_OVERLAY;
           }
@@ -1120,8 +1178,6 @@ export default {
         });
       } finally {
         this.isLoading = false;
-        // 获取资源配额数据
-        await this.getQuotaPlans();
       }
     },
     // 将web放在第一个位置
@@ -1175,7 +1231,7 @@ export default {
 
     useExample() {
       this.formData.image = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
-      if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
+      if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx') {
         this.formData.command = [];
         this.formData.args = [];
         this.formData.port = 80;
@@ -1355,7 +1411,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.message || e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -1371,6 +1427,10 @@ export default {
       await this.$refs?.formStagEnv?.validate();
       await this.$refs?.formProdEnv?.validate();
       await this.$refs?.formDeploy?.validate();
+      // 创建应用或创建模块返回值
+      if (this.isCreate) {
+        return [...this.processData];
+      }
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,

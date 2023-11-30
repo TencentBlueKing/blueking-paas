@@ -38,16 +38,16 @@ def get_default_redis(settings_prefix: str = "REDIS_") -> redis.Redis:
         return _default_redisdb
 
     try:
-        server_url = getattr(settings, f'{settings_prefix}URL')
+        server_url = getattr(settings, f"{settings_prefix}URL")
     except AttributeError:
         raise ImproperlyConfigured(f"Please set {settings_prefix}URL in settings in order to use redis!")
 
     # Get connection options from settings
-    connection_options = getattr(settings, f'{settings_prefix}CONNECTION_OPTIONS', {})
+    connection_options = getattr(settings, f"{settings_prefix}CONNECTION_OPTIONS", {})
 
     if is_redis_sentinel_backend(server_url):
         backend = SentinelBackend(
-            server_url, settings.SENTINEL_MASTER_NAME, {'password': settings.SENTINEL_PASSWORD}, **connection_options
+            server_url, settings.SENTINEL_MASTER_NAME, {"password": settings.SENTINEL_PASSWORD}, **connection_options
         )
         _default_redisdb = backend.client
     else:

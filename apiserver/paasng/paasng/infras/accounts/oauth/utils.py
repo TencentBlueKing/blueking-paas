@@ -29,13 +29,13 @@ def set_get_backends_callback_func(func: Callable):
     _get_backends_callback_func = func
 
 
-def get_available_backends() -> Iterable[Tuple[str, 'OAuth2Backend']]:
+def get_available_backends() -> Iterable[Tuple[str, "OAuth2Backend"]]:
     if not _get_backends_callback_func:
         raise RuntimeError("Must set the callback function for getting oauth backends")
     yield from _get_backends_callback_func()
 
 
-def get_backend(backend_name: str) -> 'OAuth2Backend':
+def get_backend(backend_name: str) -> "OAuth2Backend":
     for sourcectl_name, backend in get_available_backends():
         if sourcectl_name == backend_name:
             return backend

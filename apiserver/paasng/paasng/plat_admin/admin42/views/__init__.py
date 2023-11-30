@@ -24,4 +24,4 @@ class FrontPageView(View):
     """Welcome to admin42"""
 
     def get(self, request):
-        return render(request, 'admin42/front_page.html')
+        return render(request, "admin42/front_page.html")

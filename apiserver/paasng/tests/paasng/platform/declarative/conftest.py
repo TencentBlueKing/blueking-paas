@@ -24,7 +24,7 @@ from tests.utils.mocks.engine import mock_cluster_service
 
 
 @pytest.fixture(autouse=True)
-def setup_mocks(mock_wl_services_in_creation):
+def _setup_mocks(mock_wl_services_in_creation):
     """Setup mocks for current testing module
 
     - Mock wl_app creation which depends on `workloads` module
@@ -39,7 +39,7 @@ def setup_mocks(mock_wl_services_in_creation):
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def one_px_png():
     """The binary content of an one pixel png format picture"""
     return (

@@ -73,7 +73,7 @@ class Command(BaseCommand):
             dest="credentials_str",
             required=True,
             help="增强服务实例的实例配置(json format), 支持只传部分属性做模糊匹配, "
-            "例如 '{\"host\": \"xxx.xxx.xxx.xxx\"}' 将匹配所有 host 为 xxx.xxx.xxx.xxx 的实例",
+            '例如 \'{"host": "xxx.xxx.xxx.xxx"}\' 将匹配所有 host 为 xxx.xxx.xxx.xxx 的实例',
         )
 
     def handle(self, service_name: str, credentials_str: str, **options):

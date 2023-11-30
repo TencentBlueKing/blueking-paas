@@ -35,7 +35,7 @@ class TestInitialize:
         with pytest.raises(ImproperlyConfigured):
             initialize_remote_services(store)
 
-    @mock.patch('requests.get')
+    @mock.patch("requests.get")
     def test_normal(self, mocked_get, config):
         mocked_get.return_value = mock_json_response(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON)
         mocked_store = mock.MagicMock()
@@ -46,4 +46,4 @@ class TestInitialize:
 
         assert mocked_store.bulk_upsert.call_count == len(SERVICE_REMOTE_ENDPOINTS)
         assert mocked_get.called
-        assert mocked_get.call_args[0][0] == 'http://faked-host/services/'
+        assert mocked_get.call_args[0][0] == "http://faked-host/services/"

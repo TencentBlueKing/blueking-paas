@@ -19,10 +19,10 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import traceback
 
+from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 from paasng.platform.mgrlegacy.exceptions import MigrationFailed
 from paasng.platform.mgrlegacy.models import MigrationContext, MigrationRegister
-from paasng.accessories.publish.sync_market.managers import AppManger
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
@@ -42,15 +42,15 @@ logger = logging.getLogger(__name__)
 
 def _do_migrate(migration_process, migration, context):
     if migration.should_skip():
-        logger.info('Skip migration %s...', migration.get_name())
-        return None
+        logger.info("Skip migration %s...", migration.get_name())
+        return
     migration_process.set_ongoing(migration)
 
-    logger.info('Start migration %s for %s', migration.get_name(), migration.legacy_app.code)
+    logger.info("Start migration %s for %s", migration.get_name(), migration.legacy_app.code)
     try:
         migration.apply_migration()
     except MigrationFailed:
-        logger.exception('Error when running migration, %s', migration.get_name())
+        logger.exception("Error when running migration, %s", migration.get_name())
         migration_process.fail_on(migration)
         raise
 
@@ -82,7 +82,7 @@ def run_migration(migration_process, session):
         _do_migrate(migration_process, migration, context)
 
         if migration.should_skip():
-            logger.info('Skip migration %s...', migration.get_name())
+            logger.info("Skip migration %s...", migration.get_name())
             continue
         # Use the new context
         context = migration.context
@@ -114,7 +114,7 @@ def run_single_migration(migration_process, migration_class, session):
 def _do_rollback(migration_process, migration, context):
     # update ongoing
     migration_process.set_ongoing(migration)
-    logger.info('Start rollback %s for %s', migration.get_name(), migration.legacy_app.code)
+    logger.info("Start rollback %s for %s", migration.get_name(), migration.legacy_app.code)
     try:
         migration.apply_rollback()
     except Exception:
@@ -134,8 +134,8 @@ def run_rollback(migration_process, session):
     # FIXME: is this ok?
     # 第二次进入的时候app是None
     if migration_process.app is None:
-        logger.critical('rollback app for %s is None \n %s' % (migration_process, "\n".join(traceback.format_stack())))
-        raise MigrationFailed('rollback app for %s is None ' % migration_process.id)
+        logger.critical("rollback app for %s is None \n %s", migration_process, "\n".join(traceback.format_stack()))
+        raise MigrationFailed("rollback app for %s is None " % migration_process.id)
 
     legacy_app = AppManger(session).get_by_app_id(migration_process.legacy_app_id)
     context = MigrationContext(
@@ -148,14 +148,13 @@ def run_rollback(migration_process, session):
 
     if migration_process.finished_migrations:
         for migration_info in reversed(migration_process.finished_migrations):
-            migration_class = MigrationRegister.get_class(migration_info['name'])
+            migration_class = MigrationRegister.get_class(migration_info["name"])
             migration = migration_class(context)
 
             _do_rollback(migration_process=migration_process, migration=migration, context=context)
             # Use the new context
             context = migration.context
-        else:
-            migration_process.set_rollback_state()
+        migration_process.set_rollback_state()
 
 
 def run_single_rollback(migration_process, migration_class, session):

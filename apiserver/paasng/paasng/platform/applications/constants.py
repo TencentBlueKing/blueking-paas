@@ -23,13 +23,15 @@ from django.utils.translation import gettext_lazy as _
 
 
 class ApplicationType(str, StructuredEnum):
-    DEFAULT = EnumField('default', label="普通应用")  # 默认类型：无任何定制逻辑
-    ENGINELESS_APP = EnumField('engineless_app', label="外链应用")  # 无引擎应用：不部署，但可通过设置第三方地址上线到市场，也支持申请云 API
-    BK_PLUGIN = EnumField('bk_plugin', label="蓝鲸应用插件")  # 蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑
+    DEFAULT = EnumField("default", label="普通应用")  # 默认类型：无任何定制逻辑
+    ENGINELESS_APP = EnumField(
+        "engineless_app", label="外链应用"
+    )  # 无引擎应用：不部署，但可通过设置第三方地址上线到市场，也支持申请云 API
+    BK_PLUGIN = EnumField("bk_plugin", label="蓝鲸应用插件")  # 蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑
 
     # 云原生架构应用：完全基于 YAML 模型的应用，当前作为一个独立应用类型存在，但未来它也许会成为所有应用
     # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
-    CLOUD_NATIVE = EnumField('cloud_native', label="云原生应用")
+    CLOUD_NATIVE = EnumField("cloud_native", label="云原生应用")
 
     @classmethod
     def normal_app_type(cls):
@@ -40,34 +42,34 @@ class ApplicationType(str, StructuredEnum):
 
 
 class ApplicationRole(int, StructuredEnum):
-    NOBODY = EnumField(-1, label='无身份用户')
-    COLLABORATOR = EnumField(1, label='协作者')
-    ADMINISTRATOR = EnumField(2, label='管理员')
-    DEVELOPER = EnumField(3, label='开发')
-    OPERATOR = EnumField(4, label='运营')
+    NOBODY = EnumField(-1, label="无身份用户")
+    COLLABORATOR = EnumField(1, label="协作者")
+    ADMINISTRATOR = EnumField(2, label="管理员")
+    DEVELOPER = EnumField(3, label="开发")
+    OPERATOR = EnumField(4, label="运营")
 
     @classmethod
     def get_roles(cls: Type[StructuredEnum]):
         return [
-            {'id': role.value, 'name': role.name.lower()}
+            {"id": role.value, "name": role.name.lower()}
             for role in cls
-            if role.name not in ['COLLABORATOR', '_choices_labels']
+            if role.name not in ["COLLABORATOR", "_choices_labels"]
         ]
 
 
 class AppLanguage(str, StructuredEnum):
-    PYTHON = EnumField('Python', label='Python')
-    PHP = EnumField('PHP', label='PHP')
-    GO = EnumField('Go', label='Go')
-    NODEJS = EnumField('NodeJS', label='NodeJS')
-    JAVA = EnumField('Java', label='Java')
+    PYTHON = EnumField("Python", label="Python")
+    PHP = EnumField("PHP", label="PHP")
+    GO = EnumField("Go", label="Go")
+    NODEJS = EnumField("NodeJS", label="NodeJS")
+    JAVA = EnumField("Java", label="Java")
 
     @classmethod
     def _missing_(cls, value):
         if not isinstance(value, str):
             return super()._missing_(value)
         # 保证不同格式的 language 都可以正常转换到 AppLanguage
-        maps = {'python': cls.PYTHON, 'php': cls.PHP, 'go': cls.GO, 'nodejs': cls.NODEJS, 'java': cls.JAVA}
+        maps = {"python": cls.PYTHON, "php": cls.PHP, "go": cls.GO, "nodejs": cls.NODEJS, "java": cls.JAVA}
         return maps.get(value.lower()) or super()._missing_(value)
 
     def __str__(self):

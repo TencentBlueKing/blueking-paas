@@ -40,12 +40,12 @@ def get_app_logging_volume(app: WlApp) -> List[Volume]:
     return cattr.structure(
         [
             {
-                'name': settings.VOLUME_NAME_APP_LOGGING,
-                'hostPath': {"path": f"{settings.VOLUME_HOST_PATH_APP_LOGGING_DIR}/{legacy_log_path}"},
+                "name": settings.VOLUME_NAME_APP_LOGGING,
+                "hostPath": {"path": f"{settings.VOLUME_HOST_PATH_APP_LOGGING_DIR}/{legacy_log_path}"},
             },
             {
-                'name': settings.MUL_MODULE_VOLUME_NAME_APP_LOGGING,
-                'hostPath': {"path": f"{settings.MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR}/{module_log_path}"},
+                "name": settings.MUL_MODULE_VOLUME_NAME_APP_LOGGING,
+                "hostPath": {"path": f"{settings.MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR}/{module_log_path}"},
             },
         ],
         List[Volume],
@@ -60,12 +60,12 @@ def get_app_logging_volume_mounts(app: WlApp) -> List[VolumeMount]:
     return cattr.structure(
         [
             {
-                'name': settings.VOLUME_NAME_APP_LOGGING,
-                'mountPath': settings.VOLUME_MOUNT_APP_LOGGING_DIR,
+                "name": settings.VOLUME_NAME_APP_LOGGING,
+                "mountPath": settings.VOLUME_MOUNT_APP_LOGGING_DIR,
             },
             {
-                'name': settings.MUL_MODULE_VOLUME_NAME_APP_LOGGING,
-                'mountPath': settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
+                "name": settings.MUL_MODULE_VOLUME_NAME_APP_LOGGING,
+                "mountPath": settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
             },
         ],
         List[VolumeMount],

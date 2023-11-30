@@ -55,7 +55,7 @@ class BaseMountFields(serializers.Serializer):
 
         configMap = ConfigMapInputSLZ()
 
-    name = serializers.RegexField(regex=r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', max_length=63)
+    name = serializers.RegexField(regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63)
     mountPath = serializers.RegexField(regex=r"^/([^/\0]+(/)?)*$")
     source = SourceInputSLZ()
 
@@ -162,6 +162,7 @@ class ProcessInputSLZ(serializers.Serializer):
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
 
+    # TODO 删除 v1alpha1 的配置
     # v1alpha1
     image = serializers.CharField(allow_null=True, default=None, allow_blank=True)
     imagePullPolicy = serializers.ChoiceField(choices=ImagePullPolicy.get_choices(), allow_null=True, default=None)

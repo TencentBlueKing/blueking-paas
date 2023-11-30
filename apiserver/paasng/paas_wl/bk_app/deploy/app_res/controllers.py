@@ -43,6 +43,7 @@ from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.utils.constants import PodStatus
 from paas_wl.utils.kubestatus import (
     HealthStatus,
     HealthStatusType,
@@ -557,31 +558,40 @@ class ProcAutoscalingHandler(ResourceHandlerBase):
         self.manager.delete_by_name(scaling.app, scaling.name)
 
 
-class BkAppHookLogFetcher:
-    """Log Fetcher for BkApp Hook Pod"""
-
-    def __init__(self, app: "WlApp"):
+class BkAppHookHandler:
+    def __init__(self, app: "WlApp", hook_name: str):
+        """
+        :param app: app hook belongs to
+        :param hook_name: hook pod name
+        """
         self.client = get_client_by_app(app)
+        self.namespace = app.namespace
+        self.hook_name = hook_name
 
-    def wait_for_logs_readiness(self, namespace: str, pod_name: str, timeout: float = 300):
-        """Waits for hook Pod to become ready for retrieving logs
+    def wait_for_logs_readiness(self, timeout: float = 300):
+        """Waits for hook pod to become ready for retrieving logs
 
-        :param namespace: namespace where run the command.
-        :param pod_name: Pod name
         :param timeout: max timeout
         """
-        log_available_statuses = {"Running", "Succeeded", "Failed"}
+        log_available_statuses = {PodStatus.RUNNING, PodStatus.SUCCEEDED, PodStatus.FAILED}
         KPod(self.client).wait_for_status(
-            namespace=namespace,
-            name=pod_name,
+            namespace=self.namespace,
+            name=self.hook_name,
             target_statuses=log_available_statuses,
             timeout=timeout,
         )
 
-    def fetch_logs(self, namespace: str, pod_name: str, follow: bool = False):
-        """Fetch logs of running pod.
+    def fetch_logs(self, follow: bool = False):
+        """Fetch logs of running hook pod"""
+        return KPod(self.client).get_log(name=self.hook_name, namespace=self.namespace, follow=follow)
 
-        :param namespace: Pod 命名空间
-        :param pod_name: Pod name
-        """
-        return KPod(self.client).get_log(name=pod_name, namespace=namespace, follow=follow)
+    def wait_hook_finished(self, timeout: float = 300) -> PodStatus:
+        """Waits for hook pod to finish"""
+        finished_statuses = {PodStatus.SUCCEEDED, PodStatus.FAILED}
+        status = KPod(self.client).wait_for_status(
+            namespace=self.namespace,
+            name=self.hook_name,
+            target_statuses=finished_statuses,
+            timeout=timeout,
+        )
+        return PodStatus(status)

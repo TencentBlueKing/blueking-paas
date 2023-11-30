@@ -107,6 +107,7 @@ def setup_dockerbuild_metaset() -> StepMetaSet:
         (DeployPhaseTypes.PREPARATION, "配置资源实例"),
         (DeployPhaseTypes.BUILD, "下载构建上下文"),
         (DeployPhaseTypes.BUILD, "构建镜像"),
+        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
         (DeployPhaseTypes.RELEASE, "部署应用"),
         (DeployPhaseTypes.RELEASE, "检测部署结果"),
     ]
@@ -155,7 +156,11 @@ class DeployStepPicker:
             except StepMetaSet.DoesNotExist:
                 return setup_image_release_metaset()
 
-        # 以 SlugBuilder 匹配为主, 不存在绑定直接走缺省步骤集
+        return cls._pick_default_meta_set(m)
+
+    @classmethod
+    def _pick_default_meta_set(cls, m: ModuleRuntimeManager):
+        """以 SlugBuilder 匹配为主, 不存在绑定直接走缺省步骤集"""
         builder = m.get_slug_builder(raise_exception=False)
         if builder is None:
             return cls._get_default_meta_set()
@@ -169,7 +174,7 @@ class DeployStepPicker:
         return meta_sets[0]
 
     @classmethod
-    def _get_default_meta_set(self):
+    def _get_default_meta_set(cls):
         """防止由于后台配置缺失而影响部署流程, 绑定默认的 StepMetaSet"""
         try:
             best_matched_set = StepMetaSet.objects.get(is_default=True)

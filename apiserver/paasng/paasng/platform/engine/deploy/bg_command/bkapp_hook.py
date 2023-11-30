@@ -20,9 +20,9 @@ import logging
 
 from six import ensure_text
 
-from paas_wl.bk_app.deploy.app_res.controllers import BkAppHookLogFetcher
+from paas_wl.bk_app.deploy.app_res.controllers import BkAppHookHandler
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
-from paas_wl.utils.kubestatus import check_pod_health_status
+from paas_wl.utils.constants import PodStatus
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
@@ -47,42 +47,54 @@ class PreReleaseDummyExecutor(DeployStep):
     PHASE_TYPE = DeployPhaseTypes.RELEASE
 
     def start(self, hook_name: str):
-        # self._mark_step_start()
-        self._perform(hook_name)
+        self._mark_step_start()
+        status = self._perform(hook_name)
+        self._mark_step_stop(status)
 
     def _mark_step_start(self):
         try:
             step = self.phase.get_step_by_name("执行部署前置命令")
         except StepNotInPresetListError:
             return
-        step.mark_procedure_status(JobStatus.PENDING)
+        step.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
 
-    def _perform(self, hook_name: str):
+    def _perform(self, hook_name: str) -> PodStatus:
         self.stream.write_message(Style.Warning("Starting pre-release phase"))
 
         wl_app = self.engine_app.to_wl_obj()
-        fetcher = BkAppHookLogFetcher(wl_app)
+        handler = BkAppHookHandler(wl_app, hook_name)
+
+        self.stream.write_title("executing...")
 
         try:
-            fetcher.wait_for_logs_readiness(wl_app.namespace, hook_name)
+            handler.wait_for_logs_readiness()
         except ReadTargetStatusTimeout as e:
             pod = e.extra_value
             if pod is None:
                 self.stream.write_message(
                     Style.Error("Pod is not created normally, please contact the cluster administrator.")
                 )
-            else:
-                health_status = check_pod_health_status(pod)
-                self.stream.write_message(Style.Error(health_status.message))
-            return
-
-        self.stream.write_title("executing...")
+            return PodStatus.FAILED
 
         try:
-            for line in fetcher.fetch_logs(wl_app.namespace, hook_name, follow=True):
+            for line in handler.fetch_logs(follow=True):
                 self.stream.write_message(ensure_text(line))
         except Exception:
-            logger.exception(f"A critical error happened during execute hook({hook_name})")
+            logger.exception(f"A critical error happened during fetch logs from hook({hook_name})")
             self.stream.write_message(Style.Error("fetch logs failed"))
-        else:
-            self.stream.write_message(Style.Error("pre-release execution succeed."))
+
+        try:
+            return handler.wait_hook_finished()
+        except ReadTargetStatusTimeout:
+            return PodStatus.RUNNING
+
+    def _mark_step_stop(self, status: PodStatus):
+        try:
+            step = self.phase.get_step_by_name("执行部署前置命令")
+        except StepNotInPresetListError:
+            return
+
+        if status == PodStatus.SUCCEEDED:
+            step.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
+        elif status == PodStatus.FAILED:
+            step.mark_and_write_to_stream(self.stream, JobStatus.FAILED)

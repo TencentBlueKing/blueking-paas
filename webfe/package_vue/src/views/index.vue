@@ -141,39 +141,32 @@
                     v-bk-tooltips="$t('无可用地址')"
                     class="ps-btn ps-btn-disabled-new"
                   >
-                    {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down" />
+                    {{ $t('访问模块') }} <i class="paasng-icon paasng-ps-arrow-down" />
                   </button>
                 </div>
 
                 <div
+                  class="paas-operation-section section3 access-module-wrapper"
                   v-if="recordItem.represent_info.props.provide_links && (recordItem.stag.deployed || recordItem.prod.deployed)"
-                  :class="['paas-operation-section','section3',{ 'open': activeVisit === index }]"
                 >
-                  <div
-                    :class="['section-box']"
-                  >
-                    <a
-                      class="section-button-new"
-                      href="javascript:"
-                      @click.stop.prevent="visitOpen($event,index)"
-                    > {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down" /></a>
-                    <div class="section-button-down">
-                      <a
-                        v-if="recordItem.stag.deployed"
-                        target="_blank"
-                        :href="recordItem.stag.url"
-                      >
-                        {{ $t('预发布环境') }}
-                      </a>
-                      <a
-                        v-if="recordItem.prod.deployed"
-                        target="_blank"
-                        :href="recordItem.prod.url"
-                      >
-                        {{ $t('生产环境') }}
-                      </a>
-                    </div>
-                  </div>
+                  <bk-select
+                    :disabled="false"
+                    :value="curSelectValue"
+                    :clearable="false"
+                    style="width: 100px"
+                    ext-cls="access-module-custom"
+                    ext-popover-cls="access-module-popover-custom"
+                    @change="handleSelectChange($event, recordItem)">
+                    <bk-option
+                      v-for="option in envList"
+                      :class="{ 'hide': option.id === 'default' }"
+                      :key="option.id"
+                      :id="option.id"
+                      :title="option.name"
+                      :name="option.showName">
+                      {{ option.name }}
+                    </bk-option>
+                  </bk-select>
                 </div>
 
                 <div class="paas-operation-section fright">
@@ -490,6 +483,12 @@ export default {
       defaultImg: '/static/images/default_logo.png',
       isShowOffAppAction: false,
       type: 'default',
+      curSelectValue: 'default',
+      envList: [
+        { name: this.$t('访问模块'), id: 'default', showName: this.$t('访问模块') },
+        { name: this.$t('预发布环境'), id: 'stag', showName: this.$t('访问模块') },
+        { name: this.$t('生产环境'), id: 'prod', showName: this.$t('访问模块') },
+      ],
     };
   },
   computed: {
@@ -800,7 +799,14 @@ export default {
     closeOpen() {
       this.activeVisit = -1;
     },
-
+    // 访问模块
+    handleSelectChange(env, data) {
+      if (env === 'default') {
+        return;
+      }
+      const url = data[env]?.url;
+      window.open(url, '_blank');
+    },
   },
 };
 </script>
@@ -992,6 +998,7 @@ export default {
     }
 
     .ps-btn-disabled-new {
+        height: 32px;
         color: #dcdee5 !important;
         background: #fafbfd;
         cursor: not-allowed;
@@ -1490,4 +1497,36 @@ export default {
         white-space: nowrap;
         text-overflow: ellipsis;
     }
+    .access-module-wrapper {
+      transform: translateY(4px);
+    }
+    .access-module-custom {
+      background: #F0F1F5;
+      border: none;
+
+      &.is-focus {
+        background: #fff;
+        border: 1px solid #3a84ff;
+        box-shadow: none;
+        &:hover {
+          background: #fff;
+        }
+      }
+
+      &:hover {
+        background: #eaebf0;
+      }
+    }
+</style>
+<style lang="scss">
+.access-module-popover-custom {
+  .bk-options .bk-option .bk-option-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bk-options .bk-option.is-selected + .bk-option {
+    margin-top: 6px !important;
+  }
+}
 </style>

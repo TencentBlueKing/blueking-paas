@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Deep copy the directory for -e pip installations
+deep-cp "${APP_DIR:-/app}/.heroku/src" "${BUILD_DIR}/.heroku/src" || true
+
+export | grep -E -e ' (LIBRARY_PATH|LD_LIBRARY_PATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|PATH|PKG_CONFIG_PATH|)=' > "${BUILD_PACK}/export"
+
+# remove all __pycache__ folders
+find "${BUILD_DIR}" -name '__pycache__' -type d -exec rm -rf '{}' \; > /dev/null 2>&1 || true
+# remove all .pyc files
+find "${BUILD_DIR}" -name '*.pyc' -type f -delete > /dev/null 2>&1 || true

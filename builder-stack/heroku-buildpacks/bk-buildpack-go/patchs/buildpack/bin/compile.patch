@@ -1,0 +1,18 @@
+13a14
+> source "${buildpack}/hooks/pre-compile"
+422a424,425
+> 
+> source "${buildpack}/hooks/pre-gobuild"
+470,477d472
+<         export GOBIN="${build}/bin"
+<         if [ "${GO_SETUP_GOPATH_FOR_MODULE_CACHE}" = "true" ]; then
+<             export GOPATH="${build}/.heroku/go-path"
+<             mkdir -p $GOPATH # ensure that it's created
+<         else
+<             export GOPATH="${cache}/go-path"
+<         fi
+< 
+718a714,715
+> 
+> source "${buildpack}/hooks/post-compile"
+\ No newline at end of file

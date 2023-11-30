@@ -42,6 +42,7 @@ from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod
 from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.kubestatus import (
     HealthStatus,
     HealthStatusType,
@@ -554,3 +555,33 @@ class ProcAutoscalingHandler(ResourceHandlerBase):
     def delete(self, scaling: ProcAutoscaling):
         """删除集群中的 GPA"""
         self.manager.delete_by_name(scaling.app, scaling.name)
+
+
+class BkAppHookLogFetcher:
+    """Log Fetcher for BkApp Hook Pod"""
+
+    def __init__(self, app: WlApp):
+        self.client = get_client_by_app(app)
+
+    def wait_for_logs_readiness(self, namespace: str, pod_name: str, timeout: float = 300):
+        """Waits for hook Pod to become ready for retrieving logs
+
+        :param namespace: namespace where run the command.
+        :param pod_name: Pod name
+        :param timeout: max timeout
+        """
+        log_available_statuses = {"Running", "Succeeded", "Failed"}
+        KPod(self.client).wait_for_status(
+            namespace=namespace,
+            name=pod_name,
+            target_statuses=log_available_statuses,
+            timeout=timeout,
+        )
+
+    def fetch_logs(self, namespace: str, pod_name: str, follow: bool = False):
+        """Fetch logs of running pod.
+
+        :param namespace: Pod 命名空间
+        :param pod_name: Pod name
+        """
+        return KPod(self.client).get_log(name=pod_name, namespace=namespace, follow=follow)

@@ -34,7 +34,7 @@ pytestmark = [pytest.mark.xdist_group(name="remote-services")]
 
 class TestRemoteStore:
     @pytest.fixture(autouse=True)
-    def setup_data(self, config, raw_store):
+    def _setup_data(self, config, raw_store):
         meta_info = {"version": None}
         with mock.patch("requests.get") as mocked_get:
             # Mock requests response
@@ -69,7 +69,7 @@ class TestRemoteStore:
         with pytest.raises(RuntimeError):
             store.get(uuid, "neverland")
 
-    def test_bulk_get(self, setup_data, store):
+    def test_bulk_get(self, store):
         uuids = [
             data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"],
             data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[1]["uuid"],
@@ -121,5 +121,5 @@ class TestRemoteStore:
 
         # 增强服务的名称不能更新
         config_json["name"] = "xman"
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* already exists"):
             store.bulk_upsert(deepcopy(store.all()), meta_info, collector.RemoteSvcConfig.from_json(config_json))

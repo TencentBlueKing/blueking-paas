@@ -24,7 +24,8 @@ from paas_wl.bk_app.applications.models.build import Build, mark_as_latest_artif
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_mark_as_latest_artifact(bk_module, bk_stag_env, with_wl_apps):
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_mark_as_latest_artifact(bk_module, bk_stag_env):
     build_1 = Build.objects.create(module_id=bk_module.id, artifact_type=ArtifactType.IMAGE, image="nginx:latest")
     mark_as_latest_artifact(build_1)
     assert Build.objects.filter(module_id=bk_module.id, image="nginx:latest").count() == 1

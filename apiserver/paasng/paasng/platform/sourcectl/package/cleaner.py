@@ -39,7 +39,8 @@ def delete_from_blob_store(package: SourcePackage):
         store.delete_file(o.key)
         package.is_deleted = True
         package.save(update_fields=["is_deleted", "updated"])
-        return True
     except Exception:
         logger.exception("Source package %s failed to delete!", o)
         return False
+    else:
+        return True

@@ -80,7 +80,7 @@ class Command(BaseCommand):
         self.user_group_map = {g.app_code: g.user_group_id for g in user_groups}
 
         if len(self.grade_manager_map) != len(self.user_group_map):
-            raise Exception("the length of grade_manager_map and user_group_map not equal!")
+            raise ValueError("the length of grade_manager_map and user_group_map not equal!")
 
         self.total_count = len(self.user_group_map)
         self.app_codes = list(self.user_group_map)
@@ -142,13 +142,13 @@ class Command(BaseCommand):
 
         user_group_id = self.user_group_map.get(app_code)
         if not user_group_id:
-            raise Exception(f"app {app_code} user group id not find!")
+            raise ValueError(f"app {app_code} user group id not find!")
 
         administrators = self.cli.fetch_user_group_members(user_group_id)
 
         grade_manager_id = self.grade_manager_map.get(app_code)
         if not grade_manager_id:
-            raise Exception(f"app {app_code} grade manager id not find!")
+            raise ValueError(f"app {app_code} grade manager id not find!")
 
         grade_managers = self.cli.fetch_grade_manager_members(grade_manager_id)
 

@@ -17,16 +17,16 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import inspect
-from typing import Callable, List, NoReturn, Optional, Union  # noqa:F401
+from typing import Callable, List, NoReturn, Optional, Union  # noqa: F401
 
 from django.apps import AppConfig
 from django.utils.module_loading import import_string
 
 try:
-    from django.urls import URLPattern, URLResolver  # noqa
+    from django.urls import URLPattern, URLResolver
 except ImportError:
     # Will be removed in Django 2.0
-    from django.urls import RegexURLPattern as URLPattern  # noqa
+    from django.urls import RegexURLPattern as URLPattern
     from django.urls import RegexURLResolver as URLResolver
 
 
@@ -57,7 +57,7 @@ class PlugableAppConfig(AppConfig):
             except ImportError:
                 continue
             if not callable(contribute):
-                raise RuntimeError("contribute must be callable")
+                raise TypeError("contribute must be callable")
             if len(inspect.signature(contribute).parameters) != 1:
                 raise RuntimeError("contribute should accept and only accept 1 parameter")
             break

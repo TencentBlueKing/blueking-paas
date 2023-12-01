@@ -115,5 +115,5 @@ class AsCodeClient:
                 incremental=incremental,
             )
         except Exception as e:
-            logger.error(f"ascode import alert rule configs of app_code({self.app_code}) error: {e}")
+            logger.exception(f"ascode import alert rule configs of app_code({self.app_code}) error.")
             raise AsCodeAPIError(e)

@@ -509,8 +509,7 @@ class LocalServiceBinder:
         for plan in plans:
             if "restricted_envs" not in plan.properties or env.environment in plan.properties["restricted_envs"]:
                 return plan
-        else:
-            raise RuntimeError("can not bind a plan")
+        raise RuntimeError("can not bind a plan")
 
     def _bind_for_env(self, env: ModuleEnvironment, plan: LocalPlanObj):
         svc_engine_app_attachment, created = ServiceEngineAppAttachment.objects.get_or_create(

@@ -45,7 +45,8 @@ class TestBkPlugin:
         assert obj.id == bk_plugin_app.id.hex
 
 
-def test_get_deployed_statuses(with_empty_live_addrs, bk_plugin_app):
+@pytest.mark.usefixtures("_with_empty_live_addrs")
+def test_get_deployed_statuses(bk_plugin_app):
     obj = BkPlugin.from_application(bk_plugin_app)
     assert get_deployed_statuses(obj) is not None
 
@@ -71,12 +72,14 @@ def test_get_or_create_by_application(bk_app):
     assert profile.tag.name == "sample-tag-1"
 
 
-def test_plugin_to_detailed_default(with_empty_live_addrs, bk_plugin):
+@pytest.mark.usefixtures("_with_empty_live_addrs")
+def test_plugin_to_detailed_default(bk_plugin):
     ret = plugin_to_detailed(bk_plugin)
     assert ret.dict()["deployed_statuses"]["stag"].get("addresses") is not None
 
 
-def test_plugin_to_detailed_no_addresses(with_empty_live_addrs, bk_plugin):
+@pytest.mark.usefixtures("_with_empty_live_addrs")
+def test_plugin_to_detailed_no_addresses(bk_plugin):
     ret = plugin_to_detailed(bk_plugin, include_addresses=False)
     assert ret.dict()["deployed_statuses"]["stag"].get("addresses") is None
 

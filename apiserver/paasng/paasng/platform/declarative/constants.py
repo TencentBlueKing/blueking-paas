@@ -61,7 +61,7 @@ class DiffType(str, StructuredEnum):
     NOT_MODIFIED = EnumField("not_modified", label="未改动")
 
 
-WEB_PROCESS = """gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"' --timeout 600"""  # noqa
+WEB_PROCESS = """gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"' --timeout 600"""
 CELERY_PROCESS = "python manage.py celery worker -l info --autoscale=8,1"
 CELERY_PROCESS_WITH_GEVENT = "python manage.py celery worker -l info --without-gossip -P gevent -c 20"
 CELERY_BEAT_PROCESS = "python manage.py celery beat"

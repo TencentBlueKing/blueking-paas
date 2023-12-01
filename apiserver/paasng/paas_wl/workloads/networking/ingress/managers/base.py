@@ -210,16 +210,19 @@ class IngressUpdater:
             )
             ingress_kmodel.save(desired_ingress)
         else:
-            if restore_default_when_invalid and default_service_name:
+            if (
+                restore_default_when_invalid
+                and default_service_name
+                and not self._service_name_valid(ingress.service_name)
+            ):
                 # Restore service name to default if it's invalid
-                if not self._service_name_valid(ingress.service_name):
-                    logger.info(
-                        "Restore service name to default, ingress: %s, current name: %s, new name: %s",
-                        ingress.name,
-                        ingress.service_name,
-                        default_service_name,
-                    )
-                    ingress.service_name = default_service_name
+                logger.info(
+                    "Restore service name to default, ingress: %s, current name: %s, new name: %s",
+                    ingress.name,
+                    ingress.service_name,
+                    default_service_name,
+                )
+                ingress.service_name = default_service_name
 
             logger.info("Updating existed ingress<%s>", ingress.name)
             ingress.domains = domains

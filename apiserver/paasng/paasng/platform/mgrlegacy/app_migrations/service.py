@@ -67,9 +67,10 @@ class LegacyBaseServiceMigration(BaseMigration):
             service_attachment = self.context.app.envs.get(environment=environment).engine_app.service_attachment.get(
                 service__name=self.service_name
             )
-            return service_attachment
         except ObjectDoesNotExist:
-            logger.debug("service_attachment for application:%s not exists!" % self.context.app.code)
+            logger.debug("service_attachment for application:%s not exists!", self.context.app.code)
+        else:
+            return service_attachment
 
     def _add_service_instance(self, environment: str, credentials: Dict, config: Optional[Dict] = None):
         service_attachment = self._get_environment_attachment(environment=environment)

@@ -161,7 +161,7 @@ class Command(BaseCommand):
             try:
                 before_finishing_application_creation.send("FakeSender", application=application)
             except IntegrityError as e:
-                logger.error(f"app with the same {e.field} field already exists in paas2.0, skip create")
+                logger.error(f"app with the same {e.field} field already exists in paas2.0, skip create.")  # noqa: TRY400
                 # 同步 PaaS2.0 失败，则同步删除 PaaS3.0 中已经创建的内容，权限中心先删除用户组，再删除分级管理员
                 delete_builtin_user_groups(application.code)
                 delete_grade_manager(application.code)

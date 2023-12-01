@@ -22,17 +22,20 @@ from paas_wl.bk_app.applications.models import Build
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.platform.engine.utils.client import EngineDeployClient
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = [
+    pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.usefixtures("_with_wl_apps"),
+]
 
 
 class TestEngineDeployClient:
-    def test_create_build(self, bk_stag_env, with_wl_apps):
+    def test_create_build(self, bk_stag_env):
         c = EngineDeployClient(bk_stag_env.get_engine_app())
         build_id = c.create_build("nginx:latest", {}, {})
         assert build_id is not None
         assert Build.objects.get(pk=build_id).image == "nginx:latest"
 
-    def test_upsert_image_credentials(self, bk_stag_env, bk_stag_wl_app, with_wl_apps):
+    def test_upsert_image_credentials(self, bk_stag_env, bk_stag_wl_app):
         c = EngineDeployClient(bk_stag_env.get_engine_app())
         with pytest.raises(AppImageCredential.DoesNotExist):
             AppImageCredential.objects.get(app=bk_stag_wl_app, registry="example.com")

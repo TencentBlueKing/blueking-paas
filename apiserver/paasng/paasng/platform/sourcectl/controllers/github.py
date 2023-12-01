@@ -74,9 +74,10 @@ class GitHubRepoController(BaseGitRepoController):
     def touch(self) -> bool:
         try:
             self.list_alternative_versions()
-            return True
         except (exceptions.DoesNotExistsOnGitServer, exceptions.AccessTokenForbidden) as e:
             raise exceptions.AccessTokenForbidden(project=self.project) from e
+        else:
+            return True
 
     def export(self, local_path: PathLike, version_info: VersionInfo):
         """下载 zip 包并解压到指定路径"""

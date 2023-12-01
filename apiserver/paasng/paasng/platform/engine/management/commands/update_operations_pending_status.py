@@ -79,4 +79,4 @@ class Command(BaseCommand):
 
             logger.info("update type<%s> done", model_class)
         except Exception:
-            logger.error("update type<%s> failed", model_class)
+            logger.exception("update type<%s> failed", model_class)

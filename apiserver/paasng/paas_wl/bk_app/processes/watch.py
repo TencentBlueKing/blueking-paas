@@ -197,8 +197,8 @@ class ParallelChainedGenerator:
                 if value.type == "ERROR":
                     logger.warning("Watch resource error: %s", value.error_message)
                 self.queue.put(value)
-        except Exception as e:
-            logger.exception("Error while consuming generator: %s", str(e))
+        except Exception:
+            logger.exception("Consuming generator error.")
         finally:
             # Always close connection in every thread to avoid leaking of database connections
             logger.debug("generator stopped")

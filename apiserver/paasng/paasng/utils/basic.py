@@ -79,10 +79,10 @@ def sha256_checksum(file_path):
         stdout, stderr = force_text(stdout), force_text(stderr)
         if "command not found" in stderr:
             continue
-        else:
-            searched_obj = RE_SHA256SUM.search(stdout)
-            if searched_obj:
-                return searched_obj.group()
+
+        searched_obj = RE_SHA256SUM.search(stdout)
+        if searched_obj:
+            return searched_obj.group()
     raise RuntimeError(
         ("Can not calculate sha256sum of file %s, no available command " "found(sha256sum|gsha256sum)") % file_path
     )

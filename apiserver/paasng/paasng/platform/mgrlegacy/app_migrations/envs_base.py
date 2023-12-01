@@ -120,6 +120,6 @@ class BaseEnvironmentVariableMigration(BaseMigration):
 
 try:
     # Load external envs
-    from . import envs_ext  # type: ignore  # noqa
+    from . import envs_ext  # type: ignore  # noqa: F401
 except ImportError:
     pass

@@ -142,7 +142,7 @@ class Command(BaseCommand):
         print(f"---------------- migrate {self.total_count} applications role data finished! ----------------")
         print(f"-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------")
 
-    def _migrate_single(self, idx: int, app: Dict) -> List:  # noqa: C901
+    def _migrate_single(self, idx: int, app: Dict) -> List:  # noqa: C901, PLR0912, PLR0915
         """迁移单个应用权限数据"""
         app_code, app_name, creator = app["code"], app["name"], app["creator"]
         migrate_logs = []
@@ -158,7 +158,7 @@ class Command(BaseCommand):
 
         administrators = self.members_map[administrator_key]
         if not administrators:
-            raise Exception("application hasn't administrators")
+            raise ValueError("application hasn't administrators")
 
         # 默认创建者会是应用的分级管理员，如果他已经不是应用的管理员，则使用第一个应用管理员，作为初始的分级管理员
         first_grade_manager = creator

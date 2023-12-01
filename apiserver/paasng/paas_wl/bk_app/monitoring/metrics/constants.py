@@ -42,7 +42,7 @@ RAW_PROMQL_TMPL = {
         "current": "sum by(container_name)(container_memory_working_set_bytes{{"
         'pod_name="{instance_name}", container_name!="POD", cluster_id="{cluster_id}"}})',
         # 内存预留值
-        "request": 'kube_pod_container_resource_requests_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
+        "request": 'kube_pod_container_resource_requests_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
         # 内存上限值
         "limit": 'kube_pod_container_resource_limits_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
     },
@@ -51,7 +51,7 @@ RAW_PROMQL_TMPL = {
         "current": "sum by (container_name)(rate(container_cpu_usage_seconds_total{{"
         'image!="",container_name!="POD",pod_name="{instance_name}", cluster_id="{cluster_id}"}}[1m]))',
         # CPU 预留值
-        "request": 'kube_pod_container_resource_requests_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
+        "request": 'kube_pod_container_resource_requests_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
         # CPU 上限值
         "limit": 'kube_pod_container_resource_limits_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
     },

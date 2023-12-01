@@ -53,11 +53,12 @@ class SvnRepoController:
     def touch(self) -> bool:
         try:
             self.svn_client.rclient.info()
-            return True
         except Exception as e:
             if "E170001" in str(e):
                 raise BasicAuthError()
             raise
+        else:
+            return True
 
     def export(self, local_path, version_info: VersionInfo):
         target_branch, revision = self.extract_version_info(version_info)

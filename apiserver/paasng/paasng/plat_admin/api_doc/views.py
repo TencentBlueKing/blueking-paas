@@ -66,7 +66,7 @@ class FullSwaggerConfigurationView(schema_view):  # type: ignore
             if sub_key in base["paths"]:
                 if ignore_conflict:
                     continue
-                raise Exception(f"paths conflict at f`{sub_key}`")
+                raise ValueError(f"paths conflict at f`{sub_key}`")
             base["paths"][sub_key] = sub_item
 
     def _merge_definitions(self, base: Dict, target: Dict, ignore_conflict: bool = True):
@@ -78,5 +78,5 @@ class FullSwaggerConfigurationView(schema_view):  # type: ignore
             if sub_key in base["definitions"]:
                 if ignore_conflict:
                     continue
-                raise Exception(f"definitions conflict at f`{sub_key}`")
+                raise ValueError(f"definitions conflict at f`{sub_key}`")
             base["definitions"][sub_key] = sub_item

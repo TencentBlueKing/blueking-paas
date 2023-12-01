@@ -392,13 +392,13 @@ class TestApplicationUpdate:
 class TestApplicationDeletion:
     """Test delete application API"""
 
+    @pytest.mark.usefixtures("_with_empty_live_addrs")
     def test_normal(
         self,
         api_client,
         bk_app,
         bk_user,
         mock_wl_services_in_creation,
-        with_empty_live_addrs,
     ):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
@@ -406,13 +406,13 @@ class TestApplicationDeletion:
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
 
+    @pytest.mark.usefixtures("_with_empty_live_addrs")
     def test_rollback(
         self,
         api_client,
         bk_app,
         bk_user,
         mock_wl_services_in_creation,
-        with_empty_live_addrs,
     ):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
         with mock.patch(

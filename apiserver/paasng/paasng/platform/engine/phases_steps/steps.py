@@ -130,6 +130,7 @@ def setup_image_release_metaset() -> StepMetaSet:
     steps = [
         (DeployPhaseTypes.PREPARATION, "解析应用进程信息"),
         (DeployPhaseTypes.PREPARATION, "配置资源实例"),
+        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
         (DeployPhaseTypes.RELEASE, "部署应用"),
         (DeployPhaseTypes.RELEASE, "检测部署结果"),
     ]

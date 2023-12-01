@@ -1,6 +1,6 @@
 # Blueking Buildpack: Go
 
-蓝鲸 SaaS(Go) 的构建工具, 基于 [heroku-buildpack-go](https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-go).
+蓝鲸 SaaS 应用（Go 语言）构建工具, 基于 [heroku-buildpack-go](https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-go).
 
 # 项目结构
 ```bash

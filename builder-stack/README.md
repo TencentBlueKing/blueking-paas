@@ -13,13 +13,13 @@
 蓝鲸 SaaS Builder, 基于 [paketo-buildpacks/bionic-base-stack](https://github.com/paketo-buildpacks/bionic-base-stack), 底层镜像是 ubuntu:bionic.
 
 ## cloudnative-buildpacks/buildpacks/bk-buildpack-python
-蓝鲸 SaaS(Python) 的构建工具, 基于 heroku-buildpack-python.
+蓝鲸 SaaS 应用（Python 语言）构建工具, 基于 heroku-buildpack-python.
 
 ## cloudnative-buildpacks/buildpacks/bk-buildpack-nodejs
-蓝鲸 SaaS(NodeJS) 的构建工具, 基于 heroku-buildpack-nodejs.
+蓝鲸 SaaS 应用（NodeJS 语言）构建工具, 基于 heroku-buildpack-nodejs.
 
 ## cloudnative-buildpacks/buildpacks/bk-buildpack-go
-蓝鲸 SaaS(Golang) 的构建工具, 基于 heroku-buildpack-go.
+蓝鲸 SaaS 应用（Go 语言）构建工具, 基于 heroku-buildpack-go.
 
 # 开发说明
 

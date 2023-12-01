@@ -1,6 +1,6 @@
 # Blueking Buildpack: Python
 
-蓝鲸 SaaS(Python) 的构建工具, 基于 [heroku-buildpack-python](https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-python).
+蓝鲸 SaaS 应用（Python 语言）构建工具, 基于 [heroku-buildpack-python](https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-python).
 
 # 项目结构
 ```bash

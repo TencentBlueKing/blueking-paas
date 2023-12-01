@@ -1,6 +1,6 @@
 # Blueking Buildpack: NodeJS
 
-蓝鲸 SaaS(NodeJS) 的构建工具, 基于 [heroku-buildpack-nodejs](https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-nodejs).
+蓝鲸 SaaS 应用（NodeJS 语言）构建工具, 基于 [heroku-buildpack-nodejs](https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-nodejs).
 
 # 项目结构
 ```bash

@@ -24,11 +24,13 @@ from django.conf import settings
 from django.urls import reverse
 from django_dynamic_fixture import G
 
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.shim import RegionClusterService
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
-from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -574,3 +576,30 @@ class TestCreateCloudNativeApp:
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "dockerfile"
         assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
+
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_create_with_bk_log_feature(self, api_client, settings):
+        """测试创建应用时开启日志平台功能特性"""
+        cluster = RegionClusterService(settings.DEFAULT_REGION_NAME).get_default_cluster()
+        cluster.feature_flags[ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR] = True
+        cluster.save()
+
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
+                "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
+                "source_config": {
+                    "source_init_template": "docker",
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        application = Application.objects.get(code=f"uta-{random_suffix}")
+        assert application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)

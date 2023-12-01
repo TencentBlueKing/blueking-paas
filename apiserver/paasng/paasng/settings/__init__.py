@@ -581,8 +581,12 @@ IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_CLOU
 # 云原生应用的默认集群名称
 CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
 
-# TODO lesscode 正式环境导航修改后去掉该配置项。新建的 lesscode 应用是否为云原生应用
-IS_LESSCODE_APP_CLOUD_NATIVE = settings.get("IS_LESSCODE_APP_CLOUD_NATIVE", False)
+# 新建的 lesscode 应用是否为云原生应用
+IS_LESSCODE_APP_CLOUD_NATIVE = settings.get("IS_LESSCODE_APP_CLOUD_NATIVE", True)
+
+# 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
+IS_SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("IS_SOURCE_PACKAGE_APP_CLOUD_NATIVE", True)
+
 
 # 开发者中心使用的 k8s 集群组件（helm chart 名称）
 BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(

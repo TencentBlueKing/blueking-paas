@@ -23,6 +23,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Dict, List, Optional
 
+from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
@@ -38,6 +39,7 @@ from paasng.infras.accounts.models import User, UserProfile
 from paasng.infras.accounts.permissions.application import user_has_app_action_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import create_oauth2_client
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.handlers import application_logo_updated
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, post_create_application
@@ -89,6 +91,10 @@ class AppDeclarativeController:
         is_smart_app = self.source_origin == SourceOrigin.S_MART
         is_scene_app = self.source_origin == SourceOrigin.SCENE
 
+        app_type = (
+            ApplicationType.CLOUD_NATIVE if settings.IS_SOURCE_PACKAGE_APP_CLOUD_NATIVE else ApplicationType.DEFAULT
+        )
+
         application = Application.objects.create(
             owner=self.user.pk,
             creator=self.user.pk,
@@ -98,6 +104,7 @@ class AppDeclarativeController:
             name_en=desc.name_en,
             is_smart_app=is_smart_app,
             is_scene_app=is_scene_app,
+            type=app_type,
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,
         )

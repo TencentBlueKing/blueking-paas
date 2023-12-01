@@ -6,7 +6,7 @@
 ```bash
 .
 ├── buildpack      -- heroku-buildpack-go
-├── hooks           -- 钩子脚本
+├── hooks          -- 钩子脚本
 ├── patchs         -- 修改补丁
 ├── tests          -- 基于 bats 的脚本测试
 ├── Makefile       -- make 命令集
@@ -19,13 +19,9 @@
 > **引入新的 hook 或 patch 后, 请维护下列的文件说明**
 
 ## 已有 hook
-- post-compile:调用 bin/post-compile, 将 GOPATH 的二进制复制到构建目录 go/bin 中, 清理代码文件以减少 slug 包体积
+- post-compile: 调用 bin/post-compile, 将 GOPATH 的二进制复制到构建目录 go/bin 中, 清理代码文件以减少 slug 包体积
 - pre-compile: 支持使用 GO_INSTALL_PACKAGE_SPEC 设置 go package name, 从 go.mod 解析 go version
 - pre-gobuild: 调用 bin/pre-compile, 尝试读取 /tmp/environment/GO_INSTLL_ARGS, 剔除 -tags heroku
 
 ## 已有 patch
-- bin/compile.patch: 替换 heroku 的开发文档地址
-- lib/binaries.sh.patch: 设置 NPM_REGISTRY 和触发 pre-install-nodejs hook
-- lib/cache.sh.patch: --
-- lib/dependencies.sh.patch: 替换装包指令, 设置 --package-lock=false
-- lib/monitor.sh.patch: 关闭 xtrace 避免打印大量无意义的日志
+- bin/compile.patch: hooks 埋点

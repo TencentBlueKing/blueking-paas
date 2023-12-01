@@ -27,6 +27,6 @@
 ## 已有 patch
 - bin/compile.patch: 替换 heroku 的开发文档地址
 - lib/binaries.sh.patch: 设置 NPM_REGISTRY 和触发 pre-install-nodejs hook
-- lib/cache.sh.patch: --
+- lib/cache.sh.patch: 删除 node_modules/.cache 目录
 - lib/dependencies.sh.patch: 替换装包指令, 设置 --package-lock=false
 - lib/monitor.sh.patch: 关闭 xtrace 避免打印大量无意义的日志

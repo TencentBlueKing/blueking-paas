@@ -6,7 +6,7 @@ echo "bk-hook"
 node --version 
 npm --version
 
-# tnpm已经不维度，需要做兼容处理
+# tnpm已经不维护，需要做兼容处理
 if [ "${USE_TNPM}" ]; then
 	cp -rf .heroku/node/bin/npm .heroku/node/bin/tnpm
 	echo "install tnpm success"

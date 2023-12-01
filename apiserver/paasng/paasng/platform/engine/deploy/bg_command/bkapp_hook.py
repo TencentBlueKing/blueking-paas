@@ -45,6 +45,7 @@ class PreReleaseDummyExecutor(DeployStep):
     """
 
     PHASE_TYPE = DeployPhaseTypes.RELEASE
+    STEP_NAME = "执行部署前置命令"
 
     def start(self, hook_name: str):
         self._mark_step_start()
@@ -53,7 +54,7 @@ class PreReleaseDummyExecutor(DeployStep):
 
     def _mark_step_start(self):
         try:
-            step = self.phase.get_step_by_name("执行部署前置命令")
+            step = self.phase.get_step_by_name(self.STEP_NAME)
         except StepNotInPresetListError:
             return
         step.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
@@ -63,8 +64,6 @@ class PreReleaseDummyExecutor(DeployStep):
 
         wl_app = self.engine_app.to_wl_obj()
         handler = BkAppHookHandler(wl_app, hook_name)
-
-        self.stream.write_title("executing...")
 
         try:
             handler.wait_for_logs_readiness()
@@ -90,7 +89,7 @@ class PreReleaseDummyExecutor(DeployStep):
 
     def _mark_step_stop(self, status: PodStatus):
         try:
-            step = self.phase.get_step_by_name("执行部署前置命令")
+            step = self.phase.get_step_by_name(self.STEP_NAME)
         except StepNotInPresetListError:
             return
 

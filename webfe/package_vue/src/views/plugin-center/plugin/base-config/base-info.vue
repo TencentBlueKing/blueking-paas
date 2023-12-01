@@ -370,7 +370,7 @@
             {{ $t('下架插件') }}
           </div>
           <div class="info">
-            {{ $t('插件下架后，插件列表、插件市场等不再展示该插件的信息') }}
+            {{ $t('插件下架后，插件市场不再展示该插件信息') }}
           </div>
           <div class="content no-border">
             <bk-button

@@ -225,6 +225,7 @@ export default {
       if (this.stageData?.detail?.next_step_disabled_tips) {
         config.content = this.stageData.detail?.next_step_disabled_tips || '';
         config.disabled = this.isAllowNext;
+        if (!config.content) config.disabled = true;
       }
       return config;
     },

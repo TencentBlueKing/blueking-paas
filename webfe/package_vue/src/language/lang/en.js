@@ -1977,7 +1977,7 @@ export default {
   联系人: 'Contacts',
   详细描述: 'Details',
   下架插件: 'Archive plugin',
-  '插件下架后，插件列表、插件市场等不再展示该插件的信息': 'After the plug-in is taken off the shelf, the plug-in list, plug-in market, etc. will no longer display the information of the plug-in',
+  '插件下架后，插件市场不再展示该插件信息': 'After the plugin is taken down, the Plugin Marketplace will no longer display information about this plugin.',
   退出插件: 'Exit plugin',
   插件推广: 'Plugin Promotion',
   应用分类: 'APP classification',

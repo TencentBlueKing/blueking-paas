@@ -98,11 +98,10 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             filepath = get_filepath(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
-
             app_desc = get_app_description(stat)
             self.validate_app_desc(app_desc)
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Store as prepared package for later usage(create_prepared)
             PreparedSourcePackage(request).store(filepath)

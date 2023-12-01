@@ -1,0 +1,33 @@
+# 在安装依应用赖包前执行
+# 运行应用提供的pre-compile hook
+
+header "bk-hook: pre-npm-install-hook"
+echo "bk-hook"
+node --version 
+npm --version
+
+# tnpm已经不维护，需要做兼容处理
+if [ "${USE_TNPM}" ]; then
+	cp -rf .heroku/node/bin/npm .heroku/node/bin/tnpm
+	echo "install tnpm success"
+fi
+
+# 设置依赖包安装源
+
+# PaaS系统传过来
+if [ "${BK_NPM_REGISTRY}" ]; then
+	NPMRC=${1:-$HOME}/.npmrc
+	npm config set registry "${BK_NPM_REGISTRY}" --userconfig "$NPMRC"
+	echo "set npm registry success: ${BK_NPM_REGISTRY}"
+fi
+
+# 用户通过环境变量自定义
+if [ "${NPM_REGISTRY}" ]; then
+	NPMRC=${1:-$HOME}/.npmrc
+	npm config set registry "${NPM_REGISTRY}" --userconfig "$NPMRC"
+	echo "set npm registry success: ${NPM_REGISTRY}"
+fi
+
+if [[ -f "$BUILD_DIR/bin/pre-compile" ]]; then
+	source "$BUILD_DIR/bin/pre-compile"
+fi

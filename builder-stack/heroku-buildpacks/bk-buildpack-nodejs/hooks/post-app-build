@@ -1,0 +1,12 @@
+# 在应用build后执行
+# 运行应用提供的post-compile hook
+
+if [[ -f "$BUILD_DIR/bin/post-compile" ]]; then
+	source "$BUILD_DIR/bin/post-compile"
+fi
+
+# 使得缓存生效
+if [[ -f "${BUILD_DIR}/package.json" ]]; then
+	mkdir -p ${CACHE_DIR}/.heroku
+	md5sum ${BUILD_DIR}/package.json > ${CACHE_DIR}/.heroku/package.json.md5
+fi

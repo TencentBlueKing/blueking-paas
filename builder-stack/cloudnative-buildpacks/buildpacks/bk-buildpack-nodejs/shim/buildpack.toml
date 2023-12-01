@@ -1,0 +1,9 @@
+api = "0.4"
+
+[buildpack]
+  id = "blueking/nodejs"
+  version = "v163"
+  name = "bk-buildpack-nodejs"
+
+[[stacks]]
+id = "*"

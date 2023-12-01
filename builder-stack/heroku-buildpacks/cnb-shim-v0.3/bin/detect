@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# fail hard
+set -o pipefail
+
+bp_dir="$(cd $(dirname $0)/..; pwd)" # absolute path
+target_dir="${bp_dir}/target"
+
+"${target_dir}/bin/detect" "$(pwd)" > /dev/null 2>&1
+
+EXITCODE=$?
+
+case $EXITCODE in
+    1) exit 100;;
+    *) exit $EXITCODE;;
+esac

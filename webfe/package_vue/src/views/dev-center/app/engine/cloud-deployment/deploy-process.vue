@@ -854,7 +854,7 @@ export default {
     },
     cloudFormData: {
       type: Object,
-      default: {},
+      default: () => {},
     },
   },
   data() {
@@ -1179,16 +1179,29 @@ export default {
     },
     // 将web放在第一个位置
     setProcessData(processList = []) {
-      if (!processList.length) return processList;
-      let processItem = {};
-      for (let i = 0; i < processList.length; i++) {
-        if (processList[i].name === 'web') {
-          processItem = processList[i];
-          processList.splice(i, 1);
-          break;
+      // 无进程，默认添加 web 进程
+      if (!processList.length) {
+        processList.push(this.formData);
+      };
+
+      // 是否存在web进程
+      const webProcess = processList.find(v => v.name === 'web');
+      if (webProcess) {
+        let processItem = {};
+        for (let i = 0; i < processList.length; i++) {
+          if (processList[i].name === 'web') {
+            processItem = processList[i];
+            processList.splice(i, 1);
+            break;
+          }
         }
+        // 将web进程设置为第一项
+        processList.unshift(processItem);
+      } else {
+        // 没有 web 进程 默认为当前进程列表第一项
+        this.processNameActive = processList[0].name;
       }
-      processList.unshift(processItem);
+
       return processList;
     },
     trimStr(str) {
@@ -1249,7 +1262,7 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       }
     },
@@ -1381,13 +1394,13 @@ export default {
         // 资源配额数据
         this.allQuotaList = res;
         // 当前stag资源配额
-        this.handleChange(this.formData.env_overlay.stag?.plan_name || 'default', 'stag');
+        this.handleChange(this.formData.env_overlay?.stag?.plan_name || 'default', 'stag');
         // 当前prod资源配额
-        this.handleChange(this.formData.env_overlay.prod?.plan_name || 'default', 'prod');
+        this.handleChange(this.formData.env_overlay?.prod?.plan_name || 'default', 'prod');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || this.$t('接口异常'),
+          message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.quotaPlansFlag = false;

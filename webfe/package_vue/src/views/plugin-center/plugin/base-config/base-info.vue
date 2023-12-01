@@ -101,7 +101,7 @@
         </div>
 
         <!-- 更多信息 -->
-        <div class="basic-info-item mt15">
+        <div class="basic-info-item mt15" v-if="isMoreInfo">
           <div class="title">
             {{ $t('更多信息') }}
             <span
@@ -112,7 +112,7 @@
               {{ $t('编辑') }}
             </span>
           </div>
-          <more-info ref="moreInfoRef" @set-schema="setPluginSchema" />
+          <more-info ref="moreInfoRef" @show-info="isMoreInfo = $event" @set-schema="setPluginSchema" />
         </div>
 
         <!-- 市场信息 -->
@@ -513,6 +513,7 @@ export default {
       tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。'),
       // 插件更多信息数据
       pluginSchema: {},
+      isMoreInfo: true,
     };
   },
   computed: {

@@ -57,6 +57,11 @@ export default {
       try {
         const results = await this.$store.dispatch('plugin/getPluginsTypeList');
         const curPluginType = results.find(v => v.plugin_type?.id === this.curPluginInfo.pd_id);
+
+        if (!Object.keys(curPluginType.schema.extra_fields)?.length) {
+          // 无extra_fields字段不展示
+          this.$emit('show-info', false);
+        }
         // 根据 extra_fields_order 字段排序
         const extraFields = this.sortdSchema(
           curPluginType.schema?.extra_fields_order || [],

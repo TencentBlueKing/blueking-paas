@@ -68,7 +68,7 @@ class MetricSmartTimeRange:
             return
 
         else:
-            raise ValueError("to_now only support timedelta and time phase")
+            raise TypeError("to_now only support timedelta and time phase")
 
     def __post_init__(self):
         if self.time_range_str:

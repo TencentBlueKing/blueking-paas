@@ -113,7 +113,7 @@ class RegionMobileConfig:
         self.etcd_servers = etcd_servers
         for k, v in list(kwargs.items()):
             if not k.endswith("_prefix"):
-                raise Exception("__init__ takes exactly 1 argument {}".format(k))
+                raise ValueError("__init__ takes exactly 1 argument {}".format(k))
             setattr(self, k, v)
 
 

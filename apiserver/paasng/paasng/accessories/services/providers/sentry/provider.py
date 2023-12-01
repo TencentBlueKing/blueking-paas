@@ -59,9 +59,9 @@ class SentryProvider(BaseProvider):
     def _gen_dsn(self, client_key_info):
         service = "{host}:{port}".format(host=self._host, port=self._port)
         prefix = client_key_info["dsn_prefix"]
-        projectId = client_key_info["projectId"]
+        project_id = client_key_info["projectId"]
 
-        return "http://{prefix}@{service}/{projectId}".format(prefix=prefix, service=service, projectId=projectId)
+        return "http://{prefix}@{service}/{projectId}".format(prefix=prefix, service=service, projectId=project_id)
 
     def _gen_url(self, project):
         return "http://{domain}/{organ}/{project}/".format(domain=self._domain, organ=self._organ, project=project)

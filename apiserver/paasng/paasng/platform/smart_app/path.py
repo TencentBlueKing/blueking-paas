@@ -97,9 +97,10 @@ class ZipPath(PathLike):
         """Whether this path is a regular file"""
         try:
             self.source.getinfo(str(self.path))
-            return True
         except KeyError:
             return False
+        else:
+            return True
 
     def is_dir(self) -> bool:
         """Check whether this path is a directory.
@@ -113,9 +114,10 @@ class ZipPath(PathLike):
         """
         try:
             self.source.getinfo(str(self.path) + "/")
-            return True
         except KeyError:
             return False
+        else:
+            return True
 
     def relative_to(self, other) -> PurePath:
         assert isinstance(other, ZipPath)

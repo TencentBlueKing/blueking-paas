@@ -114,8 +114,9 @@ class CallThroughKresMapper(Mapper, Generic[MapperResource]):
     def _kres_call_through(self, method: str, use_label_based: bool = False) -> Callable:
         with self.kres() as target_obj:
             if use_label_based:
-                target_obj = target_obj.ops_label
-            return getattr(target_obj, method)
+                return getattr(target_obj.ops_label, method)
+            else:
+                return getattr(target_obj, method)
 
     def get(self) -> MapperResource:
         """get 方法快捷注入"""

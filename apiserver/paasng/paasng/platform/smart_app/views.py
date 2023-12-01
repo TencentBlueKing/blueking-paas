@@ -287,8 +287,8 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             if stat.sha256_signature != signature:
                 # NOTE: 防御性日志, 先不处理这种情景, 仅记录下来
                 logger.error(
-                    "the provided digital signature is inconsistent with"
-                    + "the digital signature of the actually saved source code package."
+                    "the provided digital signature is inconsistent with "
+                    "the digital signature of the actually saved source code package."
                 )
 
             # Step 2. handle app(create module if necessary)

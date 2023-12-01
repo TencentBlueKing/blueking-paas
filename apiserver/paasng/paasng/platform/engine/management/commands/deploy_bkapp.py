@@ -70,7 +70,7 @@ def handle_error(func):
         except DeployError:
             raise
         except Exception as e:
-            logger.exception(str(e))
+            logger.exception("command error.")
             raise CommandError("- 部署失败, 未捕获的异常情况❌") from e
 
     return wrapper

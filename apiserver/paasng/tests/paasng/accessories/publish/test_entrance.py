@@ -45,7 +45,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     """Replace cluster info in module level"""
     with mock_cluster_service(
         ingress_config={
@@ -95,7 +95,7 @@ def test_get_module_exposed_links(
 
 class TestUpdateExposedURLType:
     @pytest.fixture(autouse=True)
-    def setUp(self, bk_module):
+    def _setup(self, bk_module):
         create_fake_deployment(bk_module, "stag", status=JobStatus.SUCCESSFUL.value)
         create_fake_deployment(bk_module, "prod", status=JobStatus.SUCCESSFUL.value)
 
@@ -108,7 +108,8 @@ class TestUpdateExposedURLType:
         assert bk_module.exposed_url_type == ExposedURLType.SUBDOMAIN
         assert mocker.called
 
-    def test_with_legacy_market(self, with_live_addrs, bk_app, bk_module):
+    @pytest.mark.usefixtures("_with_live_addrs")
+    def test_with_legacy_market(self, bk_app, bk_module):
         if (
             getattr(settings, "BK_CONSOLE_DBCONF", None) is None
             or getattr(settings, "PAAS_LEGACY_DBCONF", None) is None

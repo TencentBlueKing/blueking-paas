@@ -211,9 +211,8 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         # 注入当前用户的角色信息
-        if request := self.context.get("request"):  # noqa: SIM102
-            if request.user.is_authenticated:
-                setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
+        if (request := self.context.get("request")) and request.user.is_authenticated:
+            setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
         return super().to_representation(instance)
 
     class Meta:

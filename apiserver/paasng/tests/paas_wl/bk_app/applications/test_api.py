@@ -41,13 +41,15 @@ def test_create_app_ignore_duplicated():
     assert recreated_info.uuid == info.uuid
 
 
-def test_metadata_funcs(bk_app, bk_stag_env, with_wl_apps):
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_metadata_funcs(bk_app, bk_stag_env):
     assert get_metadata_by_env(bk_stag_env).paas_app_code == bk_app.code
     update_metadata_by_env(bk_stag_env, {"paas_app_code": "foo-updated"})
     assert get_metadata_by_env(bk_stag_env).paas_app_code == "foo-updated"
 
 
-def test_delete_wl_resources(bk_stag_env, with_wl_apps):
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_delete_wl_resources(bk_stag_env):
     assert WlApp.objects.filter(pk=bk_stag_env.engine_app_id).exists()
     delete_wl_resources(bk_stag_env)
     assert not WlApp.objects.filter(pk=bk_stag_env.engine_app_id).exists()

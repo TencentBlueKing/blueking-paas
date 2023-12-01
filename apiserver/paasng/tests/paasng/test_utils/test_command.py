@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.utils.command import get_command_name
 from paas_wl.bk_app.processes.managers import AppProcessManager
+from paas_wl.utils.command import get_command_name
 from tests.paas_wl.utils.wl_app import create_wl_app, create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])
@@ -27,7 +27,7 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 class TestGetCommandName:
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def _setup(self):
         self.app = create_wl_app()
         self.release = create_wl_release(
             wl_app=self.app,

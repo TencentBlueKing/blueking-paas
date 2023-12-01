@@ -23,4 +23,4 @@ class BkPluginsAppConfig(AppConfig):
     name = "paasng.bk_plugins.bk_plugins"
 
     def ready(self):
-        from . import handlers  # noqa
+        from . import handlers  # noqa: F401

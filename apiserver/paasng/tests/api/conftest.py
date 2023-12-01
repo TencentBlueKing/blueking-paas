@@ -43,7 +43,7 @@ class FakeMiddleware:
 
 
 @pytest.fixture(autouse=True)
-def mock_bkpaas_auth_middlewares():
+def _mock_bkpaas_auth_middlewares():
     with mock.patch("bkpaas_auth.middlewares.CookieLoginMiddleware", new=FakeMiddleware), mock.patch(
         "apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware", new=FakeMiddleware
     ), mock.patch("apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware", new=FakeMiddleware), mock.patch(
@@ -53,6 +53,6 @@ def mock_bkpaas_auth_middlewares():
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     with mock_cluster_service():
         yield

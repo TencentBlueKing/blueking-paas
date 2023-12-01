@@ -83,7 +83,7 @@ class BaseMigration(six.with_metaclass(MigrationRegister)):
         except Exception as e:
             self.failed_reason = str(e)
             self.successful = False
-            logger.exception("Apply %s failed: %s" % (self.get_name(), e))
+            logger.exception("Apply %s failed.", self.get_name())
             raise MigrationFailed("Apply %s failed: %s" % (self.get_name(), e))
         finally:
             self.finished = True
@@ -93,8 +93,9 @@ class BaseMigration(six.with_metaclass(MigrationRegister)):
         """Apply rollback"""
         if self.context.app is None:
             logger.critical(
-                "rollback app for LApplication[%s] is None \n %s"
-                % (self.context.legacy_app.id, "\n".join(traceback.format_stack()))
+                "rollback app for LApplication[%s] is None \n %s",
+                self.context.legacy_app.id,
+                "\n".join(traceback.format_stack()),
             )
 
         st = time.time()
@@ -105,7 +106,7 @@ class BaseMigration(six.with_metaclass(MigrationRegister)):
         except Exception as e:
             self.failed_reason = str(e)
             self.successful = False
-            logger.exception("Apply %s %s failed: %s" % (self.get_name(), self.apply_type, e))
+            logger.exception("Apply %s %s failed.", self.get_name(), self.apply_type)
         finally:
             self.finished = True
             self.msecs_cost = int((time.time() - st) * 1000)

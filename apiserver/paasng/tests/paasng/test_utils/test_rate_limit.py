@@ -31,11 +31,11 @@ from paasng.utils.rate_limit.token_bucket import UserActionRateLimiter as UserAc
 from tests.utils.auth import create_user
 
 
-@pytest.mark.parametrize("RateLimiter", [UserActionTokenBucketRateLimiter, UserActionFixedWindowRateLimiter])
-def test_UserActionRateLimiter(RateLimiter):
+@pytest.mark.parametrize("limiter_cls", [UserActionTokenBucketRateLimiter, UserActionFixedWindowRateLimiter])
+def test_UserActionRateLimiter(limiter_cls):  # noqa: N802
     window_size, threshold = 3, 2
     user = create_user()
-    rate_limiter = RateLimiter(get_default_redis(), user.username, UserAction.WATCH_PROCESS, window_size, threshold)
+    rate_limiter = limiter_cls(get_default_redis(), user.username, UserAction.WATCH_PROCESS, window_size, threshold)
     # 消耗令牌
     for _ in range(threshold):
         assert rate_limiter.is_allowed()

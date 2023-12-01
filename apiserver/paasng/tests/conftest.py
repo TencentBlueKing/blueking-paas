@@ -199,7 +199,7 @@ def _sqlalchemy_transaction(request):
     session = None
 
     def fake_sessionmaker(*args, **kwargs):
-        # copy from [pytest_flask_sqlalchemy](https://github.com/jeancochrane/pytest-flask-sqlalchemy/blob/master/pytest_flask_sqlalchemy/fixtures.py) # noqa
+        # copy from [pytest_flask_sqlalchemy](https://github.com/jeancochrane/pytest-flask-sqlalchemy/blob/master/pytest_flask_sqlalchemy/fixtures.py)
         # but remove flask requirement
         nonlocal session
         if session is not None:
@@ -814,16 +814,14 @@ def mock_get_builtin_addresses(mock_env_is_running):
         yield addresses
 
 
-# TODO: fix PT004
 @pytest.fixture()
-def with_empty_live_addrs(mock_env_is_running, mock_get_builtin_addresses):  # noqa: PT004
+def _with_empty_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
     """Always return empty addresses by patching `get_builtin_addresses` function"""
     return
 
 
-# TODO: fix PT004
 @pytest.fixture()
-def with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):  # noqa: PT004
+def _with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):
     """Always return valid addresses by patching `get_builtin_addresses` function"""
     mock_env_is_running["stag"] = True
     mock_env_is_running["prod"] = True
@@ -838,7 +836,7 @@ def with_live_addrs(mock_env_is_running, mock_get_builtin_addresses):  # noqa: P
 
 
 @pytest.fixture()
-def with_wl_apps(request):  # noqa: PT004
+def _with_wl_apps(request):
     """Create all pending WlApp objects related with current bk_app, useful
     for tests which want to use `bk_app`, `bk_stag_env` fixtures.
     """

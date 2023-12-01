@@ -94,7 +94,7 @@ def on_environment_offlined(sender, offline_instance, environment, **kwargs):
     any_env_active = any(app_env.is_running() for app_env in application.envs.all())
 
     if not any_env_active:
-        logger.info("application[%s] active state is setting to inactive" % application.id.hex)
+        logger.info("application[%s] active state is setting to inactive", application.id.hex)
         application.is_active = False
         application.save(update_fields=["is_active"])
 
@@ -108,7 +108,7 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
 
         application = instance.app_environment.application
         if not application.is_active:
-            logger.info("application[%s] active state is setting to active" % application.id.hex)
+            logger.info("application[%s] active state is setting to active", application.id.hex)
             application.is_active = True
             application.save(update_fields=["is_active"])
 

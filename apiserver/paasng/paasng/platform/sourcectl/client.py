@@ -158,8 +158,7 @@ class BaseGitApiClient(abc.ABC):
                 self._refresh_token()
                 continue
             return resp
-        else:
-            raise exceptions.CallGitApiFailed(_("请求失败"))
+        raise exceptions.CallGitApiFailed(_("请求失败"))
 
     def _validate_resp(self, raw_resp: requests.Response) -> Any:
         """尝试解析 requests.Response，当返回 404, 401 等错误时会抛出对应的异常
@@ -202,7 +201,7 @@ class BaseGitApiClient(abc.ABC):
         try:
             holder.refresh()
         except OAuth2Error:
-            logger.error(f"fail to refresh token for {holder.user.username}")
+            logger.error(f"failed to refresh token for {holder.user.username}")  # noqa: TRY400
             raise exceptions.AccessTokenRefreshError("fail to refresh token")
         # 更新 token 后更新请求头
         self.session.headers["Authorization"] = f"token {holder.access_token}"

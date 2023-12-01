@@ -102,7 +102,7 @@ class TemplateRuntimeManager:
             else:
                 bp_names = required_buildpacks.get("__default__") or []
         else:
-            raise ValueError("required_buildpacks is invalid")
+            raise TypeError("required_buildpacks is invalid")
 
         builder = AppSlugBuilder.objects.get(name=bp_stack_name)
         available_bps = {

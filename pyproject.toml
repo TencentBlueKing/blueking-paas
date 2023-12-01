@@ -80,7 +80,7 @@ ignore = [
   "SIM105",
   # flake8-simplify: 忽略后，不强制要求用三元表达式替换普通的短 if-else 语句
   "SIM108",
-  # flake8-pytest-style：忽略后，允许 fixture 显式指定 scope='fnction'
+  # flake8-pytest-style：忽略后，允许 fixture 显式指定 scope="function"
   "PT003",
 
   # === 谨慎忽略 ===

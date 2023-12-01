@@ -100,9 +100,10 @@ class GitlabRepoController(BaseGitRepoController):
     def touch(self) -> bool:
         try:
             error_converter(self.api_client.get_project_info)(self.project)
-            return True
         except (exceptions.DoesNotExistsOnGitServer, exceptions.AccessTokenForbidden) as e:
             raise exceptions.AccessTokenForbidden(project=self.project) from e
+        else:
+            return True
 
     @error_converter
     def export(self, local_path: str, version_info: VersionInfo):

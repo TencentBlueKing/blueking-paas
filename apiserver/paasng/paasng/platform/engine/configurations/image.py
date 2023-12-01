@@ -146,7 +146,7 @@ class RuntimeImageInfo:
         """返回当前 engine_app 的运行时的类型, buildpack 或者 custom_image"""
         return self.module_spec.runtime_type
 
-    def generate_image(self, version_info: "VersionInfo", special_tag: Optional[str] = None) -> str:
+    def generate_image(self, version_info: "VersionInfo", special_tag: Optional[str] = None) -> str:  # noqa: PLR0911
         """generate the runtime image of the application at a given version
 
         :param version_info: 版本信息

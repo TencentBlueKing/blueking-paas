@@ -54,7 +54,7 @@ def _loads(dumped: bytes) -> Dict:
 
 def get_remote_store():
     """Get the single instanced remote services database object"""
-    global _g_services_store  # noqa: PLW0603
+    global _g_services_store
     if _g_services_store is None:
         _g_services_store = RemoteServiceStore()
     return _g_services_store
@@ -195,7 +195,7 @@ class RedisStore(StoreMixin):
             legacy_config = redis_client.get(config_key)
             # 如果新的配置项中的服务名 与 缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
             if legacy_config and _loads(legacy_config)["name"] != config["name"]:
-                raise ValueError(f'Service uuid={service["uuid"]} with a different source  name already exists')
+                raise ValueError(f'Service uuid={service["uuid"]} with a different source name already exists')
 
             pipe = redis_client.pipeline()
             pipe.set(info_key, _dumps(service), self.expires)

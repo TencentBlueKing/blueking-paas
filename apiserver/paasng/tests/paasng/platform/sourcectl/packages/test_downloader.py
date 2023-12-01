@@ -37,8 +37,9 @@ def test_download_file_via_http(mock_adapter, content):
         with open(source, mode="wb") as fh:
             fh.write(content)
 
-        mock_adapter.register(url, open(source, mode="rb"))
-        download_file_via_http(url, dest)
-        assert source != dest
-        with open(dest, "rb") as dh:
-            assert dh.read() == content
+        with open(source, mode="rb") as file:
+            mock_adapter.register(url, file)
+            download_file_via_http(url, dest)
+            assert source != dest
+            with open(dest, "rb") as dh:
+                assert dh.read() == content

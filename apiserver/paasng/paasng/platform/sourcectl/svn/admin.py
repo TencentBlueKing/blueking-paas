@@ -36,7 +36,7 @@ from .exceptions import SVNServiceError
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from paasng.platform.applications.models import Application  # noqa
+    from paasng.platform.applications.models import Application
 
 
 class BaseSvnAuthClient:
@@ -259,9 +259,9 @@ class SvnApplicationAuthorization:
         self.svn_client = self.svn_client_cls()
 
     @classmethod
-    def create_svn_client(self) -> BaseSvnAuthClient:
+    def create_svn_client(cls) -> BaseSvnAuthClient:
         """Create a client object for interacting with svn server"""
-        return self.svn_client_cls()
+        return cls.svn_client_cls()
 
     @property
     def group_name(self):

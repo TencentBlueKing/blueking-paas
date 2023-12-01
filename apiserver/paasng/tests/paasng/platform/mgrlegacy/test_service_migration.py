@@ -56,14 +56,14 @@ dummy_service = RemoteServiceObj(
 
 
 @pytest.fixture(autouse=True)
-def mock_get_service():
+def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
         yield
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     with mock_cluster_service():
         yield
 

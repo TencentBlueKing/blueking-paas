@@ -139,7 +139,7 @@ urlpatterns += [
         name="api.applications.feature_flags.list",
     ),
     url(
-        r"^api/bkapps/applications/feature_flags/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/env/(?P<environment>[^/]+)/$",  # noqa
+        r"^api/bkapps/applications/feature_flags/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/env/(?P<environment>[^/]+)/$",
         views.ApplicationFeatureFlagViewSet.as_view({"get": "list_with_env"}),
         name="api.applications.feature_flags.list_with_env",
     ),

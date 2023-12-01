@@ -39,11 +39,11 @@ class TestInitialize:
     def test_normal(self, mocked_get, config):
         mocked_get.return_value = mock_json_response(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON)
         mocked_store = mock.MagicMock()
-        SERVICE_REMOTE_ENDPOINTS = [config.to_json()]
+        service_remote_endpoints = [config.to_json()]
 
-        with override_settings(SERVICE_REMOTE_ENDPOINTS=SERVICE_REMOTE_ENDPOINTS):
+        with override_settings(SERVICE_REMOTE_ENDPOINTS=service_remote_endpoints):
             initialize_remote_services(mocked_store)
 
-        assert mocked_store.bulk_upsert.call_count == len(SERVICE_REMOTE_ENDPOINTS)
+        assert mocked_store.bulk_upsert.call_count == len(service_remote_endpoints)
         assert mocked_get.called
         assert mocked_get.call_args[0][0] == "http://faked-host/services/"

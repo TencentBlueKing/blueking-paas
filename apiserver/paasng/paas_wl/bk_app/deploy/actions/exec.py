@@ -73,10 +73,10 @@ class AppCommandExecutor:
             # User interruption was allowed when first log message was received — which means the Pod
             # has entered "Running" status.
 
-            for line in self.scheduler_client.get_command_logs(
+            for raw_line in self.scheduler_client.get_command_logs(
                 command=self.kmodel, timeout=_FOLLOWING_LOGS_TIMEOUT, follow=True
             ):
-                line = ensure_text(line)
+                line = ensure_text(raw_line)
                 self.stream.write_message(line)
             self.wait_for_succeeded()
         except ResourceDuplicate as e:

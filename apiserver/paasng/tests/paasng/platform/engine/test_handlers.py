@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.platform.engine.handlers import update_last_deployed_date  # noqa
+from paasng.platform.engine.handlers import update_last_deployed_date  # noqa: F401
 from paasng.platform.engine.signals import post_appenv_deploy
 
 from .setup_utils import create_fake_deployment

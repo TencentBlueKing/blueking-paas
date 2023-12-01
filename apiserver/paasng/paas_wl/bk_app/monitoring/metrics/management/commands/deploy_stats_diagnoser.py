@@ -93,8 +93,8 @@ def build_process_stats(clusters: Iterable[Cluster]) -> BatchProcessStats:
             # Update stats objects
             stat = process_stats[proc]
             cluster_stat = stat.get_stat(cluster.name)
-            hostIP = pod.status.hostIP
-            cluster_stat.assigned_hosts.append(hostIP)
+            host_ip = pod.status.hostIP
+            cluster_stat.assigned_hosts.append(host_ip)
     return process_stats
 
 

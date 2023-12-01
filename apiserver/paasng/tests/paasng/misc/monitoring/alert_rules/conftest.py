@@ -54,12 +54,12 @@ def _mock_metric_label():
 
 
 @pytest.fixture()
-def wl_namespaces(bk_stag_env, bk_prod_env, with_wl_apps) -> Dict[str, str]:
+def wl_namespaces(bk_stag_env, bk_prod_env, _with_wl_apps) -> Dict[str, str]:
     return {"prod": bk_prod_env.wl_app.namespace, "stag": bk_stag_env.wl_app.namespace}
 
 
 @pytest.fixture()
-def create_module_for_alert(create_module, with_wl_apps):
+def create_module_for_alert(create_module, _with_wl_apps):
     return create_module
 
 

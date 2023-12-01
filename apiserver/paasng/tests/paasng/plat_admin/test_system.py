@@ -281,7 +281,7 @@ class TestSysAddonsAPIViewSet:
 
 class TestClusterNamespaceInfoViewSet:
     @pytest.fixture(autouse=True)
-    def _create_cluster_obj(self, bk_app, with_wl_apps):
+    def _create_cluster_obj(self, bk_app, _with_wl_apps):
         wl_apps = [app.wl_app for app in bk_app.envs.all()]
         for wl_app in wl_apps:
             Cluster.objects.get_or_create(
@@ -289,7 +289,7 @@ class TestClusterNamespaceInfoViewSet:
                 defaults={"annotations": {"bcs_cluster_id": generate_random_string()}},
             )
 
-    def test_list_by_code(self, bk_app, with_wl_apps, sys_api_client):
+    def test_list_by_code(self, bk_app, sys_api_client):
         url = f"/sys/api/bkapps/applications/{bk_app.code}/cluster_namespaces/"
         response = sys_api_client.get(url)
 

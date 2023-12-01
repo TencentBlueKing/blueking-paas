@@ -40,7 +40,7 @@ class AbortedDetails(BaseModel):
     extra_data: Optional[Any]
 
     @validator("policy", always=True)
-    def data_not_empty(cls, v, values, **kwargs):
+    def data_not_empty(cls, v, values, **kwargs):  # noqa: N805
         if values.get("aborted") and v is None:
             raise ValueError('"data" can not be empty when aborted is "True"!')
         return v

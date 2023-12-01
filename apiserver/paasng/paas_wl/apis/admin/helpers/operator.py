@@ -80,11 +80,12 @@ def fetch_paas_cobj_info(client: EnhancedApiClient, crd_exists: Dict[str, bool])
         for bkapp in bkapps:
             bkapp_name = f"{bkapp['metadata']['namespace']}/{bkapp['metadata']['name']}"
 
-            if hookStatuses := bkapp.get("status", {}).get("hookStatuses", []):
+            if (hook_statuses := bkapp.get("status", {}).get("hookStatuses", [])) and any(
+                hs.get("phase") != "Healthy" for hs in hook_statuses
+            ):
                 # 任何 Hook 状态不健康，该 bkapp 都被认为非 ready
-                if any(hs.get("phase") != "Healthy" for hs in hookStatuses):
-                    not_ready_bkapps.append(bkapp_name)
-                    continue
+                not_ready_bkapps.append(bkapp_name)
+                continue
 
             # bkapp 总状态需要是 Running 才能算是 ready 的
             if bkapp.get("status", {}).get("phase") != "Running":

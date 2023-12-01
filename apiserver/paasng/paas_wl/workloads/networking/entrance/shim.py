@@ -181,14 +181,15 @@ def get_builtin_addr_preferred(env: ModuleEnvironment) -> Tuple[bool, Optional[A
 
     # Use the first address because the results is sorted already
     addr = addresses[0]
-    if module.exposed_url_type in [ExposedURLType.SUBPATH, ExposedURLType.SUBDOMAIN]:  # noqa: SIM102
-        if preferred_root := module.user_preferred_root_domain:
-            # Find the first address ends with preferred root domain
-            preferred_addr = next((a for a in addresses if a.hostname_endswith(preferred_root)), None)
-            if not preferred_addr:
-                logger.warning("No addresses found matching preferred root domain: %s", preferred_root)
-            else:
-                addr = preferred_addr
+    if module.exposed_url_type in [ExposedURLType.SUBPATH, ExposedURLType.SUBDOMAIN] and (
+        preferred_root := module.user_preferred_root_domain
+    ):
+        # Find the first address ends with preferred root domain
+        preferred_addr = next((a for a in addresses if a.hostname_endswith(preferred_root)), None)
+        if not preferred_addr:
+            logger.warning("No addresses found matching preferred root domain: %s", preferred_root)
+        else:
+            addr = preferred_addr
     return is_living, addr
 
 

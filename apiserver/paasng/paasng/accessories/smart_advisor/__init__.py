@@ -16,4 +16,4 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .tags import AppFeatureTag, AppPLTag, AppSDKTag, PlatPanelTag, force_tag, get_default_tagset  # noqa
+from .tags import AppFeatureTag, AppPLTag, AppSDKTag, PlatPanelTag, force_tag, get_default_tagset  # noqa: F401

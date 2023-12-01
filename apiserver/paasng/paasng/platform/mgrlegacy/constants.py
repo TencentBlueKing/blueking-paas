@@ -122,6 +122,6 @@ class AppMember:
 
 try:
     # Load external constants
-    from . import constants_ext  # type: ignore  # noqa
+    from . import constants_ext  # type: ignore  # noqa: F401
 except ImportError:
     pass

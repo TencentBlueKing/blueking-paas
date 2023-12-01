@@ -141,7 +141,7 @@ class DeployStepPicker:
     """部署步骤选择器"""
 
     @classmethod
-    def pick(cls, engine_app: "EngineApp") -> StepMetaSet:
+    def pick(cls, engine_app: "EngineApp") -> StepMetaSet:  # noqa: PLR0911
         """通过 engine_app 选择部署阶段应该绑定的步骤"""
         m = ModuleRuntimeManager(engine_app.env.module)
         if m.build_config.build_method == RuntimeType.DOCKERFILE:
@@ -169,7 +169,7 @@ class DeployStepPicker:
         return meta_sets[0]
 
     @classmethod
-    def _get_default_meta_set(self):
+    def _get_default_meta_set(cls):
         """防止由于后台配置缺失而影响部署流程, 绑定默认的 StepMetaSet"""
         try:
             best_matched_set = StepMetaSet.objects.get(is_default=True)

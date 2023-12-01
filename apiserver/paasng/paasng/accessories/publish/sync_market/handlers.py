@@ -428,7 +428,7 @@ def sync_release_record(sender: ApplicationEnvironment, deployment: Deployment, 
 
 try:
     # Load external handlers
-    from . import handlers_ext  # type: ignore  # noqa
+    from . import handlers_ext  # type: ignore  # noqa: F401
 except ImportError:
     pass
 

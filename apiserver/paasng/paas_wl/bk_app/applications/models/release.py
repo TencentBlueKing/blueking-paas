@@ -51,7 +51,7 @@ class ReleaseManager(models.Manager):
             raise RuntimeError("Only call `new` method from RelatedManager.")
 
         if not isinstance(self.instance, WlApp):
-            raise RuntimeError("Only call from app.release_set.")
+            raise TypeError("Only call from app.release_set.")
 
         if build is None:
             raise RuntimeError("No build associated with this release.")

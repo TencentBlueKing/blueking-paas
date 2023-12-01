@@ -16,5 +16,5 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .basic_services import *  # noqa
-from .metrics import *  # noqa
+from .basic_services import *  # noqa: F401
+from .metrics import *  # noqa: F401

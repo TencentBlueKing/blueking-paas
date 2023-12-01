@@ -49,7 +49,7 @@ class SourceTypeSpecManageView(GenericTemplateView):
         ]
         # 存在 TcGitSourceTypeSpec 才将其添加到可选项中
         try:
-            from paasng.platform.sourcectl.type_specs import TcGitSourceTypeSpec  # noqa
+            from paasng.platform.sourcectl.type_specs import TcGitSourceTypeSpec  # noqa: F401
 
             available_spec_cls.append("TcGitSourceTypeSpec")
         except ImportError:

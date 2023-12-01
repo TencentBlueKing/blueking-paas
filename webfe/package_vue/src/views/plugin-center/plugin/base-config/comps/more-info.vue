@@ -17,7 +17,12 @@
           class="value"
           v-else
         >
-          {{ item.default || '--' }}
+          <template v-if="radioData[item.key] && radioData[item.key].length">
+            {{ radioData[item.key].find(v => v.value === item.default)?.label || '--' }}
+          </template>
+          <template v-else>
+            {{ item.default || '--' }}
+          </template>
         </div>
       </li>
     </ul>
@@ -32,6 +37,7 @@ export default {
       schemaFormData: {},
       schema: {},
       viewData: [],
+      radioData: {},
     };
   },
   computed: {
@@ -63,8 +69,7 @@ export default {
           const uiComponent = extraFields[key]['ui:component'];
           // 单选框处理
           if (uiComponent?.name === 'radio') {
-            extraFields[key].default = uiComponent.props.datasource[0].label;
-            continue;
+            this.radioData[key] = uiComponent.props.datasource;
           }
           if (this.moreInfoFields[key]) {
             extraFields[key].default = this.moreInfoFields[key];
@@ -75,7 +80,7 @@ export default {
             }
           }
           // 查看态数据
-          this.viewData.push({ title: extraFields[key].title, default: extraFields[key].default });
+          this.viewData.push({ title: extraFields[key].title, default: extraFields[key].default, key });
         }
 
         this.$emit('set-schema', { type: 'object', required: this.getRequiredFields(extraFields), properties: extraFields });

@@ -45,10 +45,11 @@ class DockerIgnore:
         self.patterns: List[Tuple[bool, Pattern]] = []
         self.whitelist = [PurePath(path) for path in (whitelist or [])]
         for pattern_str in self.content:
+            pattern_str_new = pattern_str
             invert = pattern_str.startswith("!")
             if invert:
-                pattern_str = pattern_str[1:]
-            self.patterns.append((invert, Pattern(pattern_str)))
+                pattern_str_new = pattern_str[1:]
+            self.patterns.append((invert, Pattern(pattern_str_new)))
 
     def should_ignore(self, filename: str) -> bool:
         """detect whether to ignore given filename,
@@ -142,6 +143,7 @@ def compress_directory_ext(
 
     with GzipFile(target_path, mode="w", mtime=0) as gz, tarfile.open(fileobj=gz, mode="w|") as tf:  # type: ignore
         compress_core(tf, source_path)
+        return None
 
 
 def compress_directory(source_path, target_path):
@@ -178,7 +180,7 @@ def uncompress_directory(source_path, target_path):
         raise RuntimeError("Unable to unpackage source, error: %s" % stderr)
 
 
-def __generate_temp_dir__(suffix=None) -> Iterator[Path]:
+def _generate_temp_dir_(suffix=None) -> Iterator[Path]:
     path = None
     try:
         path = Path(tempfile.mkdtemp(suffix=suffix))
@@ -189,10 +191,10 @@ def __generate_temp_dir__(suffix=None) -> Iterator[Path]:
             shutil.rmtree(path)
 
 
-generate_temp_dir: Callable[..., ContextManager[Path]] = contextmanager(__generate_temp_dir__)
+generate_temp_dir: Callable[..., ContextManager[Path]] = contextmanager(_generate_temp_dir_)
 
 
-def __generate_temp_file__(suffix="") -> Iterator[Path]:
+def _generate_temp_file_(suffix="") -> Iterator[Path]:
     path = None
     try:
         path = Path(tempfile.mktemp(suffix=suffix))
@@ -203,7 +205,7 @@ def __generate_temp_file__(suffix="") -> Iterator[Path]:
             path.unlink()
 
 
-generate_temp_file: Callable[..., ContextManager[Path]] = contextmanager(__generate_temp_file__)
+generate_temp_file: Callable[..., ContextManager[Path]] = contextmanager(_generate_temp_file_)
 
 
 def get_all_intermediate_dirs(path: str) -> List[str]:

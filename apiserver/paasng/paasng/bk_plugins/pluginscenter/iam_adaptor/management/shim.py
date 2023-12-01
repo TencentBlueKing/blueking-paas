@@ -173,7 +173,7 @@ def remove_user_all_roles(plugin: PluginInstance, usernames: List[str]):
 
     # 再将所有的内建角色权限清理掉
     role_group_id_map = {group.role: group.user_group_id for group in PluginUserGroup.objects.filter_by_plugin(plugin)}
-    for _, group_id in role_group_id_map.items():
+    for group_id in role_group_id_map.values():
         lazy_iam_client.delete_user_group_members(group_id, usernames)
 
 

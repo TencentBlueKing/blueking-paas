@@ -82,7 +82,7 @@ def find_coded_error_message(exception: BaseException) -> Optional[str]:
     # Q: 为什么关注异常堆栈最底部的异常?
     # A: 因为异常堆栈最底部的异常才是真正导致报错的异常.
     if not issubclass(type(exception), Exception):
-        raise ValueError(f"Expect Type[Exception], but got {type(exception)}")
+        raise TypeError(f"Expect Type[Exception], but got {type(exception)}")
 
     exception = find_innermost_exception(exception)
     coded_error = detect_error_code(type(exception))

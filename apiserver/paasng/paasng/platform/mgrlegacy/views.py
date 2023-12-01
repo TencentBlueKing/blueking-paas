@@ -170,9 +170,8 @@ class MigrationDetailViewset(viewsets.ModelViewSet):
             )
 
             # 只要确认迁移完成的应用就不允许回滚
-            if not force:
-                if migration_process.status == MigrationStatus.CONFIRMED.value:
-                    return JsonResponse(data={"message": _("已确认后的应用无法回滚"), "result": False}, status=403)
+            if not force and migration_process.status == MigrationStatus.CONFIRMED.value:
+                return JsonResponse(data={"message": _("已确认后的应用无法回滚"), "result": False}, status=403)
 
             # 应用必须在 PaaS3.0 全部下架后，才能回滚。否则会出现在 PaaS3.0 页面上看不到应用，但是应用进程还在的情况
             if migration_process.is_v3_prod_available() or migration_process.is_v3_stag_available():

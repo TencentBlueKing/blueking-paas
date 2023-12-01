@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db
 
 class TestInterruptDeployment:
     @pytest.mark.parametrize(
-        "has_bp_id,engine_called",
+        ("has_bp_id", "engine_called"),
         [
             (True, True),
             (False, False),

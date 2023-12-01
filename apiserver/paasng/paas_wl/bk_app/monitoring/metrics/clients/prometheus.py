@@ -45,11 +45,11 @@ class PrometheusMetricClient:
         for query in queries:
             try:
                 if not query.is_ranged or not query.time_range:
-                    raise ValueError("for security reasons, query metric without time range isn't allowed!")
+                    raise ValueError("for security reasons, query metric without time range isn't allowed!")  # noqa: TRY301
 
                 results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
-            except Exception as e:
-                logger.exception("fetch metrics failed, query: %s, reason: %s", query.query, e)
+            except Exception:
+                logger.exception("fetch metrics failed, query: %s", query.query)
                 # 某些 metrics 如果失败，不影响其他数据
                 results = []
 
@@ -100,7 +100,7 @@ class PrometheusMetricClient:
         # long time range may cause timeout
         resp = requests.request(method, url, **kwargs)
 
-        if not resp.status_code == desired_code:
+        if resp.status_code != desired_code:
             logger.warning("fetch<%s> metrics failed", url)
             raise RequestMetricBackendError(resp)
 

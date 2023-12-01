@@ -23,7 +23,7 @@ from paasng.accessories.services.models import Plan, Service
 from paasng.accessories.services.providers import ResourcePoolProvider
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_service():
     service = G(Service, name="redis")
 
@@ -34,6 +34,6 @@ def bk_service():
     return service
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_plan(bk_service):
     return G(Plan, config="{}", service=bk_service, name="plan-b")

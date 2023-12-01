@@ -73,4 +73,3 @@ def cal_app_resource_quotas():
     # Save to redis
     store = DefaultRediStore(rkey="quotas::app")
     store.save(sorted_app_quotas)
-    return

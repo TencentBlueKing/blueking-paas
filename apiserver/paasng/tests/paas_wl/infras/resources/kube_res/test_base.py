@@ -151,7 +151,7 @@ class TestEntitySerializerPicker:
         pass
 
     @pytest.fixture(autouse=True)
-    def setup_gvk_config(self):
+    def _setup_gvk_config(self):
         self.gvk_config = GVKConfig(
             server_version="v1.8.15",
             kind="Deployment",
@@ -160,7 +160,7 @@ class TestEntitySerializerPicker:
         )
 
     @pytest.mark.parametrize(
-        "serializers,expected,message",
+        ("serializers", "expected", "message"),
         [
             ([v1beta1SLZ, v1SLZ], v1beta1SLZ, "extensions/v1beta1 preferred"),
             ([v1SLZ, v1beta1SLZ], v1SLZ, "apps/v1 preferred"),

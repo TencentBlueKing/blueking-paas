@@ -31,7 +31,7 @@ except ImportError:
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def legacy_app():
     if not check_legacy_enabled():
         raise pytest.skip("Legacy db engine is not initialized")
@@ -42,7 +42,7 @@ def legacy_app():
         return AppAdaptor(session).create(code=code, name=name, deploy_ver=settings.DEFAULT_REGION_NAME)
 
 
-@pytest.fixture
+@pytest.fixture()
 def legacy_tag():
     if not check_legacy_enabled():
         raise pytest.skip("Legacy db engine is not initialized")
@@ -65,7 +65,7 @@ def legacy_tag():
 
 class TestLightAppViewSet:
     @pytest.mark.parametrize(
-        "data, expected_info",
+        ("data", "expected_info"),
         [
             (
                 {
@@ -131,7 +131,7 @@ class TestLightAppViewSet:
         assert result["result"]
 
     @pytest.mark.parametrize(
-        "is_lapp, expected",
+        ("is_lapp", "expected"),
         [
             (False, {"bk_error_msg": "{code} not found", "bk_error_code": "1301100", "data": None, "result": False}),
             (True, {"bk_error_msg": "", "bk_error_code": "0", "data": {"count": 1}, "result": True}),
@@ -151,7 +151,7 @@ class TestLightAppViewSet:
         assert result == expected
 
     @pytest.mark.parametrize(
-        "is_lapp, expected",
+        ("is_lapp", "expected"),
         [
             (False, {"bk_error_msg": "{code} not found", "bk_error_code": "1301100", "result": False}),
             (True, {"bk_error_msg": "", "bk_error_code": "0", "result": True}),
@@ -174,7 +174,7 @@ class TestLightAppViewSet:
         assert result == expected
 
     @pytest.mark.parametrize(
-        "is_lapp, data, expected",
+        ("is_lapp", "data", "expected"),
         [
             (False, {}, {"bk_error_msg": "{code} not found", "bk_error_code": "1301100", "result": False, "data": ""}),
             (

@@ -23,7 +23,7 @@ from paasng.utils.es_log.misc import filter_indexes_by_time_range
 from paasng.utils.es_log.time_range import SmartTimeRange
 
 
-@pytest.fixture
+@pytest.fixture()
 def indexes():
     return [
         "k8s_app_log_-2022.10.10",
@@ -34,7 +34,7 @@ def indexes():
 
 
 @pytest.mark.parametrize(
-    "time_range, expected",
+    ("time_range", "expected"),
     [
         (
             SmartTimeRange(

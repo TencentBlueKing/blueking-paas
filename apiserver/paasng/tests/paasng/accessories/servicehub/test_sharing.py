@@ -47,7 +47,7 @@ def create_module(bk_app):
 
 
 @pytest.fixture(autouse=True)
-def setup_data(bk_app, bk_module):
+def _setup_data(bk_app, bk_module):
     bk_app.region = _region_name
     bk_app.save(update_fields=["region"])
 
@@ -55,7 +55,7 @@ def setup_data(bk_app, bk_module):
     bk_module.save(update_fields=["region"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def local_service(request):
     if hasattr(request, "param"):
         param = request.param
@@ -71,8 +71,8 @@ def local_service(request):
     return mixed_service_mgr.get(service.uuid, region=_region_name)
 
 
-@pytest.fixture
-def remote_service(faked_remote_services):
+@pytest.fixture()
+def remote_service(_faked_remote_services):
     return mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"], region=_region_name)
 
 
@@ -97,7 +97,7 @@ def service_obj(request, local_service, remote_service):
         raise ValueError("Invalid type_ parameter")
 
 
-@pytest.fixture
+@pytest.fixture()
 def ref_module(bk_app, bk_module, service_obj):
     """A fixture which creates a module sharing service object to `bk_module`"""
     ref_module = create_module(bk_app)

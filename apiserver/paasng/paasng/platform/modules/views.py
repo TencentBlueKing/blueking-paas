@@ -264,10 +264,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         source_origin = SourceOrigin(source_config["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
 
-        # 初始化应用镜像凭证信息
-        if image_credential := data["bkapp_spec"]["build_config"].image_credential:
-            self._init_image_credential(application, image_credential)
-
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config["source_init_template"]:
@@ -315,9 +311,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
         """对使用非默认源码来源的，需要检查是否有权限"""
-        if source_origin not in SourceOrigin.get_default_origins():
-            if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-                raise ValidationError(_("你无法使用非默认的源码来源"))
+        if source_origin in SourceOrigin.get_default_origins():
+            return
+        if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
+            raise ValidationError(_("你无法使用非默认的源码来源"))
 
     def _init_image_credential(self, application: Application, image_credential: Dict):
         try:

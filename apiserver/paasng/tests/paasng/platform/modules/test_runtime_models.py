@@ -33,11 +33,10 @@ pytestmark = pytest.mark.django_db
 @pytest.mark.parametrize("model_class", [AppSlugBuilder, AppSlugRunner])
 class TestAppImageModel:
     @pytest.mark.parametrize(
-        "region, is_hidden, expect_empty",
+        ("region", "is_hidden", "expect_empty"),
         [
             (..., False, False),
             (..., True, True),
-            ("random_name", True, True),
             ("random_name", True, True),
         ],
     )
@@ -51,7 +50,7 @@ class TestAppImageModel:
         assert list(model_class.objects.filter_module_available(bk_module)) == expected
 
     @pytest.mark.parametrize(
-        "image, tag, full_image, expect_empty",
+        ("image", "tag", "full_image", "expect_empty"),
         [
             ("aaaa", "latest", "aaaa:latest", False),
             ("bbbb", "latest", "aaaa:latest", True),
@@ -64,7 +63,7 @@ class TestAppImageModel:
         assert list(type(instance).objects.filter_by_full_image(bk_module, full_image)) == expected
 
     @pytest.mark.parametrize(
-        "labels, language, source_origin, expect_matched, expect_empty",
+        ("labels", "language", "source_origin", "expect_matched", "expect_empty"),
         [
             ({"language": "Python", "category": "smart_app"}, "Python", SourceOrigin.S_MART.value, True, False),
             (
@@ -104,7 +103,7 @@ class TestAppImageModel:
             assert available_qs.count() == 0
 
     @pytest.mark.parametrize(
-        "runtimes, labels, ctx",
+        ("runtimes", "labels", "ctx"),
         [
             # 测试 is_default
             ([{"name": "a", "is_default": True}], {}, nullcontext("a")),
@@ -152,7 +151,7 @@ class TestAppImageModel:
 
 class TestAppSlugBuilder:
     @pytest.mark.parametrize(
-        "region, is_hidden, bind, expect_empty",
+        ("region", "is_hidden", "bind", "expect_empty"),
         [
             ("random_name", False, False, True),
             ("random_name", True, False, True),

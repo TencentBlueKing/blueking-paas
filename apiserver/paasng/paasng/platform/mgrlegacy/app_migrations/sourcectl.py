@@ -47,14 +47,14 @@ class SourceControlMigration(BaseMigration):
         secure_info = AppSecureInfoManger(session).get(self.legacy_app.code)
         if not secure_info:
             logger.warning("app_secure_info module not found, skip migrate process.")
-            return
+            return None
 
         # Smart 应用需要将最近的部署包迁移过来
         if self.context.legacy_app_proxy.is_smart():
             package_info = AppManger(session).get_saas_package_info(self.legacy_app.id)
             # 应用没有源码包信息，则不需要处理
             if not package_info:
-                return
+                return None
 
             return upload_package_via_url(
                 module,
@@ -73,7 +73,7 @@ class SourceControlMigration(BaseMigration):
             repo_type = get_sourcectl_names().bare_svn
         else:
             logger.warning(f"repo_type({secure_info.vcs_type}) not supported, skip migrate process.")
-            return
+            return None
         # 获取仓库链接和认证信息
         repo_url = secure_info.vcs_url
         repo_auth_info = {"username": secure_info.vcs_username, "password": secure_info.vcs_password}

@@ -33,13 +33,13 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     with mock_cluster_service():
         yield
 
 
 class TestDeployProcedure:
-    @pytest.fixture
+    @pytest.fixture()
     def phases(self, bk_prod_env, bk_deployment):
         manager = DeployPhaseManager(bk_prod_env)
         phases = manager.get_or_create_all()
@@ -63,7 +63,7 @@ class TestDeployProcedure:
 
         try:
             with DeployProcedure(stream, None, "doing nothing", phases[0]):
-                raise DeployShouldAbortError("oops")
+                raise DeployShouldAbortError("oops")  # noqa: TRY301
         except DeployShouldAbortError:
             pass
 
@@ -76,7 +76,7 @@ class TestDeployProcedure:
 
         try:
             with DeployProcedure(stream, None, "doing nothing", phases[0]):
-                raise ValueError("oops")
+                raise ValueError("oops")  # noqa: TRY301
         except ValueError:
             pass
 
@@ -150,7 +150,7 @@ class TestDeploymentCoordinator:
 
         deployment = create_fake_deployment(bk_module)
         env_mgr = DeploymentCoordinator(bk_stag_env)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"deployment lock holder mismatch.*"):
             env_mgr.release_lock(deployment)
 
         assert env_mgr.get_current_deployment() == bk_deployment

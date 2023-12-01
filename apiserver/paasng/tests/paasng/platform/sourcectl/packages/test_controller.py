@@ -19,28 +19,28 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 import yaml
 
+from paasng.platform.engine.configurations.source_file import get_metadata_reader
+from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.controllers.package import PackageController
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, SPStoragePolicy, VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
-from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.smart_app.detector import SourcePackageStatReader
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar, gen_zip
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def package_module(bk_module):
     bk_module.name = "default"
     bk_module.source_origin = 2
     bk_module.save()
-    yield bk_module
+    return bk_module
 
 
 class TestPackageRepoController:
-    @pytest.mark.parametrize("engine, archive_maker", [("TarClient", gen_tar), ("ZipClient", gen_zip)])
+    @pytest.mark.parametrize(("engine", "archive_maker"), [("TarClient", gen_tar), ("ZipClient", gen_zip)])
     @pytest.mark.parametrize(
-        "contents, expected",
+        ("contents", "expected"),
         [
             (
                 {
@@ -99,7 +99,7 @@ class TestPackageRepoController:
             controller = get_metadata_reader(package_module)
             assert controller.get_procfile(version_info) == expected
 
-    @pytest.mark.parametrize("engine, archive_maker", [("TarClient", gen_tar), ("ZipClient", gen_zip)])
+    @pytest.mark.parametrize(("engine", "archive_maker"), [("TarClient", gen_tar), ("ZipClient", gen_zip)])
     @pytest.mark.parametrize(
         "contents",
         [
@@ -123,7 +123,7 @@ class TestPackageRepoController:
             assert {str(child.relative_to(working_dir)) for child in working_dir.iterdir()} == set(contents.keys())
 
     @pytest.mark.parametrize(
-        "versions, expected",
+        ("versions", "expected"),
         [
             ([], []),
             (

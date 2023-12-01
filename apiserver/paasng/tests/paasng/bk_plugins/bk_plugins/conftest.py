@@ -23,12 +23,12 @@ import pytest
 from paasng.bk_plugins.bk_plugins.models import BkPlugin
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_plugin(bk_plugin_app):
     return BkPlugin.from_application(bk_plugin_app)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_apigw_api_client():
     """Replace the default API Gateway client with a fake client which produce successful result"""
     fake_client = mock.MagicMock()

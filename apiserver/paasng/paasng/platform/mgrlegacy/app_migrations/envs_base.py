@@ -108,7 +108,6 @@ class BaseEnvironmentVariableMigration(BaseMigration):
             else:
                 environment = self._get_environment(env_name)
             self._add_environment_variable(variables=envs, environment=environment)
-        return None
 
     def migrate(self):
         self.handle_env()

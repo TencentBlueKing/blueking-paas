@@ -28,7 +28,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "meta_info,is_valid, name_in_desc",
+    ("meta_info", "is_valid", "name_in_desc"),
     [
         ({}, False, None),
         ({"app_name": "阿尔法"}, False, None),

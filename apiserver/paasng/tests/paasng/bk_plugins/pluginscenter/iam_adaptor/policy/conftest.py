@@ -23,7 +23,7 @@ import pytest
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 
 
-@pytest.fixture
+@pytest.fixture()
 def iam_policy_client():
     with mock.patch(
         "paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client",

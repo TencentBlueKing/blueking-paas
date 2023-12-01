@@ -139,7 +139,7 @@ class MixedServiceMgr:
 
     def get_without_region(self, uuid: str) -> ServiceObj:
         """Get a service without any region info"""
-        for region in get_all_regions().keys():
+        for region in get_all_regions():
             try:
                 return self.get(uuid, region)
             except ServiceObjNotFound:

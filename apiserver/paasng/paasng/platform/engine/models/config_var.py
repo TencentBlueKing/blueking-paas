@@ -57,7 +57,7 @@ class ConfigVarQuerySet(models.QuerySet):
         """Filter ConfigVar objects by environment name"""
         if name == ConfigVarEnvName.GLOBAL:
             return self.filter(environment_id=ENVIRONMENT_ID_FOR_GLOBAL)
-        return self.filter(environment__environment=name.value)
+        return self.filter(environment__environment=name.value).prefetch_related("environment")
 
 
 class ConfigVar(TimestampedModel):

@@ -69,9 +69,10 @@ class TestRepoProvider:
 
 
 class TestSvnRepositoryClientV2:
+    @pytest.mark.usefixtures("_init_tmpls")
     @mock.patch("paasng.platform.sourcectl.svn.client.LocalClient")
     @mock.patch("paasng.platform.sourcectl.svn.client.RemoteClient")
-    def test_download_template_from_svn(self, rclient, lclient, init_tmpls, bk_app, bk_user):
+    def test_download_template_from_svn(self, rclient, lclient, bk_app, bk_user):
         client = SvnRepositoryClient(repo_url="svn://faked-repo", username="fake_username", password="fake_password")
         # Mock Remote and Local Instance
         with generate_temp_dir() as working_dir:
@@ -115,7 +116,7 @@ class TestSvnRepositoryClientV2:
         assert results[0].name == "trunk"
 
     def test_extract_smart_revision(self, svn_client):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* is not a valid smart revision.*"):
             svn_client.extract_smart_revision("invalid")
 
         assert svn_client.extract_smart_revision("trunk:trunk") is not None
@@ -154,7 +155,7 @@ class TestSvnAuth:
             assert kwargs["repo_path"].endswith(f"/{bk_app.code}-123")
 
     @pytest.mark.parametrize(
-        "username, role, added",
+        ("username", "role", "added"),
         [
             ("bar", ApplicationRole.DEVELOPER, True),
             ("baz", ApplicationRole.ADMINISTRATOR, True),

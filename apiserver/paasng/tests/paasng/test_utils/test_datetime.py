@@ -23,7 +23,7 @@ from paasng.utils.datetime import calculate_gap_seconds_interval
 
 class TestUtil:
     @pytest.mark.parametrize(
-        "seconds,wide,expected",
+        ("seconds", "wide", "expected"),
         [
             (10, False, "1s"),
             (10, True, "10s"),

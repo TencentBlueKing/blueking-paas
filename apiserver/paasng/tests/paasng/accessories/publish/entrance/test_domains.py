@@ -46,7 +46,7 @@ class TestGetPreallocatedDomain:
         assert domain is None
 
     @pytest.mark.parametrize(
-        "https_enabled, expected_address",
+        ("https_enabled", "expected_address"),
         [
             (True, "https://test-code.example.com"),
             (False, "http://test-code.example.com"),
@@ -96,7 +96,7 @@ def bk_app(bk_app):
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     """Replace cluster info in module level"""
     with mock_cluster_service(
         ingress_config={
@@ -131,7 +131,7 @@ class TestModuleEnvDomains:
             "stag-dot-default-dot-some-app-o.bar-1.example.com",
         ]
 
-    @pytest.mark.parametrize("https_enabled, expected_scheme", ((True, "https"), (False, "http")))
+    @pytest.mark.parametrize(("https_enabled", "expected_scheme"), [(True, "https"), (False, "http")])
     def test_enable_https_by_default(self, https_enabled, expected_scheme, bk_stag_env):
         with mock_cluster_service(
             ingress_config={"app_root_domains": [{"name": "example.com", "https_enabled": https_enabled}]}
@@ -159,11 +159,11 @@ class TestModuleEnvDomainsCodeWithUnderscore:
 
 
 class TestSubDomainAllocator:
-    @pytest.fixture
+    @pytest.fixture()
     def allocator(self) -> SubDomainAllocator:
         return SubDomainAllocator("some-app", PortMap())
 
-    @pytest.fixture
+    @pytest.fixture()
     def domain_cfg(self) -> DomainCfg:
         return DomainCfg(name="example.com", https_enabled=True)
 

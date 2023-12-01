@@ -28,12 +28,12 @@ from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
 @pytest.fixture(autouse=True)
-def setup_languages():
+def _setup_languages():
     with override_settings(LANGUAGES=[("en", "English"), ("zh-cn", "简体中文")]):
         yield
 
 
-@pytest.fixture
+@pytest.fixture()
 def serializer_class():
     class DummySLZ(serializers.Serializer):
         A = serializers.CharField(required=False, allow_blank=True, default="")
@@ -46,7 +46,7 @@ def serializer_class():
 
 class TestTranslatedCharField:
     @pytest.mark.parametrize(
-        "init_kwargs, ctx, expected",
+        ("init_kwargs", "ctx", "expected"),
         [
             ({}, nullcontext(), {"A": "", "B": ""}),
             ({"B": "beta"}, nullcontext(), {"A": "", "B": "beta"}),
@@ -61,7 +61,7 @@ class TestTranslatedCharField:
             assert slz.validated_data == expected
 
     @pytest.mark.parametrize(
-        "init_kwargs, ctx, expected",
+        ("init_kwargs", "ctx", "expected"),
         [
             ({}, nullcontext(), {"A": "", "B": ""}),
             ({"B": "beta"}, nullcontext(), {"A": "", "B": "beta"}),
@@ -75,7 +75,7 @@ class TestTranslatedCharField:
             assert slz.data == expected
 
 
-@pytest.fixture
+@pytest.fixture()
 def i18n_serializer_class():
     @i18n
     class DummySLZ(serializers.Serializer):
@@ -87,7 +87,7 @@ def i18n_serializer_class():
 
 class TestI18NExtend:
     @pytest.mark.parametrize(
-        "init_kwargs, ctx, expected",
+        ("init_kwargs", "ctx", "expected"),
         [
             ({}, nullcontext(), {"A": "", "c_en": "", "c_zh_cn": ""}),
             ({"C": "delta"}, nullcontext(), {"A": "", "c_en": "delta", "c_zh_cn": "delta"}),
@@ -106,7 +106,7 @@ class TestI18NExtend:
             assert slz.validated_data == expected
 
     @pytest.mark.parametrize(
-        "init_kwargs, ctx",
+        ("init_kwargs", "ctx"),
         [
             ({"C": "delta-delta-delta"}, nullcontext()),
             (

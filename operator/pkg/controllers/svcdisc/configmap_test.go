@@ -67,13 +67,13 @@ var _ = Describe("Test configmap related functions", func() {
 			builder.WithScheme(scheme)
 		})
 
-		Context("test ApplyToDeployments", func() {
-			var deploys []*appsv1.Deployment
+		Context("test ApplyToDeployment", func() {
+			var deploy *appsv1.Deployment
 			var configmap *v1.ConfigMap
 
 			BeforeEach(func() {
 				// An empty deployment resource
-				deploy := appsv1.Deployment{
+				deploy = &appsv1.Deployment{
 					TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      names.Deployment(bkapp, "foo"),
@@ -88,7 +88,6 @@ var _ = Describe("Test configmap related functions", func() {
 						},
 					},
 				}
-				deploys = []*appsv1.Deployment{&deploy}
 
 				configmap = &v1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: bkapp.Namespace, Name: "svc-disc-results-" + bkapp.Name},
@@ -99,7 +98,7 @@ var _ = Describe("Test configmap related functions", func() {
 			})
 
 			It("No configmap", func() {
-				ret := NewWorkloadsMutator(builder.Build(), bkapp).ApplyToDeployments(ctx, deploys)
+				ret := NewWorkloadsMutator(builder.Build(), bkapp).ApplyToDeployment(ctx, deploy)
 				Expect(ret).To(BeFalse())
 			})
 			It("Configmap has no valid key", func() {
@@ -108,7 +107,7 @@ var _ = Describe("Test configmap related functions", func() {
 				ret := NewWorkloadsMutator(
 					builder.WithObjects(configmap).Build(),
 					bkapp,
-				).ApplyToDeployments(ctx, deploys)
+				).ApplyToDeployment(ctx, deploy)
 				Expect(ret).To(BeFalse())
 			})
 			It("Configmap exists, but svc-discovery config is empty", func() {
@@ -116,18 +115,18 @@ var _ = Describe("Test configmap related functions", func() {
 				ret := NewWorkloadsMutator(
 					builder.WithObjects(configmap).Build(),
 					bkapp,
-				).ApplyToDeployments(ctx, deploys)
+				).ApplyToDeployment(ctx, deploy)
 				Expect(ret).To(BeFalse())
 			})
 			It("Applied successfully", func() {
-				Expect(len(deploys[0].Spec.Template.Spec.Containers[0].Env)).To(BeZero())
+				Expect(len(deploy.Spec.Template.Spec.Containers[0].Env)).To(BeZero())
 
 				ret := NewWorkloadsMutator(
 					builder.WithObjects(configmap).Build(),
 					bkapp,
-				).ApplyToDeployments(ctx, deploys)
+				).ApplyToDeployment(ctx, deploy)
 				Expect(ret).To(BeTrue())
-				Expect(len(deploys[0].Spec.Template.Spec.Containers[0].Env)).To(Equal(1))
+				Expect(len(deploy.Spec.Template.Spec.Containers[0].Env)).To(Equal(1))
 			})
 		})
 	})

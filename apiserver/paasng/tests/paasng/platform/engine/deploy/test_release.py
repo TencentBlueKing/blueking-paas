@@ -34,23 +34,24 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster():
+def _setup_cluster():
     with mock_cluster_service():
         yield
 
 
-@pytest.fixture
-def auto_binding_phases(bk_prod_env, bk_deployment):
+@pytest.fixture()
+def _auto_binding_phases(bk_prod_env, bk_deployment):
     manager = DeployPhaseManager(bk_prod_env)
     phases = manager.get_or_create_all()
     for p in phases:
         manager.attach(DeployPhaseTypes(p.type), bk_deployment)
 
 
+@pytest.mark.usefixtures("_auto_binding_phases")
 class TestApplicationReleaseMgr:
     """Tests for ApplicationReleaseMgr"""
 
-    def test_failed_when_create_release(self, bk_deployment, auto_binding_phases):
+    def test_failed_when_create_release(self, bk_deployment):
         with mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream, mock.patch(
             "paasng.platform.engine.deploy.release.legacy.update_image_runtime_config"
         ) as mocked_update_image, mock.patch(
@@ -70,7 +71,7 @@ class TestApplicationReleaseMgr:
             assert deployment.status == JobStatus.FAILED.value
             assert deployment.err_detail == "can not create release"
 
-    def test_start_normal(self, bk_deployment, auto_binding_phases):
+    def test_start_normal(self, bk_deployment):
         bk_deployment.processes = {
             "web": {
                 "name": "web",
@@ -110,7 +111,7 @@ class TestApplicationReleaseMgr:
             ProcessTmpl(name="worker", command="start worker", replicas=None, plan=None),
         ]
 
-    def test_sync_specs_from_procfile(self, bk_deployment, auto_binding_phases):
+    def test_sync_specs_from_procfile(self, bk_deployment):
         bk_deployment.procfile = {"web": "start web", "worker": "start worker"}
         bk_deployment.save()
         bk_deployment.refresh_from_db()
@@ -147,12 +148,12 @@ class TestApplicationReleaseMgr:
 class TestReleaseResultHandler:
     """Tests for ReleaseResultHandler"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def deployment_id(self):
         return str(uuid.uuid4())
 
     @pytest.mark.parametrize(
-        "result,status,error_detail",
+        ("result", "status", "error_detail"),
         [
             (
                 CallbackResult(status=CallbackStatus.EXCEPTION),

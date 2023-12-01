@@ -31,6 +31,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
 // NewServiceReconciler will return a ServiceReconciler with given k8s client
@@ -57,12 +58,14 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.B
 	if len(outdated) != 0 {
 		for _, svc := range outdated {
 			if err = r.Client.Delete(ctx, svc); err != nil {
+				metrics.IncDeleteOutdatedServiceFailures(bkapp, svc.Name)
 				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, svc := range expected {
 		if err = r.applyService(ctx, svc); err != nil {
+			metrics.IncDeployExpectedServiceFailures(bkapp, svc.Name)
 			return r.Result.WithError(err)
 		}
 	}

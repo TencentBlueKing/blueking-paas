@@ -27,7 +27,6 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.serializers import ClusterSLZ
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paas_wl.workloads.images.serializers import ImageCredentialSLZ
 from paasng.platform.bkapp_model.serializers import ModuleDeployHookSLZ as CNativeModuleDeployHookSLZ
 from paasng.platform.bkapp_model.serializers import ModuleProcessSpecSLZ
 from paasng.platform.engine.constants import RuntimeType
@@ -86,9 +85,10 @@ class ModuleSLZ(serializers.ModelSerializer):
 
         try:
             basic_auth = RepoBasicAuthHolder.objects.get_by_repo(instance, instance.get_source_obj())
-            return basic_auth.desensitized_info
         except ObjectDoesNotExist:
             return {}
+        else:
+            return basic_auth.desensitized_info
 
     def get_web_config(self, obj) -> dict:
         return ModuleSpecs(obj).to_dict()
@@ -240,7 +240,7 @@ class ImageTagOptionsSLZ(serializers.Serializer):
         charset = {*string.digits, *string.ascii_letters}
         if prefix is None:
             return None
-        if prefix.startswith(".") or prefix.startswith("-"):
+        if prefix.startswith((".", "-")):
             raise ValidationError("Tag can not startswith '.' or '-'")
         if forbidden_chars := set(prefix) - charset:
             raise ValidationError(f"Tag can not contain {sorted(forbidden_chars)}")
@@ -307,6 +307,14 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
                 detail={param: _("This field is required.") for param in missed_params}, code="required"
             )
         return attrs
+
+
+class ImageCredentialSLZ(serializers.Serializer):
+    """镜像凭证相关参数"""
+
+    name = serializers.CharField(required=True)
+    username = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
 
 
 class CreateModuleBuildConfigSLZ(serializers.Serializer):
@@ -403,7 +411,7 @@ class ModuleRuntimeOverviewSLZ(serializers.Serializer):
         """从 AppSlugBuilder 的 display_name 获取基础镜像"""
         slugbuilder: "AppSlugBuilder" = self.context.get("slugbuilder")
         if not slugbuilder:
-            return
+            return None
         # NOTE: 按照约定, 相同 name 的 builder/runner 的基础镜像是一致的, 同时使用 display_name 字段存储的是 基础镜像 的信息
         # TODO: 使用专有的字段标记每个 builder/runner 的基础镜像
         return slugbuilder.display_name
@@ -412,7 +420,7 @@ class ModuleRuntimeOverviewSLZ(serializers.Serializer):
         """从 AppSlugBuilder"""
         slugbuilder: "AppSlugBuilder" = self.context.get("slugbuilder")
         if not slugbuilder:
-            return
+            return None
         return slugbuilder.name
 
     def get_source_origin(self, instance):

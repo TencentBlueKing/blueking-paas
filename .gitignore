@@ -103,6 +103,7 @@ package-lock.json
 public/
 webpack-stats.json
 prometheus/
+!operator/prometheus/
 .envrc
 .mypy_cache
 .gitmodules

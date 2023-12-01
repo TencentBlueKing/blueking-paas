@@ -29,7 +29,7 @@ from tests.utils.helpers import generate_random_string
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def market_info(plugin):
     return G(
         PluginMarketInfo,
@@ -42,7 +42,7 @@ def market_info(plugin):
     )
 
 
-@pytest.mark.parametrize("handler", (market.create_market_info, market.update_market_info))
+@pytest.mark.parametrize("handler", [market.create_market_info, market.update_market_info])
 def test_market_upsert_api(thirdparty_client, pd, plugin, market_info, handler):
     """测试 market create/update 接口的序列化"""
     handler(pd, plugin, market_info, operator="nobody")

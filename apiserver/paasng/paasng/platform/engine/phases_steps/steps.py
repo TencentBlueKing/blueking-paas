@@ -107,8 +107,8 @@ def setup_dockerbuild_metaset() -> StepMetaSet:
         (DeployPhaseTypes.PREPARATION, "配置资源实例"),
         (DeployPhaseTypes.BUILD, "下载构建上下文"),
         (DeployPhaseTypes.BUILD, "构建镜像"),
-        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
         (DeployPhaseTypes.RELEASE, "部署应用"),
+        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
         (DeployPhaseTypes.RELEASE, "检测部署结果"),
     ]
     for phase, step_name in steps:
@@ -130,8 +130,8 @@ def setup_image_release_metaset() -> StepMetaSet:
     steps = [
         (DeployPhaseTypes.PREPARATION, "解析应用进程信息"),
         (DeployPhaseTypes.PREPARATION, "配置资源实例"),
-        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
         (DeployPhaseTypes.RELEASE, "部署应用"),
+        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
         (DeployPhaseTypes.RELEASE, "检测部署结果"),
     ]
     for phase, step_name in steps:

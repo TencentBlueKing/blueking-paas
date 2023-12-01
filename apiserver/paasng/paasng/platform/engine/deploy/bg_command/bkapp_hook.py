@@ -95,5 +95,7 @@ class PreReleaseDummyExecutor(DeployStep):
 
         if status == PodStatus.SUCCEEDED:
             step.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
+            self.stream.write_message(Style.Warning("Pre-release execution succeed"))
         elif status == PodStatus.FAILED:
             step.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
+            self.stream.write_message(Style.Error("Pre-release failed, please check logs for more details"))

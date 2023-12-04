@@ -364,6 +364,7 @@ class TestApplicationCreateWithoutEngine:
 class TestApplicationUpdate:
     """Test update application API"""
 
+    @pytest.mark.usefixtures("_register_app_core_data")
     def test_normal(self, api_client, bk_app_full, bk_user, random_name):
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app_full.code),

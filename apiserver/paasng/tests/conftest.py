@@ -399,6 +399,20 @@ def _mock_after_created_action():
 
 
 @pytest.fixture()
+def _turn_on_bk_log_feature():
+    post_create_application.connect(turn_on_bk_log_feature)
+    yield
+    post_create_application.disconnect(turn_on_bk_log_feature)
+
+
+@pytest.fixture()
+def _register_app_core_data():
+    before_finishing_application_creation.connect(register_app_core_data)
+    yield
+    before_finishing_application_creation.disconnect(register_app_core_data)
+
+
+@pytest.fixture()
 def bk_app(request, bk_user) -> Application:
     """Generate a random application owned by current user fixture
 

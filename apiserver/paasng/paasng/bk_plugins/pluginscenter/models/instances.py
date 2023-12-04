@@ -342,4 +342,4 @@ class OperationRecord(AuditedModel):
 
         if self.specific:
             return f"{username} {action_text} {self.specific} {subject_text}"
-        return f"{username} {action_text}{subject_text}"
+        return f"{username} {action_text} {subject_text}"

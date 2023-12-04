@@ -66,6 +66,7 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 	cfgFile  string
 
+	platformEnv         string
 	metricServerAddress string
 	metricPort          uint
 )
@@ -85,13 +86,24 @@ func main() {
 		"The controller will load its initial configuration from this file. "+
 			"Omit this flag to use the default configuration values. "+
 			"Command-line flags override configuration from this file.")
-	opts := zap.Options{
-		Development: true,
-	}
+	flag.StringVar(&platformEnv, "environment", "prod",
+		"The runtime environment of the controller. default is stag. options: [stag, prod]")
+
+	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	// false: zap.InfoLevel, enable sampling logging. V(0) corresponds to InfoLevel, bigger than 0 will be silent
+	// true: zap.DebugLevel. V(0) corresponds to InfoLevel, V(1) corresponds to DebugLevel, bigger than 1 will be silent
+	if platformEnv == "prod" {
+		opts.Development = false
+	} else {
+		opts.Development = true
+	}
+
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	setupLog.V(1).Info("starting bkpaas-operator log test")
 
 	var err error
 	projConf := paasv1alpha1.NewProjectConfig()

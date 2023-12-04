@@ -1969,6 +1969,8 @@ export default {
   已上线: 'Published',
   发布中: 'Publishing',
   已中断: 'Interrupted',
+  等待: 'Pending',
+  初始化: 'Initial',
   '调整插件的环境变量后，重新发布后生效': 'After adjusting the environment variables of the plug-in, it will take effect after re-publishing',
   '管理员、开发者可以修改插件名称等基本信息': 'Administrators and developers can modify basic information such as the plug-in name',
   市场信息: 'Market information',

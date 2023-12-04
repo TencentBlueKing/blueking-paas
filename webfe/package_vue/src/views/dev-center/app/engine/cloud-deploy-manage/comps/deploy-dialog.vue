@@ -661,6 +661,7 @@ export default {
         this.deploymentId = res.deployment_id;
         this.handleAfterLeave(); // 关闭弹窗
         this.isShowSideslider = true; // 打开侧边栏
+        this.$emit('showSideslider');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

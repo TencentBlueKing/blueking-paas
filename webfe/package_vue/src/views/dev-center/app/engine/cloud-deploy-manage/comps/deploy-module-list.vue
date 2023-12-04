@@ -181,7 +181,8 @@
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
       :rv-data="rvData"
-      @refresh="handleRefresh">
+      @refresh="handleListRefresh"
+      @showSideslider="isDialogShowSideslider = true">
     </deploy-dialog>
 
     <bk-sideslider
@@ -255,6 +256,7 @@ export default {
       intervalTimer: null,
       yamlLoading: false,
       curDeployItemIndex: '',
+      isDialogShowSideslider: false,  // 部署的侧边栏
     };
   },
 
@@ -377,7 +379,8 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      if (this.intervalTimer) return;  // 如果已经有了timer则return
+      if (this.intervalTimer || this.isShowSideslider
+      || this.isDialogShowSideslider) return;  // 如果已经有了timer则return 打开了侧边栏也不需要watch
       try {
         this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
@@ -448,7 +451,7 @@ export default {
 
     // 刷新列表
     handleRefresh() {
-      if (this.intervalTimer) return;
+      if (this.intervalTimer || this.isDialogShowSideslider) return;
       this.getModuleReleaseInfo(false);
     },
 
@@ -492,6 +495,12 @@ export default {
         name: 'cloudAppDeployForProcess',
         params: { id: this.appCode, moduleId: moduleName },
       });
+    },
+
+    // dialog里的slider关闭
+    handleListRefresh() {
+      this.isDialogShowSideslider = false;
+      this.handleRefresh();
     },
   },
 };

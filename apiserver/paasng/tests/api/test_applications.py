@@ -31,6 +31,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
+from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -55,6 +56,13 @@ def another_user(request):
     """Generate a random user"""
     user = create_user()
     return user
+
+
+@pytest.fixture()
+def _turn_on_bk_log_feature():
+    post_create_application.connect(turn_on_bk_log_feature)
+    yield
+    post_create_application.disconnect(turn_on_bk_log_feature)
 
 
 class TestMembershipViewset:
@@ -578,6 +586,7 @@ class TestCreateCloudNativeApp:
         assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
 
     @pytest.mark.usefixtures("_init_tmpls")
+    @pytest.mark.usefixtures("_turn_on_bk_log_feature")
     def test_create_with_bk_log_feature(self, api_client, settings):
         """测试创建应用时开启日志平台功能特性"""
         cluster = RegionClusterService(settings.DEFAULT_REGION_NAME).get_default_cluster()

@@ -49,6 +49,7 @@ from paasng.core.core.storages.utils import SADBManager
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.modules.constants import SourceOrigin
@@ -390,8 +391,11 @@ def _mock_iam():
 def _mock_after_created_action():
     # skip registry app core data to console
     before_finishing_application_creation.disconnect(register_app_core_data)
+    # skip turn on bk log feature by default because it required workloads database
+    post_create_application.disconnect(turn_on_bk_log_feature)
     yield
     before_finishing_application_creation.connect(register_app_core_data)
+    post_create_application.connect(turn_on_bk_log_feature)
 
 
 @pytest.fixture()

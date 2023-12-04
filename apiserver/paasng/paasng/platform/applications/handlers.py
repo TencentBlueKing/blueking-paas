@@ -26,10 +26,13 @@ from django.core.files.storage import Storage
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.shim import get_application_cluster
 from paasng.core.region.app import S3BucketRegionHelper
 from paasng.core.region.models import get_region
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.misc.metrics import NEW_APP_COUNTER
+from paasng.platform.applications.constants import AppFeatureFlag as AppFeatureFlagConst
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models import Deployment
@@ -62,6 +65,22 @@ def initialize_application_members(sender, application: Application, **kwargs):
         register_builtin_user_groups_and_grade_manager(application)
     except BKIAMGatewayServiceError as e:
         raise error_codes.INITIALIZE_APP_MEMBERS_ERROR.f(e.message)
+
+
+@receiver(post_create_application)
+def turn_on_bk_log_feature(sender, application: Application, **kwargs):
+    """将符合灰度条件的应用查询日志的链路切换至应用平台"""
+    if AppFeatureFlagConst.get_default_flags()[AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR]:
+        # 如果已默认开启, 则直接返回
+        return
+
+    cluster = get_application_cluster(application)
+    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+        # 集群未开启日志平台特性, 则直接返回
+        return
+
+    logger.debug("turn on ENABLE_BK_LOG_COLLECTOR flag for application %s", application)
+    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
 
 
 @receiver(post_create_application)

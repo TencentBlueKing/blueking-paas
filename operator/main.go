@@ -87,7 +87,7 @@ func main() {
 			"Omit this flag to use the default configuration values. "+
 			"Command-line flags override configuration from this file.")
 	flag.StringVar(&runEnv, "environment", "prod",
-		"The runtime environment of the controller. default is stag. options: [stag, prod]")
+		"The runtime environment of the controller. default is prod. options: [stag, prod]")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)

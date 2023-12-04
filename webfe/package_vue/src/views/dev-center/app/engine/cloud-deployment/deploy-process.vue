@@ -43,7 +43,7 @@
           >
             {{ panel.name }}
             <i
-              v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
+              v-if="processNameActive === panel.name && panel.name !== 'web' && isPageEdit"
               class="paasng-icon paasng-edit-2 pl5 pr10"
               ref="tooltipsHtml"
               @click="handleProcessNameEdit(panel.name, index)"

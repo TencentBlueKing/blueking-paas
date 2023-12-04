@@ -90,7 +90,7 @@ export default {
       return this.pluginData.current_stage.itsm_detail?.fields || this.stageData.detail?.fields || [];
     },
     itsmDetail() {
-      return this.pluginData.current_stage?.itsm_detail || this.stageData.detail?.ticket_url || {};
+      return this.pluginData.current_stage?.itsm_detail || this.stageData.detail || {};
     },
     curStatusBarData() {
       // approval successful failed interrupted
@@ -131,7 +131,11 @@ export default {
     },
     // 查看详情
     handlerApprovalDetails() {
-      window.open(this.itsmDetail.ticket_url, '_blank');
+      let url = this.pluginData.current_stage?.itsm_detail?.ticket_url;
+      if (!url) {
+        url = this.stageData?.detail?.ticket_url;
+      }
+      window.open(url, '_blank');
     },
   },
 };

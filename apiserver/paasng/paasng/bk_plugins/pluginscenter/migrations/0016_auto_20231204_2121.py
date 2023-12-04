@@ -13,11 +13,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='pluginbasicinfodefinition',
             name='extra_fields_en',
-            field=models.JSONField(default=list),
+            field=models.JSONField(default=dict),
         ),
         migrations.AddField(
             model_name='pluginmarketinfodefinition',
             name='extra_fields_en',
-            field=models.JSONField(default=list),
+            field=models.JSONField(default=dict),
         ),
     ]

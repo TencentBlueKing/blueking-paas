@@ -23,7 +23,7 @@
                   <i
                     v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。')"
                     style="color: #C4C6CC;margin-top:1px;"
-                    class="paasng-icon paasng-info-line"
+                    class="paasng-icon paasng-info-line ml5"
                   />
                 </div>
               </div>
@@ -50,7 +50,7 @@
                   <i
                     v-bk-tooltips="`${$t('拦截次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.interceptionCount || '--'} / ${$t('运行总次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.totalExecuteCount || '--'}`"
                     style="color: #C4C6CC;margin-top:1px;"
-                    class="paasng-icon paasng-info-line"
+                    class="paasng-icon paasng-info-line ml5"
                   />
                 </div>
               </div>
@@ -665,6 +665,9 @@ export default {
                         font-size: 12px;
                         color: #63656E;
                         line-height: 20px;
+                    }
+                    i {
+                        transform: translateY(0px);
                     }
                 }
             }

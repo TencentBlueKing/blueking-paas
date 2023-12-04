@@ -68,6 +68,7 @@
               target="_blank"
               :href="curPluginItem.plugin_type.docs"
               class="plugin-guide"
+              :style="{ right: `${localLanguage === 'en' ? -14 : 7}px`}"
             >
               <i class="paasng-icon paasng-question-circle" />
               {{ $t('插件指引') }}
@@ -246,8 +247,7 @@
     </paas-content-loader>
   </div>
 </template>
-<script>
-import http from '@/api';
+<script>import http from '@/api';
 import { quillEditor } from 'vue-quill-editor';
 import 'quill/dist/quill.core.css';
 import 'quill/dist/quill.snow.css';
@@ -358,6 +358,9 @@ export default {
     defaultPluginType() {
       return this.$route.query.type;
     },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
   },
   watch: {
     'form.plugin_id'(value) {
@@ -425,7 +428,7 @@ export default {
           properties[key]['ui:rules'] = [
             {
               validator: '{{ $self.value.length > 0 }}',
-              message: '必填项',
+              message: this.$t('必填项'),
             },
           ];
         }
@@ -499,8 +502,8 @@ export default {
       this.rules.name = rulesName;
     },
     changePlaceholder() {
-      this.pdIdPlaceholder = this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
-      this.namePlaceholder = this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
+      this.pdIdPlaceholder = this.$t(this.curPluginInfo.schema.id.description) || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
+      this.namePlaceholder = this.$t(this.curPluginInfo.schema.name.description) || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
     },
     // 选中具体插件类型
     changePluginType(value) {
@@ -673,6 +676,7 @@ export default {
   font-size: 12px;
   cursor: pointer;
   margin-left: 10px;
+  position: absolute;
 }
 .plugin-top-title {
   margin: 12px 0 14px;

@@ -2458,4 +2458,13 @@ export default {
   忽略的步骤: 'Ignored steps',
   执行后置命令: 'Execute Post-Command',
   '上架成功！': 'Publish Successful!',
+  编辑更多信息: 'Edit More Info',
+  是否已下架: 'Availability',
+  '唯一标识，创建后不可修改；由小写字母、数字、连接符(-)组成，须以字母开头，长度不超过 20 个字符': 'Unique identifier, unchangeable after creation; composed of lowercase letters, numbers, and hyphens (-), must start with a letter, and not exceed 20 characters in length.',
+  '由汉字、数字、大小写字母组成，长度不超过 20 个字符': 'Composed of Chinese characters, numbers, and uppercase and lowercase letters; not exceeding 20 characters in length.',
+  '由字母、数字、下划线组成，长度小于 64 个字符': 'Composed of letters, numbers, and underscores; length less than 64 characters.',
+  '由汉字、数字、大小写字母组成，长度不超过 20 个字符': 'Composed of Chinese characters, numbers, and uppercase and lowercase letters; not exceeding 20 characters in length.',
+  '由汉字、英文字母、数字、连字符和下划线组成，长度小于 64 个字符': 'Composed of Chinese characters, English letters, numbers, hyphens, and underscores; length less than 64 characters.',
+  '代码 Tag': 'Code tag',
+  '新建 Tag': 'New Tag',
 };

@@ -387,7 +387,7 @@ def _mock_iam():
         yield
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def _mock_after_created_action():
     # skip registry app core data to console
     before_finishing_application_creation.disconnect(register_app_core_data)
@@ -399,7 +399,7 @@ def _mock_after_created_action():
 
 
 @pytest.fixture()
-def bk_app(request, bk_user, _mock_after_created_action) -> Application:
+def bk_app(request, bk_user) -> Application:
     """Generate a random application owned by current user fixture
 
     This result object is not fully functional in order to speed up fixture, if you want a full featured applicƒsation.
@@ -409,7 +409,7 @@ def bk_app(request, bk_user, _mock_after_created_action) -> Application:
 
 
 @pytest.fixture()
-def bk_cnative_app(request, bk_user, _mock_after_created_action):
+def bk_cnative_app(request, bk_user):
     """Generate a random cloud-native application owned by current user fixture"""
     return create_cnative_app(owner_username=bk_user.username, cluster_name=CLUSTER_NAME_FOR_TESTING)
 

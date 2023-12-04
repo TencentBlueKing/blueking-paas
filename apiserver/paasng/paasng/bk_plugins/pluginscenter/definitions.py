@@ -301,6 +301,7 @@ class BKLogConfig(BaseModel):
     scenarioID: Literal["log", "bkdata"] = Field(default="log", description="接入场景")
     bkdataDataToken: Optional[str] = Field(description="数据平台认证Token")
     bkdataAuthenticationMethod: Optional[Literal["token", "user"]] = Field(description="数据平台认证方式")
+    bkLogApiStage: str = Field(default="prod", description="日志平台 API 的环境信息，默认为正式环境")
 
 
 @register

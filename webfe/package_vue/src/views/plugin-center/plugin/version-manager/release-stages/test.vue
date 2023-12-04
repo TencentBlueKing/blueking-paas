@@ -42,6 +42,24 @@ export default {
       return document.querySelector('.footer-btn-warp');
     },
   },
+  created() {
+    window.addEventListener('message', this.messageEvent);
+
+    // 组件销毁前
+    this.$once('hook:beforeDestroy', () => {
+      window.removeEventListener('message', this.messageEvent);
+    });
+  },
+  methods: {
+    messageEvent(event) {
+      if (event.data && event.data.type === 'udcTaskDelete') {
+        this.$bkMessage({
+          theme: 'success',
+          message: this.$t('取消成功'),
+        });
+      }
+    },
+  },
 };
 </script>
 

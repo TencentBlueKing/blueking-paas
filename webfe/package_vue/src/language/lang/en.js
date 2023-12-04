@@ -2469,4 +2469,5 @@ export default {
   '由汉字、英文字母、数字、连字符和下划线组成，长度小于 64 个字符': 'Composed of Chinese characters, English letters, numbers, hyphens, and underscores; length less than 64 characters.',
   '代码 Tag': 'Code tag',
   '新建 Tag': 'New Tag',
+  取消成功: 'Cancel success',
 };

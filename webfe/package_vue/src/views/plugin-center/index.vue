@@ -334,22 +334,20 @@ export default {
     async getPluginFilterParams() {
       try {
         const res = await this.$store.dispatch('plugin/getPluginFilterParams');
-        for (const key in res) {
-          res[key].forEach((value) => {
-            if (key === 'languages') {
-              this.languageFilters.push({
-                value,
-                text: value,
-              });
-            }
-            if (key === 'plugin_types') {
-              this.pluginTypeFilters.push({
-                value: value.id,
-                text: value.name,
-              });
-            }
+        // 开发语言
+        res.languages.forEach((value) => {
+          this.languageFilters.push({
+            value,
+            text: value,
           });
-        }
+        });
+        // 插件类型
+        res.plugin_types.forEach((value) => {
+          this.pluginTypeFilters.push({
+            value: value.id,
+            text: value.name,
+          });
+        });
       } catch (e) {
         this.$bkMessage({
           theme: 'error',

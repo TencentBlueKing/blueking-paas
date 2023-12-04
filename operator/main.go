@@ -103,8 +103,6 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	setupLog.V(1).Info("starting bkpaas-operator log test")
-
 	var err error
 	projConf := paasv1alpha1.NewProjectConfig()
 	options := ctrl.Options{

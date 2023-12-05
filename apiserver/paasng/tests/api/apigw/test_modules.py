@@ -46,6 +46,7 @@ def create_module_params():
 class TestApiInAPIGW:
     """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
         ("app_type", "template_name", "language"),
         [
@@ -61,7 +62,6 @@ class TestApiInAPIGW:
         create_module_params,
         bk_app,
         module_name,
-        init_tmpls,
         app_type,
         template_name,
         language,

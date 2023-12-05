@@ -18,7 +18,10 @@
 
 package metrics
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
+)
 
 var collectorGroup = []prometheus.Collector{
 	HooksFinishedFailures,
@@ -41,7 +44,11 @@ var collectorGroup = []prometheus.Collector{
 }
 
 func init() {
-	register := prometheus.DefaultRegisterer
+	// register operator metrics to kubebuilder default register,
+	// which can be accessed from the default metrics exposed address "/metrics"
+	// and is protected by kube-rbac-proxy
+	// see also: https://kubebuilder.io/reference/metrics
+	register := metrics.Registry
 
 	for _, collector := range collectorGroup {
 		register.MustRegister(collector)

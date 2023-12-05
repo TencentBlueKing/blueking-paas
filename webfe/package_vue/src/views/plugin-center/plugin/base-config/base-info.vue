@@ -163,7 +163,10 @@
                 :class="{ 'input-show-index': isFormEdited.profileInput }"
               >
                 <div
-                  v-bk-tooltips="marketInfo.introduction ? marketInfo.introduction : marketDefault"
+                  v-bk-tooltips="{
+                    content: marketInfo.introduction ? marketInfo.introduction : marketDefault,
+                    disabled: !marketInfo.introduction
+                  }"
                   class="introductory"
                 >
                   <bk-input

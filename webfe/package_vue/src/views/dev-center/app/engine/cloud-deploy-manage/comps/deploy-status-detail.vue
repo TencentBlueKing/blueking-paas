@@ -381,7 +381,7 @@ export default {
             this.isDeploySuccess = true;
             this.isWatchDeploying = false;
             // 更新当前模块信息
-            this.getModuleProcessList();
+            // this.getModuleProcessList();
           } else if (item.status === 'failed') {
             // 部署失败
             this.isDeployFail = true;
@@ -811,6 +811,7 @@ export default {
           deployId: this.deploymentId,
         });
         this.curModuleInfo = res.data.find(e => e.module_name === this.curModuleId);
+        console.log('this.curModuleId', this.curModuleId, this.curModuleInfo);
         this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
         this.formatProcesses(this.curModuleInfo);
       } catch (e) {
@@ -905,11 +906,11 @@ export default {
         } else if (data.object_type === 'instance') {
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateInstanceData(data);
-          if (data.type === 'ADDED') {
-            if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
-            console.warn(this.$t('重新拉取进程...'));
-            this.getModuleProcessList(false);
-          }
+          // if (data.type === 'ADDED') {
+          //   if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          //   console.warn(this.$t('重新拉取进程...'));
+          //   this.getModuleProcessList(false);
+          // }
         } else if (data.type === 'ERROR') {
           // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
           clearTimeout(this.timer);
@@ -978,12 +979,12 @@ export default {
           // 新增
           if (data.type === 'ADDED') {
             // 防止在短时间内重复推送
-            // process.instances.forEach((instance, index) => {
-            //     if (instance.name === instanceData.name) {
-            //         process.instances.splice(index, 1)
-            //     }
-            // })
-            // process.instances.push(instanceData)
+            process.instances.forEach((instance, index) => {
+              if (instance.name === instanceData.name) {
+                process.instances.splice(index, 1);
+              }
+            });
+            process.instances.push(instanceData);
           } else {
             process.instances.forEach((instance, index) => {
               if (instance.name === instanceData.name) {

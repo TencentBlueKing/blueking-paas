@@ -20,7 +20,7 @@ import logging
 
 from django.dispatch import receiver
 
-from paasng.accessories.paas_analysis.utils import enable_ingress_tracking
+from paasng.accessories.paas_analysis.services import enable_ingress_tracking
 from paasng.platform.engine.signals import on_release_created
 
 logger = logging.getLogger(__name__)

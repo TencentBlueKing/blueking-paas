@@ -27,10 +27,6 @@ class MetricSourceType(int, StructuredEnum):
     USER_TRACKER = EnumField(2, label="user_tracker")
 
 
-def get_metrics_source_type_from_str(metrics_source_type: str) -> MetricSourceType:
-    return {"ingress": MetricSourceType.INGRESS, "user_tracker": MetricSourceType.USER_TRACKER}[metrics_source_type]
-
-
 class MetricsDimensionType(str, StructuredEnum):
     PATH = EnumField("path", label="path")
     USER = EnumField("user", label="user")

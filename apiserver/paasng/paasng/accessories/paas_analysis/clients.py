@@ -29,8 +29,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 from paasng.accessories.paas_analysis import serializers as slzs
 from paasng.accessories.paas_analysis.constants import MetricsDimensionType, MetricsInterval, MetricSourceType
+from paasng.accessories.paas_analysis.entities import Site
 from paasng.accessories.paas_analysis.exceptions import PAClientException, PAResponseError
-from paasng.accessories.paas_analysis.models import Site
 from paasng.core.core.storages.cache import region as cache_region
 
 logger = logging.getLogger(__name__)

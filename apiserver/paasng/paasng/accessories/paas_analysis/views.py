@@ -31,14 +31,16 @@ from paasng.accessories.paas_analysis.constants import (
     MetricsDimensionType,
     MetricsInterval,
     MetricSourceType,
-    get_metrics_source_type_from_str,
 )
 from paasng.accessories.paas_analysis.exceptions import PAClientException
-from paasng.accessories.paas_analysis.utils import (
+from paasng.accessories.paas_analysis.services import (
     enable_ingress_tracking,
     get_ingress_tracking_status,
     get_or_create_custom_site_for_application,
     get_or_create_site_by_env,
+)
+from paasng.accessories.paas_analysis.utils import (
+    get_metrics_source_type_from_str,
 )
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction

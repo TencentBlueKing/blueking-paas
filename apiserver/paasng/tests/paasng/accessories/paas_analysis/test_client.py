@@ -23,7 +23,7 @@ import pytest
 from paas_wl.bk_app.applications.models.managers.app_metadata import WlAppMetadata
 from paasng.accessories.paas_analysis.clients import SiteMetricsClient
 from paasng.accessories.paas_analysis.constants import MetricsDimensionType, MetricsInterval, MetricSourceType
-from paasng.accessories.paas_analysis.utils import (
+from paasng.accessories.paas_analysis.services import (
     enable_ingress_tracking,
     get_ingress_tracking_status,
     get_or_create_site_by_env,

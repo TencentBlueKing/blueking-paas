@@ -196,7 +196,7 @@
               <div style="margin-top: -5px; width: 78px; float: left">
                 {{ $t('排序方式') }}
               </div>
-              <div style="width: 110px; float: right">
+              <div :style="{ width: enFormItemWidth, float: 'right' }">
                 <bk-radio-group v-model="sortValue">
                   <bk-radio
                     value="name"
@@ -232,7 +232,7 @@
               <div style="width: 78px; float: left; margin-top: -4px;">
                 {{ $t('使用语言') }}
               </div>
-              <div style="width: 110px; float: right">
+              <div :style="{ width: enFormItemWidth, float: 'right' }">
                 <label
                   v-if="isShowAllWithLanguages"
                   class="button-holder"
@@ -267,7 +267,7 @@
               <div style="width: 78px; float: left">
                 {{ $t('应用版本') }}
               </div>
-              <div style="width: 110px; float: right">
+              <div :style="{ width: enFormItemWidth, float: 'right' }">
                 <label
                   v-if="isShowAllWithRegions"
                   class="button-holder"
@@ -298,6 +298,7 @@
             <div class="application-choose-btn">
               <bk-button
                 theme="primary"
+                class="mr10"
                 @click.stop.prevent="fetchAppList(1)"
               >
                 {{ $t('筛选') }}
@@ -590,580 +591,587 @@
   </div>
 </template>
 
-<script>
-    import auth from '@/auth';
-    import i18n from '@/language/i18n';
+<script>import auth from '@/auth';
+import i18n from '@/language/i18n';
 
-    const APP_TYPE_MAP = [
-        {
-           text: i18n.t('全部'),
-           key: 'all',
-           type: 'all'
-        },
-        {
-           text: i18n.t('普通应用'),
-           key: 'default_app_count',
-           type: 'default'
-        },
-        {
-           text: i18n.t('云原生应用'),
-           key: 'cloud_native_app_count',
-           type: 'cloud_native'
-        },
-        {
-           text: i18n.t('外链应用'),
-           key: 'engineless_app_count',
-           type: 'engineless_app'
-        }
-    ];
+const APP_TYPE_MAP = [
+  {
+    text: i18n.t('全部'),
+    key: 'all',
+    type: 'all',
+  },
+  {
+    text: i18n.t('普通应用'),
+    key: 'default_app_count',
+    type: 'default',
+  },
+  {
+    text: i18n.t('云原生应用'),
+    key: 'cloud_native_app_count',
+    type: 'cloud_native',
+  },
+  {
+    text: i18n.t('外链应用'),
+    key: 'engineless_app_count',
+    type: 'engineless_app',
+  },
+];
 
-    export default {
-        // Get userHasApp before render
-        beforeRouteEnter (to, from, next) {
-            const promise = auth.requestHasApp();
-            promise.then((userHasApp) => {
-                next(async vm => {
-                    if (!userHasApp) {
-                        vm.isFirstLoading = true;
-                        await auth.requestOffApp()
-                            .then(flag => {
-                                vm.userHasApp = flag;
-                            }).finally(() => {
-                                vm.isFirstLoading = false;
-                            });
-                    } else {
-                        vm.userHasApp = userHasApp;
-                    }
-                });
+export default {
+  // Get userHasApp before render
+  beforeRouteEnter(to, from, next) {
+    const promise = auth.requestHasApp();
+    promise.then((userHasApp) => {
+      next(async (vm) => {
+        if (!userHasApp) {
+          vm.isFirstLoading = true;
+          await auth.requestOffApp()
+            .then((flag) => {
+              vm.userHasApp = flag;
+            })
+            .finally(() => {
+              vm.isFirstLoading = false;
             });
-        },
-        beforeRouteUpdate (to, from, next) {
-            const promise = auth.requestHasApp();
-            promise.then((userHasApp) => {
-                next(async () => {
-                    if (!userHasApp) {
-                        this.isFirstLoading = true;
-                        await auth.requestOffApp()
-                            .then(flag => {
-                                this.userHasApp = flag;
-                            }).finally(() => {
-                                this.isFirstLoading = false;
-                            });
-                    } else {
-                        this.userHasApp = userHasApp;
-                    }
-                });
-            });
-        },
-        data () {
-            return {
-                isInitLoading: true,
-                isLoading: true,
-                isFirstLoading: true,
-                searcLoading: false,
-                userHasApp: true,
-                ifopen: false,
-                minHeight: 550,
-                ifvisited: -1,
-                appList: [],
-                loaderPlaceholder: 'apps-loading',
-                // 过滤后的 app 数量
-                appNum: '',
-                focusInput: 0,
-                defaultImg: '/static/images/default_logo.png',
-                // 搜索条件筛选
-                appFilter: {
-                    // 显示已下架应用
-                    includeInactive: false,
-                    // 显示我创建的
-                    excludeCollaborated: false,
-                    // 版本选择
-                    regionList: ['ieod', 'tencent', 'clouds'],
-                    // 语言选择
-                    languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
-                    type: false
-                },
-                // 搜索词
-                filterKey: '',
-                pageConf: {
-                    count: 0,
-                    curPage: 0,
-                    totalPage: 0,
-                    limit: 10,
-                    limitList: [5, 10, 20, 50]
-                },
-                sortValue: 'name',
-                // fetchParams
-                fetchParams: {
-                    // 等于 filterKey
-                    search_term: '',
-                    // (curPage -1 ) * limit
-                    offset: 0,
-                    // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
-                    exclude_collaborated: false,
-                    // 是否包含已下架应用，默认不包含
-                    include_inactive: false,
-                    // limit
-                    limit: 0,
-                    order_by: 'name'
-                },
-                // app数量, 不考虑筛选情况
-                appNumInfo: {
-                    All: 0,
-                    PHP: 0,
-                    Go: 0,
-                    NodeJS: 0,
-                    Python: 0,
-                    ieod: 0,
-                    tencent: 0,
-                    clouds: 0,
-                    default: 0
-                },
-                availableLanguages: ['Python', 'PHP', 'Go', 'NodeJS'],
-                availableRegions: ['ieod', 'tencent', 'clouds'],
-                RegionTranslate: {
-                    ieod: this.$t('内部版'),
-                    tencent: this.$t('外部版'),
-                    clouds: this.$t('混合云版'),
-                    default: this.$t('默认')
-                },
-                isFilter: false,
-                type: 'default',
-                curAppType: '',
-                curAppTypeActive: 'all',
-                tableEmptyConf: {
-                    keyword: '',
-                    isAbnormal: false
-                }
-            };
-        },
-        computed: {
-            userFeature () {
-                return this.$store.state.userFeature;
-            },
-            platformFeature () {
-                return this.$store.state.platformFeature;
-            },
-            // 显示全部语言
-            IncludeAllLanguages: {
-                get: function () {
-                    // 由于当全不选时，按照drf的逻辑是不使用该filter字段，导致行为也是全选
-                    return this.appFilter.languageList.length === this.availableLanguages.length;
-                },
-                set: function (value) {
-                    this.appFilter.languageList = (value) ? this.availableLanguages : [];
-                }
-            },
-            // 显示所有版本
-            IncludeAllRegions: {
-                get: function () {
-                    // 由于当全不选时，按照drf的逻辑是不使用该filter字段，导致行为也是全选
-                    return this.appFilter.regionList.length === this.availableRegions.length;
-                },
-                set: function (value) {
-                    this.appFilter.regionList = (value) ? this.availableRegions : [];
-                }
-            },
-            isOrderByDesc: function () {
-                // 是否倒序
-                return this.fetchParams.order_by.indexOf('-') === 0;
-            },
-            isShowLanguagesSearch () {
-                return this.availableLanguages.filter(item => this.appNumInfo[item]).length > 0;
-            },
-            isShowRegionsSearch () {
-                return this.availableRegions.length > 0;
-            },
-            isShowAllWithLanguages () {
-                return this.availableLanguages.filter(item => this.appNumInfo[item]).length > 1;
-            },
-            isShowAllWithRegions () {
-                return this.availableRegions.length > 1;
-            },
-            appTypeList () {
-                if (!this.$store.state.userFeature?.ALLOW_CREATE_CLOUD_NATIVE_APP) {
-                  return APP_TYPE_MAP.filter(item => item.key !== 'cloud_native_app_count');
-                }
-                return APP_TYPE_MAP;
-            }
-        },
-        watch: {
-            filterKey (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '') {
-                    if (this.isFilter) {
-                        this.fetchAppList();
-                        this.isFilter = false;
-                    }
-                }
-            },
-            ifopen (value) {
-                if (!value) {
-                    this.sortValue = this.fetchParams.order_by;
-                }
-            }
-        },
-        created () {
-            this.getAppCategory(false);
-            if (this.$route.query.include_inactive) {
-                this.appFilter.includeInactive = true;
-            }
-            this.fetchAppList();
-        },
-        mounted () {
-            const HEADER_HEIGHT = 50;
-            const FOOTER_HEIGHT = 70;
-            const winHeight = window.innerHeight;
-            const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
-            if (contentHeight > this.minHeight) {
-                this.minHeight = contentHeight;
-            }
-        },
-        methods: {
-            deploy (item, subModule) {
-                if (item.application.type === 'cloud_native') {
-                    this.toDeploy(item.application);
-                } else {
-                    this.$router.push({
-                        name: 'appDeploy',
-                        params: {
-                            id: item.application.code,
-                            moduleId: subModule.name
-                        }
-                    });
-                }
-            },
-
-            async toDeploy (recordItem) {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${recordItem.code}/`;
-                try {
-                    const res = await this.$http.get(url);
-                    this.type = res.application.type;
-                    this.$router.push({
-                        name: this.type === 'cloud_native' ? 'cloudAppDeploy' : 'appDeploy',
-                        params: {
-                            id: recordItem.code
-                        }
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
-
-            toPage (appItem) {
-                this.toAppSummary(appItem);
-            },
-
-            pageChange (page) {
-                this.fetchAppList(page);
-            },
-
-            toCloudAPI (item) {
-                this.$router.push({
-                    name: 'appCloudAPI',
-                    params: {
-                        id: item.application.code
-                    }
-                });
-            },
-
-            createApp () {
-                this.$router.push({
-                    name: 'createApp'
-                });
-            },
-
-            viewLog (item, subModule) {
-                this.$router.push({
-                    name: 'appLog',
-                    params: {
-                        id: item.application.code,
-                        moduleId: subModule.name
-                    },
-                    query: {
-                        tab: 'structured'
-                    }
-                });
-            },
-
-            addModule (appItem) {
-                this.$router.push({
-                    name: 'appCreateModule',
-                    params: {
-                        id: appItem.application.code
-                    }
-                });
-            },
-
-            applyCludeApi (item) {
-                this.$router.push({
-                    name: 'appCloudAPI',
-                    params: {
-                        id: item.application.code
-                    }
-                });
-            },
-
-            expandedPanel (item) {
-                if (!item.application.config_info.engine_enabled) {
-                    return;
-                }
-                this.fetchRegionInfo(item.application.region, item);
-                item.expanded = !item.expanded;
-            },
-
-            async fetchRegionInfo (region, item) {
-                try {
-                    const res = await this.$store.dispatch('fetchRegionInfo', region);
-                    this.$set(item, 'creation_allowed', res.mul_modules_config.creation_allowed);
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-
-            toAppBaseInfo (appItem) {
-                this.$router.push({
-                    name: 'appBaseInfo',
-                    params: {
-                        id: appItem.application.code
-                    }
-                });
-            },
-
-            toModule (appItem, subModule) {
-                this.$router.push({
-                    name: 'appSummary',
-                    params: {
-                        id: appItem.application.code,
-                        moduleId: subModule.name
-                    }
-                });
-            },
-
-            toAppSummary (appItem) {
-                this.$router.push({
-                    name: 'appSummary',
-                    params: {
-                        id: appItem.application.code,
-                        moduleId: appItem.application.modules.find(item => item.is_default).name
-                    }
-                });
-            },
-
-            appMigrate () {
-                this.$router.push({
-                    name: 'appLegacyMigration'
-                });
-            },
-
-            searchApp () {
-                if (this.filterKey === '') {
-                    return;
-                }
-                this.isFilter = true;
-                this.fetchAppList();
-            },
-
-            clearFilter () {
-                this.filterKey = '';
-            },
-
-            // 列表排序
-            toggleSortTab () {
-                if (this.fetchParams.order_by.indexOf('-') === 0) {
-                    this.fetchParams.order_by = this.fetchParams.order_by.substr(1);
-                } else {
-                    this.fetchParams.order_by = '-' + this.fetchParams.order_by;
-                }
-                this.fetchAppList();
-            },
-
-            setFocus (n) {
-                this.focusInput = n;
-            },
-
-            // 初始化
-            resetAction () {
-                this.ifopen = false;
-                this.ifvisited = -1;
-            },
-
-            showChoose () {
-                this.ifopen = true;
-            },
-
-            toggleChoose () {
-                this.ifopen = !this.ifopen;
-            },
-
-            handlePageSizeChange (pageSize) {
-                this.pageConf.limit = pageSize;
-                this.fetchAppList();
-            },
-
-            // 获取 app list
-            async fetchAppList (page = 1) {
-                let url = BACKEND_URL + `/api/bkapps/applications/lists/detailed?format=json`;
-                // 筛选,搜索等操作时，强制切到 page 的页码
-                // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
-                // 如果能切到 axios 就可以去掉这部分代码了
-                url = this.getParams(url);
-                this.fetchParams.order_by = this.sortValue;
-                this.fetchParams = Object.assign(this.fetchParams, {
-                    search_term: this.filterKey,
-                    offset: (page - 1) * this.pageConf.limit,
-                    limit: this.pageConf.limit,
-                    // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
-                    exclude_collaborated: this.appFilter.excludeCollaborated,
-                    // 是否包含已下架应用，默认不包含
-                    include_inactive: this.appFilter.includeInactive,
-                    // 对应类型
-                    type: this.curAppType
-                });
-                this.isLoading = true;
-                for (const key in this.fetchParams) {
-                    url += `&${key}=` + this.fetchParams[key];
-                }
-                try {
-                    const res = await this.$store.dispatch('getAppList', { url });
-                    this.pageConf.curPage = page;
-                    this.pageConf.count = res.count;
-                    this.pageConf.totalPage = Math.ceil(this.pageConf.count / this.pageConf.limit);
-                    (res.results || []).forEach(item => {
-                        this.$set(item, 'expanded', false);
-                        this.$set(item, 'creation_allowed', true);
-                    });
-                    this.appList.splice(0, this.appList.length, ...(res.results || []));
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (e) {
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isFirstLoading = false;
-                    this.isLoading = false;
-                }
-            },
-
-            visitLink (data, env) {
-                window.open(data.application.deploy_info[env].url);
-            },
-
-            // 标记应用，标记后的应用会被放在列表最前端
-            async toggleAppMarked (appItem) {
-                const appCode = appItem.application.code;
-                const msg = appItem.marked ? this.$t('取消收藏成功') : this.$t('应用收藏成功');
-                try {
-                    await this.$store.dispatch('toggleAppMarked', { appCode, isMarked: appItem.marked });
-                    appItem.marked = !appItem.marked;
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: msg
-                    });
-                } catch (error) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('无法标记应用，请稍后再试')
-                    });
-                }
-            },
-
-            reset () {
-                this.appFilter = {
-                    // 已下架
-                    includeInactive: false,
-                    // 我创建的
-                    excludeCollaborated: false,
-                    IncludeAllLanguages: true,
-                    IncludeAllRegions: true,
-                    languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
-                    regionList: ['ieod', 'tencent', 'clouds'],
-                    type: false
-                };
-                this.sortValue = 'name';
-                this.filterKey = '';
-                this.fetchAppList();
-            },
-
-            // 获取App类型列表及数量
-            getAppCategory (includeInactive) {
-                const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=language&include_inactive=${includeInactive}`;
-                const regionUrl = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=region&include_inactive=${includeInactive}`;
-                this.$http.get(url).then((res) => {
-                    const langGroup = res.groups;
-                    // 这里的总数是拥有的App总数，而不是筛选后得到的总数
-                    this.appNumInfo.All = res.total;
-                    langGroup.forEach((item) => {
-                        this.appNumInfo[item.language] = item.count;
-                    });
-                });
-                this.$http.get(regionUrl).then((res) => {
-                    const regionGroup = res.groups;
-                    regionGroup.forEach((item) => {
-                        this.appNumInfo[item.region] = item.count;
-                    });
-                });
-            },
-
-            toAccessApps (appItem) {
-                if (appItem.market_config && appItem.market_config.source_tp_url) {
-                    window.open(appItem.market_config.source_tp_url);
-                }
-            },
-
-            switchAppType (item) {
-                this.curAppType = item.type !== 'all' ? item.type : '';
-                this.curAppTypeActive = item.key;
-                this.fetchAppList();
-            },
-
-            clearFilterKey () {
-                this.filterKey = '';
-                this.reset();
-            },
-
-            getParams (url) {
-                if (!this.IncludeAllLanguages) {
-                    this.appFilter.languageList.forEach((item) => {
-                        url += '&language=' + item;
-                    });
-                }
-                // 应用版本
-                if (!this.IncludeAllRegions) {
-                    this.appFilter.regionList.forEach((item) => {
-                        url += '&region=' + item;
-                    });
-                }
-                return url;
-            },
-
-            updateTableEmptyConfig (arr) {
-                let url = '';
-                let isParams = false;
-                url = this.getParams(url);
-                for (const value in this.appFilter) {
-                    if (typeof this.appFilter[value] === 'boolean' && this.appFilter[value]) {
-                        isParams = true;
-                        break;
-                    }
-                };
-                if (this.filterKey || isParams || url) {
-                    this.tableEmptyConf.keyword = 'placeholder';
-                    return;
-                }
-                this.tableEmptyConf.keyword = '';
-            }
+        } else {
+          vm.userHasApp = userHasApp;
         }
+      });
+    });
+  },
+  beforeRouteUpdate(to, from, next) {
+    const promise = auth.requestHasApp();
+    promise.then((userHasApp) => {
+      next(async () => {
+        if (!userHasApp) {
+          this.isFirstLoading = true;
+          await auth.requestOffApp()
+            .then((flag) => {
+              this.userHasApp = flag;
+            })
+            .finally(() => {
+              this.isFirstLoading = false;
+            });
+        } else {
+          this.userHasApp = userHasApp;
+        }
+      });
+    });
+  },
+  data() {
+    return {
+      isInitLoading: true,
+      isLoading: true,
+      isFirstLoading: true,
+      searcLoading: false,
+      userHasApp: true,
+      ifopen: false,
+      minHeight: 550,
+      ifvisited: -1,
+      appList: [],
+      loaderPlaceholder: 'apps-loading',
+      // 过滤后的 app 数量
+      appNum: '',
+      focusInput: 0,
+      defaultImg: '/static/images/default_logo.png',
+      // 搜索条件筛选
+      appFilter: {
+        // 显示已下架应用
+        includeInactive: false,
+        // 显示我创建的
+        excludeCollaborated: false,
+        // 版本选择
+        regionList: ['ieod', 'tencent', 'clouds'],
+        // 语言选择
+        languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
+        type: false,
+      },
+      // 搜索词
+      filterKey: '',
+      pageConf: {
+        count: 0,
+        curPage: 0,
+        totalPage: 0,
+        limit: 10,
+        limitList: [5, 10, 20, 50],
+      },
+      sortValue: 'name',
+      // fetchParams
+      fetchParams: {
+        // 等于 filterKey
+        search_term: '',
+        // (curPage -1 ) * limit
+        offset: 0,
+        // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
+        exclude_collaborated: false,
+        // 是否包含已下架应用，默认不包含
+        include_inactive: false,
+        // limit
+        limit: 0,
+        order_by: 'name',
+      },
+      // app数量, 不考虑筛选情况
+      appNumInfo: {
+        All: 0,
+        PHP: 0,
+        Go: 0,
+        NodeJS: 0,
+        Python: 0,
+        ieod: 0,
+        tencent: 0,
+        clouds: 0,
+        default: 0,
+      },
+      availableLanguages: ['Python', 'PHP', 'Go', 'NodeJS'],
+      availableRegions: ['ieod', 'tencent', 'clouds'],
+      RegionTranslate: {
+        ieod: this.$t('内部版'),
+        tencent: this.$t('外部版'),
+        clouds: this.$t('混合云版'),
+        default: this.$t('默认'),
+      },
+      isFilter: false,
+      type: 'default',
+      curAppType: '',
+      curAppTypeActive: 'all',
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
     };
+  },
+  computed: {
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
+    // 显示全部语言
+    IncludeAllLanguages: {
+      get() {
+        // 由于当全不选时，按照drf的逻辑是不使用该filter字段，导致行为也是全选
+        return this.appFilter.languageList.length === this.availableLanguages.length;
+      },
+      set(value) {
+        this.appFilter.languageList = (value) ? this.availableLanguages : [];
+      },
+    },
+    // 显示所有版本
+    IncludeAllRegions: {
+      get() {
+        // 由于当全不选时，按照drf的逻辑是不使用该filter字段，导致行为也是全选
+        return this.appFilter.regionList.length === this.availableRegions.length;
+      },
+      set(value) {
+        this.appFilter.regionList = (value) ? this.availableRegions : [];
+      },
+    },
+    isOrderByDesc() {
+      // 是否倒序
+      return this.fetchParams.order_by.indexOf('-') === 0;
+    },
+    isShowLanguagesSearch() {
+      return this.availableLanguages.filter(item => this.appNumInfo[item]).length > 0;
+    },
+    isShowRegionsSearch() {
+      return this.availableRegions.length > 0;
+    },
+    isShowAllWithLanguages() {
+      return this.availableLanguages.filter(item => this.appNumInfo[item]).length > 1;
+    },
+    isShowAllWithRegions() {
+      return this.availableRegions.length > 1;
+    },
+    appTypeList() {
+      if (!this.$store.state.userFeature?.ALLOW_CREATE_CLOUD_NATIVE_APP) {
+        return APP_TYPE_MAP.filter(item => item.key !== 'cloud_native_app_count');
+      }
+      return APP_TYPE_MAP;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    enFormItemWidth() {
+      return this.localLanguage === 'en' ? '120px' : '110px';
+    },
+  },
+  watch: {
+    filterKey(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '') {
+        if (this.isFilter) {
+          this.fetchAppList();
+          this.isFilter = false;
+        }
+      }
+    },
+    ifopen(value) {
+      if (!value) {
+        this.sortValue = this.fetchParams.order_by;
+      }
+    },
+  },
+  created() {
+    this.getAppCategory(false);
+    if (this.$route.query.include_inactive) {
+      this.appFilter.includeInactive = true;
+    }
+    this.fetchAppList();
+  },
+  mounted() {
+    const HEADER_HEIGHT = 50;
+    const FOOTER_HEIGHT = 70;
+    const winHeight = window.innerHeight;
+    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+    if (contentHeight > this.minHeight) {
+      this.minHeight = contentHeight;
+    }
+  },
+  methods: {
+    deploy(item, subModule) {
+      if (item.application.type === 'cloud_native') {
+        this.toDeploy(item.application);
+      } else {
+        this.$router.push({
+          name: 'appDeploy',
+          params: {
+            id: item.application.code,
+            moduleId: subModule.name,
+          },
+        });
+      }
+    },
+
+    async toDeploy(recordItem) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${recordItem.code}/`;
+      try {
+        const res = await this.$http.get(url);
+        this.type = res.application.type;
+        this.$router.push({
+          name: this.type === 'cloud_native' ? 'cloudAppDeploy' : 'appDeploy',
+          params: {
+            id: recordItem.code,
+          },
+        });
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
+
+    toPage(appItem) {
+      this.toAppSummary(appItem);
+    },
+
+    pageChange(page) {
+      this.fetchAppList(page);
+    },
+
+    toCloudAPI(item) {
+      this.$router.push({
+        name: 'appCloudAPI',
+        params: {
+          id: item.application.code,
+        },
+      });
+    },
+
+    createApp() {
+      this.$router.push({
+        name: 'createApp',
+      });
+    },
+
+    viewLog(item, subModule) {
+      this.$router.push({
+        name: 'appLog',
+        params: {
+          id: item.application.code,
+          moduleId: subModule.name,
+        },
+        query: {
+          tab: 'structured',
+        },
+      });
+    },
+
+    addModule(appItem) {
+      this.$router.push({
+        name: 'appCreateModule',
+        params: {
+          id: appItem.application.code,
+        },
+      });
+    },
+
+    applyCludeApi(item) {
+      this.$router.push({
+        name: 'appCloudAPI',
+        params: {
+          id: item.application.code,
+        },
+      });
+    },
+
+    expandedPanel(item) {
+      if (!item.application.config_info.engine_enabled) {
+        return;
+      }
+      this.fetchRegionInfo(item.application.region, item);
+      item.expanded = !item.expanded;
+    },
+
+    async fetchRegionInfo(region, item) {
+      try {
+        const res = await this.$store.dispatch('fetchRegionInfo', region);
+        this.$set(item, 'creation_allowed', res.mul_modules_config.creation_allowed);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    toAppBaseInfo(appItem) {
+      this.$router.push({
+        name: 'appBaseInfo',
+        params: {
+          id: appItem.application.code,
+        },
+      });
+    },
+
+    toModule(appItem, subModule) {
+      this.$router.push({
+        name: 'appSummary',
+        params: {
+          id: appItem.application.code,
+          moduleId: subModule.name,
+        },
+      });
+    },
+
+    toAppSummary(appItem) {
+      this.$router.push({
+        name: 'appSummary',
+        params: {
+          id: appItem.application.code,
+          moduleId: appItem.application.modules.find(item => item.is_default).name,
+        },
+      });
+    },
+
+    appMigrate() {
+      this.$router.push({
+        name: 'appLegacyMigration',
+      });
+    },
+
+    searchApp() {
+      if (this.filterKey === '') {
+        return;
+      }
+      this.isFilter = true;
+      this.fetchAppList();
+    },
+
+    clearFilter() {
+      this.filterKey = '';
+    },
+
+    // 列表排序
+    toggleSortTab() {
+      if (this.fetchParams.order_by.indexOf('-') === 0) {
+        this.fetchParams.order_by = this.fetchParams.order_by.substr(1);
+      } else {
+        this.fetchParams.order_by = `-${this.fetchParams.order_by}`;
+      }
+      this.fetchAppList();
+    },
+
+    setFocus(n) {
+      this.focusInput = n;
+    },
+
+    // 初始化
+    resetAction() {
+      this.ifopen = false;
+      this.ifvisited = -1;
+    },
+
+    showChoose() {
+      this.ifopen = true;
+    },
+
+    toggleChoose() {
+      this.ifopen = !this.ifopen;
+    },
+
+    handlePageSizeChange(pageSize) {
+      this.pageConf.limit = pageSize;
+      this.fetchAppList();
+    },
+
+    // 获取 app list
+    async fetchAppList(page = 1) {
+      let url = `${BACKEND_URL}/api/bkapps/applications/lists/detailed?format=json`;
+      // 筛选,搜索等操作时，强制切到 page 的页码
+      // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
+      // 如果能切到 axios 就可以去掉这部分代码了
+      url = this.getParams(url);
+      this.fetchParams.order_by = this.sortValue;
+      this.fetchParams = Object.assign(this.fetchParams, {
+        search_term: this.filterKey,
+        offset: (page - 1) * this.pageConf.limit,
+        limit: this.pageConf.limit,
+        // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
+        exclude_collaborated: this.appFilter.excludeCollaborated,
+        // 是否包含已下架应用，默认不包含
+        include_inactive: this.appFilter.includeInactive,
+        // 对应类型
+        type: this.curAppType,
+      });
+      this.isLoading = true;
+      for (const key in this.fetchParams) {
+        url += `&${key}=${this.fetchParams[key]}`;
+      }
+      try {
+        const res = await this.$store.dispatch('getAppList', { url });
+        this.pageConf.curPage = page;
+        this.pageConf.count = res.count;
+        this.pageConf.totalPage = Math.ceil(this.pageConf.count / this.pageConf.limit);
+        (res.results || []).forEach((item) => {
+          this.$set(item, 'expanded', false);
+          this.$set(item, 'creation_allowed', true);
+        });
+        this.appList.splice(0, this.appList.length, ...(res.results || []));
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.isFirstLoading = false;
+        this.isLoading = false;
+      }
+    },
+
+    visitLink(data, env) {
+      window.open(data.application.deploy_info[env].url);
+    },
+
+    // 标记应用，标记后的应用会被放在列表最前端
+    async toggleAppMarked(appItem) {
+      const appCode = appItem.application.code;
+      const msg = appItem.marked ? this.$t('取消收藏成功') : this.$t('应用收藏成功');
+      try {
+        await this.$store.dispatch('toggleAppMarked', { appCode, isMarked: appItem.marked });
+        appItem.marked = !appItem.marked;
+        this.$paasMessage({
+          theme: 'success',
+          message: msg,
+        });
+      } catch (error) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('无法标记应用，请稍后再试'),
+        });
+      }
+    },
+
+    reset() {
+      this.appFilter = {
+        // 已下架
+        includeInactive: false,
+        // 我创建的
+        excludeCollaborated: false,
+        IncludeAllLanguages: true,
+        IncludeAllRegions: true,
+        languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
+        regionList: ['ieod', 'tencent', 'clouds'],
+        type: false,
+      };
+      this.sortValue = 'name';
+      this.filterKey = '';
+      this.fetchAppList();
+    },
+
+    // 获取App类型列表及数量
+    getAppCategory(includeInactive) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=language&include_inactive=${includeInactive}`;
+      const regionUrl = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=region&include_inactive=${includeInactive}`;
+      this.$http.get(url).then((res) => {
+        const langGroup = res.groups;
+        // 这里的总数是拥有的App总数，而不是筛选后得到的总数
+        this.appNumInfo.All = res.total;
+        langGroup.forEach((item) => {
+          this.appNumInfo[item.language] = item.count;
+        });
+      });
+      this.$http.get(regionUrl).then((res) => {
+        const regionGroup = res.groups;
+        regionGroup.forEach((item) => {
+          this.appNumInfo[item.region] = item.count;
+        });
+      });
+    },
+
+    toAccessApps(appItem) {
+      if (appItem.market_config && appItem.market_config.source_tp_url) {
+        window.open(appItem.market_config.source_tp_url);
+      }
+    },
+
+    switchAppType(item) {
+      this.curAppType = item.type !== 'all' ? item.type : '';
+      this.curAppTypeActive = item.key;
+      this.fetchAppList();
+    },
+
+    clearFilterKey() {
+      this.filterKey = '';
+      this.reset();
+    },
+
+    getParams(url) {
+      if (!this.IncludeAllLanguages) {
+        this.appFilter.languageList.forEach((item) => {
+          url += `&language=${item}`;
+        });
+      }
+      // 应用版本
+      if (!this.IncludeAllRegions) {
+        this.appFilter.regionList.forEach((item) => {
+          url += `&region=${item}`;
+        });
+      }
+      return url;
+    },
+
+    updateTableEmptyConfig(arr) {
+      let url = '';
+      let isParams = false;
+      url = this.getParams(url);
+      for (const value in this.appFilter) {
+        if (typeof this.appFilter[value] === 'boolean' && this.appFilter[value]) {
+          isParams = true;
+          break;
+        }
+      };
+      if (this.filterKey || isParams || url) {
+        this.tableEmptyConf.keyword = 'placeholder';
+        return;
+      }
+      this.tableEmptyConf.keyword = '';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

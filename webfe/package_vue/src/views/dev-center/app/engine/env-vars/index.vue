@@ -332,7 +332,12 @@
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
-                      v-bk-tooltips="{ content: varItem.key, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      v-bk-tooltips="{
+                        content: varItem.key === '*' ? '*\&nbsp' : varItem.key,
+                        trigger: 'mouseenter',
+                        maxWidth: 400,
+                        extCls: 'env-var-popover'
+                      }"
                       class="desc-form-content"
                     >{{ varItem.key }}</div>
                   </template>
@@ -352,7 +357,12 @@
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
-                      v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      v-bk-tooltips="{
+                        content: varItem.value === '*' ? '*\&nbsp' : varItem.value,
+                        trigger: 'mouseenter',
+                        maxWidth: 400,
+                        extCls: 'env-var-popover'
+                      }"
                       class="desc-form-content"
                     >
                       {{ varItem.value }}
@@ -532,7 +542,7 @@
       @confirm="updateRuntimeInfo"
       @cancel="handleHideRuntimeDialog"
     >
-      <bk-form :label-width="95">
+      <bk-form :label-width="localLanguage === 'en' ? 105 : 95">
         <bk-form-item :label="$t('基础镜像:')">
           <bk-select
             v-model="runtimeDialogConf.image"
@@ -967,6 +977,9 @@ export default {
     },
     canModifyEnvVariable() {
       return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {

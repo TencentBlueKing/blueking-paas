@@ -304,7 +304,7 @@ class ModuleInitializer:
         ]
 
         mgr = ModuleProcessSpecManager(self.module)
-        # image_credential_names 设置为空字典, 用于非 v1alph1 版本
+        # image_credential_names 设置为空字典, 目的是不保存到 ModuleProcessSpec 的 image_credential_name 字段, 该字段仅为 v1alpha1 设计
         mgr.sync_from_bkapp(processes, image_credential_names={})
         for proc in bkapp_spec["processes"]:
             if env_overlay := proc.get("env_overlay"):

@@ -92,6 +92,8 @@ class PreReleaseDummyExecutor(DeployStep):
             self.stream.write_message(Style.Warning("Pre-release execution succeed"))
         elif status == PodPhase.FAILED:
             self.stream.write_message(Style.Error("Pre-release failed, please check logs for more details"))
+        else:
+            self.stream.write_message(Style.Warning("Pre-release exceeded timeout"))
 
         try:
             step = self.phase.get_step_by_name(self.STEP_NAME)

@@ -610,7 +610,7 @@ class KPod(BaseKresource):
                 logger.warning("Pod %s %s not found.", namespace, name)
             else:
                 if pod.status.phase in target_statuses:
-                    return
+                    return pod.status.phase
             time.sleep(check_period)
         raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=pod)
 

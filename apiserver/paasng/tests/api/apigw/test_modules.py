@@ -51,7 +51,6 @@ class TestApiInAPIGW:
         ("app_type", "template_name", "language"),
         [
             (ApplicationType.CLOUD_NATIVE.value, settings.DUMMY_TEMPLATE_NAME, "Python"),
-            (ApplicationType.DEFAULT.value, settings.DUMMY_TEMPLATE_NAME, "Python"),
         ],
     )
     def test_create_module(

@@ -1230,6 +1230,7 @@ export default {
           // 服务结束请求列表接口
           bus.$emit('get-release-info');
           this.watchServerTimer = setTimeout(() => {
+            console.log('testetst');
             this.watchServerPush();
           }, 3000);
         }

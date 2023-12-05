@@ -933,14 +933,15 @@ export default {
 
       // 服务结束
       this.serverProcessEvent.addEventListener('EOF', () => {
+        // 侧栏监听到EOF就不需要重新watch了 一般不会再侧栏看状态
         this.serverProcessEvent.close();
 
-        if (!this.isDeploySseEof) {
-          // 推迟调用，防止过于频繁导致服务性能问题
-          this.watchServerTimer = setTimeout(() => {
-            this.watchServerPush();
-          }, 3000);
-        }
+        // if (!this.isDeploySseEof) {
+        //   // 推迟调用，防止过于频繁导致服务性能问题
+        //   this.watchServerTimer = setTimeout(() => {
+        //     this.watchServerPush();
+        //   }, 3000);
+        // }
       });
     },
 

@@ -316,6 +316,11 @@ export default {
       this.getModuleReleaseInfo();
     },
     handleChangePanel(payload) {
+      this.deploymentInfoData.forEach((e) => {
+        if (e.module_name !== payload.module_name) {
+          e.isExpand = false;
+        }
+      });
       payload.isExpand = !payload.isExpand;
       if (payload.isExpand) {
         this.handleRefresh();
@@ -451,6 +456,7 @@ export default {
 
     // 刷新列表
     handleRefresh() {
+      console.log('this.intervalTimer', this.intervalTimer);
       if (this.intervalTimer || this.isDialogShowSideslider) return;
       this.getModuleReleaseInfo(false);
     },

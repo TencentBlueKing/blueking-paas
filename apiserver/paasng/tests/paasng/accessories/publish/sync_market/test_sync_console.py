@@ -49,7 +49,12 @@ from paasng.platform.mgrlegacy.constants import LegacyAppState
 from tests.conftest import mark_skip_if_console_not_configured
 from tests.utils.helpers import create_app, generate_random_string
 
-pytestmark = [mark_skip_if_console_not_configured(), pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
+pytestmark = [
+    mark_skip_if_console_not_configured(),
+    pytest.mark.django_db,
+    pytest.mark.xdist_group(name="legacy-db"),
+    pytest.mark.usefixtures("_register_app_core_data"),
+]
 
 
 logger = logging.getLogger(__name__)

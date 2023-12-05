@@ -30,6 +30,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -61,17 +62,20 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alph
 	if len(outdated) != 0 {
 		for _, gpa := range outdated {
 			if err = r.Client.Delete(ctx, gpa); err != nil {
+				metrics.IncDeleteOutdatedGpaFailures(bkapp, gpa.Name)
 				return r.Result.WithError(err)
 			}
 		}
 	}
 	for _, gpa := range expected {
 		if err = r.deploy(ctx, gpa); err != nil {
+			metrics.IncDeployExpectedGpaFailures(bkapp, gpa.Name)
 			return r.Result.WithError(err)
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
+		metrics.IncAutoscaleUpdateBkappStatusFailures(bkapp)
 		return r.Result.WithError(err)
 	}
 	return r.Result

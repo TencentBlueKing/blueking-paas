@@ -201,7 +201,7 @@ class Base64FileField(serializers.Field):
             value = value.encode()
 
         if not isinstance(value, bytes):
-            raise ValueError(f"Unsupported value: {value}")
+            raise ValueError(f"Unsupported value: {value}")  # noqa: TRY004
 
         return self._prefix + (base64.b64encode(value).decode())
 

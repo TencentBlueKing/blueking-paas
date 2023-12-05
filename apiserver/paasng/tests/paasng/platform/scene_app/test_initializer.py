@@ -30,19 +30,19 @@ pytestmark = pytest.mark.django_db
 
 class TestSceneAPPInitializer:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def _setup(self):
         from tests.utils.helpers import create_scene_tmpls
 
         create_scene_tmpls()
         with mock.patch(
             "paasng.platform.declarative.application.controller.initialize_smart_module",
-            new=lambda *args, **kwargs: {},
+            return_value={},
         ), mock.patch(
             "paasng.platform.scene_app.initializer.create_oauth2_client",
-            new=lambda *args, **kwargs: "test_app_secret",
+            return_value="test_app_secret",
         ), mock.patch(
             "paasng.platform.scene_app.initializer.get_oauth2_client_secret",
-            new=lambda *args, **kwargs: "test_app_secret",
+            return_value="test_app_secret",
         ):
             yield
 

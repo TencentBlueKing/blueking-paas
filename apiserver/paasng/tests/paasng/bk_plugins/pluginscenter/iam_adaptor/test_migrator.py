@@ -56,5 +56,5 @@ class TestIAMPermissionTemplateRender:
     )
     def test_invalid_template(self, template_str):
         render = IAMPermissionTemplateRender(template_str)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*is not a valid.*"):
             render.render()

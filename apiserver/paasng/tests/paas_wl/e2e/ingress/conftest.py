@@ -73,7 +73,7 @@ def framework(
 
 
 @pytest.fixture(scope="session", autouse=True)
-def skip_if_configuration_not_ready(request):
+def _skip_if_configuration_not_ready(request):
     if not settings.FOR_TEST_E2E_INGRESS_CONFIG:
         pytest.skip("nginx-ingress e2e configuration not ready, skip e2e test")
 
@@ -177,7 +177,7 @@ def echo_pod(namespace_maker, framework, e2e_app):
             "restartPolicy": "Always",
         },
     }
-    KPod(framework.client).create_or_update(
+    pod = KPod(framework.client).create_or_update(
         e2e_app.scheduler_safe_name,
         namespace=e2e_app.namespace,
         body=pod_dict,
@@ -185,6 +185,7 @@ def echo_pod(namespace_maker, framework, e2e_app):
     KPod(framework.client).wait_for_status(
         e2e_app.scheduler_safe_name, target_statuses=["Running"], namespace=e2e_app.namespace, timeout=60
     )
+    return pod
 
 
 @pytest.fixture(scope="module")

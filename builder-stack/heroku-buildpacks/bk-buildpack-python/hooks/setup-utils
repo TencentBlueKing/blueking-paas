@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+# 在 utils 脚本正式开始之前执行
+
+# 通过 BUILDPACK_VENDOR_URL 来下载 stdlib.sh，避免使用外网源
+if [[ ! -f "${STDLIB_ROOT:-/tmp}/stdlib.sh" ]] && [ "${BUILDPACK_VENDOR_URL}" ]; then
+    curl --retry 3 -s "${BUILDPACK_VENDOR_URL}/buildpack-stdlib/v8/stdlib.sh" > /tmp/stdlib.sh
+fi

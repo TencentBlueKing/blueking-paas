@@ -169,8 +169,8 @@ class GitClient:
         command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
         output = self.run(command)
         results = []
-        for line in output.splitlines():
-            line = line.strip()
+        for raw_line in output.splitlines():
+            line = raw_line.strip()
             if not line:
                 continue
 

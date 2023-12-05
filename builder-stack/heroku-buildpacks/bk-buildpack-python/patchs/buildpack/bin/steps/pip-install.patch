@@ -1,0 +1,45 @@
+64a65,108
+> 
+>     # 使用 pip-tools 严格控制依赖, 多余的依赖包(来自构建缓存)将会被移除
+>     if [ "$STRICT_PIP_MODE" ]; then
+>         if [ ! "$PIP_TOOLS_VERSION" ]; then
+>             cat > .heroku/python/select_pip_tools_version.py <<EOF
+> import pip, sys
+> PY2 = sys.version_info[0] == 2
+> PY36 = sys.version_info[:2] == (3, 6)
+> PY37 = sys.version_info[:2] == (3, 7)
+> PIP_VERSION=pip.__version__.split(".")
+> MAJOR, MINOR = int(PIP_VERSION[0]), int(PIP_VERSION[1])
+> 
+> 
+> if (MAJOR, MINOR) <= (20, 0):
+>     PIP_TOOLS_VERSION = "4.5"
+> elif (MAJOR, MINOR) <= (20, 1):
+>     PIP_TOOLS_VERSION = "5.3.0"
+> elif (MAJOR, MINOR) <= (20, 3):
+>     PIP_TOOLS_VERSION = "5.5.0"
+> elif (MAJOR, MINOR) <= (21, 2):
+>     PIP_TOOLS_VERSION = "6.3.1"
+> elif PY36:
+>     PIP_TOOLS_VERSION = "6.4.0"
+> elif (MAJOR, MINOR) <= (22, 0):
+>     PIP_TOOLS_VERSION = "6.5.1"
+> else:
+>     PIP_TOOLS_VERSION = "6.6.2"
+> 
+> 
+> print(PIP_TOOLS_VERSION)
+> EOF
+>             PIP_TOOLS_VERSION=`/app/.heroku/python/bin/python .heroku/python/select_pip_tools_version.py`
+>         fi
+> 
+>         puts-step "installing pip-tools==${PIP_TOOLS_VERSION}"
+> 
+>         /app/.heroku/python/bin/pip install pip-tools==${PIP_TOOLS_VERSION}
+> 
+>         puts-step "Compiling requirements"
+>         /app/.heroku/python/bin/pip-compile requirements.txt --output-file .heroku/python/requirements.lock
+> 
+>         puts-step "Syning requirements"
+>         /app/.heroku/python/bin/pip-sync .heroku/python/requirements.lock
+>     fi

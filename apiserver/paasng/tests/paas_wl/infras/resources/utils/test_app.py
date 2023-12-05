@@ -27,7 +27,7 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 class TestProcessScheduler:
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def _setup(self):
         self.app = create_wl_app(
             force_app_info={"name": "bkapp-fakeme-stag"},
             paas_app_code="fakeme",

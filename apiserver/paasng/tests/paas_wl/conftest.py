@@ -292,12 +292,12 @@ def set_structure(default_process_spec_plan):
 
 
 @pytest.fixture()
-def bk_stag_wl_app(bk_stag_env, with_wl_apps):
+def bk_stag_wl_app(bk_stag_env, _with_wl_apps):
     return bk_stag_env.wl_app
 
 
 @pytest.fixture()
-def bk_prod_wl_app(bk_prod_env, with_wl_apps):
+def bk_prod_wl_app(bk_prod_env, _with_wl_apps):
     return bk_prod_env.wl_app
 
 

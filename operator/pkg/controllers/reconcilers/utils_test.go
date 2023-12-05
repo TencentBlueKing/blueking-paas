@@ -104,7 +104,10 @@ var _ = Describe("Test utils", func() {
 		b := fakeDeploy.DeepCopy()
 		b.Name = names.Deployment(bkapp, "web")
 		current := []*appsv1.Deployment{&a, b}
-		want := resources.GetWantedDeploys(bkapp)
+
+		// Wanted resource list
+		webDeploy, _ := resources.BuildProcDeployment(bkapp, "web")
+		want := []*appsv1.Deployment{webDeploy}
 
 		outdated := FindExtraByName(current, want)
 		Expect(len(outdated)).To(Equal(1))

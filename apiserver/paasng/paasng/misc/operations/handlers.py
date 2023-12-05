@@ -74,25 +74,29 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
             user=instance.creator,
             module_name=instance.name,
         )
-    elif isinstance(instance, Deployment) and not created:
-        if instance.status == JobStatus.SUCCESSFUL.value and instance.app_environment.environment == "prod":
-            application = instance.app_environment.application
-            product = application.get_product()
+    elif (
+        isinstance(instance, Deployment)
+        and not created
+        and instance.status == JobStatus.SUCCESSFUL.value
+        and instance.app_environment.environment == "prod"
+    ):
+        application = instance.app_environment.application
+        product = application.get_product()
 
-            if product is None:
-                return
+        if product is None:
+            return
 
-            # 迁移未完成前的应用正式上线不会上线到桌面
-            # Only do this check when "mgrlegacy" APP is enabled
-            if (
-                hasattr(application, "migrationprocess_set")
-                and application.migrationprocess_set.exists()
-                and application.migrationprocess_set.last().is_active()
-            ):
-                return
+        # 迁移未完成前的应用正式上线不会上线到桌面
+        # Only do this check when "mgrlegacy" APP is enabled
+        if (
+            hasattr(application, "migrationprocess_set")
+            and application.migrationprocess_set.exists()
+            and application.migrationprocess_set.last().is_active()
+        ):
+            return
 
-            if product.state != AppState.RELEASED.value:
-                online_market_success.send(sender=instance, deployment_instance=instance)
+        if product.state != AppState.RELEASED.value:
+            online_market_success.send(sender=instance, deployment_instance=instance)
 
 
 @receiver(online_market_success)
@@ -233,6 +237,6 @@ def on_new_operation_happened(
 
 
 try:
-    from .handlers_ext import *  # noqa
+    from .handlers_ext import *  # noqa: F401
 except ImportError:
     pass

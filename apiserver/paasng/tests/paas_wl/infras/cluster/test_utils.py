@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 class TestGetClusterByApp:
     @pytest.fixture(autouse=True)
-    def setup(self, example_cluster_config):
+    def _setup(self, example_cluster_config):
         clusters = [
             {
                 "name": "region1-default",
@@ -58,7 +58,7 @@ class TestGetClusterByApp:
         # 考虑到本处不获取集群 client，并不影响当前测试，因此通过 mock 处理
         with mock.patch(
             "paas_wl.infras.resources.generation.version.get_client_by_app",
-            new=lambda *args, **kwargs: None,
+            return_value=None,
         ):
             yield
 

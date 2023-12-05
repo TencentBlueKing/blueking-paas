@@ -470,8 +470,8 @@
               collapse-item-name="process"
               :title="$t('进程配置')">
               <deploy-process
-                ref="processRef" :image-url="mirrorData.url"
-                :image-credential-name="imageCredentialsData.name"
+                ref="processRef"
+                :cloud-form-data="{url: mirrorData.url, imageCredentialName: imageCredentialsData.name}"
                 :is-create="isCreate"></deploy-process>
             </collapseContent>
 
@@ -1098,7 +1098,9 @@ export default {
         if (!processData || !hookData) return;
         hookData.type = 'pre-release-hook';
         params.bkapp_spec.processes = processData;
-        params.bkapp_spec.hook = hookData;
+        if (hookData.enabled) {
+          params.bkapp_spec.hook = hookData;
+        }
       }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {

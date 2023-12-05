@@ -54,7 +54,7 @@ class CommandManager(models.Manager):
             raise RuntimeError("Only call `new` method from RelatedManager.")
 
         if not isinstance(self.instance, WlApp):
-            raise RuntimeError("Only call from app.command_set.")
+            raise TypeError("Only call from app.command_set.")
 
         app = self.instance
         latest_obj = self.filter(type=type_.value).order_by("-version").first()

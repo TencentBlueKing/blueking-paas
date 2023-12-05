@@ -27,7 +27,7 @@ class CIAppConfig(AppConfig):
     name = "paasng.accessories.ci"
 
     def ready(self):
-        from . import handlers  # noqa
+        from . import handlers  # noqa: F401
 
         # Multi-editions specific start
 

@@ -30,6 +30,7 @@ from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 class TestMresDeploymentsViewSet:
     def test_list(self, api_client, bk_app, bk_module, bk_stag_env, bk_user):
         url = (
@@ -61,7 +62,7 @@ class TestMresDeploymentsViewSet:
             "operator": bk_user.username,
         }
 
-    def test_create(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps, bk_user):
+    def test_create(self, api_client, bk_app, bk_module, bk_stag_env, bk_user):
         url = (
             "/svc_workloads/api/cnative/specs/applications/"
             f"{bk_app.code}/modules/{bk_module.name}/envs/{bk_stag_env.environment}/mres/deployments/"
@@ -111,7 +112,7 @@ class TestMresDeploymentsViewSet:
 
 
 class TestMresStatusViewSet:
-    def test_retrieve(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps, bk_user):
+    def test_retrieve(self, api_client, bk_app, bk_module, bk_stag_env, bk_user):
         url = (
             "/svc_workloads/api/cnative/specs/applications/"
             f"{bk_app.code}/modules/{bk_module.name}/envs/{bk_stag_env.environment}/mres/status/"

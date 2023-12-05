@@ -185,7 +185,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             try:
                 mixed_service_mgr.bind_service(svc, module, specs)
             except Exception as e:
-                logger.exception("bind service %s to module %s error %s", svc.uuid, module.name, e)
+                logger.exception("bind service %s to module %s error.", svc.uuid, module.name)
                 raise error_codes.CANNOT_BIND_SERVICE.f(str(e))
 
         # 如果未分配增强服务实例, 则进行分配

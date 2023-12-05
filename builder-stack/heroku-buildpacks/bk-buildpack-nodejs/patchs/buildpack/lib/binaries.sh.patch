@@ -1,0 +1,24 @@
+42c42
+< 
+---
+>   echo "${resolve_result}"
+48c48
+< 
+---
+>   echo ${url}
+99a100,105
+>   echo "default npm version ${npm_version}"
+> 
+>   if [ "${BK_NPM_REGISTRY}" ]; then
+>     npm config set registry "${BK_NPM_REGISTRY}"
+>     echo "npm use registry ${BK_NPM_REGISTRY}"
+>   fi
+100a107,111
+>   if [ "${NPM_REGISTRY}" ]; then
+>     npm config set registry "${NPM_REGISTRY}"
+>     echo "npm use registry ${NPM_REGISTRY}"
+>   fi
+>   
+119a131,132
+> 
+> source "$BP_DIR/hooks/pre-install-nodejs"

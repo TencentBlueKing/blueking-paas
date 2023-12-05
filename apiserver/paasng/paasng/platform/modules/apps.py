@@ -25,4 +25,4 @@ class ModulesConfig(PlugableAppConfig):
     def ready(self):
         super().ready()
 
-        from . import handlers  # noqa
+        from . import handlers  # noqa: F401

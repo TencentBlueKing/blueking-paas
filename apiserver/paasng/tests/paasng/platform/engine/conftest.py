@@ -31,7 +31,7 @@ def _no_color():
 
 
 @pytest.fixture()
-def wl_app(bk_stag_env, with_wl_apps) -> WlApp:
+def wl_app(bk_stag_env, _with_wl_apps) -> WlApp:
     """A WlApp object"""
     return bk_stag_env.wl_app
 

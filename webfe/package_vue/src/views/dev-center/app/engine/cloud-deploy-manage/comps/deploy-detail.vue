@@ -497,6 +497,10 @@ export default {
       type: Number,
       default: () => 0,
     },
+    isDialogShowSideslider: {
+      type: Boolean,
+      default: () => false,
+    },
   },
   data() {
     const dateShortCut = [
@@ -667,6 +671,16 @@ export default {
       },
       immediate: true,
       // deep: true,
+    },
+    isDialogShowSideslider: {
+      handler(value) {
+        // 在没有侧栏的情况下
+        if (!value
+        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+          this.watchServerPush();
+        }
+      },
+      immediate: true,
     },
   },
   mounted() {
@@ -1229,6 +1243,8 @@ export default {
         if (this.serverProcessEvent === serverProcessEvent) {
           // 服务结束请求列表接口
           bus.$emit('get-release-info');
+          // 有侧边栏的时候不需要持续watch
+          if (this.isDialogShowSideslider) return;
           this.watchServerTimer = setTimeout(() => {
             console.log('testetst');
             this.watchServerPush();

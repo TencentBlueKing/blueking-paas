@@ -138,7 +138,8 @@
               :index="index"
               :deployment-info="deploymentInfo"
               :environment="environment"
-              :module-name="deploymentInfo.module_name" />
+              :module-name="deploymentInfo.module_name"
+              :is-dialog-show-sideslider="isDialogShowSideslider" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"
@@ -505,6 +506,7 @@ export default {
 
     // dialog里的slider关闭
     handleListRefresh() {
+      console.log('this.curDeploymentInfoItem.isExpand', this.curDeploymentInfoItem.isExpand);
       this.isDialogShowSideslider = false;
       this.handleRefresh();
     },

@@ -282,6 +282,9 @@ class ElasticSearchParams(BaseModel):
     )
     builtinFilters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的过滤条件")
     builtinExcludes: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的排除条件")
+
+    # example: ["json.message", "json.funcName", "json.levelname", "json.otelTraceID", "json.otelSpanID"]
+    filterFields: List[str] = Field(default_factory=list, description="前端可选的字段过滤选项集")
     # paas 的标准输出日志过滤条件
     # termTemplate = {"app_code": "{{ plugin_id }}"}
     # builtinFilters = {"environment": "prod", "stream": ["stderr", "stdout"]}

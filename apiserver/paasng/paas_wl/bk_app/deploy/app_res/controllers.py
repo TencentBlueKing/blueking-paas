@@ -568,7 +568,7 @@ class BkAppHookHandler:
         self.namespace = app.namespace
         self.hook_name = hook_name
 
-    def wait_for_logs_readiness(self, timeout: float = 300):
+    def wait_for_logs_readiness(self, timeout: float = 20):
         """Waits for hook pod to become ready for retrieving logs
 
         :param timeout: max timeout
@@ -585,7 +585,7 @@ class BkAppHookHandler:
         """Fetch logs of running hook pod"""
         return KPod(self.client).get_log(name=self.hook_name, namespace=self.namespace, follow=follow)
 
-    def wait_hook_finished(self, timeout: float = 300) -> PodPhase:
+    def wait_hook_finished(self, timeout: float = 60 * 5) -> PodPhase:
         """Waits for hook pod to finish"""
         finished_statuses = {PodPhase.SUCCEEDED, PodPhase.FAILED}
         status = KPod(self.client).wait_for_status(

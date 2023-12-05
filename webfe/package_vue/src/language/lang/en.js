@@ -2470,4 +2470,5 @@ export default {
   '代码 Tag': 'Code tag',
   '新建 Tag': 'New Tag',
   取消成功: 'Cancel success',
+  '修改环境变量后，需要重新发布插件后生效': 'After modifying the environment variables, it is necessary to republish the plugin for the changes to take effect.',
 };

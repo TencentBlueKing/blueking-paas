@@ -11,14 +11,14 @@
           class="value"
           v-if="Array.isArray(item.default)"
         >
-          {{ item.default.length ? item.default?.join(',') : '--' }}
+          {{ formatMultiple(item.default, item.key) }}
         </div>
         <div
           class="value"
           v-else
         >
-          <template v-if="radioData[item.key] && radioData[item.key].length">
-            {{ radioData[item.key].find(v => v.value === item.default)?.label || '--' }}
+          <template v-if="componentData[item.key] && componentData[item.key].length">
+            {{ componentData[item.key].find(v => v.value === item.default || v.label === item.default)?.label || '--' }}
           </template>
           <template v-else>
             {{ item.default || '--' }}
@@ -37,7 +37,7 @@ export default {
       schemaFormData: {},
       schema: {},
       viewData: [],
-      radioData: {},
+      componentData: {},
     };
   },
   computed: {
@@ -72,10 +72,8 @@ export default {
         // eslint-disable-next-line no-restricted-syntax
         for (const key in extraFields) {
           const uiComponent = extraFields[key]['ui:component'];
-          // 单选框处理
-          if (uiComponent?.name === 'radio') {
-            this.radioData[key] = uiComponent.props.datasource;
-          }
+          // 下拉选择列表数据，处理国际化翻译问题
+          this.componentData[key] = uiComponent?.props?.datasource || [];
           if (this.moreInfoFields[key]) {
             extraFields[key].default = this.moreInfoFields[key];
           } else {
@@ -123,6 +121,18 @@ export default {
         }
       }
       return requiredFields;
+    },
+    // 格式化多选显示内容
+    formatMultiple(data = [], key) {
+      if (!data.length) {
+        return '--';
+      }
+      const arr = [];
+      data.forEach((v) => {
+        const res = this.componentData[key].find(item => v === item.label || v === item.value)?.label;
+        res && arr.push(res);
+      });
+      return arr.join(', ') || '--';
     },
   },
 };

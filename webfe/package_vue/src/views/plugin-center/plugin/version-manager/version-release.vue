@@ -347,20 +347,19 @@ export default {
 
     // 给step绑定点击事件
     stepsBindingClick() {
-      // 获取对应节点
       const stepsEl = document.querySelector('.custom-step-cls');
       const stepList = Array.from(stepsEl?.childNodes || []);
+      // 根据对应当前id获取DOM
+      const i = this.curAllStages.findIndex(v => v.stage_id === this.stageId);
       let bingElementList = [];
-      for (let i = 0; i < stepList.length; i++) {
-        const curStepEl = stepList[i];
-        if (curStepEl?.className.includes('current')) {
-          // 当前步骤index
-          if (this.curStepIndex === null) {
-            this.curStepIndex = i + 1;
-          }
-          bingElementList = stepList.slice(0, i + 1);
-        }
-      }
+      bingElementList = stepList.slice(0, i + 1);
+      this.curStepIndex = i + 1;
+      // 设置步骤状态
+      this.setStepsData();
+
+      // 重置点击事件，防止点击上一步状态变更事件带来的接口错误
+      this.clearEventSideEffects(stepList);
+
       // 已成功步骤绑定点击事件
       bingElementList.forEach((el, index) => {
         const childList = Array.from(el.childNodes);
@@ -371,10 +370,6 @@ export default {
               return;
             }
             // 给已发布完成的步骤添加状态
-            this.stepAllStages = this.curAllStages.map((v, index) => ({
-              ...v,
-              status: index < this.curStepIndex ? 'done' : '',
-            }));
 
             // 点击更新步骤
             this.curStep = index + 1;
@@ -399,6 +394,24 @@ export default {
           };
         });
       });
+    },
+
+    clearEventSideEffects(steps) {
+      steps.forEach((stepEl) => {
+        const childList = Array.from(stepEl.childNodes);
+        childList.forEach((child) => {
+          child.onclick = () => {};
+        });
+      });
+    },
+
+    setStepsData() {
+      const curIndex = this.curStepIndex;
+      this.stepAllStages = this.curAllStages.map((v, index) => ({
+        ...v,
+        // 已完成步骤设置状态
+        status: index < curIndex ? 'done' : '',
+      }));
     },
 
     // 获取版本详情（获取当前步骤详情数据）
@@ -548,6 +561,7 @@ export default {
         };
         const releaseData = await this.$store.dispatch('plugin/backRelease', params);
         this.$store.commit('plugin/updateCurRelease', releaseData);
+        await this.getReleaseDetail();
         await this.getReleaseStageDetail();
       } catch (e) {
         this.$bkMessage({

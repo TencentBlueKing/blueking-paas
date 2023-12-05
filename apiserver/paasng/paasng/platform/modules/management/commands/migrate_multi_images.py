@@ -80,7 +80,9 @@ class Command(BaseCommand):
         for process_name in process_names:
             self._migrate_to_module(application, cluster.name, process_name, proc_specs_maps[process_name])
 
-        ModuleProcessSpec.objects.filter(module=default_module, name="web").update(image=None)
+        ModuleProcessSpec.objects.filter(module=default_module, name="web").update(
+            image=None, image_credential_name=None
+        )
 
         self.stdout.write(f"{app_code} migrate multi images success")
 

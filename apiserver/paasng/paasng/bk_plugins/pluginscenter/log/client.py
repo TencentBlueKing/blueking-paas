@@ -59,8 +59,10 @@ class BKLogClient:
 
     def __init__(self, config: BKLogConfig, bk_username: str):
         self.config = config
+        bk_log_stage = config.bkLogApiStage
         self.client = make_client(
-            PluginBackendAPIResource(apiName="log-search", path="esquery_dsl/", method="POST"), bk_username=bk_username
+            PluginBackendAPIResource(apiName="log-search", path="esquery_dsl/", method="POST", stage=bk_log_stage),
+            bk_username=bk_username,
         )
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:

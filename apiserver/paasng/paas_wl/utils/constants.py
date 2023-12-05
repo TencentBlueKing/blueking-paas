@@ -78,7 +78,7 @@ def make_enum_choices(obj):
     return [(member.value, name) for name, member in obj.__members__.items()]
 
 
-class PodStatus(str, StructuredEnum):
+class PodPhase(str, StructuredEnum):
     SUCCEEDED = EnumField("Succeeded", "成功")
     FAILED = EnumField("Failed", "失败")
     RUNNING = EnumField("Running", "运行中")

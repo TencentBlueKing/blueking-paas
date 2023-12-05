@@ -21,7 +21,7 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.utils.constants import PodStatus
+from paas_wl.utils.constants import PodPhase
 from paasng.platform.engine.deploy.bg_command.bkapp_hook import PreReleaseDummyExecutor
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.utils.output import Style
@@ -40,12 +40,12 @@ class TestPreReleaseDummyExecutor:
     def test_start(self, bk_cnative_app, bk_module, bk_deployment):
         with mock.patch(
             "paas_wl.bk_app.deploy.app_res.controllers.BkAppHookHandler.wait_for_logs_readiness",
-            return_value=PodStatus.RUNNING,
+            return_value=PodPhase.RUNNING,
         ), mock.patch(
             "paas_wl.bk_app.deploy.app_res.controllers.BkAppHookHandler.fetch_logs", return_value=["1", "2"]
         ), mock.patch(
             "paas_wl.bk_app.deploy.app_res.controllers.BkAppHookHandler.wait_hook_finished",
-            return_value=PodStatus.SUCCEEDED,
+            return_value=PodPhase.SUCCEEDED,
         ), mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream:
             attach_all_phases(sender=bk_deployment.app_environment, deployment=bk_deployment)
 

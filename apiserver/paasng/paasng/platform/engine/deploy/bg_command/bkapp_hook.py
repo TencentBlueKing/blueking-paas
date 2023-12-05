@@ -22,7 +22,7 @@ from six import ensure_text
 
 from paas_wl.bk_app.deploy.app_res.controllers import BkAppHookHandler
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
-from paas_wl.utils.constants import PodStatus
+from paas_wl.utils.constants import PodPhase
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
@@ -59,7 +59,7 @@ class PreReleaseDummyExecutor(DeployStep):
             return
         step.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
 
-    def _perform(self, hook_name: str) -> PodStatus:
+    def _perform(self, hook_name: str) -> PodPhase:
         self.stream.write_message(Style.Warning("Starting pre-release phase"))
 
         wl_app = self.engine_app.to_wl_obj()
@@ -73,7 +73,7 @@ class PreReleaseDummyExecutor(DeployStep):
                 self.stream.write_message(
                     Style.Error("Pod is not created normally, please contact the cluster administrator.")
                 )
-            return PodStatus.FAILED
+            return PodPhase.FAILED
 
         try:
             for line in handler.fetch_logs(follow=True):
@@ -85,17 +85,20 @@ class PreReleaseDummyExecutor(DeployStep):
         try:
             return handler.wait_hook_finished()
         except ReadTargetStatusTimeout:
-            return PodStatus.RUNNING
+            return PodPhase.RUNNING
 
-    def _mark_step_stop(self, status: PodStatus):
+    def _mark_step_stop(self, status: PodPhase):
+        if status == PodPhase.SUCCEEDED:
+            self.stream.write_message(Style.Warning("Pre-release execution succeed"))
+        elif status == PodPhase.FAILED:
+            self.stream.write_message(Style.Error("Pre-release failed, please check logs for more details"))
+
         try:
             step = self.phase.get_step_by_name(self.STEP_NAME)
         except StepNotInPresetListError:
             return
 
-        if status == PodStatus.SUCCEEDED:
+        if status == PodPhase.SUCCEEDED:
             step.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
-            self.stream.write_message(Style.Warning("Pre-release execution succeed"))
-        elif status == PodStatus.FAILED:
+        elif status == PodPhase.FAILED:
             step.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
-            self.stream.write_message(Style.Error("Pre-release failed, please check logs for more details"))

@@ -22,10 +22,10 @@ from django.core.cache import cache
 from django.utils.timezone import now
 from prometheus_client.core import GaugeMetricFamily
 
+from paas_wl.bk_app.processes.utils import list_unavailable_deployment
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kube_client import CoreDynamicClient
-from paas_wl.bk_app.processes.utils import list_unavailable_deployment
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,13 @@ class UnavailableDeploymentTotalMetric:
             except ValueError:
                 logger.exception(f"configuration of cluster<{cluster.name}> is not ready")
                 continue
-            unavailable_deployments = list_unavailable_deployment(CoreDynamicClient(client))
+
+            try:
+                unavailable_deployments = list_unavailable_deployment(CoreDynamicClient(client))
+            except Exception:
+                logger.exception(f"list unavailable deployments of cluster<{cluster.name}> ")
+                continue
+
             gauge_family.add_metric(
                 labels=[cluster.region, cluster.name],
                 value=len(unavailable_deployments),

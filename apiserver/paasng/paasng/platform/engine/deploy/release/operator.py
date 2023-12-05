@@ -164,7 +164,7 @@ def release_by_k8s_operator(
 
     # TODO: 统计成功 metrics
 
-    if bkapp_res.spec.hooks and deployment:
+    if bkapp_res.spec.hooks and bkapp_res.spec.hooks.preRelease and deployment:
         exec_bkapp_hook.delay(bkapp_res.metadata.name, app_model_deploy.id, deployment.id)
 
     # Poll status in background

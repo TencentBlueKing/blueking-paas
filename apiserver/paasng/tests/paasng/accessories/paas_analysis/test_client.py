@@ -181,7 +181,7 @@ class TestIngressTrackingStatus:
         [(None, False), (100, True)],
     )
     def test_get_status(self, bk_stag_env, bkpa_site_id, status: bool):
-        with mock.patch("paasng.accessories.paas_analysis.utils.get_metadata_by_env") as mocked_get:
+        with mock.patch("paasng.accessories.paas_analysis.services.get_metadata_by_env") as mocked_get:
             mocked_get.return_value = WlAppMetadata(bkpa_site_id=bkpa_site_id)
             assert get_ingress_tracking_status(bk_stag_env) is status
 
@@ -191,10 +191,10 @@ class TestIngressTrackingStatus:
     )
     def test_enable(self, bk_stag_env, bkpa_site_id, update_called: bool, site_dict):
         with mock.patch("paasng.accessories.paas_analysis.clients.PAClient") as pa_client_class, mock.patch(
-            "paasng.accessories.paas_analysis.utils.get_metadata_by_env"
+            "paasng.accessories.paas_analysis.services.get_metadata_by_env"
         ) as mocked_get, mock.patch(
-            "paasng.accessories.paas_analysis.utils.update_metadata_by_env"
-        ) as mocked_update, mock.patch("paasng.accessories.paas_analysis.utils.sync_proc_ingresses"):
+            "paasng.accessories.paas_analysis.services.update_metadata_by_env"
+        ) as mocked_update, mock.patch("paasng.accessories.paas_analysis.services.sync_proc_ingresses"):
             pa_client_class().get_or_create_app_site.return_value = site_dict
             mocked_get.return_value = WlAppMetadata(bkpa_site_id=bkpa_site_id)
 

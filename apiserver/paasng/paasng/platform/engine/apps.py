@@ -34,7 +34,7 @@ class EngineConfig(PlugableAppConfig):
         from .monitoring import register_metrics
         register_metrics()
 
-        from . import handlers  # noqa
-        from .processes import handlers as deploy_phase_handlers  # noqa
+        from . import handlers  # noqa: F401
+        from .processes import handlers as deploy_phase_handlers  # noqa: F401
 
         # fmt: on

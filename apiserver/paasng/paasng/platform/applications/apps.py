@@ -27,6 +27,6 @@ class ApplicationConfig(AppConfig):
         # TODO: Move to other modules other than "applications"
         from paasng.utils.monitoring.sentry import init_sentry_sdk
 
-        from . import handlers  # noqa
+        from . import handlers  # noqa: F401
 
         init_sentry_sdk()

@@ -112,9 +112,9 @@ class TestClientProcess:
             assert kwargs.get("body")["spec"]["replicas"] == 3
 
     def test_shutdown_process(self, scheduler_client, wl_app):
-        DSpec = make_dataclass("Dspec", [("replicas", int)])  # noqa: N806
-        DBody = make_dataclass("DBody", [("spec", DSpec)])  # noqa: N806
-        kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
+        d_spec = make_dataclass("Dspec", [("replicas", int)])
+        d_body = make_dataclass("DBody", [("spec", d_spec)])
+        kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
             "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
         ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
@@ -134,9 +134,9 @@ class TestClientProcess:
             assert kwargs["body"]["spec"]["replicas"] == 0
 
     def test_shutdown_web_processes(self, wl_app, scheduler_client, web_process):
-        DSpec = make_dataclass("Dspec", [("replicas", int)])  # noqa: N806
-        DBody = make_dataclass("DBody", [("spec", DSpec)])  # noqa: N806
-        kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
+        d_spec = make_dataclass("Dspec", [("replicas", int)])
+        d_body = make_dataclass("DBody", [("spec", d_spec)])
+        kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
             "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
         ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(

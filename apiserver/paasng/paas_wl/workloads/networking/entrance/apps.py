@@ -27,4 +27,4 @@ class EntranceConfig(AppConfig):
     name = "paas_wl.workloads.networking.entrance"
 
     def ready(self):
-        from . import handlers  # noqa
+        from . import handlers  # noqa: F401

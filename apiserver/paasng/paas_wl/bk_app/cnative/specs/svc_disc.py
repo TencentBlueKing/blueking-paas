@@ -113,9 +113,10 @@ class ConfigMapManager:
             try:
                 # TODO: Write another faster method which don't read the whole object in KRes
                 KConfigMap(client).get(self.resource_name, namespace=self.wl_app.namespace)
-                return True
             except ResourceMissing:
                 return False
+            else:
+                return True
 
     @property
     def resource_name(self) -> str:

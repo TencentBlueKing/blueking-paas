@@ -61,11 +61,11 @@ class EnhancedTemplateCommand:
             raise ValueError("template path must be absolute!")
 
         context = Context({**self.default_options, **options}, autoescape=False)
-        for root, dirs, files in os.walk(template, followlinks=False):
+        for root, dirs, all_files in os.walk(template, followlinks=False):
             # Ignore dirs and files which should be ignored
             # See: https://stackoverflow.com/questions/19859840/excluding-directories-in-os-walk
             dirs[:] = [d for d in dirs if not self.should_ignore(d)]
-            files = [f for f in files if not self.should_ignore(f)]
+            files = [f for f in all_files if not self.should_ignore(f)]
 
             rel_path = root[len(template) :].lstrip("/")
             dst_path = Path(os.path.join(target, rel_path))

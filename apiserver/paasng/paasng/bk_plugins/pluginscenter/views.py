@@ -750,9 +750,12 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
             else:
                 market_api.update_market_info(pd, plugin, market_info, operator=request.user.pk)
         # 如果当前插件正处于完善市场信息的发布阶段, 则设置该阶段的状态为 successful(允许进入下一阶段)
-        if release := plugin.all_versions.get_ongoing_release():  # noqa: SIM102
-            if release.current_stage and release.current_stage.stage_id == "market":
-                release.current_stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        if (
+            (release := plugin.all_versions.get_ongoing_release())
+            and release.current_stage
+            and release.current_stage.stage_id == "market"
+        ):
+            release.current_stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
 
         # 操作记录: 修改市场信息
         OperationRecord.objects.create(

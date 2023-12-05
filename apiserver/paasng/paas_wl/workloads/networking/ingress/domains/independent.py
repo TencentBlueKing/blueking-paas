@@ -68,9 +68,10 @@ class ReplaceAppDomainService:
                 module_id=self.env.module_id,
                 environment_id=self.env.id,
             )
-            return domain
         except Domain.DoesNotExist:
             raise ReplaceAppDomainFailed("无法找到旧域名记录，请稍后重试")
+        else:
+            return domain
 
     @transaction.atomic
     def replace_with(self, host: str, path_prefix, https_enabled: bool):

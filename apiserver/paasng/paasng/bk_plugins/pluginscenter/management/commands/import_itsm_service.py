@@ -55,8 +55,8 @@ class Command(BaseCommand):
 
             try:
                 service_id = client.import_service(plugin_center_catalog_id, service_name)
-            except (ItsmApiError, ItsmGatewayServiceError) as e:
-                logger.error(e.message)
+            except (ItsmApiError, ItsmGatewayServiceError):
+                logger.exception("Request ITSM error.")
             else:
                 ApprovalService.objects.update_or_create(
                     service_name=service_name,

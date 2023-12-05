@@ -218,10 +218,8 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.DEPLOY_BKAPP_FAILED.f(
                 f"{code}, module: {module_name}, env: {environment}, reason: bkpaas-app-operator not ready"
             )
-        except Exception as e:
-            logger.exception(
-                "failed to deploy bkapp, code: %s, module: %s, env: %s, reason: %s", code, module_name, environment, e
-            )
+        except Exception:
+            logger.exception("failed to deploy bkapp, code: %s, module: %s, env: %s.", code, module_name, environment)
             raise error_codes.DEPLOY_BKAPP_FAILED.f(f"{code}, module: {module_name}, env: {environment}")
         revision.refresh_from_db()
         return Response(revision.deployed_value)

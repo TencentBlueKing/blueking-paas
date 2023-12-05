@@ -231,7 +231,7 @@ class PluginRelease(AuditedModel):
 
         if self.all_stages.count() != 0:
             if not force_refresh:
-                raise Exception("Release 不能重复初始化")  # noqa: TRY002
+                raise RuntimeError("Release 不能重复初始化")
             self.all_stages.all().delete()
 
         stages_shortcut = []

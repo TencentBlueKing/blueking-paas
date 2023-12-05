@@ -175,8 +175,9 @@ def set_subdomain_exposed_url_type(region_config):
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
+@pytest.mark.usefixtures("_with_wl_apps", "_setup_cluster")
 class TestSetEntrance:
-    def test_set_builtin_entrance(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    def test_set_builtin_entrance(self, api_client, bk_app, bk_module, bk_prod_env):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         # 切换默认访问入口
         with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
@@ -193,7 +194,8 @@ class TestSetEntrance:
             market_config.refresh_from_db()
             assert market_config.source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV
 
-    def test_set_builtin_custom(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    @pytest.mark.usefixtures("_setup_cluster")
+    def test_set_builtin_custom(self, api_client, bk_app, bk_module, bk_prod_env):
         # setup data
         # source type: custom
         Domain.objects.create(
@@ -219,7 +221,8 @@ class TestSetEntrance:
             assert market_config.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN
             assert market_config.custom_domain_url == "http://foo-custom.example.com/subpath/"
 
-    def test_set_failed(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    @pytest.mark.usefixtures("_setup_cluster")
+    def test_set_failed(self, api_client, bk_app, bk_module, bk_prod_env):
         # 切换不存在的独立域名
         with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
             url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
@@ -238,7 +241,8 @@ class TestSetEntrance:
                 "fields_detail": {"url": ["http://foo-404.example.com/subpath/ 并非 default 模块的访问入口"]},
             }
 
-    def test_set_third_party_url(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    @pytest.mark.usefixtures("_setup_cluster")
+    def test_set_third_party_url(self, api_client, bk_app, bk_module, bk_prod_env):
         bk_app.type = ApplicationType.ENGINELESS_APP
         bk_app.save()
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)

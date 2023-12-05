@@ -29,10 +29,10 @@ pytestmark = pytest.mark.django_db
 
 class TestCNative:
     @pytest.fixture(autouse=True)
-    def mock_dependencies(self):
+    def _mock_dependencies(self):
         with mock.patch(
             "paasng.platform.bkapp_model.views.mixed_service_mgr.list_binded",
-            new=lambda *args, **kwargs: [
+            return_value=[
                 ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid="xxx", name="mysql", logo="", is_visible=True),
                 ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid="xxx", name="redis", logo="", is_visible=True),
             ],

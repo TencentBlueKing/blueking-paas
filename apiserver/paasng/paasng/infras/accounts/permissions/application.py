@@ -91,7 +91,7 @@ def user_has_app_action_perm(user, application: Application, action: AppAction) 
     )
     try:
         return ApplicationPermission().get_method_by_action(action)(perm_ctx, raise_exception=False)
-    except AuthAPIError as e:
-        logger.exception(f"check user has application perm error: {e}")
+    except AuthAPIError:
+        logger.exception("check user has application perm error.")
 
     return False

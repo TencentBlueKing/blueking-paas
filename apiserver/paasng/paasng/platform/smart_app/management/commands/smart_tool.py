@@ -46,8 +46,8 @@ def handle_error(func):
             return func(self, *args, **kwargs)
         except (ControllerError, DescriptionValidationError, APIError) as e:
             self.stderr.write(f"{type(e)}: {e.message}")
-        except Exception as e:
-            logger.exception(str(e))
+        except Exception:
+            logger.exception("command error")
 
     return wrapper
 

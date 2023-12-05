@@ -129,14 +129,16 @@ class TestAppDefaultSubpaths:
             envs = get_env_variables(bk_app.get_default_module().get_envs("stag"))
         assert envs[sub_path_key] == request.getfixturevalue(expected)
 
-    def test_sync(self, bk_stag_env, with_wl_apps):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_sync(self, bk_stag_env):
         with mock.patch("paasng.platform.engine.configurations.ingress.sync_subpaths") as mocker:
             AppDefaultSubpaths(bk_stag_env).sync()
             assert mocker.called
 
 
 class TestAppDefaultDomains:
-    def test_sync(self, bk_stag_env, with_wl_apps):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_sync(self, bk_stag_env):
         with mock.patch("paasng.platform.engine.configurations.ingress.sync_subdomains") as mocker:
             AppDefaultDomains(bk_stag_env).sync()
             assert mocker.called

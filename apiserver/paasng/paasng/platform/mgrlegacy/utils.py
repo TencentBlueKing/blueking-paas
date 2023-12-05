@@ -80,17 +80,15 @@ class LegacyAppManager:
             if reasons:
                 return LegacyAppTag.NOT_SUPPORT.value, reasons
             return LegacyAppTag.SUPPORT.value, []
-        else:
-            # FIXME: refactor here
-            if self.migration_process is not None and self.migration_process.app is not None:
-                # FIXME: change status
-                # if self.migration_process.status == MigrationStatus.CONFIRMED.value:
-                if self.migration_process.confirmed:
-                    return LegacyAppTag.FINISHED_MIGRATION.value, []
-                else:
-                    return LegacyAppTag.ON_MIGRATION.value, []
+        elif self.migration_process is not None and self.migration_process.app is not None:
+            # FIXME: change status
+            # if self.migration_process.status == MigrationStatus.CONFIRMED.value:
+            if self.migration_process.confirmed:
+                return LegacyAppTag.FINISHED_MIGRATION.value, []
             else:
-                return LegacyAppTag.SUPPORT.value, []
+                return LegacyAppTag.ON_MIGRATION.value, []
+        else:
+            return LegacyAppTag.SUPPORT.value, []
 
     def is_ready_for_migration(self):
         """准备迁往V3的应用"""
@@ -113,8 +111,7 @@ class LegacyAppManager:
         for method, value in category_map.items():
             if getattr(self, method)():
                 return value
-        else:
-            raise NotImplementedError("state not found")
+        raise NotImplementedError("state not found")
 
     def is_not_supported_migration(self):
         tag, _ = self.app_migration_tag

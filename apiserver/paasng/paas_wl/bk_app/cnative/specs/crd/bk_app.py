@@ -266,7 +266,7 @@ class BkAppResource(BaseModel):
     status: BkAppStatus = Field(default_factory=BkAppStatus)
 
     @validator("apiVersion")
-    def validate_api_version(cls, v) -> str:
+    def validate_api_version(cls, v) -> str:  # noqa: N805
         """ApiVersion can not be used for "Literal" validation directly, so we define a
         custom validator instead.
         """

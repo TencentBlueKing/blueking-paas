@@ -74,7 +74,7 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
         slz.is_valid(True)
 
         # 必须调用 get_application() 方法才能触发权限校验
-        application = self.get_application()  # noqa: F841
+        _ = self.get_application()
         module = self.get_module_via_path()
         env = self.get_env_via_path()
         manager = ProcessManager(env)

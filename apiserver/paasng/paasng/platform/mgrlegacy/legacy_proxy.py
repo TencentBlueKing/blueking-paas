@@ -148,8 +148,8 @@ class LegacyAppProxy:
             response = requests.get(logo_url, stream=True)
             if response.ok:
                 return ContentFile(response.raw.data)
-        except Exception as e:
-            logger.exception("从旧版本Paas获取应用Logo失败：%s" % e)
+        except Exception:
+            logger.exception("从旧版本Paas获取应用Logo失败.")
 
         logger.info("尝试返回默认logo")
         try:
@@ -157,8 +157,8 @@ class LegacyAppProxy:
             response = requests.get(settings.APPLICATION_DEFAULT_LOGO, stream=True)
             if response.ok:
                 return ContentFile(response.raw.data)
-        except Exception as e:
-            logger.exception("从旧版本Paas获取应用默认Logo失败：%s" % e)
+        except Exception:
+            logger.exception("从旧版本Paas获取应用默认Logo失败.")
 
     def is_prod_deployed(self):
         """已经部署到正式环境，且没有下架"""

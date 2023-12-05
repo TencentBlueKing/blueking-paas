@@ -23,11 +23,14 @@ from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.utils.constants import BuildStatus
 from tests.paas_wl.utils.build import create_build, create_build_proc
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = [
+    pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.usefixtures("_with_wl_apps"),
+]
 
 
 class TestImageArtifactViewSet:
-    def test_list(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps):
+    def test_list(self, api_client, bk_app, bk_module, bk_stag_env):
         bp = create_build_proc(bk_stag_env)
         bp.update_status(BuildStatus.SUCCESSFUL)
         build = create_build(bk_stag_env, image="nginx:latest", bp=bp, artifact_type=ArtifactType.IMAGE)
@@ -49,7 +52,7 @@ class TestImageArtifactViewSet:
         assert data["results"][0]["digest"] == build.artifact_detail["digest"]
 
     # 测试相同镜像会覆盖旧的镜像信息
-    def test_list_duplicated(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps):
+    def test_list_duplicated(self, api_client, bk_app, bk_module, bk_stag_env):
         bp = create_build_proc(bk_stag_env)
         bp.update_status(BuildStatus.SUCCESSFUL)
         build_1 = create_build(bk_stag_env, image="nginx:latest", bp=bp, artifact_type=ArtifactType.IMAGE)
@@ -78,7 +81,7 @@ class TestImageArtifactViewSet:
         assert data["results"][0]["size"] == build_2.artifact_detail["size"]
         assert data["results"][0]["digest"] == build_2.artifact_detail["digest"]
 
-    def test_retrieve_image_detail(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps):
+    def test_retrieve_image_detail(self, api_client, bk_app, bk_module, bk_stag_env):
         bp = create_build_proc(bk_stag_env)
         bp.update_status(BuildStatus.SUCCESSFUL)
         build_1 = create_build(bk_stag_env, image="nginx:latest", bp=bp, artifact_type=ArtifactType.IMAGE)
@@ -109,7 +112,7 @@ class TestImageArtifactViewSet:
 
 
 class TestBuildProcessViewSet:
-    def test_list_pending(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps):
+    def test_list_pending(self, api_client, bk_app, bk_module, bk_stag_env):
         bp = create_build_proc(bk_stag_env)
         resp = api_client.get(path=f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_process/")
         assert resp.status_code == 200
@@ -120,7 +123,7 @@ class TestBuildProcessViewSet:
         assert data["results"][0]["status"] == "pending"
         assert data["results"][0]["build_id"] is None
 
-    def test_list_successful(self, api_client, bk_app, bk_module, bk_stag_env, with_wl_apps):
+    def test_list_successful(self, api_client, bk_app, bk_module, bk_stag_env):
         bp = create_build_proc(bk_stag_env)
         bp.update_status(BuildStatus.SUCCESSFUL)
         build = create_build(bk_stag_env, image="nginx:latest", bp=bp, artifact_type=ArtifactType.IMAGE)

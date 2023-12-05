@@ -31,7 +31,7 @@ class TestDeployConfig:
         return "one " + generate_random_string()
 
     @pytest.fixture(autouse=True)
-    def setup(self, bk_module, command):
+    def _setup(self, bk_module, command):
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command=command)
 
     def test_add_hook(self, bk_module, command):

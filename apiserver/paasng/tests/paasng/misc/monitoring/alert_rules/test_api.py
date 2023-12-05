@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestAlertRulesView:
     @pytest.fixture(autouse=True)
-    def init_rules(self, bk_app, wl_namespaces):
+    def _init_rules(self, bk_app, wl_namespaces):
         manager = AlertRuleManager(bk_app)
         manager.init_rules()
 

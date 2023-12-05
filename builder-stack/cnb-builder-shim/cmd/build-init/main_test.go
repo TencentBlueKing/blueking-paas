@@ -80,7 +80,7 @@ var _ = Describe("Test setupBuildpacksOrder", func() {
 	})
 
 	It("test write order.toml successfully", func() {
-		err := setupBuildpacksOrder(logging.Default(), "tgz apt https://example.com v;tgz blueking/python https://example.com v213", cnbDir)
+		err := setupBuildpacksOrder(logging.Default(), "tgz apt https://example.com v;tgz bk-buildpack-python https://example.com v213", cnbDir)
 		Expect(err).To(BeNil())
 
 		content, _ := ioutil.ReadFile(filepath.Join(cnbDir, "order.toml"))
@@ -90,19 +90,19 @@ id = 'apt'
 version = 'v'
 
 [[order.group]]
-id = 'blueking/python'
+id = 'bk-buildpack-python'
 version = 'v213'
 `))
 	})
 
 	It("test skip wrong value", func() {
-		err := setupBuildpacksOrder(logging.Default(), "tgz apt;tgz blueking/python https://example.com v213", cnbDir)
+		err := setupBuildpacksOrder(logging.Default(), "tgz apt;tgz bk-buildpack-python https://example.com v213", cnbDir)
 		Expect(err).To(BeNil())
 
 		content, _ := ioutil.ReadFile(filepath.Join(cnbDir, "order.toml"))
 		Expect(string(content)).To(Equal(`[[order]]
 [[order.group]]
-id = 'blueking/python'
+id = 'bk-buildpack-python'
 version = 'v213'
 `))
 	})

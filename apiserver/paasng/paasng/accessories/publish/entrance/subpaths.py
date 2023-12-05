@@ -48,11 +48,10 @@ def get_preallocated_paths_by_env(env: ModuleEnvironment) -> List[Subpath]:
     for domain_cfg in ingress_config.sub_path_domains:
         if not env.module.is_default:
             results.append(allocator.for_universal(domain_cfg, module.name, env.environment))
+        elif env.environment == AppEnvName.STAG.value:
+            results.append(allocator.for_default_module(domain_cfg, "stag"))
         else:
-            if env.environment == AppEnvName.STAG.value:
-                results.append(allocator.for_default_module(domain_cfg, "stag"))
-            else:
-                results.append(allocator.for_default_module_prod_env(domain_cfg))
+            results.append(allocator.for_default_module_prod_env(domain_cfg))
     return results
 
 

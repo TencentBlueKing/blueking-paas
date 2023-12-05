@@ -16,30 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
-
-from paasng.platform.sourcectl.package.downloader import download_file_via_http
-from paasng.platform.sourcectl.utils import generate_temp_file
-from tests.utils.helpers import generate_random_string
-
-
-@pytest.mark.parametrize(
-    "content",
-    [
-        b"foo\n",
-        b"bar\n",
-        b"foo\nbar\n",
-    ],
-)
-def test_download_file_via_http(mock_adapter, content):
-    url = f"http://foo.com/{generate_random_string()}"
-    with generate_temp_file() as source, generate_temp_file() as dest:
-        with open(source, mode="wb") as fh:
-            fh.write(content)
-
-        with open(source, mode="rb") as file:
-            mock_adapter.register(url, file)
-            download_file_via_http(url, dest)
-            assert source != dest
-            with open(dest, "rb") as dh:
-                assert dh.read() == content

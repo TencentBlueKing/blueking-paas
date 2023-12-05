@@ -58,8 +58,8 @@ class Changelog:
         for file in self.log_path.iterdir():
             try:
                 detail = self._parse_log(file)
-            except InvalidChangelogError as e:
-                logger.error(f"invalid changelog file {file.name}: {e}")
+            except InvalidChangelogError:
+                logger.exception(f"invalid changelog file {file.name}.")
             else:
                 logs.append(detail)
 

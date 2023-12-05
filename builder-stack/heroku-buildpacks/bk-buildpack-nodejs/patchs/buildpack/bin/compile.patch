@@ -1,0 +1,67 @@
+5d4
+< 
+11d9
+< 
+23a22,24
+> # bk-start
+> source "$BP_DIR/hooks/bk-time"
+> 
+26c27,31
+< curl --silent --show-error --retry 5 --retry-max-time 15 'https://lang-common.s3.amazonaws.com/buildpack-stdlib/v7/stdlib.sh' > "$STDLIB_FILE"
+---
+> # curl --silent --show-error --retry 5 --retry-max-time 15 'https://lang-common.s3.amazonaws.com/buildpack-stdlib/v7/stdlib.sh' > "$STDLIB_FILE"
+> 
+> # shellcheck source=bin/pre-bk-comppile
+> source "$BP_DIR/hooks/pre-bk-compile"
+> 
+189a195,197
+> # bk-install_bins
+> source "$BP_DIR/hooks/bk-time"
+> 
+192a201,203
+> # 在安装完node和npm后，用户可以介入
+> source "$BP_DIR/hooks/pre-npm-install"
+> 
+206c217,218
+< 
+---
+>   echo "${cache_status}"
+>   echo "${cache_directories}"
+219a232
+>       echo "bk-debug restore_cache6"
+234d246
+< 
+238a251,253
+> 
+> # bk-irestore_cache
+> source "$BP_DIR/hooks/bk-time"
+245a261,263
+>   # bk-install
+>   source "$BP_DIR/hooks/bk-time"
+> 
+259a278,280
+>   # bk-build
+>   source "$BP_DIR/hooks/bk-time"
+> 
+262a284,286
+> 
+>   # bk-build-end
+>   source "$BP_DIR/hooks/bk-time"
+267a292,293
+> 
+> source "$BP_DIR/hooks/bk-time"
+270a297,299
+> # 在应用build后，用户才可以介入
+> source "$BP_DIR/hooks/post-app-build"
+> 
+271a301
+>   source "$BP_DIR/hooks/bk-time"
+289a320
+>   source "$BP_DIR/hooks/bk-time"
+292a324,325
+>   source "$BP_DIR/hooks/bk-time"
+> 
+342a376,378
+> 
+> # bk-end
+> source "$BP_DIR/hooks/bk-time"

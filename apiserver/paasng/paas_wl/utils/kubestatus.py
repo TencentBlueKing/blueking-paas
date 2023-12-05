@@ -87,7 +87,7 @@ def parse_container_status(instance: Union[ResourceInstance, ResourceField]) -> 
     return parse_dynamic_instance(instance, kmodels.V1ContainerStatus)
 
 
-def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: C901
+def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: C901, PLR0911, PLR0912
     """Check if the pod is healthy
 
     For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
@@ -121,23 +121,29 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: C901
             return unhealthy.with_message(fail_message)
         return unhealthy.with_message("unknown")
     elif pod_status.phase == "Pending":
-        if fail_message := get_any_container_fail_message(pod):
+        if (fail_message := get_any_container_fail_message(pod)) and fail_message not in [
+            "ContainerCreating",
+            "PodInitializing",
+        ]:
             # ContainerCreating: 无 init containers 的 Pod 的默认状态
             # PodInitializing: 有 init containers 的 Pod 的默认状态
             # 处于这两个状态的 Pod 仍然在 Pending
-            if fail_message not in ["ContainerCreating", "PodInitializing"]:
-                return unhealthy.with_message(fail_message)
+            return unhealthy.with_message(fail_message)
+
         # PodScheduled represents status of the scheduling process for this pod.
         scheduled_cond = find_pod_status_condition(pod_status.conditions or [], cond_type="PodScheduled")
-        if scheduled_cond and scheduled_cond.status == "False":
+        if (
+            scheduled_cond
+            and scheduled_cond.status == "False"
+            and scheduled_cond.reason in ["Unschedulable", "SchedulingGated"]
+        ):
             # PodScheduled will be False for many reason, something should be regarded as Failed
             # - Unschedulable means that the scheduler can't schedule the pod right now,
             # for example due to insufficient resources in the cluster.
             # - SchedulingGated means that the scheduler skips scheduling the pod
             # because one or more scheduling gates are still present.
-            if scheduled_cond.reason in ["Unschedulable", "SchedulingGated"]:
-                return unhealthy.with_message(scheduled_cond.message)
-            # otherwise, the pod is still scheduling
+            return unhealthy.with_message(scheduled_cond.message)
+        # otherwise, the pod is still scheduling
         return progressing
     else:
         return HealthStatus(

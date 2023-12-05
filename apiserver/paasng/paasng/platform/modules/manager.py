@@ -313,7 +313,7 @@ class ModuleInitializer:
                 mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)
 
         # 导入 hook 配置
-        if hook := bkapp_spec.get("hooks"):
+        if hook := bkapp_spec.get("hook"):
             self.module.deploy_hooks.enable_hook(
                 type_=hook["type"],
                 proc_command=hook.get("proc_command"),

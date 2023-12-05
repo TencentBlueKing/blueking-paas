@@ -367,8 +367,8 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             get_repo_connector(repo_type, module).bind(
                 repo_url, repo_auth_info=data["source_repo_auth_info"], source_dir=data["source_dir"]
             )
-        except Exception as e:
-            logger.exception("Fail to bind repo: %s", e)
+        except Exception:
+            logger.exception("Fail to bind repo")
             raise error_codes.CANNOT_BIND_REPO.f(_("请稍候再试"))
 
         repo_updated.send(sender=self, module_id=module.id, operator=request.user.username)

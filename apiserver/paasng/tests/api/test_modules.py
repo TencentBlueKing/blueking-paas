@@ -26,7 +26,7 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleDeployHook, ModuleProcessSpec
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
@@ -142,6 +142,12 @@ class TestCreateCloudNativeModule:
                             },
                         }
                     ],
+                    "hook": {
+                        "type": "pre-release-hook",
+                        "enabled": True,
+                        "command": ["/bin/bash"],
+                        "args": ["-c", "echo 'hello world'"],
+                    },
                 },
             },
         )
@@ -150,14 +156,20 @@ class TestCreateCloudNativeModule:
         assert module_data["web_config"]["build_method"] == "custom_image"
         assert module_data["web_config"]["artifact_type"] == "none"
         module = Module.objects.get(id=module_data["id"])
+
         cfg = BuildConfig.objects.get_or_create_by_module(module)
         assert cfg.image_repository == image_repository
+
         process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
         assert process_spec.image is None
         assert process_spec.image_credential_name is None
         assert process_spec.command == ["bash", "/app/start_web.sh"]
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2
+
+        deploy_hook = ModuleDeployHook.objects.get(module=module, type=DeployHookType.PRE_RELEASE_HOOK)
+        assert deploy_hook.command == ["/bin/bash"]
+        assert deploy_hook.args == ["-c", "echo 'hello world'"]
 
     @pytest.mark.usefixtures("_init_tmpls")
     @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")

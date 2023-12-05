@@ -16,5 +16,5 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .app_rule import RuleConfig, get_supported_alert_codes  # noqa
-from .generator import AppRuleConfigGenerator  # noqa
+from .app_rule import RuleConfig, get_supported_alert_codes  # noqa: F401
+from .generator import AppRuleConfigGenerator  # noqa: F401

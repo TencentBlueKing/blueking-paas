@@ -60,6 +60,9 @@ filepath_conf = {
     'certificate/serving-cert.yaml': ['serving-cert.yaml'],
     # 包含需要使用自动生成的证书的模板，统一渲染避免重复调用 genCA 导致的证书不一致问题
     'certificate/certificate.yaml': ['certificate.yaml'],
+    # metrics
+    'metrics/custom-metrics-service.yaml': ['custom-metrics-service.yaml'],
+    'metrics/custom-metrics-service-monitor.yaml': ['custom-metrics-service-monitor.yaml'],
 }
 
 # 格式：文件路径: [(src_str1, dst_str1), (src_str2, dst_str2)]

@@ -831,6 +831,7 @@
 import { RESQUOTADATA, ENV_OVERLAY } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 import quotaPopver from './comps/quota-popver';
+import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 
 export default {
   components: {
@@ -851,15 +852,9 @@ export default {
       type: Boolean,
       default: false,
     },
-    // 创建应用镜像仓库
-    imageUrl: {
-      type: String,
-      default: '',
-    },
-    // 创建应用镜像凭证
-    imageCredentialName: {
-      type: String,
-      default: '',
+    cloudFormData: {
+      type: Object,
+      default: {},
     },
   },
   data() {
@@ -1098,24 +1093,27 @@ export default {
       },
       deep: true,
     },
-    imageUrl: {
-      handler(v) {
-        // 创建应用且没有镜像仓库值 则设置
-        if (this.isCreate && !this.formData.image) {
-          this.$nextTick(() => {
-            this.$set(this.formData, 'image', v);
-          });
-        }
-      },
-      immediate: true,
-    },
-    imageCredentialName: {
-      handler(v) {
-        // 创建应用且没有镜像凭证值 则设置
-        if (this.isCreate && !this.formData.image_credential_name) {
-          this.$nextTick(() => {
-            this.$set(this.formData, 'image_credential_name', v);
-          });
+    cloudFormData: {
+      handler(data) {
+        if (this.isCreate) {
+          // 镜像仓库
+          if (!this.formData.image) {
+            this.$set(this.formData, 'image', data.url);
+          }
+          // 镜像凭证
+          if (!this.formData.image_credential_name) {
+            this.$set(this.formData, 'image_credential_name', data.imageCredentialName);
+          }
+
+          if (this.formData.image === this.GLOBAL.CONFIG.MIRROR_EXAMPLE) {
+            this.formData.command = [];
+            this.formData.args = [];
+            this.formData.port = 80;
+          } else if (this.formData.image === TE_MIRROR_EXAMPLE) {
+            this.formData.command = ['bash', '/app/start_web.sh'];
+            this.formData.args = [];
+            this.formData.port = 5000;
+          }
         }
       },
       immediate: true,
@@ -1136,9 +1134,8 @@ export default {
       this.getAutoScalFlag('stag');
       this.getAutoScalFlag('prod');
     }
-    // 镜像需要调用进程配置
-    console.log('this.isCustomImage', this.isCustomImage);
-    if (this.isCustomImage) {
+    // 镜像需要调用进程配置、且不能是创建应用的时候
+    if (this.isCustomImage && !this.isCreate) {
       this.init();
     }
     // 获取资源配额数据

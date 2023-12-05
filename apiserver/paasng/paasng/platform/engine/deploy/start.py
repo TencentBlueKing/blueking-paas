@@ -125,7 +125,7 @@ class DeployTaskRunner:
             release_without_build.apply_async(args=(deployment_id,))
 
     def require_build(self) -> bool:
-        if self.runtime_type == RuntimeType.CUSTOM_IMAGE:
+        if self.runtime_type == RuntimeType.CUSTOM_IMAGE:  # noqa: SIM114
             return False
         elif (
             self.module.get_source_origin() == SourceOrigin.S_MART

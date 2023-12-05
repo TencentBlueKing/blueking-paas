@@ -1,0 +1,10 @@
+155c155
+<       monitor "npm-install" npm install --production="$production" --unsafe-perm --userconfig "$build_dir/.npmrc" 2>&1
+---
+>       monitor "npm-install" npm install --package-lock=false --production="$production" --unsafe-perm --userconfig "$build_dir/.npmrc" 2>&1
+175c175
+<     monitor "npm-rebuild" npm install --production="$production" --unsafe-perm --userconfig "$build_dir/.npmrc" 2>&1
+---
+>     monitor "npm-rebuild" npm install --package-lock=false --production="$production" --unsafe-perm --userconfig "$build_dir/.npmrc" 2>&1
+228a229
+> 

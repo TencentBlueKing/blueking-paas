@@ -1,0 +1,12 @@
+212c212
+< elif [[ -n "${CACHED_PYTHON_VERSION:-}" ]]; then
+---
+> elif [[ -n "${CACHED_PYTHON_VERSION:-}" ]] && [[ "${CACHED_PYTHON_VERSION}" == "${DEFAULT_PYTHON_VERSION}" ]]; then
+214c214
+<   echo "       To use a different version, see: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>   echo "       To use a different version, see: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+219c219
+<   echo "       To use a different version, see: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>   echo "       To use a different version, see: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"

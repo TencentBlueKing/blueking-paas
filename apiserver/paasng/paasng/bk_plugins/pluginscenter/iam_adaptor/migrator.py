@@ -41,7 +41,7 @@ class IAMPermissionTemplateRender:
         except Exception as e:
             raise ValueError(f"{self.template_str} is not a valid json") from e
         if not isinstance(data, dict):
-            raise ValueError(f"{self.template_str} is not a valid dict")
+            raise ValueError(f"{self.template_str} is not a valid dict")  # noqa: TRY004
         if "system_id" not in data or "operations" not in data:
             raise ValueError(f"{self.template_str} is not a valid IAM migrations data")
         return data
@@ -65,12 +65,12 @@ class IAMMigrator:
         app_code = settings.IAM_APP_CODE
         app_secret = settings.IAM_APP_SECRET
 
-        USE_APIGATEWAY = getattr(settings, "BK_IAM_USE_APIGATEWAY", False)
-        if USE_APIGATEWAY:
+        use_apigateway = getattr(settings, "BK_IAM_USE_APIGATEWAY", False)
+        if use_apigateway:
             do_migrate.enable_use_apigateway()
             iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
             if iam_host == "":
-                raise exceptions.MigrationFailError("settings.BK_IAM_APIGATEWAY_URL should be setted")
+                raise exceptions.MigrationFailError("settings.BK_IAM_APIGATEWAY_URL should be set")
         else:
             iam_host = settings.BK_IAM_V3_INNER_URL
 

@@ -35,7 +35,7 @@ TEST_CHANGELOG_FILE_NAMES = [
 
 class TestChangelog:
     @pytest.fixture(autouse=True)
-    def init_changelog_dir(self, tmp_path):
+    def _init_changelog_dir(self, tmp_path):
         d = tmp_path / get_language()
         d.mkdir()
 

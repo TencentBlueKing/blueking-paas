@@ -67,7 +67,7 @@ class ConfigVar(TimestampedModel):
 
     is_global = models.BooleanField(default=False)
     # When is_global is True, environment_id will be set to -1, because null value will break
-    # MySQL unique index, see: https://stackoverflow.com/questions/1346765/unique-constraint-that-allows-empty-values-in-mysql # noqa
+    # MySQL unique index, see: https://stackoverflow.com/questions/1346765/unique-constraint-that-allows-empty-values-in-mysql
     environment = models.ForeignKey(
         "applications.ApplicationEnvironment", on_delete=models.CASCADE, db_constraint=False, null=True
     )

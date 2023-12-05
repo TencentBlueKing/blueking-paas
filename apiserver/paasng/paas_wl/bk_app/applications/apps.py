@@ -25,4 +25,4 @@ class ApplicationsAppConfig(AppConfig):
     label = "api"
 
     def ready(self):
-        from . import handlers  # noqa
+        from . import handlers  # noqa: F401

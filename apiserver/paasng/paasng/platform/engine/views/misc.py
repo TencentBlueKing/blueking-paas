@@ -214,10 +214,10 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
         if data.get("instance_name"):
             params["instance_name"] = data["instance_name"]
             get_metrics_method = list_app_proc_metrics
-            ResultSLZ = ResourceMetricsResultSerializer
+            result_slz_cls = ResourceMetricsResultSerializer
         else:
             get_metrics_method = list_app_proc_all_metrics  # type: ignore
-            ResultSLZ = InstanceMetricsResultSerializer
+            result_slz_cls = InstanceMetricsResultSerializer
 
         try:
             result = get_metrics_method(**params)
@@ -228,4 +228,4 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
         except AppMetricNotSupportedError as e:
             raise error_codes.APP_METRICS_UNSUPPORTED.f(str(e))
 
-        return Response(data={"result": ResultSLZ(instance=result, many=True).data})
+        return Response(data={"result": result_slz_cls(instance=result, many=True).data})

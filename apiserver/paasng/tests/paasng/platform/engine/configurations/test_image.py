@@ -114,7 +114,8 @@ class TestRuntimeInfo:
 
 
 class TestUpdateImageRuntimeConfig:
-    def test_normal(self, bk_user, bk_module, bk_deployment, with_wl_apps, bk_prod_env):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_normal(self, bk_user, bk_module, bk_deployment, bk_prod_env):
         build_params = {
             "owner": bk_user,
             "app": bk_prod_env.get_engine_app().to_wl_obj(),

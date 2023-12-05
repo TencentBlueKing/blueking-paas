@@ -121,7 +121,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             rel_pk = mixed_service_mgr.bind_service(service_obj, module, specs)
         except Exception as e:
-            logger.exception("bind service %s to module %s error %s", service_obj.uuid, module.name, e)
+            logger.exception("bind service %s to module %s error.", service_obj.uuid, module.name)
             raise error_codes.CANNOT_BIND_SERVICE.f(f"{e}")
 
         for env in module.envs.all():

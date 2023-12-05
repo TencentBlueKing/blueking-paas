@@ -204,7 +204,7 @@ def _get_advanced_fields(
         },
         {
             "key": "version_url",
-            "value": f"{settings.PLUGIN_CENTER_URL}/plugin/{pd.identifier}/{plugin.id}/version-release?release_id={version.id}",  # noqa
+            "value": f"{settings.PLUGIN_CENTER_URL}/plugin/{pd.identifier}/{plugin.id}/version-release?release_id={version.id}",
         },
     ]
     return fields

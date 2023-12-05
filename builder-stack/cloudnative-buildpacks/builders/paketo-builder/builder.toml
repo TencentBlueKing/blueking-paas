@@ -1,0 +1,113 @@
+description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, NodeJS, Go, Python, Ruby, Apache HTTPD, NGINX and Procfile"
+
+[[buildpacks]]
+  uri = "urn:cnb:registry:fagiani/apt"
+  version = "0.2.5"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/dotnet-core:0.35.3"
+  version = "0.35.3"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/go:4.3.3"
+  version = "4.3.3"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/java-native-image:8.3.0"
+  version = "8.3.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/java:9.4.0"
+  version = "9.4.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/nodejs:1.6.0"
+  version = "1.6.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/procfile:5.6.1"
+  version = "5.6.1"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/python:2.10.0"
+  version = "2.10.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/ruby:0.34.0"
+  version = "0.34.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/watchexec:2.8.1"
+  version = "2.8.1"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/web-servers:0.13.0"
+  version = "0.13.0"
+
+[lifecycle]
+  version = "0.16.1"
+
+[[order]]
+  [[order.group]]
+    id = "fagiani/apt"
+    version = "0.2.5"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/ruby"
+    version = "0.34.0"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/dotnet-core"
+    version = "0.35.3"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/go"
+    version = "4.3.3"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/python"
+    version = "2.10.0"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/web-servers"
+    version = "0.13.0"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/java-native-image"
+    version = "8.3.0"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/java"
+    version = "9.4.0"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/nodejs"
+    version = "1.6.0"
+
+[[order]]
+
+  [[order.group]]
+    id = "paketo-buildpacks/procfile"
+    version = "5.6.1"
+
+[stack]
+  build-image = "docker.io/paketobuildpacks/build:1.2.62-base-cnb"
+  id = "io.buildpacks.stacks.bionic"
+  run-image = "index.docker.io/paketobuildpacks/run:base-cnb"
+  run-image-mirrors = ["gcr.io/paketo-buildpacks/run:base-cnb"]

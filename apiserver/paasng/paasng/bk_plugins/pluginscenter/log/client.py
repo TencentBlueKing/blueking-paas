@@ -50,7 +50,9 @@ class LogClientProtocol(Protocol):
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
         """Aggregate time-based histogram"""
 
-    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, timeout: int, fields: List[str]
+    ) -> List[FieldFilter]:
         """Aggregate fields filters"""
 
 
@@ -93,7 +95,9 @@ class BKLogClient:
         resp = self._call_api(data, timeout)
         return AggResponse(search.search.aggs, search.search, resp["data"]["aggregations"]).histogram
 
-    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, timeout: int, fields: List[str]
+    ) -> List[FieldFilter]:
         """aggregate fields filter"""
         # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
         search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
@@ -103,8 +107,9 @@ class BKLogClient:
             "body": search.to_dict(),
         }
         resp = self._call_api(data, timeout)
-        filters = {field: FieldFilter(name=field, key=field) for field in resp["data"]["select_fields_order"]}
-        return count_filters_options(list(Response(search.search, resp["data"])), filters)
+        response = Response(search.search, resp["data"])
+        filters = {field: FieldFilter(name=field, key=field) for field in fields}
+        return count_filters_options(list(response), filters)
 
     def _call_api(self, data, timeout: int):
         if self.config.bkdataAuthenticationMethod:
@@ -147,7 +152,9 @@ class ESLogClient:
             ],
         ).histogram
 
-    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, timeout: int, fields: List[str]
+    ) -> List[FieldFilter]:
         """aggregate fields filter"""
         # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
         search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)

@@ -682,13 +682,25 @@ export default {
       },
       immediate: true,
     },
+    rvData: {
+      handler(newVal, oldVal) {
+        if (this.isDialogShowSideslider) return;
+        // 进入页面启动事件流
+        console.log(newVal, oldVal);
+        if (JSON.stringify(newVal) !== JSON.stringify(oldVal)
+        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+          this.watchServerPush();
+        }
+      },
+      immediate: true,
+    },
   },
   mounted() {
     moment.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
-    if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
-      this.watchServerPush();
-    }
+    // if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
+    //   this.watchServerPush();
+    // }
   },
 
   beforeDestroy() {
@@ -1244,11 +1256,11 @@ export default {
           // 服务结束请求列表接口
           bus.$emit('get-release-info');
           // 有侧边栏的时候不需要持续watch
-          if (this.isDialogShowSideslider) return;
-          this.watchServerTimer = setTimeout(() => {
-            console.log('testetst');
-            this.watchServerPush();
-          }, 500);
+          // if (this.isDialogShowSideslider) return;
+          // this.watchServerTimer = setTimeout(() => {
+          //   console.log('testetst');
+          //   this.watchServerPush();
+          // }, 500);
         }
       });
     },

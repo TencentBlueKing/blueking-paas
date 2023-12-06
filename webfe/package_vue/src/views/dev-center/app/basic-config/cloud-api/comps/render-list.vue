@@ -239,7 +239,10 @@
           >
             <template slot-scope="props">
               <template v-if="props.row.permission_status === 'owned'">
-                <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                <span class="paasng-icon paasng-pass" /> {{ $t('已申请') }}
+              </template>
+              <template v-else-if="props.row.permission_status === 'unlimited'">
+                <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
               </template>
               <template v-else-if="props.row.permission_status === 'need_apply'">
                 <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
@@ -273,33 +276,35 @@
             :label="$t('操作')"
             :width="localLanguage === 'en' ? 130 : 110"
           >
-            <template slot-scope="props">
+            <template slot-scope="{ row }">
               <div class="table-operate-buttons">
                 <bk-button
                   style="padding: 0 0 0 10px;"
                   theme="primary"
-                  :disabled="props.row.permission_action !== 'apply'"
+                  :disabled="row._applyDisabled"
                   size="small"
                   text
-                  @click="handleApply(props.row)"
+                  @click="handleApply(row)"
                 >
-                  <template v-if="props.row.permission_action !== 'apply'">
-                    <span v-bk-tooltips="props.row.permission_status === 'pending' ? $t('权限申请中') : $t('已拥有权限')"> {{ $t('申请') }} </span>
-                  </template>
-                  <span v-else> {{ $t('申请') }} </span>
+                  <span
+                    v-bk-tooltips="{
+                      content: $t(row._applyTips),
+                      disabled: !row._applyDisabled
+                    }"> {{ $t('申请') }} </span>
                 </bk-button>
                 <bk-button
                   style="padding: 0 0 0 10px;"
                   theme="primary"
-                  :disabled="props.row.permission_action !== 'renew'"
+                  :disabled="row._renewDisabled"
                   size="small"
                   text
-                  @click="handleRenwal(props.row)"
+                  @click="handleRenwal(row)"
                 >
-                  <template v-if="props.row.permission_action !== 'renew'">
-                    <span v-bk-tooltips="$t('无权限，或权限有效期大于30天')"> {{ $t('续期') }} </span>
-                  </template>
-                  <span v-else> {{ $t('续期') }} </span>
+                  <span
+                    v-bk-tooltips="{
+                      content: $t(row._renewTips),
+                      disabled: !row._renewDisabled
+                    }"> {{ $t('续期') }} </span>
                 </bk-button>
               </div>
             </template>
@@ -344,6 +349,8 @@ import BatchDialog from './batch-apply-dialog';
 import RenewalDialog from './batch-renewal-dialog';
 import GatewayDialog from './apply-by-gateway-dialog';
 import { clearFilter } from '@/common/utils';
+import { formatApplyFun, formatRenewFun } from '@/common/cloud-api';
+
 export default {
   name: '',
   components: {
@@ -826,6 +833,22 @@ export default {
         }
         const res = await this.$store.dispatch(`cloudApi/${this.curFetchDispatchMethod}`, params);
         // this.apiList = Object.freeze(res.data.sort(this.compare('name')))
+        // 网关api，申请/续期处理
+        if (res.data.length) {
+          res.data = res.data.map((v) => {
+            // 申请
+            const apply = formatApplyFun(v.permission_status);
+            // 续期
+            const renew = formatRenewFun(v.permission_status);
+            return {
+              ...v,
+              _applyDisabled: apply.disabled,
+              _applyTips: apply.tips,
+              _renewDisabled: renew.disabled,
+              _renewTips: renew.tips,
+            };
+          });
+        }
         this.apiList = Object.freeze(res.data);
         this.allData = this.apiList;
         this.filterStatus = [];

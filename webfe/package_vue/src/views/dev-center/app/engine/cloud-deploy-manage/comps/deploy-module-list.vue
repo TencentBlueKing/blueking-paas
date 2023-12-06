@@ -457,20 +457,20 @@ export default {
 
     // 刷新列表
     handleRefresh() {
-      console.log('this.intervalTimer', this.intervalTimer);
       if (this.intervalTimer || this.isDialogShowSideslider) return;
       this.getModuleReleaseInfo(false);
     },
 
     // 关闭进程的事件流
     handleCloseProcessWatch() {
-      this.handleRefresh();
       this.isShowSideslider = false;
+      this.handleRefresh();
     },
 
     // 关闭侧边栏
     handleCloseSideslider() {
       this.isShowSideslider = false;
+      this.handleRefresh();
     },
 
     // 将模块的进程实例全部收起

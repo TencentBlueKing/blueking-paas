@@ -314,8 +314,10 @@ export default {
     this.isDeployReady = true;
   },
   beforeDestroy() {
-    // 页面销毁 关闭stream
+    // 页面销毁 关闭右边的部署进程watch事件
     this.closeServerPush();
+    // 关闭左边的timeline时间轴watch事件
+    this.serverLogEvent && this.serverLogEvent.close();
   },
   methods: {
     init() {
@@ -405,7 +407,9 @@ export default {
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
             this.releaseId = item.bk_release_id;
-            this.getModuleProcessList(true);
+            if (!this.processLoading) {
+              this.getModuleProcessList(true);
+            }
 
             // 发起服务监听
             this.watchServerPush();

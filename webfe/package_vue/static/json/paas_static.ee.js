@@ -693,6 +693,7 @@ export const PAAS_STATIC_CONFIG = {
                             'appServiceInner',
                             'cloudAppServiceInnerShared',
                             'cloudAppServiceInner',
+                            'cloudAppServiceInnerWithModule',
                             'networkConfig'
                         ],
                         "iconfontName": "squares",

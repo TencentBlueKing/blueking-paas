@@ -1,5 +1,6 @@
 <template lang="html">
   <div class="right-main">
+    <!-- 内容 -->
     <app-top-bar
       v-if="!isCloudNativeApp"
       :paths="servicePaths"
@@ -156,7 +157,7 @@ export default {
 
     handleViewDetail() {
       this.$router.push({
-        name: 'appServiceInner',
+        name: this.isCloudNativeApp ? 'cloudAppServiceInner' : 'appServiceInner',
         params: {
           id: this.appCode,
           category_id: this.categoryId,

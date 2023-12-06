@@ -83,4 +83,5 @@ urlpatterns = [
     path("", include("paas_wl.workloads.networking.entrance.urls")),
     path("", include("paas_wl.bk_app.processes.urls")),
     path("", include("paas_wl.bk_app.cnative.specs.urls")),
+    url(r"^", include("paasng.accessories.paas_analysis.urls")),
 ]

@@ -144,6 +144,11 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
             "key": "creator",
             "value": plugin.creator.username,
         },
+        {
+            "key": "approver",
+            # 审批者为插件管理员
+            "value": ",".join(pd.administrator),
+        },
     ]
     return fields
 

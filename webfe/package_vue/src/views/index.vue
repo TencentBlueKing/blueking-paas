@@ -141,39 +141,32 @@
                     v-bk-tooltips="$t('无可用地址')"
                     class="ps-btn ps-btn-disabled-new"
                   >
-                    {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down" />
+                    {{ $t('访问模块') }} <i class="paasng-icon paasng-ps-arrow-down" />
                   </button>
                 </div>
 
                 <div
+                  class="paas-operation-section section3 access-module-wrapper"
                   v-if="recordItem.represent_info.props.provide_links && (recordItem.stag.deployed || recordItem.prod.deployed)"
-                  :class="['paas-operation-section','section3',{ 'open': activeVisit === index }]"
                 >
-                  <div
-                    :class="['section-box']"
-                  >
-                    <a
-                      class="section-button-new"
-                      href="javascript:"
-                      @click.stop.prevent="visitOpen($event,index)"
-                    > {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down" /></a>
-                    <div class="section-button-down">
-                      <a
-                        v-if="recordItem.stag.deployed"
-                        target="_blank"
-                        :href="recordItem.stag.url"
-                      >
-                        {{ $t('预发布环境') }}
-                      </a>
-                      <a
-                        v-if="recordItem.prod.deployed"
-                        target="_blank"
-                        :href="recordItem.prod.url"
-                      >
-                        {{ $t('生产环境') }}
-                      </a>
-                    </div>
-                  </div>
+                  <bk-select
+                    :disabled="false"
+                    :value="curSelectValue"
+                    :clearable="false"
+                    style="width: 100px"
+                    ext-cls="access-module-custom"
+                    ext-popover-cls="access-module-popover-custom"
+                    @change="handleSelectChange($event, recordItem)">
+                    <bk-option
+                      v-for="option in envList"
+                      :class="{ 'hide': option.id === 'default' }"
+                      :key="option.id"
+                      :id="option.id"
+                      :title="option.name"
+                      :name="option.showName">
+                      {{ option.name }}
+                    </bk-option>
+                  </bk-select>
                 </div>
 
                 <div class="paas-operation-section fright">
@@ -181,7 +174,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      style="margin-right: 6px; height:38px"
+                      :style="{ marginRight: localLanguage === 'en' ? '15px' : '6px', height: '38px' }"
                       @click="toDeploy(recordItem)"
                     >
                       {{ $t('部署') }}
@@ -456,353 +449,366 @@
   </div>
 </template>
 
-<script>
-    import auth from '@/auth';
-    import { bus } from '@/common/bus';
-    import ECharts from 'vue-echarts/components/ECharts.vue';
-    import echarts from 'echarts';
-    import 'echarts/lib/chart/bar';
-    import 'echarts/lib/component/tooltip';
-    import { psIndexInfo, psHeaderInfo } from '@/mixins/ps-static-mixin';
+<script>import auth from '@/auth';
+import { bus } from '@/common/bus';
+import ECharts from 'vue-echarts/components/ECharts.vue';
+import echarts from 'echarts';
+import 'echarts/lib/chart/bar';
+import 'echarts/lib/component/tooltip';
+import { psIndexInfo, psHeaderInfo } from '@/mixins/ps-static-mixin';
 
-    export default {
-        components: {
-            'chart': ECharts
-        },
-        mixins: [psIndexInfo, psHeaderInfo],
-        data () {
-            return {
-                userHasApp: false,
-                isNewUser: global.isUser,
-                serviceInfo: [], // 服务列表
-                curServiceIndex: 0,
-                flag: false,
-                activeVisit: -1,
-                appCount: 0,
-                records: [], // 操作记录
-                isLoading: true,
-                loading1: true,
-                loading2: true,
-                colorList1: ['#3a84ff', '#89c1fa', '#a8d3ff', '#c9e4ff', '#e2f1ff'],
-                colorList2: ['#ccdff3', '#cfeedc', '#f7eedb', '#fae5d5', '#fcc8c8'],
-                isnull: false,
-                chartList1: [],
-                chartList2: [],
-                defaultImg: '/static/images/default_logo.png',
-                isShowOffAppAction: false,
-                type: 'default'
-            };
-        },
-        computed: {
-            userFeature () {
-                return this.$store.state.userFeature;
-            }
-        },
-        // Get userHasApp before render
-        beforeRouteEnter (to, from, next) {
-            const promise = auth.requestHasApp();
-            promise.then((userHasApp) => {
-                next(vm => {
-                    vm.setUserHasApp(userHasApp);
-                    if (!userHasApp) {
-                        auth.requestOffApp()
-                            .then(flag => {
-                                vm.isShowOffAppAction = flag;
-                            });
-                    }
-                });
-            });
-        },
-        beforeRouteUpdate (to, from, next) {
-            const promise = auth.requestHasApp();
-            promise.then((userHasApp) => {
-                this.setUserHasApp(userHasApp);
-                next(() => {
-                    if (!userHasApp) {
-                        auth.requestOffApp()
-                            .then(flag => {
-                                this.isShowOffAppAction = flag;
-                            });
-                    }
-                });
-            });
-        },
-        created () {
-            // 了解我们的服务和头部导航同步
-            const results = [];
-            this.headerStaticInfo.list.subnav_service.forEach(item => {
-                if (!item.title) {
-                    results.push(...item.items);
-                } else {
-                    results.push(item);
-                }
-            });
-            this.serviceInfo = results;
-
-            // 获取最近四次操作记录
-            this.$http.get(BACKEND_URL + '/api/bkapps/applications/lists/latest/').then((response) => {
-                const resData = response;
-
-                this.appCount = resData.results.length;
-
-                resData.results.forEach((item) => {
-                    const appinfo = item.application;
-
-                    this.records.push({
-                        'applogo': appinfo.logo_url || '/static/images/default_logo.png',
-                        'appname': appinfo.name,
-                        'appcode': appinfo.code,
-                        'time': item.at,
-                        'type': item.operate,
-                        'stag': item.represent_info.props.provide_links ? item.represent_info.links.stag : {},
-                        'prod': item.represent_info.props.provide_links ? item.represent_info.links.prod : {},
-                        'engine_enabled': appinfo.config_info.engine_enabled,
-                        'defaultModuleId': item.represent_info.module_name,
-                        'represent_info': item.represent_info
-                    });
-                });
-                this.isLoading = false;
-            });
-            this.chartSet({
-                type: 'app_groups',
-                url: BACKEND_URL + '/api/bkapps/applications/statistics/group_by_state/',
-                id: 'viewchart',
-                title: this.$t('我的应用(模块)分布'),
-                yAxisName: this.$t('单位（个）'),
-                colorList: this.colorList1
-            });
-            this.chartSet({
-                type: 'pv',
-                url: BACKEND_URL + '/api/bkapps/applications/statistics/pv/top5/?limit=5&days_before=30',
-                id: 'visitedchart',
-                title: this.$t('访问量 Top 5 (最近 30 天)'),
-                yAxisName: this.$t('单位（次）'),
-                colorList: this.colorList2
-            });
-        },
-        methods: {
-            async toDeploy (recordItem) {
-                const url = `${BACKEND_URL}/api/bkapps/applications/${recordItem.appcode}/`;
-                try {
-                    const res = await this.$http.get(url);
-                    this.type = res.application.type;
-                    this.$router.push({
-                        name: this.type === 'cloud_native' ? 'cloudAppDeploy' : 'appDeploy',
-                        params: {
-                            id: recordItem.appcode
-                        }
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
-
-            toViewLog (recordItem) {
-                this.$router.push({
-                    name: 'appLog',
-                    params: {
-                        id: recordItem.appcode,
-                        moduleId: recordItem.represent_info.module_name || 'default'
-                    },
-                    query: {
-                        tab: 'structured'
-                    }
-                });
-            },
-
-            toCloudAPI (recordItem) {
-                this.$router.push({
-                    name: 'appCloudAPI',
-                    params: {
-                        id: recordItem.appcode
-                    }
-                });
-            },
-
-            chartSet ({ type, url, id, title, colorList, yAxisName }) {
-                this.$http.get(url).then((response) => {
-                    const resData = response;
-
-                    const chatData = {
-                        countList: [],
-                        nameList: []
-                    };
-
-                    if (type === 'app_groups') {
-                        this.loading1 = false;
-                        for (let i = 0; i < resData.data.length; i++) {
-                            chatData.countList.push(resData.data[i].count);
-                            chatData.nameList.push(resData.data[i].name);
-                        }
-                        this.chartList1 = resData.data;
-                    } else if (type === 'pv') {
-                        this.loading2 = false;
-                        for (let i = 0; i < resData.data.length; i++) {
-                            chatData.countList.push(resData.data[i].pv);
-                            chatData.nameList.push(resData.data[i].application_name);
-                        }
-                        this.chartList2 = resData.data;
-                    }
-
-                    this.$nextTick(() => {
-                        const chart = echarts.init(document.getElementById(id));
-                        let yAxisNameBackup = '';
-                        if (id === 'viewchart') {
-                            yAxisNameBackup = this.chartList1.length ? yAxisName : '';
-                        } else {
-                            yAxisNameBackup = this.chartList2.length ? yAxisName : '';
-                        }
-                        chart.setOption({
-                            color: '#666666',
-                            title: {
-                                text: title,
-                                x: 'center',
-                                y: 'top',
-                                textStyle: {
-                                    color: '#333333',
-                                    fontStyle: 'normal',
-                                    fontWeight: 'normal',
-                                    fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif',
-                                    fontSize: 16
-                                }
-                            },
-                            tooltip: {
-                                trigger: 'item',
-                                axisPointer: { // 坐标轴指示器，坐标轴触发有效
-                                    type: 'shadow' // 默认为直线，可选为：'line' | 'shadow'
-                                }
-                            },
-                            xAxis: [
-                                {
-                                    axisTick: { show: false },
-                                    type: 'category',
-                                    data: chatData.nameList,
-                                    splitArea: { show: false }, // 保留网格区域
-                                    splitLine: { // 分隔线
-                                        show: false // 默认显示，属性show控制显示与否
-                                    },
-                                    axisLine: {
-                                        show: false
-
-                                    },
-                                    axisLabel: {
-                                        show: true,
-                                        rotate: 0,
-                                        interval: 'auto',
-                                        textStyle: {
-                                            color: '#666666',
-                                            fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif'
-                                        },
-                                        formatter: params => {
-                                            let newParamsName = '';
-                                            const paramsNameNumber = params.length; // 字符总长度
-                                            const provideNumber = 5; // 每行显示的字符数量
-                                            const maxLenNumber = 9; // 最多两行显示的字符最大数量
-                                            if (paramsNameNumber > provideNumber) {
-                                                if (paramsNameNumber > maxLenNumber) {
-                                                    newParamsName = params.substring(0, provideNumber) + '\n' + params.substring(provideNumber, maxLenNumber) + '...';
-                                                } else {
-                                                    newParamsName = params.substring(0, provideNumber) + '\n' + params.substring(provideNumber, paramsNameNumber);
-                                                }
-                                            } else {
-                                                newParamsName = params;
-                                            }
-                                            return newParamsName;
-                                        }
-                                    }
-                                }
-                            ],
-                            yAxis: [
-                                {
-                                    name: yAxisNameBackup,
-                                    allowDecimals: false,
-                                    axisTick: { show: false },
-                                    type: 'value',
-                                    splitArea: { show: false },
-                                    splitLine: { // 分隔线
-                                        show: true, // 默认显示，属性show控制显示与否
-                                        lineStyle: { // 属性lineStyle（详见lineStyle）控制线条样式
-                                            color: ['#e9edee'],
-                                            width: 1,
-                                            type: 'solid'
-                                        }
-                                    },
-                                    axisLine: {
-                                        show: false,
-                                        lineStyle: {
-                                            color: '#999999',
-                                            type: 'solid',
-                                            width: '0'
-                                        }
-                                    },
-                                    axisLabel: {
-                                        show: true,
-                                        textStyle: {
-                                            color: '#999999',
-                                            fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif'
-                                        }
-                                    }
-                                }
-                            ],
-                            series: [
-                                {
-
-                                    type: 'bar',
-                                    data: chatData.countList,
-                                    barWidth: 40,
-                                    itemStyle: {
-                                        normal: {
-                                            color: (params) => {
-                                                return colorList[params.dataIndex];
-                                            },
-                                            type: 'line',
-                                            barBorderRadius: [8, 8, 0, 0],
-                                            lineStyle: {
-                                                color: '#3a84ff',
-                                                type: 'dashed'
-                                            }
-
-                                        },
-                                        emphasis: {
-                                            barBorderRadius: [8, 8, 0, 0]
-                                        }
-                                    }
-                                }
-                            ]
-                        });
-                    });
-                });
-            },
-            setUserHasApp (value) {
-                this.userHasApp = value;
-                if (!value) {
-                    bus.$emit('page-header-be-transparent');
-                }
-            },
-            // 服务列表切换
-            changeService (index) {
-                this.curServiceIndex = index;
-            },
-            // 访问按钮展开
-            visitOpen (event, index) {
-                if (event.currentTarget.parentNode.classList.contains('disabledBox')) return;
-                const isopen = event.currentTarget.parentNode.parentNode.classList.contains('open');
-                if (isopen) {
-                    this.activeVisit = -1;
-                } else {
-                    this.activeVisit = index;
-                }
-            },
-            closeOpen () {
-                this.activeVisit = -1;
-            }
-
-        }
+export default {
+  components: {
+    chart: ECharts,
+  },
+  mixins: [psIndexInfo, psHeaderInfo],
+  data() {
+    return {
+      userHasApp: false,
+      isNewUser: global.isUser,
+      serviceInfo: [], // 服务列表
+      curServiceIndex: 0,
+      flag: false,
+      activeVisit: -1,
+      appCount: 0,
+      records: [], // 操作记录
+      isLoading: true,
+      loading1: true,
+      loading2: true,
+      colorList1: ['#3a84ff', '#89c1fa', '#a8d3ff', '#c9e4ff', '#e2f1ff'],
+      colorList2: ['#ccdff3', '#cfeedc', '#f7eedb', '#fae5d5', '#fcc8c8'],
+      isnull: false,
+      chartList1: [],
+      chartList2: [],
+      defaultImg: '/static/images/default_logo.png',
+      isShowOffAppAction: false,
+      type: 'default',
+      curSelectValue: 'default',
+      envList: [
+        { name: this.$t('访问模块'), id: 'default', showName: this.$t('访问模块') },
+        { name: this.$t('预发布环境'), id: 'stag', showName: this.$t('访问模块') },
+        { name: this.$t('生产环境'), id: 'prod', showName: this.$t('访问模块') },
+      ],
     };
+  },
+  computed: {
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  // Get userHasApp before render
+  beforeRouteEnter(to, from, next) {
+    const promise = auth.requestHasApp();
+    promise.then((userHasApp) => {
+      next((vm) => {
+        vm.setUserHasApp(userHasApp);
+        if (!userHasApp) {
+          auth.requestOffApp()
+            .then((flag) => {
+              vm.isShowOffAppAction = flag;
+            });
+        }
+      });
+    });
+  },
+  beforeRouteUpdate(to, from, next) {
+    const promise = auth.requestHasApp();
+    promise.then((userHasApp) => {
+      this.setUserHasApp(userHasApp);
+      next(() => {
+        if (!userHasApp) {
+          auth.requestOffApp()
+            .then((flag) => {
+              this.isShowOffAppAction = flag;
+            });
+        }
+      });
+    });
+  },
+  created() {
+    // 了解我们的服务和头部导航同步
+    const results = [];
+    this.headerStaticInfo.list.subnav_service.forEach((item) => {
+      if (!item.title) {
+        results.push(...item.items);
+      } else {
+        results.push(item);
+      }
+    });
+    this.serviceInfo = results;
+
+    // 获取最近四次操作记录
+    this.$http.get(`${BACKEND_URL}/api/bkapps/applications/lists/latest/`).then((response) => {
+      const resData = response;
+
+      this.appCount = resData.results.length;
+
+      resData.results.forEach((item) => {
+        const appinfo = item.application;
+
+        this.records.push({
+          applogo: appinfo.logo_url || '/static/images/default_logo.png',
+          appname: appinfo.name,
+          appcode: appinfo.code,
+          time: item.at,
+          type: item.operate,
+          stag: item.represent_info.props.provide_links ? item.represent_info.links.stag : {},
+          prod: item.represent_info.props.provide_links ? item.represent_info.links.prod : {},
+          engine_enabled: appinfo.config_info.engine_enabled,
+          defaultModuleId: item.represent_info.module_name,
+          represent_info: item.represent_info,
+        });
+      });
+      this.isLoading = false;
+    });
+    this.chartSet({
+      type: 'app_groups',
+      url: `${BACKEND_URL}/api/bkapps/applications/statistics/group_by_state/`,
+      id: 'viewchart',
+      title: this.$t('我的应用(模块)分布'),
+      yAxisName: this.$t('单位（个）'),
+      colorList: this.colorList1,
+    });
+    this.chartSet({
+      type: 'pv',
+      url: `${BACKEND_URL}/api/bkapps/applications/statistics/pv/top5/?limit=5&days_before=30`,
+      id: 'visitedchart',
+      title: this.$t('访问量 Top 5 (最近 30 天)'),
+      yAxisName: this.$t('单位（次）'),
+      colorList: this.colorList2,
+    });
+  },
+  methods: {
+    async toDeploy(recordItem) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${recordItem.appcode}/`;
+      try {
+        const res = await this.$http.get(url);
+        this.type = res.application.type;
+        this.$router.push({
+          name: this.type === 'cloud_native' ? 'cloudAppDeploy' : 'appDeploy',
+          params: {
+            id: recordItem.appcode,
+          },
+        });
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
+
+    toViewLog(recordItem) {
+      this.$router.push({
+        name: 'appLog',
+        params: {
+          id: recordItem.appcode,
+          moduleId: recordItem.represent_info.module_name || 'default',
+        },
+        query: {
+          tab: 'structured',
+        },
+      });
+    },
+
+    toCloudAPI(recordItem) {
+      this.$router.push({
+        name: 'appCloudAPI',
+        params: {
+          id: recordItem.appcode,
+        },
+      });
+    },
+
+    chartSet({ type, url, id, title, colorList, yAxisName }) {
+      this.$http.get(url).then((response) => {
+        const resData = response;
+
+        const chatData = {
+          countList: [],
+          nameList: [],
+        };
+
+        if (type === 'app_groups') {
+          this.loading1 = false;
+          for (let i = 0; i < resData.data.length; i++) {
+            chatData.countList.push(resData.data[i].count);
+            chatData.nameList.push(resData.data[i].name);
+          }
+          this.chartList1 = resData.data;
+        } else if (type === 'pv') {
+          this.loading2 = false;
+          for (let i = 0; i < resData.data.length; i++) {
+            chatData.countList.push(resData.data[i].pv);
+            chatData.nameList.push(resData.data[i].application_name);
+          }
+          this.chartList2 = resData.data;
+        }
+
+        this.$nextTick(() => {
+          const chart = echarts.init(document.getElementById(id));
+          let yAxisNameBackup = '';
+          if (id === 'viewchart') {
+            yAxisNameBackup = this.chartList1.length ? yAxisName : '';
+          } else {
+            yAxisNameBackup = this.chartList2.length ? yAxisName : '';
+          }
+          chart.setOption({
+            color: '#666666',
+            title: {
+              text: title,
+              x: 'center',
+              y: 'top',
+              textStyle: {
+                color: '#333333',
+                fontStyle: 'normal',
+                fontWeight: 'normal',
+                fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif',
+                fontSize: 16,
+              },
+            },
+            tooltip: {
+              trigger: 'item',
+              axisPointer: { // 坐标轴指示器，坐标轴触发有效
+                type: 'shadow', // 默认为直线，可选为：'line' | 'shadow'
+              },
+            },
+            xAxis: [
+              {
+                axisTick: { show: false },
+                type: 'category',
+                data: chatData.nameList,
+                splitArea: { show: false }, // 保留网格区域
+                splitLine: { // 分隔线
+                  show: false, // 默认显示，属性show控制显示与否
+                },
+                axisLine: {
+                  show: false,
+
+                },
+                axisLabel: {
+                  show: true,
+                  rotate: 0,
+                  interval: 'auto',
+                  textStyle: {
+                    color: '#666666',
+                    fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif',
+                  },
+                  formatter: (params) => {
+                    let newParamsName = '';
+                    const paramsNameNumber = params.length; // 字符总长度
+                    const provideNumber = 5; // 每行显示的字符数量
+                    const maxLenNumber = 9; // 最多两行显示的字符最大数量
+                    if (paramsNameNumber > provideNumber) {
+                      if (paramsNameNumber > maxLenNumber) {
+                        newParamsName = `${params.substring(0, provideNumber)}\n${params.substring(provideNumber, maxLenNumber)}...`;
+                      } else {
+                        newParamsName = `${params.substring(0, provideNumber)}\n${params.substring(provideNumber, paramsNameNumber)}`;
+                      }
+                    } else {
+                      newParamsName = params;
+                    }
+                    return newParamsName;
+                  },
+                },
+              },
+            ],
+            yAxis: [
+              {
+                name: yAxisNameBackup,
+                allowDecimals: false,
+                axisTick: { show: false },
+                type: 'value',
+                splitArea: { show: false },
+                splitLine: { // 分隔线
+                  show: true, // 默认显示，属性show控制显示与否
+                  lineStyle: { // 属性lineStyle（详见lineStyle）控制线条样式
+                    color: ['#e9edee'],
+                    width: 1,
+                    type: 'solid',
+                  },
+                },
+                axisLine: {
+                  show: false,
+                  lineStyle: {
+                    color: '#999999',
+                    type: 'solid',
+                    width: '0',
+                  },
+                },
+                axisLabel: {
+                  show: true,
+                  textStyle: {
+                    color: '#999999',
+                    fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif',
+                  },
+                },
+              },
+            ],
+            series: [
+              {
+
+                type: 'bar',
+                data: chatData.countList,
+                barWidth: 40,
+                itemStyle: {
+                  normal: {
+                    color: params => colorList[params.dataIndex],
+                    type: 'line',
+                    barBorderRadius: [8, 8, 0, 0],
+                    lineStyle: {
+                      color: '#3a84ff',
+                      type: 'dashed',
+                    },
+
+                  },
+                  emphasis: {
+                    barBorderRadius: [8, 8, 0, 0],
+                  },
+                },
+              },
+            ],
+          });
+        });
+      });
+    },
+    setUserHasApp(value) {
+      this.userHasApp = value;
+      if (!value) {
+        bus.$emit('page-header-be-transparent');
+      }
+    },
+    // 服务列表切换
+    changeService(index) {
+      this.curServiceIndex = index;
+    },
+    // 访问按钮展开
+    visitOpen(event, index) {
+      if (event.currentTarget.parentNode.classList.contains('disabledBox')) return;
+      const isopen = event.currentTarget.parentNode.parentNode.classList.contains('open');
+      if (isopen) {
+        this.activeVisit = -1;
+      } else {
+        this.activeVisit = index;
+      }
+    },
+    closeOpen() {
+      this.activeVisit = -1;
+    },
+    // 访问模块
+    handleSelectChange(env, data) {
+      if (env === 'default') {
+        return;
+      }
+      const url = data[env]?.url;
+      window.open(url, '_blank');
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/ellipsis.scss';
@@ -992,6 +998,7 @@
     }
 
     .ps-btn-disabled-new {
+        height: 32px;
         color: #dcdee5 !important;
         background: #fafbfd;
         cursor: not-allowed;
@@ -1490,4 +1497,36 @@
         white-space: nowrap;
         text-overflow: ellipsis;
     }
+    .access-module-wrapper {
+      transform: translateY(4px);
+    }
+    .access-module-custom {
+      background: #F0F1F5;
+      border: none;
+
+      &.is-focus {
+        background: #fff;
+        border: 1px solid #3a84ff;
+        box-shadow: none;
+        &:hover {
+          background: #fff;
+        }
+      }
+
+      &:hover {
+        background: #eaebf0;
+      }
+    }
+</style>
+<style lang="scss">
+.access-module-popover-custom {
+  .bk-options .bk-option .bk-option-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bk-options .bk-option.is-selected + .bk-option {
+    margin-top: 6px !important;
+  }
+}
 </style>

@@ -42,6 +42,8 @@ from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod
 from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.utils.constants import PodPhase
 from paas_wl.utils.kubestatus import (
     HealthStatus,
     HealthStatusType,
@@ -178,7 +180,7 @@ class PodScheduleHandler(ResourceHandlerBase):
                 raise
         else:
             # ignore the other pods
-            if pod.status.phase == "Running" and not force:
+            if pod.status.phase == PodPhase.RUNNING and not force:
                 logger.warning(f"trying to clean Pod<{namespace}/{pod_name}>, but it's still running.")
                 return None
 
@@ -270,7 +272,7 @@ class BuildHandler(PodScheduleHandler):
             logger.info("build slug<%s/%s> does not exist, will create one", template.namespace, template.name)
         else:
             # ignore the other pods
-            if slug_pod.status.phase == "Running":
+            if slug_pod.status.phase == PodPhase.RUNNING:
                 # 如果 slug 超过了最长执行时间，尝试删除并重新创建，否则取消本次创建
                 if not self.check_pod_timeout(slug_pod):
                     raise ResourceDuplicate(
@@ -367,7 +369,7 @@ class BuildHandler(PodScheduleHandler):
         :param timeout: max timeout
         """
         pod_name = self.normalize_builder_name(name)
-        log_available_statuses = {"Running", "Succeeded", "Failed"}
+        log_available_statuses = {PodPhase.RUNNING, PodPhase.SUCCEEDED, PodPhase.FAILED}
         KPod(self.client).wait_for_status(
             name=pod_name, namespace=namespace, target_statuses=log_available_statuses, timeout=timeout
         )
@@ -408,7 +410,7 @@ class CommandHandler(PodScheduleHandler):
             command_kmodel.save(command)
             return command.name
 
-        if existed.phase == "Running":
+        if existed.phase == PodPhase.RUNNING:
             # 如果 slug 超过了最长执行时间，尝试删除并重新创建，否则取消本次创建
             if not self.check_pod_timeout(existed):
                 raise ResourceDuplicate(
@@ -434,7 +436,7 @@ class CommandHandler(PodScheduleHandler):
             logger.info("Command Pod<%s/%s> does not exist, skip delete", namespace, command.name)
             return None
 
-        if existed.phase == "Running" and existed.main_container_exit_code is None:
+        if existed.phase == PodPhase.RUNNING and existed.main_container_exit_code is None:
             logger.warning(f"trying to clean Pod<{namespace}/{command.name}>, but it's still running.")
             return None
 
@@ -477,9 +479,9 @@ class CommandHandler(PodScheduleHandler):
                 raise PodAbsentError(f"Pod<{namespace}/{pod_name}> not found") from e
 
             # Pod 执行成功或主容器正常退出, 视为成功
-            if command_in_k8s.phase == "Succeeded" or command_in_k8s.main_container_exit_code == os.EX_OK:
+            if command_in_k8s.phase == PodPhase.SUCCEEDED or command_in_k8s.main_container_exit_code == os.EX_OK:
                 return True
-            elif command_in_k8s.phase == "Running":
+            elif command_in_k8s.phase == PodPhase.RUNNING:
                 time.sleep(check_period)
                 continue
 
@@ -507,7 +509,7 @@ class CommandHandler(PodScheduleHandler):
         :param command: Command to run.
         :param timeout: max timeout
         """
-        log_available_statuses = {"Running", "Succeeded", "Failed"}
+        log_available_statuses = {PodPhase.RUNNING, PodPhase.SUCCEEDED, PodPhase.FAILED}
         KPod(self.client).wait_for_status(
             namespace=command.app.namespace,
             name=command.name,
@@ -554,3 +556,42 @@ class ProcAutoscalingHandler(ResourceHandlerBase):
     def delete(self, scaling: ProcAutoscaling):
         """删除集群中的 GPA"""
         self.manager.delete_by_name(scaling.app, scaling.name)
+
+
+class BkAppHookHandler:
+    def __init__(self, app: "WlApp", hook_name: str):
+        """
+        :param app: app hook belongs to
+        :param hook_name: hook pod name
+        """
+        self.client = get_client_by_app(app)
+        self.namespace = app.namespace
+        self.hook_name = hook_name
+
+    def wait_for_logs_readiness(self, timeout: float = 20):
+        """Waits for hook pod to become ready for retrieving logs
+
+        :param timeout: max timeout
+        """
+        log_available_statuses = {PodPhase.RUNNING, PodPhase.SUCCEEDED, PodPhase.FAILED}
+        KPod(self.client).wait_for_status(
+            namespace=self.namespace,
+            name=self.hook_name,
+            target_statuses=log_available_statuses,
+            timeout=timeout,
+        )
+
+    def fetch_logs(self, follow: bool = False):
+        """Fetch logs of running hook pod"""
+        return KPod(self.client).get_log(name=self.hook_name, namespace=self.namespace, follow=follow)
+
+    def wait_hook_finished(self, timeout: float = 60 * 5) -> PodPhase:
+        """Waits for hook pod to finish"""
+        finished_statuses = {PodPhase.SUCCEEDED, PodPhase.FAILED}
+        status = KPod(self.client).wait_for_status(
+            namespace=self.namespace,
+            name=self.hook_name,
+            target_statuses=finished_statuses,
+            timeout=timeout,
+        )
+        return PodPhase(status)

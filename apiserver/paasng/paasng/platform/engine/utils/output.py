@@ -110,7 +110,7 @@ class RedisChannelStream(DeployStream):
     def write_title(self, title):
         return self.channel.publish(event="title", data=title)
 
-    def write_message(self, message, stream=StreamType.STDOUT):
+    def write_message(self, message, stream=StreamType.STDOUT.value):
         return self.channel.publish_msg(message=json.dumps({"line": message, "stream": str(stream)}))
 
     def write_event(self, event_name: str, data: dict):

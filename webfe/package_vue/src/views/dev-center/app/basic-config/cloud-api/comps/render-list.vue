@@ -46,7 +46,7 @@
           @input="handleSearch"
         />
         <div
-          class="advanced-filter"
+          :class="['advanced-filter', { 'en': localLanguage === 'en' }]"
           @click.stop="toggleChoose"
         >
           <p>
@@ -130,6 +130,7 @@
           <bk-table-column
             label="API"
             min-width="180"
+            :show-overflow-tooltip="true"
           >
             <template slot-scope="props">
               <template v-if="props.row.doc_link">
@@ -158,6 +159,7 @@
           <bk-table-column
             :label="$t('描述')"
             min-width="120"
+            :show-overflow-tooltip="true"
           >
             <template slot-scope="props">
               <!-- <span v-html="highlightDesc(props.row)" v-bk-tooltips="props.row.description"></span> -->
@@ -167,6 +169,7 @@
           <bk-table-column
             :label="$t('权限等级')"
             :render-header="$renderHeader"
+            :show-overflow-tooltip="true"
           >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level) ? 'sensitive' : ''">{{ levelMap[props.row.permission_level] }}</span>
@@ -188,6 +191,7 @@
               :filters="statusFilters"
               :filter-multiple="true"
               :min-width="110"
+              :show-overflow-tooltip="true"
               :render-header="$renderHeader"
             >
               <template slot-scope="props">
@@ -229,6 +233,8 @@
           <bk-table-column
             v-else
             :label="$t('状态')"
+            :min-width="110"
+            :show-overflow-tooltip="true"
             :render-header="$renderHeader"
           >
             <template slot-scope="props">
@@ -265,7 +271,7 @@
           </bk-table-column>
           <bk-table-column
             :label="$t('操作')"
-            width="110"
+            :width="localLanguage === 'en' ? 130 : 110"
           >
             <template slot-scope="props">
               <div class="table-operate-buttons">
@@ -333,624 +339,617 @@
   </div>
 </template>
 
-<script>
-    import _ from 'lodash';
-    import BatchDialog from './batch-apply-dialog';
-    import RenewalDialog from './batch-renewal-dialog';
-    import GatewayDialog from './apply-by-gateway-dialog';
-    import { clearFilter } from '@/common/utils';
-    export default {
-        name: '',
-        components: {
-            BatchDialog,
-            RenewalDialog,
-            GatewayDialog
-        },
-        props: {
-            apiType: {
-                type: String
-            },
-            id: {
-                type: [String, Number],
-                default: ''
-            },
-            name: {
-                type: String,
-                default: ''
-            },
-            maintainers: {
-                type: Array,
-                default: () => []
-            },
-            isRefresh: {
-                type: Boolean,
-                default: false
-            }
-        },
-        data () {
-            return {
-                loading: false,
-                apiList: [],
-                allData: [],
-                tableList: [],
-                selectedAPIList: [],
-                searchValue: '',
-                isFilter: false,
-                pagination: {
-                    current: 1,
-                    limit: 10,
-                    count: 0
-                },
-                allChecked: false,
-                indeterminate: false,
-                applyDialog: {
-                    visiable: false,
-                    title: '',
-                    rows: []
-                },
+<script>import _ from 'lodash';
+import BatchDialog from './batch-apply-dialog';
+import RenewalDialog from './batch-renewal-dialog';
+import GatewayDialog from './apply-by-gateway-dialog';
+import { clearFilter } from '@/common/utils';
+export default {
+  name: '',
+  components: {
+    BatchDialog,
+    RenewalDialog,
+    GatewayDialog,
+  },
+  props: {
+    apiType: {
+      type: String,
+    },
+    id: {
+      type: [String, Number],
+      default: '',
+    },
+    name: {
+      type: String,
+      default: '',
+    },
+    maintainers: {
+      type: Array,
+      default: () => [],
+    },
+    isRefresh: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      loading: false,
+      apiList: [],
+      allData: [],
+      tableList: [],
+      selectedAPIList: [],
+      searchValue: '',
+      isFilter: false,
+      pagination: {
+        current: 1,
+        limit: 10,
+        count: 0,
+      },
+      allChecked: false,
+      indeterminate: false,
+      applyDialog: {
+        visiable: false,
+        title: '',
+        rows: [],
+      },
 
-                renewalDialog: {
-                    visiable: false,
-                    title: '',
-                    rows: []
-                },
+      renewalDialog: {
+        visiable: false,
+        title: '',
+        rows: [],
+      },
 
-                isShowBatchRenewalDialog: false,
-                isShowGatewayDialog: false,
-                levelMap: {
-                    normal: this.$t('普通'),
-                    special: this.$t('特殊'),
-                    sensitive: this.$t('敏感'),
-                    unlimited: this.$t('无限制')
-                },
-                requestQueue: ['list'],
-                judgeIsApplyByGateway: {
-                    allow_apply_by_api: false,
-                    reason: ''
-                },
-                statusFilters: [
-                    { text: this.$t('已拥有'), value: 'owned' },
-                    { text: this.$t('未申请'), value: 'need_apply' },
-                    { text: this.$t('已过期'), value: 'expired' },
-                    { text: this.$t('已拒绝'), value: 'rejected' },
-                    { text: this.$t('申请中'), value: 'pending' }
-                ],
-                tableKey: -1,
-                ifopen: false,
-                listFilter: {
-                    isApply: false,
-                    isRenew: false
-                },
-                tableEmptyConf: {
-                    keyword: '',
-                    isAbnormal: false
-                },
-                filterStatus: [],
-                filterData: []
-            };
-        },
-        computed: {
-            isComponentApi () {
-                return this.apiType === 'component';
-            },
-            appCode () {
-                return this.$route.params.id;
-            },
-            isPageDisabled () {
-                return this.tableList.every(item => !item.permission_action) || !this.tableList.length;
-            },
-            curFetchDispatchMethod () {
-                return this.isComponentApi ? 'getComponents' : 'getResources';
-            },
-            isApplyDisabled () {
-                return !this.selectedAPIList.some(item => item.permission_action === 'apply');
-            },
-            isRenewalDisabled () {
-                return !this.selectedAPIList.some(item => item.permission_action === 'renew');
-            }
-        },
-        watch: {
-            'listFilter.isApply' (value) {
-                if (value) {
-                    if (this.listFilter.isRenew) {
-                        this.allData = this.apiList.filter(item => ['apply', 'renew'].includes(item.permission_action));
-                    } else {
-                        this.allData = this.apiList.filter(item => item.permission_action === 'apply');
-                    }
-                } else {
-                    if (this.listFilter.isRenew) {
-                        this.allData = this.apiList.filter(item => item.permission_action === 'renew');
-                    } else {
-                        this.allData = this.apiList;
-                    }
-                }
-                this.pagination.count = this.allData.length;
-                this.pagination.current = 1;
-                const start = this.pagination.limit * (this.pagination.current - 1);
-                const end = start + this.pagination.limit;
-                this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
-            },
+      isShowBatchRenewalDialog: false,
+      isShowGatewayDialog: false,
+      levelMap: {
+        normal: this.$t('普通'),
+        special: this.$t('特殊'),
+        sensitive: this.$t('敏感'),
+        unlimited: this.$t('无限制'),
+      },
+      requestQueue: ['list'],
+      judgeIsApplyByGateway: {
+        allow_apply_by_api: false,
+        reason: '',
+      },
+      statusFilters: [
+        { text: this.$t('已拥有'), value: 'owned' },
+        { text: this.$t('未申请'), value: 'need_apply' },
+        { text: this.$t('已过期'), value: 'expired' },
+        { text: this.$t('已拒绝'), value: 'rejected' },
+        { text: this.$t('申请中'), value: 'pending' },
+      ],
+      tableKey: -1,
+      ifopen: false,
+      listFilter: {
+        isApply: false,
+        isRenew: false,
+      },
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
+      filterStatus: [],
+      filterData: [],
+    };
+  },
+  computed: {
+    isComponentApi() {
+      return this.apiType === 'component';
+    },
+    appCode() {
+      return this.$route.params.id;
+    },
+    isPageDisabled() {
+      return this.tableList.every(item => !item.permission_action) || !this.tableList.length;
+    },
+    curFetchDispatchMethod() {
+      return this.isComponentApi ? 'getComponents' : 'getResources';
+    },
+    isApplyDisabled() {
+      return !this.selectedAPIList.some(item => item.permission_action === 'apply');
+    },
+    isRenewalDisabled() {
+      return !this.selectedAPIList.some(item => item.permission_action === 'renew');
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  watch: {
+    'listFilter.isApply'(value) {
+      if (value) {
+        if (this.listFilter.isRenew) {
+          this.allData = this.apiList.filter(item => ['apply', 'renew'].includes(item.permission_action));
+        } else {
+          this.allData = this.apiList.filter(item => item.permission_action === 'apply');
+        }
+      } else {
+        if (this.listFilter.isRenew) {
+          this.allData = this.apiList.filter(item => item.permission_action === 'renew');
+        } else {
+          this.allData = this.apiList;
+        }
+      }
+      this.pagination.count = this.allData.length;
+      this.pagination.current = 1;
+      const start = this.pagination.limit * (this.pagination.current - 1);
+      const end = start + this.pagination.limit;
+      this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+    },
 
-            'listFilter.isRenew' (value) {
-                if (value) {
-                    if (this.listFilter.isApply) {
-                        this.allData = this.apiList.filter(item => ['apply', 'renew'].includes(item.permission_action));
-                    } else {
-                        this.allData = this.apiList.filter(item => item.permission_action === 'renew');
-                    }
-                } else {
-                    if (this.listFilter.isApply) {
-                        this.allData = this.apiList.filter(item => item.permission_action === 'apply');
-                    } else {
-                        this.allData = this.apiList;
-                    }
-                }
-                this.pagination.count = this.allData.length;
-                this.pagination.current = 1;
-                const start = this.pagination.limit * (this.pagination.current - 1);
-                const end = start + this.pagination.limit;
-                this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
-            },
+    'listFilter.isRenew'(value) {
+      if (value) {
+        if (this.listFilter.isApply) {
+          this.allData = this.apiList.filter(item => ['apply', 'renew'].includes(item.permission_action));
+        } else {
+          this.allData = this.apiList.filter(item => item.permission_action === 'renew');
+        }
+      } else {
+        if (this.listFilter.isApply) {
+          this.allData = this.apiList.filter(item => item.permission_action === 'apply');
+        } else {
+          this.allData = this.apiList;
+        }
+      }
+      this.pagination.count = this.allData.length;
+      this.pagination.current = 1;
+      const start = this.pagination.limit * (this.pagination.current - 1);
+      const end = start + this.pagination.limit;
+      this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+    },
 
-            searchValue (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '' && this.isFilter) {
-                    this.allData = this.apiList;
-                    this.pagination.count = this.apiList.length;
-                    this.pagination.current = 1;
-                    const start = this.pagination.limit * (this.pagination.current - 1);
-                    const end = start + this.pagination.limit;
-                    this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
-                    this.isFilter = false;
-                }
-            },
-            id: {
-                handler (value) {
-                    // 强制刷新表格，为了重置表格过滤条件
-                    this.tableKey = +new Date();
-                    this.searchValue = '';
-                    this.judgeIsApplyByGateway = Object.assign({}, {
-                        allow_apply_by_api: false,
-                        reason: ''
-                    });
-                    if (!value) {
-                        this.requestQueue = [];
-                        this.$emit('data-ready');
-                    } else {
-                        if (this.isComponentApi) {
-                            this.requestQueue = ['list'];
-                        } else {
-                            this.requestQueue = ['list', 'flag'];
-                        }
-                        this.fetchList(value);
-                        if (!this.isComponentApi) {
-                            this.fetchIsApplyByGateway(value);
-                        }
-                    }
-                },
-                immediate: true
-            },
-            isRefresh (value) {
-                if (value) {
-                    this.querySelect();
-                }
-            },
-            requestQueue (value) {
-                if (value.length < 1) {
-                    this.$emit('data-ready');
-                }
-            },
-            allData (value) {
-                const list = [
-                    { text: this.$t('已拥有'), value: 'owned' },
-                    { text: this.$t('未申请'), value: 'need_apply' },
-                    { text: this.$t('已过期'), value: 'expired' },
-                    { text: this.$t('已拒绝'), value: 'rejected' },
-                    { text: this.$t('申请中'), value: 'pending' }
-                ];
-                this.statusFilters = list.filter(item => {
-                    return this.allData.map(_ => _.permission_status).includes(item.value);
-                });
-                this.tableKey = +new Date();
-            }
-        },
-        created () {
-            this.compare = p => {
-                return (m, n) => {
-                    const a = m[p].slice(0, 1).charCodeAt();
-                    const b = n[p].slice(0, 1).charCodeAt();
-                    return a - b;
-                };
-            };
-        },
-        methods: {
-            getComputedExpires (payload) {
-                if (!payload.expires_in) {
-                    if (payload.permission_status === 'owned') {
-                        return this.$t('永久');
-                    }
-                    return '--';
-                }
-                return `${Math.ceil(payload.expires_in / (24 * 3600))}天`;
-            },
+    searchValue(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '' && this.isFilter) {
+        this.allData = this.apiList;
+        this.pagination.count = this.apiList.length;
+        this.pagination.current = 1;
+        const start = this.pagination.limit * (this.pagination.current - 1);
+        const end = start + this.pagination.limit;
+        this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+        this.isFilter = false;
+      }
+    },
+    id: {
+      handler(value) {
+        // 强制刷新表格，为了重置表格过滤条件
+        this.tableKey = +new Date();
+        this.searchValue = '';
+        this.judgeIsApplyByGateway = Object.assign({}, {
+          allow_apply_by_api: false,
+          reason: '',
+        });
+        if (!value) {
+          this.requestQueue = [];
+          this.$emit('data-ready');
+        } else {
+          if (this.isComponentApi) {
+            this.requestQueue = ['list'];
+          } else {
+            this.requestQueue = ['list', 'flag'];
+          }
+          this.fetchList(value);
+          if (!this.isComponentApi) {
+            this.fetchIsApplyByGateway(value);
+          }
+        }
+      },
+      immediate: true,
+    },
+    isRefresh(value) {
+      if (value) {
+        this.querySelect();
+      }
+    },
+    requestQueue(value) {
+      if (value.length < 1) {
+        this.$emit('data-ready');
+      }
+    },
+    allData() {
+      const list = [
+        { text: this.$t('已拥有'), value: 'owned' },
+        { text: this.$t('未申请'), value: 'need_apply' },
+        { text: this.$t('已过期'), value: 'expired' },
+        { text: this.$t('已拒绝'), value: 'rejected' },
+        { text: this.$t('申请中'), value: 'pending' },
+      ];
+      this.statusFilters = list.filter(item => this.allData.map(_ => _.permission_status).includes(item.value));
+      this.tableKey = +new Date();
+    },
+  },
+  created() {
+    this.compare = p => (m, n) => {
+      const a = m[p].slice(0, 1).charCodeAt();
+      const b = n[p].slice(0, 1).charCodeAt();
+      return a - b;
+    };
+  },
+  methods: {
+    getComputedExpires(payload) {
+      if (!payload.expires_in) {
+        if (payload.permission_status === 'owned') {
+          return this.$t('永久');
+        }
+        return '--';
+      }
+      return `${Math.ceil(payload.expires_in / (24 * 3600))}天`;
+    },
 
-            // 状态筛选
-            handleFilterChange (filter) {
-                this.filterStatus = filter['permission_status'] || [];
-                // 重置
-                if (this.filterStatus.length === 0) {
-                  this.filterData = this.allData;
-                } else {
-                  this.filterData = this.allData.filter(item => this.filterStatus.includes(item['permission_status']));
-                }
-                this.pagination.current = 1;
-                this.pagination.count = this.filterData.length;
-                this.tableList = this.filterData.slice((this.pagination.current - 1) * this.pagination.limit, this.pagination.current * this.pagination.limit);
+    // 状态筛选
+    handleFilterChange(filter) {
+      this.filterStatus = filter.permission_status || [];
+      // 重置
+      if (this.filterStatus.length === 0) {
+        this.filterData = this.allData;
+      } else {
+        this.filterData = this.allData.filter(item => this.filterStatus.includes(item.permission_status));
+      }
+      this.pagination.current = 1;
+      this.pagination.count = this.filterData.length;
+      this.tableList = this.filterData.slice((this.pagination.current - 1) * this.pagination.limit, this.pagination.current * this.pagination.limit);
+    },
+
+    handleClickOutside() {
+      if (arguments[0].target.className.indexOf('advanced-filter') !== -1
+                    || arguments[0].target.className.indexOf('paasng-angle-double-down') !== -1
+                    || arguments[0].target.className.indexOf('paasng-angle-double-up') !== -1) {
+        return;
+      }
+      this.ifopen = false;
+    },
+
+    handleSuccessApply() {
+      this.applyDialog.visiable = false;
+      this.allChecked = false;
+      this.indeterminate = false;
+      this.fetchList(this.id);
+    },
+
+    handleApiSuccessApply() {
+      this.isShowGatewayDialog = false;
+      this.judgeIsApplyByGateway.allow_apply_by_api = false;
+      this.judgeIsApplyByGateway.reason = this.$t('权限申请中，请联系网关负责人审批');
+      this.allChecked = false;
+      this.indeterminate = false;
+      this.fetchList(this.id);
+    },
+
+    handleSuccessRenewal() {
+      this.renewalDialog.visiable = false;
+      this.allChecked = false;
+      this.indeterminate = false;
+      this.fetchList(this.id);
+    },
+
+    handleAfterLeave() {
+      this.applyDialog = Object.assign({}, {
+        visiable: false,
+        title: '',
+        rows: [],
+      });
+    },
+
+    handleRenewalAfterLeave() {
+      this.renewalDialog = Object.assign({}, {
+        visiable: false,
+        title: '',
+        rows: [],
+      });
+    },
+
+    afterApplyDialogClose() {
+      this.applyDialog.name = '';
+    },
+
+    columChage(newVal, modelVal, trueVal, item) {
+      if (newVal) {
+        this.selectedAPIList.push(item);
+      } else {
+        const len = this.selectedAPIList.length;
+        for (let i = 0; i < len; i++) {
+          if (item.id === this.selectedAPIList[i].id) {
+            this.selectedAPIList.splice(i, 1);
+            break;
+          }
+        }
+      }
+      this.indeterminate = !!this.selectedAPIList.length && this.selectedAPIList.length < this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length;
+      this.allChecked = this.selectedAPIList.length === this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length && !!this.tableList.length;
+    },
+
+    tableAllClick() {
+      if (this.isPageDisabled) {
+        return;
+      }
+
+      this.allChecked = !this.allChecked;
+      if (this.allChecked) {
+        this.indeterminate = false;
+        this.selectedAPIList.splice(0, this.selectedAPIList.length, ...this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned' && !!api.permission_action));
+      } else {
+        this.selectedAPIList.splice(0, this.selectedAPIList.length, ...[]);
+      }
+      this.tableList.forEach((api) => {
+        if (api.permission_action) {
+          this.$set(api, 'checked', this.allChecked);
+        }
+      });
+    },
+
+    renderHeader(h, { column }) {
+      return h(
+        'div',
+        [
+          h('bk-checkbox', {
+            style: 'margin-right: 10px;',
+            props: {
+              disabled: this.isPageDisabled,
+              indeterminate: this.indeterminate,
+              checked: this.allChecked,
             },
-
-            handleClickOutside () {
-                if (arguments[0]['target']['className'].indexOf('advanced-filter') !== -1 ||
-                    arguments[0]['target']['className'].indexOf('paasng-angle-double-down') !== -1 ||
-                    arguments[0]['target']['className'].indexOf('paasng-angle-double-up') !== -1) {
-                    return;
-                }
-                this.ifopen = false;
+            nativeOn: {
+              click: () => this.tableAllClick(),
             },
+          }),
+        ],
+      );
+    },
 
-            handleSuccessApply () {
-                this.applyDialog.visiable = false;
-                this.allChecked = false;
-                this.indeterminate = false;
-                this.fetchList(this.id);
-            },
+    handleSearch: _.debounce(function () {
+      if (this.searchValue === '') {
+        return;
+      }
+      this.isFilter = true;
+      // 多个API过滤
+      if (this.searchValue.indexOf(',') !== -1) {
+        let searchArr = this.searchValue.split(',');
+        searchArr = _.uniq(searchArr);
+        let filterArr = [];
+        for (let i = 0; i < searchArr.length; i++) {
+          if (searchArr[i] === '') {
+            continue;
+          }
+          const val = [...this.apiList.filter(api => api.name.indexOf(searchArr[i]) !== -1 || api.description.indexOf(searchArr[i]) !== -1)];
+          filterArr.push(...val);
+        }
+        // 结果去重
+        filterArr = _.uniq(filterArr);
+        this.allData = filterArr;
+      } else {
+        this.allData = [...this.apiList.filter(api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1)];
+      }
+      this.pagination.count = this.allData.length;
 
-            handleApiSuccessApply () {
-                this.isShowGatewayDialog = false;
-                this.judgeIsApplyByGateway.allow_apply_by_api = false;
-                this.judgeIsApplyByGateway.reason = this.$t('权限申请中，请联系网关负责人审批');
-                this.allChecked = false;
-                this.indeterminate = false;
-                this.fetchList(this.id);
-            },
+      this.pagination.current = 1;
 
-            handleSuccessRenewal () {
-                this.renewalDialog.visiable = false;
-                this.allChecked = false;
-                this.indeterminate = false;
-                this.fetchList(this.id);
-            },
+      const start = this.pagination.limit * (this.pagination.current - 1);
+      const end = start + this.pagination.limit;
+      this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+      this.updateTableEmptyConfig();
+    }, 350),
 
-            handleAfterLeave () {
-                this.applyDialog = Object.assign({}, {
-                    visiable: false,
-                    title: '',
-                    rows: []
-                });
-            },
-
-            handleRenewalAfterLeave () {
-                this.renewalDialog = Object.assign({}, {
-                    visiable: false,
-                    title: '',
-                    rows: []
-                });
-            },
-
-            afterApplyDialogClose () {
-                this.applyDialog.name = '';
-            },
-
-            columChage (newVal, modelVal, trueVal, item) {
-                if (newVal) {
-                    this.selectedAPIList.push(item);
-                } else {
-                    const len = this.selectedAPIList.length;
-                    for (let i = 0; i < len; i++) {
-                        if (item.id === this.selectedAPIList[i].id) {
-                            this.selectedAPIList.splice(i, 1);
-                            break;
-                        }
-                    }
-                }
-                this.indeterminate = !!this.selectedAPIList.length && this.selectedAPIList.length < this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length;
-                this.allChecked = this.selectedAPIList.length === this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length && !!this.tableList.length;
-            },
-
-            tableAllClick () {
-                if (this.isPageDisabled) {
-                    return;
-                }
-
-                this.allChecked = !this.allChecked;
-                if (this.allChecked) {
-                    this.indeterminate = false;
-                    this.selectedAPIList.splice(0, this.selectedAPIList.length, ...this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned' && !!api.permission_action));
-                } else {
-                    this.selectedAPIList.splice(0, this.selectedAPIList.length, ...[]);
-                }
-                this.tableList.forEach(api => {
-                    if (api.permission_action) {
-                        this.$set(api, 'checked', this.allChecked);
-                    }
-                });
-            },
-
-            renderHeader (h, { column }) {
-                return h(
-                    'div',
-                    [
-                        h('bk-checkbox', {
-                            style: 'margin-right: 10px;',
-                            props: {
-                                disabled: this.isPageDisabled,
-                                indeterminate: this.indeterminate,
-                                checked: this.allChecked
-                            },
-                            nativeOn: {
-                                click: () => this.tableAllClick()
-                            }
-                        })
-                    ]
-                );
-            },
-
-            handleSearch: _.debounce(function () {
-                if (this.searchValue === '') {
-                    return;
-                }
-                this.isFilter = true;
-                // 多个API过滤
-                if (this.searchValue.indexOf(',') !== -1) {
-                    let searchArr = this.searchValue.split(',');
-                    searchArr = _.uniq(searchArr);
-                    let filterArr = [];
-                    for (let i = 0; i < searchArr.length; i++) {
-                        if (searchArr[i] === '') {
-                            continue;
-                        }
-                        const val = [...this.apiList.filter(api => {
-                            return api.name.indexOf(searchArr[i]) !== -1 || api.description.indexOf(searchArr[i]) !== -1;
-                        })];
-                        filterArr.push(...val);
-                    }
-                    // 结果去重
-                    filterArr = _.uniq(filterArr);
-                    this.allData = filterArr;
-                } else {
-                    this.allData = [...this.apiList.filter(api => {
-                        return api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1;
-                    })];
-                }
-                this.pagination.count = this.allData.length;
-
-                this.pagination.current = 1;
-
-                const start = this.pagination.limit * (this.pagination.current - 1);
-                const end = start + this.pagination.limit;
-                this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
-                this.updateTableEmptyConfig();
-            }, 350),
-
-            /**
+    /**
              * 根据query参数选择对应网关
              */
-            querySelect () {
-                const query = this.$route.query;
-                if (!Object.keys(query).length) {
-                    return;
-                }
-                this.searchValue = query.api;
-                this.handleSearch();
-            },
+    querySelect() {
+      const { query } = this.$route;
+      if (!Object.keys(query).length) {
+        return;
+      }
+      this.searchValue = query.api;
+      this.handleSearch();
+    },
 
-            /**
+    /**
              * 初始化弹层翻页条
              */
-            initPageConf () {
-                this.pagination.current = 1;
-                const total = this.allData.length;
-                this.pagination.count = total;
-            },
+    initPageConf() {
+      this.pagination.current = 1;
+      const total = this.allData.length;
+      this.pagination.count = total;
+    },
 
-            /**
+    /**
              * 翻页回调
              *
              * @param {number} page 当前页
              */
-            pageChange (page = 1) {
-                this.allChecked = false;
-                this.indeterminate = false;
-                this.selectedAPIList = [];
-                this.tableList.forEach(api => {
-                    if (api.hasOwnProperty('checked')) {
-                        api.checked = false;
-                    }
-                });
-                this.pagination.current = page;
-                const data = this.getDataByPage(page);
-                this.tableList.splice(0, this.tableList.length, ...data);
-            },
+    pageChange(page = 1) {
+      this.allChecked = false;
+      this.indeterminate = false;
+      this.selectedAPIList = [];
+      this.tableList.forEach((api) => {
+        if (api.hasOwnProperty('checked')) {
+          api.checked = false;
+        }
+      });
+      this.pagination.current = page;
+      const data = this.getDataByPage(page);
+      this.tableList.splice(0, this.tableList.length, ...data);
+    },
 
-            /**
+    /**
              * 获取当前这一页的数据
              *
              * @param {number} page 当前页
              *
              * @return {Array} 当前页数据
              */
-            getDataByPage (page) {
-                if (!page) {
-                    this.pagination.current = page = 1;
-                }
-                let startIndex = (page - 1) * this.pagination.limit;
-                let endIndex = page * this.pagination.limit;
-                if (startIndex < 0) {
-                    startIndex = 0;
-                }
-                if (endIndex > this.allData.length) {
-                    endIndex = this.allData.length;
-                }
-                // 当前状态数据
-                if (this.filterStatus.length) {
-                  return this.filterData.slice(startIndex, endIndex);
-                } else {
-                  return this.allData.slice(startIndex, endIndex);
-                }
-            },
+    getDataByPage(page) {
+      if (!page) {
+        this.pagination.current = page = 1;
+      }
+      let startIndex = (page - 1) * this.pagination.limit;
+      let endIndex = page * this.pagination.limit;
+      if (startIndex < 0) {
+        startIndex = 0;
+      }
+      if (endIndex > this.allData.length) {
+        endIndex = this.allData.length;
+      }
+      // 当前状态数据
+      if (this.filterStatus.length) {
+        return this.filterData.slice(startIndex, endIndex);
+      }
+      return this.allData.slice(startIndex, endIndex);
+    },
 
-            limitChange (currentLimit, prevLimit) {
-                this.allChecked = false;
-                this.indeterminate = false;
-                this.selectedAPIList = [];
-                this.tableList.forEach(api => {
-                    if (api.hasOwnProperty('checked')) {
-                        api.checked = false;
-                    }
-                });
-                this.pagination.limit = currentLimit;
-                this.pagination.current = 1;
-                this.pageChange(this.pagination.current);
-            },
-
-            async fetchList (payload) {
-                this.allChecked = false;
-                this.indeterminate = false;
-                this.selectedAPIList = [];
-                this.loading = true;
-                try {
-                    const params = {
-                        appCode: this.appCode
-                    };
-                    if (this.isComponentApi) {
-                        params.systemId = payload;
-                    } else {
-                        params.apiId = payload;
-                    }
-                    const res = await this.$store.dispatch(`cloudApi/${this.curFetchDispatchMethod}`, params);
-                    // this.apiList = Object.freeze(res.data.sort(this.compare('name')))
-                    this.apiList = Object.freeze(res.data);
-                    this.allData = this.apiList;
-                    this.filterStatus = [];
-                    this.initPageConf();
-                    this.tableList = this.getDataByPage();
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (e) {
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.catchErrorHandler(e);
-                } finally {
-                    this.loading = false;
-                    if (this.requestQueue.length > 0) {
-                        this.requestQueue.shift();
-                    }
-                    this.handleSearch();
-                }
-            },
-
-            async fetchIsApplyByGateway (payload) {
-                try {
-                    const params = {
-                        appCode: this.appCode,
-                        apiId: payload
-                    };
-                    const res = await this.$store.dispatch('cloudApi/getAllowApplyByApi', params);
-                    this.judgeIsApplyByGateway = res.data;
-                } catch (e) {
-                    console.warn(e);
-                } finally {
-                    if (this.requestQueue.length > 0) {
-                        this.requestQueue.shift();
-                    }
-                }
-            },
-
-            handleApply (item) {
-                this.applyDialog.visiable = true;
-                this.applyDialog.title = this.$t('申请权限');
-                this.applyDialog.rows = [item];
-            },
-
-            handleRenwal (item) {
-                this.renewalDialog.visiable = true;
-                this.renewalDialog.title = this.$t('权限续期');
-                this.renewalDialog.rows = [item];
-            },
-
-            handleApplyByGateway () {
-                this.isShowGatewayDialog = true;
-            },
-
-            handleBatchRenwal () {
-                if (!this.selectedAPIList.length) {
-                    return;
-                }
-                this.renewalDialog.visiable = true;
-                this.renewalDialog.title = this.$t('批量续期权限');
-                const applyRows = this.selectedAPIList.filter(item => item.permission_action === 'apply');
-                const renewalRows = this.selectedAPIList.filter(item => item.permission_action === 'renew');
-                this.renewalDialog.rows = renewalRows.concat(applyRows);
-            },
-
-            handleBatchApply () {
-                if (!this.selectedAPIList.length) {
-                    return;
-                }
-                this.applyDialog.visiable = true;
-                this.applyDialog.title = this.$t('批量申请权限');
-                const applyRows = this.selectedAPIList.filter(item => item.permission_action === 'apply');
-                const renewalRows = this.selectedAPIList.filter(item => item.permission_action === 'renew');
-                this.applyDialog.rows = applyRows.concat(renewalRows);
-            },
-
-            highlight ({ name }) {
-                if (this.isFilter) {
-                    const searchValueArr = this.searchValue.split(',');
-                    for (let i = 0; i < searchValueArr.length; i++) {
-                        if (searchValueArr[i] !== '') {
-                            name = name.replace(new RegExp(searchValueArr[i], 'g'), `<marked>${searchValueArr[i]}</marked>`);
-                        }
-                    }
-                }
-                return name;
-            },
-
-            highlightDesc ({ description }) {
-                if (description !== '' && this.isFilter) {
-                    const descriptionArr = this.searchValue.split(',');
-                    for (let i = 0; i < descriptionArr.length; i++) {
-                        if (descriptionArr[i] !== '') {
-                            description = description.replace(new RegExp(descriptionArr[i], 'g'), `<marked>${descriptionArr[i]}</marked>`);
-                        }
-                    }
-                } else {
-                    return '--';
-                }
-                return description || '--';
-            },
-
-            showChoose () {
-                this.ifopen = true;
-            },
-
-            toggleChoose () {
-                this.ifopen = !this.ifopen;
-            },
-
-            clearFilterKey () {
-                this.searchValue = '';
-                this.$refs.gatewayRef.clearFilter();
-                // 清空表头筛选条件
-                if (this.$refs.gatewayRef && this.$refs.gatewayRef.$refs.tableHeader) {
-                    const tableHeader = this.$refs.gatewayRef.$refs.tableHeader;
-                    clearFilter(tableHeader);
-                }
-                this.fetchList(this.id);
-            },
-
-            updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.searchValue;
-            }
+    limitChange(currentLimit, prevLimit) {
+      this.allChecked = false;
+      this.indeterminate = false;
+      this.selectedAPIList = [];
+      this.tableList.forEach((api) => {
+        if (api.hasOwnProperty('checked')) {
+          api.checked = false;
         }
-    };
+      });
+      this.pagination.limit = currentLimit;
+      this.pagination.current = 1;
+      this.pageChange(this.pagination.current);
+    },
+
+    async fetchList(payload) {
+      this.allChecked = false;
+      this.indeterminate = false;
+      this.selectedAPIList = [];
+      this.loading = true;
+      try {
+        const params = {
+          appCode: this.appCode,
+        };
+        if (this.isComponentApi) {
+          params.systemId = payload;
+        } else {
+          params.apiId = payload;
+        }
+        const res = await this.$store.dispatch(`cloudApi/${this.curFetchDispatchMethod}`, params);
+        // this.apiList = Object.freeze(res.data.sort(this.compare('name')))
+        this.apiList = Object.freeze(res.data);
+        this.allData = this.apiList;
+        this.filterStatus = [];
+        this.initPageConf();
+        this.tableList = this.getDataByPage();
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.catchErrorHandler(e);
+      } finally {
+        this.loading = false;
+        if (this.requestQueue.length > 0) {
+          this.requestQueue.shift();
+        }
+        this.handleSearch();
+      }
+    },
+
+    async fetchIsApplyByGateway(payload) {
+      try {
+        const params = {
+          appCode: this.appCode,
+          apiId: payload,
+        };
+        const res = await this.$store.dispatch('cloudApi/getAllowApplyByApi', params);
+        this.judgeIsApplyByGateway = res.data;
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        if (this.requestQueue.length > 0) {
+          this.requestQueue.shift();
+        }
+      }
+    },
+
+    handleApply(item) {
+      this.applyDialog.visiable = true;
+      this.applyDialog.title = this.$t('申请权限');
+      this.applyDialog.rows = [item];
+    },
+
+    handleRenwal(item) {
+      this.renewalDialog.visiable = true;
+      this.renewalDialog.title = this.$t('权限续期');
+      this.renewalDialog.rows = [item];
+    },
+
+    handleApplyByGateway() {
+      this.isShowGatewayDialog = true;
+    },
+
+    handleBatchRenwal() {
+      if (!this.selectedAPIList.length) {
+        return;
+      }
+      this.renewalDialog.visiable = true;
+      this.renewalDialog.title = this.$t('批量续期权限');
+      const applyRows = this.selectedAPIList.filter(item => item.permission_action === 'apply');
+      const renewalRows = this.selectedAPIList.filter(item => item.permission_action === 'renew');
+      this.renewalDialog.rows = renewalRows.concat(applyRows);
+    },
+
+    handleBatchApply() {
+      if (!this.selectedAPIList.length) {
+        return;
+      }
+      this.applyDialog.visiable = true;
+      this.applyDialog.title = this.$t('批量申请权限');
+      const applyRows = this.selectedAPIList.filter(item => item.permission_action === 'apply');
+      const renewalRows = this.selectedAPIList.filter(item => item.permission_action === 'renew');
+      this.applyDialog.rows = applyRows.concat(renewalRows);
+    },
+
+    highlight({ name }) {
+      if (this.isFilter) {
+        const searchValueArr = this.searchValue.split(',');
+        for (let i = 0; i < searchValueArr.length; i++) {
+          if (searchValueArr[i] !== '') {
+            name = name.replace(new RegExp(searchValueArr[i], 'g'), `<marked>${searchValueArr[i]}</marked>`);
+          }
+        }
+      }
+      return name;
+    },
+
+    highlightDesc({ description }) {
+      if (description !== '' && this.isFilter) {
+        const descriptionArr = this.searchValue.split(',');
+        for (let i = 0; i < descriptionArr.length; i++) {
+          if (descriptionArr[i] !== '') {
+            description = description.replace(new RegExp(descriptionArr[i], 'g'), `<marked>${descriptionArr[i]}</marked>`);
+          }
+        }
+      } else {
+        return '--';
+      }
+      return description || '--';
+    },
+
+    showChoose() {
+      this.ifopen = true;
+    },
+
+    toggleChoose() {
+      this.ifopen = !this.ifopen;
+    },
+
+    clearFilterKey() {
+      this.searchValue = '';
+      this.$refs.gatewayRef.clearFilter();
+      // 清空表头筛选条件
+      if (this.$refs.gatewayRef && this.$refs.gatewayRef.$refs.tableHeader) {
+        const { tableHeader } = this.$refs.gatewayRef.$refs;
+        clearFilter(tableHeader);
+      }
+      this.fetchList(this.id);
+    },
+
+    updateTableEmptyConfig() {
+      this.tableEmptyConf.keyword = this.searchValue;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -1014,6 +1013,9 @@
             .paasng-icon {
                 font-size: 12px;
             }
+        }
+        &.en {
+          width: 92px;
         }
     }
 

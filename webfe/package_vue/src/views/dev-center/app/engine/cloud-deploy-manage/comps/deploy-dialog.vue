@@ -3,7 +3,6 @@
     <bk-dialog
       v-model="deployAppDialog.visiable"
       width="520"
-      :title="$t('模块部署')"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
@@ -14,6 +13,12 @@
       @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
+      <template #header>
+        <div class="dialog-header-wrapper">
+          {{ $t('模块部署') }}
+          <div class="module-name-tag">{{ curAppModule.name || '--' }}</div>
+        </div>
+      </template>
       <!-- 源码逻辑 -->
       <div v-if="isSourceCodeBuild">
         <div
@@ -836,6 +841,20 @@ export default {
 .image-tag-cls {
   /deep/ .bk-label::after {
     display: none;
+  }
+}
+
+.dialog-header-wrapper {
+  color: #313238;
+  display: flex;
+  align-items: center;
+  .module-name-tag {
+    margin-left: 8px;
+    font-size: 12px;
+    color: #63656E;
+    background-color: #F0F1F5;
+    padding: 3px 7px;
+    border-radius: 2px;
   }
 }
 </style>

@@ -73,7 +73,7 @@
     -e OUTPUT_IMAGE="mirrors.tencent.com/foo:latest" \
     -e RUN_IMAGE="mirrors.tencent.com/bkpaas/heroku-stack-bionic:run" \
     -e SOURCE_GET_URL="file:///tmp/source.tgz" \
-    -e REQUIRED_BUILDPACKS="tgz fagiani/apt ... 0.2.5;tgz blueking/python ... v213" \
+    -e REQUIRED_BUILDPACKS="tgz fagiani/apt ... 0.2.5;tgz bk-buildpack-python ... v213" \
     # 非必要不要改这个值
     -e CNB_PLATFORM_API="0.11" \
     # TODO: 修改成你的镜像源访问凭证, 结构为 Dict[str, str], key 是镜像仓库名称, value 是 Basic Auth 格式的用户凭证

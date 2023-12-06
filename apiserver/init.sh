@@ -106,6 +106,20 @@ ensure-apt-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar" \
     --hidden
+
+    # 云原生应用直接使用社区的 apt buildapck
+    python manage.py manage_buildpack \
+    --region "${region}" \
+    --name "fagiani/apt" \
+    --display_name_zh_cn "安装系统包" \
+    --display_name_en "Install Apt package" \
+    --description_zh_cn "安装 Aptfile 文件描述的系统依赖包" \
+    --description_en "Install the system dependency packages described in the Aptfile file" \
+    --tag "0.2.5" \
+    --language Apt \
+    --type tar \
+    --address "urn:cnb:registry:fagiani/apt" \
+    --hidden
 }
 
 ensure-python-buildpack() {
@@ -211,11 +225,27 @@ ensure-buleking-image() {
     --display_name_en "Blueking Basic Image" \
     --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
-    --label secureEncrypted=1 normal_app=1 smart_app=1
+    --label secureEncrypted=1 supportHttp=1 normal_app=1 smart_app=1
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${apt_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${python_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${nodejs_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${golang_buildpack_name}"
+
+    cnb_image_name="blueking-cloudnative"
+    python manage.py manage_image \
+    --region "${region}" \
+    --image "${PAAS_HEROKU_BUILDER_IMAGE}" \
+    --name "${cnb_image_name}" \
+    --display_name_zh_cn "蓝鲸基础镜像" \
+    --display_name_en "Blueking Basic Image" \
+    --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
+    --description_en "Ubuntu-based, multi-buildpack combination build support" \
+    --environment "CNB_PLATFORM_API=0.11" "RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" \
+    --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "fagiani/apt"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${python_buildpack_name}"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${nodejs_buildpack_name}"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${golang_buildpack_name}"
 }
 
 ensure-legacy-image() {

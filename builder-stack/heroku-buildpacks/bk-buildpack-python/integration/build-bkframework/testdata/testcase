@@ -1,0 +1,26 @@
+#!/usr/bin/expect
+set timeout 600;
+
+# 等待 dockerd 启动
+sleep 3
+set flag 0
+while {$flag < 10} {
+    sleep 1
+    incr flag
+    spawn docker info -f "{{ .ServerVersion }}"
+    expect "20.10" {set flag 10}
+}
+
+# 测试-启动构建容器
+spawn bk-saas-pack debug --src project.tar.gz --python-buildpack /buildpack/bk-buildpack-python-debug.tar
+expect "root@" {puts "\n成功进入容器\n"}
+
+# 测试-执行构建
+send "STRICT_PIP_MODE=1 make default\n"
+expect "installing pip-tools"
+expect "Build success" {puts "\n构建成功！\n"}
+
+# 测试-启动 web 进程
+send "PORT=5000 pilot run start web\n"
+expect "0.0.0.0:5000"
+exit 0;

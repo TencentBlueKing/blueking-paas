@@ -4,7 +4,7 @@
       :title="$t('包版本管理')"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
-      :module-list="isLesscodeApp ? curAppModuleList : ''"
+      :module-list="isLesscodeApp ? curAppModuleList : []"
     />
     <paas-content-loader
       :is-loading="isPageLoading"
@@ -222,6 +222,7 @@
       <div v-else>
         <uploader
           :key="renderUploaderIndex"
+          :validate-name="fileReg"
           :action="uploadUrl"
           :with-credentials="true"
           :name="'package'"
@@ -252,202 +253,202 @@
   </div>
 </template>
 
-<script>
-    import appBaseMixin from '@/mixins/app-base-mixin.js';
-    import appTopBar from '@/components/paas-app-bar';
-    import uploader from '@/components/uploader';
+<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+import appTopBar from '@/components/paas-app-bar';
+import uploader from '@/components/uploader';
 
-    export default {
-        components: {
-            appTopBar,
-            uploader
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isDataCommiting: false,
-                isPageLoading: true,
-                isDataLoading: true,
-                renderUploaderIndex: 0,
-                packageList: [],
-                uploadDialogConf: {
-                    isShow: false,
-                    title: '',
-                    package: null
-                },
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10,
-                    order_by: ''
-                },
-                lessCodeData: {},
-                lessCodeFlag: true
-            };
-        },
-        computed: {
-            uploadHeader () {
-                return {
-                    name: 'X-CSRFToken',
-                    value: this.GLOBAL.CSRFToken
-                };
-            },
-            uploadUrl () {
-                return `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/source_package/stash/`;
-            }
-        },
-        watch: {
-            '$route' () {
-                this.isPageLoading = true;
-                this.resetParams();
-                this.getPackageList();
-            },
-            curModuleId () {
-                this.getLessCode();
-            }
-        },
-        created () {
-            this.getPackageList();
-            this.getLessCode();
-        },
-        methods: {
-            async getPackageList (page) {
-                this.isDataLoading = true;
-                try {
-                    const curPage = page || this.pagination.current;
-                    const params = {
-                        limit: this.pagination.limit,
-                        offset: this.pagination.limit * (curPage - 1)
-                    };
-
-                    if (this.pagination.order_by) {
-                        params.order_by = this.pagination.order_by;
-                    }
-
-                    const res = await this.$store.dispatch('packages/getAppPackageList', {
-                        isLesscodeApp: this.isLesscodeApp,
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        params: params
-                    });
-
-                    res.results.forEach(item => {
-                        item.size = (item.package_size / 1024 / 1024).toFixed(2);
-                    });
-                    this.packageList = res.results;
-                    this.pagination.count = res.count;
-                } catch (e) {
-                    // this.$bkMessage({
-                    //     theme: 'error',
-                    //     message: e.detail || e.message || this.$t('接口异常')
-                    // })
-                } finally {
-                    this.isPageLoading = false;
-                    this.isDataLoading = false;
-                }
-            },
-
-            async handleCommitPackage () {
-                this.isDataCommiting = true;
-                try {
-                    await this.$store.dispatch('packages/commitPackage', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        signature: this.uploadDialogConf.package.signature
-                    });
-
-                    this.pagination.current = 1;
-                    this.getPackageList();
-                    this.$bkMessage({
-                        theme: 'success',
-                        message: this.$t('上传新版本成功')
-                    });
-                    this.uploadDialogConf.isShow = false;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isDataCommiting = false;
-                }
-            },
-
-            handleCancelCommit () {
-                this.uploadDialogConf.isShow = false;
-            },
-
-            limitChange (limit) {
-                this.pagination.limit = limit;
-                this.pagination.current = 1;
-                this.getPackageList(this.pagination.current);
-            },
-
-            pageChange (newPage) {
-                this.pagination.current = newPage;
-                this.getPackageList(newPage);
-            },
-
-            sortChange (params) {
-                if (params.order === 'descending') {
-                    this.pagination.order_by = `-${params.prop}`;
-                } else if (params.order === 'ascending') {
-                    this.pagination.order_by = `${params.prop}`;
-                } else {
-                    this.pagination.order_by = '';
-                }
-                this.getPackageList();
-            },
-
-            handleUpload () {
-                this.renderUploaderIndex++;
-                this.uploadDialogConf.package = null;
-                this.uploadDialogConf.isShow = true;
-            },
-
-            handleUploadCallback (res) {
-                return !!(res && res.signature);
-            },
-
-            resetParams () {
-                this.pagination.current = 1;
-                this.pagination.limit = 10;
-            },
-
-            handleSuccess (res) {
-                this.uploadDialogConf.package = res;
-                this.uploadDialogConf.title = this.$t('版本包详情');
-            },
-
-            handleError () {
-                this.uploadDialogConf.package = null;
-                this.uploadDialogConf.title = '';
-            },
-
-            async getLessCode () {
-                try {
-                    const resp = await this.$store.dispatch('baseInfo/gitLessCodeAddress', {
-                        appCode: this.appCode,
-                        moduleName: this.curModuleId
-                    });
-                    if (resp.address_in_lesscode === '' && resp.tips === '') {
-                        this.lessCodeFlag = false;
-                    }
-                    this.lessCodeData = resp;
-                } catch (errRes) {
-                    this.lessCodeFlag = false;
-                    console.error(errRes);
-                }
-            },
-
-            handleLessCode () {
-                if (this.lessCodeData.address_in_lesscode) {
-                    return;
-                }
-                this.$bkMessage({ theme: 'warning', message: this.$t(this.lessCodeData.tips), delay: 2000, dismissable: false });
-            }
-        }
+export default {
+  components: {
+    appTopBar,
+    uploader,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isDataCommiting: false,
+      isPageLoading: true,
+      isDataLoading: true,
+      renderUploaderIndex: 0,
+      packageList: [],
+      uploadDialogConf: {
+        isShow: false,
+        title: '',
+        package: null,
+      },
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+        order_by: '',
+      },
+      lessCodeData: {},
+      lessCodeFlag: true,
+      fileReg: /^[a-zA-Z0-9-_. ]+$/,
     };
+  },
+  computed: {
+    uploadHeader() {
+      return {
+        name: 'X-CSRFToken',
+        value: this.GLOBAL.CSRFToken,
+      };
+    },
+    uploadUrl() {
+      return `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/source_package/stash/`;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.isPageLoading = true;
+      this.resetParams();
+      this.getPackageList();
+    },
+    curModuleId() {
+      this.getLessCode();
+    },
+  },
+  created() {
+    this.getPackageList();
+    this.getLessCode();
+  },
+  methods: {
+    async getPackageList(page) {
+      this.isDataLoading = true;
+      try {
+        const curPage = page || this.pagination.current;
+        const params = {
+          limit: this.pagination.limit,
+          offset: this.pagination.limit * (curPage - 1),
+        };
+
+        if (this.pagination.order_by) {
+          params.order_by = this.pagination.order_by;
+        }
+
+        const res = await this.$store.dispatch('packages/getAppPackageList', {
+          isLesscodeApp: this.isLesscodeApp,
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          params,
+        });
+
+        res.results.forEach((item) => {
+          item.size = (item.package_size / 1024 / 1024).toFixed(2);
+        });
+        this.packageList = res.results;
+        this.pagination.count = res.count;
+      } catch (e) {
+        // this.$bkMessage({
+        //     theme: 'error',
+        //     message: e.detail || e.message || this.$t('接口异常')
+        // })
+      } finally {
+        this.isPageLoading = false;
+        this.isDataLoading = false;
+      }
+    },
+
+    async handleCommitPackage() {
+      this.isDataCommiting = true;
+      try {
+        await this.$store.dispatch('packages/commitPackage', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          signature: this.uploadDialogConf.package.signature,
+        });
+
+        this.pagination.current = 1;
+        this.getPackageList();
+        this.$bkMessage({
+          theme: 'success',
+          message: this.$t('上传新版本成功'),
+        });
+        this.uploadDialogConf.isShow = false;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.isDataCommiting = false;
+      }
+    },
+
+    handleCancelCommit() {
+      this.uploadDialogConf.isShow = false;
+    },
+
+    limitChange(limit) {
+      this.pagination.limit = limit;
+      this.pagination.current = 1;
+      this.getPackageList(this.pagination.current);
+    },
+
+    pageChange(newPage) {
+      this.pagination.current = newPage;
+      this.getPackageList(newPage);
+    },
+
+    sortChange(params) {
+      if (params.order === 'descending') {
+        this.pagination.order_by = `-${params.prop}`;
+      } else if (params.order === 'ascending') {
+        this.pagination.order_by = `${params.prop}`;
+      } else {
+        this.pagination.order_by = '';
+      }
+      this.getPackageList();
+    },
+
+    handleUpload() {
+      this.renderUploaderIndex++;
+      this.uploadDialogConf.package = null;
+      this.uploadDialogConf.isShow = true;
+    },
+
+    handleUploadCallback(res) {
+      return !!(res && res.signature);
+    },
+
+    resetParams() {
+      this.pagination.current = 1;
+      this.pagination.limit = 10;
+    },
+
+    handleSuccess(res) {
+      this.uploadDialogConf.package = res;
+      this.uploadDialogConf.title = this.$t('版本包详情');
+    },
+
+    handleError() {
+      this.uploadDialogConf.package = null;
+      this.uploadDialogConf.title = '';
+    },
+
+    async getLessCode() {
+      try {
+        const resp = await this.$store.dispatch('baseInfo/gitLessCodeAddress', {
+          appCode: this.appCode,
+          moduleName: this.curModuleId,
+        });
+        if (resp.address_in_lesscode === '' && resp.tips === '') {
+          this.lessCodeFlag = false;
+        }
+        this.lessCodeData = resp;
+      } catch (errRes) {
+        this.lessCodeFlag = false;
+        console.error(errRes);
+      }
+    },
+
+    handleLessCode() {
+      if (this.lessCodeData.address_in_lesscode) {
+        return;
+      }
+      this.$bkMessage({ theme: 'warning', message: this.$t(this.lessCodeData.tips), delay: 2000, dismissable: false });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

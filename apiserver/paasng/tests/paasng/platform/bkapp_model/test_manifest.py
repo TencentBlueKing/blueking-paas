@@ -416,7 +416,8 @@ def test_get_manifest(bk_module):
     assert manifest[0]["kind"] == "BkApp"
 
 
-def test_apply_env_annots(blank_resource, bk_stag_env, with_wl_apps):
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_apply_env_annots(blank_resource, bk_stag_env):
     apply_env_annots(blank_resource, bk_stag_env)
 
     annots = blank_resource.metadata.annotations
@@ -425,7 +426,8 @@ def test_apply_env_annots(blank_resource, bk_stag_env, with_wl_apps):
     assert "bkapp.paas.bk.tencent.com/bkpaas-deploy-id" not in annots
 
 
-def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env, with_wl_apps):
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env):
     apply_env_annots(blank_resource, bk_stag_env, deploy_id="foo-id")
     assert blank_resource.metadata.annotations["bkapp.paas.bk.tencent.com/bkpaas-deploy-id"] == "foo-id"
 

@@ -61,7 +61,7 @@ class RabbitMQServiceMigration(BaseRemoteServiceMigration):
             rel.provision()
 
             instance = rel.get_instance()
-            BK_BROKER_URL = (
+            bk_broker_url = (
                 "amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/{RABBITMQ_VHOST}".format(
                     **instance.credentials
                 )
@@ -72,7 +72,7 @@ class RabbitMQServiceMigration(BaseRemoteServiceMigration):
                 module=module,
                 environment=env,
                 key="BK_BROKER_URL",
-                value=BK_BROKER_URL,
+                value=bk_broker_url,
                 description="RabbitMQ 服务迁移变量",
             )
             ConfigVar.objects.create(

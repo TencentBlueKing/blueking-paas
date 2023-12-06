@@ -74,9 +74,10 @@ class GiteeRepoController(BaseGitRepoController):
     def touch(self) -> bool:
         try:
             self.list_alternative_versions()
-            return True
         except (exceptions.DoesNotExistsOnGitServer, exceptions.AccessTokenForbidden) as e:
             raise exceptions.AccessTokenForbidden(project=self.project) from e
+        else:
+            return True
 
     def export(self, local_path, version_info: VersionInfo):
         """Gitee API 不支持下载压缩包，改成直接将代码库 clone 下来，由通用逻辑进行打包"""

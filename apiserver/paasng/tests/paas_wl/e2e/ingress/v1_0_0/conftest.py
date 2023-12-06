@@ -42,14 +42,14 @@ def ingress_nginx_reload_checker():
 
 
 @pytest.fixture(autouse=True)
-def setup_cluster(cluster):
+def _setup_cluster(cluster):
     # ingress-controller == 1.0.0 必须使用正则表达式
     cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_REGEX] = True
     cluster.save()
 
 
 @pytest.fixture(scope="module", autouse=True)
-def setup_ingress_nginx_controller(skip_if_configuration_not_ready, namespace_maker, k8s_client, ingress_nginx_ns):
+def _setup_ingress_nginx_controller(skip_if_configuration_not_ready, namespace_maker, k8s_client, ingress_nginx_ns):
     k8s_version = VersionApi(k8s_client).get_code()
     # k8s 1.8 只起了 apiserver 模拟测试, 无法进行集成测试
     if (int(k8s_version.major), int(k8s_version.minor)) < (1, 19):

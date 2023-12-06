@@ -124,7 +124,7 @@ def save_redis(doc: Dict):
         return
 
     # Connect to redis and save the connection pool afterwards
-    global _redis_client  # noqa: PLW0603
+    global _redis_client
     if _redis_client is None:
         connection_options = getattr(settings, "REDIS_CONNECTION_OPTIONS", {})
         # TODO ee 版本如果开启, 再支持 sentinel 模式. 届时 PAAS_API_LOG_REDIS_HANDLER 参数也要适配调整

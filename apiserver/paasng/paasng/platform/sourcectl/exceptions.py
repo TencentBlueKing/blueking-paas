@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Optional
 from django.utils.translation import gettext as _
 
 if TYPE_CHECKING:
-    from .models import GitProject  # noqa
+    from .models import GitProject  # noqa: F401
 
 
 class DoesNotExistsOnServer(Exception):

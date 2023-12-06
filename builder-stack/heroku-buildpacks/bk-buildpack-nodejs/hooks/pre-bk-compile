@@ -1,0 +1,16 @@
+# 在 bin/compile命令一开始就注入
+
+# buildpack 版本
+BUILDPACK_VERSION="163"
+
+# 让源码bin目录的勾子有执行权限
+# chmod +x "$BUILD_DIR"/bin/* || true
+find "$BUILD_DIR"/bin -name '*' -exec chmod +x {} \; || true
+
+# 设置stdlib.shg
+# curl --silent --noproxy --show-error 'https://lang-common.s3.amazonaws.com/buildpack-stdlib/v7/stdlib.sh' > "$STDLIB_FILE"
+if [ ${STDLIB_FILE_URL} ]; then
+	curl --silent --noproxy --show-error --retry 1 --retry-max-time 2 "$STDLIB_FILE_URL" > "$STDLIB_FILE"
+else
+	curl --silent --show-error --retry 5 --retry-max-time 15 'https://lang-common.s3.amazonaws.com/buildpack-stdlib/v7/stdlib.sh' > "$STDLIB_FILE"
+fi

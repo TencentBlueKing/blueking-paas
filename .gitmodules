@@ -1,0 +1,9 @@
+[submodule "builder-stack/heroku-buildpacks/bk-buildpack-go/buildpack"]
+	path = builder-stack/heroku-buildpacks/bk-buildpack-go/buildpack
+	url = https://github.com/heroku/heroku-buildpack-go.git
+[submodule "builder-stack/heroku-buildpacks/bk-buildpack-nodejs/buildpack"]
+	path = builder-stack/heroku-buildpacks/bk-buildpack-nodejs/buildpack
+	url = https://github.com/heroku/heroku-buildpack-nodejs.git
+[submodule "builder-stack/heroku-buildpacks/bk-buildpack-python/buildpack"]
+	path = builder-stack/heroku-buildpacks/bk-buildpack-python/buildpack
+	url = https://github.com/heroku/heroku-buildpack-python.git

@@ -82,11 +82,13 @@ def upload_package_via_url(
         stat = SourcePackageStatReader(path).read()
         # Patch 源码包，如添加 Procfile 文件等
         if need_patch:
-            path = SourceCodePatcher.patch_tarball(
+            new_path = SourceCodePatcher.patch_tarball(
                 module=module, tarball_path=path, working_dir=patching_dir, stat=stat
             )
             # 更新 stat
-            stat = SourcePackageStatReader(path).read()
+            stat = SourcePackageStatReader(new_path).read()
+        else:
+            new_path = path
 
         stat.name = filename
         # 保存版本信息
@@ -95,7 +97,7 @@ def upload_package_via_url(
             stat.version = version
 
         obj_key = generate_storage_path(module, stat=stat)
-        obj_url = upload_to_blob_store(path, key=obj_key, allow_overwrite=allow_overwrite)
+        obj_url = upload_to_blob_store(new_path, key=obj_key, allow_overwrite=allow_overwrite)
 
     policy = SPStoragePolicy(path=obj_key, url=obj_url, stat=stat, allow_overwrite=allow_overwrite)
     source_package = SourcePackage.objects.store(module, policy, operator=operator)

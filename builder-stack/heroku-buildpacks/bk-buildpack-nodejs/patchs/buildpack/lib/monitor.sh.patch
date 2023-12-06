@@ -1,0 +1,20 @@
+20a21,30
+> 
+>   # 关闭 xtrace 避免打印大量无意义的日志
+>   local xtrace_status="0"
+>   if [[ $- == *x* ]]; then
+>     echo "xtrace (set -x) is enabled, will close it temporarily"
+>     xtrace_status="1"
+>     set +x
+>   fi
+> 
+> 
+31a42,49
+> 
+>   # 复原 xtrace 状态位
+>   if [[ $xtrace_status == "1" ]]; then
+>     echo "reset xtrace (set -x)"
+>     set -x
+>   fi
+> 
+> 

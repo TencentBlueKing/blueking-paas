@@ -78,7 +78,7 @@ class TestVolumeSourceManager:
         )
 
     @pytest.fixture()
-    def _create_namespace(self, bk_stag_env, with_wl_apps):
+    def _create_namespace(self, bk_stag_env, _with_wl_apps):
         wl_app = bk_stag_env.wl_app
         with get_client_by_app(wl_app) as client:
             body = {
@@ -108,11 +108,11 @@ class TestVolumeSourceManager:
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")
-    def test_deploy(self, bk_stag_env, with_wl_apps):
+    def test_deploy(self, bk_stag_env):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
 
     @pytest.mark.usefixtures("_create_namespace")
-    def test_delete(self, bk_stag_env, with_wl_apps, mount):
+    def test_delete(self, bk_stag_env, mount):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
         assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=mount.source.name)
         mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount)

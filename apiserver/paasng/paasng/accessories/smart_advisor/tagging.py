@@ -67,8 +67,8 @@ def dig_tags_local_repo(local_path: str):
 
 def py_module_in_requirements(name, requirements):
     """Check if a module was defined in python requirements"""
-    for line in requirements.split("\n"):
-        line = line.strip().lower()
+    for raw_line in requirements.split("\n"):
+        line = raw_line.strip().lower()
         if line.startswith("#"):
             continue
 

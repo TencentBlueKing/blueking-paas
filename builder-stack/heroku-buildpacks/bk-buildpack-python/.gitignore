@@ -1,0 +1,7 @@
+file-cache/**
+test/assets/
+output/
+.vscode/
+.idea/
+.DS_Store
+download/

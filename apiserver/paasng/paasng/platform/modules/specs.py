@@ -131,9 +131,9 @@ class SourceOriginSpecs(ABC):
             raise RuntimeError(f"{source_origin} is not valid, no SourceOriginSpecs can be found!")
 
     @classmethod
-    def supported_runtime_types(self) -> List[RuntimeType]:
+    def supported_runtime_types(cls) -> List[RuntimeType]:
         """List of supported runtime types"""
-        return [self.runtime_type]
+        return [cls.runtime_type]
 
 
 class AuthorizedVcsSpecs(SourceOriginSpecs):
@@ -145,7 +145,7 @@ class AuthorizedVcsSpecs(SourceOriginSpecs):
     deploy_via_package = False
 
     @classmethod
-    def supported_runtime_types(self) -> List[RuntimeType]:
+    def supported_runtime_types(cls) -> List[RuntimeType]:
         """List of supported runtime types"""
         return [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE]
 

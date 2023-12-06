@@ -178,10 +178,10 @@ class BuildProcessExecutor(DeployStep):
         try:
             # User interruption was allowed when first log message was received — which means the Pod
             # has entered "Running" status.
-            for line in self.scheduler_client.get_build_log(
+            for raw_line in self.scheduler_client.get_build_log(
                 name=self._builder_name, follow=True, timeout=_FOLLOWING_LOGS_TIMEOUT, namespace=self.wl_app.namespace
             ):
-                line = force_text(line)
+                line = force_text(raw_line)
                 self.stream.write_message(line)
         except Exception:
             logger.warning("failed to watch build logs for App: %s", self.wl_app.name)

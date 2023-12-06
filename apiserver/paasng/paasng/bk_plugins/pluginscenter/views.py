@@ -24,6 +24,7 @@ import semver
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, status
@@ -82,6 +83,10 @@ class SchemaViewSet(ViewSet):
         for pd in PluginDefinition.objects.all():
             basic_info_definition = pd.basic_info_definition
             pd_data = serializers.PluginDefinitionSLZ(pd).data
+            extra_fields = basic_info_definition.extra_fields
+            # 当前语言为英文，且定义了英文字段则返回英文字段的定义
+            if get_language() == "en" and basic_info_definition.extra_fields:
+                extra_fields = basic_info_definition.extra_fields_en
             schemas.append(
                 {
                     "plugin_type": pd_data,
@@ -92,7 +97,7 @@ class SchemaViewSet(ViewSet):
                         "release_method": basic_info_definition.release_method,
                         "repository_group": basic_info_definition.repository_group,
                         "repository_template": shim.build_repository_template(basic_info_definition.repository_group),
-                        "extra_fields": cattr.unstructure(basic_info_definition.extra_fields),
+                        "extra_fields": cattr.unstructure(extra_fields),
                         "extra_fields_order": cattr.unstructure(basic_info_definition.extra_fields_order),
                     },
                 }
@@ -106,12 +111,17 @@ class SchemaViewSet(ViewSet):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         market_info_definition = pd.market_info_definition
         readonly = market_info_definition.storage == constants.MarketInfoStorageType.THIRD_PARTY
+        extra_fields = market_info_definition.extra_fields
+        # 当前语言为英文，且定义了英文字段则返回英文字段的定义
+        if get_language() == "en" and market_info_definition.extra_fields:
+            extra_fields = market_info_definition.extra_fields_en
+
         return Response(
             {
                 "category": market_api.list_category(pd) if not readonly else [],
                 "schema": {
                     "extra_fields": cattr.unstructure(market_info_definition.extra_fields),
-                    "extra_fields_order": cattr.unstructure(market_info_definition.extra_fields_order),
+                    "extra_fields_order": cattr.unstructure(extra_fields),
                 },
                 "readonly": readonly,
             }
@@ -750,9 +760,12 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
             else:
                 market_api.update_market_info(pd, plugin, market_info, operator=request.user.pk)
         # 如果当前插件正处于完善市场信息的发布阶段, 则设置该阶段的状态为 successful(允许进入下一阶段)
-        if release := plugin.all_versions.get_ongoing_release():  # noqa: SIM102
-            if release.current_stage and release.current_stage.stage_id == "market":
-                release.current_stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        if (
+            (release := plugin.all_versions.get_ongoing_release())
+            and release.current_stage
+            and release.current_stage.stage_id == "market"
+        ):
+            release.current_stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
 
         # 操作记录: 修改市场信息
         OperationRecord.objects.create(

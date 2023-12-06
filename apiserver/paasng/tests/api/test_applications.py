@@ -24,11 +24,14 @@ from django.conf import settings
 from django.urls import reverse
 from django_dynamic_fixture import G
 
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.shim import RegionClusterService
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
-from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
+from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -53,6 +56,13 @@ def another_user(request):
     """Generate a random user"""
     user = create_user()
     return user
+
+
+@pytest.fixture()
+def _turn_on_bk_log_feature():
+    post_create_application.connect(turn_on_bk_log_feature)
+    yield
+    post_create_application.disconnect(turn_on_bk_log_feature)
 
 
 class TestMembershipViewset:
@@ -354,6 +364,7 @@ class TestApplicationCreateWithoutEngine:
 class TestApplicationUpdate:
     """Test update application API"""
 
+    @pytest.mark.usefixtures("_register_app_core_data")
     def test_normal(self, api_client, bk_app_full, bk_user, random_name):
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app_full.code),
@@ -392,13 +403,13 @@ class TestApplicationUpdate:
 class TestApplicationDeletion:
     """Test delete application API"""
 
+    @pytest.mark.usefixtures("_with_empty_live_addrs")
     def test_normal(
         self,
         api_client,
         bk_app,
         bk_user,
         mock_wl_services_in_creation,
-        with_empty_live_addrs,
     ):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
@@ -406,13 +417,13 @@ class TestApplicationDeletion:
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
 
+    @pytest.mark.usefixtures("_with_empty_live_addrs")
     def test_rollback(
         self,
         api_client,
         bk_app,
         bk_user,
         mock_wl_services_in_creation,
-        with_empty_live_addrs,
     ):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
         with mock.patch(
@@ -513,10 +524,11 @@ class TestCreateCloudNativeApp:
         module = Module.objects.get(id=app_data["modules"][0]["id"])
         cfg = BuildConfig.objects.get_or_create_by_module(module)
         assert cfg.image_repository == image_repository
+        assert cfg.image_credential_name == image_credential_name
+
         process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
         assert process_spec.image is None
         assert process_spec.command == ["bash", "/app/start_web.sh"]
-        assert process_spec.image_credential_name == image_credential_name
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2
 
@@ -574,3 +586,31 @@ class TestCreateCloudNativeApp:
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "dockerfile"
         assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
+
+    @pytest.mark.usefixtures("_init_tmpls")
+    @pytest.mark.usefixtures("_turn_on_bk_log_feature")
+    def test_create_with_bk_log_feature(self, api_client, settings):
+        """测试创建应用时开启日志平台功能特性"""
+        cluster = RegionClusterService(settings.DEFAULT_REGION_NAME).get_default_cluster()
+        cluster.feature_flags[ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR] = True
+        cluster.save()
+
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
+                "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
+                "source_config": {
+                    "source_init_template": "docker",
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                    "source_repo_auth_info": {},
+                },
+            },
+        )
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        application = Application.objects.get(code=f"uta-{random_suffix}")
+        assert application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)

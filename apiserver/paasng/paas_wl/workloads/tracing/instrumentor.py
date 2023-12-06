@@ -105,7 +105,7 @@ class BKAppInstrumentor(BaseInstrumentor):
         CeleryInstrumentor().instrument()
 
         if getattr(settings, "OTEL_INSTRUMENT_DB_API", False):
-            import MySQLdb  # noqa
+            import MySQLdb
 
             dbapi.wrap_connect(
                 __name__,

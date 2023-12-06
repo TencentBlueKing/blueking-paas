@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+# 在 compile 脚本正式开始之前执行
+# - 兼容 pre-compile 和 post-compile
+
+make_hook() {
+    name="$1"
+    target="$2"
+    hook="${BUILD_DIR}/bin/${name}"
+    cat > "${hook}" << EOF
+#!/bin/bash
+status=0
+if [ -f "${BUILD_DIR}/bin/${target}" ]; then
+    chmod +x "${BUILD_DIR}/bin/${target}"
+    trace_call "${BUILD_DIR}/bin/${target}"
+    status=\$?
+fi
+rm -rf \$0
+exit \${status}
+EOF
+    chmod +x "${hook}"
+}
+
+# 兼容 pre-compile 和 post-compile
+if [ -d "${BUILD_DIR}/bin" ] && [ ! -f "${BUILD_DIR}/bin/pre_compile" ]; then
+    make_hook pre_compile pre-compile
+fi
+
+if [ -d "${BUILD_DIR}/bin" ] && [ ! -f "${BUILD_DIR}/bin/post_compile" ]; then
+    make_hook post_compile post-compile
+fi

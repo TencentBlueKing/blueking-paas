@@ -657,7 +657,7 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
     permission_classes: List = []
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def retrieve_related_applications_info(self, db_name):
+    def retrieve_related_applications_info(self, request, db_name):
         all_provisioned_rels = list(mixed_service_mgr.list_all_provisioned_rels())
         for rel in all_provisioned_rels:
             if self._is_mysql_service_with_db_name(rel, db_name):

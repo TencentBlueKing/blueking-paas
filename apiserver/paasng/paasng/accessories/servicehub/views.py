@@ -665,14 +665,14 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
                 return Response(ApplicationMembersInfoSLZ(app).data)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def _is_mysql_service_with_db_name(self, rel, mysql_name: str) -> bool:
+    def _is_mysql_service_with_db_name(self, rel, db_name: str) -> bool:
         """
         Check if the provided relationship corresponds to a 'mysql' service
         with the specified database name.
         """
         service_name = rel.get_service().name
         mysql_db_name = rel.get_instance.instance.get_credentials().get("MYSQL_NAME")
-        return service_name == "mysql" and mysql_db_name == mysql_name
+        return service_name == "mysql" and mysql_db_name == db_name
 
     def _get_application(self, rel) -> Application:
         env = ApplicationEnvironment.objects.get(engine_app=rel.db_obj.engine_app)

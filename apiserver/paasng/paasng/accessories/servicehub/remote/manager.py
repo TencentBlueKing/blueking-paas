@@ -610,6 +610,12 @@ class RemoteServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
+    def list_all_provisioned_rels(self) -> Generator[RemoteEngineAppInstanceRel, None, None]:
+        """Return all provisioned remote service instances"""
+        qs = RemoteServiceEngineAppAttachment.objects.all().exclude(service_instance_id__isnull=True)
+        for attachment in qs:
+            yield self.transform_rel_db_obj(attachment)
+
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         try:
             return RemoteServiceEngineAppAttachment.objects.get(

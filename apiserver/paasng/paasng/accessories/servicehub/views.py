@@ -44,11 +44,14 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager, Sharing
 from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application, UserApplicationFilter
+from paasng.platform.applications.models import Application, ApplicationEnvironment, UserApplicationFilter
 from paasng.platform.applications.protections import ProtectedRes, raise_if_protected, res_must_not_be_protected_perm
+from paasng.platform.applications.serializers import ApplicationMembersInfoSLZ
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.platform.modules.manager import ModuleCleaner
@@ -648,3 +651,29 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         modules = SharingReferencesManager(module).list_related_modules(service_obj)
         return Response(MinimalModuleSLZ(modules, many=True).data)
+
+
+class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
+    permission_classes: List = []
+
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    def retrieve_related_applications_info(self, db_name):
+        all_provisioned_rels = list(mixed_service_mgr.list_all_provisioned_rels())
+        for rel in all_provisioned_rels:
+            if self._is_mysql_service_with_db_name(rel, db_name):
+                app = self._get_application(rel)
+                return Response(ApplicationMembersInfoSLZ(app).data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _is_mysql_service_with_db_name(self, rel, db_name: str) -> bool:
+        """
+        Check if the provided relationship corresponds to a 'mysql' service
+        with the specified database name.
+        """
+        service_name = rel.get_service().name
+        mysql_db_name = rel.get_instance.instance.get_credentials().get("MYSQL_NAME")
+        return service_name == "mysql" and mysql_db_name == db_name
+
+    def _get_application(self, rel) -> Application:
+        env = ApplicationEnvironment.objects.get(engine_app=rel.db_obj.engine_app)
+        return env.application

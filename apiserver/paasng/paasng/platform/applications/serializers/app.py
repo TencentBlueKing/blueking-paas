@@ -367,3 +367,18 @@ class ApplicationLogoSLZ(serializers.ModelSerializer):
         # Send signal to trigger extra processes for logo
         application_logo_updated.send(sender=instance, application=instance)
         return result
+
+
+class ApplicationMembersInfoSLZ(ApplicationMinimalSLZ):
+    administrators = serializers.SerializerMethodField(help_text="应用管理人员名单")
+    devopses = serializers.SerializerMethodField(help_text="应用运营人员名单")
+    developers = serializers.SerializerMethodField(help_text="应用开发人员名单")
+
+    def get_administrators(self, application: Application):
+        return application.get_administrators()
+
+    def get_devopses(self, application: Application):
+        return application.get_devopses()
+
+    def get_developers(self, application: Application):
+        return application.get_developers()

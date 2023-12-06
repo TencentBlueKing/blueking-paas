@@ -268,6 +268,9 @@ class BaseServiceMgr(metaclass=ABCMeta):
     ) -> Generator[EngineAppInstanceRel, None, None]:
         raise NotImplementedError
 
+    def list_all_provisioned_rels(self) -> Generator[EngineAppInstanceRel, None, None]:
+        raise NotImplementedError
+
     @abstractmethod
     def get_provisioned_queryset(self, service: ServiceObj, application_ids: List[str]) -> QuerySet:
         raise NotImplementedError

@@ -119,6 +119,12 @@ urlpatterns = [
         views.SharingReferencesViewSet.as_view({"get": "list_related_modules"}),
         name="api.services.sharing_references.list_related_modules",
     ),
+    # Retrieve application information related to the mysql db_name
+    re_path(
+        r"^system/api/services/mysql/(?P<db_name>[^/]+)/related_applications_info/$",
+        views.RelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
+        name="api.services.mysql.retrieve_related_applications_info",
+    ),
 ]
 
 # Multi-editions specific start

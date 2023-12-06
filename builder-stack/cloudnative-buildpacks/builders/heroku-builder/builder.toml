@@ -97,5 +97,5 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 [stack]
   id = "heroku-18"
-  run-image = "mirrors.tencent.com/bkpaas/heroku-stack-bionic:run"
-  build-image = "mirrors.tencent.com/bkpaas/heroku-stack-bionic:build"
+  run-image = "mirrors.tencent.com/bkpaas/run-heroku-bionic:latest"
+  build-image = "mirrors.tencent.com/bkpaas/build-heroku-bionic:latest"

@@ -37,6 +37,7 @@ from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
+from paasng.platform.engine.deploy.bg_command.tasks import exec_bkapp_hook
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
@@ -162,6 +163,10 @@ def release_by_k8s_operator(
     revision.save(update_fields=["deployed_value", "has_deployed", "updated"])
 
     # TODO: 统计成功 metrics
+
+    if bkapp_res.spec.hooks and bkapp_res.spec.hooks.preRelease and deployment:
+        exec_bkapp_hook.delay(bkapp_res.metadata.name, app_model_deploy.id, deployment.id)
+
     # Poll status in background
     WaitAppModelReady.start(
         {"env_id": env.id, "deploy_id": app_model_deploy.id, "deployment_id": deployment.id if deployment else None},

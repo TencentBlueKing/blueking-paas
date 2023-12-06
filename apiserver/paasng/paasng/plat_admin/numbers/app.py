@@ -58,7 +58,7 @@ except ImportError:
     from paasng.infras.legacydb.models import LApplication, LApplicationUseRecord
 
 try:
-    from paasng.accessories.paas_analysis.utils import get_pv_uv_for_env
+    from paasng.accessories.paas_analysis.services import get_pv_uv_for_env
 except ImportError:
 
     def get_pv_uv_for_env(*args, **kwargs) -> Tuple[int, int]:  # type: ignore

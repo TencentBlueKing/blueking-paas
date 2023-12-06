@@ -93,7 +93,6 @@ urlpatterns = [
     ),
 ]
 
-
 # Multi-editions specific start
 
 try:

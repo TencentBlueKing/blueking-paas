@@ -263,7 +263,7 @@ class TestKPod:
                 namespace=wl_app.namespace,
                 timeout=0.2,
             )
-            is None
+            == "Pending"
         )
 
     def test_get_logs(self, k8s_client, wl_app):

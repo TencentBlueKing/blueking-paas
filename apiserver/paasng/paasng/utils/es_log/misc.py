@@ -99,6 +99,9 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
                 value = get_attribute(log, split_log_field)
             except (AttributeError, KeyError):
                 continue
+            # 过滤 None 值, 否则前端会出现异常
+            if value is None:
+                continue
             try:
                 field_counter[log_field][value] += 1
             except TypeError:

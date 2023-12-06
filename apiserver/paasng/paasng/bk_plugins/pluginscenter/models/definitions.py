@@ -81,6 +81,7 @@ class PluginBasicInfoDefinition(AuditedModel):
     api: PluginBackendAPI = PluginBackendAPIField()
     sync_members: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields_en = PluginExtraFieldField(default=dict)
     extra_fields_order = models.JSONField(default=list)
     overview_page = PluginoverviewPageField(null=True)
 
@@ -105,6 +106,7 @@ class PluginMarketInfoDefinition(AuditedModel):
     category: PluginBackendAPIResource = PluginBackendAPIResourceField()
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields_en = PluginExtraFieldField(default=dict)
     extra_fields_order = models.JSONField(default=list)
 
 

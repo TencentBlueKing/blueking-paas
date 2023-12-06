@@ -304,6 +304,10 @@ export default {
     // this.isExpand = this.isDeploy;
   },
 
+  beforeDestroy() {
+    bus.$off('get-release-info');
+  },
+
   mounted() {
     this.initPage = true;   // 进入页面
     bus.$on('get-release-info', () => {

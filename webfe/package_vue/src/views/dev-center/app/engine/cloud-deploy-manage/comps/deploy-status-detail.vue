@@ -408,8 +408,7 @@ export default {
             this.appearDeployState.push('release');
             this.releaseId = item.bk_release_id;
             if (!this.processLoading) {
-              this.getModuleProcessList(true).then((res) => {
-                console.log('res', res);
+              this.getModuleProcessList(true).then(() => {
                 // 发起服务监听
                 this.watchServerPush();
                 this.$nextTick(() => {

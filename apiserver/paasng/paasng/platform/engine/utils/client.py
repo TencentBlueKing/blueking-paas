@@ -25,6 +25,7 @@ from django.utils.functional import cached_property
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.build import Build, BuildProcess
+from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.platform.engine.models.deployment import Deployment
 
@@ -50,11 +51,24 @@ def get_all_logs(d: Deployment) -> str:
     engine_app = d.get_engine_app()
     client = EngineDeployClient(engine_app)
     # NOTE: 当前暂不包含“准备阶段”和“检测部署结果”这两个步骤的日志，将在未来版本添加
+    if preparation_stream_obj := d.get_preparation_stream():
+        logs.extend(serialize_stream_logs(preparation_stream_obj))
+
     if d.build_process_id:
-        logs.extend([polish_line(obj["line"]) for obj in client.list_build_proc_logs(d.build_process_id)])
+        stream = client.get_build_proc_stream(d.build_process_id)
+        logs.extend(serialize_stream_logs(stream))
     if d.pre_release_id:
-        logs.extend([polish_line(obj["line"]) for obj in client.list_command_logs(d.pre_release_id)])
+        stream = client.get_command_stream(d.pre_release_id)
+        logs.extend(serialize_stream_logs(stream))
+
+    if main_stream_obj := d.get_main_stream():
+        logs.extend(serialize_stream_logs(main_stream_obj))
     return "".join(logs) + "\n" + (d.err_detail or "")
+
+
+def serialize_stream_logs(output_stream: OutputStream) -> List[str]:
+    """Serialize all logs of the given output_stream object."""
+    return [polish_line(line.line) for line in output_stream.lines.all().order_by("created")]
 
 
 class EngineDeployClient:
@@ -87,19 +101,15 @@ class EngineDeployClient:
         )
         return str(build.uuid)
 
-    def list_command_logs(self, command_id: str) -> List[LogLine]:
-        """List all logs of command"""
+    def get_command_stream(self, command_id: str) -> OutputStream:
+        """Get the output stream object of the given command by id."""
         command = self.wl_app.command_set.get(pk=command_id)
-        return [{"stream": line.stream, "line": line.line, "created": line.created} for line in command.lines]
+        return command.output_stream
 
-    def list_build_proc_logs(self, build_process_id: str) -> List[LogLine]:
-        """Get current status of build process"""
+    def get_build_proc_stream(self, build_process_id: str) -> OutputStream:
+        """Get the output stream object of the given build process by id."""
         build_proc = BuildProcess.objects.get(pk=build_process_id)
-
-        lines: List[LogLine] = []
-        for line in build_proc.output_stream.lines.all().order_by("created"):
-            lines.append({"stream": line.stream, "line": line.line, "created": line.created})
-        return lines
+        return build_proc.output_stream
 
     def upsert_image_credentials(self, registry: str, username: str, password: str):
         """Update an engine app's image credentials, which will be used to pull image."""

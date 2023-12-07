@@ -26,6 +26,7 @@ from attrs import define
 from django.db import models
 from jsonfield import JSONField
 
+from paas_wl.bk_app.applications.models.misc import OutputStream
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
@@ -143,6 +144,11 @@ class Deployment(OperationVersionBase):
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
     bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
+    # The fields that store deployment logs, related to the `OutputStream` model. These fields exist
+    # because some logs cannot be written to the "build_process" or "pre_release" objects's output streams,
+    # such as logs of the service provision actions and hook command executions from cloud-native applications.
+    preparation_stream_id = models.UUIDField(help_text="the logs at the preparation phase", max_length=32, null=True)
+    main_stream_id = models.UUIDField(help_text="the logs at the main phase", max_length=32, null=True)
 
     objects = DeploymentQuerySet().as_manager()
 
@@ -303,3 +309,33 @@ class Deployment(OperationVersionBase):
                 List[ProcessTmpl],
             )
         return []
+
+    def get_preparation_stream(self, create: bool = False) -> Optional[OutputStream]:
+        """Return the preparation output stream object.
+
+        :param create: Whether to create the stream object if not initialized yet.
+        """
+        if not self.preparation_stream_id and create:
+            s = OutputStream.objects.create()
+            self.preparation_stream_id = s.uuid
+            self.save(update_fields=["preparation_stream_id"])
+
+        try:
+            return OutputStream.objects.get(pk=self.preparation_stream_id)
+        except OutputStream.DoesNotExist:
+            return None
+
+    def get_main_stream(self, create: bool = False) -> Optional[OutputStream]:
+        """Return the main output stream object.
+
+        :param create: Whether to create the stream object if not initialized yet.
+        """
+        if not self.main_stream_id and create:
+            s = OutputStream.objects.create()
+            self.main_stream_id = s.uuid
+            self.save(update_fields=["main_stream_id"])
+
+        try:
+            return OutputStream.objects.get(pk=self.main_stream_id)
+        except OutputStream.DoesNotExist:
+            return None

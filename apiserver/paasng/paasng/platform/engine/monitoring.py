@@ -64,7 +64,8 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
         return True
 
     client = EngineDeployClient(deployment.get_engine_app())
-    log_lines = client.list_build_proc_logs(deployment.build_process_id)
+    output_stream = client.get_build_proc_stream(deployment.build_process_id)
+    log_lines = list(output_stream.lines.all())
 
     # Deployment with no logs lines was frozen
     if not log_lines:
@@ -73,7 +74,7 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
     # Deployment which has no new lines in `edge_seconds` was frozen
     last_log_line = log_lines[-1]
     try:
-        last_line_created = arrow.get(last_log_line["created"])
+        last_line_created = arrow.get(last_log_line.created)
     except KeyError:
         # Backward compatibility
         return False

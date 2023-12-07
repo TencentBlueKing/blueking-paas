@@ -28,7 +28,8 @@ from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.deploy.bg_command.bkapp_hook import PreReleaseDummyExecutor, generate_pre_release_hook_name
-from paasng.platform.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream
+from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream, get_default_stream
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def execute_bg_command(uuid: str, stream_channel_id: Optional[str] = None, extra
     if stream_channel_id:
         stream_channel = StreamChannel(stream_channel_id, redis_db=get_default_redis())
         stream_channel.initialize()
-        stream = RedisWithModelStream(command, stream_channel)
+        stream = RedisWithModelStream(command.output_stream, stream_channel)
     else:
         stream = ConsoleStream()
 
@@ -81,5 +82,11 @@ def execute_bg_command(uuid: str, stream_channel_id: Optional[str] = None, extra
 def exec_bkapp_hook(bkapp_name: str, bkapp_deploy_id: int, deployment_id: str):
     # pre-release hook 实际在 operator 中的调和过程中执行
     hook_name = generate_pre_release_hook_name(bkapp_name, bkapp_deploy_id)
-    dummy_executor = PreReleaseDummyExecutor.from_deployment_id(deployment_id)
+
+    # Wrap the stream channel object to write logs to database also
+    deployment = Deployment.objects.get(pk=deployment_id)
+    rds_stream_channel = get_default_stream(deployment)
+    stream = RedisWithModelStream(deployment.get_main_stream(create=True), rds_stream_channel.channel)
+
+    dummy_executor = PreReleaseDummyExecutor(deployment, stream=stream)
     dummy_executor.start(hook_name)

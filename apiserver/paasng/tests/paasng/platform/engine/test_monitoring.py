@@ -64,17 +64,20 @@ class TestCountFrozenDeployments:
         ],
     )
     def test_different_log_lines(self, bk_deployment, log_lines, cnt):
-        with mock.patch("paasng.platform.engine.monitoring.EngineDeployClient") as mocked_client:
-            # Create the output stream with given log lines
-            s = OutputStream.objects.create()
-            for obj in log_lines:
-                db_obj = OutputStreamLine(output_stream_id=s.uuid, **obj)
-                db_obj.save()
-                if created := obj.get("created"):
-                    # Call .update() to modify the "created" field because the field was set to "auto_now_add"
-                    OutputStreamLine.objects.filter(id=db_obj.id).update(created=created)
+        # Create the output stream with given log lines
+        s = OutputStream.objects.create()
+        for obj in log_lines:
+            db_obj = OutputStreamLine(output_stream_id=s.uuid, **obj)
+            db_obj.save()
+            if created := obj.get("created"):
+                # Call .update() to modify the "created" field because the field was set to "auto_now_add"
+                OutputStreamLine.objects.filter(id=db_obj.id).update(created=created)
 
-            mocked_client().get_build_proc_stream.return_value = s
+        with mock.patch(
+            "paasng.platform.engine.logs.DeploymentLogStreams.build_proc_stream",
+            new_callable=mock.PropertyMock,
+            return_value=s,
+        ):
             assert count_frozen_deployments(edge_seconds=10, now=_NOW.datetime) == cnt
 
     def test_now_not_provided(self, bk_deployment):

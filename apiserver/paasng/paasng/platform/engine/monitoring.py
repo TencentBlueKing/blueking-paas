@@ -27,7 +27,7 @@ from prometheus_client.core import GaugeMetricFamily
 
 from paasng.core.core.storages.cache import region as cache_region
 from paasng.misc.metrics.collector import cb_metric_collector
-from paasng.platform.engine.utils.client import EngineDeployClient
+from paasng.platform.engine.logs import DeploymentLogStreams
 
 from .constants import JobStatus
 from .models.deployment import Deployment
@@ -63,9 +63,12 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
     if not deployment.build_process_id:
         return True
 
-    client = EngineDeployClient(deployment.get_engine_app())
-    output_stream = client.get_build_proc_stream(deployment.build_process_id)
-    log_lines = list(output_stream.lines.all())
+    log_streams = DeploymentLogStreams(deployment)
+    # TODO: Include more streams besides the building process stream
+    if s := log_streams.build_proc_stream:
+        log_lines = list(s.lines.all())
+    else:
+        log_lines = []
 
     # Deployment with no logs lines was frozen
     if not log_lines:

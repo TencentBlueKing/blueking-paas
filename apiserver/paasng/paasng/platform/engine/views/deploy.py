@@ -45,6 +45,7 @@ from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
+from paasng.platform.engine.logs import get_all_logs
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.engine.phases_steps.steps import get_sorted_steps
@@ -58,7 +59,6 @@ from paasng.platform.engine.serializers import (
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
 )
-from paasng.platform.engine.utils.client import get_all_logs
 from paasng.platform.engine.utils.query import DeploymentGetter
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector

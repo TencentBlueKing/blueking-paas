@@ -133,7 +133,13 @@ class PluginLoggingClient:
         search = self._make_base_search(
             env=env, search_params=query_config.search_params, mappings=mappings, time_range=smart_time_range
         )
-        return search.filter("term", **{get_es_term(query_term="json.trace_id", mappings=mappings): trace_id})
+        if query_config.backend_type == "bkLog":
+            # 日志平台方案会将未配置清洗规则的字段, 映射到 __ext_json 字段
+            query_term = "__ext_json.trace_id"
+        else:
+            # PaaS 内置采集方案会将所有字段放到 json 字段
+            query_term = "json.trace_id"
+        return search.filter("term", **{get_es_term(query_term=query_term, mappings=mappings): trace_id})
 
     def _make_base_search(
         self,

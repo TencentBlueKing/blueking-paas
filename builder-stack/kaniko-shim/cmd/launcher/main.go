@@ -229,7 +229,7 @@ func buildKanikoExecutorCmd(ctx context.Context, signal chan int) (*exec.Cmd, er
 			return nil, err
 		}
 		for _, buildArg := range buildArgs {
-			args = append(args, "--buildArgs", buildArg)
+			args = append(args, "--build-arg", buildArg)
 		}
 	}
 	if *cacheRepo != "" {

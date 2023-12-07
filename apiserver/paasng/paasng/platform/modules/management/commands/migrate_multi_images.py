@@ -28,10 +28,10 @@ from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.modules import entities
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.entities import BuildConfig
 from paasng.platform.modules.manager import initialize_module
-from paasng.platform.modules.models.build_cfg import ImageTagOptions
+from paasng.platform.modules.models.build_cfg import BuildConfig, ImageTagOptions
 from paasng.platform.modules.models.module import Module
 
 ACTION_MIGRATE = "migrate"
@@ -80,6 +80,16 @@ class Command(BaseCommand):
         for process_name in process_names:
             self._migrate_to_module(application, cluster.name, process_name, proc_specs_maps[process_name])
 
+        # 更新 web 进程
+        web_spec = proc_specs_maps["web"]
+        parsed = parse_image(web_spec.image, default_registry="registry.hub.docker.com")
+        BuildConfig.objects.update_or_create(
+            defaults={
+                "image_repository": f"{parsed.domain}/{parsed.name}",
+                "image_credential_name": web_spec.image_credential_name,
+            },
+            module=default_module,
+        )
         ModuleProcessSpec.objects.filter(module=default_module, name="web").update(
             image=None, image_credential_name=None
         )
@@ -115,7 +125,7 @@ class Command(BaseCommand):
         parsed = parse_image(proc_spec.image, default_registry="registry.hub.docker.com")
         image_repository = f"{parsed.domain}/{parsed.name}"
         bkapp_spec = {
-            "build_config": BuildConfig(
+            "build_config": entities.BuildConfig(
                 build_method=RuntimeType.CUSTOM_IMAGE,
                 image_repository=image_repository,
                 tag_options=ImageTagOptions(),

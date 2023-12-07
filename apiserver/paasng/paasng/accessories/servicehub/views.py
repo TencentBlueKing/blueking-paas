@@ -671,7 +671,7 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
             service_name = rel.get_service().name
             service_db_name = service_instance.credentials.get(db_name_key_map[service_name])
             if service_db_name == db_name:
-                return Response(ApplicationMembersInfoSLZ(rel).data)
+                return Response(ApplicationMembersInfoSLZ(self._get_application(rel)).data)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _get_mysql_services(self) -> List[ServiceObj]:

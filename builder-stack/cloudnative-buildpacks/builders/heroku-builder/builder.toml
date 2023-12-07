@@ -36,17 +36,19 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
   id = "bk-buildpack-go"
   version = "v168"
 
+
 [[buildpacks]]
-  uri = "urn:cnb:registry:fagiani/apt"
-  version = "0.2.5"
+  uri = "../../buildpacks/bk-buildpack-apt/shim"
+  id = "bk-buildpack-apt"
+  version = "v2"
 
 [lifecycle]
   version = "0.16.1"
 
 [[order]]
   [[order.group]]
-    id = "fagiani/apt"
-    version = "0.2.5"
+    id = "bk-buildpack-apt"
+    version = "v2"
 
 
 [[order]]

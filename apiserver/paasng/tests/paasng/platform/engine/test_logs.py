@@ -23,9 +23,14 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_make_channel_stream(bk_deployment):
-    types = ["main", "preparation", "build_proc", "pre_release_cmd"]
-    for t in types:
-        assert make_channel_stream(bk_deployment, t) is not None
+    assert make_channel_stream(bk_deployment, "main") is not None
+    assert make_channel_stream(bk_deployment, "preparation") is not None
+
+    # Make streams that does not exists yet will raise an error
+    with pytest.raises(ValueError, match=r".*does not exist"):
+        make_channel_stream(bk_deployment, "build_proc")
+    with pytest.raises(ValueError, match=r".*does not exist"):
+        make_channel_stream(bk_deployment, "pre_release_cmd")
 
 
 class TestDeploymentLogs:

@@ -369,7 +369,8 @@ class ApplicationLogoSLZ(serializers.ModelSerializer):
         return result
 
 
-class ApplicationMembersInfoSLZ(ApplicationMinimalSLZ):
+class ApplicationMembersInfoSLZ(serializers.ModelSerializer):
+    name = TranslatedCharField()
     administrators = serializers.SerializerMethodField(help_text="应用管理人员名单")
     devopses = serializers.SerializerMethodField(help_text="应用运营人员名单")
     developers = serializers.SerializerMethodField(help_text="应用开发人员名单")
@@ -382,3 +383,7 @@ class ApplicationMembersInfoSLZ(ApplicationMinimalSLZ):
 
     def get_developers(self, application: Application):
         return application.get_developers()
+
+    class Meta:
+        fields = ["id", "code", "name","administrators", "devopses", "developers"]
+

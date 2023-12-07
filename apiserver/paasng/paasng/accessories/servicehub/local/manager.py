@@ -338,9 +338,13 @@ class LocalServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
-    def list_all_provisioned_rels(self) -> Generator[LocalEngineAppInstanceRel, None, None]:
+    def list_all_provisioned_rels(
+        self, services: List[ServiceObj] = None
+    ) -> Generator[LocalEngineAppInstanceRel, None, None]:
         """Return all provisioned service instances"""
         qs = ServiceEngineAppAttachment.objects.all().exclude(service_instance__isnull=True)
+        if services:
+            qs = qs.filter(service_id__in=[service.uuid for service in services])
         for attachment in qs:
             if not ModuleEnvironment.objects.filter(engine_app=attachment.engine_app).exists():
                 continue

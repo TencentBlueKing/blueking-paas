@@ -610,9 +610,13 @@ class RemoteServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
-    def list_all_provisioned_rels(self) -> Generator[RemoteEngineAppInstanceRel, None, None]:
+    def list_all_provisioned_rels(
+        self, services: List[ServiceObj] = None
+    ) -> Generator[RemoteEngineAppInstanceRel, None, None]:
         """Return all provisioned remote service instances"""
-        qs = RemoteServiceEngineAppAttachment.objects.all().exclude(service_instance_id__isnull=True)
+        qs = RemoteServiceEngineAppAttachment.objects.exclude(service_instance_id__isnull=True)
+        if services:
+            qs = qs.filter(service_id__in=[service.uuid for service in services])
         for attachment in qs:
             if not ModuleEnvironment.objects.filter(engine_app=attachment.engine_app).exists():
                 continue

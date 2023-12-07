@@ -46,7 +46,7 @@ from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class, site_perm_required
+from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -658,33 +658,33 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
     permission_classes = [site_perm_class(SiteAction.SYSAPI_READ_APPLICATIONS)]
 
     def retrieve_related_applications_info(self, request, db_name):
-        all_provisioned_rels = list(mixed_service_mgr.list_all_provisioned_rels())
+        services = self._get_mysql_services()
+        all_provisioned_rels = list(mixed_service_mgr.list_all_provisioned_rels(services))
+        db_name_key_map = {"mysql": "MYSQL_NAME", "gcs_mysql": "GCS_MYSQL_NAME"}
         for rel in all_provisioned_rels:
-            if self._is_mysql_service_with_db_name(rel, db_name):
-                app = self._get_application(rel)
-                return Response(ApplicationMembersInfoSLZ(app).data)
+            # remote service 可能无法获取实例
+            try:
+                service_instance = rel.get_instance()
+            except RClientResponseError:
+                continue
+
+            service_name = rel.get_service().name
+            service_db_name = service_instance.credentials.get(db_name_key_map[service_name])
+            if service_db_name == db_name:
+                return Response(ApplicationMembersInfoSLZ(rel).data)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def _is_mysql_service_with_db_name(self, rel, db_name: str) -> bool:
-        """
-        Check if the provided relationship corresponds to a 'mysql' service
-        with the specified database name.
-        """
-        # remote service 在获取实例时可能失败
-        try:
-            service_instance = rel.get_instance()
-        except RClientResponseError:
-            return False
-
-        # 使用一个字典来映射服务名称与 credentials 中索引 db_name 的键
-        db_name_key_map = {"mysql": "MYSQL_NAME", "gcs_mysql": "GCS_MYSQL_NAME"}
-        service_name = rel.get_service().name
-        db_name_key = db_name_key_map.get(service_name)
-        if db_name_key:
-            service_db_name = service_instance.credentials.get(db_name_key)
-            return service_db_name == db_name
-
-        return False
+    def _get_mysql_services(self) -> List[ServiceObj]:
+        """Get all mysql services"""
+        service_objects = []
+        for region in get_all_regions():
+            for service_name in ["gcs_mysql", "mysql"]:
+                try:
+                    svc = mixed_service_mgr.find_by_name(name=service_name, region=region)
+                    service_objects = service_objects.append(svc)
+                except ServiceObjNotFound:
+                    continue
+        return service_objects
 
     def _get_application(self, rel) -> Application:
         env = ApplicationEnvironment.objects.get(engine_app=rel.db_obj.engine_app)

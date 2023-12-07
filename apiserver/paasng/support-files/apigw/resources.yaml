@@ -1671,3 +1671,28 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn: Query the list of applications that the specified user has permission
+  /system/bkapps/services/mysql/{db_name}/related_applications_info/:
+    get:
+      operationId: retrieve_applications_info_by_db_name
+      description: 根据 mysql 增强服务实例的数据库名称查询所属应用的基本信息
+      tags:
+      - 应用/模块信息查询
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/services/mysql/{db_name}/related_applications_info/
+          matchSubpath: false
+          timeout: 30
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: Retrieve basic information of the application based on the database name of the MySQL enhanced service instance

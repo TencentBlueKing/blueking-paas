@@ -41,6 +41,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceSetGroupByName
 from paasng.accessories.servicehub.services import ServiceObj, ServicePlansHelper, ServiceSpecificationHelper
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
+from paasng.accessories.servicehub.remote.exceptions import RClientResponseError
 from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -670,9 +671,24 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
         Check if the provided relationship corresponds to a 'mysql' service
         with the specified database name.
         """
+        # remote service 在获取实例时可能失败
+        try:
+            service_instance = rel.get_instance()
+        except RClientResponseError:
+            return False
+
+        # 使用一个字典来映射服务名称与 credentials 中索引 db_name 的键
+        db_name_key_map = {
+            "mysql": "MYSQL_NAME",
+            "gcs_mysql": "GCS_MYSQL_NAME"
+        }
         service_name = rel.get_service().name
-        mysql_db_name = rel.get_instance.instance.get_credentials().get("MYSQL_NAME")
-        return service_name == "mysql" and mysql_db_name == db_name
+        db_name_key = db_name_key_map.get(service_name)
+        if db_name_key:
+            service_db_name = service_instance.credentials.get(db_name_key)
+            return service_db_name == db_name
+
+        return False
 
     def _get_application(self, rel) -> Application:
         env = ApplicationEnvironment.objects.get(engine_app=rel.db_obj.engine_app)

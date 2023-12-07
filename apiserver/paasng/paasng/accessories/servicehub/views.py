@@ -46,7 +46,7 @@ from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
+from paasng.infras.accounts.permissions.global_site import site_perm_class, site_perm_required
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -655,9 +655,8 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
-    permission_classes: List = []
+    permission_classes = [site_perm_class(SiteAction.SYSAPI_READ_APPLICATIONS)]
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def retrieve_related_applications_info(self, request, db_name):
         all_provisioned_rels = list(mixed_service_mgr.list_all_provisioned_rels())
         for rel in all_provisioned_rels:

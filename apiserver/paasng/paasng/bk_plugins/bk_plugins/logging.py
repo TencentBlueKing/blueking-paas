@@ -28,6 +28,7 @@ from paasng.accessories.log.client import LogClientProtocol, instantiate_log_cli
 from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE
 from paasng.accessories.log.filters import EnvFilter
 from paasng.accessories.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
+from paasng.accessories.log.shim import LogCollectorType, get_log_collector_type
 from paasng.accessories.log.utils import clean_logs, get_es_term
 from paasng.bk_plugins.bk_plugins.models import BkPlugin
 from paasng.platform.applications.models import ModuleEnvironment
@@ -133,7 +134,8 @@ class PluginLoggingClient:
         search = self._make_base_search(
             env=env, search_params=query_config.search_params, mappings=mappings, time_range=smart_time_range
         )
-        if query_config.backend_type == "bkLog":
+
+        if get_log_collector_type(env) == LogCollectorType.BK_LOG:
             # 日志平台方案会将未配置清洗规则的字段, 映射到 __ext_json 字段
             query_term = "__ext_json.trace_id"
         else:

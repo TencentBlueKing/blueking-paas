@@ -681,7 +681,7 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
             for service_name in ["gcs_mysql", "mysql"]:
                 try:
                     svc = mixed_service_mgr.find_by_name(name=service_name, region=region)
-                    service_objects = service_objects.append(svc)
+                    service_objects.append(svc)
                 except ServiceObjNotFound:
                     continue
         return service_objects

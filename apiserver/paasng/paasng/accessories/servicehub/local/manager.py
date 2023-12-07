@@ -342,7 +342,7 @@ class LocalServiceMgr(BaseServiceMgr):
         self, services: List[ServiceObj] = None
     ) -> Generator[LocalEngineAppInstanceRel, None, None]:
         """Return all provisioned service instances"""
-        qs = ServiceEngineAppAttachment.objects.all().exclude(service_instance__isnull=True)
+        qs = ServiceEngineAppAttachment.objects.exclude(service_instance__isnull=True)
         if services:
             qs = qs.filter(service_id__in=[service.uuid for service in services])
         for attachment in qs:

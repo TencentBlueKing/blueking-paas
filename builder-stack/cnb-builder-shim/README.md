@@ -10,7 +10,7 @@ cnb-builder-shim 是一个运行在 cloudnative builder 之上的衬垫层，目
 ```bash
 # 构建基于 heroku-builder 的镜像, 默认镜像名是
 ❯ make heroku-builder
-# 可以通过环境变量指定镜像名称和tag
+# 可以通过环境变量指定镜像名称和 tag
 ❯ BUILDER_IMAGE_NAME="builder-heroku-bionic" BUILDER_IMAGE_TAG="latest" IMAGE_NAME="bk-builder-heroku-bionic" IMAGE_TAG="latest" make heroku-builder
 ```
 

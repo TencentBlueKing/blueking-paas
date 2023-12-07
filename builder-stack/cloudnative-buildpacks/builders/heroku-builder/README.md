@@ -6,7 +6,7 @@
 
 ```bash
 ❯ make stack-image
-# 可以通过环境变量指定镜像名称和tag
+# 可以通过环境变量指定镜像名称和 tag
 ❯ BUILD_IMAGE_NAME="build-heroku-bionic" STACK_BUILDER_TAG="latest" RUN_IMAGE_NAME="run-heroku-bionic" STACK_RUNNER_TAG="latest" make stack-image
 ```
 
@@ -16,7 +16,7 @@
 
 ```bash
 ❯ make builder
-# 可以通过环境变量指定镜像名称和tag
+# 可以通过环境变量指定镜像名称和 tag
 # 如需修改基础镜像, 需要修改 builder.toml 中的 run-image 和 build-image 字段
 ❯ BUILDER_IMAGE_NAME="builder-heroku-bionic" BUILDER_TAG="latest" make builder
 ```

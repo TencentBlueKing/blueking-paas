@@ -16,9 +16,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY, ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -27,7 +27,7 @@ from paasng.platform.modules.models import Module
 logger = logging.getLogger(__name__)
 
 
-def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImportResult:
+def import_processes(module: Module, processes: List[BkAppProcess], annotations: Dict) -> CommonImportResult:
     """Import processes data.
 
     :param processes: A list of BkAppProcess items.
@@ -63,7 +63,8 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
             defaults["image"] = process.image
         if process.imagePullPolicy:
             defaults["image_pull_policy"] = process.imagePullPolicy
-        # TODO: image_credential_name
+        if image_credential_name := _extract_image_credential_name(annotations):
+            defaults["image_credential_name"] = image_credential_name
 
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
         ret.incr_by_created_flag(created)
@@ -73,3 +74,13 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
     # Remove existing data that is not touched.
     ret.deleted_num, _ = ModuleProcessSpec.objects.filter(module=module, id__in=existing_index.values()).delete()
     return ret
+
+
+def _extract_image_credential_name(annotations: Dict) -> Optional[str]:
+    """extract image credential name from annotations"""
+    value = annotations.get(IMAGE_CREDENTIALS_REF_ANNO_KEY)
+    if value == "true":
+        return "bkapp-dockerconfigjson"
+    if value:
+        return value
+    return None

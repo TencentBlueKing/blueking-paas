@@ -70,7 +70,7 @@ class StructureLogLine(LogLine):
         self.raw["ts"] = convert_timestamp_to_str(self.timestamp)
         # 适配 bk-sops 需要的日志字段, 将日志平台清洗后打平的字段扩展到 detail
         for src_filed, dest_field in [
-            ("levelname", "josn.levelname"),
+            ("levelname", "json.levelname"),
             ("funcName", "json.funcName"),
             ("message", "json.message"),
         ]:

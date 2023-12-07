@@ -37,12 +37,14 @@
           {{ item.tag }}
         </div>
         <!-- 当前耗时 -->
-        <div
-          v-if="item.content && item.status && !hideTime.includes(item.status)"
-          class="paas-timeline-content"
-        >
-          {{ item.content }}
-        </div>
+        <template v-if="!LOADING_MAP.includes(item.status)">
+          <div
+            v-if="item.content && item.status && !hideTime.includes(item.status)"
+            class="paas-timeline-content"
+          >
+            {{ item.content }}
+          </div>
+        </template>
       </div>
     </li>
   </ul>

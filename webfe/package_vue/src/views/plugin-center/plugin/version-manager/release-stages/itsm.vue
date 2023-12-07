@@ -94,7 +94,8 @@ export default {
     },
     curStatusBarData() {
       // approval successful failed interrupted
-      const curStatus = APPROVALSTATUS[this.pluginData.current_stage.status];
+      const status = this.stageData.status || this.pluginData.current_stage.status;
+      const curStatus = APPROVALSTATUS[status];
       return STATUSBARDATA[curStatus];
     },
     isCancelBtn() {

@@ -9,6 +9,7 @@
         :http-adapter="{ request }"
         :label-width="170"
         :schema="schema"
+        :layout="layout"
       ></BkSchemaForm>
       <section class="action-button-group">
         <bk-button
@@ -48,6 +49,13 @@ export default {
       schemaFormData: {},
       schema: {},
       isLoading: true,
+      layout: {
+        prop: 0,
+        container: {
+          display: 'grid',
+          gridGap: '0',
+        },
+      },
     };
   },
   computed: {

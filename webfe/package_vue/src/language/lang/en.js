@@ -30,8 +30,8 @@ export default {
   切换语言: '简体中文',
   系统提示: 'System hint',
   '静态文件加载失败，请刷新页面重试': 'Static files failed to load, please refresh the page and try again',
-  '开发者中心 | 腾讯蓝鲸智云': 'Developer Center | Tencent BK',
-  '开发者中心 | 蓝鲸': 'Developer Center | BK',
+  '开发者中心 | 腾讯蓝鲸智云': 'Developer Center | Tencent BlueKing',
+  '开发者中心 | 蓝鲸': 'Developer Center | Tencent BlueKing',
   服务异常: 'Service exception',
   '无法连接到后端服务，请稍候再试。': 'Unable to connect to backend service, please try again later.',
   无权限访问: 'No access',
@@ -2471,4 +2471,6 @@ export default {
   '新建 Tag': 'New Tag',
   取消成功: 'Cancel success',
   '修改环境变量后，需要重新发布插件后生效': 'After modifying the environment variables, it is necessary to republish the plugin for the changes to take effect.',
+  '只有在当前步骤成功完成后，才可进行下一步操作。': 'The next step can only be performed after the current step has been successfully completed.',
+  '请选择版本，已经发布过的版本不可选择。': 'Please select a version. Versions that have already been released cannot be selected.',
 };

@@ -221,6 +221,7 @@
             :http-adapter="{ request }"
             :label-width="170"
             :schema="schema"
+            :layout="layout"
           ></BkSchemaForm>
         </bk-form>
       </template>
@@ -348,6 +349,13 @@ export default {
       isLoading: true,
       schemaFormData: {},
       schema: {},
+      layout: {
+        prop: 0,
+        container: {
+          display: 'grid',
+          gridGap: '0',
+        },
+      },
     };
   },
   computed: {

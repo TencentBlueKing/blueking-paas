@@ -64,6 +64,7 @@
                 v-model="curVersion.source_versions"
                 :disabled="false"
                 ext-cls="select-custom"
+                :placeholder="$t('请选择版本，已经发布过的版本不可选择。')"
                 searchable
                 :loading="isBranchLoading"
               >
@@ -103,13 +104,6 @@
                   <span>{{ $t('代码差异') }}</span>
                 </div>
               </div>
-              <p
-                slot="tip"
-                class="code-branch-tip"
-                v-if="!curVersionData.allow_duplicate_source_version"
-              >
-                {{ $t('不能选择已发布过的代码分支') }}
-              </p>
             </bk-form-item>
             <bk-form-item
               v-if="curVersion.version_no === 'automatic'"

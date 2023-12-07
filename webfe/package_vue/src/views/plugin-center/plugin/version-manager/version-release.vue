@@ -194,7 +194,7 @@ export default {
     isAllowPrev() {
       switch (this.curStageComponmentType) {
         case 'itsm':
-          const itemStatus = this.pluginDetailedData.current_stage?.status;
+          const itemStatus = this.stageData.status || this.pluginDetailedData.current_stage?.status;
           // 已撤销、审批不通过，才显示上一步，其余情况禁用
           const isDisabledList = ['interrupted', 'failed'];
           return !!isDisabledList.includes(itemStatus);
@@ -225,8 +225,14 @@ export default {
       if (this.stageData?.detail?.next_step_disabled_tips) {
         config.content = this.stageData.detail?.next_step_disabled_tips || '';
         config.disabled = this.isAllowNext;
-        if (!config.content) config.disabled = true;
       }
+      // 审批阶段-禁用状态tips
+      if (this.isItsmStage && !this.isAllowNext) {
+        config.content = this.$t('只有在当前步骤成功完成后，才可进行下一步操作。');
+        config.disabled = false;
+      }
+      // 消除无tips内容展示
+      if (!config.content) config.disabled = true;
       return config;
     },
     // 是否发布成功
@@ -728,12 +734,10 @@ export default {
     color: #C4C6CC;
 }
 .discontinued {
-    height: 26px;
-    line-height: 26px;
     color: #979BA5;
-    font-size: 12px;
+    font-size: 14px;
     i {
-        font: 14px;
+        font-size: 16px;
     }
 }
 .release-log-warp {

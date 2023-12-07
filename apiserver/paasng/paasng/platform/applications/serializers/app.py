@@ -385,5 +385,6 @@ class ApplicationMembersInfoSLZ(serializers.ModelSerializer):
         return application.get_developers()
 
     class Meta:
+        model = Application
         fields = ["id", "code", "name","administrators", "devopses", "developers"]
 

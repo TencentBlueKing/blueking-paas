@@ -33,7 +33,7 @@ from paasng.accessories.log.utils import clean_logs, get_es_term
 from paasng.bk_plugins.bk_plugins.models import BkPlugin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.datetime import convert_timestamp_to_str
-from paasng.utils.es_log.models import LogLine, Logs, extra_field
+from paasng.utils.es_log.models import LogLine, Logs, extra_field, field_extractor_factory
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
 
@@ -56,7 +56,9 @@ class StructureLogLine(LogLine):
     plugin_code: str = extra_field(source="app_code", converter=converters.optional(str))
     environment: str = extra_field(converter=converters.optional(str))
     process_id: Optional[str] = extra_field(converter=converters.optional(str))
-    stream: str = extra_field(converter=converters.optional(str))
+    stream: Optional[str] = extra_field(
+        source=field_extractor_factory(field_key="stream", raise_exception=False), converter=converters.optional(str)
+    )
     ts: str = extra_field(converter=converters.optional(str))
 
     def __attrs_post_init__(self):

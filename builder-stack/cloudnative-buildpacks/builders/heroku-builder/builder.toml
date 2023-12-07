@@ -22,23 +22,23 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 
 [[buildpacks]]
-  uri = "../../buildpacks/bk-buildpack-python/shim"
+  uri = "../../buildpacks/bk-buildpack-python/cnb-buildpack"
   id = "bk-buildpack-python"
   version = "v213"
 
 [[buildpacks]]
-  uri = "../../buildpacks/bk-buildpack-nodejs/shim"
+  uri = "../../buildpacks/bk-buildpack-nodejs/cnb-buildpack"
   id = "bk-buildpack-nodejs"
   version = "v163"
 
 [[buildpacks]]
-  uri = "../../buildpacks/bk-buildpack-go/shim"
+  uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
   id = "bk-buildpack-go"
   version = "v168"
 
 
 [[buildpacks]]
-  uri = "../../buildpacks/bk-buildpack-apt/shim"
+  uri = "../../buildpacks/bk-buildpack-apt/cnb-buildpack"
   id = "bk-buildpack-apt"
   version = "v2"
 

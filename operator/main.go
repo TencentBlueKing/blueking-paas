@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -34,9 +33,6 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/spf13/pflag"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -65,9 +61,6 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 	cfgFile  string
-
-	metricServerAddress string
-	metricPort          uint
 )
 
 func init() {
@@ -75,9 +68,6 @@ func init() {
 	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
-
-	pflag.StringVar(&metricServerAddress, "metric-server-address", "0.0.0.0", "http metric server address")
-	pflag.UintVar(&metricPort, "metric-port", 10251, "prometheus metrics port")
 }
 
 func main() {
@@ -171,17 +161,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
-	// start metric server
-	go func() {
-		setupLog.Info("starting metrics server", "address", metricServerAddress)
-		http.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{}))
-		addr := metricServerAddress + ":" + strconv.Itoa(int(metricPort))
-		if err := http.ListenAndServe(addr, nil); err != nil {
-			setupLog.Error(err, "error starting metrics server")
-			os.Exit(1)
-		}
-	}()
 
 	//+kubebuilder:scaffold:builder
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

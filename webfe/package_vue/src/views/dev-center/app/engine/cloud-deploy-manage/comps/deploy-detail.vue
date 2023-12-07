@@ -680,11 +680,10 @@ export default {
           this.watchServerPush();
         }
       },
-      immediate: true,
     },
     rvData: {
       handler(newVal, oldVal) {
-        if (this.isDialogShowSideslider) return;
+        if (this.isDialogShowSideslider || !oldVal) return;
         // 进入页面启动事件流
         console.log(newVal, oldVal);
         if (JSON.stringify(newVal) !== JSON.stringify(oldVal)

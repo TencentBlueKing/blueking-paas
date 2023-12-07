@@ -408,14 +408,15 @@ export default {
             this.appearDeployState.push('release');
             this.releaseId = item.bk_release_id;
             if (!this.processLoading) {
-              this.getModuleProcessList(true);
+              this.getModuleProcessList(true).then((res) => {
+                console.log('res', res);
+                // 发起服务监听
+                this.watchServerPush();
+                this.$nextTick(() => {
+                  this.$refs.deployLogRef && this.$refs.deployLogRef.handleScrollToLocation('release');
+                });
+              });
             }
-
-            // 发起服务监听
-            this.watchServerPush();
-            this.$nextTick(() => {
-              this.$refs.deployLogRef && this.$refs.deployLogRef.handleScrollToLocation('release');
-            });
           }
 
           if (['failed', 'successful'].includes(item.status)) {
@@ -818,6 +819,7 @@ export default {
         console.log('this.curModuleId', this.curModuleId, this.curModuleInfo);
         this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
         this.formatProcesses(this.curModuleInfo);
+        return Promise.resolve(true);
       } catch (e) {
         // 无法获取进程目前状态
         console.error(e);

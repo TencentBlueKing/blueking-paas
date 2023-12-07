@@ -406,7 +406,7 @@ export default {
 
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
-            this.releaseId = item.bk_release_id;
+            this.releaseId = item.bkapp_release_id;
             if (!this.processLoading) {
               this.getModuleProcessList(true).then(() => {
                 // 发起服务监听
@@ -909,7 +909,8 @@ export default {
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {
-          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          if (data.object.module_name !== this.curModuleId
+          || data.object.version !== this.releaseId) return;   // 更新当前模块的进程且是当前版本
           this.updateInstanceData(data);
           // if (data.type === 'ADDED') {
           //   if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程

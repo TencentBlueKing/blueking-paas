@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 """Logging facilities for bk-plugins"""
 import json
 from typing import Any, Dict, Optional, Tuple
@@ -36,6 +38,8 @@ from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.es_log.models import LogLine, Logs, extra_field, field_extractor_factory
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
+
+logger = logging.getLogger(__name__)
 
 
 @define
@@ -64,6 +68,19 @@ class StructureLogLine(LogLine):
     def __attrs_post_init__(self):
         self.detail = self.raw
         self.raw["ts"] = convert_timestamp_to_str(self.timestamp)
+        # 适配 bk-sops 需要的日志字段, 将日志平台清洗后打平的字段扩展到 detail
+        for src_filed, dest_field in [
+            ("levelname", "josn.levelname"),
+            ("funcName", "json.funcName"),
+            ("message", "json.message"),
+        ]:
+            if dest_field not in self.detail:
+                try:
+                    self.detail[dest_field] = self.detail[src_filed]
+                except Exception:
+                    logger.exception(
+                        "failed to adaptor to bk-sops required log format, missing field `%s`", dest_field
+                    )
         super().__attrs_post_init__()
 
 

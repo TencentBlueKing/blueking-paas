@@ -26,19 +26,25 @@ from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
-RANDOM_CREDENTIAL_NAME = f"{generate_random_string(8)}--dockerconfigjson"
+IMAGE_CREDENTIAL_NAME = generate_random_string(8)
 
 
 class Test__import_processes:
     @pytest.mark.parametrize(
-        ("image_credential_value", "image_credential_name"),
+        ("image_credential_annots", "image_credential_name"),
         [
-            ("true", "bkapp-dockerconfigjson"),
-            ("", None),
-            (RANDOM_CREDENTIAL_NAME, RANDOM_CREDENTIAL_NAME),
+            (
+                {
+                    IMAGE_CREDENTIALS_REF_ANNO_KEY: "true",
+                    f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.web": IMAGE_CREDENTIAL_NAME,
+                },
+                IMAGE_CREDENTIAL_NAME,
+            ),
+            ({}, None),
+            ({IMAGE_CREDENTIALS_REF_ANNO_KEY: f"{generate_random_string(8)}--dockerconfigjson"}, None),
         ],
     )
-    def test_integrated(self, bk_module, proc_web, proc_celery, image_credential_value, image_credential_name):
+    def test_integrated(self, bk_module, proc_web, proc_celery, image_credential_annots, image_credential_name):
         assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 2
 
         ret = import_processes(
@@ -47,12 +53,14 @@ class Test__import_processes:
                 BkAppProcess(name="web", replicas=1, command=["./start.sh"]),
                 BkAppProcess(name="sleep", replicas=1, command=["bash"], args=["-c", "100"]),
             ],
-            {IMAGE_CREDENTIALS_REF_ANNO_KEY: image_credential_value},
+            image_credential_annots,
         )
         assert ret.updated_num == 1
         assert ret.created_num == 1
         assert ret.deleted_num == 1
         assert (
-            ModuleProcessSpec.objects.filter(module=bk_module, image_credential_name=image_credential_name).count()
-            == 2
+            ModuleProcessSpec.objects.filter(
+                module=bk_module, name=proc_web.name, image_credential_name=image_credential_name
+            ).count()
+            == 1
         )

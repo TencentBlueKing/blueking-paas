@@ -63,7 +63,7 @@ def import_processes(module: Module, processes: List[BkAppProcess], annotations:
             defaults["image"] = process.image
         if process.imagePullPolicy:
             defaults["image_pull_policy"] = process.imagePullPolicy
-        if image_credential_name := _extract_image_credential_name(annotations):
+        if image_credential_name := _extract_image_credential_name(process.name, annotations):
             defaults["image_credential_name"] = image_credential_name
 
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
@@ -76,11 +76,21 @@ def import_processes(module: Module, processes: List[BkAppProcess], annotations:
     return ret
 
 
-def _extract_image_credential_name(annotations: Dict) -> Optional[str]:
-    """extract image credential name from annotations"""
+def _extract_image_credential_name(process_name: str, annotations: Dict) -> Optional[str]:
+    """extract image credential name from annotations(v1alpha1).
+
+    v1alpha1:
+        bkapp.paas.bk.tencent.com/image-credentials: true
+        bkapp.paas.bk.tencent.com/image-credentials.web: xxx # image credential name
+
+    v1alpha2:
+        bkapp.paas.bk.tencent.com/image-credentials: xxx--dockerconfigjson # image pull secret name
+    """
     value = annotations.get(IMAGE_CREDENTIALS_REF_ANNO_KEY)
+    if not value:
+        return None
+
     if value == "true":
-        return "bkapp-dockerconfigjson"
-    if value:
-        return value
+        return annotations.get(f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.{process_name}")
+
     return None

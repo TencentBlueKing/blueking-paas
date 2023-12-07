@@ -30,7 +30,7 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5">{{ row.available_instance_count }} / {{ row.targetReplicas }}</span>
+              <span class="ml5">{{ row.instances.length }} / {{ row.available_instance_count }}</span>
               <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <img
@@ -172,7 +172,8 @@
           <template slot-scope="{ row }">
             <div class="operation">
               <div
-                v-if="row.status === 'Running' && !row.autoscaling"
+                v-if="!row.autoscaling
+                  && row.instances.length !== row.available_instance_count"
                 class="flex-row align-items-center mr10"
               >
                 <img

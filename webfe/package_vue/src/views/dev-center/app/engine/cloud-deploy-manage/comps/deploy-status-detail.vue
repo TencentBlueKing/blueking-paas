@@ -423,7 +423,7 @@ export default {
           }
 
           if (item.status === 'successful' && item.name === this.$t('检测部署结果')) {
-            this.serverProcessEvent.close();  // 关闭进程的watch事件流
+            this.serverProcessEvent && this.serverProcessEvent.close();  // 关闭进程的watch事件流
           }
           this.$nextTick(() => {
             // eslint-disable-next-line max-len

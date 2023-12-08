@@ -106,20 +106,6 @@ ensure-apt-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar" \
     --hidden
-
-    # 云原生应用直接使用社区的 apt buildapck
-    python manage.py manage_buildpack \
-    --region "${region}" \
-    --name "${buildpack_name}" \
-    --display_name_zh_cn "安装系统包" \
-    --display_name_en "Install Apt package" \
-    --description_zh_cn "安装 Aptfile 文件描述的系统依赖包" \
-    --description_en "Install the system dependency packages described in the Aptfile file" \
-    --tag "${apt_buildpack_version}" \
-    --language Apt \
-    --type tar \
-    --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar" \
-    --hidden
 }
 
 ensure-python-buildpack() {

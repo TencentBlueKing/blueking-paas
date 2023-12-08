@@ -18,11 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional
 
+from rest_framework import serializers
 from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
-from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.region.states import get_region

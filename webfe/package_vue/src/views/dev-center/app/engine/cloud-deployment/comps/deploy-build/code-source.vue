@@ -116,6 +116,8 @@
             :default-account="curAppModule.repo_auth_info?.username"
             :default-dir="curAppModule.repo?.source_dir"
             :deployment-is-show="true"
+            :source-dir-label="'构建目录'"
+            :is-cloud-created="true"
             @change="handleRepoInfoChange"
           />
         </template>

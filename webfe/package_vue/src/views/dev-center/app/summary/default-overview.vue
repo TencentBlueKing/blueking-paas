@@ -1231,17 +1231,17 @@ export default {
     async getAlarmData() {
       const { start, end } = this.getEndDate();
 
-      const params = {
-        code: this.appCode,
-        search: {
-          start_before: end,
-          start_after: start,
-        },
+      const data = {
+        start_time: start,
+        end_time: end,
       };
 
       try {
-        const res = await this.$store.dispatch('alarm/getPersonalAlarmList', params);
-        this.$set(this.topInfo.data, 'alarmCount', res.count || 0);
+        const alarmList = await this.$store.dispatch('alarm/getBkAlarmList', {
+          appCode: this.appCode,
+          data,
+        });
+        this.$set(this.topInfo.data, 'alarmCount', alarmList.length || 0);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

@@ -79,7 +79,7 @@ func main() {
 	opts := zap.Options{
 		// false: zap.InfoLevel, enable sampling logging. V(0) corresponds to InfoLevel, bigger than 0 will be silent
 		// true: zap.DebugLevel. V(0) corresponds to InfoLevel, V(1) corresponds to DebugLevel, bigger than 1 will be silent
-		Development: true,
+		Development: false,
 	}
 	// can pass zap-devel and zap-log-level args to reset the log level
 	opts.BindFlags(flag.CommandLine)

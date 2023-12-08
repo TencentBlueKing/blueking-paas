@@ -1,18 +1,13 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-BUILDER_IMAGE_NAME ?= mirrors.tencent.com/bkpaas/heroku-builder
-BUILDER_TAG ?= bionic
-
-STACK_IMAGE_NAME ?= mirrors.tencent.com/bkpaas/heroku-stack-bionic
-STACK_BUILDER_TAG ?= build
-STACK_RUNNER_TAG ?= run
-
+BUILDER_IMAGE_NAME ?= mirrors.tencent.com/bkpaas/builder-heroku-bionic
+BUILDER_TAG ?= latest
 
 ##@ Build
 .PHONY: stack-image
-stack-image:  ## Build builder/runner image
-	cd $(ROOT_DIR)/stack/ && IMAGE_NAME=$(STACK_IMAGE_NAME) BUILDER_TAG=$(STACK_BUILDER_TAG) docker buildx bake heroku-build -f docker-bake.hcl
-	cd $(ROOT_DIR)/stack/ && IMAGE_NAME=$(STACK_IMAGE_NAME) RUNNER_TAG=$(STACK_RUNNER_TAG) docker buildx bake heroku-run -f docker-bake.hcl
+stack-image:  ## Build builder/runner image 
+	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-build -f docker-bake.hcl
+	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-run -f docker-bake.hcl
 
 
 .PHONY: builder

@@ -133,20 +133,8 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
             "value": pd.name,
         },
         {
-            "key": "plugin_id",
-            "value": plugin.id,
-        },
-        {
             "key": "plugin_name",
             "value": plugin.name,
-        },
-        {
-            "key": "language",
-            "value": plugin.language,
-        },
-        {
-            "key": "template",
-            "value": plugin.template.name,
         },
         {
             "key": "repository",
@@ -155,10 +143,6 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
         {
             "key": "creator",
             "value": plugin.creator.username,
-        },
-        {
-            "key": "extra_fields",
-            "value": plugin.extra_fields,
         },
         {
             "key": "approver",
@@ -185,22 +169,6 @@ def _get_advanced_fields(
         {
             "key": "comment",
             "value": version.comment,
-        },
-        {
-            "key": "category",
-            "value": market_info.category if market_info else "",
-        },
-        {
-            "key": "introduction",
-            "value": market_info.introduction if market_info else "",
-        },
-        {
-            "key": "description",
-            "value": market_info.description if market_info else "",
-        },
-        {
-            "key": "contact",
-            "value": market_info.contact if market_info else "",
         },
         {
             "key": "version_url",

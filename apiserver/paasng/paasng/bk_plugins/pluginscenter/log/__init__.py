@@ -201,6 +201,7 @@ def aggregate_fields_filters(
         search_params = pd.log_config.ingress
     if not search_params:
         raise ValueError(f"this plugin does not support query {log_type} logs")
+
     search = make_base_search(plugin=instance, search_params=search_params, time_range=time_range, limit=200, offset=0)
     if query_string:
         search = search.filter("query_string", query=query_string, analyze_wildcard=True)
@@ -209,7 +210,10 @@ def aggregate_fields_filters(
     if exclude:
         search = search.exclude("terms", **exclude)
     return log_client.aggregate_fields_filters(
-        index=search_params.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
+        index=search_params.indexPattern,
+        search=search,
+        timeout=DEFAULT_ES_SEARCH_TIMEOUT,
+        fields=search_params.filterFields,
     )
 
 

@@ -302,12 +302,10 @@ class ModuleInitializer:
             )
             for proc in bkapp_spec["processes"]
         ]
-        image_credential_names = (
-            {proc["name"]: image_credential["name"] for proc in bkapp_spec["processes"]} if image_credential else {}
-        )
 
         mgr = ModuleProcessSpecManager(self.module)
-        mgr.sync_from_bkapp(processes, image_credential_names)
+        # image_credential_names 设置为空字典, 目的是不保存到 ModuleProcessSpec 的 image_credential_name 字段, 该字段仅为 v1alpha1 设计
+        mgr.sync_from_bkapp(processes, image_credential_names={})
         for proc in bkapp_spec["processes"]:
             if env_overlay := proc.get("env_overlay"):
                 mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)

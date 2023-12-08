@@ -1,24 +1,25 @@
-variable "BUILDER_IMAGE" {
-  default = "mirrors.tencent.com/bkpaas/heroku-builder"
+variable "BUILDER_IMAGE_NAME" {
+  default = "mirrors.tencent.com/bkpaas/builder-heroku-bionic"
 }
 
-variable "BUILDER_TAG" {
-  default = "bionic"
+variable "BUILDER_IMAGE_TAG" {
+  default = "latest"
 }
 
 variable "IMAGE_NAME" {
-  default = "mirrors.tencent.com/bkpaas/heroku-builder-all-in-one"
+  default = "mirrors.tencent.com/bkpaas/bk-builder-heroku-bionic"
 }
 
 variable "IMAGE_TAG" {
-  default = "bionic"
+  default = "latest"
 }
 
 target "heroku-builder" {
   dockerfile = "docker-build/heroku-builder/Dockerfile"
   args = {
-    BUILDER_IMAGE = "${BUILDER_IMAGE}"
-    BUILDER_TAG = "${BUILDER_TAG}"
+    BUILDER_IMAGE_NAME = "${BUILDER_IMAGE_NAME}"
+    BUILDER_IMAGE_TAG = "${BUILDER_IMAGE_TAG}"
   }
   tags = ["${IMAGE_NAME}:${IMAGE_TAG}"]
+  platforms = ["linux/amd64"]
 }

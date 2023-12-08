@@ -23,17 +23,17 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-python/shim"
-  id = "blueking/python"
+  id = "bk-buildpack-python"
   version = "v213"
 
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-nodejs/shim"
-  id = "blueking/nodejs"
+  id = "bk-buildpack-nodejs"
   version = "v163"
 
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-go/shim"
-  id = "blueking/go"
+  id = "bk-buildpack-go"
   version = "v168"
 
 [[buildpacks]]
@@ -57,19 +57,19 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 [[order]]
   [[order.group]]
-    id = "blueking/python"
+    id = "bk-buildpack-python"
     version = "v213"
 
 
 [[order]]
   [[order.group]]
-    id = "blueking/nodejs"
+    id = "bk-buildpack-nodejs"
     version = "v163"
 
 
 [[order]]
   [[order.group]]
-    id = "blueking/go"
+    id = "bk-buildpack-go"
     version = "v168"
 
 
@@ -97,5 +97,5 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 [stack]
   id = "heroku-18"
-  run-image = "mirrors.tencent.com/bkpaas/heroku-stack-bionic:run"
-  build-image = "mirrors.tencent.com/bkpaas/heroku-stack-bionic:build"
+  run-image = "mirrors.tencent.com/bkpaas/run-heroku-bionic:latest"
+  build-image = "mirrors.tencent.com/bkpaas/build-heroku-bionic:latest"

@@ -130,6 +130,9 @@ class PluginBasicInfoDefinition(BaseModel):
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsEn: Dict[str, FieldSchema] = Field(
+        default_factory=dict, description="extraFields 的定义无法做国际化，只能手动添加字段"
+    )
     extraFieldsOrder: List[str] = Field(
         default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
     )
@@ -170,6 +173,9 @@ class PluginMarketInfoDefinition(BaseModel):
     category: PluginBackendAPIResource = Field(description="市场类型分类查询接口")
     api: Optional[PluginBackendAPI] = Field(description="插件市场信息操作接口集")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsEn: Dict[str, FieldSchema] = Field(
+        default_factory=dict, description="extraFields 的定义无法做国际化，只能手动添加字段"
+    )
     extraFieldsOrder: List[str] = Field(
         default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
     )
@@ -276,6 +282,9 @@ class ElasticSearchParams(BaseModel):
     )
     builtinFilters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的过滤条件")
     builtinExcludes: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的排除条件")
+
+    # example: ["json.message", "json.funcName", "json.levelname", "json.otelTraceID", "json.otelSpanID"]
+    filterFields: List[str] = Field(default_factory=list, description="前端可选的字段过滤选项集")
     # paas 的标准输出日志过滤条件
     # termTemplate = {"app_code": "{{ plugin_id }}"}
     # builtinFilters = {"environment": "prod", "stream": ["stderr", "stdout"]}
@@ -295,6 +304,7 @@ class BKLogConfig(BaseModel):
     scenarioID: Literal["log", "bkdata"] = Field(default="log", description="接入场景")
     bkdataDataToken: Optional[str] = Field(description="数据平台认证Token")
     bkdataAuthenticationMethod: Optional[Literal["token", "user"]] = Field(description="数据平台认证方式")
+    bkLogApiStage: str = Field(default="prod", description="日志平台 API 的环境信息，默认为正式环境")
 
 
 @register

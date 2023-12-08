@@ -16,7 +16,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.13.0
 	github.com/samber/lo v1.25.0
-	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/sjson v1.2.5
 	golang.org/x/net v0.0.0-20221002022538-bcab6841153b
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af
@@ -65,6 +64,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

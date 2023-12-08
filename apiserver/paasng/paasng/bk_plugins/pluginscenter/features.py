@@ -27,12 +27,14 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     RE_RELEASE_HISTORY_VERSION = FeatureFlagField(label="重新发布历史版本", default=True)
     API_GATEWAY = FeatureFlagField(label="云 API 管理", default=False)
     PROCESS_MANAGE = FeatureFlagField(label="进程管理", default=False)
-    STRUCTURE_LOG = FeatureFlagField(label="结构化日志", default=False)
+    STRUCTURE_LOG = FeatureFlagField(label="日志管理导航", default=False)
     APP_SECRETS = FeatureFlagField(label="应用密钥管理", default=False)
     PLUGIN_DISTRIBUTER = FeatureFlagField(label="插件使用方", default=False)
     CANCEL_RELEASE = FeatureFlagField(label="终止发布版本", default=True)
     SHOW_ENTRANCES_ADDRESS = FeatureFlagField(label="显示访问入口地址", default=False)
     CONFIGURATION_MANAGE = FeatureFlagField(label="配置管理", default=True)
+    STDOUT_LOG = FeatureFlagField(label="标准输出日志", default=True)
+    ACCESS_LOG = FeatureFlagField(label="访问日志日志", default=True)
 
 
 class PluginFeatureFlagsManager:

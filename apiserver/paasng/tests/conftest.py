@@ -49,6 +49,7 @@ from paasng.core.core.storages.utils import SADBManager
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.modules.constants import SourceOrigin
@@ -386,16 +387,33 @@ def _mock_iam():
         yield
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def _mock_after_created_action():
     # skip registry app core data to console
     before_finishing_application_creation.disconnect(register_app_core_data)
+    # skip turn on bk log feature by default because it required workloads database
+    post_create_application.disconnect(turn_on_bk_log_feature)
     yield
     before_finishing_application_creation.connect(register_app_core_data)
+    post_create_application.connect(turn_on_bk_log_feature)
 
 
 @pytest.fixture()
-def bk_app(request, bk_user, _mock_after_created_action) -> Application:
+def _turn_on_bk_log_feature():
+    post_create_application.connect(turn_on_bk_log_feature)
+    yield
+    post_create_application.disconnect(turn_on_bk_log_feature)
+
+
+@pytest.fixture()
+def _register_app_core_data():
+    before_finishing_application_creation.connect(register_app_core_data)
+    yield
+    before_finishing_application_creation.disconnect(register_app_core_data)
+
+
+@pytest.fixture()
+def bk_app(request, bk_user) -> Application:
     """Generate a random application owned by current user fixture
 
     This result object is not fully functional in order to speed up fixture, if you want a full featured applicƒsation.
@@ -405,7 +423,7 @@ def bk_app(request, bk_user, _mock_after_created_action) -> Application:
 
 
 @pytest.fixture()
-def bk_cnative_app(request, bk_user, _mock_after_created_action):
+def bk_cnative_app(request, bk_user):
     """Generate a random cloud-native application owned by current user fixture"""
     return create_cnative_app(owner_username=bk_user.username, cluster_name=CLUSTER_NAME_FOR_TESTING)
 

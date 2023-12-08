@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.importer.processes import import_processes
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -26,7 +27,21 @@ pytestmark = pytest.mark.django_db
 
 
 class Test__import_processes:
-    def test_integrated(self, bk_module, proc_web, proc_celery):
+    @pytest.mark.parametrize(
+        ("image_credential_annots", "image_credential_name"),
+        [
+            (
+                {
+                    IMAGE_CREDENTIALS_REF_ANNO_KEY: "true",
+                    f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.web": "web-image-credential",
+                },
+                "web-image-credential",
+            ),
+            ({}, None),
+            ({IMAGE_CREDENTIALS_REF_ANNO_KEY: "app--dockerconfigjson"}, None),
+        ],
+    )
+    def test_integrated(self, bk_module, proc_web, proc_celery, image_credential_annots, image_credential_name):
         assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 2
 
         ret = import_processes(
@@ -35,7 +50,14 @@ class Test__import_processes:
                 BkAppProcess(name="web", replicas=1, command=["./start.sh"]),
                 BkAppProcess(name="sleep", replicas=1, command=["bash"], args=["-c", "100"]),
             ],
+            image_credential_annots,
         )
         assert ret.updated_num == 1
         assert ret.created_num == 1
         assert ret.deleted_num == 1
+        assert (
+            ModuleProcessSpec.objects.filter(
+                module=bk_module, name=proc_web.name, image_credential_name=image_credential_name
+            ).count()
+            == 1
+        )

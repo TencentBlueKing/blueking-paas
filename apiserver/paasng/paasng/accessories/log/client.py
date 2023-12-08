@@ -95,7 +95,7 @@ class BKLogClient:
         self, index: str, search: SmartSearch, timeout: int, scroll_id: Optional[str] = None, scroll="5m"
     ) -> Tuple[Response, int]:
         """search log(scrolling) from index with search"""
-        raise NotImplementedError("TODO: 确认日志平台接口 /esquery_scroll/ 是否可用")
+        raise NotImplementedError("日志平台接口 /esquery_scroll/ 暂不对外开放")
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
         """Aggregate time-based histogram"""
@@ -119,22 +119,13 @@ class BKLogClient:
         self, index: str, search: SmartSearch, mappings: dict, timeout: int
     ) -> List[FieldFilter]:
         """aggregate fields filter"""
-        # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
-        search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
-        data = {
-            "indices": index,
-            "scenario_id": self.config.scenarioID,
-            "body": search.to_dict(),
-        }
-        resp = self._call_api(data, timeout)
-        filters = {field: FieldFilter(name=field, key=field) for field in resp["data"]["select_fields_order"]}
-        # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
-        filters = count_filters_options_from_logs(list(Response(search.search, resp["data"])), filters)
-        return sorted(filters.values(), key=attrgetter("total", "key"), reverse=True)
+        raise NotImplementedError(
+            "由于日志平台接口 /esquery_mapping/ 暂不对外开放, 暂时无法实现 aggregate_fields_filters"
+        )
 
     def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
         """query the mappings in es"""
-        raise NotImplementedError("TODO: 确认日志平台接口 /esquery_mapping/ 是否可用")
+        raise NotImplementedError("日志平台接口 /esquery_mapping/ 暂不对外开放")
 
     def _get_indexes(self, index: str, time_range: SmartSearch) -> List[str]:
         """Get indexes within the time_range range from ES"""

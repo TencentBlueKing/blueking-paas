@@ -81,7 +81,7 @@ func main() {
 		// true: zap.DebugLevel. V(0) corresponds to InfoLevel, V(1) corresponds to DebugLevel, bigger than 1 will be silent
 		Development: false,
 	}
-	// can pass zap-devel and zap-log-level args to reset the log level
+	// can use zap-devel and zap-log-level args to reset Development and the log level
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 

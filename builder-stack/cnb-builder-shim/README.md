@@ -26,7 +26,7 @@ cnb-builder-shim 是一个运行在 cloudnative builder 之上的衬垫层，目
     -e RUN_IMAGE="mirrors.tencent.com/bkpaas/run-heroku-bionic:latest" \
     -e SOURCE_GET_URL="file:///tmp/source.tgz" \
     # 设置需要使用的 builderpack
-    -e REQUIRED_BUILDPACKS="tgz fagiani/apt ... 0.2.5;tgz bk-buildpack-python ... v213" \
+    -e REQUIRED_BUILDPACKS="tgz bk-buildpack-apt ... v2;tgz bk-buildpack-python ... v213" \
     # TODO: 修改成你的镜像源访问凭证, 结构为 Dict[str, str], key 是镜像仓库名称, value 是 Basic Auth 格式的用户凭证
     -e CNB_REGISTRY_AUTH='{"mirrors.tencent.com":"Basic YQ=="}' \
     # TODO: 修改 source 路径为你本地的应用源码

@@ -1,13 +1,14 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-NAME := mirrors.tencent.com/bkpaas/bk-nodejs-cnb
+NAME := bk-buildpack-nodejs
 VERSION := v163
 
 ##@ Build
 .PHONY: package
 package: package-heroku-buildpack ## package the buildpack
-	tar -xvf target/output/bk-buildpack-nodejs-v163.tar -C shim/target
-	pack buildpack package $(NAME):$(VERSION) -p shim/
+	cp shim/* cnb-buildpack/bin/
+	tar -xvf target/output/bk-buildpack-nodejs-${VERSION}.tar -C cnb-buildpack/target
+	pack buildpack package $(NAME)-$(VERSION).cnb -p cnb-buildpack/ -f file
 
 .PHONY: package-heroku-buildpack
 package-heroku-buildpack: init-submodule ## 打包 heroku-buildpack

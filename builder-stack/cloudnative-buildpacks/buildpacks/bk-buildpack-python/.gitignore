@@ -1,3 +1,7 @@
-shim/target/*
-!shim/target
-!shim/target/.gitkeep
+cnb-buildpack/target/*
+!cnb-buildpack/target
+!cnb-buildpack/target/.gitkeep
+cnb-buildpack/bin/*
+!cnb-buildpack/bin
+!cnb-buildpack/bin/.gitkeep
+*.cnb

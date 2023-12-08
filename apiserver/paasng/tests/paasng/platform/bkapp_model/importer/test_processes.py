@@ -22,11 +22,8 @@ from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KE
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.importer.processes import import_processes
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
-
-IMAGE_CREDENTIAL_NAME = generate_random_string(8)
 
 
 class Test__import_processes:
@@ -36,12 +33,12 @@ class Test__import_processes:
             (
                 {
                     IMAGE_CREDENTIALS_REF_ANNO_KEY: "true",
-                    f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.web": IMAGE_CREDENTIAL_NAME,
+                    f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.web": "web-image-credential",
                 },
-                IMAGE_CREDENTIAL_NAME,
+                "web-image-credential",
             ),
             ({}, None),
-            ({IMAGE_CREDENTIALS_REF_ANNO_KEY: f"{generate_random_string(8)}--dockerconfigjson"}, None),
+            ({IMAGE_CREDENTIALS_REF_ANNO_KEY: "app--dockerconfigjson"}, None),
         ],
     )
     def test_integrated(self, bk_module, proc_web, proc_celery, image_credential_annots, image_credential_name):

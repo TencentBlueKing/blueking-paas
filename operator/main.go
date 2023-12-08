@@ -75,9 +75,13 @@ func main() {
 		"The controller will load its initial configuration from this file. "+
 			"Omit this flag to use the default configuration values. "+
 			"Command-line flags override configuration from this file.")
+
 	opts := zap.Options{
+		// false: zap.InfoLevel, enable sampling logging. V(0) corresponds to InfoLevel, bigger than 0 will be silent
+		// true: zap.DebugLevel. V(0) corresponds to InfoLevel, V(1) corresponds to DebugLevel, bigger than 1 will be silent
 		Development: true,
 	}
+	// can pass zap-devel and zap-log-level args to reset the log level
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
@@ -127,7 +131,6 @@ func main() {
 
 	setupCtx := context.Background()
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
-
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)

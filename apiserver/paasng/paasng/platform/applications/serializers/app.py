@@ -315,8 +315,8 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if (
-                self.context["request"].method in ["POST"]
-                and self.Meta.model.objects.filter(
+            self.context["request"].method in ["POST"]
+            and self.Meta.model.objects.filter(
             owner=self.context["request"].user.pk, application__code=attrs["application"].code
         ).exists()
         ):

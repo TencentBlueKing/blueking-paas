@@ -1,13 +1,17 @@
-variable "IMAGE_NAME" {
-  default = "mirrors.tencent.com/bkpaas/heroku-stack-bionic"
+variable "BUILD_IMAGE_NAME" {
+  default = "mirrors.tencent.com/bkpaas/build-heroku-bionic"
 }
 
-variable "BUILDER_TAG" {
-  default = "build"
+variable "STACK_BUILDER_TAG" {
+  default = "latest"
 }
 
-variable "RUNNER_TAG" {
-  default = "run"
+variable "RUN_IMAGE_NAME" {
+  default = "mirrors.tencent.com/bkpaas/run-heroku-bionic"
+}
+
+variable "STACK_RUNNER_TAG" {
+  default = "latest"
 }
 
 
@@ -33,7 +37,8 @@ target "heroku-build" {
         default-libmysqlclient-dev
     EOF
   }
-  tags = ["${IMAGE_NAME}:${BUILDER_TAG}"]
+  tags = ["${BUILD_IMAGE_NAME}:${STACK_BUILDER_TAG}"]
+  platforms = ["linux/amd64"]
 }
 
 target "heroku-run" {
@@ -58,5 +63,6 @@ target "heroku-run" {
         default-libmysqlclient-dev
     EOF
   }
-  tags = ["${IMAGE_NAME}:${RUNNER_TAG}"]
+  tags = ["${RUN_IMAGE_NAME}:${STACK_RUNNER_TAG}"]
+  platforms = ["linux/amd64"]
 }

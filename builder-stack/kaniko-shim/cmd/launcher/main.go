@@ -62,9 +62,9 @@ const (
 	// CacheRepoEnvVarKey The env var key that store cache repo
 	CacheRepoEnvVarKey = "CACHE_REPO"
 	// InsecureRegistriesEnvVarKey The env var key that store InsecureRegistries
-	InsecureRegistriesEnvVarKey = "InsecureRegistries"
+	InsecureRegistriesEnvVarKey = "INSECURE_REGISTRIES"
 	// SkipTLSVerifyRegistriesEnvVarKey The env var key that store SkipTlsVerifyRegistries
-	SkipTLSVerifyRegistriesEnvVarKey = "SkipTlsVerifyRegistries"
+	SkipTLSVerifyRegistriesEnvVarKey = "SKIP_TLS_VERIFY_REGISTRIES"
 )
 
 var (
@@ -73,7 +73,7 @@ var (
 		"Path to the dockerfile to be built.")
 	buildArgs = flag.String("build-arg",
 		os.Getenv(BuildArgEnvVarKey),
-		"This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
+		"This flag allows you to pass in ARG values at build time. Join with ',' for multiple value; Each value should be base64 encoded k=v.")
 
 	outputImage = flag.String("output-image",
 		os.Getenv(OutputImageEnvVarKey),
@@ -81,7 +81,7 @@ var (
 	cacheRepo = flag.String("cache-repo",
 		os.Getenv(CacheRepoEnvVarKey),
 		"Specify a repository to use as a cache, otherwise one will be inferred from the destination provided; "+
-			"when prefixed with 'oci:' the repository will be written in OCI image layout format at the path provided")
+			"when prefixed with 'oci:' the repository will be written in OCI image layout format at the path provided.")
 
 	sourceUrl = flag.String("source-url",
 		os.Getenv(SourceUrlEnvVarKey),
@@ -144,7 +144,11 @@ func main() {
 	logger.Info("Start building...")
 	ctx := context.Background()
 	signal := make(chan int)
-	cmd := buildKanikoExecutorCmd(ctx, signal)
+	cmd, err := buildKanikoExecutorCmd(ctx, signal)
+	if err != nil {
+		logger.Error(err, "    !! Failed to start build process")
+		os.Exit(1)
+	}
 	if err := cmd.Start(); err != nil {
 		logger.Error(err, "    !! Build failed")
 		os.Exit(1)
@@ -186,12 +190,16 @@ func fetchSource(logger logr.Logger, contextDir string) error {
 		}
 	case "git":
 		return errors.New("git is not implemented")
+	case "dir":
+		// local path dir, just move it to contextDir
+		return os.Rename(url.Path, contextDir)
 	default:
 		return errors.New("no git url, http url, or registry image provided")
 	}
 	return nil
 }
 
+// setupDockerConfigJson: 初始化 dockerconfig json(拉取镜像和上传镜像的凭证)
 func setupDockerConfigJson(dockerConfigJson string) error {
 	if err := os.MkdirAll(filepath.Dir(DockerConfigJsonPath), os.ModeDir); err != nil {
 		return errors.Wrapf(err, "failed to setup %s", DockerConfigJsonPath)
@@ -206,7 +214,7 @@ func setupDockerConfigJson(dockerConfigJson string) error {
 	return nil
 }
 
-func buildKanikoExecutorCmd(ctx context.Context, signal chan int) *exec.Cmd {
+func buildKanikoExecutorCmd(ctx context.Context, signal chan int) (*exec.Cmd, error) {
 	args := []string{
 		"--dockerfile", *dockerfilePath,
 		"--context", fmt.Sprintf("dir://%s", BuildContextDir),
@@ -216,8 +224,13 @@ func buildKanikoExecutorCmd(ctx context.Context, signal chan int) *exec.Cmd {
 		"--ignore-path", "/product_uuid",
 	}
 	if *buildArgs != "" {
-		// TODO: split buildArgs
-		args = append(args, "--build-arg", *buildArgs)
+		buildArgs, err := utils.ParseBuildArgs(*buildArgs)
+		if err != nil {
+			return nil, err
+		}
+		for _, buildArg := range buildArgs {
+			args = append(args, "--build-arg", buildArg)
+		}
 	}
 	if *cacheRepo != "" {
 		args = append(args, "--cache", "--cache-repo", *cacheRepo)
@@ -239,5 +252,5 @@ func buildKanikoExecutorCmd(ctx context.Context, signal chan int) *exec.Cmd {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = utils.NewWriterWrapper(os.Stdout, signal)
 	cmd.Stderr = utils.NewWriterWrapper(os.Stderr, signal)
-	return cmd
+	return cmd, nil
 }

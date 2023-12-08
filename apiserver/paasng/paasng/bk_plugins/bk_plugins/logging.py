@@ -157,6 +157,13 @@ class PluginLoggingClient:
         if get_log_collector_type(env) == LogCollectorType.BK_LOG:
             # 日志平台方案会将未配置清洗规则的字段, 映射到 __ext_json 字段
             query_term = "__ext_json.trace_id"
+            search = search.sort(
+                {
+                    "dtEventTimeStamp": {"order": "desc"},
+                    "gseIndex": {"order": "desc"},
+                    "iterationIndex": {"order": "desc"},
+                }
+            )
         else:
             # PaaS 内置采集方案会将所有字段放到 json 字段
             query_term = "json.trace_id"

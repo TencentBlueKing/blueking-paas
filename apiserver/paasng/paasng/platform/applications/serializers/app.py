@@ -31,8 +31,10 @@ from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.applications.specs import AppTypeSpecs
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.validators import RE_APP_SEARCH
 
@@ -313,10 +315,10 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if (
-            self.context["request"].method in ["POST"]
-            and self.Meta.model.objects.filter(
-                owner=self.context["request"].user.pk, application__code=attrs["application"].code
-            ).exists()
+                self.context["request"].method in ["POST"]
+                and self.Meta.model.objects.filter(
+            owner=self.context["request"].user.pk, application__code=attrs["application"].code
+        ).exists()
         ):
             raise serializers.ValidationError("您已经标记该应用")
         return attrs
@@ -374,6 +376,7 @@ class ApplicationMembersInfoSLZ(serializers.ModelSerializer):
     administrators = serializers.SerializerMethodField(help_text="应用管理人员名单")
     devopses = serializers.SerializerMethodField(help_text="应用运营人员名单")
     developers = serializers.SerializerMethodField(help_text="应用开发人员名单")
+    last_operator = serializers.SerializerMethodField(help_text="最近操作人员")
 
     def get_administrators(self, application: Application):
         return application.get_administrators()
@@ -384,7 +387,16 @@ class ApplicationMembersInfoSLZ(serializers.ModelSerializer):
     def get_developers(self, application: Application):
         return application.get_developers()
 
+    def get_last_operator(self, application: Application):
+        # 最近操作人员
+        last_operator = (
+            Deployment.objects.filter(app_environment__module__application__code=application.code)
+            .order_by("-created")
+            .first()
+            .operator
+        )
+        return get_username_by_bkpaas_user_id(last_operator)
+
     class Meta:
         model = Application
-        fields = ["id", "code", "name","administrators", "devopses", "developers"]
-
+        fields = ["id", "code", "name", "administrators", "devopses", "developers", "last_operator"]

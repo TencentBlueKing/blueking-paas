@@ -15,6 +15,7 @@ builder: stack-image ## Build cnb builder
 	cd ../../buildpacks/bk-buildpack-python && make package
 	cd ../../buildpacks/bk-buildpack-nodejs && make package
 	cd ../../buildpacks/bk-buildpack-go && make package
+	cd ../../buildpacks/bk-buildpack-apt && make package
 	pack builder create $(BUILDER_IMAGE_NAME):$(BUILDER_TAG) --config ./builder.toml --pull-policy=if-not-present
 
 

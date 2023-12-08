@@ -317,7 +317,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
         if (
             self.context["request"].method in ["POST"]
             and self.Meta.model.objects.filter(
-            owner=self.context["request"].user.pk, application__code=attrs["application"].code
+                owner=self.context["request"].user.pk, application__code=attrs["application"].code
         ).exists()
         ):
             raise serializers.ValidationError("您已经标记该应用")

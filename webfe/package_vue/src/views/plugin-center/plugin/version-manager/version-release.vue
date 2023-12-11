@@ -182,7 +182,11 @@ export default {
       return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
     },
     curStageComponmentType() {
-      return this.stageData.stage_id;
+      const invokeMethod = this.pluginDetailedData?.current_stage?.invoke_method;
+      if (invokeMethod === 'pipeline') {
+        return 'build';
+      }
+      return invokeMethod;
     },
     finalStageIsOnline() {
       return this.curAllStages.length > 0 && this.curAllStages[this.curAllStages.length - 1].name === 'online';

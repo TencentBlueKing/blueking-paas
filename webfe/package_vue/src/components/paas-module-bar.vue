@@ -20,6 +20,7 @@
       <div class="module-operate">
         <!-- 新增模块 -->
         <div
+          v-if="isCreatedModule"
           class="icon-warapper"
           :title="$t('新增模块')"
           @click="handleToAddCloudModulePage"
@@ -53,6 +54,7 @@
         :title="$t('主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通')"
       ></bk-alert>
       <bk-button
+        v-if="isCreatedModule"
         theme="primary"
         @click="handleToAddCloudModulePage"
       >
@@ -180,12 +182,16 @@ export default defineComponent({
       visiable: false,
       isLoading: false,
     });
+    const { curAppInfo } = store.state;
 
     // 输入的文案和选中模块相同
     const formRemoveValidated = computed(() => curAppModuleName.value === formRemoveConfirmCode.value);
 
     // 当前语言
     const localLanguage = computed(() => store.state.localLanguage);
+
+    // 是否展示新建模块入口
+    const isCreatedModule = computed(() => curAppInfo.application?.config_info?.can_create_extra_modules);
 
     // 切换tab
     const handleTabChange = async () => {
@@ -289,6 +295,7 @@ export default defineComponent({
       curAppModuleName,
       formRemoveConfirmCode,
       localLanguage,
+      isCreatedModule,
     };
   },
 });

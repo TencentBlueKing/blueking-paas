@@ -1,16 +1,18 @@
 <template lang="html">
-  <div class="right-main">
+  <div :class="['right-main', { 'packages-wrapper': isCloudNativeApp }]">
     <app-top-bar
+      v-if="!isCloudNativeApp"
       :title="$t('包版本管理')"
       :can-create="canCreateModule"
       :cur-module="curAppModule"
       :module-list="isLesscodeApp ? curAppModuleList : []"
     />
+    <div class="title" v-else>{{ $t('源码信息') }}</div>
     <paas-content-loader
       :is-loading="isPageLoading"
       placeholder="packages-loading"
       :offset-top="30"
-      class="app-container middle overview"
+      :class="['middle overview', { 'app-container': !isCloudNativeApp }]"
     >
       <div class="ps-table-bar mb15 mt15">
         <bk-button
@@ -50,6 +52,7 @@
         :data="packageList"
         :size="'small'"
         :pagination="pagination"
+        :outer-border="!isCloudNativeApp"
         @page-change="pageChange"
         @page-limit-change="limitChange"
         @sort-change="sortChange"
@@ -308,6 +311,11 @@ export default {
     },
   },
   created() {
+    // 云原生设置表格配置项
+    if (this.isCloudNativeApp) {
+      this.pagination.limit = 5;
+      this.pagination.limitList = [5, 10, 15, 20];
+    }
     this.getPackageList();
     this.getLessCode();
   },
@@ -401,6 +409,7 @@ export default {
     },
 
     handleUpload() {
+      // eslint-disable-next-line no-plusplus
       this.renderUploaderIndex++;
       this.uploadDialogConf.package = null;
       this.uploadDialogConf.isShow = true;
@@ -541,5 +550,14 @@ export default {
 
     .mt2{
         margin-top: 2px;
+    }
+    .packages-wrapper {
+        border-bottom: 1px solid #eaebf0;
+        margin-bottom: 24px;
+        .title {
+            font-weight: 700;
+            font-size: 14px;
+            color: #313238;
+        }
     }
 </style>

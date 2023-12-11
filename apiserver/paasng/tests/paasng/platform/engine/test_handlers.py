@@ -23,7 +23,7 @@ from paasng.platform.engine.signals import post_appenv_deploy
 
 from .setup_utils import create_fake_deployment
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_update_last_deployed_date(bk_module):

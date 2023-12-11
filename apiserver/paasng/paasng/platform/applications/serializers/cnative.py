@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict, Optional
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
@@ -46,4 +48,13 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
         ):
             raise ValidationError("image_repository is not consistent with source_repo_url")
 
+        self._validate_image_credential(build_config.image_credential)
+
         return attrs
+
+    def _validate_image_credential(self, image_credential: Optional[Dict[str, str]]):
+        if not image_credential:
+            return
+
+        if not image_credential.get("password") or not image_credential.get("username"):
+            raise ValidationError("image credential missing valid username and password")

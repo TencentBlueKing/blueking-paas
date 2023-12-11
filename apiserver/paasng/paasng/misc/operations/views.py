@@ -111,11 +111,10 @@ class LatestApplicationsViewSet(APIView):
 
     def _transform_op(self, obj: Operation):
         """Transform special operations before representing them to users"""
-        # When app's engine was disabled, tranform `CREATE_MODULE` event because engine-less app has no idea what
+        # When app's engine was disabled, transform `CREATE_MODULE` event because engine-less app has no idea what
         # "module" is.
-        if not obj.application.engine_enabled:
-            if obj.type == OT.CREATE_MODULE.value:
-                obj.type = OT.CREATE_APPLICATION.value
+        if not obj.application.engine_enabled and obj.type == OT.CREATE_MODULE.value:
+            obj.type = OT.CREATE_APPLICATION.value
 
     def _attach_represent_info(self, obj: Operation):
         """Attach an extra "represent_info" onto operation object"""

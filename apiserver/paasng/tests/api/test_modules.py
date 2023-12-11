@@ -26,7 +26,7 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleDeployHook, ModuleProcessSpec
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 class TestModuleCreation:
     """Test module creation APIs"""
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
         "creation_params",
         [
@@ -60,7 +61,6 @@ class TestModuleCreation:
     def test_create_different_engine_params(
         self,
         api_client,
-        init_tmpls,
         bk_app,
         mock_wl_services_in_creation,
         mock_initialize_vcs_with_template,
@@ -81,11 +81,11 @@ class TestModuleCreation:
             )
             assert response.status_code == 201
 
-    @pytest.mark.parametrize("with_feature_flag,is_success", [(True, True), (False, False)])
+    @pytest.mark.usefixtures("_init_tmpls")
+    @pytest.mark.parametrize(("with_feature_flag", "is_success"), [(True, True), (False, False)])
     def test_create_nondefault_origin(
         self,
         api_client,
-        init_tmpls,
         bk_app,
         bk_user,
         mock_wl_services_in_creation,
@@ -114,7 +114,7 @@ class TestModuleCreation:
 
 class TestCreateCloudNativeModule:
     @pytest.fixture(autouse=True)
-    def setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, init_tmpls, bk_user, settings):
+    def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
@@ -142,6 +142,12 @@ class TestCreateCloudNativeModule:
                             },
                         }
                     ],
+                    "hook": {
+                        "type": "pre-release-hook",
+                        "enabled": True,
+                        "command": ["/bin/bash"],
+                        "args": ["-c", "echo 'hello world'"],
+                    },
                 },
             },
         )
@@ -150,8 +156,10 @@ class TestCreateCloudNativeModule:
         assert module_data["web_config"]["build_method"] == "custom_image"
         assert module_data["web_config"]["artifact_type"] == "none"
         module = Module.objects.get(id=module_data["id"])
+
         cfg = BuildConfig.objects.get_or_create_by_module(module)
         assert cfg.image_repository == image_repository
+
         process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
         assert process_spec.image is None
         assert process_spec.image_credential_name is None
@@ -159,16 +167,17 @@ class TestCreateCloudNativeModule:
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2
 
+        deploy_hook = ModuleDeployHook.objects.get(module=module, type=DeployHookType.PRE_RELEASE_HOOK)
+        assert deploy_hook.command == ["/bin/bash"]
+        assert deploy_hook.args == ["-c", "echo 'hello world'"]
+
+    @pytest.mark.usefixtures("_init_tmpls")
     @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
     @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
-    def test_create_with_buildpack(
-        self, MockedModuleRuntimeBinder, MockedModuleRuntimeManager, api_client, bk_cnative_app, init_tmpls
-    ):
+    def test_create_with_buildpack(self, mocked_binder, mocked_manager, api_client, bk_cnative_app):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
-        MockedModuleRuntimeBinder().bind_bp_stack.return_value = None
-        MockedModuleRuntimeManager().get_slug_builder.return_value = mock.MagicMock(
-            is_cnb_runtime=True, environments={}
-        )
+        mocked_binder().bind_bp_stack.return_value = None
+        mocked_manager().get_slug_builder.return_value = mock.MagicMock(is_cnb_runtime=True, environments={})
 
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
@@ -189,7 +198,8 @@ class TestCreateCloudNativeModule:
         assert module_data["web_config"]["build_method"] == "buildpack"
         assert module_data["web_config"]["artifact_type"] == "image"
 
-    def test_create_with_dockerfile(self, api_client, bk_cnative_app, init_tmpls):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_create_with_dockerfile(self, api_client, bk_cnative_app):
         """托管方式：源码 & 镜像（使用 dockerfile 进行构建）"""
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
@@ -217,11 +227,11 @@ class TestCreateCloudNativeModule:
 
 
 class TestModuleDeployConfigViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def the_hook(self, bk_module):
         return bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="the-hook")
 
-    @pytest.fixture
+    @pytest.fixture()
     def the_procfile(self, bk_module):
         ModuleProcessSpec.objects.update_or_create(module=bk_module, name="web", proc_command="python -m http.server")
         return [{"name": "web", "command": "python -m http.server"}]
@@ -236,7 +246,7 @@ class TestModuleDeployConfigViewSet:
         }
 
     @pytest.mark.parametrize(
-        "type_, command, success",
+        ("type_", "command", "success"),
         [
             ("A", "B", False),
             ("pre-release-hook", "B", True),
@@ -270,7 +280,7 @@ class TestModuleDeployConfigViewSet:
         assert not hook.enabled
 
     @pytest.mark.parametrize(
-        "procfile, expected_procfile, success",
+        ("procfile", "expected_procfile", "success"),
         [
             ([], {}, True),
             ([{"name": "web", "command": "python -m http.server"}], {"web": "python -m http.server"}, True),
@@ -303,7 +313,7 @@ class TestModuleDeletion:
     """Test delete module API"""
 
     @pytest.fixture(autouse=True)
-    def mock_validate_custom_domain(self):
+    def _mock_validate_custom_domain(self):
         with mock.patch("paasng.platform.modules.protections.CustomDomainUnBoundCondition.validate"):
             yield
 

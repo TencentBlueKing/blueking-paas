@@ -1,0 +1,25 @@
+22c22
+<       echo "       Learn More: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>       echo "       Learn More: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+28c28
+<       echo "       Learn More: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>       echo "       Learn More: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+35c35
+<       echo "       Learn More: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>       echo "       Learn More: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+42c42
+<       echo "       Learn More: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>       echo "       Learn More: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+49c49
+<       echo "       Learn More: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>       echo "       Learn More: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+174c174,175
+<   SETUPTOOLS_VERSION='59.6.0'
+---
+>   # anyjson==0.3.3 需要 SETUPTOOLS_VERSION<58.0.0 才能安装
+>   SETUPTOOLS_VERSION='57.5.0'

@@ -36,5 +36,3 @@ class ItsmBasicAuthentication(BasicAuthentication):
         is_passed = client.verify_token(token)
         if not is_passed:
             raise AuthenticationFailed("authentication failed: itsm callback token verification failed")
-
-        return

@@ -24,7 +24,7 @@ from paas_wl.infras.resource_templates.constants import AppAddOnType
 from paas_wl.infras.resource_templates.models import AppAddOnTemplate
 
 
-@pytest.fixture
+@pytest.fixture()
 def sidecar_template():
     return dedent(
         """
@@ -43,12 +43,12 @@ def sidecar_template():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def sidecar_addon_template(sidecar_template):
     return AppAddOnTemplate.objects.create(name="sidecar", spec=sidecar_template, type=AppAddOnType.SIMPLE_SIDECAR)
 
 
-@pytest.fixture
+@pytest.fixture()
 def probe_template():
     return dedent(
         """
@@ -65,12 +65,12 @@ def probe_template():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def probe_addon_template(probe_template):
     return AppAddOnTemplate.objects.create(name="probe", spec=probe_template, type=AppAddOnType.READINESS_PROBE)
 
 
-@pytest.fixture
+@pytest.fixture()
 def probe_handler_templates():
     return {
         "readiness": {
@@ -80,12 +80,12 @@ def probe_handler_templates():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def port_env():
     return 80
 
 
-@pytest.fixture
+@pytest.fixture()
 def shm_volume_mount_template():
     return dedent(
         """
@@ -97,14 +97,14 @@ def shm_volume_mount_template():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def shm_volume_mount_addon_template(shm_volume_mount_template):
     return AppAddOnTemplate.objects.create(
         name="shm-mount-point", spec=shm_volume_mount_template, type=AppAddOnType.VOLUME_MOUNT
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def shm_volume_template():
     return dedent(
         """
@@ -119,12 +119,12 @@ def shm_volume_template():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def shm_volume_addon_template(shm_volume_template):
     return AppAddOnTemplate.objects.create(name="shm-momory-mount", spec=shm_volume_template, type=AppAddOnType.VOLUME)
 
 
-@pytest.fixture
+@pytest.fixture()
 def secret_volume_template():
     return dedent(
         """
@@ -145,12 +145,12 @@ def secret_volume_template():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def process_type():
     return "web"
 
 
-@pytest.fixture
+@pytest.fixture()
 def secret_volume_addon_template(secret_volume_template):
     return AppAddOnTemplate.objects.create(
         name="a-secret-volume", spec=secret_volume_template, type=AppAddOnType.VOLUME

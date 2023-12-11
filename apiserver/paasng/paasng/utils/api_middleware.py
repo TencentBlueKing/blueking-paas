@@ -76,7 +76,7 @@ class ApiLogMiddleware:
 
     def get_api_data(self, request, response):
         if request.method in ["OPTIONS"]:
-            return
+            return None
 
         username = request.user.username
         user_id = request.user.get_username()

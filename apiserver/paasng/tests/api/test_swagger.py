@@ -41,5 +41,5 @@ class TestSwaggerConfigurationGenerator(TestCase):
         response = FullSwaggerConfigurationView.as_view()(request)
         configuration_json = response.content
         configuration_dict = json.loads(configuration_json)
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue("swagger" in configuration_dict)
+        assert response.status_code == 200
+        assert "swagger" in configuration_dict

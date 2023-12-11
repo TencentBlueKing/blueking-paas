@@ -31,6 +31,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
 // NewDeployActionReconciler returns a DeployActionReconciler.
@@ -49,7 +50,7 @@ type DeployActionReconciler struct {
 func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	log := logf.FromContext(ctx)
 	var err error
-	log.V(4).Info("handling deploy action reconciliation.")
+	log.V(1).Info("handling deploy action reconciliation.")
 
 	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 	if currentDeployID == "" {
@@ -60,7 +61,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	// it means that there is no new deploy action, the further process of current reconcile
 	// loop wil be skipped.
 	if bkapp.Status.DeployId == currentDeployID {
-		log.V(2).Info(
+		log.V(1).Info(
 			"No new deploy action found on the BkApp, skip the rest of the process.",
 			"ObservedGeneration",
 			bkapp.Status.ObservedGeneration,
@@ -88,6 +89,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	SetDefaultConditions(bkapp)
 
 	if err = r.Client.Status().Update(ctx, bkapp); err != nil {
+		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
 		log.Error(err, "Unable to update bkapp status when a new deploy action is detected")
 		return r.Result.WithError(err)
 	}

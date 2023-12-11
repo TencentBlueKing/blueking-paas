@@ -20,19 +20,25 @@ package reconcilers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kuberuntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/svcdisc"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
@@ -50,43 +56,40 @@ type DeploymentReconciler struct {
 // Reconcile ...
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	log := logf.FromContext(ctx)
-
-	current, err := r.getCurrentState(ctx, bkapp)
+	currentDeploys, err := r.getCurrentDeployments(ctx, bkapp)
 	if err != nil {
 		return r.Result.WithError(err)
 	}
-	expected := resources.GetWantedDeploys(bkapp)
-	if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployments(ctx, expected); ok {
-		log.V(2).Info("Applied svc-discovery related changes to deployments.")
+
+	// Get deployments synced with the current bkapp, new deployment resource might be created and old deployments
+	// might be updated.
+	newDeployMap, err := r.getNewDeployments(ctx, bkapp, currentDeploys)
+	if err != nil {
+		return r.Result.WithError(err)
+	}
+	// Clean up the deployments which are not in the new deploys
+	newDeployNames := []string{}
+	for _, d := range newDeployMap {
+		newDeployNames = append(newDeployNames, d.Name)
+	}
+	if err = r.cleanUpDeployments(ctx, bkapp, currentDeploys, newDeployNames); err != nil {
+		return r.Result.WithError(err)
 	}
 
-	outdated := FindExtraByName(current, expected)
-
-	if len(outdated) != 0 {
-		for _, deploy := range outdated {
-			if err = r.Client.Delete(ctx, deploy); err != nil {
-				return r.Result.WithError(err)
-			}
-		}
-	}
-	for _, deploy := range expected {
-		if err = r.deploy(ctx, deploy); err != nil {
-			return r.Result.WithError(err)
-		}
-	}
-
+	// Modify conditions in status
 	if err = r.updateCondition(ctx, bkapp); err != nil {
 		return r.Result.WithError(err)
 	}
-	// deployment 未就绪, 下次调和循环重新更新状态
+	// The statuses of the deployments is not ready yet, reconcile later.
 	if bkapp.Status.Phase == paasv1alpha2.AppPending {
+		log.V(1).Info("bkapp is still pending, reconcile later.", "bkapp", bkapp.Name)
 		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	return r.Result
 }
 
-// 获取应用当前在集群中的状态
-func (r *DeploymentReconciler) getCurrentState(
+// get all deployment objects owned by the given bkapp
+func (r *DeploymentReconciler) getCurrentDeployments(
 	ctx context.Context,
 	bkapp *paasv1alpha2.BkApp,
 ) (result []*appsv1.Deployment, err error) {
@@ -101,41 +104,107 @@ func (r *DeploymentReconciler) getCurrentState(
 	return lo.ToSlicePtr(deployList.Items), nil
 }
 
-// 将给定的 deployment 发布至 k8s, 如果不存在则创建, 如果同名对象已存在且配置发生变化, 则更新
-func (r *DeploymentReconciler) deploy(ctx context.Context, deploy *appsv1.Deployment) error {
-	return UpsertObject(ctx, r.Client, deploy, r.updateHandler)
+// Get the deployments which match the given bkapp's specifications. Main behaviour:
+//
+// - Create new deployments if does not exist;
+// - Update existing deployments if the resource exists but don't match current bkapp;
+// - Use existing deployments if it match current bkapp.
+func (r *DeploymentReconciler) getNewDeployments(
+	ctx context.Context,
+	bkapp *paasv1alpha2.BkApp,
+	deployList []*appsv1.Deployment,
+) (results map[string]*appsv1.Deployment, err error) {
+	log := logf.FromContext(ctx)
+	results = make(map[string]*appsv1.Deployment)
+	existingNewDeployMap := r.findNewDeployments(ctx, bkapp, deployList)
+	for _, proc := range bkapp.Spec.Processes {
+		// Use existing deployment directly
+		if existingDeploy, exists := existingNewDeployMap[proc.Name]; exists {
+			results[proc.Name] = existingDeploy
+			continue
+		}
+
+		// The new deployment does not exist or has not been up to date, perform upsert
+		deployment, err := resources.BuildProcDeployment(bkapp, proc.Name)
+		if err != nil {
+			return nil, errors.Wrapf(err, "get new deployment error, build failed for %s:%s.", bkapp.Name, proc.Name)
+		}
+		// Apply service discovery related changes
+		if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployment(ctx, deployment); ok {
+			log.V(1).Info("Applied svc-discovery related changes to deployments.")
+		}
+
+		if err = UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {
+			return nil, errors.Wrapf(err, "get new deployment error, upsert failed for %s:%s.", bkapp.Name, proc.Name)
+		}
+		results[proc.Name] = deployment
+	}
+	return results, nil
 }
 
-// updateHandler Deployment 更新策略: 除非在注解中指定了 `bkapp.paas.bk.tencent.com/deployment-skip-update`
-// （执行测试代码时会用到）, 或配置内容没有任何变化，否则总是更新
-func (r *DeploymentReconciler) updateHandler(
+// Find deployments which match the given bkapp's specifications, accept a list fo deployment objects,
+// return {process name: *deployment}.
+func (r *DeploymentReconciler) findNewDeployments(
 	ctx context.Context,
-	cli client.Client,
-	current *appsv1.Deployment,
-	want *appsv1.Deployment,
-) error {
+	bkapp *paasv1alpha2.BkApp,
+	deployList []*appsv1.Deployment,
+) map[string]*appsv1.Deployment {
 	log := logf.FromContext(ctx)
-	if current.Annotations[paasv1alpha2.DeploySkipUpdateAnnoKey] == "true" {
-		return nil
-	}
-	// Skip update if the content of deployment is not changed, unnecessary updates will trigger
-	// the reconcile loop of the BkApp again and result infinite loops.
-	if want.Annotations[paasv1alpha2.DeployContentHashAnnoKey] == current.Annotations[paasv1alpha2.DeployContentHashAnnoKey] {
-		log.V(2).Info("The content of deployment is not changed, skip update.")
-		return nil
-	}
+	results := make(map[string]*appsv1.Deployment)
+	for _, d := range deployList {
+		// Ignore deployment which does not contain the serialized bkapp in annotation, which means the object was
+		// created by legacy controller.
+		serializedBkApp, exists := d.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]
+		if !exists {
+			log.V(1).Info("Deployment does not contain the serialized bkapp in annots.", "name", d.Name)
+			continue
+		}
+		// Decode the serialized BkApp into object
+		// TODO: Handle changes across different api versions which introduces backward-incompatible schema changes.
+		// In that case, the "converter" might be needed.
+		var syncedBkApp paasv1alpha2.BkApp
+		if err := kuberuntime.DecodeInto(clientsetscheme.Codecs.UniversalDecoder(), []byte(serializedBkApp), &syncedBkApp); err != nil {
+			log.Error(err, "Unmarshal serialized bkapp failed.", "name", d.Name)
+			continue
+		}
 
-	if err := cli.Update(ctx, want); err != nil {
-		return errors.Wrapf(
-			err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
-		)
+		// If the deployment ID has been changed, always treat current deployment as outdated.
+		if bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey] != syncedBkApp.Annotations[paasv1alpha2.DeployIDAnnoKey] {
+			log.V(1).Info("Deploy ID changed, current deployment is outdated.", "name", d.Name)
+			continue
+		}
+		if BkAppSemanticEqual(bkapp, &syncedBkApp) {
+			procName := d.Labels[paasv1alpha2.ProcessNameKey]
+			results[procName] = d
+			continue
+		}
+	}
+	return results
+}
+
+// Clean up deployments which are not needed anymore. Args:
+// - deployList: A list of deployment resources.
+// - newDeployNames: The names of deployment that are synced with the current bkapp.
+func (r *DeploymentReconciler) cleanUpDeployments(ctx context.Context,
+	bkapp *paasv1alpha2.BkApp,
+	deployList []*appsv1.Deployment,
+	newDeployNames []string,
+) error {
+	for _, d := range deployList {
+		if lo.Contains(newDeployNames, d.Name) {
+			continue
+		}
+		if err := r.Client.Delete(ctx, d); err != nil {
+			metrics.IncDeleteOutdatedDeployFailures(bkapp, d.Name)
+			return errors.Wrapf(err, "error cleaning up deployments")
+		}
 	}
 	return nil
 }
 
 // update condition `AppAvailable`
 func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
-	current, err := r.getCurrentState(ctx, bkapp)
+	current, err := r.getCurrentDeployments(ctx, bkapp)
 	if err != nil {
 		return err
 	}
@@ -210,4 +279,78 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 		}
 	}
 	return nil
+}
+
+// The handler for updating a deployment resource.
+func (r *DeploymentReconciler) updateHandler(
+	ctx context.Context,
+	cli client.Client,
+	current *appsv1.Deployment,
+	want *appsv1.Deployment,
+) error {
+	// Respect an annotation to skip update, useful for testing
+	if current.Annotations[paasv1alpha2.DeploySkipUpdateAnnoKey] == "true" {
+		return nil
+	}
+
+	// Only patch the serialized bkapp in annotations to avoid unnecessary updates, this happens when we upgrade
+	// the operator from an older version which does not write "last-synced-serialized-bkapp" annotation.
+	//
+	// WARNING: After the patch successfully applied, updates on the deployment will be skipped until the
+	// bkapp resource spec from the input has been changed.
+	_, currentHasBkappAnnot := current.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]
+	if !currentHasBkappAnnot {
+		patchBody, _ := json.Marshal(map[string]any{
+			"metadata": map[string]any{
+				"annotations": map[string]string{
+					paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: want.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey],
+				},
+			},
+		})
+		if err := cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patchBody)); err != nil {
+			return errors.Wrapf(
+				err,
+				"patch serialized bkapp annotation for %s(%s) error.",
+				want.GetObjectKind().GroupVersionKind().String(),
+				want.GetName(),
+			)
+		}
+		return nil
+	}
+
+	// Perform the resource update
+	if err := cli.Update(ctx, want); err != nil {
+		return errors.Wrapf(
+			err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
+		)
+	}
+	return nil
+}
+
+// BkAppSemanticEqual checks if two bkapp resources are semantically equal, it respect the default values.
+// Args:
+// - bkApp: The bkapp resource.
+// - syncBkApp: The bkapp stored in the annotation, not mutated by the default webhook.
+func BkAppSemanticEqual(bkApp, syncedBkApp *paasv1alpha2.BkApp) bool {
+	bkAppCopy := bkApp.DeepCopy()
+	syncedBkAppCopy := syncedBkApp.DeepCopy()
+	// Remove unrelated content before comparing
+	delete(bkAppCopy.Annotations, paasv1alpha2.DeployIDAnnoKey)
+	delete(syncedBkAppCopy.Annotations, paasv1alpha2.DeployIDAnnoKey)
+
+	// Compare the given and the synced BkApp
+	if apiequality.Semantic.DeepEqual(bkAppCopy.Spec, syncedBkAppCopy.Spec) &&
+		apiequality.Semantic.DeepEqual(bkAppCopy.Annotations, syncedBkAppCopy.Annotations) {
+		return true
+	}
+	// Also compare with the synced BkApp whose "nil" values have been set to default values, this can
+	// handle the situation when BkApp's schema has been updated and the given app has been mutated by
+	// the webhook. In this case, the former comparison will fail because new fields in the synced bkapp have
+	// not been set to the default values but the given bkapp has.
+	syncedBkAppCopy.Default()
+	if apiequality.Semantic.DeepEqual(bkAppCopy.Spec, syncedBkAppCopy.Spec) &&
+		apiequality.Semantic.DeepEqual(bkAppCopy.Annotations, syncedBkAppCopy.Annotations) {
+		return true
+	}
+	return false
 }

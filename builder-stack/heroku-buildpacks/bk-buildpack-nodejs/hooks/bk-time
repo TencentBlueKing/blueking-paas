@@ -1,0 +1,8 @@
+# 在compile各个环节打印时间
+
+# 显示当前时间
+# BK_DEBUG系统开启，USER_DEBUG用户开启
+if [ "${BK_DEBUG}" ] || [ "${USER_DEBUG}" ]; then
+	start_time=$(date "+%Y-%m-%d %H:%M:%S")
+	echo "compile当前时间：${start_time}"
+fi

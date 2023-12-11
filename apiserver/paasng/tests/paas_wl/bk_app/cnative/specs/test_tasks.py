@@ -32,12 +32,12 @@ from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy, crea
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def dp(bk_stag_env, bk_stag_wl_app, bk_user):
     return create_cnative_deploy(bk_stag_env, bk_user, status=DeployStatus.PENDING)
 
 
-@pytest.fixture
+@pytest.fixture()
 def poller(bk_stag_env, dp):
     """A poller fixture for testing"""
     metadata = PollingMetadata(retries=0, query_started_at=time.time(), queried_count=1)

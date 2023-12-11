@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, Optional, Type, Union
+from typing import Dict, List, Optional, Type, Union
 
 import cattrs
 import jinja2
@@ -64,6 +64,59 @@ class BaseStageController:
         cls, invoke_method: Union[str, constants.ReleaseStageInvokeMethod]
     ) -> Type["BaseStageController"]:
         return cls._stage_types[constants.ReleaseStageInvokeMethod(invoke_method)]
+
+    def execute_post_command(self) -> bool:
+        """后置命令，当前阶段的状态更新为 SUCCESS 时执行"""
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        if stage_definition is None:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
+
+        if not stage_definition.api or not stage_definition.api.postCommand:
+            return True
+
+        resp = utils.make_client(stage_definition.api.postCommand).call(
+            data={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+            },
+            path_params={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+            },
+        )
+        # 部分系统遵循老的蓝鲸 AP I规范，status_code 永远返回 200，需要通过返回数据的 result 来判断调用是否成功
+        if not (result := resp.get("result", True)):
+            logger.error(
+                f"execute post command [plugin_id: {self.plugin.id}, version:{self.release.version}], error: {resp}"
+            )
+        return result
+
+    def execute_pre_command(self, operator: str) -> bool:
+        """前置命令，进入该阶段前先执行"""
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        if stage_definition is None:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
+
+        if not stage_definition.api or not stage_definition.api.preCommand:
+            return True
+
+        resp = utils.make_client(stage_definition.api.preCommand).call(
+            data={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+                "bk_username": operator,
+            },
+            path_params={
+                "plugin_id": self.plugin.id,
+                "version": self.release.version,
+            },
+        )
+        # 部分系统遵循老的蓝鲸 AP I规范，status_code 永远返回 200，需要通过返回数据的 result 来判断调用是否成功
+        if not (result := resp.get("result", True)):
+            logger.error(
+                f"execute pre command [plugin_id: {self.plugin.id}, version:{self.release.version}], error: {resp}"
+            )
+        return result
 
     def execute(self, operator: str):
         """执行步骤"""
@@ -163,21 +216,45 @@ class PipelineStage(BaseStageController):
 
     def __init__(self, stage: PluginReleaseStage):
         super().__init__(stage)
-        self.ctl = PipelineController(bk_username="admin")
+
+        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        pipeline_env = "prod"
+        if stage_definition and stage_definition.pipelineEnv:
+            pipeline_env = stage_definition.pipelineEnv
+        self.ctl = PipelineController(bk_username="admin", stage=pipeline_env)
+
         if stage.status == constants.PluginReleaseStatus.INITIAL or stage.pipeline_detail is None:
             self.build = None
         else:
             self.build = cattrs.structure(stage.pipeline_detail, devops_definitions.PipelineBuild)
+
+    def _update_pipline_status(self, status: str, stage_status: List[devops_definitions.BuildStageStatus]):
+        if stage_status is None:
+            stage_status = []
+
+        if status == PipelineBuildStatus.SUCCEED:
+            # 执行后置命令
+            is_success = self.execute_post_command()
+            if not is_success:
+                self.stage.update_status(constants.PluginReleaseStatus.FAILED, "execute post command error")
+            else:
+                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        elif status == PipelineBuildStatus.FAILED:
+            self.stage.update_status(
+                constants.PluginReleaseStatus.FAILED,
+                next((i.showMsg for i in stage_status if i.showMsg), _("构建失败")),
+            )
+        elif status == PipelineBuildStatus.CANCELED:
+            self.stage.update_status(
+                constants.PluginReleaseStatus.INTERRUPTED,
+                next((i.showMsg for i in stage_status if i.showMsg), _("构建失败")),
+            )
 
     def render_to_view(self) -> Dict:
         if self.build is None:
             raise error_codes.STAGE_RENDER_ERROR.f(_("当前步骤状态异常"))
         basic_info = super().render_to_view()
         build_detail = self.ctl.retrieve_build_detail(self.build)
-        # 如果已经构建完成，则主动更新当前步骤状态
-        if build_detail.status not in constants.PluginReleaseStatus.running_status():
-            self.async_check_status()
-            self.stage.refresh_from_db()
 
         logs = self.ctl.retrieve_full_log(build=self.build).dict()
         return {**basic_info, "detail": build_detail.dict(), "logs": logs}
@@ -186,26 +263,7 @@ class PipelineStage(BaseStageController):
         if self.build is None:
             return False
         status = self.ctl.retrieve_build_status(build=self.build)
-        if status.status == PipelineBuildStatus.SUCCEED:
-            # 部分插件需要在构建成功后，回调第三方API来获取构建产物等
-            is_success = self.execute_post_command()
-            if not is_success:
-                self.stage.update_status(
-                    constants.PluginReleaseStatus.FAILED,
-                    next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建回调失败")),
-                )
-            else:
-                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
-        elif status.status == PipelineBuildStatus.FAILED:
-            self.stage.update_status(
-                constants.PluginReleaseStatus.FAILED,
-                next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建失败")),
-            )
-        elif status.status == PipelineBuildStatus.CANCELED:
-            self.stage.update_status(
-                constants.PluginReleaseStatus.INTERRUPTED,
-                next((i.showMsg for i in status.stageStatus if i.showMsg), _("构建失败")),
-            )
+        self._update_pipline_status(status.status, status.stageStatus)
         return self.stage.status not in constants.PluginReleaseStatus.running_status()
 
     def execute(self, operator: str):
@@ -288,7 +346,7 @@ class SubPageStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.SUBPAGE
 
     def execute(self, operator: str):
-        # 内嵌页面，不需要做任何处理
+        # 内嵌页面，不需要做任何处理, 仅执行部署前置命令
         return
 
     def render_to_view(self) -> Dict:

@@ -36,20 +36,20 @@ pytestmark = pytest.mark.django_db
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture()
 def existed_app(bk_app):
     """Create a existed app to test conflicted situations"""
     return create_app()
 
 
-@pytest.fixture
+@pytest.fixture()
 def tag(bk_app):
     """A tag fixture for testing"""
     parent = Tag.objects.create(name="parent test", region=bk_app.region)
     return Tag.objects.create(name="test", region=bk_app.region, parent=parent)
 
 
-@pytest.fixture
+@pytest.fixture()
 def creation_params(bk_app, tag):
     return {
         "application": bk_app.code,
@@ -101,7 +101,7 @@ class TestCreateMarketApp:
 
 class TestGetAndUpdateProduct:
     @pytest.fixture(autouse=True)
-    def existed_product(self, api_client, bk_app, creation_params):
+    def _existed_product(self, api_client, bk_app, creation_params):
         """Create product beforehand"""
         creation_params.update({"name": bk_app.name})
         api_client.post(reverse("api.market.products.list"), data=creation_params, format="json")
@@ -113,6 +113,15 @@ class TestGetAndUpdateProduct:
         assert response.json()["open_mode"] == OpenMode.NEW_TAB.value
 
     def test_update_market_app(self, api_client, bk_app_full):
+        # 开启了应用市场配置，则测试数据同步
+        if getattr(settings, "BK_CONSOLE_DBCONF", None):
+            from paasng.accessories.publish.sync_market.handlers import (
+                register_app_core_data,
+            )
+
+            # 单测为了提高性能, 禁用了 register_app_core_data, 需要主动触发
+            register_app_core_data(sender=None, application=bk_app_full)
+
         # Get the origin product value
         Product.objects.create_default_product(bk_app_full)
         response = api_client.get(reverse("api.market.products.detail", args=(bk_app_full.code,)), format="json")
@@ -166,8 +175,9 @@ def set_subdomain_exposed_url_type(region_config):
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
+@pytest.mark.usefixtures("_with_wl_apps", "_setup_cluster")
 class TestSetEntrance:
-    def test_set_builtin_entrance(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    def test_set_builtin_entrance(self, api_client, bk_app, bk_module, bk_prod_env):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         # 切换默认访问入口
         with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
@@ -184,7 +194,8 @@ class TestSetEntrance:
             market_config.refresh_from_db()
             assert market_config.source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV
 
-    def test_set_builtin_custom(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    @pytest.mark.usefixtures("_setup_cluster")
+    def test_set_builtin_custom(self, api_client, bk_app, bk_module, bk_prod_env):
         # setup data
         # source type: custom
         Domain.objects.create(
@@ -210,7 +221,8 @@ class TestSetEntrance:
             assert market_config.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN
             assert market_config.custom_domain_url == "http://foo-custom.example.com/subpath/"
 
-    def test_set_failed(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    @pytest.mark.usefixtures("_setup_cluster")
+    def test_set_failed(self, api_client, bk_app, bk_module, bk_prod_env):
         # 切换不存在的独立域名
         with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
             url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
@@ -229,7 +241,8 @@ class TestSetEntrance:
                 "fields_detail": {"url": ["http://foo-404.example.com/subpath/ 并非 default 模块的访问入口"]},
             }
 
-    def test_set_third_party_url(self, api_client, bk_app, bk_module, bk_prod_env, with_wl_apps, setup_cluster):
+    @pytest.mark.usefixtures("_setup_cluster")
+    def test_set_third_party_url(self, api_client, bk_app, bk_module, bk_prod_env):
         bk_app.type = ApplicationType.ENGINELESS_APP
         bk_app.save()
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)

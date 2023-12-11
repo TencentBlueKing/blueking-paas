@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db
 
 
 class TestPhaseManager:
-    @pytest.fixture
+    @pytest.fixture()
     def manager(self, bk_stag_env):
         return DeployPhaseManager(bk_stag_env)
 

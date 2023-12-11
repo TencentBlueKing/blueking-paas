@@ -44,7 +44,7 @@
         </div>
         <div class="content">
           <div
-            v-if="application.config_info.require_templated_source && downloadableAddress"
+            v-if="downloadableAddress"
             class="input-wrapper"
           >
             <div class="title-wrapper">

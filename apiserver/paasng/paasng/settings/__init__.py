@@ -803,7 +803,7 @@ DEFAULT_REGION_TEMPLATE = {
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,
-    # 是否允许部署“蓝鲸可视化开发平台提供源码包”
+    # 是否允许部署“蓝鲸运维开发平台提供源码包”
     "allow_deploy_app_by_lesscode": True,
 }
 
@@ -1197,7 +1197,12 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 PLUGIN_CENTER_PROJECT_ID = settings.get("PLUGIN_CENTER_PROJECT_ID", default="bkplugins")
 
 # 插件开发者中心访问地址
-PLUGIN_CENTER_URL = settings.get("PLUGIN_CENTER_URL", default=f'{BKPAAS_URL}/plugin-center')
+PLUGIN_CENTER_URL = settings.get("PLUGIN_CENTER_URL", default=f"{BKPAAS_URL}/plugin-center")
+
+# 插件应用的默认 LOGO
+PLUGIN_APP_DEFAULT_LOGO = settings.get(
+    "PLUGIN_APP_DEFAULT_LOGO", default=f"{BKPAAS_URL}/static/images/plugin-default.svg"
+)
 
 # -----------------
 # 蓝鲸监控配置项

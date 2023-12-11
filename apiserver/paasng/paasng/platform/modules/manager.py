@@ -37,7 +37,6 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
@@ -51,6 +50,7 @@ from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
+from paasng.platform.modules.handlers import on_module_initialized
 from paasng.platform.modules.helpers import (
     ModuleRuntimeBinder,
     get_image_labels_by_module,
@@ -152,7 +152,6 @@ class ModuleInitializer:
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
             update_metadata_by_env(env, engine_app_meta_info)
-        return
 
     def initialize_vcs_with_template(
         self,
@@ -255,10 +254,6 @@ class ModuleInitializer:
         for buildpack in planer.get_required_buildpacks(bp_stack_name=slugbuilder.name):
             binder.bind_buildpack(buildpack)
 
-    def initialize_log_config(self):
-        for env in self.module.get_envs():
-            setup_env_log_model(env)
-
     def initialize_app_model_resource(self, bkapp_spec: Optional[Dict] = None):
         """
         Initialize the AppModelResource and import the bkapp_spec into the corresponding bkapp models
@@ -307,18 +302,16 @@ class ModuleInitializer:
             )
             for proc in bkapp_spec["processes"]
         ]
-        image_credential_names = (
-            {proc["name"]: image_credential["name"] for proc in bkapp_spec["processes"]} if image_credential else {}
-        )
 
         mgr = ModuleProcessSpecManager(self.module)
-        mgr.sync_from_bkapp(processes, image_credential_names)
+        # image_credential_names 设置为空字典, 目的是不保存到 ModuleProcessSpec 的 image_credential_name 字段, 该字段仅为 v1alpha1 设计
+        mgr.sync_from_bkapp(processes, image_credential_names={})
         for proc in bkapp_spec["processes"]:
             if env_overlay := proc.get("env_overlay"):
                 mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)
 
         # 导入 hook 配置
-        if hook := bkapp_spec.get("hooks"):
+        if hook := bkapp_spec.get("hook"):
             self.module.deploy_hooks.enable_hook(
                 type_=hook["type"],
                 proc_command=hook.get("proc_command"),
@@ -344,7 +337,7 @@ def _humanize_exception(step_name: str, message: str):
     try:
         yield
     except Exception as e:
-        logger.exception("An exception occurred during `%s`, detail: %s", step_name, e)
+        logger.exception("An exception occurred during `%s`", step_name)
         raise ModuleInitializationError(message) from e
 
 
@@ -376,9 +369,7 @@ def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):
         with _humanize_exception(_("绑定初始运行环境失败，请稍候再试"), "bind default runtime"):
             module_initializer.bind_default_runtime()
 
-    with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
-        module_initializer.initialize_log_config()
-
+    on_module_initialized.send(sender=initialize_smart_module, module=module)
     return ModuleInitResult(source_init_result={})
 
 
@@ -444,12 +435,10 @@ def initialize_module(
     with _humanize_exception("bind_default_services", _("绑定初始增强服务失败，请稍候再试")):
         module_initializer.bind_default_services()
 
-    with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
-        module_initializer.initialize_log_config()
-
     with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
         module_initializer.initialize_app_model_resource(bkapp_spec)
 
+    on_module_initialized.send(sender=initialize_module, module=module)
     return ModuleInitResult(source_init_result=source_init_result)
 
 

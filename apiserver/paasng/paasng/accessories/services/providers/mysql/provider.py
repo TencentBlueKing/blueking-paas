@@ -79,7 +79,7 @@ class MySQLProvider(BaseProvider):
                     try:
                         cursor.execute(sql)
                     except Exception:
-                        logger.exception("Revoke privileges FAIL: %s" % sql)
+                        logger.exception("Revoke privileges FAIL: %s", sql)
                         continue
 
             cursor.execute("flush privileges;")
@@ -146,7 +146,7 @@ class MySQLProvider(BaseProvider):
             self._grant_auth_ips(connection, self.auth_ip_list, database_name, database_user, database_password)
 
         except Exception as e:
-            logger.exception("CommonMySQLProvider CREATE FAIL! create database for %s FAIL" % database_name)
+            logger.exception("CommonMySQLProvider CREATE FAIL! create database for %s FAIL", database_name)
             raise CreateDatabaseFailed("Can not create database: %s" % e)
         finally:
             if connection:

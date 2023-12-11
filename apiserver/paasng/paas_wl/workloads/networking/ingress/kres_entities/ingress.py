@@ -144,7 +144,7 @@ class ConfigurationSnippetPatcher:
         :return: PatchResult
         """
         if re.findall(self.REGEX, snippet, re.M | re.S):
-            return self.PatchResult(True, re.sub(self.REGEX, "", snippet, 0, re.M | re.S).strip())
+            return self.PatchResult(True, re.sub(self.REGEX, "", snippet, count=0, flags=re.M | re.S).strip())
         return self.PatchResult(False, snippet)
 
 
@@ -251,7 +251,7 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         spec = kube_data.spec
         rules = spec.get("rules") or []
         service_name, service_port_name = self.parse_service_info_from_rules(rules)
-        all_annotations = kube_data.metadata.annotations or {}
+        all_annotations = kube_data.metadata.annotations.__dict__ or {}
         extra_annotations = {k: v for k, v in all_annotations.items() if k not in reserved_annotations}
 
         configuration_snippet = all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")
@@ -265,7 +265,7 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             service_port_name=service_port_name,
             server_snippet=all_annotations.get(ANNOT_SERVER_SNIPPET, ""),
             configuration_snippet=ConfigurationSnippetPatcher().unpatch(configuration_snippet).configuration_snippet,
-            rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations.keys(),
+            rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations,
             set_header_x_script_name=set_header_x_script_name,
             annotations=extra_annotations,
         )
@@ -404,7 +404,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         spec = kube_data.spec
         rules = spec.get("rules") or []
         service_name, service_port_name = self.parse_service_info_from_rules(rules)
-        all_annotations = kube_data.metadata.annotations or {}
+        all_annotations = kube_data.metadata.annotations.__dict__ or {}
         extra_annotations = {k: v for k, v in all_annotations.items() if k not in reserved_annotations}
 
         configuration_snippet = all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")
@@ -418,7 +418,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             service_port_name=service_port_name,
             server_snippet=all_annotations.get(ANNOT_SERVER_SNIPPET, ""),
             configuration_snippet=ConfigurationSnippetPatcher().unpatch(configuration_snippet).configuration_snippet,
-            rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations.keys(),
+            rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations,
             set_header_x_script_name=set_header_x_script_name,
             annotations=extra_annotations,
         )

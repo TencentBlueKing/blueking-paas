@@ -44,10 +44,11 @@ class UserField(BaseUserField):
                     .values_list("token", flat=True)
                     .first()
                 )
-            return representation
         except ValueError as e:
-            logger.warning("except a dirty userprofile", e)
+            logger.warning("except a dirty userprofile, error: %s", e)
             return {"id": obj, "username": obj, "provider_type": None}
+        else:
+            return representation
 
 
 class UserProfileBulkCreateFormSLZ(serializers.Serializer):

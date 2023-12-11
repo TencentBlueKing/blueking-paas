@@ -21,16 +21,18 @@ from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.shim import Cluster, EnvClusterService, RegionClusterService
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = [
+    pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.usefixtures("_with_wl_apps"),
+]
 
 
 @pytest.fixture(autouse=True)
-def setup(settings, with_wl_apps):
+def _setup(settings):
     """setup clusters and wl_apps"""
     Cluster.objects.all().delete()
     G(Cluster, name="default", is_default=True, region=settings.DEFAULT_REGION_NAME)
     G(Cluster, name="extra-1", is_default=False, region=settings.DEFAULT_REGION_NAME)
-    yield
 
 
 class TestEnvClusterService:

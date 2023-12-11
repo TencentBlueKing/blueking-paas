@@ -115,7 +115,7 @@ class TestAppDescriptionHandler:
             assert logo_content[23] == 144
 
     @pytest.mark.parametrize(
-        "yaml_content, ctx",
+        ("yaml_content", "ctx"),
         [
             (
                 dedent(
@@ -195,7 +195,7 @@ class TestAppDescriptionHandler:
 
 
 class TestSMartDescriptionHandler:
-    @pytest.fixture
+    @pytest.fixture()
     def app_desc(self, one_px_png) -> Dict:
         return {
             "author": "blueking",
@@ -247,7 +247,7 @@ class TestSMartDescriptionHandler:
         assert EnvVariablesReader(desc_obj).read_as_dict() == {"BKAPP_FOO": "1"}
 
     @pytest.mark.parametrize(
-        "memory, expected_plan_name",
+        ("memory", "expected_plan_name"),
         [
             (512, "Starter"),
             (1024, "Starter"),
@@ -273,7 +273,7 @@ class TestSMartDescriptionHandler:
         assert desc_obj.runtime["processes"]["web"]["plan"] == expected_plan_name
 
     @pytest.mark.parametrize(
-        "is_use_celery, expected_services",
+        ("is_use_celery", "expected_services"),
         [
             (True, [ServiceSpec(name="mysql"), ServiceSpec(name="rabbitmq")]),
             (False, [ServiceSpec(name="mysql")]),
@@ -284,7 +284,7 @@ class TestSMartDescriptionHandler:
         assert SMartDescriptionHandler(app_desc).app_desc.default_module.services == expected_services
 
     @pytest.mark.parametrize(
-        "libraries, expected", [([], []), ([dict(name="foo", version="bar")], [dict(name="foo", version="bar")])]
+        ("libraries", "expected"), [([], []), ([dict(name="foo", version="bar")], [dict(name="foo", version="bar")])]
     )
     def test_libraries(self, random_name, app_desc, libraries, expected):
         app_desc.update({"app_code": random_name, "app_name": random_name, "libraries": libraries})

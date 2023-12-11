@@ -23,7 +23,7 @@ import pytest
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.client import BKIAMClient
 
 
-@pytest.fixture
+@pytest.fixture()
 def iam_management_client():
     with mock.patch(
         "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.lazy_iam_client", new=BKIAMClient()

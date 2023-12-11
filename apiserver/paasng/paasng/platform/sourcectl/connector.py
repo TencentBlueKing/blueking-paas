@@ -129,7 +129,6 @@ class DBBasedMixin:
         self.module.source_type = None
         self.module.source_repo_id = None
         self.module.save(update_fields=["source_type", "source_repo_id"])
-        return None
 
     def get_repo(self):
         return self.module.get_source_obj()

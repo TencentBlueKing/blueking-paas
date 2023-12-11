@@ -58,7 +58,7 @@ except ImportError:
     from paasng.infras.legacydb.models import LApplication, LApplicationUseRecord
 
 try:
-    from paasng.accessories.paas_analysis.utils import get_pv_uv_for_env
+    from paasng.accessories.paas_analysis.services import get_pv_uv_for_env
 except ImportError:
 
     def get_pv_uv_for_env(*args, **kwargs) -> Tuple[int, int]:  # type: ignore
@@ -379,7 +379,7 @@ class LegacyAppDataBuilder(AppDataBuilder):
                 market_address = self.get_market_address(region=region, app_code=app.code)
                 market_tag = self.get_tag_display_name(app.tags_id)
 
-            app = SimpleApp(
+            sim_app = SimpleApp(
                 _source=SimpleAppSource.LEGACY,
                 name=app.name,
                 type="legacy",
@@ -396,7 +396,7 @@ class LegacyAppDataBuilder(AppDataBuilder):
                 market_address=market_address,
                 market_tag=market_tag,
             )
-            yield app
+            yield sim_app
 
 
 class Table:
@@ -712,6 +712,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
         return git_ctl.get_client().calculate_user_contribution(
             username, GitProject.parse_from_repo_url(app.source_location, sourcectl_type=app.source_repo_type)
         )
+    return None
 
 
 def make_table_apps_grouped_by_developer(filter_developers: Optional[List[str]] = None) -> Table:
@@ -753,8 +754,8 @@ def make_table_apps_grouped_by_developer(filter_developers: Optional[List[str]] 
                 logger.info("finish calculate_user_contribution_in_app for user:%s, app:%s", user, app.code)
             except (Oauth2TokenHolder.DoesNotExist, UserProfile.DoesNotExist):
                 logger.exception("Can't find Oauth2TokenHolder for user: %s", user)
-            except Exception as e:
-                logger.exception("Unexpected Exception is raised, detail: %s", e)
+            except Exception:
+                logger.exception("Unexpected exception")
             table.add_row(row_data, app=app, contribution=contribution)
             # Hide first two columns after the first row was added
             table.set_indent(2)

@@ -37,7 +37,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestResourceMetricManager:
     @pytest.fixture(autouse=True)
-    def setUp(self) -> None:
+    def _set_up(self) -> None:
         self.app = create_wl_app(force_app_info={"region": settings.DEFAULT_REGION_NAME})
         create_wl_release(wl_app=self.app)
         self.web_process = AppProcessManager(app=self.app).assemble_process("web")
@@ -45,9 +45,9 @@ class TestResourceMetricManager:
         self.web_process.instances = [create_wl_instance(self.app), create_wl_instance(self.app)]
         self.worker_process.instances = [create_wl_instance(self.app)]
 
-    @pytest.fixture
+    @pytest.fixture()
     def metric_client(self):
-        yield BkMonitorMetricClient(bk_biz_id="123")
+        return BkMonitorMetricClient(bk_biz_id="123")
 
     def test_normal_gen_series_query(self, metric_client):
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id="")
@@ -137,8 +137,8 @@ class TestTimeRange:
             start="2013-05-11 21:23:58", end="2013-05-11 21:25:58", time_range_str=datetime.timedelta(hours=1)
         )
 
-        assert not tr.start == "1368278638"
-        assert not tr.end == "1368278758"
+        assert tr.start != "1368278638"
+        assert tr.end != "1368278758"
 
         # 精确到秒
         assert int(tr.end) - int(tr.start) == 3600

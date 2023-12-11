@@ -33,7 +33,7 @@ from paasng.platform.sourcectl.connector import (
 from paasng.platform.sourcectl.constants import DiffFeatureType
 from paasng.platform.sourcectl.controllers.bare_git import BareGitRepoController
 from paasng.platform.sourcectl.controllers.bare_svn import BareSvnRepoController
-from paasng.platform.sourcectl.controllers.bk_svn import SvnRepoController as SvnRepoController
+from paasng.platform.sourcectl.controllers.bk_svn import SvnRepoController
 from paasng.platform.sourcectl.controllers.gitee import GiteeRepoController
 from paasng.platform.sourcectl.controllers.github import GitHubRepoController
 from paasng.platform.sourcectl.controllers.gitlab import GitlabRepoController

@@ -23,26 +23,26 @@ from typing import Dict
 import pytest
 import yaml
 
-from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.smart_app.path import ZipPath
+from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML, gen_tar, gen_zip
 
 
-@pytest.fixture
+@pytest.fixture()
 def contents() -> Dict:
     """The default contents for making tar file."""
     return {"app.yaml": yaml.safe_dump(EXAMPLE_APP_YAML)}
 
 
-@pytest.fixture
+@pytest.fixture()
 def tar_path(contents):
     with generate_temp_file() as file_path:
         gen_tar(file_path, contents)
         yield file_path
 
 
-@pytest.fixture
+@pytest.fixture()
 def zip_path(contents):
     with generate_temp_file() as file_path:
         gen_zip(file_path, contents)
@@ -62,7 +62,7 @@ def package_root(request):
     return request.getfixturevalue(request.param)
 
 
-@pytest.fixture
+@pytest.fixture()
 def package_stat(request):
     package_root = request.getfixturevalue("package_root")
     if isinstance(package_root, ZipPath):

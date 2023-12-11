@@ -25,6 +25,7 @@ from django.conf import settings
 from django.db import models
 from jsonfield import JSONField
 
+from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -161,6 +162,10 @@ class ProcessSpecManager:
 
         # add spec objects start
         default_process_spec_plan = ProcessSpecPlan.objects.get_by_name(name=settings.DEFAULT_PROC_SPEC_PLAN)
+        if self.wl_app.type == WlAppType.CLOUD_NATIVE:
+            default_process_spec_plan = (
+                ProcessSpecPlan.objects.get_by_name(name=ResQuotaPlan.P_DEFAULT) or default_process_spec_plan
+            )
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
         def process_spec_builder(process: "ProcessTmpl") -> ProcessSpec:

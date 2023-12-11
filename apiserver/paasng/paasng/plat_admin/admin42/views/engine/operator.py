@@ -37,7 +37,7 @@ class OperatorManageView(GenericTemplateView):
             kwargs["view"] = self
 
         cnative_default_cluster = {}
-        for region in get_all_regions().keys():
+        for region in get_all_regions():
             try:
                 cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
             except KeyError:

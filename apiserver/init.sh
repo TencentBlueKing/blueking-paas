@@ -211,11 +211,27 @@ ensure-buleking-image() {
     --display_name_en "Blueking Basic Image" \
     --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
-    --label secureEncrypted=1 normal_app=1 smart_app=1
+    --label secureEncrypted=1 supportHttp=1 normal_app=1 smart_app=1
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${apt_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${python_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${nodejs_buildpack_name}"
     python manage.py bind_buildpacks --image "${image_name}" --buildpack-name "${golang_buildpack_name}"
+
+    cnb_image_name="blueking-cloudnative"
+    python manage.py manage_image \
+    --region "${region}" \
+    --image "${PAAS_HEROKU_BUILDER_IMAGE}" \
+    --name "${cnb_image_name}" \
+    --display_name_zh_cn "蓝鲸基础镜像" \
+    --display_name_en "Blueking Basic Image" \
+    --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
+    --description_en "Ubuntu-based, multi-buildpack combination build support" \
+    --environment "CNB_PLATFORM_API=0.11" "RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" \
+    --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${apt_buildpack_name}"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${python_buildpack_name}"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${nodejs_buildpack_name}"
+    python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${golang_buildpack_name}"
 }
 
 ensure-legacy-image() {

@@ -41,21 +41,21 @@ def set_plugin_repository(repository: str):
 
 
 class TestInitPlugin:
-    @pytest.fixture
+    @pytest.fixture()
     def plugin(self, plugin):
         # 清空 plugin.repository
         plugin.repository = ""
         plugin.save()
         return plugin
 
-    @pytest.fixture
+    @pytest.fixture()
     def plugin_repo_initializer(self):
         with mock.patch(
             "paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_initializer", spec=PluginRepoInitializer
         ) as mocked:
             yield mocked()
 
-    @pytest.fixture
+    @pytest.fixture()
     def mocked_create_instance(self):
         with mock.patch("paasng.bk_plugins.pluginscenter.shim.create_instance") as mocked:
             yield mocked

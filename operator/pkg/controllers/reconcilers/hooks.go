@@ -55,7 +55,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	log := logf.FromContext(ctx)
 	current := r.getCurrentState(ctx, bkapp)
 
-	log.V(4).Info("handling pre-release-hook reconciliation")
+	log.V(1).Info("handling pre-release-hook reconciliation")
 	if current.Pod != nil {
 		if err := r.UpdateStatus(ctx, bkapp, current, resources.HookExecuteTimeoutThreshold); err != nil {
 			return r.Result.WithError(err)

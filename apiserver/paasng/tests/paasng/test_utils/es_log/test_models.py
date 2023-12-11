@@ -28,7 +28,7 @@ from paasng.utils.es_log.models import FieldFilter, LogLine, extra_field
 
 
 @pytest.mark.parametrize(
-    "value, input_format, expected",
+    ("value", "input_format", "expected"),
     [
         (1000, "timestamp[s]", 1000),
         (1000, "timestamp[ns]", 1),
@@ -42,7 +42,7 @@ def test_format_timestamp(value, input_format, expected):
 
 
 @pytest.mark.parametrize(
-    "logs, filters, expected",
+    ("logs", "filters", "expected"),
     [
         # 测试忽略所有日志中不存在的字段
         (
@@ -74,7 +74,7 @@ def test_count_filters_options(logs, filters, expected):
 
 
 @pytest.mark.parametrize(
-    "structured_fields,parent,expected_output",
+    ("structured_fields", "parent", "expected_output"),
     [
         # 结构体为空，父级字段为空（即默认值）
         ({}, None, {}),
@@ -115,7 +115,7 @@ def _build_expected(data):
 
 
 @pytest.mark.parametrize(
-    "extra_fields, data, expected",
+    ("extra_fields", "data", "expected"),
     [
         (
             {

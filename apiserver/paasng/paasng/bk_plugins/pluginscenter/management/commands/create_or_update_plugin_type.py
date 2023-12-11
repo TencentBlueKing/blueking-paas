@@ -89,6 +89,8 @@ class Command(BaseCommand):
                 "repository_group": pd_data.spec.basicInfo.repositoryGroup,
                 "api": pd_data.spec.basicInfo.api,
                 "extra_fields": pd_data.spec.basicInfo.extraFields,
+                "extra_fields_en": pd_data.spec.basicInfo.extraFieldsEn,
+                "extra_fields_order": pd_data.spec.basicInfo.extraFieldsOrder,
                 "overview_page": pd_data.spec.basicInfo.overviewPage,
                 "sync_members": pd_data.spec.basicInfo.syncMembers,
             },
@@ -102,6 +104,8 @@ class Command(BaseCommand):
                 "category": pd_data.spec.marketInfo.category,
                 "api": pd_data.spec.marketInfo.api,
                 "extra_fields": pd_data.spec.marketInfo.extraFields,
+                "extra_fields_en": pd_data.spec.basicInfo.extraFieldsEn,
+                "extra_fields_order": pd_data.spec.marketInfo.extraFieldsOrder,
             },
         )
 

@@ -24,7 +24,7 @@ from paasng.accessories.cloudapi.components.component import BaseComponent
 
 class TestBaseComponent:
     @pytest.mark.parametrize(
-        "mocked_http_ok, mocked_resp, will_error",
+        ("mocked_http_ok", "mocked_resp", "will_error"),
         [
             (
                 True,
@@ -64,7 +64,7 @@ class TestBaseComponent:
         assert result == mocked_resp
 
     @pytest.mark.parametrize(
-        "host, path, expected",
+        ("host", "path", "expected"),
         [
             (
                 "http://bking.com",

@@ -62,7 +62,7 @@ def get_default_options():
 
 
 def set_default_options(options: ClientOptionsDict):
-    global _default_options
+    global _default_options  # noqa: PLW0603
     _default_options = options
 
 
@@ -317,11 +317,12 @@ class NameBasedOperations(BaseOperations):
         # Try call create method first
         try:
             obj = self.resource.create(body=body_dict, namespace=namespace, **self.default_kwargs)
-            return obj, True
         except ApiException as e:
             # Only continue when resource is already exits
             if not (e.status == 409 and json.loads(e.body)["reason"] == "AlreadyExists"):
                 raise
+        else:
+            return obj, True
 
         if update_method == "replace" and auto_add_version:
             self._add_resource_version(name, namespace, body_dict)
@@ -346,9 +347,10 @@ class NameBasedOperations(BaseOperations):
         """
         try:
             obj = self.get(name, namespace=namespace)
-            return obj, False
         except ResourceMissing:
             pass
+        else:
+            return obj, False
 
         # Set a default body if body is not given
         if not body:
@@ -520,7 +522,7 @@ class KNamespace(BaseKresource):
         time_started = time.time()
         while timeout is None or time.time() - time_started < timeout:
             if self.default_sa_exists(namespace):
-                return None
+                return
 
             logger.warning("No default ServiceAccount found in namespace %s", namespace)
             time.sleep(check_period)
@@ -548,10 +550,11 @@ class KNamespace(BaseKresource):
             try:
                 self.get(namespace)
             except ResourceMissing:
-                return True
+                return
             time.sleep(check_period)
         if raise_timeout:
             raise ResourceDeleteTimeout(resource_type=self.kind, namespace=namespace, name="")
+        return
 
     def default_sa_exists(self, namespace: Namespace) -> bool:
         """Check if a namespace has default ServiceAccount or not, this account was usually created
@@ -607,7 +610,7 @@ class KPod(BaseKresource):
                 logger.warning("Pod %s %s not found.", namespace, name)
             else:
                 if pod.status.phase in target_statuses:
-                    return
+                    return pod.status.phase
             time.sleep(check_period)
         raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=pod)
 

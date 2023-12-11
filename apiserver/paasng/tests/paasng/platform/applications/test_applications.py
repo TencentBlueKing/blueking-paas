@@ -55,7 +55,7 @@ class TestCreateDefaultModule(TestCase):
 
 class BaseCaseWithApps:
     @pytest.fixture(autouse=True)
-    def setup_data(self):
+    def _setup_data(self):
         self.user = create_user()
         self.another_user = create_user(username="another_user")
         self.app1 = G(

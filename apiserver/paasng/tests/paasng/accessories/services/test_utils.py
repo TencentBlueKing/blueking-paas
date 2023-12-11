@@ -51,7 +51,7 @@ class TestWRR(TestCase):
         assert wr_list.get().values == "foo"
 
     def test_no_weight(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"no valid items given"):
             WRItemList.from_json([{"values": "foo", "weight": 0}])
 
     def test_weight_zero(self):

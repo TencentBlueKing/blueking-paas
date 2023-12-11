@@ -1,0 +1,4 @@
+file-cache/**
+test/assets/
+output/
+.vscode/

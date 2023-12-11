@@ -41,7 +41,7 @@ S3_CONFIG = dict(
 
 
 @pytest.mark.parametrize(
-    "settings, expected",
+    ("settings", "expected"),
     [
         (
             dict(**S3_CONFIG, BLOBSTORE_BKREPO_CONFIG=BKREPO_CONFIG),
@@ -59,7 +59,7 @@ def test_detect_default_blob_store(settings, expected):
 
 
 @pytest.mark.parametrize(
-    "settings, expected",
+    ("settings", "expected"),
     [
         (
             dict(
@@ -116,7 +116,7 @@ def test_make_blob_store_env(settings, expected):
 
 
 @pytest.mark.parametrize(
-    "settings, expected",
+    ("settings", "expected"),
     [
         (
             dict(

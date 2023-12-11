@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 """Logging facilities for bk-plugins"""
 import json
 from typing import Any, Dict, Optional, Tuple
@@ -28,13 +30,16 @@ from paasng.accessories.log.client import LogClientProtocol, instantiate_log_cli
 from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE
 from paasng.accessories.log.filters import EnvFilter
 from paasng.accessories.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
+from paasng.accessories.log.shim import LogCollectorType, get_log_collector_type
 from paasng.accessories.log.utils import clean_logs, get_es_term
 from paasng.bk_plugins.bk_plugins.models import BkPlugin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.datetime import convert_timestamp_to_str
-from paasng.utils.es_log.models import LogLine, Logs, extra_field
+from paasng.utils.es_log.models import LogLine, Logs, extra_field, field_extractor_factory
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
+
+logger = logging.getLogger(__name__)
 
 
 @define
@@ -55,12 +60,27 @@ class StructureLogLine(LogLine):
     plugin_code: str = extra_field(source="app_code", converter=converters.optional(str))
     environment: str = extra_field(converter=converters.optional(str))
     process_id: Optional[str] = extra_field(converter=converters.optional(str))
-    stream: str = extra_field(converter=converters.optional(str))
+    stream: Optional[str] = extra_field(
+        source=field_extractor_factory(field_key="stream", raise_exception=False), converter=converters.optional(str)
+    )
     ts: str = extra_field(converter=converters.optional(str))
 
     def __attrs_post_init__(self):
         self.detail = self.raw
         self.raw["ts"] = convert_timestamp_to_str(self.timestamp)
+        # 适配 bk-sops 需要的日志字段, 将日志平台清洗后打平的字段扩展到 detail
+        for src_filed, dest_field in [
+            ("levelname", "json.levelname"),
+            ("funcName", "json.funcName"),
+            ("message", "json.message"),
+        ]:
+            if dest_field not in self.detail:
+                try:
+                    self.detail[dest_field] = self.detail[src_filed]
+                except Exception:
+                    logger.exception(
+                        "failed to adaptor to bk-sops required log format, missing field `%s`", dest_field
+                    )
         super().__attrs_post_init__()
 
 
@@ -133,7 +153,21 @@ class PluginLoggingClient:
         search = self._make_base_search(
             env=env, search_params=query_config.search_params, mappings=mappings, time_range=smart_time_range
         )
-        return search.filter("term", **{get_es_term(query_term="json.trace_id", mappings=mappings): trace_id})
+
+        if get_log_collector_type(env) == LogCollectorType.BK_LOG:
+            # 日志平台方案会将未配置清洗规则的字段, 映射到 __ext_json 字段
+            query_term = "__ext_json.trace_id"
+            search = search.sort(
+                {
+                    "dtEventTimeStamp": {"order": "desc"},
+                    "gseIndex": {"order": "desc"},
+                    "iterationIndex": {"order": "desc"},
+                }
+            )
+        else:
+            # PaaS 内置采集方案会将所有字段放到 json 字段
+            query_term = "json.trace_id"
+        return search.filter("term", **{get_es_term(query_term=query_term, mappings=mappings): trace_id})
 
     def _make_base_search(
         self,

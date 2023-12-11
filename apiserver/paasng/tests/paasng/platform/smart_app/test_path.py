@@ -27,7 +27,7 @@ from tests.paasng.platform.sourcectl.packages.utils import gen_zip
 
 class TestZipPath:
     @pytest.mark.parametrize(
-        "contents, path, expected",
+        ("contents", "path", "expected"),
         [
             ({"中文名称": "1"}, "中文名称", True),
             ({"中文名称": "1"}, "./中文名称", True),
@@ -44,7 +44,7 @@ class TestZipPath:
                 assert ZipPath(zf, path).is_file() == expected
 
     @pytest.mark.parametrize(
-        "contents, path, expected",
+        ("contents", "path", "expected"),
         [
             ({"中文名称": "1"}, "中文名称", False),
             ({"中文名称": "1"}, "./中文名称", False),

@@ -138,7 +138,7 @@ class RabbitMQProvider(BaseProvider):
         if not is_success:
             return False, "删除账户失败"
 
-        return
+        return None
 
     def patch(self, params):
         """

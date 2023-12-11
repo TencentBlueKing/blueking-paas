@@ -224,10 +224,12 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     def validate_source_origin(self, value: Optional[int]):
         if value:
             return SourceOrigin(value)
+        return None
 
     def validate_type(self, value: Optional[str]):
         if value:
             return ApplicationType(value)
+        return None
 
 
 class ApplicationListMinimalSLZ(serializers.Serializer):
@@ -310,11 +312,13 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
     )
 
     def validate(self, attrs):
-        if self.context["request"].method in ["POST"]:
-            if self.Meta.model.objects.filter(
+        if (
+            self.context["request"].method in ["POST"]
+            and self.Meta.model.objects.filter(
                 owner=self.context["request"].user.pk, application__code=attrs["application"].code
-            ).exists():
-                raise serializers.ValidationError("您已经标记该应用")
+            ).exists()
+        ):
+            raise serializers.ValidationError("您已经标记该应用")
         return attrs
 
     class Meta:

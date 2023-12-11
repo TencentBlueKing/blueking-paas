@@ -47,9 +47,10 @@ def generate_state(region: str, cluster_name: str, client, ignore_labels: List) 
     try:
         state = RegionClusterState.objects.get(region=region, cluster_name=cluster_name, nodes_digest=nodes_digest)
         logger.info("legacy state found in database, current cluster state has already been recorded")
-        return state
     except RegionClusterState.DoesNotExist:
         pass
+    else:
+        return state
 
     return RegionClusterState.objects.create(
         region=region,

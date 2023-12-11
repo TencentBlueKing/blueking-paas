@@ -80,12 +80,18 @@ ignore = [
   "SIM105",
   # flake8-simplify: 忽略后，不强制要求用三元表达式替换普通的短 if-else 语句
   "SIM108",
+  # flake8-pytest-style：忽略后，允许 fixture 显式指定 scope="function"
+  "PT003",
 
   # === 谨慎忽略 ===
   # pep8-naming: 忽略后，不强制 class 必须使用驼峰命名，部分单元测试代码中用下划线起名可能更方便
   "N801",
+  # flake8-logging-format: 忽略后，允许在打印日志时使用 .format() 方法，可能降低性能
+  "G001",
   # flake8-logging-format: 忽略后，允许在打印日志时使用 f-string 表达式，更可读但可能降低性能
   "G004",
+  # pylint: 忽略后，允许使用 global 关键字修改全局变量
+  "PLW0603",
 ]
 
 # 添加需要额外忽略的目录，比如 Django 自动生成的 migrations 目录

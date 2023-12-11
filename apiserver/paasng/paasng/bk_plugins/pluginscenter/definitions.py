@@ -86,7 +86,9 @@ class PluginReleaseAPI(BaseModel):
     release: Optional[PluginBackendAPIResource] = Field(description="部署/构建操作")
     result: Optional[PluginBackendAPIResource] = Field(description="查询是否可进入下一步")
     log: Optional[PluginBackendAPIResource] = Field(description="日志接口")
-    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令")
+    postCommand: Optional[PluginBackendAPIResource] = Field(description="后置命令，当前阶段状态为成功即会执行")
+    # 例如测试阶段完成进入到下一个阶段的时候，希望能先回收测试阶段的资源
+    preCommand: Optional[PluginBackendAPIResource] = Field(description="前置命令，进入当前阶段后会先执行")
 
 
 @register
@@ -128,6 +130,12 @@ class PluginBasicInfoDefinition(BaseModel):
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsEn: Dict[str, FieldSchema] = Field(
+        default_factory=dict, description="extraFields 的定义无法做国际化，只能手动添加字段"
+    )
+    extraFieldsOrder: List[str] = Field(
+        default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
+    )
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
     overviewPage: Optional[PluginoverviewPage] = Field(description="概览页面嵌入地址")
@@ -165,6 +173,12 @@ class PluginMarketInfoDefinition(BaseModel):
     category: PluginBackendAPIResource = Field(description="市场类型分类查询接口")
     api: Optional[PluginBackendAPI] = Field(description="插件市场信息操作接口集")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFieldsEn: Dict[str, FieldSchema] = Field(
+        default_factory=dict, description="extraFields 的定义无法做国际化，只能手动添加字段"
+    )
+    extraFieldsOrder: List[str] = Field(
+        default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
+    )
     # TODO: visibleRange
 
 
@@ -203,6 +217,7 @@ class ReleaseStageDefinition(BaseModel):
     pipelineId: Optional[str] = Field(description="类型为 pipeline 时必填")
     pageUrl: Optional[str] = Field(description="类型为 subpage 时必填")
     pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")
+    pipelineEnv: Optional[str] = Field(default="prod", description="蓝盾流水线环境，默认为正式环境")
     itsmServiceName: Optional[str] = Field(description="itsm 服务名称, 类型为 itsm 时必填")
     builtinParams: Optional[Dict] = Field(
         description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)"
@@ -267,6 +282,9 @@ class ElasticSearchParams(BaseModel):
     )
     builtinFilters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的过滤条件")
     builtinExcludes: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的排除条件")
+
+    # example: ["json.message", "json.funcName", "json.levelname", "json.otelTraceID", "json.otelSpanID"]
+    filterFields: List[str] = Field(default_factory=list, description="前端可选的字段过滤选项集")
     # paas 的标准输出日志过滤条件
     # termTemplate = {"app_code": "{{ plugin_id }}"}
     # builtinFilters = {"environment": "prod", "stream": ["stderr", "stdout"]}
@@ -286,6 +304,7 @@ class BKLogConfig(BaseModel):
     scenarioID: Literal["log", "bkdata"] = Field(default="log", description="接入场景")
     bkdataDataToken: Optional[str] = Field(description="数据平台认证Token")
     bkdataAuthenticationMethod: Optional[Literal["token", "user"]] = Field(description="数据平台认证方式")
+    bkLogApiStage: str = Field(default="prod", description="日志平台 API 的环境信息，默认为正式环境")
 
 
 @register

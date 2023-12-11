@@ -42,7 +42,7 @@ def mock_import_configs():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def mock_metric_label():
+def _mock_metric_label():
     with mock.patch.dict(
         "paasng.misc.monitoring.monitor.alert_rules.config.metric_label.LABEL_VALUE_QUERY_FUNCS",
         {
@@ -53,17 +53,17 @@ def mock_metric_label():
         yield
 
 
-@pytest.fixture
-def wl_namespaces(bk_stag_env, bk_prod_env, with_wl_apps) -> Dict[str, str]:
+@pytest.fixture()
+def wl_namespaces(bk_stag_env, bk_prod_env, _with_wl_apps) -> Dict[str, str]:
     return {"prod": bk_prod_env.wl_app.namespace, "stag": bk_stag_env.wl_app.namespace}
 
 
-@pytest.fixture
-def create_module_for_alert(create_module, with_wl_apps):
+@pytest.fixture()
+def create_module_for_alert(create_module, _with_wl_apps):
     return create_module
 
 
-@pytest.fixture
+@pytest.fixture()
 def bk_app_init_rule_configs(bk_app, wl_namespaces):
     tpl_dir = Path(settings.BASE_DIR) / "paasng" / "misc" / "monitoring" / "monitor" / "alert_rules" / "ascode"
     loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"])
@@ -126,7 +126,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
     return init_rule_configs, notice_group_config
 
 
-@pytest.fixture
+@pytest.fixture()
 def cpu_usage_alert_rule_obj(bk_app):
     return AppAlertRule.objects.create(
         alert_code=AlertCode.HIGH_CPU_USAGE.value,

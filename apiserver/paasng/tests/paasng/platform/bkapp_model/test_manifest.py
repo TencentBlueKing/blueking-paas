@@ -79,7 +79,7 @@ from tests.utils.helpers import generate_random_string
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def blank_resource() -> BkAppResource:
     """A blank resource object."""
     return BkAppResource(
@@ -87,7 +87,7 @@ def blank_resource() -> BkAppResource:
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def local_service(bk_app):
     """A local service object."""
     service = G(Service, name="mysql", category=G(ServiceCategory), region=bk_app.region, logo_b64="dummy")
@@ -95,7 +95,7 @@ def local_service(bk_app):
     return mixed_service_mgr.get(service.uuid, region=bk_app.region)
 
 
-@pytest.fixture
+@pytest.fixture()
 def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
     return G(
@@ -103,7 +103,7 @@ def process_web(bk_module) -> ModuleProcessSpec:
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
     """An overlay data for web process"""
     return G(
@@ -175,7 +175,7 @@ class TestBuiltinAnnotsManifestConstructor:
 
 
 class TestProcessesManifestConstructor:
-    @pytest.fixture
+    @pytest.fixture()
     def process_web_autoscaling(self, process_web) -> ModuleProcessSpec:
         """ProcessSpec for web, with autoscaling enabled"""
         process_web.autoscaling = True
@@ -184,7 +184,7 @@ class TestProcessesManifestConstructor:
         return process_web
 
     @pytest.mark.parametrize(
-        "plan_name, expected",
+        ("plan_name", "expected"),
         [
             ("", ResQuotaPlan.P_DEFAULT),
             (settings.DEFAULT_PROC_SPEC_PLAN, ResQuotaPlan.P_DEFAULT),
@@ -199,7 +199,7 @@ class TestProcessesManifestConstructor:
         assert ProcessesManifestConstructor().get_quota_plan(plan_name) == expected
 
     @pytest.mark.parametrize(
-        "build_method, is_cnb_runtime, expected",
+        ("build_method", "is_cnb_runtime", "expected"),
         [
             (RuntimeType.BUILDPACK, False, (DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", "web"])),
             (RuntimeType.BUILDPACK, True, (["web"], [])),
@@ -280,7 +280,7 @@ class TestProcessesManifestConstructor:
             "policy": "default",
         }
 
-    @pytest.fixture
+    @pytest.fixture()
     def v1alpha1_process_web(self, bk_module, process_web) -> ModuleProcessSpec:
         process_web.image = "python:latest"
         process_web.image_credential_name = "auto-generated"
@@ -416,7 +416,8 @@ def test_get_manifest(bk_module):
     assert manifest[0]["kind"] == "BkApp"
 
 
-def test_apply_env_annots(blank_resource, bk_stag_env, with_wl_apps):
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_apply_env_annots(blank_resource, bk_stag_env):
     apply_env_annots(blank_resource, bk_stag_env)
 
     annots = blank_resource.metadata.annotations
@@ -425,7 +426,8 @@ def test_apply_env_annots(blank_resource, bk_stag_env, with_wl_apps):
     assert "bkapp.paas.bk.tencent.com/bkpaas-deploy-id" not in annots
 
 
-def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env, with_wl_apps):
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env):
     apply_env_annots(blank_resource, bk_stag_env, deploy_id="foo-id")
     assert blank_resource.metadata.annotations["bkapp.paas.bk.tencent.com/bkpaas-deploy-id"] == "foo-id"
 
@@ -433,5 +435,5 @@ def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env, with_wl_ap
 def test_apply_builtin_env_vars(blank_resource, bk_stag_env):
     apply_builtin_env_vars(blank_resource, bk_stag_env)
     var_names = {item.name for item in blank_resource.spec.configuration.env}
-    for name in {"BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL", "BK_DOCS_URL_PREFIX"}:
+    for name in ("BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL", "BK_DOCS_URL_PREFIX"):
         assert name in var_names

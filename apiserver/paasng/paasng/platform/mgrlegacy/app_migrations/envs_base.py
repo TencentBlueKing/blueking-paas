@@ -108,7 +108,6 @@ class BaseEnvironmentVariableMigration(BaseMigration):
             else:
                 environment = self._get_environment(env_name)
             self._add_environment_variable(variables=envs, environment=environment)
-        return None
 
     def migrate(self):
         self.handle_env()
@@ -121,6 +120,6 @@ class BaseEnvironmentVariableMigration(BaseMigration):
 
 try:
     # Load external envs
-    from . import envs_ext  # type: ignore  # noqa
+    from . import envs_ext  # type: ignore  # noqa: F401
 except ImportError:
     pass

@@ -62,5 +62,5 @@ class AppProcessManager:
         if not release:
             release = Release.objects.get_latest(self.app)
 
-        for process_type in release.get_procfile().keys():
+        for process_type in release.get_procfile():
             yield self.assemble_process(process_type, release, extra_envs)

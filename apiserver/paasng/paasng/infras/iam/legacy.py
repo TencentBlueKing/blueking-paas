@@ -48,8 +48,8 @@ class Permission:
         try:
             request = self._make_request_without_resources(username, LegacyAction.MANAGE_SMART)
             return self._iam.is_allowed_with_cache(request)
-        except AuthAPIError as e:
-            logger.exception(f"check is allowed to manage smart app error: {e}")
+        except AuthAPIError:
+            logger.exception("check is allowed to manage smart app error.")
             return False
 
     def app_filters(self, username):

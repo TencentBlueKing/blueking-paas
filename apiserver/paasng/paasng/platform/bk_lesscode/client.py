@@ -93,8 +93,8 @@ class LessCodeClient:
         params = {"appCode": app_id, "moduleCode": module_name}
         try:
             resp = self.client.find_project_by_app(headers=self._prepare_headers(), params=params)
-        except Exception as e:
-            logger.exception(f"get lesscode app address path, detail: {e}")
+        except Exception:
+            logger.exception("Get lesscode app address path error.")
             # 获取不到地址时，不展示给用户就行，页面上不需要报错
             return ""
 

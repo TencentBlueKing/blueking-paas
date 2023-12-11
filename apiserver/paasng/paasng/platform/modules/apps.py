@@ -21,3 +21,8 @@ from paasng.utils.addons import PlugableAppConfig
 
 class ModulesConfig(PlugableAppConfig):
     name = "paasng.platform.modules"
+
+    def ready(self):
+        super().ready()
+
+        from . import handlers  # noqa: F401

@@ -29,7 +29,7 @@ from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_good_client():
     """Make a fake client which produce successful result"""
     fake_client = MagicMock()
@@ -46,7 +46,7 @@ def fake_good_client():
     return fake_client
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_bad_client():
     """Make a fake client which produce failed result"""
     fake_client = MagicMock()
@@ -119,7 +119,8 @@ def test_safe_sync_apigw_failed(bk_plugin_app, fake_bad_client):
 
 
 class TestSetDistributors:
-    def test_integrated(self, init_tmpls, bk_plugin_app, fake_good_client):
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_integrated(self, bk_plugin_app, fake_good_client):
         dis_1 = G(BkPluginDistributor, code_name="sample-dis-1", bk_app_code="sample-dis-1")
         dis_2 = G(BkPluginDistributor, code_name="sample-dis-2", bk_app_code="sample-dis-2")
 

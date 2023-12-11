@@ -33,7 +33,7 @@ const DEFAULT_APP_TYPE = [
     type: 'default',
   },
   {
-    title: i18n.t('蓝鲸可视化开发平台'),
+    title: i18n.t('蓝鲸运维开发平台'),
     type: 'bkLesscode',
   },
 ];

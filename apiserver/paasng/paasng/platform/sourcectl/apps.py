@@ -24,4 +24,4 @@ class SourceCtlConfig(AppConfig):
 
     def ready(self):
         # Trigger register code
-        from paasng.platform.sourcectl import models_utils  # noqa
+        from paasng.platform.sourcectl import models_utils  # noqa: F401

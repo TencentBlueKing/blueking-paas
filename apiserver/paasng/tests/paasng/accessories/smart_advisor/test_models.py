@@ -43,7 +43,7 @@ class TestModuleTagger:
 
 class TestGetDynamicTag:
     @pytest.mark.parametrize(
-        "tag_str,tag_obj",
+        ("tag_str", "tag_obj"),
         [
             ("deploy-failure:fix_procfile", DeploymentFailureTag("fix_procfile")),
             ("app-pl:python", AppPLTag("python")),
@@ -54,7 +54,7 @@ class TestGetDynamicTag:
     )
     def test_normal(self, tag_str, tag_obj):
         if not tag_obj:
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match=r".* is not a valid tag string"):
                 get_dynamic_tag(tag_str)
         else:
             assert get_dynamic_tag(tag_str) == tag_obj

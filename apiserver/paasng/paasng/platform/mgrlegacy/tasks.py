@@ -44,8 +44,8 @@ def migrate_with_rollback_on_failure(migration_process_id):
         try:
             run_migration(migration_process=migration_process, session=session)
         except Exception:
-            logger.exception("run_migration failed: migration_process_id=%s" % migration_process_id)
-            logger.info("auto to rollback: migration_process_id=%s" % migration_process_id)
+            logger.exception("run_migration failed: migration_process_id=%s", migration_process_id)
+            logger.info("auto to rollback: migration_process_id=%s", migration_process_id)
             try:
                 run_rollback(migration_process=migration_process, session=session)
             except Exception:
@@ -65,7 +65,7 @@ def rollback_migration_process(migration_process_id):
         try:
             run_rollback(migration_process=migration_process, session=session)
         except Exception:
-            logger.exception("run_rollback failed: migration_process_id=%s" % migration_process_id)
+            logger.exception("run_rollback failed: migration_process_id=%s", migration_process_id)
             migration_process.set_status(MigrationStatus.ROLLBACK_FAILED.value)
 
 
@@ -82,7 +82,7 @@ def confirm_with_rollback_on_failure(migration_process_id):
                 migration_process=migration_process, migration_class=EntranceMigration, session=session
             )
         except Exception:
-            logger.exception("run migration confirmed failed: migration_process_id=%s" % migration_process_id)
+            logger.exception("run migration confirmed failed: migration_process_id=%s", migration_process_id)
             # FIXME: this maybe fail too
             run_single_rollback(
                 migration_process=migration_process, migration_class=EntranceMigration, session=session

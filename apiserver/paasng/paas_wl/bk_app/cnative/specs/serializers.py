@@ -197,13 +197,12 @@ class UpsertMountSLZ(serializers.Serializer):
         # 根据 source_type 验证 source_config_data
         source_type = attrs["source_type"]
         source_config_data = attrs["source_config_data"]
-        if source_type == VolumeSourceType.ConfigMap.value:
-            if not source_config_data:
-                raise serializers.ValidationError(_("挂载卷内容不可为空"))
+        if source_type == VolumeSourceType.ConfigMap.value and not source_config_data:
+            raise serializers.ValidationError(_("挂载卷内容不可为空"))
         return attrs
 
     def validate_source_config_data(self, value):
-        for key in value.keys():
+        for key in value:
             if not key:
                 raise serializers.ValidationError("key cannot be empty")
         return value

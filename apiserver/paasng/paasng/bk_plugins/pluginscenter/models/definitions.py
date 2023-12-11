@@ -57,6 +57,7 @@ class PluginDefinition(UuidAuditedModel):
     name = TranslatedFieldWithFallback(models.CharField(max_length=64))
     description = TranslatedFieldWithFallback(models.TextField())
     docs = models.CharField(max_length=255)
+    # 插件类型的 LOGO，仅用在创建插件页面辅助插件类型的选择
     logo = models.CharField(max_length=255)
 
     administrator = models.JSONField()
@@ -80,6 +81,8 @@ class PluginBasicInfoDefinition(AuditedModel):
     api: PluginBackendAPI = PluginBackendAPIField()
     sync_members: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields_en = PluginExtraFieldField(default=dict)
+    extra_fields_order = models.JSONField(default=list)
     overview_page = PluginoverviewPageField(null=True)
 
     @classmethod
@@ -103,6 +106,8 @@ class PluginMarketInfoDefinition(AuditedModel):
     category: PluginBackendAPIResource = PluginBackendAPIResourceField()
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields_en = PluginExtraFieldField(default=dict)
+    extra_fields_order = models.JSONField(default=list)
 
 
 class PluginConfigInfoDefinition(AuditedModel):

@@ -23,7 +23,7 @@ import pytest
 from paasng.utils.configs import RegionAwareConfig, get_region_aware
 
 
-@pytest.fixture
+@pytest.fixture()
 def config_with_region():
     return {
         "_lookup_field": "region",
@@ -33,7 +33,7 @@ def config_with_region():
 
 class TestRegionAwareConfig:
     @pytest.mark.parametrize(
-        "user_settings,expected_config",
+        ("user_settings", "expected_config"),
         [
             ({"url": "http://example.com"}, {"url": "http://example.com"}),
             (["foo", "bar"], ["foo", "bar"]),
@@ -65,7 +65,7 @@ class FooConfig:
 
 
 @pytest.mark.parametrize(
-    "region,result_cls,expected_result",
+    ("region", "result_cls", "expected_result"),
     [
         ("r1", None, {"key": "r1", "value": "r1-value"}),
         ("r1", FooConfig, FooConfig("r1", "r1-value")),

@@ -29,7 +29,7 @@ from paasng.platform.declarative.handlers import AppDescriptionHandler
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def yaml_content():
     return dedent(
         """
@@ -62,7 +62,7 @@ def yaml_content():
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def yaml_content_after_change():
     return dedent(
         """
@@ -119,7 +119,7 @@ class TestSaasProbes:
         assert readiness_probe.probe_handler
         assert readiness_probe.probe_handler.tcp_socket.port == "${PORT}"
 
-    @pytest.mark.parametrize("mock_delete_process_probe", [True], indirect=True)
+    @pytest.mark.parametrize("_mock_delete_process_probe", [True], indirect=True)
     def test_saas_probes_changes(self, bk_deployment, bk_deployment_full, yaml_content, yaml_content_after_change):
         """验证 saas 应用探针对象 ProcessProbe 成功修改"""
         # bk_deployment.app_environment  外键未实例化，补全

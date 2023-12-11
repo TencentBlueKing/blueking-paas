@@ -20,7 +20,7 @@ from django.shortcuts import HttpResponse
 from django.utils.translation import gettext as _
 from django.views.generic import View
 
-from .filters import *  # noqa
+from .filters import *
 
 
 def unsupported_view(reason: str) -> View:

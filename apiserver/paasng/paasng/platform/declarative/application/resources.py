@@ -82,7 +82,7 @@ class ServiceSpec(BaseModel):
     display_name: Optional[str] = None
     shared_from: Optional[str] = None
 
-    def __init__(__pydantic_self__, **data: Any) -> None:
+    def __init__(__pydantic_self__, **data: Any) -> None:  # noqa: N805
         super().__init__(**data)
         if __pydantic_self__.display_name is None:
             __pydantic_self__.display_name = __pydantic_self__.name

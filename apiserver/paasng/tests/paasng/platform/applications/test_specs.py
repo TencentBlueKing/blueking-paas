@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 
 class TestAppSpecs:
     @pytest.mark.parametrize(
-        "type,value",
+        ("type", "value"),
         [
             (ApplicationType.DEFAULT, True),
             (ApplicationType.ENGINELESS_APP, False),
@@ -42,7 +42,7 @@ class TestAppSpecs:
         assert AppSpecs(bk_app).engine_enabled is value
 
     @pytest.mark.parametrize(
-        "region_creation_allowed,is_smart_app,type,value",
+        ("region_creation_allowed", "is_smart_app", "type", "value"),
         [
             (True, False, ApplicationType.DEFAULT, True),
             (True, True, ApplicationType.DEFAULT, False),
@@ -76,7 +76,7 @@ class TestAppSpecs:
         assert confirm_required_when_publish is False
 
     @pytest.mark.parametrize(
-        "market_ready,expect",
+        ("market_ready", "expect"),
         [
             (True, False),
             (False, True),

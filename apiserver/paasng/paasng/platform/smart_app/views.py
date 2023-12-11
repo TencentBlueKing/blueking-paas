@@ -98,11 +98,10 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             filepath = get_filepath(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
-
             app_desc = get_app_description(stat)
             self.validate_app_desc(app_desc)
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Store as prepared package for later usage(create_prepared)
             PreparedSourcePackage(request).store(filepath)
@@ -287,8 +286,8 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             if stat.sha256_signature != signature:
                 # NOTE: 防御性日志, 先不处理这种情景, 仅记录下来
                 logger.error(
-                    "the provided digital signature is inconsistent with"
-                    + "the digital signature of the actually saved source code package."
+                    "the provided digital signature is inconsistent with "
+                    "the digital signature of the actually saved source code package."
                 )
 
             # Step 2. handle app(create module if necessary)

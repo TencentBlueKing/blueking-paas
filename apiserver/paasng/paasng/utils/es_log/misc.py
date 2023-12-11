@@ -92,12 +92,15 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
     """统计 ES 日志的可选字段, 并填充到 filters 的 options"""
     # 在内存中统计 filters 的可选值
     field_counter: Dict[str, Counter] = defaultdict(Counter)
-    log_fields = [(f, f.split(".")) for f in properties.keys()]
+    log_fields = [(f, f.split(".")) for f in properties]
     for log in logs:
         for log_field, split_log_field in log_fields:
             try:
                 value = get_attribute(log, split_log_field)
             except (AttributeError, KeyError):
+                continue
+            # 过滤 None 值, 否则前端会出现异常
+            if value is None:
                 continue
             try:
                 field_counter[log_field][value] += 1

@@ -26,7 +26,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestEnvIsRunning:
-    def test_default_app_env_is_running(self, bk_app, bk_stag_env, bk_user, with_wl_apps):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_default_app_env_is_running(self, bk_app, bk_stag_env, bk_user):
         assert env_is_running(bk_stag_env) is False
         # Create a failed release at first, it should not affect the result
         create_release(bk_stag_env, bk_user, failed=True)

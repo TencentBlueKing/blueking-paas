@@ -55,7 +55,7 @@ class PluginPolicyConverter(DjangoQuerySetConverter):
         if field != "plugin.id":
             raise ValueError("invalid field {}".format(field))
         if not isinstance(value, (list, tuple)):
-            raise ValueError("invalid value {}".format(value))
+            raise ValueError("invalid value {}".format(value))  # noqa: TRY004
 
         qs = []
         for resource_id in value:

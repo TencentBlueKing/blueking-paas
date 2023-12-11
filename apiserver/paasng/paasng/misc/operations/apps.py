@@ -24,4 +24,4 @@ class OperationsConfig(AppConfig):
     verbose_name = "Operations"
 
     def ready(self):
-        from . import handlers  # noqa
+        from . import handlers  # noqa: F401

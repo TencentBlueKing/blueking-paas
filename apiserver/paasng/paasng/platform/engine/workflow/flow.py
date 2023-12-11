@@ -329,7 +329,7 @@ class DeployStep:
                 return func(self, *args, **kwargs)
             except Exception as e:
                 deployment = self.deployment
-                logger.exception(f"A critical error happened during deploy[{deployment.pk}], {e}")
+                logger.exception(f"A critical error happened during deploy[{deployment.pk}]")
                 # The error message has already been written to stream by DeployProcedure context
                 # So we will not write the error message again.
                 self.state_mgr.finish(JobStatus.FAILED, str(e), write_to_stream=False)

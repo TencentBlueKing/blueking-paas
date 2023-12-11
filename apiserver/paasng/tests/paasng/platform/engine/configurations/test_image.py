@@ -35,7 +35,7 @@ from paasng.platform.sourcectl.models import VersionInfo
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.fixture
+@pytest.fixture()
 def version():
     return VersionInfo(revision="foo", version_type="tag", version_name="foo")
 
@@ -51,7 +51,7 @@ class TestRuntimeInfo:
             assert runtime_info.generate_image(version_info=version) == "docker.io/library/python:foo"
 
     @pytest.mark.parametrize(
-        "is_cnb_runtime, expected", [(True, f"{get_image_repository_template()}:{{tag}}"), (False, "")]
+        ("is_cnb_runtime", "expected"), [(True, f"{get_image_repository_template()}:{{tag}}"), (False, "")]
     )
     def test_buildpack_runtime(self, bk_module_full, version, is_cnb_runtime, expected):
         bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS
@@ -80,7 +80,7 @@ class TestRuntimeInfo:
         )
 
     @pytest.mark.parametrize(
-        "image_repository, expected",
+        ("image_repository", "expected"),
         [
             # v1alpha1
             ("", ""),
@@ -102,7 +102,7 @@ class TestRuntimeInfo:
         assert runtime_info.generate_image(version_info=version) == expected.format(tag=version.version_name)
 
     @pytest.mark.parametrize(
-        "source_origin, expected",
+        ("source_origin", "expected"),
         [(SourceOrigin.IMAGE_REGISTRY, "custom_image"), (SourceOrigin.AUTHORIZED_VCS, "buildpack")],
     )
     def test_type(self, bk_module_full, version, source_origin, expected):
@@ -114,7 +114,8 @@ class TestRuntimeInfo:
 
 
 class TestUpdateImageRuntimeConfig:
-    def test_normal(self, bk_user, bk_module, bk_deployment, with_wl_apps, bk_prod_env):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_normal(self, bk_user, bk_module, bk_deployment, bk_prod_env):
         build_params = {
             "owner": bk_user,
             "app": bk_prod_env.get_engine_app().to_wl_obj(),

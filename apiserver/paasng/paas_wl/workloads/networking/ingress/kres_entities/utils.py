@@ -46,7 +46,7 @@ class LegacyNginxRewrittenProvider:
         #
         # However, `$location_path` was added in version 0.16.0
         # For forward compatibility, we should set $location_path to shortest_path as fallback.
-        # To know "How the fallback work", see also: [nginx-variables-variable-scope](https://openresty.org/download/agentzh-nginx-tutorials-en.html#nginx-variables-variable-scope)  # noqa
+        # To know "How the fallback work", see also: [nginx-variables-variable-scope](https://openresty.org/download/agentzh-nginx-tutorials-en.html#nginx-variables-variable-scope)
 
         snippet = dedent(
             f"""\

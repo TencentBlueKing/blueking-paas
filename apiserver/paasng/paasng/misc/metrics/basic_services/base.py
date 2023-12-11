@@ -26,7 +26,7 @@ class GaugeMetric:
     description = "gauge metric"
 
     @classmethod
-    def calc_value(self) -> Any:
+    def calc_value(cls) -> Any:
         """获取值"""
 
     @classmethod

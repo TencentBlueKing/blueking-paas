@@ -142,7 +142,7 @@ class ErrorCodes:
     SCENE_TMPL_DESC_ERROR = ErrorCode(_("场景模板应用描述文件异常"))
 
     # lesscode app 相关
-    CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸可视化开发平台应用错误"))
+    CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))
 
     # Admin 相关
     CONTROLLER_INTERNAL_ERROR = ErrorCode(_("engine 服务错误"))

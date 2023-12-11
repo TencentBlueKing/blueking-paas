@@ -67,7 +67,7 @@ def global_mock(context: MigrationContext):
 def get_legacy_app(session, code="test"):
     legacy_app = session.query(LApplication).filter_by(code=code).scalar()
     if legacy_app is None:
-        raise Exception("暂不支持mock legacy_app, 必须使用已存在的 legacy_app 进行测试")
+        raise ValueError("暂不支持mock legacy_app, 必须使用已存在的 legacy_app 进行测试")
     return legacy_app
 
 

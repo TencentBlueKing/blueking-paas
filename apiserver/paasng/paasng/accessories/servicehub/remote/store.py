@@ -94,17 +94,14 @@ class StoreMixin:
             try:
                 items.append(self.get(uuid, region))
             except ServiceNotFound:
-                logger.error(f"bulk_get: can not find a service by uuid {uuid}")
+                logger.warning(f"bulk_get: can not find a service by uuid {uuid}")
                 items.append(None)
         return items
 
     @staticmethod
     def _svc_supports_region(svc_data: Dict, region: str) -> bool:
         """Check if a service supports given region"""
-        for plan in svc_data["plans"]:
-            if plan["properties"].get("region") == region:
-                return True
-        return False
+        return any(plan["properties"].get("region") == region for plan in svc_data["plans"])
 
 
 class MemoryStore(StoreMixin):
@@ -141,7 +138,8 @@ class MemoryStore(StoreMixin):
             item = copy.deepcopy(self._map_id_to_service[uuid])
             if not self._svc_supports_region(item, region):
                 raise RuntimeError("service does not contains a plan in given region")
-            return item
+            else:
+                return item
         except KeyError:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 
@@ -197,7 +195,7 @@ class RedisStore(StoreMixin):
             legacy_config = redis_client.get(config_key)
             # 如果新的配置项中的服务名 与 缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
             if legacy_config and _loads(legacy_config)["name"] != config["name"]:
-                raise ValueError(f'Service uuid={service["uuid"]} with a different source  name already exists')
+                raise ValueError(f'Service uuid={service["uuid"]} with a different source name already exists')
 
             pipe = redis_client.pipeline()
             pipe.set(info_key, _dumps(service), self.expires)

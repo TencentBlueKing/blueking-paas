@@ -26,7 +26,7 @@ from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.es_log.misc import format_timestamp
 
 
-@pytest.fixture
+@pytest.fixture()
 def make_stats_indexes_fake_resp():
     def _make_stats_indexes_fake_resp(indexes: List[str]):
         def _wrapper(*args, **kwargs):
@@ -42,7 +42,7 @@ def make_stats_indexes_fake_resp():
 
 
 @pytest.mark.parametrize(
-    "query_term, mappings, expected",
+    ("query_term", "mappings", "expected"),
     [
         ("dd", {"dd": {"type": "text"}}, "dd.keyword"),
         ("dd", {"dd": {"type": "int"}}, "dd"),
@@ -82,15 +82,6 @@ def make_stats_indexes_fake_resp():
             "__ext.labels.bkapp_paas_bk_tencent_com_code",
         ),
         (
-            "app_code",
-            {
-                "__ext": {
-                    "properties": {"labels": {"properties": {"bkapp_paas_bk_tencent_com_code": {"type": "keyword"}}}}
-                }
-            },
-            "__ext.labels.bkapp_paas_bk_tencent_com_code",
-        ),
-        (
             "module_name",
             {
                 "__ext": {
@@ -100,17 +91,6 @@ def make_stats_indexes_fake_resp():
                 }
             },
             "__ext.labels.bkapp_paas_bk_tencent_com_module_name",
-        ),
-        (
-            "environment",
-            {
-                "__ext": {
-                    "properties": {
-                        "labels": {"properties": {"bkapp_paas_bk_tencent_com_environment": {"type": "keyword"}}}
-                    }
-                }
-            },
-            "__ext.labels.bkapp_paas_bk_tencent_com_environment",
         ),
         (
             "environment",
@@ -134,17 +114,6 @@ def make_stats_indexes_fake_resp():
             },
             "__ext.labels.bkapp_paas_bk_tencent_com_process_name",
         ),
-        (
-            "environment",
-            {
-                "__ext": {
-                    "properties": {
-                        "labels": {"properties": {"bkapp_paas_bk_tencent_com_environment": {"type": "keyword"}}}
-                    }
-                }
-            },
-            "__ext.labels.bkapp_paas_bk_tencent_com_environment",
-        ),
     ],
 )
 def test_get_es_term(query_term, mappings, expected):
@@ -163,7 +132,7 @@ _default_log: dict = {
 
 
 @pytest.mark.parametrize(
-    "log, expected",
+    ("log", "expected"),
     [
         (
             {"__ext.labels.bkapp_paas_bk_tencent_com_region": "default"},
@@ -205,7 +174,7 @@ def test_rename_log_fields(log, expected):
 
 
 @pytest.mark.parametrize(
-    "query_conditions, mappings, expected",
+    ("query_conditions", "mappings", "expected"),
     [
         (
             SearchRequestSchema(query={"query_string": "foo"}),
@@ -266,7 +235,7 @@ def test_parse_request_to_es_dsl(query_conditions, mappings, expected):
 # 测试将 timestamp(时间戳) 转换成旧的 ts 字段的格式是否符合预期
 @pytest.mark.parametrize(
     # es_timestamp 即 @timestamp 字段, 实际上这个字段存的是 datetime
-    "es_timestamp, expected_ts",
+    ("es_timestamp", "expected_ts"),
     [
         ("2023-04-11T11:13:58.102Z", "2023-04-11 19:13:58"),
         ("2023-04-11T11:13:57.958Z", "2023-04-11 19:13:57"),

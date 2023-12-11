@@ -26,7 +26,7 @@ from tests.utils.helpers import override_region_configs
 
 class TestGetDefaultFeatureFlags:
     @pytest.mark.parametrize(
-        "engine_enabled, enabled_feature_flags, default_feature_flags",
+        ("engine_enabled", "enabled_feature_flags", "default_feature_flags"),
         [
             (
                 True,

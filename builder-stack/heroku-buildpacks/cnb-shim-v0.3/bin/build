@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+# fail hard
+set -o pipefail
+# fail harder
+set -eu
+
+bp_dir=$(cd $(dirname $0)/..; pwd) # absolute path
+source_dir="${bp_dir}/target"
+
+layers_dir="${1:?}"
+platform_dir="${2:?}"
+
+# translate new stack ID to old stack ID
+export STACK="$CNB_STACK_ID"
+
+# copy the buildpack source into the target dir
+target_dir="$(mktemp -d)/target"
+cp -R "$source_dir" "$target_dir"
+chmod -R +w "$target_dir"
+
+# create a shim cache layer
+cache_dir="${layers_dir}/shim"
+mkdir -p "${cache_dir}"
+echo "cache = true" > ${layers_dir}/shim.toml
+
+"${target_dir}/bin/compile" "$(pwd)" "${cache_dir}" "${platform_dir}/env"
+
+# copy profile.d scripts into a layer so they will be sourced
+if [[ -d .profile.d ]]; then
+	profile_dir="${layers_dir}/profile"
+	mkdir -p "${profile_dir}/profile.d"
+	cp .profile.d/* "${profile_dir}/profile.d/"
+	echo "launch = true" > "${profile_dir}.toml"
+fi
+
+if [[ -f "${target_dir}/export" ]]; then
+  echo "build = true" >> "${profile_dir}.toml"
+  mkdir -p "${profile_dir}/env.build/"
+  "${bp_dir}/bin/exports" "${target_dir}/export" "${platform_dir}" "${profile_dir}/env.build/"
+fi
+
+# run bin/release, read Procfile, and generate launch.toml
+"${bp_dir}/bin/release" "${target_dir}" "${layers_dir}" "${platform_dir}" "$(pwd)"

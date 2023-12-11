@@ -36,7 +36,7 @@ SMART_APP_PATH = Path(__file__).resolve().parent / "assets" / "smart_app_v2"
 
 
 @pytest.fixture(autouse=True)
-def setup_fixtures(mock_wl_services_in_creation):
+def _setup_fixtures(mock_wl_services_in_creation):
     """Set fixtures for testings"""
     # Create default tags
     parent_tag = Tag.objects.create(name="demo parent", region=settings.DEFAULT_REGION_NAME)
@@ -57,9 +57,8 @@ class TestCreateSMartApp:
 
         # API: Upload tarball for creation
         tarball_path = make_smart_tarball(tmp_path, _desc_updater)
-        response = api_client.post(
-            "/api/sourcectl/smart_packages/", format="multipart", data={"package": open(tarball_path, "rb")}
-        )
+        with open(tarball_path, "rb") as file:
+            response = api_client.post("/api/sourcectl/smart_packages/", format="multipart", data={"package": file})
         assert response.status_code == 200, f'error: {response.json()["detail"]}'
         assert response.json()["app_description"] is not None
         assert response.json()["app_description"]["name"]

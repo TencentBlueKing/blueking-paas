@@ -1,8 +1,4 @@
 .DEFAULT_GOAL:=help
-BUILDER_IMAGE_NAME ?= mirrors.tencent.com/bkpaas/heroku-builder
-BUILDER_TAG ?= bionic
-HEROKU_IMAGE_NAME ?= mirrors.tencent.com/bkpaas/heroku-builder-all-in-one
-IMAGE_TAG ?= bionic
 
 ifeq ($(shell go env GOOS),windows)
 BINARY_SUFFIX := .exe
@@ -31,8 +27,8 @@ entrypoint: $(LOCALBIN) ## Build `entrypoint` binary
 
 ##@ Build Image
 .PHONY: heroku-builder
-heroku-builder:  ## Build `heroku-builder` image
-	IMAGE_NAME=$(HEROKU_IMAGE_NAME) IMAGE_TAG=$(IMAGE_TAG) docker buildx bake heroku-builder -f docker-build/heroku-builder/docker-bake.hcl
+heroku-builder:  ## Build builder image which is based on `cloudnative-buildpacks/builders/heroku-builder`
+	docker buildx bake heroku-builder -f docker-build/heroku-builder/docker-bake.hcl
 
 
 ##@ Test

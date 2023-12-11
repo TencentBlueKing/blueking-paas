@@ -1,5 +1,5 @@
-ARG BUILDER_IMAGE=mirrors.tencent.com/bkpaas/heroku-builder
-ARG BUILDER_TAG=bionic
+ARG BUILDER_IMAGE_NAME=mirrors.tencent.com/bkpaas/builder-heroku-bionic
+ARG BUILDER_IMAGE_TAG=latest
 
 FROM golang:1.18.10-bullseye as binary-builder
 
@@ -13,10 +13,11 @@ COPY ./pkg ./pkg
 COPY ./Makefile ./Makefile
 RUN make build
 
-FROM ${BUILDER_IMAGE}:${BUILDER_TAG}
+FROM ${BUILDER_IMAGE_NAME}:${BUILDER_IMAGE_TAG}
 
 USER root
 ENV HOME /app
+ENV CNB_PLATFORM_API=0.11
 RUN mkdir -p /blueking-shim/bin
 COPY --from=binary-builder /src/bin/* /blueking-shim/bin/
 ENTRYPOINT /blueking-shim/bin/entrypoint

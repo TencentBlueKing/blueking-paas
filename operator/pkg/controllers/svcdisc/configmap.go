@@ -62,11 +62,11 @@ func (w *WorkloadsMutator) ApplyToDeployment(ctx context.Context, d *appsv1.Depl
 
 	configmap, err := w.GetConfigMap(ctx)
 	if err != nil {
-		log.V(4).Info("unable to get configmap, skip apply.", "error", err)
+		log.V(1).Info("unable to get configmap, skip apply.", "error", err)
 		return false
 	}
 	if _, ok := configmap.Data[DataKeyBkSaaS]; !ok {
-		log.V(4).Info("configmap data invalid, skip apply.")
+		log.V(1).Info("configmap data invalid, skip apply.")
 		return false
 	}
 

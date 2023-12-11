@@ -30,7 +30,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.fixture()
 def module_name():
-    return generate_random_string(8)
+    return "m-{}".format(generate_random_string(6))
 
 
 @pytest.fixture()

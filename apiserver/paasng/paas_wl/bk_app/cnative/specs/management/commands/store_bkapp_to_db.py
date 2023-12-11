@@ -19,13 +19,16 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import TYPE_CHECKING
 
+import yaml
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import CommandError
+from rest_framework.serializers import ValidationError
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.management.base import BaseAppModelResourceCommand
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.platform.bkapp_model.importer.importer import import_manifest_yaml
+from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
 from paasng.platform.modules.models import Module
 
 if TYPE_CHECKING:
@@ -85,6 +88,19 @@ class Command(BaseAppModelResourceCommand):
                 )
             )
         )
+        # dry_run validate json_value
+        if dry_run:
+            manifest = yaml.safe_load(input_data)
+            spec_slz = BkAppSpecInputSLZ(data=manifest["spec"])
+            try:
+                spec_slz.is_valid(raise_exception=True)
+            except ValidationError as e:
+                self.stdout.write(
+                    self.style.ERROR(
+                        f"{prefix}import manifest to app<{module.application.code}> module<{module.name}> failed: {e}"
+                    )
+                )
+
         # Verbosity level, 2=verbose output
         if verbosity >= 2:
             self.stdout.write(

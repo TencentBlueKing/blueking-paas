@@ -22,12 +22,14 @@ pack: ${ROOT}/output patch  ## 打包 buildpack
 .PHONY: patch
 patch:
 	patch buildpack/bin/compile patchs/buildpack/bin/compile.patch
+	patch buildpack/files.json patchs/buildpack/files.json.patch
 	ln -s ../hooks buildpack/hooks
 
 
 .PHONY: unpatch
 unpatch:
 	patch -R buildpack/bin/compile patchs/buildpack/bin/compile.patch
+	patch -R buildpack/files.json patchs/buildpack/files.json.patch
 	rm buildpack/hooks
 
 

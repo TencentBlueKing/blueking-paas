@@ -269,7 +269,7 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     def list_all_provisioned_rels(
-        self, services: List[ServiceObj] = None
+        self, services: Optional[List[ServiceObj]] = None
     ) -> Generator[EngineAppInstanceRel, None, None]:
         raise NotImplementedError
 

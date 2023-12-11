@@ -339,7 +339,7 @@ class LocalServiceMgr(BaseServiceMgr):
             yield self.transform_rel_db_obj(attachment)
 
     def list_all_provisioned_rels(
-        self, services: List[ServiceObj] = None
+        self, services: Optional[List[ServiceObj]] = None
     ) -> Generator[LocalEngineAppInstanceRel, None, None]:
         """Return all provisioned service instances"""
         qs = ServiceEngineAppAttachment.objects.exclude(service_instance__isnull=True)

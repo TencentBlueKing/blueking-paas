@@ -611,7 +611,7 @@ class RemoteServiceMgr(BaseServiceMgr):
             yield self.transform_rel_db_obj(attachment)
 
     def list_all_provisioned_rels(
-        self, services: List[ServiceObj] = None
+        self, services: Optional[List[ServiceObj]] = None
     ) -> Generator[RemoteEngineAppInstanceRel, None, None]:
         """Return all provisioned remote service instances"""
         qs = RemoteServiceEngineAppAttachment.objects.exclude(service_instance_id__isnull=True)

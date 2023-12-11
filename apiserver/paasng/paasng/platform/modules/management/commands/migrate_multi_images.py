@@ -63,14 +63,16 @@ class Command(BaseCommand):
         images = [proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None]
 
         if len(images) <= 1:
-            self.stdout.write(f"{app_code} has no multi images in default module, skip migration")
+            self.stdout.write(self.style.WARNING(f"{app_code} has no multi images in default module, skip migration"))
             return
 
         process_names = [proc_spec.name for proc_spec in proc_specs if proc_spec.name != "web"]
         if conflict_module_names := self._get_conflict_module_names(app_code, process_names):
             self.stdout.write(
-                f"app_code({app_code}) process name ({', '.join(conflict_module_names)}) conflict with existed "
-                f"module name, skip migration"
+                self.style.ERROR(
+                    f"app_code({app_code}) process name ({', '.join(conflict_module_names)}) conflict with existed "
+                    f"module name, skip migration"
+                )
             )
             return
 
@@ -87,6 +89,7 @@ class Command(BaseCommand):
             defaults={
                 "image_repository": f"{parsed.domain}/{parsed.name}",
                 "image_credential_name": web_spec.image_credential_name,
+                "build_method": RuntimeType.CUSTOM_IMAGE,
             },
             module=default_module,
         )
@@ -148,6 +151,8 @@ class Command(BaseCommand):
         # 复制环境变量到新模块
         self._clone_config_vars(application, module)
         self.stdout.write(f"clone config vars success for module {module.name}")
+
+        # TODO 补充镜像凭证的更新
 
     def _build_process(self, process_name: str, proc_spec: ModuleProcessSpec) -> Dict:
         env_overlay = {

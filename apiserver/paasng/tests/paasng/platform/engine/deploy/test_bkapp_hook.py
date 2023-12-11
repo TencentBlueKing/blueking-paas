@@ -39,13 +39,12 @@ class TestPreReleaseDummyExecutor:
 
     def test_start(self, bk_cnative_app, bk_module, bk_deployment):
         with mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.BkAppHookHandler.wait_for_logs_readiness",
-            return_value=PodPhase.RUNNING,
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.BkAppHookHandler.fetch_logs", return_value=["1", "2"]
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.BkAppHookHandler.wait_hook_finished",
-            return_value=PodPhase.SUCCEEDED,
+            "paasng.platform.engine.deploy.bg_command.bkapp_hook.BkAppHookHandler",
+            return_value=mock.MagicMock(
+                wait_for_logs_readiness=mock.MagicMock(return_value=PodPhase.RUNNING),
+                fetch_logs=mock.MagicMock(return_value=["1", "2"]),
+                wait_hook_finished=mock.MagicMock(return_value=PodPhase.SUCCEEDED),
+            ),
         ), mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream:
             attach_all_phases(sender=bk_deployment.app_environment, deployment=bk_deployment)
 

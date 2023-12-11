@@ -41,7 +41,7 @@ from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppDescriptionHandler:

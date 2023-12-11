@@ -369,6 +369,11 @@ def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):
         with _humanize_exception(_("绑定初始运行环境失败，请稍候再试"), "bind default runtime"):
             module_initializer.bind_default_runtime()
 
+    if module.application.type == ApplicationType.CLOUD_NATIVE:
+        # Cloud-native applications require the initialization of application model resources
+        with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
+            module_initializer.initialize_app_model_resource()
+
     on_module_initialized.send(sender=initialize_smart_module, module=module)
     return ModuleInitResult(source_init_result={})
 

@@ -169,15 +169,19 @@ class TestCustomCollectorConfigViewSet:
     @pytest.fixture()
     def builtin_json_cfg(self, bk_module, cfg_maker):
         return cfg_maker(
+            collector_config_id=2,
             name_en=build_custom_collector_config_name(bk_module, type="json"),
             log_type="json",
+            is_builtin=True,
         )
 
     @pytest.fixture()
     def builtin_stdout_cfg(self, bk_module, cfg_maker):
         return cfg_maker(
+            collector_config_id=1,
             name_en=build_custom_collector_config_name(bk_module, type="stdout"),
             log_type="stdout",
+            is_builtin=True,
         )
 
     @pytest.fixture(autouse=True)
@@ -199,7 +203,9 @@ class TestCustomCollectorConfigViewSet:
         with mock.patch("paasng.infras.bk_log.client.APIGWClient") as cls, override_settings(ENABLE_BK_LOG_APIGW=True):
             yield cls().api
 
-    def test_list_metadata(self, api_client, bk_app, bk_module, apigw_client, bkmonitor_space):
+    def test_list_metadata(
+        self, api_client, bk_app, bk_module, apigw_client, bkmonitor_space, builtin_json_cfg, builtin_stdout_cfg
+    ):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/custom-collector-metadata/"
 
         apigw_client.databus_list_collectors.return_value = {
@@ -232,13 +238,19 @@ class TestCustomCollectorConfigViewSet:
             ],
         }
 
-        resp = api_client.get(url)
+        resp = api_client.get(url, data={"all": True})
         assert "url" in resp.data
         options = resp.data["options"]
         assert len(options) == 3
         assert options[0]["is_builtin"]
         assert options[1]["is_builtin"]
         assert not options[2]["is_builtin"]
+
+        resp = api_client.get(url, data={"all": False})
+        assert "url" in resp.data
+        filtered_options = resp.data["options"]
+        assert len(filtered_options) == 1
+        assert options[2] == filtered_options[0]
 
     def test_insert_success(self, api_client, bk_app, bk_module, apigw_client, bkmonitor_space):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/custom-collector/"

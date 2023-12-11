@@ -19,7 +19,9 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Set
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -31,7 +33,6 @@ from paasng.accessories.log.serializers import (
     BkLogCustomCollectMetadataQuerySLZ,
     ModuleCustomCollectorConfigSLZ,
 )
-from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.bk_log.client import make_bk_log_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
@@ -47,8 +48,10 @@ def get_all_build_in_config_names(application: Application) -> Set[str]:
     """get all builtin custom collector config name for application"""
     names = set()
     for module in application.modules.all():
-        names.add(build_custom_collector_config_name(module, type="json"))
-        names.add(build_custom_collector_config_name(module, type="stdout"))
+        builtin_config_names = list(
+            CustomCollectorConfig.objects.filter(module=module, is_builtin=True).values_list("name_en", flat=True)
+        )
+        names.update(builtin_config_names)
     return names
 
 
@@ -67,10 +70,9 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
             "request": self.request,
             "format": self.format_kwarg,
             "view": self,
-            "builtin_config_names": [
-                build_custom_collector_config_name(module, type="json"),
-                build_custom_collector_config_name(module, type="stdout"),
-            ],
+            "builtin_config_names": list(
+                CustomCollectorConfig.objects.filter(module=module, is_builtin=True).values_list("name_en", flat=True)
+            ),
             "space_uid": monitor_space.space_uid,
         }
 
@@ -88,17 +90,13 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
         cfgs = make_bk_log_client().list_custom_collector_config(biz_or_space_id=monitor_space.iam_resource_id)
         if not slz.validated_data.get("all", False):
+            # 过滤当前模块已创建的自定义采集配置 以及 应用所有内置自定义采集配置
             existed_ids = set(
-                CustomCollectorConfig.objects.filter(module=module).values_list("collector_config_id", flat=True)
-            )
-            # 创建采集规则时默认隐藏平台内置的自定义采集项
-            builtin_collector_config_ids = set(
                 CustomCollectorConfig.objects.filter(
-                    module_id__in=application.modules.values_list("id", flat=True),
-                    name_en__in=get_all_build_in_config_names(application),
+                    Q(module=module) | Q(is_builtin=True, module__application_id=application.pk)
                 ).values_list("collector_config_id", flat=True)
             )
-            cfgs = [cfg for cfg in cfgs if cfg.id not in (existed_ids | builtin_collector_config_ids)]
+            cfgs = [cfg for cfg in cfgs if cfg.id not in existed_ids]
         return Response(
             data=BkLogCustomCollectMetadataOutputSLZ(
                 {
@@ -159,5 +157,7 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
     def destroy(self, request, code, module_name, name_en):
         module = self.get_module_via_path()
         cfg = get_object_or_404(CustomCollectorConfig, module=module, name_en=name_en)
+        if cfg.is_builtin:
+            raise error_codes.CANNOT_DELETE_CUSTOM_COLLECTOR.f(_("内置采集规则只能停用不能删除"))
         cfg.delete()
         return Response()

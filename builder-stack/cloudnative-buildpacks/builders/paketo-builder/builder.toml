@@ -1,10 +1,6 @@
 description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, NodeJS, Go, Python, Ruby, Apache HTTPD, NGINX and Procfile"
 
 [[buildpacks]]
-  uri = "urn:cnb:registry:fagiani/apt"
-  version = "0.2.5"
-
-[[buildpacks]]
   uri = "docker://gcr.io/paketo-buildpacks/dotnet-core:0.35.3"
   version = "0.35.3"
 
@@ -46,11 +42,6 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 [lifecycle]
   version = "0.16.1"
-
-[[order]]
-  [[order.group]]
-    id = "fagiani/apt"
-    version = "0.2.5"
 
 [[order]]
 

@@ -58,7 +58,7 @@ def another_user(request):
     return user
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def _turn_on_bk_log_feature():
     post_create_application.connect(turn_on_bk_log_feature)
     yield
@@ -588,7 +588,6 @@ class TestCreateCloudNativeApp:
         assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.usefixtures("_turn_on_bk_log_feature")
     def test_create_with_bk_log_feature(self, api_client, settings):
         """测试创建应用时开启日志平台功能特性"""
         cluster = RegionClusterService(settings.DEFAULT_REGION_NAME).get_default_cluster()

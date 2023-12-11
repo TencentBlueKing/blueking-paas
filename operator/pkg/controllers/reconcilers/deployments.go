@@ -82,7 +82,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	}
 	// The statuses of the deployments is not ready yet, reconcile later.
 	if bkapp.Status.Phase == paasv1alpha2.AppPending {
-		log.V(2).Info("bkapp is still pending, reconcile later.", "bkapp", bkapp.Name)
+		log.V(1).Info("bkapp is still pending, reconcile later.", "bkapp", bkapp.Name)
 		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	return r.Result
@@ -131,7 +131,7 @@ func (r *DeploymentReconciler) getNewDeployments(
 		}
 		// Apply service discovery related changes
 		if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployment(ctx, deployment); ok {
-			log.V(2).Info("Applied svc-discovery related changes to deployments.")
+			log.V(1).Info("Applied svc-discovery related changes to deployments.")
 		}
 
 		if err = UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {
@@ -156,7 +156,7 @@ func (r *DeploymentReconciler) findNewDeployments(
 		// created by legacy controller.
 		serializedBkApp, exists := d.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]
 		if !exists {
-			log.V(2).Info("Deployment does not contain the serialized bkapp in annots.", "name", d.Name)
+			log.V(1).Info("Deployment does not contain the serialized bkapp in annots.", "name", d.Name)
 			continue
 		}
 		// Decode the serialized BkApp into object
@@ -170,7 +170,7 @@ func (r *DeploymentReconciler) findNewDeployments(
 
 		// If the deployment ID has been changed, always treat current deployment as outdated.
 		if bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey] != syncedBkApp.Annotations[paasv1alpha2.DeployIDAnnoKey] {
-			log.V(2).Info("Deploy ID changed, current deployment is outdated.", "name", d.Name)
+			log.V(1).Info("Deploy ID changed, current deployment is outdated.", "name", d.Name)
 			continue
 		}
 		if BkAppSemanticEqual(bkapp, &syncedBkApp) {

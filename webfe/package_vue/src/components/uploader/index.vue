@@ -215,7 +215,7 @@
         validate.success = false;
         validate.message = this.acceptTips;
       }
-      if (!this.validateName.test(file.name)) {
+      if (this.validateName && !this.validateName.test(file.name)) {
         validate.success = false;
         validate.message = this.$t('格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)');
       }

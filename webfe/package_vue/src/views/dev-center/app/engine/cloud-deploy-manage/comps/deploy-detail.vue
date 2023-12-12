@@ -3,11 +3,11 @@
     <section class="instance-details">
       <div class="instance-item">
         <span class="label">{{$t('运行实例数')}}：</span>
-        <span class="value">{{deployData.total_available_instance_count}}</span>
+        <span class="value">{{ runningInstanceLength }}</span>
       </div>
       <div class="instance-item">
         <span class="label">{{$t('期望实例数')}}：</span>
-        <span class="value">{{deployData.total_desired_replicas}}</span>
+        <span class="value">{{expectInstanceLength}}</span>
       </div>
       <div class="instance-item">
         <span class="label">{{$t('异常实例数')}}：</span>
@@ -660,6 +660,18 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    expectInstanceLength() {
+      return this.allProcesses.reduce((p, v) => {
+        p += (v.available_instance_count || 0);
+        return p;
+      }, 0);
+    },
+    runningInstanceLength() {
+      return this.allProcesses.reduce((p, v) => {
+        p += (v.instances.length || 0);
+        return p;
+      }, 0);
     },
   },
 

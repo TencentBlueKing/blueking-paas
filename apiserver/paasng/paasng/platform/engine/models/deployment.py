@@ -143,6 +143,11 @@ class Deployment(OperationVersionBase):
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
     bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
+    # The fields that store deployment logs, related to the `OutputStream` model. These fields exist
+    # because some logs cannot be written to the "build_process" or "pre_release" objects's output streams,
+    # such as logs of the service provision actions and hook command executions from cloud-native applications.
+    preparation_stream_id = models.UUIDField(help_text="the logs at the preparation phase", max_length=32, null=True)
+    main_stream_id = models.UUIDField(help_text="the logs at the main phase", max_length=32, null=True)
 
     objects = DeploymentQuerySet().as_manager()
 

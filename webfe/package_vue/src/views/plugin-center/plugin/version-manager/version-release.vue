@@ -118,6 +118,7 @@ import itsmStage from './release-stages/itsm';
 import approvalStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
 import testStage from './release-stages/test';
+import { PLUGIN_VERSION_MAP } from '@/common/constants';
 
 export default {
   components: {
@@ -182,11 +183,11 @@ export default {
       return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
     },
     curStageComponmentType() {
-      const invokeMethod = this.pluginDetailedData?.current_stage?.invoke_method;
-      if (invokeMethod === 'pipeline') {
-        return 'build';
+      const invokeMethod = this.pluginDetailedData?.current_stage?.invokeMethod;
+      if (invokeMethod === 'builtin') {
+        return this.pluginDetailedData?.current_stage?.stage_id || this.stageData.stage_id;
       }
-      return invokeMethod;
+      return PLUGIN_VERSION_MAP[invokeMethod];
     },
     finalStageIsOnline() {
       return this.curAllStages.length > 0 && this.curAllStages[this.curAllStages.length - 1].name === 'online';

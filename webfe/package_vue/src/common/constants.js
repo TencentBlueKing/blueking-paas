@@ -218,3 +218,13 @@ export const STATUSBARDATA = {
     type: 'interrupted',
   },
 };
+
+/**
+ * 插件新建版本对应阶段
+ */
+export const PLUGIN_VERSION_MAP = {
+  pipeline: 'build',
+  deployAPI: 'deploy',
+  subpage: 'test',
+  itsm: 'itsm',
+};

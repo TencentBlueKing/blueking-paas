@@ -225,12 +225,17 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
 
 
 def build_custom_collector_config_name(module: Module, type: str) -> str:
-    """构造应用唯一的自定义采集项英文名称，重要，5-50 个字符，仅包含字母数字下划线"""
+    """构造应用唯一的自定义采集项英文名称，重要，5-50 个字符，仅包含字母数字下划线
+
+    保险起见, type 只能在 6 个字符以内(含6个字符)
+    """
     # app_code max_length 20 字符
     app_code = module.application.code
     # module_name max_length 20 字符
     module_name = module.name
-    return f"bkapp__{app_code}__{module_name}__{type}".replace("-", "_")
+    # 使用 "__" 分割 app_code/module_name 是为了保证从自定义采集项名称可以逆推出应用信息(这个名称会作为 ES index 的组成部分)
+    # 原理: 目前的逻辑保证 app_code 与 module_name 均不能有连续的连字符 "--"
+    return f"{app_code}__{module_name}__{type}".replace("-", "_")
 
 
 def to_custom_collector_config(module: Module, collector_config: AppLogCollectorConfig) -> CustomCollectorConfig:

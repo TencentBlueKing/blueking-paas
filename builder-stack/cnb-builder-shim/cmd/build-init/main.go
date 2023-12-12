@@ -45,7 +45,7 @@ const (
 	// OutputImageEnvVarKey The env var key that store output image
 	OutputImageEnvVarKey = "OUTPUT_IMAGE"
 	// RunImageEnvVarKey The env var key that store runner image
-	RunImageEnvVarKey = "RUN_IMAGE"
+	RunImageEnvVarKey = "CNB_RUN_IMAGE"
 	// SourceUrlEnvVarKey The env var key that store source url
 	SourceUrlEnvVarKey = "SOURCE_GET_URL"
 	// GitRevisionEnvVarKey The env var key that store git revision info

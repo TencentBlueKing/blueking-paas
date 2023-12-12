@@ -44,7 +44,7 @@ from paasng.utils.error_codes import error_codes
 logger = logging.getLogger(__name__)
 
 
-def get_all_build_in_config_names(application: Application) -> Set[str]:
+def get_all_builtin_config_names(application: Application) -> Set[str]:
     """get all builtin custom collector config name for application"""
     names = set()
     for module in application.modules.all():
@@ -64,15 +64,13 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         """
         Extra context provided to the serializer class.
         """
-        module = self.get_module_via_path()
-        monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+        application = self.get_application()
+        monitor_space, _ = get_or_create_bk_monitor_space(application)
         return {
             "request": self.request,
             "format": self.format_kwarg,
             "view": self,
-            "builtin_config_names": list(
-                CustomCollectorConfig.objects.filter(module=module, is_builtin=True).values_list("name_en", flat=True)
-            ),
+            "builtin_config_names": sorted(get_all_builtin_config_names(application)),
             "space_uid": monitor_space.space_uid,
         }
 
@@ -158,6 +156,6 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         cfg = get_object_or_404(CustomCollectorConfig, module=module, name_en=name_en)
         if cfg.is_builtin:
-            raise error_codes.CANNOT_DELETE_CUSTOM_COLLECTOR.f(_("内置采集规则只能停用不能删除"))
+            raise error_codes.CANNOT_DELETE_CUSTOM_COLLECTOR.f(_("内置采集规则只能停用, 不能删除"))
         cfg.delete()
         return Response()

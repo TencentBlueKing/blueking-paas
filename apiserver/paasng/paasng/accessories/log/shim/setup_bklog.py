@@ -297,7 +297,7 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         )
         name = db_obj.name_en
     except CustomCollectorConfigModel.DoesNotExist:
-        logger.debug("CustomCollectorConfig dones not exits, skip fill persistence fields")
+        logger.debug("CustomCollectorConfig does not exits, skip fill persistence fields")
         name = build_custom_collector_config_name(module, type=collector_config.log_type)
 
     cfg = CustomCollectorConfig(

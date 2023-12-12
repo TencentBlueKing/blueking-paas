@@ -246,10 +246,6 @@ func (r *BkApp) validateAppSpec() *field.Error {
 			return field.Invalid(procsField, r.Spec.Processes, fmt.Sprintf(`process "%s" is duplicated`, proc.Name))
 		}
 	}
-	// 至少需要包含一个 web 进程
-	if procCounter[WebProcName] == 0 {
-		return field.Invalid(procsField, r.Spec.Processes, `"web" process is required`)
-	}
 
 	// 环境变量中的键不能为空
 	for idx, env := range r.Spec.Configuration.Env {

@@ -21,7 +21,7 @@
       </template>
 
       <!-- 镜像逻辑 -->
-      <div v-if="deploymentInfoBackUp?.build_method === 'custom_image'">
+      <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' || isSmartApp">
         <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
         <div v-if="!allowMultipleImage">
           <div class="code-depot mb15">

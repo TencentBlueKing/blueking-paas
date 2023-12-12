@@ -173,6 +173,10 @@
 # CLOUD_NATIVE_APP_DEFAULT_CLUSTER: ""
 ## 是否允许创建蓝鲸插件应用
 # IS_ALLOW_CREATE_BK_PLUGIN_APP: false
+## 新建的 lesscode 应用是否为云原生应用
+# LESSCODE_APP_USE_CLOUD_NATIVE_TYPE: true
+## 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
+# SOURCE_PACKAGE_APP_CLOUD_NATIVE: true
 
 ## 开发者中心使用的 k8s 集群组件（helm chart 名称）
 # BKPAAS_K8S_CLUSTER_COMPONENTS:
@@ -644,8 +648,6 @@
 # BKMONITOR_METRIC_RELABELINGS: {}
 ## 蓝鲸监控的API是否已经注册在 APIGW
 # ENABLE_BK_MONITOR_APIGW: false
-## 同步告警策略到监控的配置
-# MONITOR_AS_CODE_CONF: {}
 ## 蓝鲸监控网关的环境
 # BK_MONITOR_APIGW_SERVICE_STAGE: prod
 ## 监控 RabbitMQ 的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
@@ -653,6 +655,17 @@
 #    enabled: true
 #    metric_name_prefix: ''
 #    service_name: 'rabbitmq'
+
+## ------------------------------------ 蓝鲸日志配置 ------------------------------------
+# 默认的日志采集器类型, 可选值 "ELK", "BK_LOG"
+# 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
+# LOG_COLLECTOR_TYPE: "ELK"
+# 蓝鲸日志平台的 API 是否已经注册在 APIGW，未注册则走 ESB 调用日志平台 API
+# ENABLE_BK_LOG_APIGW: True
+# 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
+# BK_LOG_APIGW_SERVICE_STAGE: stag
+# 蓝鲸日志平台相关的配置项
+# BKLOG_CONFIG = {}
 
 ## ---------------------------------------- 运行时默认配置 ----------------------------------------
 

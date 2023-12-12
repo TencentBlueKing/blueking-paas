@@ -18,12 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paasng.core.core.protections.exceptions import ConditionNotMatched
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.declarative.protections import modifications_not_allowed
-from paasng.platform.applications.models import Application
-from paasng.core.core.protections.exceptions import ConditionNotMatched
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModificationsNotAllowed:

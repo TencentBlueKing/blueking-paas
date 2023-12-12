@@ -87,7 +87,7 @@ class AddrResourceManager:
         data = [subdomain_group, subpath_group, custom_group]
         data = [d for d in data if d.domains]
         return DomainGroupMapping(
-            metadata=ObjectMetadata(name=self.wl_app.name),
+            metadata=ObjectMetadata(name=self.wl_app.scheduler_safe_name),
             spec=DomainGroupMappingSpec(ref=MappingRef(name=app_name), data=data),
         )
 

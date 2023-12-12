@@ -23,7 +23,7 @@ cnb-builder-shim 是一个运行在 cloudnative builder 之上的衬垫层，目
 ❯ docker run --rm \
     # TODO: 修改成你需要构建的镜像名
     -e OUTPUT_IMAGE="mirrors.tencent.com/foo:latest" \
-    -e RUN_IMAGE="mirrors.tencent.com/bkpaas/run-heroku-bionic:latest" \
+    -e CNB_RUN_IMAGE="mirrors.tencent.com/bkpaas/run-heroku-bionic:latest" \
     -e SOURCE_GET_URL="file:///tmp/source.tgz" \
     # 设置需要使用的 builderpack
     -e REQUIRED_BUILDPACKS="tgz bk-buildpack-apt ... v2;tgz bk-buildpack-python ... v213" \

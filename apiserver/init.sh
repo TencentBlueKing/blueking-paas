@@ -226,7 +226,7 @@ ensure-buleking-image() {
     --display_name_en "Blueking Basic Image" \
     --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
-    --environment "CNB_PLATFORM_API=0.11" "RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" \
+    --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" \
     --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${apt_buildpack_name}"
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${python_buildpack_name}"

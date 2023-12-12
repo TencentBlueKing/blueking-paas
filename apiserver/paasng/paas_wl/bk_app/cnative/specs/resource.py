@@ -39,6 +39,7 @@ from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,9 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
 
 def deploy_networking(env: ModuleEnvironment) -> None:
     """Deploy the networking related resources for env, such as Ingress etc."""
+    if not _has_web_process(env):
+        return
+
     save_addresses(env)
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
@@ -118,6 +122,9 @@ def delete_bkapp(env: ModuleEnvironment):
 
 def delete_networking(env: ModuleEnvironment):
     """Delete network group mapping in cluster"""
+    if not _has_web_process(env):
+        return
+
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
@@ -167,3 +174,8 @@ class MresConditionParser:
             if condition.type == type_:
                 return condition
         return None
+
+
+def _has_web_process(env: ModuleEnvironment) -> bool:
+    """Check if the module has web process"""
+    return ModuleProcessSpec.objects.filter(module=env.module, name="web").exists()

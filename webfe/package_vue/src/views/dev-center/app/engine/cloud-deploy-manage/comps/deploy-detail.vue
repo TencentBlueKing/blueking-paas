@@ -181,8 +181,12 @@
                   class="loading"
                 >
                 <span class="pl10" style="white-space: nowrap;">
-                  <span v-if="row.instances.length < row.available_instance_count">{{ $t('启动中...') }}</span>
-                  <span v-if="row.instances.length > row.available_instance_count">{{ $t('停止中...') }}</span>
+                  <span
+                    v-if="row.instances.length < row.available_instance_count
+                      || row.available_instance_count < scaleTargetReplicas">
+                    {{ $t('启动中...') }}
+                  </span>
+                  <span v-else>{{ $t('停止中...') }}</span>
                 </span>
               </div>
               <div class="operate-process-wrapper mr15">
@@ -649,6 +653,7 @@ export default {
       rowDisplayName: '',
       // EventSource handler
       serverProcessEvent: undefined,
+      scaleTargetReplicas: 0,
     };
   },
   computed: {
@@ -1493,7 +1498,8 @@ export default {
     },
 
     // 处理进程状态
-    handleProcessStatus() {
+    handleProcessStatus(v) {
+      this.scaleTargetReplicas = v || 0;
       // 进程之后请求列表数据
       // bus.$emit('get-release-info');
     },

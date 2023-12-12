@@ -297,7 +297,7 @@ export default {
           theme: 'success',
           message: this.$t('扩缩容策略已更新'),
         });
-        this.$emit('updateStatus');
+        this.$emit('updateStatus', this.scalingConfig.targetReplicas);
         this.scaleDialog.visible = false;
       } catch (err) {
         this.$paasMessage({

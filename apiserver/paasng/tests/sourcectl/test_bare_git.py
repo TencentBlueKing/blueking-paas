@@ -16,13 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest import mock
 
 import pytest
 
 from paasng.dev_resources.sourcectl.controllers.bare_git import BareGitRepoController
-from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder
+from paasng.dev_resources.sourcectl.git.client import GitCommandExecutionError
+from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, VersionInfo
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
+from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 
 pytestmark = pytest.mark.django_db
 
@@ -73,3 +77,23 @@ class TestGeneralGitController:
 
             c = BareGitRepoController.init_by_module(bk_module, "admin")
             assert c.repo_url == target_url
+
+    def test_anonymize_url(self, bk_module):
+        with ThreadingHTTPServer(("localhost", 0), BaseHTTPRequestHandler) as httpd:
+            threading.Thread(target=httpd.serve_forever).start()
+            fake_repo = self.get_fake_repo(bk_module, f"http://localhost:{httpd.server_port}/foo.git")
+            self.get_fake_auth_holder(bk_module, fake_repo, "admin", "nopassword")
+
+            c = BareGitRepoController.init_by_module(bk_module, "admin")
+
+            with generate_temp_dir() as working_dir, pytest.raises(GitCommandExecutionError) as exp:
+                c.export(
+                    working_dir, version_info=VersionInfo(revision="foo", version_type="branch", version_name="master")
+                )
+            httpd.shutdown()
+
+            value = exp.value
+            message = value.args[0]
+            assert f"http://localhost:{httpd.server_port}/foo.git" in message
+            assert "admin:********" in message
+            assert "nopassword" not in message

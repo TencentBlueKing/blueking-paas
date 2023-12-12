@@ -181,7 +181,8 @@
                   class="loading"
                 >
                 <span class="pl10" style="white-space: nowrap;">
-                  {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+                  <span v-if="row.instances.length < row.available_instance_count">{{ $t('启动中...') }}</span>
+                  <span v-if="row.instances.length > row.available_instance_count">{{ $t('停止中...') }}</span>
                 </span>
               </div>
               <div class="operate-process-wrapper mr15">

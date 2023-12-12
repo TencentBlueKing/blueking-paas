@@ -125,6 +125,7 @@ def update_or_create_es_search_config(
     host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
 
     monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+    # Note: 修改以下的 ElasticSearchParams 只对新创建的查询配置生效
     # 日志平台的索引规则:
     # 对于 biz_id 是 业务ID 的采集项: ${biz_id}_bklog_${name_en}_*
     # 对于 biz_id 是 空间ID 的采集项: space_${id}_bklog_${name_en}_*
@@ -142,14 +143,21 @@ def update_or_create_es_search_config(
         filedMatcher="message|levelname|pathname|funcName|otelSpanID"
         r"|otelServiceName|otelTraceID|environment|process_id|stream|__ext_json\..*",
     )
-    search_config, _ = ElasticSearchConfig.objects.update_or_create(
+
+    search_config, _ = ElasticSearchConfig.objects.get_or_create(
         collector_config_id=collector_config.collector_config.id,
+        # 日志平台封装的接口不满足需求, 目前所有日志查询都是走 ES 查询
         backend_type="es",
         defaults={
             "elastic_search_host": host,
             "search_params": search_params,
         },
     )
+
+    # 如果 settings 的 ES Host 配置被修改, 需要同步到 DB
+    if search_config.elastic_search_host != host:
+        search_config.elastic_search_host = host
+        search_config.save(update_fields=["elastic_search_host"])
 
     config, _ = ProcessLogQueryConfig.objects.get_or_create(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
     if collector_config.log_type == "stdout":
@@ -205,7 +213,6 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     json_config, stdout_config = setup_bk_log_custom_collector(env.module)
 
     # 绑定日志查询的配置
-    # TODO: 日志平台支持存储将日志内容本身存储为 json 后, 修改成类似于 json.message 的字段
     update_or_create_es_search_config(env, json_config, message_field="message")
     update_or_create_es_search_config(env, stdout_config)
 
@@ -282,7 +289,17 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
     else:
         raise NotImplementedError
 
-    name = build_custom_collector_config_name(module, type=collector_config.log_type)
+    db_obj = None
+    try:
+        # 当内置采集项已创建, 则采集项名称不可修改(只能用数据库中存储的名称)
+        db_obj = CustomCollectorConfigModel.objects.get(
+            module=module, log_type=collector_config.log_type, is_builtin=True
+        )
+        name = db_obj.name_en
+    except CustomCollectorConfigModel.DoesNotExist:
+        logger.debug("CustomCollectorConfig does not exits, skip fill persistence fields")
+        name = build_custom_collector_config_name(module, type=collector_config.log_type)
+
     cfg = CustomCollectorConfig(
         name_en=name,
         name_zh_cn=name,
@@ -292,13 +309,8 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         ),
     )
     # fill persistence fields from db
-    try:
-        db_obj = CustomCollectorConfigModel.objects.get(module=module, name_en=cfg.name_en)
-    except CustomCollectorConfigModel.DoesNotExist:
-        logger.debug("CustomCollectorConfig dones not exits, skip fill persistence fields")
-        return cfg
-
-    cfg.id = db_obj.collector_config_id
-    cfg.index_set_id = db_obj.index_set_id
-    cfg.bk_data_id = db_obj.bk_data_id
+    if db_obj:
+        cfg.id = db_obj.collector_config_id
+        cfg.index_set_id = db_obj.index_set_id
+        cfg.bk_data_id = db_obj.bk_data_id
     return cfg

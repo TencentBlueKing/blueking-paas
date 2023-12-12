@@ -161,11 +161,6 @@ class LogQueryBodySLZ(serializers.Serializer):
     query = LogQueryDSLSLZ()
 
 
-def get_is_builtin(self, data) -> bool:
-    """判断自定义采集项是否平台内置的采集项"""
-    return get_attribute(data, ["name_en"]) in self.context["builtin_config_names"]
-
-
 class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
     """自定义采集项配置(日志平台-自定义上报+日志采集规则)"""
 
@@ -176,10 +171,8 @@ class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
         child=serializers.CharField(help_text="日志文件的绝对路径，可使用 通配符"), default=list
     )
     log_type = serializers.ChoiceField(help_text="日志类型", choices=BkLogType.get_choices())
-    is_builtin = serializers.SerializerMethodField(help_text="是否平台内置采集项")
+    is_builtin = serializers.BooleanField(help_text="是否平台内置采集项", read_only=True)
     url = serializers.SerializerMethodField(help_text="日志平台链接")
-
-    get_is_builtin = get_is_builtin
 
     def validate_log_paths(self, paths: List[str]):
         for path in paths:
@@ -202,7 +195,9 @@ class BkLogCustomCollectorConfigSLZ(serializers.Serializer):
     collector_config_id = serializers.IntegerField(help_text="日志平台采集项ID", source="id")
     is_builtin = serializers.SerializerMethodField(help_text="是否平台内置采集项")
 
-    get_is_builtin = get_is_builtin
+    def get_is_builtin(self, data) -> bool:
+        """判断自定义采集项是否平台内置的采集项"""
+        return get_attribute(data, ["name_en"]) in self.context["builtin_config_names"]
 
 
 class BkLogCustomCollectMetadataQuerySLZ(serializers.Serializer):

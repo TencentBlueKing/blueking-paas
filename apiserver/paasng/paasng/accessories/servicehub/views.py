@@ -684,7 +684,9 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
                     service_objects.append(svc)
                 except ServiceObjNotFound:
                     continue
-        return service_objects
+        # 利用 dict 键的唯一性去重
+        services_dict = {service_obj.uuid: service_obj for service_obj in service_objects}
+        return list(services_dict.values())
 
     def _get_application(self, rel) -> Application:
         env = ApplicationEnvironment.objects.get(engine_app=rel.db_obj.engine_app)

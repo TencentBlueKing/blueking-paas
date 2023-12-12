@@ -17,44 +17,14 @@ to the current version of the project delivered to anyone in the future.
 """
 """Engine services module
 """
-import datetime
-from typing import Dict, List, TypedDict
+from typing import Dict
 
 from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.applications.models.build import Build, BuildProcess
+from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.workloads.images.models import AppImageCredential
-from paasng.platform.engine.models.deployment import Deployment
-
-
-class LogLine(TypedDict):
-    stream: str
-    line: str
-    created: datetime.datetime
-
-
-def polish_line(line: str) -> str:
-    """Return the line with special characters removed"""
-    return line.replace("\x1b[1G", "")
-
-
-def get_all_logs(d: Deployment) -> str:
-    """Get all logs of current deployment, command and error detail are included.
-
-    :param d: The Deployment object
-    :return: All logs of the current deployment
-    """
-    logs = []
-    engine_app = d.get_engine_app()
-    client = EngineDeployClient(engine_app)
-    # NOTE: 当前暂不包含“准备阶段”和“检测部署结果”这两个步骤的日志，将在未来版本添加
-    if d.build_process_id:
-        logs.extend([polish_line(obj["line"]) for obj in client.list_build_proc_logs(d.build_process_id)])
-    if d.pre_release_id:
-        logs.extend([polish_line(obj["line"]) for obj in client.list_command_logs(d.pre_release_id)])
-    return "".join(logs) + "\n" + (d.err_detail or "")
 
 
 class EngineDeployClient:
@@ -86,20 +56,6 @@ class EngineDeployClient:
             artifact_type=artifact_type,
         )
         return str(build.uuid)
-
-    def list_command_logs(self, command_id: str) -> List[LogLine]:
-        """List all logs of command"""
-        command = self.wl_app.command_set.get(pk=command_id)
-        return [{"stream": line.stream, "line": line.line, "created": line.created} for line in command.lines]
-
-    def list_build_proc_logs(self, build_process_id: str) -> List[LogLine]:
-        """Get current status of build process"""
-        build_proc = BuildProcess.objects.get(pk=build_process_id)
-
-        lines: List[LogLine] = []
-        for line in build_proc.output_stream.lines.all().order_by("created"):
-            lines.append({"stream": line.stream, "line": line.line, "created": line.created})
-        return lines
 
     def upsert_image_credentials(self, registry: str, username: str, password: str):
         """Update an engine app's image credentials, which will be used to pull image."""

@@ -22,11 +22,12 @@ from unittest import mock
 import arrow
 import pytest
 
+from paas_wl.bk_app.applications.models.misc import OutputStream, OutputStreamLine
 from paasng.platform.engine.monitoring import count_frozen_deployments
 
 from .setup_utils import create_fake_deployment
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 # Get current datetime when compiling
@@ -55,34 +56,28 @@ class TestCountFrozenDeployments:
             # No log lines
             ([], 1),
             # Log lines has no created field
-            (
-                [
-                    {
-                        "stream": "STDOUT",
-                        "line": "foo",
-                    },
-                ],
-                0,
-            ),
+            ([{"stream": "STDOUT", "line": "foo"}], 0),
             # Log lines were fresh
-            (
-                [
-                    {"stream": "STDOUT", "line": "foo", "created": _NOW.format()},
-                ],
-                0,
-            ),
+            ([{"stream": "STDOUT", "line": "foo", "created": _NOW.format()}], 0),
             # Log lines were staled
-            (
-                [
-                    {"stream": "STDOUT", "line": "foo", "created": _NOW.shift(seconds=-30).format()},
-                ],
-                1,
-            ),
+            ([{"stream": "STDOUT", "line": "foo", "created": _NOW.shift(seconds=-30).datetime}], 1),
         ],
     )
     def test_different_log_lines(self, bk_deployment, log_lines, cnt):
-        with mock.patch("paasng.platform.engine.monitoring.EngineDeployClient") as mocked_client:
-            mocked_client().list_build_proc_logs.return_value = log_lines
+        # Create the output stream with given log lines
+        s = OutputStream.objects.create()
+        for obj in log_lines:
+            db_obj = OutputStreamLine(output_stream_id=s.uuid, **obj)
+            db_obj.save()
+            if created := obj.get("created"):
+                # Call .update() to modify the "created" field because the field was set to "auto_now_add"
+                OutputStreamLine.objects.filter(id=db_obj.id).update(created=created)
+
+        with mock.patch(
+            "paasng.platform.engine.logs.DeploymentLogStreams.build_proc_stream",
+            new_callable=mock.PropertyMock,
+            return_value=s,
+        ):
             assert count_frozen_deployments(edge_seconds=10, now=_NOW.datetime) == cnt
 
     def test_now_not_provided(self, bk_deployment):

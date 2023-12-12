@@ -55,11 +55,11 @@ from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
+from paasng.platform.engine.logs import get_all_logs
 from paasng.platform.engine.models import ConfigVar, Deployment
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.engine.phases_steps.steps import get_sorted_steps
 from paasng.platform.engine.streaming.constants import EventType
-from paasng.platform.engine.utils.client import get_all_logs
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view

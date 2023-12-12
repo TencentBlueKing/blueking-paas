@@ -183,7 +183,7 @@ export default {
       return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
     },
     curStageComponmentType() {
-      const invokeMethod = this.pluginDetailedData?.current_stage?.invokeMethod;
+      const invokeMethod = this.pluginDetailedData?.current_stage?.invoke_method;
       if (invokeMethod === 'builtin') {
         return this.pluginDetailedData?.current_stage?.stage_id || this.stageData.stage_id;
       }

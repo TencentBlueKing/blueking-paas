@@ -189,6 +189,7 @@
                   <span v-else>{{ $t('停止中...') }}</span>
                 </span>
               </div>
+              {{ row.instances.length }} {{ row.available_instance_count }}
               <div class="operate-process-wrapper mr15">
                 <bk-popconfirm
                   v-bk-tooltips="$t('停止进程')"
@@ -770,20 +771,40 @@ export default {
       const packages = processesData.proc_specs;
       const { instances } = processesData;
       // 如果是下架的进程则processesData.proc_specs会有数据
-      if (!processesData.processes.length && processesData.proc_specs.length) {
-        processesData.processes = [   // 默认值
-          {
-            module_name: 'default',
-            name: '',
-            type: 'web',
-            command: '',
-            replicas: 0,
-            success: 0,
-            failed: 0,
-            version: 0,
-            cluster_link: '',
-          },
-        ];
+      if (processesData.proc_specs.length) {
+        if (!processesData.processes.length) {
+          processesData.processes = [   // 默认值
+            {
+              module_name: 'default',
+              name: '',
+              type: 'web',
+              command: '',
+              replicas: 0,
+              success: 0,
+              failed: 0,
+              version: 0,
+              cluster_link: '',
+            },
+          ];
+        } else {
+          const processName = processesData.processes.map(e => e.type);
+          processesData.proc_specs.forEach((e) => {
+            if (!processName.includes(e.name)) {
+              processesData.processes.push({
+                module_name: e.plan_name,
+                name: '',
+                type: e.name,
+                command: '',
+                replicas: 0,
+                success: 0,
+                failed: 0,
+                version: 0,
+                cluster_link: '',
+                available_instance_count: e.target_replicas,
+              });
+            }
+          });
+        }
       }
       processesData.processes.forEach((processItem) => {
         const { type } = processItem;
@@ -1196,6 +1217,8 @@ export default {
           env: this.environment,
           data: patchForm,
         });
+
+        console.log('process', process);
 
         // 更新当前操作状态
         if (targetStatus === 'start') {

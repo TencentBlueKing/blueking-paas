@@ -92,7 +92,7 @@ class AppDeclarativeController:
         is_scene_app = self.source_origin == SourceOrigin.SCENE
 
         app_type = (
-            ApplicationType.CLOUD_NATIVE if settings.IS_SOURCE_PACKAGE_APP_CLOUD_NATIVE else ApplicationType.DEFAULT
+            ApplicationType.CLOUD_NATIVE if settings.SOURCE_PACKAGE_APP_CLOUD_NATIVE else ApplicationType.DEFAULT
         )
 
         application = Application.objects.create(

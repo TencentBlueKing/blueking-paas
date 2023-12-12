@@ -582,10 +582,10 @@ IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_CLOU
 CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
 
 # 新建的 lesscode 应用是否为云原生应用
-IS_LESSCODE_APP_CLOUD_NATIVE = settings.get("IS_LESSCODE_APP_CLOUD_NATIVE", True)
+LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE_TYPE", True)
 
 # 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
-IS_SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("IS_SOURCE_PACKAGE_APP_CLOUD_NATIVE", False)
+SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("SOURCE_PACKAGE_APP_CLOUD_NATIVE", False)
 
 
 # 开发者中心使用的 k8s 集群组件（helm chart 名称）
@@ -1012,12 +1012,12 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
 # --------------
 # 应用日志相关配置
 # --------------
-# 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
+# 默认的日志采集器类型, 可选值 "ELK", "BK_LOG"
 # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
 LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
-# 蓝鲸日志平台的API是否已经注册在 APIGW
+# 蓝鲸日志平台的 API 是否已经注册在 APIGW，未注册则走 ESB 调用日志平台 API
 ENABLE_BK_LOG_APIGW = settings.get("ENABLE_BK_LOG_APIGW", True)
-# 蓝鲸日志平台网关的环境
+# 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 BK_LOG_APIGW_SERVICE_STAGE = settings.get("BK_LOG_APIGW_SERVICE_STAGE", "stag")
 # 蓝鲸日志平台相关的配置项
 BKLOG_TIME_ZONE = settings.get("BKLOG_TIME_ZONE")

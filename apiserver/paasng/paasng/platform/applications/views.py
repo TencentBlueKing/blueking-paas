@@ -454,7 +454,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         }
         """
         # 根据配置判断新建的 lesscode 应用是否为云原生应用
-        if settings.IS_LESSCODE_APP_CLOUD_NATIVE:
+        if settings.LESSCODE_APP_USE_CLOUD_NATIVE_TYPE:
             serializer_class = slzs.CreateCloudNativeApplicationSLZ
         else:
             serializer_class = slzs.CreateApplicationV2SLZ

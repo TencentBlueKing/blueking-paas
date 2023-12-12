@@ -174,9 +174,9 @@
 ## 是否允许创建蓝鲸插件应用
 # IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 ## 新建的 lesscode 应用是否为云原生应用
-#LESSCODE_APP_USE_CLOUD_NATIVE_TYPE: true
+# LESSCODE_APP_USE_CLOUD_NATIVE_TYPE: true
 ## 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
-#SOURCE_PACKAGE_APP_CLOUD_NATIVE: true
+# SOURCE_PACKAGE_APP_CLOUD_NATIVE: true
 
 ## 开发者中心使用的 k8s 集群组件（helm chart 名称）
 # BKPAAS_K8S_CLUSTER_COMPONENTS:

@@ -422,6 +422,7 @@ class DockerBuilder(BaseBuilder):
         extra_envs = {
             "DOCKERFILE_PATH": get_dockerfile_path(env.module),
             "BUILD_ARG": get_build_args(env.module),
+            "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
         }
 
         # Create the Build object and start a background build task

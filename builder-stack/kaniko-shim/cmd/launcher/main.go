@@ -65,6 +65,8 @@ const (
 	InsecureRegistriesEnvVarKey = "INSECURE_REGISTRIES"
 	// SkipTLSVerifyRegistriesEnvVarKey The env var key that store SkipTlsVerifyRegistries
 	SkipTLSVerifyRegistriesEnvVarKey = "SKIP_TLS_VERIFY_REGISTRIES"
+	// RegistryMirrorsEnvVarKey The env var key that store RegistryMirrors
+	RegistryMirrorsEnvVarKey = "REGISTRY_MIRRORS"
 )
 
 var (
@@ -92,10 +94,13 @@ var (
 
 	insecureRegistries = flag.String("insecure-registries",
 		os.Getenv(InsecureRegistriesEnvVarKey),
-		"Insecure registry using plain HTTP to push and pull. Join with ';' for multiple registries.")
+		"Insecure registry using plain HTTP to push and pull. Join with ',' for multiple registries.")
 	skipTlsVerifyRegistries = flag.String("skip-tls-verify-registries",
 		os.Getenv(SkipTLSVerifyRegistriesEnvVarKey),
-		"Insecure registry ignoring TLS verify to push and pull. Join with ';' for multiple registries.")
+		"Insecure registry ignoring TLS verify to push and pull. Join with ',' for multiple registries.")
+	registryMirrors = flag.String("registry-mirrors",
+		os.Getenv(RegistryMirrorsEnvVarKey),
+		"Set this flag if you want to use a registry mirror instead of the default index.docker.io. Join with ',' for multiple registry mirrors.")
 )
 
 func init() {
@@ -245,6 +250,12 @@ func buildKanikoExecutorCmd(ctx context.Context, signal chan int) (*exec.Cmd, er
 		parts := strings.Split(*skipTlsVerifyRegistries, ",")
 		for _, skipTlsVerifyRegistry := range parts {
 			args = append(args, "--skip-tls-verify-registry", skipTlsVerifyRegistry)
+		}
+	}
+	if *registryMirrors != "" {
+		parts := strings.Split(*registryMirrors, ",")
+		for _, registryMirror := range parts {
+			args = append(args, "--registry-mirror", registryMirror)
 		}
 	}
 

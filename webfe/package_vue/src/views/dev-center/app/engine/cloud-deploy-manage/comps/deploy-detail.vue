@@ -189,7 +189,7 @@
                   <span v-else>{{ $t('停止中...') }}</span>
                 </span>
               </div>
-              {{ row.instances.length }} {{ row.available_instance_count }}
+              {{ row.instances.length }} {{ row.available_instance_count }} {{ scaleTargetReplicas }}
               <div class="operate-process-wrapper mr15">
                 <bk-popconfirm
                   v-bk-tooltips="$t('停止进程')"
@@ -835,7 +835,7 @@ export default {
           status: 'Stopped',
           cmd: processInfo.command,
           desired_replicas: processInfo.replicas,
-          available_instance_count: processInfo.success,
+          available_instance_count: processInfo.target_status === 'start' ? processInfo.target_replicas : processInfo.success,
           failed: processInfo.failed,
           resourceLimit: processInfo.resource_limit,
           cpuLimit: processInfo.cpu_limit,
@@ -1211,14 +1211,20 @@ export default {
       };
 
       try {
-        await this.$store.dispatch('processes/updateProcess', {
+        const res = await this.$store.dispatch('processes/updateProcess', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
           data: patchForm,
         });
 
-        console.log('process', process);
+        console.log('process', process, res);
+
+        if (res.target_status === 'start') {
+          process.available_instance_count = res.target_replicas;
+        } else {
+          process.available_instance_count = 0;
+        }
 
         // 更新当前操作状态
         if (targetStatus === 'start') {
@@ -1318,7 +1324,7 @@ export default {
       } else if (data.type === 'MODIFIED') {
         this.allProcesses.forEach((process) => {
           if (process.name === processData.type) {
-            process.available_instance_count = processData.success;
+            // process.available_instance_count = processData.success;
             process.desired_replicas = processData.replicas;
             process.failed = processData.failed;
             this.updateProcessStatus(process);

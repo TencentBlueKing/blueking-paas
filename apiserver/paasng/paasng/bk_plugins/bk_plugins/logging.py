@@ -159,9 +159,9 @@ class PluginLoggingClient:
             query_term = "__ext_json.trace_id"
             search = search.sort(
                 {
-                    "dtEventTimeStamp": {"order": "desc"},
-                    "gseIndex": {"order": "desc"},
-                    "iterationIndex": {"order": "desc"},
+                    "dtEventTimeStamp": {"order": "asc"},
+                    "gseIndex": {"order": "asc"},
+                    "iterationIndex": {"order": "asc"},
                 }
             )
         else:
@@ -180,7 +180,8 @@ class PluginLoggingClient:
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
         plugin_filter = EnvFilter(env=env, search_params=search_params, mappings=mappings)
-        search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
+        # UPDATE: Use ascend order for querying plugin logs
+        search = SmartSearch(time_field=search_params.timeField, time_range=time_range, time_order="asc")
         search = plugin_filter.filter_by_env(search)
         search = plugin_filter.filter_by_builtin_filters(search)
         search = plugin_filter.filter_by_builtin_excludes(search)

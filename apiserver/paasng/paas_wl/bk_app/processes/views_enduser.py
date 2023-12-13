@@ -33,6 +33,7 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
+from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.bk_app.processes.serializers import (
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
@@ -104,7 +105,15 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             except Exception:
                 logger.exception("Error creating app operation log")
 
-        return Response(status=status.HTTP_200_OK)
+        try:
+            proc_spec = ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type)
+        except ProcessSpec.DoesNotExist:
+            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
+        else:
+            return Response(
+                status=status.HTTP_200_OK,
+                data={"target_replicas": proc_spec.target_replicas, "target_status": proc_spec.target_status},
+            )
 
     @staticmethod
     def get_logging_operate_type(type_: str) -> Optional[int]:

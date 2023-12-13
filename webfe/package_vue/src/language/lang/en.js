@@ -2448,5 +2448,5 @@ export default {
   '权限无限制，无需申请': 'Unlimited permissions, no need to apply',
   '已有权限，无需申请': 'Already have permissions, no need to apply',
   无权限: 'No permissions',
-  已申请: 'Already applied',
+  已申请: 'Applied',
 };

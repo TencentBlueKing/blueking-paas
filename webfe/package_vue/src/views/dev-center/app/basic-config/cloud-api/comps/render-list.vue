@@ -284,29 +284,29 @@
                 <bk-button
                   style="padding: 0 0 0 10px;"
                   theme="primary"
-                  :disabled="row._applyDisabled"
+                  :disabled="row.applyDisabled"
                   size="small"
                   text
                   @click="handleApply(row)"
                 >
                   <span
                     v-bk-tooltips="{
-                      content: $t(row._applyTips),
-                      disabled: !row._applyDisabled
+                      content: $t(row.applyTips),
+                      disabled: !row.applyDisabled
                     }"> {{ $t('申请') }} </span>
                 </bk-button>
                 <bk-button
                   style="padding: 0 0 0 10px;"
                   theme="primary"
-                  :disabled="row._renewDisabled"
+                  :disabled="row.renewDisabled"
                   size="small"
                   text
                   @click="handleRenwal(row)"
                 >
                   <span
                     v-bk-tooltips="{
-                      content: $t(row._renewTips),
-                      disabled: !row._renewDisabled
+                      content: $t(row.renewTips),
+                      disabled: !row.renewDisabled
                     }"> {{ $t('续期') }} </span>
                 </bk-button>
               </div>
@@ -845,10 +845,10 @@ export default {
             const renew = formatRenewFun(v.permission_status);
             return {
               ...v,
-              _applyDisabled: apply.disabled,
-              _applyTips: apply.tips,
-              _renewDisabled: renew.disabled,
-              _renewTips: renew.tips,
+              applyDisabled: apply.disabled,
+              applyTips: apply.tips,
+              renewDisabled: renew.disabled,
+              renewTips: renew.tips,
             };
           });
         }

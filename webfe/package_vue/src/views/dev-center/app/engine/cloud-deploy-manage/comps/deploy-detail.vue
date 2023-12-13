@@ -189,7 +189,6 @@
                   <span v-else>{{ $t('停止中...') }}</span>
                 </span>
               </div>
-              {{ row.instances.length }} {{ row.available_instance_count }} {{ scaleTargetReplicas }}
               <div class="operate-process-wrapper mr15">
                 <bk-popconfirm
                   v-bk-tooltips="$t('停止进程')"

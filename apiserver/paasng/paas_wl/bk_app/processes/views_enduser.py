@@ -131,13 +131,10 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             if operate_type == ProcessUpdateType.SCALE:
                 ctl.scale(process_type, autoscaling, target_replicas, scaling_config)
-                return target_replicas or ctl.get_target_replicas(process_type)
             elif operate_type == ProcessUpdateType.STOP:
                 ctl.stop(process_type)
-                return 0
             elif operate_type == ProcessUpdateType.START:
                 ctl.start(process_type)
-                return ctl.get_target_replicas(process_type)
             else:
                 raise error_codes.PROCESS_OPERATE_FAILED.f(f"Invalid operate type {operate_type}")
         except ProcessNotFound as e:
@@ -146,6 +143,8 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
         except AutoscalingUnsupported as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
+        else:
+            return ctl.get_target_replicas(process_type)
 
 
 class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):

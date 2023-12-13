@@ -114,24 +114,18 @@ class TestCNativeProcController:
     def test_scale_static_integrated(self, bk_stag_env, web_proc_factory):
         web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
 
-        proc_name = "web"
-
-        assert BkAppProcScaler(bk_stag_env).get_replicas(proc_name) == 1
+        assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 1
         # Scale the process
-        ctl = CNativeProcController(bk_stag_env)
-        ctl.scale(proc_name, False, 2)
-        assert BkAppProcScaler(bk_stag_env).get_replicas(proc_name) == 2
-        assert ctl.get_target_replicas(proc_name) == 2
+        CNativeProcController(bk_stag_env).scale("web", False, 2)
+        assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 2
 
         # Stop the process
-        ctl.stop(proc_name)
-        assert BkAppProcScaler(bk_stag_env).get_replicas(proc_name) == 0
-        assert ctl.get_target_replicas(proc_name) == 0
+        CNativeProcController(bk_stag_env).stop("web")
+        assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 0
 
         # Start the process
-        ctl.start(proc_name)
-        assert BkAppProcScaler(bk_stag_env).get_replicas(proc_name) == 2
-        assert ctl.get_target_replicas(proc_name) == 2
+        CNativeProcController(bk_stag_env).start("web")
+        assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 2
 
     @pytest.mark.usefixtures("_deploy_stag_env")
     def test_autoscaling_integrated(self, bk_stag_env, bk_stag_wl_app, web_proc_factory):

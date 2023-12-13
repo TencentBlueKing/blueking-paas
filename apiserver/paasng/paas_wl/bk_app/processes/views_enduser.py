@@ -33,6 +33,7 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
+from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.bk_app.processes.serializers import (
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
@@ -125,7 +126,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """
         Perform process update
 
-        :return: target replicas
+        :return: the target replicas after update
         """
         ctl = get_proc_ctl(module_env)
         try:
@@ -143,8 +144,11 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
         except AutoscalingUnsupported as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
-        else:
-            return ctl.get_target_replicas(process_type)
+
+        try:
+            return ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type).target_replicas
+        except ProcessSpec.DoesNotExist:
+            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
 
 
 class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):

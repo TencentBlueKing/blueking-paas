@@ -21,7 +21,7 @@
         <!-- 新增模块 -->
         <div
           v-if="isCreatedModule"
-          class="icon-warapper"
+          class="icon-warapper mr8"
           :title="$t('新增模块')"
           @click="handleToAddCloudModulePage"
         >
@@ -53,14 +53,16 @@
         type="error"
         :title="$t('主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通')"
       ></bk-alert>
-      <bk-button
-        v-if="isCreatedModule"
-        theme="primary"
-        @click="handleToAddCloudModulePage"
-      >
-        <i class="paasng-icon paasng-plus-thick add-icon" />
-        {{ $t('新增模块') }}
-      </bk-button>
+      <span v-bk-tooltips="{ content: $t('S-mart 应用目前不允许创建其他模块'), disabled: isCreatedModule }">
+        <bk-button
+          theme="primary"
+          :disabled="!isCreatedModule"
+          @click="handleToAddCloudModulePage"
+        >
+          <i class="paasng-icon paasng-plus-thick add-icon" />
+          {{ $t('新增模块') }}
+        </bk-button>
+      </span>
 
       <div
         class="module-item flex-row justify-content-between align-items-center"
@@ -342,13 +344,13 @@ export default defineComponent({
       line-height: 26px;
       color: #3a84ff;
     }
-    &:first-child {
-      margin-right: 8px;
-      i {
-        font-weight: 700;
-        font-size: 12px;
-      }
+    i.paasng-plus {
+      font-weight: 700;
+      font-size: 12px;
     }
+  }
+  .mr8 {
+    margin-right: 8px;
   }
 }
 

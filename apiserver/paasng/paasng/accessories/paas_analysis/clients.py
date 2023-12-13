@@ -41,8 +41,12 @@ def wrap_request_exc():
     try:
         yield
     except requests.RequestException as e:
-        logger.exception(f"unable to fetch response from {e.request.url}")
-        raise PAClientException(f"something wrong happened when fetching {e.request.url}") from e
+        # Handle the potential NoneType of e.request
+        request_info = e.request.url if e.request else "unknown"
+        logger.exception(f"Unable to fetch response from {request_info}")
+
+        error_msg = f"Something wrong happened when fetching {request_info}"
+        raise PAClientException(error_msg) from e
     except json.decoder.JSONDecodeError as e:
         logger.exception(f"invalid json response: {e.doc}")
         raise PAClientException(f"invalid json response: {e.doc}") from e

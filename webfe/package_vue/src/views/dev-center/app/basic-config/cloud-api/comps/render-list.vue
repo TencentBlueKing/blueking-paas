@@ -196,7 +196,10 @@
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                  <span class="paasng-icon paasng-pass" /> {{ $t('已申请') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'unlimited'">
+                  <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
                   <span
@@ -421,7 +424,7 @@ export default {
         reason: '',
       },
       statusFilters: [
-        { text: this.$t('已拥有'), value: 'owned' },
+        { text: this.$t('已申请'), value: 'owned' },
         { text: this.$t('未申请'), value: 'need_apply' },
         { text: this.$t('已过期'), value: 'expired' },
         { text: this.$t('已拒绝'), value: 'rejected' },
@@ -556,7 +559,7 @@ export default {
     },
     allData() {
       const list = [
-        { text: this.$t('已拥有'), value: 'owned' },
+        { text: this.$t('已申请'), value: 'owned' },
         { text: this.$t('未申请'), value: 'need_apply' },
         { text: this.$t('已过期'), value: 'expired' },
         { text: this.$t('已拒绝'), value: 'rejected' },

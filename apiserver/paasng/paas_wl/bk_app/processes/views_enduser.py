@@ -88,7 +88,9 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except ProcessOperationTooOften as e:
             raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
 
-        self._perform_update(module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config)
+        target_replicas = self._perform_update(
+            module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config
+        )
 
         # Create application operation log
         op_type = self.get_logging_operate_type(operate_type)
@@ -104,7 +106,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             except Exception:
                 logger.exception("Error creating app operation log")
 
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK, data={"target_replicas": target_replicas})
 
     @staticmethod
     def get_logging_operate_type(type_: str) -> Optional[int]:
@@ -119,15 +121,23 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         autoscaling: bool,
         target_replicas: Optional[int] = None,
         scaling_config: Optional[AutoscalingConfig] = None,
-    ):
+    ) -> int:
+        """
+        Perform process update
+
+        :return: target replicas
+        """
         ctl = get_proc_ctl(module_env)
         try:
             if operate_type == ProcessUpdateType.SCALE:
                 ctl.scale(process_type, autoscaling, target_replicas, scaling_config)
+                return target_replicas or ctl.get_target_replicas(process_type)
             elif operate_type == ProcessUpdateType.STOP:
                 ctl.stop(process_type)
+                return 0
             elif operate_type == ProcessUpdateType.START:
                 ctl.start(process_type)
+                return ctl.get_target_replicas(process_type)
             else:
                 raise error_codes.PROCESS_OPERATE_FAILED.f(f"Invalid operate type {operate_type}")
         except ProcessNotFound as e:

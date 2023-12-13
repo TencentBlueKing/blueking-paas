@@ -38,6 +38,7 @@ from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,9 @@ class AppProcessesController:
 
         self._disable_autoscaling(scaling)
         return self._scale(proc_type, target_replicas)
+
+    def get_target_replicas(self, proc_type: str) -> int:
+        return self._get_spec(proc_type).target_replicas
 
     def _scale(self, proc_type: str, target_replicas: Optional[int]):
         """Scale a process to target replicas, WILL update the service if necessary
@@ -217,6 +221,9 @@ class CNativeProcController:
             if target_replicas is not None:
                 self.scale_static(proc_type, target_replicas)
 
+    def get_target_replicas(self, proc_type: str) -> int:
+        return self._get_module_process_spec(proc_type).get_target_replicas(self.env.environment)
+
     def scale_static(self, proc_type: str, target_replicas: int):
         """Scale process to the `target_replicas`."""
         if target_replicas > DEFAULT_CNATIVE_MAX_REPLICAS:
@@ -264,6 +271,12 @@ class CNativeProcController:
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
         return
+
+    def _get_module_process_spec(self, proc_type: str) -> ModuleProcessSpec:
+        try:
+            return ModuleProcessSpec.objects.get(module=self.env.module, name=proc_type)
+        except ModuleProcessSpec.DoesNotExist:
+            raise ProcessNotFound(proc_type)
 
 
 class ProcSpecUpdater:

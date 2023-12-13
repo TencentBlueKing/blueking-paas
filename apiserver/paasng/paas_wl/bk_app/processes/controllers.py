@@ -144,6 +144,9 @@ class ProcController(Protocol):
     ):
         ...
 
+    def get_target_replicas(self, proc_type: str) -> int:
+        ...
+
 
 class ProcControllerHub:
     """Get proc controller by different application type."""

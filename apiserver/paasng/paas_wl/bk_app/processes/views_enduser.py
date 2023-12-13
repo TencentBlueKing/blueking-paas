@@ -89,9 +89,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except ProcessOperationTooOften as e:
             raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
 
-        target_replicas = self._perform_update(
-            module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config
-        )
+        self._perform_update(module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config)
 
         # Create application operation log
         op_type = self.get_logging_operate_type(operate_type)
@@ -107,7 +105,15 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             except Exception:
                 logger.exception("Error creating app operation log")
 
-        return Response(status=status.HTTP_200_OK, data={"target_replicas": target_replicas})
+        try:
+            proc_spec = ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type)
+        except ProcessSpec.DoesNotExist:
+            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
+        else:
+            return Response(
+                status=status.HTTP_200_OK,
+                data={"target_replicas": proc_spec.target_replicas, "target_status": proc_spec.target_status},
+            )
 
     @staticmethod
     def get_logging_operate_type(type_: str) -> Optional[int]:
@@ -122,12 +128,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         autoscaling: bool,
         target_replicas: Optional[int] = None,
         scaling_config: Optional[AutoscalingConfig] = None,
-    ) -> int:
-        """
-        Perform process update
-
-        :return: the target replicas after update
-        """
+    ):
         ctl = get_proc_ctl(module_env)
         try:
             if operate_type == ProcessUpdateType.SCALE:
@@ -144,11 +145,6 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
         except AutoscalingUnsupported as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
-
-        try:
-            return ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type).target_replicas
-        except ProcessSpec.DoesNotExist:
-            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
 
 
 class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):

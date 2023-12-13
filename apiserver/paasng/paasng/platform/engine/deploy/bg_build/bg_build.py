@@ -72,7 +72,7 @@ def start_bg_build_process(deploy_id, bp_id, stream_channel_id=None, metadata=No
     if stream_channel_id:
         stream_channel = StreamChannel(stream_channel_id, redis_db=get_default_redis())
         stream_channel.initialize()
-        stream = RedisWithModelStream(build_process, stream_channel)
+        stream = RedisWithModelStream(build_process.output_stream, stream_channel)
     else:
         stream = ConsoleStream()
 

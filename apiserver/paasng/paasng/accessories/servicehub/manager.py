@@ -218,8 +218,7 @@ class MixedServiceMgr:
         Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_provisioned_rels")
     )
     list_all_provisioned_rels = cast(
-        Callable[..., Generator[EngineAppInstanceRel, None, None]],
-        _proxied_chained_generator("list_all_provisioned_rels")
+        Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_all_provisioned_rels")
     )
     list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
     list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
@@ -242,6 +241,20 @@ class MixedServiceMgr:
         for i in instances:
             result.update(i.credentials)
         return result
+
+    def get_mysql_services(self) -> List[ServiceObj]:
+        """Get all mysql services"""
+        service_objects = []
+        for region in get_all_regions():
+            for service_name in ["gcs_mysql", "mysql"]:
+                try:
+                    svc = self.find_by_name(name=service_name, region=region)
+                    service_objects.append(svc)
+                except ServiceObjNotFound:
+                    continue
+        # 利用 dict 键的唯一性去重
+        services_dict = {service_obj.uuid: service_obj for service_obj in service_objects}
+        return list(services_dict.values())
 
 
 class MixedPlanMgr:

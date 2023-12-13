@@ -22,7 +22,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, Generator, Iterator, List, Optional, cast
+from typing import Any, Dict, Generator, Iterable, Iterator, List, Optional, cast
 from uuid import UUID
 
 from django.core.exceptions import ValidationError
@@ -340,7 +340,7 @@ class LocalServiceMgr(BaseServiceMgr):
 
     def list_all_provisioned_rels(
         self, services: Optional[List[ServiceObj]] = None
-    ) -> Generator[LocalEngineAppInstanceRel, None, None]:
+    ) -> Iterable[LocalEngineAppInstanceRel]:
         """Return all provisioned service instances"""
         qs = ServiceEngineAppAttachment.objects.exclude(service_instance__isnull=True)
         if services:

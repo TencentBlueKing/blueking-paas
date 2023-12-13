@@ -658,9 +658,17 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
     permission_classes = [site_perm_class(SiteAction.SYSAPI_READ_APPLICATIONS)]
 
     def retrieve_related_applications_info(self, request, db_name):
-        services = self._get_mysql_services()
-        all_provisioned_rels = list(mixed_service_mgr.list_all_provisioned_rels(services))
+        """查看 mysql 增强服务的数据库关联的应用信息
+
+        APIGW 调用此接口,根据给定的 mysql 增强服务数据库名称(db_name)检索相关的应用信息。
+        遍历所有已关联的增强服务，并尝试匹配数据库名称。
+        注意:
+        此方法的性能可能较低，因为它需要对 remote mysql 增强服务的实例进行多次请求。
+        """
+        services = mixed_service_mgr.get_mysql_services()
+        all_provisioned_rels = mixed_service_mgr.list_all_provisioned_rels(services)
         db_name_key_map = {"mysql": "MYSQL_NAME", "gcs_mysql": "GCS_MYSQL_NAME"}
+        # WARNING: 该循环会不断的请求 remote mysql 服务的实例，性能较慢
         for rel in all_provisioned_rels:
             # remote service 可能无法获取实例
             try:
@@ -672,21 +680,7 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
             service_db_name = service_instance.credentials.get(db_name_key_map[service_name])
             if service_db_name == db_name:
                 return Response(ApplicationMembersInfoSLZ(self._get_application(rel)).data)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def _get_mysql_services(self) -> List[ServiceObj]:
-        """Get all mysql services"""
-        service_objects = []
-        for region in get_all_regions():
-            for service_name in ["gcs_mysql", "mysql"]:
-                try:
-                    svc = mixed_service_mgr.find_by_name(name=service_name, region=region)
-                    service_objects.append(svc)
-                except ServiceObjNotFound:
-                    continue
-        # 利用 dict 键的唯一性去重
-        services_dict = {service_obj.uuid: service_obj for service_obj in service_objects}
-        return list(services_dict.values())
+        return Response(status=status.HTTP_200_OK)
 
     def _get_application(self, rel) -> Application:
         env = ApplicationEnvironment.objects.get(engine_app=rel.db_obj.engine_app)

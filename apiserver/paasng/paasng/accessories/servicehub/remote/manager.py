@@ -22,7 +22,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, Iterator, List, Optional, cast
 
 import arrow
 from django.db.models import QuerySet
@@ -612,7 +612,7 @@ class RemoteServiceMgr(BaseServiceMgr):
 
     def list_all_provisioned_rels(
         self, services: Optional[List[ServiceObj]] = None
-    ) -> Generator[RemoteEngineAppInstanceRel, None, None]:
+    ) -> Iterable[RemoteEngineAppInstanceRel]:
         """Return all provisioned remote service instances"""
         qs = RemoteServiceEngineAppAttachment.objects.exclude(service_instance_id__isnull=True)
         if services:

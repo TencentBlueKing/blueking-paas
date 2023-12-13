@@ -402,12 +402,12 @@ class BuiltinStage(BaseStageController):
         elif self.stage.stage_id == "grayScale":
             raise NotImplementedError
         elif self.stage.stage_id == "online":
+            stage_def = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+            if not stage_def:
+                raise error_codes.STAGE_DEF_NOT_FOUND
             return {
                 **basic_info,
-                "detail": {
-                    "status": "successful",
-                    "message": _("插件已发布成功"),
-                },
+                "detail": {"status": "successful", "message": _("插件已发布成功"), "link": stage_def.link},
             }
         raise NotImplementedError
 

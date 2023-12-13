@@ -20,8 +20,8 @@
         </div>
       </template>
 
-      <!-- 镜像逻辑 -->
-      <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' || isSmartApp">
+      <!-- 镜像逻辑，排除smart应用 -->
+      <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' && !isSmartApp">
         <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
         <div v-if="!allowMultipleImage">
           <div class="code-depot mb15">
@@ -98,40 +98,44 @@
         </div>
       </div>
 
-      <!-- 源码逻辑 -->
+      <!-- 源码逻辑 && smartApp -->
       <div v-else>
-        <div
-          class="code-depot mb10"
-          v-if="deploymentInfoBackUp.repo_url"
-        >
-          <span class="pr20">{{ $t('代码仓库') }}：</span>
-          {{ deploymentInfoBackUp.repo_url }}
-        </div>
-        <div class="image-source">
-          <div class="mb10">
-            <div>
-              {{ $t('镜像来源') }}
+        <template v-if="!isSmartApp">
+          <div
+            class="code-depot mb10"
+            v-if="deploymentInfoBackUp.repo_url"
+          >
+            <span class="pr20">{{ $t('代码仓库') }}：</span>
+            {{ deploymentInfoBackUp.repo_url }}
+          </div>
+          <div class="image-source">
+            <div class="mb10">
+              <div>
+                {{ $t('镜像来源') }}
+              </div>
+            </div>
+            <div class="bk-button-group btn-container">
+              <bk-button
+                v-for="item in imageSourceData"
+                :key="item.value"
+                class="btn-item"
+                :class="buttonActive === item.value ? 'is-selected' : ''"
+                @click="handleSelected(item)"
+              >
+                {{ $t(item.label) }}
+              </bk-button>
             </div>
           </div>
-          <div class="bk-button-group btn-container">
-            <bk-button
-              v-for="item in imageSourceData"
-              :key="item.value"
-              class="btn-item"
-              :class="buttonActive === item.value ? 'is-selected' : ''"
-              @click="handleSelected(item)"
-            >
-              {{ $t(item.label) }}
-            </bk-button>
-          </div>
-        </div>
+        </template>
         <div
-          class="image-source mt20"
-          v-if="buttonActive === 'branch'"
+          v-if="buttonActive === 'branch' || isSmartApp"
+          :class="['image-source', { mt20: !isSmartApp }]"
         >
           <div class="mb10 flex-row justify-content-between">
-            <div>{{ $t('代码分支选择') }}</div>
+            <div>{{ isSmartApp ? $t('版本') : $t('代码分支选择') }}</div>
+            <!-- smartAPP 不展示，代码版本差异 -->
             <div
+              v-if="!isSmartApp"
               class="version-code"
               @click="handleShowCommits"
             >
@@ -225,7 +229,7 @@
 
       <div
         class="v1-container"
-        v-if="isShowImagePullStrategy"
+        v-if="isShowImagePullStrategy || isSmartApp"
       >
         <div
           class="image-pull-strategy"
@@ -405,7 +409,7 @@ export default {
 
     // 上一次选择的镜像拉取策略
     lastSelectedImagePullStrategy() {
-      return this.deploymentInfoBackUp.state.deployment.latest?.advanced_options?.image_pull_policy || '';
+      return this.deploymentInfoBackUp.state?.deployment.latest?.advanced_options?.image_pull_policy || '';
     },
   },
   watch: {

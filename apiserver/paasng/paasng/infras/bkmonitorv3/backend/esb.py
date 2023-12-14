@@ -82,7 +82,7 @@ class MonitorV3Group(OperationGroup):
         Operation,
         name="as_code_import_config",
         method="POST",
-        path="/api/c/compapi/v2/monitor_v3/as_code_import_config/",
+        path="/api/c/compapi/v2/monitor_v3/as_code/import_config/",
     )
 
 

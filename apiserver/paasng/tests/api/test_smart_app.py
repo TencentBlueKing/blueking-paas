@@ -30,7 +30,7 @@ from django.conf import settings
 from paasng.accessories.publish.market.models import Tag
 from paasng.platform.sourcectl.utils import compress_directory
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 SMART_APP_PATH = Path(__file__).resolve().parent / "assets" / "smart_app_v2"
 

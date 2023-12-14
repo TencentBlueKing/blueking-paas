@@ -82,7 +82,7 @@ class TestApiInAPIGW:
                 "name": bk_app_name,
             }
         )
-        with override_settings(IS_LESSCODE_APP_CLOUD_NATIVE=is_lesscode_app_cloud_native):
+        with override_settings(LESSCODE_APP_USE_CLOUD_NATIVE_TYPE=is_lesscode_app_cloud_native):
             response = api_client.post(
                 "/apigw/api/bkapps/applications/",
                 data=lesscode_public_params,

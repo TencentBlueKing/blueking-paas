@@ -139,6 +139,10 @@ class Build(UuidAuditedModel):
             return []
         return shlex.split(proc_command)
 
+    def is_build_from_cnb(self) -> bool:
+        """获取当前 Build 构件是否基于 cnb 构建"""
+        return bool(self.artifact_metadata.get("use_cnb"))
+
     @property
     def image_repository(self) -> Optional[str]:
         """从 image 字段分割出 repository 属性"""

@@ -56,24 +56,7 @@ class DeployStepMeta(AuditedModel):
     phase = models.CharField(verbose_name=_("关联阶段"), max_length=16, choices=DeployPhaseTypes.get_choices())
     name = models.CharField(_("步骤名称"), db_index=True, max_length=32)
     display_name = TranslatedFieldWithFallback(models.CharField(_("步骤名称(展示用)"), max_length=64, null=True))
-    # NOTE: 2022-03-10 已确认现网字段 buildpack_provider 并没有使用.
-    # TODO: 删除 `buildpack_provider` 和 `builder_provider` 字段
-    buildpack_provider = models.ForeignKey(
-        "modules.AppBuildPack",
-        on_delete=models.CASCADE,
-        verbose_name=_("由 BuildPack 提供"),
-        null=True,
-        blank=True,
-        related_name="step_metas",
-    )
-    builder_provider = models.ForeignKey(
-        "modules.AppSlugBuilder",
-        on_delete=models.CASCADE,
-        verbose_name=_("由 SlugBuild 提供"),
-        null=True,
-        blank=True,
-        related_name="step_metas",
-    )
+
     started_patterns = jsonfield.JSONField(_("匹配规则"), default=[], null=True, blank=True)
     finished_patterns = jsonfield.JSONField(_("匹配规则"), default=[], null=True, blank=True)
 
@@ -103,7 +86,15 @@ class StepMetaSet(AuditedModel):
     name = models.CharField(_("步骤集名称"), max_length=32)
     metas = models.ManyToManyField(DeployStepMeta, "关联步骤元信息", default=[])
     is_default = models.BooleanField(_("是否为默认步骤集"), default=False)
-    # TODO 简化模型关系: 增加 builder_provider 字段, 替代 DeployStepMeta.builder_provider
+
+    builder_provider = models.ForeignKey(
+        "modules.AppSlugBuilder",
+        on_delete=models.CASCADE,
+        verbose_name=_("由 SlugBuild 提供"),
+        null=True,
+        blank=True,
+        related_name="step_meta_sets",
+    )
 
     objects = StepMetaSetManager()
 

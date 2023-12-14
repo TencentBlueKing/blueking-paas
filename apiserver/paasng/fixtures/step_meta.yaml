@@ -1,8 +1,14 @@
+# 前置 migrations:
+# paasng/platform/engine/migrations/0005_auto_20210110_1917.py
+# paasng/platform/engine/migrations/0010_auto_20211126_1751.py
+# paasng/platform/engine/migrations/0017_reset_step_meta_set.py
+# paasng/platform/engine/migrations/0020_add_cnb_step_meta_set.py
+
+# fixtures/step_meta.yaml 在 init.sh 中可重入执行, 因此以下数据需要和 migrations 保持一致, 否则会覆盖 db 数据
+# 不建议通过 fixtures 方式去维护数据变更 :(
+
 # <- start 通用构建步骤
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.318664+00:00
     finished_patterns: '[]'
     name: 解析应用进程信息
@@ -13,9 +19,6 @@
     updated: 2021-04-27 03:12:15.318727+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.325721+00:00
     finished_patterns: '[]'
     name: 上传仓库代码
@@ -26,9 +29,6 @@
     updated: 2021-04-27 03:12:15.325745+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.331793+00:00
     finished_patterns: '[]'
     name: 配置资源实例
@@ -40,9 +40,6 @@
   model: engine.deploystepmeta
 # -- 分割线 --
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.376855+00:00
     finished_patterns: '[]'
     name: 部署应用
@@ -53,9 +50,6 @@
     updated: 2021-04-27 03:12:15.376878+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.381758+00:00
     finished_patterns: '[]'
     name: 检测部署结果
@@ -66,9 +60,6 @@
     updated: 2021-04-27 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.381758+00:00
     finished_patterns: '[]'
     name: 执行部署前置命令
@@ -81,48 +72,36 @@
 # <- end 通用构建步骤
 # <- start Heroku buildpack 构建步骤
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.336559+00:00
-    finished_patterns: '["\\s+Step setup done"]'
+    finished_patterns: '["\\s+Step setup done", "\\s+Starting builder..."]'
     name: 初始化构建环境
     display_name_zh_cn: 初始化构建环境
     display_name_en: Initialize build environment
     phase: build
-    started_patterns: '["-----> Step setup begin"]'
+    started_patterns: '["-----> Step setup begin", "Setup Build Environ"]'
     updated: 2021-04-27 03:12:15.336583+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.341442+00:00
-    finished_patterns: '["\\s+Step detect done"]'
+    finished_patterns: '["\\s+Step detect done", "\\s+Step Detect done"]'
     name: 检测构建工具
     display_name_zh_cn: 检测构建工具
     display_name_en: Detect buildpack
     phase: build
-    started_patterns: '["-----> Step detect begin"]'
+    started_patterns: '["-----> Step detect begin", "Detecting Buildpacks..."]'
     updated: 2021-04-27 03:12:15.341464+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.346245+00:00
-    finished_patterns: '["\\s+Step analysis done"]'
+    finished_patterns: '["\\s+Step analysis done", "\\s+Step Analyze done"]'
     name: 分析构建方案
     display_name_zh_cn: 分析构建方案
     display_name_en: Analyze build solutions
     phase: build
-    started_patterns: '["-----> Step analysis begin"]'
+    started_patterns: '["-----> Step analysis begin", "Analyzing optimization plan"]'
     updated: 2021-04-27 03:12:15.346268+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.351491+00:00
     finished_patterns: '[]'
     name: 调用 pre-compile
@@ -133,22 +112,16 @@
     updated: 2021-04-27 03:12:15.351517+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.356590+00:00
-    finished_patterns: '["\\s+Step build done"]'
+    finished_patterns: '["-----> Discovering process types", "\\s+Step build done", "\\s+Step Build done"]'
     name: 构建应用
     display_name_zh_cn: 构建应用
     display_name_en: Building Applications
     phase: build
-    started_patterns: '["-----> Step build begin"]'
+    started_patterns: '["-----> Compiling app...", "-----> Step build begin", "Building application..."]'
     updated: 2021-04-27 03:12:15.356615+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.361733+00:00
     finished_patterns: '[]'
     name: 调用 post-compile
@@ -159,9 +132,6 @@
     updated: 2021-04-27 03:12:15.361757+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.366889+00:00
     finished_patterns: '["\\s+Step export done"]'
     name: 生成构建结果
@@ -172,9 +142,6 @@
     updated: 2021-04-27 03:12:15.366913+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.372004+00:00
     finished_patterns: '["\\s+Step finish done"]'
     name: 清理构建环境
@@ -185,9 +152,6 @@
     updated: 2021-04-27 03:12:15.372029+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.381758+00:00
     finished_patterns: '[]'
     name: 下载代码
@@ -198,9 +162,6 @@
     updated: 2021-04-27 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.381758+00:00
     finished_patterns: '[]'
     name: 加载缓存
@@ -211,9 +172,6 @@
     updated: 2021-04-27 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.381758+00:00
     finished_patterns: '[]'
     name: 检测进程类型
@@ -224,9 +182,6 @@
     updated: 2021-04-27 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.381758+00:00
     finished_patterns: '[]'
     name: 制作打包构件
@@ -237,9 +192,6 @@
     updated: 2021-04-27 03:12:15.381779+00:00
   model: engine.deploystepmeta
 - fields:
-    builder_provider:
-    - blueking
-    buildpack_provider: null
     created: 2021-04-27 03:12:15.381758+00:00
     finished_patterns: '[]'
     name: 上传缓存
@@ -251,7 +203,9 @@
   model: engine.deploystepmeta
 - fields:
     created: 2021-04-27 03:12:15.388464+00:00
-    is_default: true
+    is_default: false
+    builder_provider:
+      - blueking
     metas:
     - - preparation
       - 解析应用进程信息
@@ -283,67 +237,4 @@
     updated: 2021-04-27 03:12:15.388489+00:00
   model: engine.stepmetaset
 # <- end Heroku buildpack 构建步骤
-# <- start Dockerfile 构建步骤
-- fields:
-    builder_provider: null
-    buildpack_provider: null
-    created: 2021-04-27 03:12:15.381758+00:00
-    name: 下载构建上下文
-    display_name_zh_cn: 下载构建上下文
-    display_name_en: Download docker build context
-    phase: build
-    started_patterns: '["Downloading docker build context\\.\\.\\."]'
-    finished_patterns: '["\\* Docker build context is ready"]'
-    updated: 2023-09-14 03:12:15.381779+00:00
-  model: engine.deploystepmeta
-- fields:
-    builder_provider: null
-    buildpack_provider: null
-    created: 2023-09-14 03:12:15.381779+00:00
-    name: 构建镜像
-    display_name_zh_cn: 构建镜像
-    display_name_en: Building image
-    phase: build
-    started_patterns: '["Start building\\.\\.\\."]'
-    finished_patterns: '["\\* Build success"]'
-    updated: 2023-09-14 03:12:15.381779+00:00
-  model: engine.deploystepmeta
-- fields:
-    created: 2023-09-14 03:12:15.388464+00:00
-    is_default: true
-    metas:
-    - - preparation
-      - 解析应用进程信息
-    - - preparation
-      - 上传仓库代码
-    - - preparation
-      - 配置资源实例
-    - - build
-      - 下载构建上下文
-    - - build
-      - 构建镜像
-    - - release
-      - 部署应用
-    - - release
-      - 检测部署结果
-    name: dockerbuild
-    updated: 2023-09-14 03:12:15.381779+00:00
-  model: engine.stepmetaset
-# <- end Dockerfile 构建步骤
-# <- start 镜像部署步骤
-- fields:
-    created: 2023-09-14 03:12:15.381779+00:00
-    is_default: true
-    metas:
-    - - preparation
-      - 解析应用进程信息
-    - - preparation
-      - 配置资源实例
-    - - release
-      - 部署应用
-    - - release
-      - 检测部署结果
-    name: image-release
-    updated: 2023-09-14 03:12:15.381779+00:00
-  model: engine.stepmetaset
-# <- end 镜像部署步骤
+

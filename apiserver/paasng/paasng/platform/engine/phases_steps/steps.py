@@ -166,8 +166,7 @@ class DeployStepPicker:
         if builder is None:
             return cls._get_default_meta_set()
 
-        # TODO 简化模型关系: StepMetaSet 增加 builder_provider 字段, 替代 DeployStepMeta.builder_provider
-        meta_sets = StepMetaSet.objects.filter(metas__builder_provider=builder).order_by("-created").distinct()
+        meta_sets = StepMetaSet.objects.filter(builder_provider=builder).order_by("-created").distinct()
         if not meta_sets:
             return cls._get_default_meta_set()
 

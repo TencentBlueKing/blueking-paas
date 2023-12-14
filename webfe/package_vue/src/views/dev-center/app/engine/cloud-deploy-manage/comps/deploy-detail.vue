@@ -3,11 +3,11 @@
     <section class="instance-details">
       <div class="instance-item">
         <span class="label">{{$t('运行实例数')}}：</span>
-        <span class="value">{{deployData.total_available_instance_count}}</span>
+        <span class="value">{{ runningInstanceLength }}</span>
       </div>
       <div class="instance-item">
         <span class="label">{{$t('期望实例数')}}：</span>
-        <span class="value">{{deployData.total_desired_replicas}}</span>
+        <span class="value">{{expectInstanceLength}}</span>
       </div>
       <div class="instance-item">
         <span class="label">{{$t('异常实例数')}}：</span>
@@ -30,7 +30,7 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5">{{ row.available_instance_count }} / {{ row.targetReplicas }}</span>
+              <span class="ml5">{{ row.instances.length }} / {{ row.available_instance_count }}</span>
               <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <img
@@ -172,7 +172,8 @@
           <template slot-scope="{ row }">
             <div class="operation">
               <div
-                v-if="row.status === 'Running' && !row.autoscaling"
+                v-if="!row.autoscaling
+                  && row.instances.length !== row.available_instance_count"
                 class="flex-row align-items-center mr10"
               >
                 <img
@@ -180,7 +181,12 @@
                   class="loading"
                 >
                 <span class="pl10" style="white-space: nowrap;">
-                  {{ row.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+                  <span
+                    v-if="row.instances.length < row.available_instance_count
+                      || row.available_instance_count < scaleTargetReplicas">
+                    {{ $t('启动中...') }}
+                  </span>
+                  <span v-else>{{ $t('停止中...') }}</span>
                 </span>
               </div>
               <div class="operate-process-wrapper mr15">
@@ -497,6 +503,10 @@ export default {
       type: Number,
       default: () => 0,
     },
+    isDialogShowSideslider: {
+      type: Boolean,
+      default: () => false,
+    },
   },
   data() {
     const dateShortCut = [
@@ -643,6 +653,7 @@ export default {
       rowDisplayName: '',
       // EventSource handler
       serverProcessEvent: undefined,
+      scaleTargetReplicas: 0,
     };
   },
   computed: {
@@ -656,6 +667,18 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    expectInstanceLength() {
+      return this.allProcesses.reduce((p, v) => {
+        p += (v.available_instance_count || 0);
+        return p;
+      }, 0);
+    },
+    runningInstanceLength() {
+      return this.allProcesses.reduce((p, v) => {
+        p += (v.instances.length || 0);
+        return p;
+      }, 0);
+    },
   },
 
   watch: {
@@ -668,13 +691,34 @@ export default {
       immediate: true,
       // deep: true,
     },
+    isDialogShowSideslider: {
+      handler(value) {
+        // 在没有侧栏的情况下
+        if (!value
+        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+          this.watchServerPush();
+        }
+      },
+    },
+    rvData: {
+      handler(newVal, oldVal) {
+        if (this.isDialogShowSideslider || !oldVal) return;
+        // 进入页面启动事件流
+        console.log(newVal, oldVal);
+        if (JSON.stringify(newVal) !== JSON.stringify(oldVal)
+        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+          this.watchServerPush();
+        }
+      },
+      immediate: true,
+    },
   },
   mounted() {
     moment.locale(this.localLanguage === 'en' ? 'en' : 'zh-cn');
     // 进入页面启动事件流
-    if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
-      this.watchServerPush();
-    }
+    // if (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED) {
+    //   this.watchServerPush();
+    // }
   },
 
   beforeDestroy() {
@@ -726,20 +770,40 @@ export default {
       const packages = processesData.proc_specs;
       const { instances } = processesData;
       // 如果是下架的进程则processesData.proc_specs会有数据
-      if (!processesData.processes.length && processesData.proc_specs.length) {
-        processesData.processes = [   // 默认值
-          {
-            module_name: 'default',
-            name: '',
-            type: 'web',
-            command: '',
-            replicas: 0,
-            success: 0,
-            failed: 0,
-            version: 0,
-            cluster_link: '',
-          },
-        ];
+      if (processesData.proc_specs.length) {
+        if (!processesData.processes.length) {
+          processesData.processes = [   // 默认值
+            {
+              module_name: 'default',
+              name: '',
+              type: 'web',
+              command: '',
+              replicas: 0,
+              success: 0,
+              failed: 0,
+              version: 0,
+              cluster_link: '',
+            },
+          ];
+        } else {
+          const processName = processesData.processes.map(e => e.type);
+          processesData.proc_specs.forEach((e) => {
+            if (!processName.includes(e.name)) {
+              processesData.processes.push({
+                module_name: e.plan_name,
+                name: '',
+                type: e.name,
+                command: '',
+                replicas: 0,
+                success: 0,
+                failed: 0,
+                version: 0,
+                cluster_link: '',
+                available_instance_count: e.target_replicas,
+              });
+            }
+          });
+        }
       }
       processesData.processes.forEach((processItem) => {
         const { type } = processItem;
@@ -770,7 +834,7 @@ export default {
           status: 'Stopped',
           cmd: processInfo.command,
           desired_replicas: processInfo.replicas,
-          available_instance_count: processInfo.success,
+          available_instance_count: processInfo.target_status === 'start' ? processInfo.target_replicas : processInfo.success,
           failed: processInfo.failed,
           resourceLimit: processInfo.resource_limit,
           cpuLimit: processInfo.cpu_limit,
@@ -1146,12 +1210,20 @@ export default {
       };
 
       try {
-        await this.$store.dispatch('processes/updateProcess', {
+        const res = await this.$store.dispatch('processes/updateProcess', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
           data: patchForm,
         });
+
+        console.log('process', process, res);
+
+        if (res.target_status === 'start') {
+          process.available_instance_count = res.target_replicas;
+        } else {
+          process.available_instance_count = 0;
+        }
 
         // 更新当前操作状态
         if (targetStatus === 'start') {
@@ -1229,9 +1301,12 @@ export default {
         if (this.serverProcessEvent === serverProcessEvent) {
           // 服务结束请求列表接口
           bus.$emit('get-release-info');
-          this.watchServerTimer = setTimeout(() => {
-            this.watchServerPush();
-          }, 3000);
+          // 有侧边栏的时候不需要持续watch
+          // if (this.isDialogShowSideslider) return;
+          // this.watchServerTimer = setTimeout(() => {
+          //   console.log('testetst');
+          //   this.watchServerPush();
+          // }, 500);
         }
       });
     },
@@ -1248,7 +1323,7 @@ export default {
       } else if (data.type === 'MODIFIED') {
         this.allProcesses.forEach((process) => {
           if (process.name === processData.type) {
-            process.available_instance_count = processData.success;
+            // process.available_instance_count = processData.success;
             process.desired_replicas = processData.replicas;
             process.failed = processData.failed;
             this.updateProcessStatus(process);
@@ -1451,9 +1526,10 @@ export default {
     },
 
     // 处理进程状态
-    handleProcessStatus() {
+    handleProcessStatus(v) {
+      this.scaleTargetReplicas = v || 0;
       // 进程之后请求列表数据
-      bus.$emit('get-release-info');
+      // bus.$emit('get-release-info');
     },
 
     handleMouseEnter(name) {

@@ -38,8 +38,17 @@
               </div>
               <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
+                <!-- 仅镜像 -->
+                <div class="flex-row" v-if="deploymentInfo.build_method === 'custom_image'">
+                  <div class="version">
+                    <span class="label">{{$t('镜像Tag：')}}</span>
+                    <span class="value">
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
+                    </span>
+                  </div>
+                </div>
                 <!-- buildpack、dockerfile 展示版本/分支 -->
-                <div v-if="deploymentInfo.build_method !== 'custom_image'">
+                <div v-else>
                   <!-- 源码分支 -->
                   <div
                     class="flex-row"
@@ -57,22 +66,6 @@
                         {{ deploymentInfo.version_info.version_name }}
                       </span>
                     </div>
-                  </div>
-                  <!-- 镜像构建 -->
-                  <div class="version" v-else>
-                    <span class="label">{{$t('镜像Tag：')}}</span>
-                    <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
-                    </span>
-                  </div>
-                </div>
-                <!-- 仅镜像 -->
-                <div class="flex-row" v-else>
-                  <div class="version">
-                    <span class="label">{{$t('镜像Tag：')}}</span>
-                    <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
-                    </span>
                   </div>
                 </div>
               </template>

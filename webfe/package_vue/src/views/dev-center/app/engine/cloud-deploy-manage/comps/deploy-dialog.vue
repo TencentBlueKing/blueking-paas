@@ -19,8 +19,87 @@
           <div class="module-name-tag">{{ curAppModule.name || '--' }}</div>
         </div>
       </template>
+
+      <!-- 镜像逻辑 -->
+      <div v-if="deploymentInfoBackUp?.build_method === 'custom_image'">
+        <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
+        <div v-if="!allowMultipleImage">
+          <div class="code-depot mb15">
+            <span class="pr20">{{ $t('镜像仓库') }}：</span>
+            {{ deploymentInfoBackUp.repo_url }}
+          </div>
+          <div>
+            <bk-form
+              :model="tagData"
+              ref="imageFormRef"
+              form-type="vertical"
+            >
+              <bk-form-item
+                :label="$t('镜像Tag')"
+                :rules="rules.tag"
+                :required="true"
+                :property="'tagValue'"
+                :error-display-type="'normal'"
+                ext-cls="image-tag-cls"
+              >
+                <div
+                  v-if="tagUrl"
+                  class="image-list version-code"
+                  @click="handleOpenUrl(tagUrl)"
+                >
+                  {{ $t('查看镜像Tag列表') }}
+                </div>
+                <bk-input
+                  v-if="tagUrl"
+                  v-model="tagData.tagValue"
+                  :placeholder="$t('请输入镜像Tag，如 latest')"
+                  clearable
+                />
+                <bk-select
+                  v-else
+                  v-model="tagData.tagValue"
+                  :placeholder="$t('请选择下拉数据或手动填写')"
+                  style="width: 470px; display: inline-block; vertical-align: middle"
+                  :popover-min-width="420"
+                  :clearable="false"
+                  searchable
+                  :search-placeholder="$t('请输入关键字搜索或在上面输入框中手动填写')"
+                  :disabled="!!errorTips"
+                  :loading="isTagLoading"
+                  allow-create
+                >
+                  <bk-option
+                    v-for="option in customImageTagList"
+                    :id="option.name"
+                    :key="option.name"
+                    :name="option.name"
+                  />
+                </bk-select>
+                <span
+                  v-if="errorTips"
+                  class="error-text"
+                >
+                  {{ errorTips }}
+                </span>
+              </bk-form-item>
+            </bk-form>
+          </div>
+        </div>
+        <div v-else>
+          <div>{{ $t('请确认模块下进程对应的镜像地址') }}</div>
+          <div
+            class="mt10"
+            v-for="item in processesData"
+            :key="item.name"
+          >
+            <span class="name">{{ item.name }}：</span>
+            <span class="value">{{ item.image }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 源码逻辑 -->
-      <div v-if="isSourceCodeBuild">
+      <div v-else>
         <div
           class="code-depot mb10"
           v-if="deploymentInfoBackUp.repo_url"
@@ -144,83 +223,6 @@
         </div>
       </div>
 
-      <!-- 镜像逻辑 -->
-      <div v-else>
-        <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
-        <div v-if="!allowMultipleImage">
-          <div class="code-depot mb15">
-            <span class="pr20">{{ $t('镜像仓库') }}：</span>
-            {{ deploymentInfoBackUp.repo_url }}
-          </div>
-          <div>
-            <bk-form
-              :model="tagData"
-              ref="imageFormRef"
-              form-type="vertical"
-            >
-              <bk-form-item
-                :label="$t('镜像Tag')"
-                :rules="rules.tag"
-                :required="true"
-                :property="'tagValue'"
-                :error-display-type="'normal'"
-                ext-cls="image-tag-cls"
-              >
-                <div
-                  v-if="tagUrl"
-                  class="image-list version-code"
-                  @click="handleOpenUrl(tagUrl)"
-                >
-                  {{ $t('查看镜像Tag列表') }}
-                </div>
-                <bk-input
-                  v-if="tagUrl"
-                  v-model="tagData.tagValue"
-                  :placeholder="$t('请输入镜像Tag，如 latest')"
-                  clearable
-                />
-                <bk-select
-                  v-else
-                  v-model="tagData.tagValue"
-                  :placeholder="$t('请选择下拉数据或手动填写')"
-                  style="width: 470px; display: inline-block; vertical-align: middle"
-                  :popover-min-width="420"
-                  :clearable="false"
-                  searchable
-                  :search-placeholder="$t('请输入关键字搜索或在上面输入框中手动填写')"
-                  :disabled="!!errorTips"
-                  :loading="isTagLoading"
-                  allow-create
-                >
-                  <bk-option
-                    v-for="option in customImageTagList"
-                    :id="option.name"
-                    :key="option.name"
-                    :name="option.name"
-                  />
-                </bk-select>
-                <span
-                  v-if="errorTips"
-                  class="error-text"
-                >
-                  {{ errorTips }}
-                </span>
-              </bk-form-item>
-            </bk-form>
-          </div>
-        </div>
-        <div v-else>
-          <div>{{ $t('请确认模块下进程对应的镜像地址') }}</div>
-          <div
-            class="mt10"
-            v-for="item in processesData"
-            :key="item.name"
-          >
-            <span class="name">{{ item.name }}：</span>
-            <span class="value">{{ item.image }}</span>
-          </div>
-        </div>
-      </div>
       <div
         class="v1-container"
         v-if="isShowImagePullStrategy"

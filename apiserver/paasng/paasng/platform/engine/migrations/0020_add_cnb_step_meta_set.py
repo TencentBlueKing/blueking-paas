@@ -57,7 +57,9 @@ def add_cnb_step_meta_set(apps, schema_editor):
         ),
         BuildStepMetaData(
             # 第 1 列是 cnb
-            name="上传镜像", started_patterns=["Exporting image..."], finished_patterns=["\\s+Step Export done"]
+            name="上传镜像",
+            started_patterns=["Exporting image..."],
+            finished_patterns=["\\s+Step Export done"],
         ),
     ]
 
@@ -69,13 +71,11 @@ def add_cnb_step_meta_set(apps, schema_editor):
         DeployStepMeta.objects.filter(name="配置资源实例").last(),
     ]
 
+    DeployStepMeta.objects.create(name="上传镜像", phase=DeployPhaseTypes.BUILD.value)
     for step in build_step_data:
-        obj, _ = DeployStepMeta.objects.update_or_create(
-            name=step.name,
-            phase=DeployPhaseTypes.BUILD.value,
-            defaults={"started_patterns": step.started_patterns, "finished_patterns": step.finished_patterns},
-        )
-        metas.append(obj)
+        queryset = DeployStepMeta.objects.filter(name=step.name, phase=DeployPhaseTypes.BUILD.value)
+        queryset.update(started_patterns=step.started_patterns, finished_patterns=step.finished_patterns)
+        metas.append(queryset.last())
 
     metas.extend(
         [

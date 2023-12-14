@@ -20,8 +20,9 @@
       <div class="module-operate">
         <!-- 新增模块 -->
         <div
-          v-if="isCreatedModule"
+          v-bk-tooltips="{ content: $t('S-mart 应用目前不允许创建其他模块'), disabled: isCreatedModule }"
           class="icon-warapper mr8"
+          :class="{ disabled: !isCreatedModule }"
           :title="$t('新增模块')"
           @click="handleToAddCloudModulePage"
         >
@@ -225,6 +226,9 @@ export default defineComponent({
 
     // 新增云原生应用模块
     const handleToAddCloudModulePage = () => {
+      if (!isCreatedModule.value) {
+        return;
+      }
       router.push({
         name: 'appCreateCloudModule',
         params: {
@@ -341,12 +345,18 @@ export default defineComponent({
     border-radius: 2px;
     cursor: pointer;
     i {
-      line-height: 26px;
       color: #3a84ff;
     }
     i.paasng-plus {
       font-weight: 700;
       font-size: 12px;
+    }
+    &.disabled  {
+      background: #F5F7FA;
+      cursor: not-allowed;
+      i {
+        color: #DCDEE5;
+      }
     }
   }
   .mr8 {

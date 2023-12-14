@@ -102,12 +102,7 @@ def delete_all_modules(application: Application, operator: str):
 
 
 def create_application(
-    region: str,
-    code: str,
-    name: str,
-    name_en: str,
-    type_: str,
-    operator: str,
+    region: str, code: str, name: str, name_en: str, type_: str, operator: str, is_plugin_app: bool = False
 ):
     """创建 Application 模型"""
     application = Application.objects.create(
@@ -118,6 +113,7 @@ def create_application(
         code=code,
         name=name,
         name_en=name_en,
+        is_plugin_app=is_plugin_app,
     )
     create_oauth2_client(application.code, application.region)
 

@@ -47,6 +47,7 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
     engine_enabled = serializers.BooleanField(default=True, required=False)
     engine_params = ModuleSourceConfigSLZ(required=False)
     advanced_options = AdvancedCreationParamsMixin(required=False)
+    is_plugin_app = serializers.BooleanField(default=False, required=False)
 
     def validate(self, attrs):
         super().validate(attrs)

@@ -77,6 +77,8 @@ class AppSpecs:
 
     @property
     def preset_services(self) -> Dict[str, Dict]:
+        if self.application.is_plugin_app:
+            return settings.PRESET_SERVICES_BY_APP_TYPE.get("bk_plugin", {})
         return self.type_specs.preset_services
 
     @property
@@ -142,6 +144,7 @@ class AppTypeSpecs(ABC):
     @classmethod
     def get_by_type(cls, type_: ApplicationType) -> "AppTypeSpecs":
         """Get Spec type by application type"""
+        #
         try:
             return cls._spec_types[type_]()
         except KeyError:
@@ -170,16 +173,6 @@ class EnginelessAppTypeSpecs(AppTypeSpecs):
     engine_enabled = False
     can_create_extra_modules = False
     require_templated_source = False
-
-
-class BkPluginTypeSpecs(AppTypeSpecs):
-    """Specs for bk_plugin type"""
-
-    type_ = ApplicationType.BK_PLUGIN
-    engine_enabled = True
-    can_create_extra_modules = False
-    require_templated_source = False
-    language_by_default = "Python"
 
 
 class CloudNativeTypeSpecs(AppTypeSpecs):

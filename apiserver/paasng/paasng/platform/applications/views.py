@@ -156,7 +156,7 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
-            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+            applications = applications.filter(is_plugin_app=False)
 
         paginator = ApplicationListPagination()
         # 如果将用户标记的应用排在前面，需要特殊处理一下
@@ -215,7 +215,7 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
-            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+            applications = applications.filter(is_plugin_app=False)
 
         # 目前应用在市场的 name 和 Application 中的 name 一致
         results = [{"application": application, "product": {"name": application.name}} for application in applications]
@@ -416,7 +416,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         self._ensure_source_origin_available(request.user, source_origin)
 
         # Guide: check if a bk_plugin can be created
-        if params["type"] == ApplicationType.BK_PLUGIN and not get_bk_plugin_config(params["region"]).allow_creation:
+        if params["is_plugin_app"] and not get_bk_plugin_config(params["region"]).allow_creation:
             raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
         if source_origin == SourceOrigin.SCENE:
@@ -603,6 +603,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             name=params["name_zh_cn"],
             name_en=params["name_en"],
             type_=params["type"],
+            is_plugin_app=params["is_plugin_app"],
             operator=operator,
         )
 

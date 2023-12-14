@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.urls import path
 
-from paas_wl.apis.admin.views import certs, clusters, domain, processes
+from paas_wl.apis.admin.views import certs, clusters, domain, logs, processes
 
 urlpatterns = [
     # 平台管理-应用资源方案-API
@@ -68,6 +68,12 @@ urlpatterns = [
     path(
         "admin42/platform/app_certs/shared/<str:name>",
         certs.AppDomainSharedCertsViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
+    ),
+    # 日志采集管理
+    path(
+        "admin42/applications/<str:code>/log_config/",
+        logs.AppLogConfigViewSet.as_view({"get": "list", "post": "toggle"}),
+        name="admin.app_log_configs",
     ),
     # 平台管理-集群管理API
     path(

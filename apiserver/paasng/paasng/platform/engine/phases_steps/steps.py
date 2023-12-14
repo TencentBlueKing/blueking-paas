@@ -181,7 +181,7 @@ class DeployStepPicker:
         except StepMetaSet.DoesNotExist:
             best_matched_set = StepMetaSet.objects.all().latest("-created")
         except StepMetaSet.MultipleObjectsReturned:
-            # 多个默认 StepMetaSet 存在时, 选取最近创建的
+            # latest default StepMetaSet created by paasng/platform/engine/migrations/0020_add_cnb_step_meta_set.py
             best_matched_set = StepMetaSet.objects.filter(is_default=True).order_by("-created")[0]
         return best_matched_set
 

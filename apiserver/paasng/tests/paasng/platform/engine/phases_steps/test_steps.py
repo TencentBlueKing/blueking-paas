@@ -55,12 +55,13 @@ class TestDeployStepPicker:
         """动态创建测试步骤集"""
 
         def _make_step_meta_set(step_set_name: str, slug_provider_name: str):
-            meta_set = StepMetaSet.objects.create(name=step_set_name)
+            meta_set = StepMetaSet.objects.create(
+                name=step_set_name, builder_provider=AppSlugBuilder.objects.get(name=slug_provider_name)
+            )
             meta_set.metas.add(
                 DeployStepMeta.objects.create(
                     phase=DeployPhaseTypes.BUILD.value,
                     name="BUILDER-PROVIDER-STEP",
-                    builder_provider=AppSlugBuilder.objects.get(name=slug_provider_name),
                 )
             )
             return meta_set
@@ -83,14 +84,14 @@ class TestDeployStepPicker:
                 # 预期获取到的步骤集 name
                 "dummy+step+set+1",
             ),
-            # 绑定的镜像没有创建对应的步骤集，直接使用 default 步骤集
+            # 绑定的镜像没有创建对应的步骤集，直接使用最新的默认步骤集
             (
                 [
                     ("dummy+step+set+1", "dummy+image+1"),
                     ("dummy+step+set+2", "dummy+image+1"),
                 ],
                 "dummy+image+3",
-                "default",
+                "cnb",
             ),
             # 匹配到多个步骤集, 使用最新创建的
             (
@@ -127,7 +128,8 @@ class TestDeployStepPicker:
 
     def test_pick_no_runtime(self, bk_deployment):
         meta_set = DeployStepPicker.pick(bk_deployment.get_engine_app())
-        assert meta_set.name == "default"
+        # latest default StepMetaSet name is cnb
+        assert meta_set.name == "cnb"
         assert meta_set.is_default
 
 

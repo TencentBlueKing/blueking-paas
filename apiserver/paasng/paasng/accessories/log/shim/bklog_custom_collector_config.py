@@ -21,10 +21,10 @@ from typing import List, Literal
 
 from django.db.transaction import atomic
 
+from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.infras.bk_log.client import make_bk_log_client
 from paasng.infras.bk_log.definitions import CustomCollectorConfig
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.platform.modules.models import Module
 
 
@@ -109,6 +109,8 @@ def update_or_create_custom_collector_config(
                 "bk_data_id": collector_config.bk_data_id,
                 "log_paths": log_paths,
                 "log_type": log_type,
+                "is_builtin": True,
+                "is_enabled": True,
             },
         )
 

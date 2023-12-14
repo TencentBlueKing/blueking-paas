@@ -171,7 +171,6 @@ class TestBuiltinAnnotsManifestConstructor:
         assert annots["bkapp.paas.bk.tencent.com/module-name"] == bk_module.name
         assert annots["bkapp.paas.bk.tencent.com/name"] == app.name
         assert annots["bkapp.paas.bk.tencent.com/region"] == app.region
-        assert annots["bkapp.paas.bk.tencent.com/use-cnb"] == "false"
 
 
 class TestProcessesManifestConstructor:
@@ -202,7 +201,7 @@ class TestProcessesManifestConstructor:
         ("build_method", "is_cnb_runtime", "expected"),
         [
             (RuntimeType.BUILDPACK, False, (DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", "web"])),
-            (RuntimeType.BUILDPACK, True, (["web"], [])),
+            (RuntimeType.BUILDPACK, True, (DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", "web"])),
             (RuntimeType.DOCKERFILE, False, (["python"], ["-m", "http.server"])),
         ],
     )

@@ -138,7 +138,8 @@
               :index="index"
               :deployment-info="deploymentInfo"
               :environment="environment"
-              :module-name="deploymentInfo.module_name" />
+              :module-name="deploymentInfo.module_name"
+              :is-dialog-show-sideslider="isDialogShowSideslider" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"
@@ -181,7 +182,8 @@
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
       :rv-data="rvData"
-      @refresh="handleRefresh">
+      @refresh="handleListRefresh"
+      @showSideslider="isDialogShowSideslider = true">
     </deploy-dialog>
 
     <bk-sideslider
@@ -255,6 +257,7 @@ export default {
       intervalTimer: null,
       yamlLoading: false,
       curDeployItemIndex: '',
+      isDialogShowSideslider: false,  // 部署的侧边栏
     };
   },
 
@@ -301,6 +304,10 @@ export default {
     // this.isExpand = this.isDeploy;
   },
 
+  beforeDestroy() {
+    bus.$off('get-release-info');
+  },
+
   mounted() {
     this.initPage = true;   // 进入页面
     bus.$on('get-release-info', () => {
@@ -314,6 +321,11 @@ export default {
       this.getModuleReleaseInfo();
     },
     handleChangePanel(payload) {
+      this.deploymentInfoData.forEach((e) => {
+        if (e.module_name !== payload.module_name) {
+          e.isExpand = false;
+        }
+      });
       payload.isExpand = !payload.isExpand;
       if (payload.isExpand) {
         this.handleRefresh();
@@ -377,7 +389,8 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      if (this.intervalTimer) return;  // 如果已经有了timer则return
+      if (this.intervalTimer || this.isShowSideslider
+      || this.isDialogShowSideslider) return;  // 如果已经有了timer则return 打开了侧边栏也不需要watch
       try {
         this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
@@ -448,19 +461,20 @@ export default {
 
     // 刷新列表
     handleRefresh() {
-      if (this.intervalTimer) return;
+      if (this.intervalTimer || this.isDialogShowSideslider) return;
       this.getModuleReleaseInfo(false);
     },
 
     // 关闭进程的事件流
     handleCloseProcessWatch() {
-      this.handleRefresh();
       this.isShowSideslider = false;
+      this.handleRefresh();
     },
 
     // 关闭侧边栏
     handleCloseSideslider() {
       this.isShowSideslider = false;
+      this.handleRefresh();
     },
 
     // 将模块的进程实例全部收起
@@ -492,6 +506,13 @@ export default {
         name: 'cloudAppDeployForProcess',
         params: { id: this.appCode, moduleId: moduleName },
       });
+    },
+
+    // dialog里的slider关闭
+    handleListRefresh() {
+      console.log('this.curDeploymentInfoItem.isExpand', this.curDeploymentInfoItem.isExpand);
+      this.isDialogShowSideslider = false;
+      this.handleRefresh();
     },
   },
 };

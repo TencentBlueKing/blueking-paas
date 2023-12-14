@@ -66,6 +66,9 @@ settings = LazySettings(
 DEFAULT_SLUGRUNNER_IMAGE = settings.get("DEFAULT_SLUGRUNNER_IMAGE", "bkpaas/slugrunner:latest")
 DEFAULT_SLUGBUILDER_IMAGE = settings.get("DEFAULT_SLUGBUILDER_IMAGE", "bkpaas/slugbuilder:latest")
 KANIKO_IMAGE = settings.get("KANIKO_IMAGE", "bkpaas/kaniko-executor")
+# Kaniko 构建镜像的镜像源镜像配置, 多个配置使用 "," 分割, 不能有空格。同时, 镜像地址不能带有 scheme
+# Example: 127.0.0.1;192.168.0.1:5000,mirror.example.com
+KANIKO_REGISTRY_MIRRORS = settings.get("KANIKO_REGISTRY_MIRRORS", "")
 
 BUILDER_USERNAME = settings.get("BUILDER_USERNAME", "blueking")
 

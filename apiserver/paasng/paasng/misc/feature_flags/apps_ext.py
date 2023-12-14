@@ -28,7 +28,7 @@ except ImportError:
         FeatureFlagField(name="API_GATEWAY", label="云 API 管理", default=True),
         FeatureFlagField(name="MARKET_VISIBILITY", label="市场可见范围", default=True),
         FeatureFlagField(name="RESOURCE_METRICS", label="应用资源使用率", default=settings.ENABLE_BK_MONITOR),
-        FeatureFlagField(name="PHALANX", label="监控告警", default=False),
+        FeatureFlagField(name="PHALANX", label="监控告警", default=settings.ENABLE_BK_MONITOR),
         FeatureFlagField(name="ANALYTICS", label="访问统计", default=False),
         FeatureFlagField(name="CI", label="CI功能", default=False),
         FeatureFlagField(name="AGGREGATE_SEARCH", label="聚合搜索", default=False),

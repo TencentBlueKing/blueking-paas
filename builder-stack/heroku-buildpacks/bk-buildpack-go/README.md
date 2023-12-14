@@ -25,3 +25,4 @@
 
 ## 已有 patch
 - bin/compile.patch: hooks 埋点
+- files.json.patch: 新增支持的 golang 二进制版本

@@ -181,6 +181,7 @@ class DeployStepPicker:
         except StepMetaSet.DoesNotExist:
             best_matched_set = StepMetaSet.objects.all().latest("-created")
         except StepMetaSet.MultipleObjectsReturned:
+            # 多个默认 StepMetaSet 存在时, 选取最近创建的
             best_matched_set = StepMetaSet.objects.filter(is_default=True).order_by("-created")[0]
         return best_matched_set
 

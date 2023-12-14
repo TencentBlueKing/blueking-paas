@@ -20,7 +20,7 @@ from blue_krill.async_utils.poll_task import PollingResult, TaskPoller
 from celery import shared_task
 
 from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus
-from paasng.bk_plugins.pluginscenter.models import PluginInstance, PluginRelease, PluginReleaseStage
+from paasng.bk_plugins.pluginscenter.models import PluginInstance, PluginRelease
 from paasng.bk_plugins.pluginscenter.releases.stages import init_stage_controller
 
 
@@ -44,12 +44,12 @@ class ReleaseStatusPoller(TaskPoller):
 
 
 @shared_task
-def poll_stage_status(plugin: PluginInstance, release: PluginRelease, stage: PluginReleaseStage):
+def poll_stage_status(pd_id: str, plugin_id: str, release_id: str, stage_id: str):
     ReleaseStatusPoller.start(
         params={
-            "pd_id": plugin.pd.identifier,
-            "plugin_id": plugin.id,
-            "release_id": release.pk,
-            "stage_id": stage.pk,
+            "pd_id": pd_id,
+            "plugin_id": plugin_id,
+            "release_id": release_id,
+            "stage_id": stage_id,
         }
     )

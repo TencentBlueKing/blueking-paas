@@ -19,40 +19,123 @@
           <div class="module-name-tag">{{ curAppModule.name || '--' }}</div>
         </div>
       </template>
-      <!-- 源码逻辑 -->
-      <div v-if="isSourceCodeBuild">
-        <div
-          class="code-depot mb10"
-          v-if="deploymentInfoBackUp.repo_url"
-        >
-          <span class="pr20">{{ $t('代码仓库') }}：</span>
-          {{ deploymentInfoBackUp.repo_url }}
+
+      <!-- 镜像逻辑，排除smart应用 -->
+      <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' && !isSmartApp">
+        <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
+        <div v-if="!allowMultipleImage">
+          <div class="code-depot mb15">
+            <span class="pr20">{{ $t('镜像仓库') }}：</span>
+            {{ deploymentInfoBackUp.repo_url }}
+          </div>
+          <div>
+            <bk-form
+              :model="tagData"
+              ref="imageFormRef"
+              form-type="vertical"
+            >
+              <bk-form-item
+                :label="$t('镜像Tag')"
+                :rules="rules.tag"
+                :required="true"
+                :property="'tagValue'"
+                :error-display-type="'normal'"
+                ext-cls="image-tag-cls"
+              >
+                <div
+                  v-if="tagUrl"
+                  class="image-list version-code"
+                  @click="handleOpenUrl(tagUrl)"
+                >
+                  {{ $t('查看镜像Tag列表') }}
+                </div>
+                <bk-input
+                  v-if="tagUrl"
+                  v-model="tagData.tagValue"
+                  :placeholder="$t('请输入镜像Tag，如 latest')"
+                  clearable
+                />
+                <bk-select
+                  v-else
+                  v-model="tagData.tagValue"
+                  :placeholder="$t('请选择下拉数据或手动填写')"
+                  style="width: 470px; display: inline-block; vertical-align: middle"
+                  :popover-min-width="420"
+                  :clearable="false"
+                  searchable
+                  :search-placeholder="$t('请输入关键字搜索或在上面输入框中手动填写')"
+                  :disabled="!!errorTips"
+                  :loading="isTagLoading"
+                  allow-create
+                >
+                  <bk-option
+                    v-for="option in customImageTagList"
+                    :id="option.name"
+                    :key="option.name"
+                    :name="option.name"
+                  />
+                </bk-select>
+                <span
+                  v-if="errorTips"
+                  class="error-text"
+                >
+                  {{ errorTips }}
+                </span>
+              </bk-form-item>
+            </bk-form>
+          </div>
         </div>
-        <div class="image-source">
-          <div class="mb10">
-            <div>
-              {{ $t('镜像来源') }}
+        <div v-else>
+          <div>{{ $t('请确认模块下进程对应的镜像地址') }}</div>
+          <div
+            class="mt10"
+            v-for="item in processesData"
+            :key="item.name"
+          >
+            <span class="name">{{ item.name }}：</span>
+            <span class="value">{{ item.image }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 源码逻辑 && smartApp -->
+      <div v-else>
+        <template v-if="!isSmartApp">
+          <div
+            class="code-depot mb10"
+            v-if="deploymentInfoBackUp.repo_url"
+          >
+            <span class="pr20">{{ $t('代码仓库') }}：</span>
+            {{ deploymentInfoBackUp.repo_url }}
+          </div>
+          <div class="image-source">
+            <div class="mb10">
+              <div>
+                {{ $t('镜像来源') }}
+              </div>
+            </div>
+            <div class="bk-button-group btn-container">
+              <bk-button
+                v-for="item in imageSourceData"
+                :key="item.value"
+                class="btn-item"
+                :class="buttonActive === item.value ? 'is-selected' : ''"
+                @click="handleSelected(item)"
+              >
+                {{ $t(item.label) }}
+              </bk-button>
             </div>
           </div>
-          <div class="bk-button-group btn-container">
-            <bk-button
-              v-for="item in imageSourceData"
-              :key="item.value"
-              class="btn-item"
-              :class="buttonActive === item.value ? 'is-selected' : ''"
-              @click="handleSelected(item)"
-            >
-              {{ $t(item.label) }}
-            </bk-button>
-          </div>
-        </div>
+        </template>
         <div
-          class="image-source mt20"
-          v-if="buttonActive === 'branch'"
+          v-if="buttonActive === 'branch' || isSmartApp"
+          :class="['image-source', { mt20: !isSmartApp }]"
         >
           <div class="mb10 flex-row justify-content-between">
-            <div>{{ $t('代码分支选择') }}</div>
+            <div>{{ isSmartApp ? $t('版本') : $t('代码分支选择') }}</div>
+            <!-- smartAPP 不展示，代码版本差异 -->
             <div
+              v-if="!isSmartApp"
               class="version-code"
               @click="handleShowCommits"
             >
@@ -144,86 +227,9 @@
         </div>
       </div>
 
-      <!-- 镜像逻辑 -->
-      <div v-else>
-        <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
-        <div v-if="!allowMultipleImage">
-          <div class="code-depot mb15">
-            <span class="pr20">{{ $t('镜像仓库') }}：</span>
-            {{ deploymentInfoBackUp.repo_url }}
-          </div>
-          <div>
-            <bk-form
-              :model="tagData"
-              ref="imageFormRef"
-              form-type="vertical"
-            >
-              <bk-form-item
-                :label="$t('镜像Tag')"
-                :rules="rules.tag"
-                :required="true"
-                :property="'tagValue'"
-                :error-display-type="'normal'"
-                ext-cls="image-tag-cls"
-              >
-                <div
-                  v-if="tagUrl"
-                  class="image-list version-code"
-                  @click="handleOpenUrl(tagUrl)"
-                >
-                  {{ $t('查看镜像Tag列表') }}
-                </div>
-                <bk-input
-                  v-if="tagUrl"
-                  v-model="tagData.tagValue"
-                  :placeholder="$t('请输入镜像Tag，如 latest')"
-                  clearable
-                />
-                <bk-select
-                  v-else
-                  v-model="tagData.tagValue"
-                  :placeholder="$t('请选择下拉数据或手动填写')"
-                  style="width: 470px; display: inline-block; vertical-align: middle"
-                  :popover-min-width="420"
-                  :clearable="false"
-                  searchable
-                  :search-placeholder="$t('请输入关键字搜索或在上面输入框中手动填写')"
-                  :disabled="!!errorTips"
-                  :loading="isTagLoading"
-                  allow-create
-                >
-                  <bk-option
-                    v-for="option in customImageTagList"
-                    :id="option.name"
-                    :key="option.name"
-                    :name="option.name"
-                  />
-                </bk-select>
-                <span
-                  v-if="errorTips"
-                  class="error-text"
-                >
-                  {{ errorTips }}
-                </span>
-              </bk-form-item>
-            </bk-form>
-          </div>
-        </div>
-        <div v-else>
-          <div>{{ $t('请确认模块下进程对应的镜像地址') }}</div>
-          <div
-            class="mt10"
-            v-for="item in processesData"
-            :key="item.name"
-          >
-            <span class="name">{{ item.name }}：</span>
-            <span class="value">{{ item.image }}</span>
-          </div>
-        </div>
-      </div>
       <div
         class="v1-container"
-        v-if="isShowImagePullStrategy"
+        v-if="isShowImagePullStrategy || isSmartApp"
       >
         <div
           class="image-pull-strategy"
@@ -403,7 +409,7 @@ export default {
 
     // 上一次选择的镜像拉取策略
     lastSelectedImagePullStrategy() {
-      return this.deploymentInfoBackUp.state.deployment.latest?.advanced_options?.image_pull_policy || '';
+      return this.deploymentInfoBackUp.state?.deployment.latest?.advanced_options?.image_pull_policy || '';
     },
   },
   watch: {

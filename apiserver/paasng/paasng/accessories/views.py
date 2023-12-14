@@ -45,15 +45,16 @@ class AdvisedDocumentaryLinksViewSet(viewsets.ViewSet, ApplicationCodeInPathMixi
 
         slz = ListAdvisedDocLinksSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
-        plat_panel_tag = get_default_tagset().get(slz.data["plat_panel"])
 
         tags = get_tags(module)
-        # Use tag from application language if no tags can be found in database
-        if not tags:
+        # Use tag from module language if no tags can be found in database and module is language based
+        if not tags and module.language:
             try:
-                tags.add(force_tag("app-pl:{}".format(application.language.lower())))
+                tags.add(force_tag("app-pl:{}".format(module.language.lower())))
             except Exception:
-                logger.exception("Unable to create tag from application language")
+                logger.exception("Unable to create tag from module language")
+
+        plat_panel_tag = get_default_tagset().get(slz.data["plat_panel"])
         tags.add(plat_panel_tag)
 
         advisor = DocumentaryLinkAdvisor()

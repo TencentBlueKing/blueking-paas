@@ -2473,4 +2473,5 @@ export default {
   '修改环境变量后，需要重新发布插件后生效': 'After modifying the environment variables, it is necessary to republish the plugin for the changes to take effect.',
   '只有在当前步骤成功完成后，才可进行下一步操作。': 'The next step can only be performed after the current step has been successfully completed.',
   '请选择版本，已经发布过的版本不可选择。': 'Please select a version. Versions that have already been released cannot be selected.',
+  去使用: 'To use',
 };

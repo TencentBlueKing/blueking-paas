@@ -8,8 +8,8 @@
       :is-transition="false"
       class="middle"
     >
-      <!-- lesscode 源码信息 -->
-      <source-code-info v-if="isLesscodeApp" />
+      <!-- lesscode/smart应用 源码信息 -->
+      <packages-view v-if="isLesscodeApp || isSmartApp" />
       <!-- 代码源 -->
       <code-source v-else />
       <!-- 镜像信息 -->
@@ -21,15 +21,15 @@
 <script>
 import codeSource from './comps/deploy-build/code-source.vue';
 import mirror from './comps/deploy-build/mirror.vue';
-import sourceCodeInfo from './comps/deploy-build/source-code-info.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import packagesView from '@/views/dev-center/app/engine/packages/index.vue';
 
 export default {
   name: 'DeployBuild',
   components: {
     codeSource,
     mirror,
-    sourceCodeInfo,
+    packagesView,
   },
   mixins: [appBaseMixin],
   data() {

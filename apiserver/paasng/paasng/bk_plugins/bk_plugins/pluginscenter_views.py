@@ -193,7 +193,8 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
-        operator = user_id_encoder.encode(ProviderType.DATABASE, settings.PLUGIN_REPO_CONF["username"])
+        operator = user_id_encoder.encode(username=data["operator"], provider_type=settings.USER_TYPE)
+
         deployment = None
         try:
             # 更新网关状态, 启用网关

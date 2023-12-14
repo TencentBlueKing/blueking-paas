@@ -175,7 +175,7 @@
           </div>
         </div>
         <div
-          v-if="curAppInfo.application.type === 'bk_plugin'"
+          v-if="curAppInfo.application.is_plugin_app"
           class="basic-info-item plugin-type-scope"
         >
           <div class="title">
@@ -706,7 +706,7 @@ export default {
       this.isLoading = true;
       this.localeAppInfo.name = value.application.name;
       this.localeAppInfo.logo = value.application.logo_url;
-      if (value.application.type === 'bk_plugin') {
+      if (value.application.is_plugin_app) {
         this.getProfile();
       }
       this.$refs.authenticationRef?.resetAppSecret();
@@ -729,7 +729,7 @@ export default {
     this.getPluginAll();
     this.getAuthorizedUse();
     this.init();
-    if (this.curAppInfo.application.type === 'bk_plugin') {
+    if (this.curAppInfo.application.is_plugin_app) {
       this.getProfile();
     }
     if (this.curAppInfo.application.name) {

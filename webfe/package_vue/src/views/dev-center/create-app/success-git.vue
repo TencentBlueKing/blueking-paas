@@ -66,7 +66,7 @@
             </div>
           </div>
           <div
-            v-if="application.type === 'bk_plugin'"
+            v-if="application.is_plugin_app"
             class="btn-check-svn spacing-x4"
           >
             <div class="tips-wrapper">
@@ -240,7 +240,7 @@ export default {
     isShowGitBash() {
       const isDockerfile = this.$route.query.method === 'dockerfile';
       // dockerfile构建方式，蓝鲸插件不展示GitBash
-      if (!isDockerfile && this.application.type !== 'bk_plugin' && this.isShowTips) {
+      if (!isDockerfile && !this.application.is_plugin_app && this.isShowTips) {
         return true;
       }
       return false;

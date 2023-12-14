@@ -38,8 +38,17 @@
               </div>
               <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
+                <!-- smart应用 -->
+                <div class="flex-row" v-if="isSmartApp">
+                  <div class="version">
+                    <span class="label">{{$t('版本：')}}</span>
+                    <span class="value">
+                      {{ deploymentInfo.version_info.revision }}
+                    </span>
+                  </div>
+                </div>
                 <!-- 仅镜像 -->
-                <div class="flex-row" v-if="deploymentInfo.build_method === 'custom_image' && !isSmartApp">
+                <div class="flex-row" v-else-if="deploymentInfo.build_method === 'custom_image'">
                   <div class="version">
                     <span class="label">{{$t('镜像Tag：')}}</span>
                     <span class="value">
@@ -52,7 +61,7 @@
                   <!-- 源码分支 -->
                   <div
                     class="flex-row"
-                    v-if="deploymentInfo.version_info.version_type === 'branch' || isSmartApp">
+                    v-if="deploymentInfo.version_info.version_type === 'branch'">
                     <div class="version">
                       <span class="label">{{$t('版本：')}}</span>
                       <span class="value">

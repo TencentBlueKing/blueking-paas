@@ -20,7 +20,7 @@
       <div class="module-operate">
         <!-- 新增模块 -->
         <div
-          v-bk-tooltips="{ content: $t('S-mart 应用目前不允许创建其他模块'), disabled: isCreatedModule }"
+          v-bk-tooltips="{ content: $t('当前应用不允许创建其他模块'), disabled: isCreatedModule }"
           class="icon-warapper mr8"
           :class="{ disabled: !isCreatedModule }"
           :title="$t('新增模块')"
@@ -54,7 +54,7 @@
         type="error"
         :title="$t('主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通')"
       ></bk-alert>
-      <span v-bk-tooltips="{ content: $t('S-mart 应用目前不允许创建其他模块'), disabled: isCreatedModule }">
+      <span v-bk-tooltips="{ content: $t('当前应用不允许创建其他模块'), disabled: isCreatedModule }">
         <bk-button
           theme="primary"
           :disabled="!isCreatedModule"

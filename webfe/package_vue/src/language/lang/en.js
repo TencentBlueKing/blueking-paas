@@ -2449,4 +2449,5 @@ export default {
   '已有权限，无需申请': 'Already have permissions, no need to apply',
   无权限: 'No permissions',
   已申请: 'Applied',
+  当前应用不允许创建其他模块: 'The current application does not allow the creation of other modules.',
 };

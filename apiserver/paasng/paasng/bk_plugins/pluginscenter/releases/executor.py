@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from blue_krill.async_utils.django_utils import apply_async_on_commit
 from django.utils.translation import gettext as _
 
 from paasng.bk_plugins.pluginscenter import constants
@@ -101,10 +102,14 @@ class PluginReleaseExecutor:
         if current_stage.status == constants.PluginReleaseStatus.INITIAL:
             current_stage.update_status(constants.PluginReleaseStatus.PENDING)
 
-        poll_stage_status(
-            plugin=self.release.plugin,
-            release=self.release,
-            stage=current_stage,
+        apply_async_on_commit(
+            poll_stage_status,
+            kwargs={
+                "pd_id": self.release.plugin.pd.identifier,
+                "plugin_id": self.release.plugin.id,
+                "release_id": self.release.pk,
+                "stage_id": current_stage.pk,
+            },
         )
 
     def back_to_previous_stage(self, operator: str):

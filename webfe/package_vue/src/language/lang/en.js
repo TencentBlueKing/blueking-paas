@@ -2443,4 +2443,10 @@ export default {
   当本地不存在镜像时从远程仓库拉取: 'The image is pulled only if it is not already present locally.',
   上次选择: 'Last selected',
   '格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)': 'Format error, can only contain letters (a-zA-Z), numbers (0-9), and half-width hyphen (-), underscore (_), space ( ), and period (.).',
+  '权限无限制，无需续期': 'Unlimited permissions, no need to renew',
+  '权限已过期，请重新申请': 'Permissions have expired, please reapply',
+  '权限无限制，无需申请': 'Unlimited permissions, no need to apply',
+  '已有权限，无需申请': 'Already have permissions, no need to apply',
+  无权限: 'No permissions',
+  已申请: 'Applied',
 };

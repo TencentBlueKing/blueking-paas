@@ -31,7 +31,7 @@ from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
 logger = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestDocumentaryLinkAdvisor:

@@ -29,6 +29,7 @@ from paasng.core.region.states import get_region
 from paasng.platform.applications.constants import AppLanguage, ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
+from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.applications.specs import AppTypeSpecs
 from paasng.platform.modules.constants import SourceOrigin
@@ -368,3 +369,27 @@ class ApplicationLogoSLZ(serializers.ModelSerializer):
         # Send signal to trigger extra processes for logo
         application_logo_updated.send(sender=instance, application=instance)
         return result
+
+
+class ApplicationMembersInfoSLZ(serializers.ModelSerializer):
+    name = TranslatedCharField()
+    administrators = serializers.SerializerMethodField(help_text="应用管理人员名单")
+    devopses = serializers.SerializerMethodField(help_text="应用运营人员名单")
+    developers = serializers.SerializerMethodField(help_text="应用开发人员名单")
+    last_operator = serializers.SerializerMethodField(help_text="最近操作人员")
+
+    def get_administrators(self, application: Application):
+        return application.get_administrators()
+
+    def get_devopses(self, application: Application):
+        return application.get_devopses()
+
+    def get_developers(self, application: Application):
+        return application.get_developers()
+
+    def get_last_operator(self, application: Application):
+        return get_last_operator(application)
+
+    class Meta:
+        model = Application
+        fields = ["id", "code", "name", "administrators", "devopses", "developers", "last_operator"]

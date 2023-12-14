@@ -174,5 +174,8 @@ class CustomCollectorConfig(UuidAuditedModel):
     log_paths = models.JSONField(_("日志文件的绝对路径，可使用 通配符;"))
     log_type = models.CharField(_("日志类型"), max_length=32)
 
+    is_builtin = models.BooleanField(_("是否为内置采集项"), default=False)
+    is_enabled = models.BooleanField(_("是否启用"), default=True)
+
     class Meta:
         unique_together = ("module", "name_en")

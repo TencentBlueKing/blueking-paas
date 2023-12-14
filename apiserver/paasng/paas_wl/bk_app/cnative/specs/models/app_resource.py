@@ -165,7 +165,7 @@ class AppModelDeploy(TimestampedModel):
     )
     environment = ModuleEnvAttrFromName()
 
-    name = models.CharField(verbose_name=_("Deploy 名称"), max_length=32)
+    name = models.CharField(verbose_name=_("Deploy 名称"), max_length=64)
     revision = models.ForeignKey(to="AppModelRevision", on_delete=models.CASCADE)
 
     # The status and related fields are a brief abstraction of BkApp's status and "status.conditions".

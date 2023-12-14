@@ -30,6 +30,7 @@ from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSU
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import make_json_field, make_legacy_json_field
@@ -142,6 +143,11 @@ class Deployment(OperationVersionBase):
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
     bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
+    # The fields that store deployment logs, related to the `OutputStream` model. These fields exist
+    # because some logs cannot be written to the "build_process" or "pre_release" objects's output streams,
+    # such as logs of the service provision actions and hook command executions from cloud-native applications.
+    preparation_stream_id = models.UUIDField(help_text="the logs at the preparation phase", max_length=32, null=True)
+    main_stream_id = models.UUIDField(help_text="the logs at the main phase", max_length=32, null=True)
 
     objects = DeploymentQuerySet().as_manager()
 
@@ -254,7 +260,9 @@ class Deployment(OperationVersionBase):
 
         :raise ValueError: 当无法获取到版本信息时抛此异常
         """
-        if self.source_version_type != "image":
+        module = self.app_environment.module
+        # s-mart 镜像应用, 对平台而言还是源码包部署
+        if self.source_version_type != "image" or module.source_origin == SourceOrigin.S_MART:
             version_type = self.source_version_type
             version_name = self.source_version_name
             # Backward compatibility

@@ -55,7 +55,7 @@ class TestConsoleStream:
 
 class TestMixStream:
     def test_write_message(self, build_proc):
-        bps = RedisWithModelStream(build_proc, mock.MagicMock())
+        bps = RedisWithModelStream(build_proc.output_stream, mock.MagicMock())
         bps.write_message("message")
         bps.write_message("write \n message test")
         assert build_proc.output_stream.lines.count() == 2

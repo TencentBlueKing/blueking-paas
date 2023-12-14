@@ -132,6 +132,7 @@ def release_by_k8s_operator(
             deploy_id=str(app_model_deploy.id),
             force_image=build.image if build else None,
             image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
+            use_cnb=build.is_build_from_cnb() if build else False,
         )
 
         # 下发 k8s 资源前需要确保命名空间存在

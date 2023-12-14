@@ -19,7 +19,7 @@ import abc
 import json
 import sys
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Protocol
+from typing import Optional, Protocol
 
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.conf import settings
@@ -27,9 +27,6 @@ from django.conf import settings
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.models import Deployment
 from paasng.utils import termcolors
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models.misc import OutputStream
 
 
 def make_style(*args, **kwargs):
@@ -150,7 +147,8 @@ class ConsoleStream(DeployStream):
 class MessageWriter(Protocol):
     """A protocol for types which has output_stream field"""
 
-    output_stream: "OutputStream"
+    def write(self, line: str, stream: Optional[str]):
+        ...
 
 
 class ModelStream:
@@ -162,7 +160,7 @@ class ModelStream:
     def write_message(self, message, stream="STDOUT"):
         """Write message to output stream"""
         message = self.cleanup_message(message)
-        self.model.output_stream.write(line=message, stream=stream)
+        self.model.write(line=message, stream=stream)
 
     @staticmethod
     def cleanup_message(message):

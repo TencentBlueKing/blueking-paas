@@ -193,12 +193,6 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err.Error()).To(ContainSubstring(`process "web" is duplicated`))
 		})
 
-		It("web process missing", func() {
-			bkapp.Spec.Processes[0].Name = "hello"
-			err := bkapp.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring(`"web" process is required`))
-		})
-
 		It("process name invalid", func() {
 			bkapp.Spec.Processes[1].Name = "Web"
 			err := bkapp.ValidateCreate()

@@ -9,7 +9,7 @@
 ❯ pre-commit install
 ```
 
-目前我们使用了五个工具: `isort`、`black`、`flake8`、`mypy`, `golangci-lint`，它们能保证你的每一次提交都符合我们的开发规范。
+目前我们使用了五个工具: `ruff`、`import-linter`、`mypy`, `golangci-lint`，它们能保证你的每一次提交都符合我们的开发规范。
 
 ## webfe
 

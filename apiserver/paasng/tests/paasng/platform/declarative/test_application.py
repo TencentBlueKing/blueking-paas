@@ -39,7 +39,7 @@ from paasng.platform.declarative.serializers import validate_desc
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def get_app_description(app_json: Dict) -> ApplicationDesc:

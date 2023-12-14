@@ -50,7 +50,7 @@ class AppLogConfigController:
     def __init__(self, env: ModuleEnvironment):
         self.wl_app = env.wl_app
         self.module = env.module
-        self.db_collector_configs = CustomCollectorConfig.objects.filter(module=self.module)
+        self.db_collector_configs = CustomCollectorConfig.objects.filter(module=self.module, is_enabled=True)
 
     def create_or_patch(self):
         if self.db_collector_configs.count() == 0:

@@ -148,13 +148,6 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
             IMAGE_CREDENTIALS_REF_ANNO_KEY
         ] = f"{generate_bkapp_name(module)}--dockerconfigjson"
 
-        # 采用 CNB 的应用在启动进程时，entrypoint 为 `process_type`, command 是空列表，
-        # 执行其他命令需要用 `launcher` 进入 buildpack 上下文，因此需要特殊标注
-        # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-        model_res.metadata.annotations[USE_CNB_ANNO_KEY] = (
-            "true" if ModuleRuntimeManager(module).is_cnb_runtime else "false"
-        )
-
 
 class BuildConfigManifestConstructor(ManifestConstructor):
     """Construct the build config."""
@@ -302,9 +295,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
 
         mgr = ModuleRuntimeManager(module)
         if mgr.build_config.build_method == RuntimeType.BUILDPACK:
-            if mgr.is_cnb_runtime:
-                # cnb buildpack 启动进程时只能通过 `进程名` 来调用 Procfile 中的命令(相关命令已被 cnb buildpack 打包到镜像内)
-                return [process_spec.name], []
+            # Note: 此处无需考虑兼容 cnb buildpack, cnb buildpack 的启动命令由 operator 做兼容(通过 use-cnb annotations 声明)
             # 普通应用的启动命令固定了 entrypoint
             return DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", process_spec.name]
 
@@ -451,6 +442,7 @@ def get_bkapp_resource_for_deploy(
     deploy_id: str,
     force_image: Optional[str] = None,
     image_pull_policy: Optional[str] = None,
+    use_cnb: bool = False,
 ) -> BkAppResource:
     """Get the BkApp manifest for deploy.
 
@@ -471,6 +463,11 @@ def get_bkapp_resource_for_deploy(
         if not model_res.spec.build:
             model_res.spec.build = BkAppBuildConfig()
         model_res.spec.build.imagePullPolicy = image_pull_policy
+
+    # 采用 CNB 的应用在启动进程时，entrypoint 为 `process_type`, command 是空列表，
+    # 执行其他命令需要用 `launcher` 进入 buildpack 上下文，因此需要特殊标注
+    # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+    model_res.metadata.annotations[USE_CNB_ANNO_KEY] = "true" if use_cnb else "false"
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

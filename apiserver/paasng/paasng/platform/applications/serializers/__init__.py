@@ -23,6 +23,7 @@ from .app import (
     ApplicationListMinimalSLZ,
     ApplicationLogoSLZ,
     ApplicationMarkedSLZ,
+    ApplicationMembersInfoSLZ,
     ApplicationMinimalSLZ,
     ApplicationRelationSLZ,
     ApplicationSLZ,
@@ -87,4 +88,5 @@ __all__ = [
     "ApplicationMemberSLZ",
     "RoleField",
     "AppIDUniqueValidator",
+    "ApplicationMembersInfoSLZ",
 ]

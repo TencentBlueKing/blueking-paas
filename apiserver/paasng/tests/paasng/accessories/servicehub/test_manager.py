@@ -119,6 +119,12 @@ class TestMixedMgr:
         envs = mixed_service_mgr.get_env_vars(mock.MagicMock())
         assert envs == {"a": 1, "b": 2, "c": 3}
 
+    def test_get_mysql_services(self):
+        category = G(ServiceCategory, id=Category.DATA_STORAGE)
+        G(Service, category=category, region="default", logo_b64="dummy", name="mysql")
+        services = mixed_service_mgr.get_mysql_services()
+        assert len(services) == 1
+
 
 class TestLocalMgr(BaseTestCaseWithApp):
     app_region = "r1"

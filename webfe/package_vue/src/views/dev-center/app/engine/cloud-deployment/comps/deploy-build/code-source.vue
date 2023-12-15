@@ -296,7 +296,7 @@ export default {
       return Object.keys(this.codeDetails).length;
     },
     isInitTemplate() {
-      return this.buildMethod === 'dockerfile';
+      return this.buildMethod === 'buildpack';
     },
   },
 

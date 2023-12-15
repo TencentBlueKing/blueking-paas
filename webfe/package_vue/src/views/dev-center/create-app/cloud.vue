@@ -657,10 +657,10 @@ export default {
           },
           {
             validator(val) {
-              const reg = /^[a-zA-Z\d\u4e00-\u9fa5]*$/;
+              const reg = /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
               return reg.test(val);
             },
-            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符'),
+            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符'),
             trigger: 'blur',
           },
         ],

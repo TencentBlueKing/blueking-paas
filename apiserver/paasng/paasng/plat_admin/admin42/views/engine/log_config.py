@@ -16,28 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 
-from django.db import models
+from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
+from paasng.platform.engine.constants import AppEnvName
 
-from paas_wl.bk_app.applications.models import UuidAuditedModel
-
-
-class OutputStream(UuidAuditedModel):
-    def write(self, line, stream="STDOUT"):
-        if not line.endswith("\n"):
-            line += "\n"
-        OutputStreamLine.objects.create(output_stream=self, line=line, stream=stream)
+logger = logging.getLogger(__name__)
 
 
-class OutputStreamLine(models.Model):
-    output_stream = models.ForeignKey("OutputStream", related_name="lines", on_delete=models.CASCADE)
-    stream = models.CharField(max_length=16)
-    line = models.TextField()
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
+class LogConfigView(ApplicationDetailBaseView):
+    name = "日志采集管理"
+    template_name = "admin42/applications/detail/engine/log_config.html"
 
-    class Meta:
-        ordering = ["created"]
-
-    def __str__(self):
-        return "%s-%s" % (self.id, self.line)
+    def get_context_data(self, **kwargs):
+        kwargs = super().get_context_data(**kwargs)
+        kwargs["env_choices"] = [{"value": value, "text": text} for value, text in AppEnvName.get_choices()]
+        return kwargs

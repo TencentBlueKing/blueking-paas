@@ -256,7 +256,7 @@ class TestSysBkPluginLogsViewset:
                     ]
                 }
             },
-            "sort": [{"@timestamp": {"order": "desc"}}],
+            "sort": [{"@timestamp": {"order": "asc"}}],
             "size": 200,
             "from": 0,
         }

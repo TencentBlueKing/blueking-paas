@@ -117,10 +117,6 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
             kwargs["view"] = self
         application = ApplicationDetailSLZ(self.get_application()).data
         kwargs["application"] = application
-        kwargs["cluster_choices"] = [
-            {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
-            for cluster in RegionClusterService(application["region"]).list_clusters()
-        ]
         return kwargs
 
     def get(self, request, *args, **kwargs):
@@ -137,9 +133,14 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
+        application = self.get_application()
         kwargs["USER_IS_ADMIN_IN_APP"] = self.request.user.username in fetch_role_members(
-            self.get_application().code, ApplicationRole.ADMINISTRATOR
+            application.code, ApplicationRole.ADMINISTRATOR
         )
+        kwargs["cluster_choices"] = [
+            {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
+            for cluster in RegionClusterService(application.region).list_clusters()
+        ]
         return kwargs
 
 

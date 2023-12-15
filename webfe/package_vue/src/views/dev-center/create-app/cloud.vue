@@ -41,7 +41,7 @@
       >
         <bk-input
           v-model="formData.name"
-          :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')"
+          :placeholder="$t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
           class="form-input-width"
         >
         </bk-input>

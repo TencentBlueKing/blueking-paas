@@ -47,6 +47,7 @@
                 >
               </div>
             </div>
+            <div class="scaling-dot mt5" v-if="row.autoscaling">{{ $t('自动扩缩容') }}</div>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -1719,12 +1720,27 @@ export default {
         background: #FAFBFD;
       }
     }
+    .bk-table-body .table-colum-process-cls  {
+      .cell {
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: center;
+        .scaling-dot {
+          height: 16px;
+          line-height: 16px;
+          padding: 0 4px;
+          font-size: 10px;
+          color: #14A568;
+          background: #E4FAF0;
+          border-radius: 2px;
+        }
+      }
+    }
     .table-colum-process-cls  {
       .cell {
         display: block;
         height: 100%;
         display: flex;
-        align-items: center;
       }
       &.default-background {
         background: #FAFBFD;

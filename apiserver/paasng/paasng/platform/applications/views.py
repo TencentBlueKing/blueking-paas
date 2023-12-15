@@ -508,6 +508,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             name_en=params["name_en"],
             type_=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
+            is_plugin_app=False,
         )
         module = create_default_module(application, **module_src_cfg)
 

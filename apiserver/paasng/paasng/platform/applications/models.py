@@ -246,7 +246,11 @@ class Application(OwnerTimestampedModel):
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
     type = models.CharField(
-        verbose_name="应用类型", max_length=16, default=ApplicationType.DEFAULT.value, db_index=True
+        verbose_name="应用类型",
+        max_length=16,
+        default=ApplicationType.DEFAULT.value,
+        db_index=True,
+        help_text="与应用部署方式相关的类型信息",
     )
     is_smart_app = models.BooleanField(verbose_name="是否为 S-Mart 应用", default=False)
     is_scene_app = models.BooleanField(verbose_name="是否为场景 SaaS 应用", default=False)

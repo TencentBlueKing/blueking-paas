@@ -33,9 +33,7 @@ class ApplicationType(str, StructuredEnum):
 
     @classmethod
     def normal_app_type(cls):
-        """普通应用类型
-        插件应用也属于普通应用
-        """
+        """普通应用类型"""
         return [cls.DEFAULT]
 
 

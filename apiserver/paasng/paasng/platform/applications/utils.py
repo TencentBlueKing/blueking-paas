@@ -102,7 +102,7 @@ def delete_all_modules(application: Application, operator: str):
 
 
 def create_application(
-    region: str, code: str, name: str, name_en: str, type_: str, operator: str, is_plugin_app: bool = False
+    region: str, code: str, name: str, name_en: str, type_: str, operator: str, is_plugin_app: bool
 ):
     """创建 Application 模型"""
     application = Application.objects.create(
@@ -159,6 +159,7 @@ def create_third_app(
         name_en=name_en,
         type_=ApplicationType.ENGINELESS_APP.value,
         operator=operator,
+        is_plugin_app=False,
     )
     create_default_module(application)
 

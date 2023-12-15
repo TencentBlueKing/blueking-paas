@@ -151,7 +151,6 @@ class AppTypeSpecs(ABC):
     @classmethod
     def get_by_type(cls, type_: ApplicationType) -> "AppTypeSpecs":
         """Get Spec type by application type"""
-        #
         try:
             return cls._spec_types[type_]()
         except KeyError:

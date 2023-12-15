@@ -86,6 +86,7 @@
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
+import { bus } from '@/common/bus';
 
 export default {
   components: {
@@ -156,6 +157,21 @@ export default {
     },
 
     handleViewDetail() {
+      // 跳转至该服务的分享模块
+      if (this.isCloudNativeApp && this.detailData.ref_module.name) {
+        const routeConfig = {
+          name: 'cloudAppServiceInner',
+          params: {
+            id: this.appCode,
+            category_id: this.categoryId,
+            service: this.service,
+            // 分享模块名
+            moduleId: this.detailData.ref_module.name,
+          },
+        };
+        bus.$emit('cloud-change-module', routeConfig);
+        return;
+      }
       this.$router.push({
         name: this.isCloudNativeApp ? 'cloudAppServiceInner' : 'appServiceInner',
         params: {

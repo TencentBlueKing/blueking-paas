@@ -23,7 +23,7 @@ paasng/platform/engine/migrations/0010_auto_20211126_1751.py
 paasng/platform/engine/migrations/0017_reset_step_meta_set.py
 paasng/platform/engine/migrations/0020_auto_20231214_1547.py
 
-最终数据在 step_meta_data.py 维护
+最终数据通过 step_meta_data.py 维护
 """
 from typing import List
 
@@ -122,4 +122,4 @@ class Command(BaseCommand):
         for step_meta in expected_step_set:
             step_meta_set_obj.metas.add(DeployStepMeta.objects.filter(name=step_meta.name).last())
 
-        self.stdout.write(f"Recreate metas for {step_meta_set_obj.name} set successfully")
+        self.stdout.write(f"Re-add metas for {step_meta_set_obj.name} set successfully")

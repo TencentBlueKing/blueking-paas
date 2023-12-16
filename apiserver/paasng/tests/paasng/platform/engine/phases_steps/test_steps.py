@@ -91,7 +91,7 @@ class TestDeployStepPicker:
                     ("dummy+step+set+2", "dummy+image+1"),
                 ],
                 "dummy+image+3",
-                "cnb",
+                "default",
             ),
             # 匹配到多个步骤集, 使用最新创建的
             (
@@ -128,8 +128,7 @@ class TestDeployStepPicker:
 
     def test_pick_no_runtime(self, bk_deployment):
         meta_set = DeployStepPicker.pick(bk_deployment.get_engine_app())
-        # latest default StepMetaSet name is cnb
-        assert meta_set.name == "cnb"
+        assert meta_set.name == "default"
         assert meta_set.is_default
 
 

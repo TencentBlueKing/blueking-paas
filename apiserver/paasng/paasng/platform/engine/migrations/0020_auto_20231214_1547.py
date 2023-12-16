@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('modules', '0011_auto_20231019_0944'),
-        ('engine', '0018_auto_20231207_1154'),
+        ('engine', '0019_delete_oneoffcommand'),
     ]
 
     operations = [

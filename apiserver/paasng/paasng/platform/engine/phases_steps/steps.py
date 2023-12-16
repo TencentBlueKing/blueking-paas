@@ -21,10 +21,11 @@ import re
 from contextlib import suppress
 from typing import TYPE_CHECKING, Dict, List
 
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import DOCKER_BUILD_STEPSET_NAME, IMAGE_RELEASE_STEPSET_NAME, RuntimeType
 from paasng.platform.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 from paasng.platform.engine.models.phases import DeployPhaseTypes
-from paasng.platform.engine.models.steps import DeployStepMeta, StepMetaSet
+from paasng.platform.engine.models.steps import StepMetaSet
 from paasng.platform.engine.utils.output import RedisChannelStream
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 
@@ -51,139 +52,36 @@ def get_sorted_steps(phase: "DeployPhase") -> List["DeployStep"]:
     return steps
 
 
-def setup_dockerbuild_stepmeta():
-    """初始化 dockerbuild 的「构建阶段」的构建步骤"""
-    DeployStepMeta.objects.update_or_create(
-        phase=DeployPhaseTypes.BUILD,
-        name="下载构建上下文",
-        defaults={
-            "display_name_zh_cn": "下载构建上下文",
-            "display_name_en": "Download docker build context",
-            "started_patterns": [r"Downloading docker build context\.\.\."],
-            "finished_patterns": [r"\* Docker build context is ready"],
-        },
-    )
-
-    DeployStepMeta.objects.update_or_create(
-        phase=DeployPhaseTypes.BUILD,
-        name="构建镜像",
-        defaults={
-            "display_name_zh_cn": "构建镜像",
-            "display_name_en": "Building image",
-            "started_patterns": [r"Start building\.\.\."],
-            "finished_patterns": [r"\* Build success"],
-        },
-    )
-
-
-def bind_step_to_metaset(metaset: StepMetaSet, phase: DeployPhaseTypes, step_name: str):
-    try:
-        metaset.metas.get(phase=phase, name=step_name)
-    except DeployStepMeta.DoesNotExist:
-        try:
-            step_meta = DeployStepMeta.objects.get(phase=phase, name=step_name)
-        except DeployStepMeta.DoesNotExist:
-            return
-        except DeployStepMeta.MultipleObjectsReturned:
-            step_meta = DeployStepMeta.objects.filter(phase=phase, name=step_name)[0]
-        metaset.metas.add(step_meta)
-
-
-def setup_dockerbuild_metaset() -> StepMetaSet:
-    """初始化 dockerbuild 的构建步骤"""
-    setup_dockerbuild_stepmeta()
-    metaset, created = StepMetaSet.objects.update_or_create(
-        defaults={
-            "is_default": False,
-        },
-        name=DOCKER_BUILD_STEPSET_NAME,
-    )
-    if not created:
-        return metaset
-
-    steps = [
-        (DeployPhaseTypes.PREPARATION, "解析应用进程信息"),
-        (DeployPhaseTypes.PREPARATION, "上传仓库代码"),
-        (DeployPhaseTypes.PREPARATION, "配置资源实例"),
-        (DeployPhaseTypes.BUILD, "下载构建上下文"),
-        (DeployPhaseTypes.BUILD, "构建镜像"),
-        (DeployPhaseTypes.RELEASE, "部署应用"),
-        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
-        (DeployPhaseTypes.RELEASE, "检测部署结果"),
-    ]
-    for phase, step_name in steps:
-        bind_step_to_metaset(metaset, phase, step_name)
-    return metaset
-
-
-def setup_image_release_metaset() -> StepMetaSet:
-    """初始化 image release 的构建步骤"""
-    metaset, created = StepMetaSet.objects.update_or_create(
-        defaults={
-            "is_default": False,
-        },
-        name=IMAGE_RELEASE_STEPSET_NAME,
-    )
-    if not created:
-        return metaset
-
-    steps = [
-        (DeployPhaseTypes.PREPARATION, "解析应用进程信息"),
-        (DeployPhaseTypes.PREPARATION, "配置资源实例"),
-        (DeployPhaseTypes.RELEASE, "部署应用"),
-        (DeployPhaseTypes.RELEASE, "执行部署前置命令"),
-        (DeployPhaseTypes.RELEASE, "检测部署结果"),
-    ]
-    for phase, step_name in steps:
-        bind_step_to_metaset(metaset, phase, step_name)
-    return metaset
-
-
 class DeployStepPicker:
     """部署步骤选择器"""
 
     @classmethod
     def pick(cls, engine_app: "EngineApp") -> StepMetaSet:  # noqa: PLR0911
-        """通过 engine_app 选择部署阶段应该绑定的步骤"""
+        """通过 engine_app 选择部署阶段应该绑定的步骤
+
+        note: 通过 python manage.py upsert_step_meta_set 来更新步骤集
+        """
         m = ModuleRuntimeManager(engine_app.env.module)
+
         if m.build_config.build_method == RuntimeType.DOCKERFILE:
-            try:
-                return StepMetaSet.objects.get(name=DOCKER_BUILD_STEPSET_NAME)
-            except StepMetaSet.DoesNotExist:
-                return setup_dockerbuild_metaset()
+            return StepMetaSet.objects.get(name=DOCKER_BUILD_STEPSET_NAME)
         elif m.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
-            try:
-                return StepMetaSet.objects.get(name=IMAGE_RELEASE_STEPSET_NAME)
-            except StepMetaSet.DoesNotExist:
-                return setup_image_release_metaset()
+            return StepMetaSet.objects.get(name=IMAGE_RELEASE_STEPSET_NAME)
 
         return cls._pick_default_meta_set(m)
 
     @classmethod
     def _pick_default_meta_set(cls, m: ModuleRuntimeManager):
         """以 SlugBuilder 匹配为主, 不存在绑定直接走缺省步骤集"""
-        builder = m.get_slug_builder(raise_exception=False)
-        if builder is None:
-            return cls._get_default_meta_set()
+        if builder := m.get_slug_builder(raise_exception=False):  # noqa: SIM102
+            # NOTE: 目前一个 builder 只会关联一个 StepMetaSet
+            if meta_set := StepMetaSet.objects.filter(builder_provider=builder).order_by("-created").first():
+                return meta_set
 
-        meta_sets = StepMetaSet.objects.filter(builder_provider=builder).order_by("-created").distinct()
-        if not meta_sets:
-            return cls._get_default_meta_set()
-
-        # NOTE: 目前一个 builder 只会关联一个 StepMetaSet
-        return meta_sets[0]
-
-    @classmethod
-    def _get_default_meta_set(cls):
-        """防止由于后台配置缺失而影响部署流程, 绑定默认的 StepMetaSet"""
-        try:
-            best_matched_set = StepMetaSet.objects.get(is_default=True)
-        except StepMetaSet.DoesNotExist:
-            best_matched_set = StepMetaSet.objects.all().latest("-created")
-        except StepMetaSet.MultipleObjectsReturned:
-            # latest default StepMetaSet created by paasng/platform/engine/migrations/0020_add_cnb_step_meta_set.py
-            best_matched_set = StepMetaSet.objects.filter(is_default=True).order_by("-created")[0]
-        return best_matched_set
+        if m.module.application.type == ApplicationType.CLOUD_NATIVE.value:
+            return StepMetaSet.objects.filter(is_default=True, name="cnb").order_by("-created").first()
+        else:
+            return StepMetaSet.objects.filter(is_default=True, name="default").order_by("-created").first()
 
 
 def update_step_by_line(line: str, pattern_maps: Dict, phase: "DeployPhase"):

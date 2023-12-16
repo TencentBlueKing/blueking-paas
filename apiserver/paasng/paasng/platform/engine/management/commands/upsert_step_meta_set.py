@@ -30,7 +30,8 @@ from typing import List
 from django.core.management.base import BaseCommand
 
 from paasng.platform.engine.constants import DOCKER_BUILD_STEPSET_NAME, IMAGE_RELEASE_STEPSET_NAME
-from paasng.platform.engine.management.commands.step_meta_data import (
+from paasng.platform.engine.models.steps import DeployStepMeta, StepMetaSet
+from paasng.platform.engine.phases_steps.step_meta_data import (
     ALL_STEP_METAS,
     CNB_SET,
     DEFAULT_SET,
@@ -39,7 +40,6 @@ from paasng.platform.engine.management.commands.step_meta_data import (
     SLUG_PILOT_SET,
     StepMetaData,
 )
-from paasng.platform.engine.models.steps import DeployStepMeta, StepMetaSet
 from paasng.platform.modules.models.runtime import AppSlugBuilder
 
 

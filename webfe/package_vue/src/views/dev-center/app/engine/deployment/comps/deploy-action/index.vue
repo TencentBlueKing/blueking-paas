@@ -2860,7 +2860,7 @@ export default {
             value: displays[key].source_dir,
           });
         }
-        if (this.curAppInfo.application.type === 'bk_plugin') {
+        if (this.curAppInfo.application.is_plugin_app) {
           sourceInfo.push({
             text: this.$t('模块类型'),
             value: this.$t('蓝鲸插件'),

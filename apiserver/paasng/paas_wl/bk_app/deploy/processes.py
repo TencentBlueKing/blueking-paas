@@ -320,7 +320,5 @@ class ProcSpecUpdater:
 
 # Register controllers
 ProcControllerHub.register_controller(ApplicationType.DEFAULT, AppProcessesController)
-ProcControllerHub.register_controller(ApplicationType.BK_PLUGIN, AppProcessesController)
 ProcControllerHub.register_controller(ApplicationType.ENGINELESS_APP, AppProcessesController)
-
 ProcControllerHub.register_controller(ApplicationType.CLOUD_NATIVE, CNativeProcController)

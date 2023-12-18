@@ -62,4 +62,3 @@ def _get_env_is_running(env: ModuleEnvironment) -> bool:
 
 EnvIsRunningHub.register_func(ApplicationType.DEFAULT, _get_env_is_running)
 EnvIsRunningHub.register_func(ApplicationType.ENGINELESS_APP, _get_env_is_running)
-EnvIsRunningHub.register_func(ApplicationType.BK_PLUGIN, _get_env_is_running)

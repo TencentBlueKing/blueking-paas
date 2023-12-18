@@ -97,8 +97,9 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             code=data["id"],
             name=data["name_zh_cn"],
             name_en=data["name_en"],
-            type_=ApplicationType.BK_PLUGIN,
+            type_=ApplicationType.CLOUD_NATIVE,
             operator=encoded_operator,
+            is_plugin_app=True,
         )
 
         module = create_default_module(

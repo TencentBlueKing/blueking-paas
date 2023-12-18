@@ -58,11 +58,11 @@
               data-parsley-required="true"
               :data-parsley-required-message="$t('该字段是必填项')"
               data-parsley-maxlength="20"
-              data-parsley-pattern="[a-zA-Z\d\u4e00-\u9fa5]+"
-              :data-parsley-pattern-message="$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符')"
+              data-parsley-pattern="[a-zA-Z\d\u4e00-\u9fa5-]+"
+              :data-parsley-pattern-message="$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符')"
               data-parsley-trigger="input blur"
               class="ps-form-control"
-              :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')"
+              :placeholder="$t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
             >
           </p>
         </div>
@@ -270,11 +270,11 @@ export default {
         this.regionDescription = this.allRegionsSpecs[this.regionChoose].description;
       });
     },
-    back () {
+    back() {
       this.$router.push({
-        name: 'myApplications'
+        name: 'myApplications',
       });
-    }
+    },
   },
 };
 </script>

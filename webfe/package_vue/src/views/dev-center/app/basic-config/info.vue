@@ -70,13 +70,21 @@
               </bk-form-item>
             </bk-form>
             <bk-form
+              :model="localeAppInfo"
               class="info-special-form"
               form-type="inline"
+              ref="appNmaeRef"
             >
               <bk-form-item style="width: 180px;">
                 <label class="title-label"> {{ $t('应用名称') }} </label>
               </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
+              <bk-form-item
+                style="width: calc(100% - 180px);"
+                :icon-offset="localLanguage === 'en' ? 104 : 84"
+                :required="true"
+                :property="'name'"
+                :rules="rules.name"
+                ext-cls="item-app-name-cls">
                 <bk-input
                   ref="nameInput"
                   v-model="localeAppInfo.name"
@@ -104,7 +112,7 @@
                       theme="primary"
                       :disabled="localeAppInfo.name === ''"
                       text
-                      @click.stop.prevent="submitBasicInfo"
+                      @click.stop.prevent="handleSaveCheck"
                     >
                       {{ $t('保存') }}
                     </bk-button>
@@ -621,20 +629,23 @@ export default {
       localeAppInfoNameTemp: '',
       localeAppInfoPluginTemp: '',
       rules: {
-        appName: [
+        name: [
           {
             required: true,
-            message: this.$t('请输入20个字符以内的应用名称'),
+            message: this.$t('该字段是必填项'),
             trigger: 'blur',
           },
           {
             max: 20,
-            message: this.$t('应用名称不可超过20个字符'),
+            message: this.$t('请输入 1-20 字符的字母、数字、汉字'),
             trigger: 'blur',
           },
           {
-            required: /[a-zA-Z\d\u4e00-\u9fa5]+/,
-            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字'),
+            validator(val) {
+              const reg = /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
+              return reg.test(val);
+            },
+            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符'),
             trigger: 'blur',
           },
         ],
@@ -769,6 +780,7 @@ export default {
     },
 
     cancelBasicInfo() {
+      this.$refs.appNmaeRef?.clearError();
       this.isEdited = false;
       this.localeAppInfo.name = this.localeAppInfoNameTemp;
     },
@@ -928,6 +940,15 @@ export default {
       this.targetPluginList.splice(0, this.targetPluginList.length, ...this.restoringTargetData);
     },
 
+    // 应用名称校验
+    handleSaveCheck() {
+      this.$refs.appNmaeRef.validate().then(() => {
+        this.submitBasicInfo();
+      }, (e) => {
+        console.error(e.content || e);
+      });
+    },
+
     async submitBasicInfo() {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/`;
       this.$http.put(url, {
@@ -950,6 +971,7 @@ export default {
       )
         .finally(() => {
           this.isEdited = false;
+          this.$refs.appNmaeRef?.clearError();
         });
     },
 
@@ -1684,5 +1706,13 @@ export default {
               }
             }
           }
+    }
+    .item-app-name-cls .bk-form-content {
+        i.tooltips-icon {
+            right: 150px;
+            z-index: 99;
+            top: 50%;
+            transform: translateY(-50%);
+        }
     }
 </style>

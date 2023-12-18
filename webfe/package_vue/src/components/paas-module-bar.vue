@@ -134,6 +134,7 @@
 import store from '@/store';
 import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
+import { bus } from '@/common/bus';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -186,6 +187,12 @@ export default defineComponent({
       isLoading: false,
     });
     const { curAppInfo } = store.state;
+
+    bus.$on('cloud-change-module', (data) => {
+      active.value = data.params.moduleId;
+      // 切换路由至该服务的分享模块
+      router.push(data);
+    });
 
     // 输入的文案和选中模块相同
     const formRemoveValidated = computed(() => curAppModuleName.value === formRemoveConfirmCode.value);

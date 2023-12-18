@@ -105,7 +105,7 @@
           class="address-info-btn"
           theme="primary"
           text
-          :disabled="fillInfo || deployInfo"
+          :disabled="isEditDisabled"
           @click="handlerAddress"
         >
           {{ isEditAddress ? $t('确定') : $t('编辑') }}
@@ -417,6 +417,12 @@ export default {
         return p;
       }, {});
       return list;
+    },
+    isEditDisabled() {
+      if (this.fillInfo || this.deployInfo) {
+        return true;
+      }
+      return false;
     },
   },
   watch: {

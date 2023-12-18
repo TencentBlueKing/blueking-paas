@@ -251,8 +251,7 @@
                   @click="handleEnvTableListData('add', $index)"
                 ></i>
                 <i
-                  class="icon paasng-icon paasng-minus-circle-shape pl20"
-                  v-if="envVarList.length > 1"
+                  class="icon paasng-icon paasng-minus-circle-shape ml10"
                   @click="handleEnvTableListData('reduce', $index)"
                 ></i>
               </div>
@@ -708,6 +707,9 @@ export default {
         if (v.key === this.curItem.key && v.environment_name === this.curItem.environment_name) {
           p.push({ ...v, i });
         }
+        if (v.key === '' || v.environment_name === '') {
+          p.push({ ...v, i });
+        }
         return p;
       }, []);
       // 仅一条数据也可删除
@@ -935,7 +937,9 @@ export default {
 
     // 编辑页面
     handleEditClick() {
+      let isEmpty = false;
       if (!this.envVarList.length) {
+        isEmpty = true;
         this.envVarList.push({
           key: '',
           value: '',
@@ -944,7 +948,7 @@ export default {
         });
       }
       // 批量编辑展示所有环境变量
-      this.handleFilterEnv('all');
+      !isEmpty && this.handleFilterEnv('all');
       this.isBatchEdit = true;
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
@@ -1784,6 +1788,7 @@ a.is-disabled {
   font-size: 14px;
   .icon {
     cursor: pointer;
+    padding: 5px;
   }
 }
 

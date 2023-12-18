@@ -714,12 +714,17 @@ const router = new Router({
               },
             },
             {
-              path: 'service/:category_id/service_inner/:service',
+              path: 'service/:id/:moduleId/service/:category_id/service_inner/:service',
               component: appServicesInstance,
               name: 'cloudAppServiceInner',
             },
             {
-              path: 'service/:category_id/service_inner_shared/:service',
+              path: 'service/:category_id/service_inner/:service',
+              component: appServicesInstance,
+              name: 'cloudAppServiceInnerWithModule',
+            },
+            {
+              path: ':id/:moduleId/service/:category_id/service_inner_shared/:service',
               component: appServicesSharedInstance,
               name: 'cloudAppServiceInnerShared',
             },

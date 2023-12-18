@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="deploy-process-config">
     <section
       v-if="isShowPage"
       style="margin-top: 38px;"

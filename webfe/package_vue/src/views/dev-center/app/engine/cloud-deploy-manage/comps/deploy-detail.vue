@@ -739,7 +739,6 @@ export default {
       this.updateProcess();
     },
     handleExpansionAndContraction(row) {
-      console.log('row', row);
       this.curUpdateProcess = row;    // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
       this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);

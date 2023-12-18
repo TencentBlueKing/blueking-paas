@@ -355,6 +355,16 @@ export default {
             message: this.$t('必填项'),
             trigger: 'blur',
           },
+          {
+            validator(val) {
+              if (val) {
+                return true;
+              }
+              return false;
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
         ],
         hostnames: [
           {
@@ -362,10 +372,30 @@ export default {
             message: this.$t('必填项'),
             trigger: 'blur',
           },
+          {
+            validator(val) {
+              if (val) {
+                return true;
+              }
+              return false;
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
         ],
         name: [
           {
             required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+          {
+            validator(val) {
+              if (val) {
+                return true;
+              }
+              return false;
+            },
             message: this.$t('必填项'),
             trigger: 'blur',
           },
@@ -539,7 +569,7 @@ export default {
 <style lang="scss" scoped>
 .config-item {
   position: relative;
-  padding: 12px 24px;
+  padding: 12px 24px 12px 0;
   background: #fff;
 
   .title {

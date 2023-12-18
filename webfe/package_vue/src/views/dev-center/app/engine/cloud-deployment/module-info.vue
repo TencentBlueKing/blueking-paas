@@ -1,12 +1,14 @@
 <template>
   <paas-content-loader
-    :is-loading="pageLoading"
+    :is-loading="isPageLoading"
     placeholder="deploy-module-info-loading"
     :offset-top="0"
     :is-transition="false"
     class="deploy-action-box"
   >
     <div class="module-info-container">
+      <!-- 网络配置 -->
+      <deploy-network @set-network-loading="setNetworkLoading" />
 
       <!-- 部署限制 -->
       <div class="base-info-container">
@@ -25,7 +27,7 @@
             {{ $t('开启部署权限控制，仅管理员可部署、下架该模块。') }}
           </div>
         </div>
-        <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">
+        <div class="form-detail mt20 pb20 border-b" v-if="!isDeployLimitEdit">
           <bk-form>
             <bk-form-item
               :label="`${$t('预发布环境')}：`">
@@ -79,7 +81,7 @@
             {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
           </div>
         </div>
-        <div class="form-detail mt20 pb20 pl40 flex-row" v-if="!isIpInfoEdit">
+        <div class="form-detail mt20 pb20 flex-row" v-if="!isIpInfoEdit">
           <bk-form>
             <bk-form-item
               :label="`${$t('预发布环境')}：`">
@@ -256,7 +258,11 @@
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import moment from 'moment';
+import deployNetwork from './deploy-network';
 export default {
+  components: {
+    deployNetwork,
+  },
   mixins: [appBaseMixin],
   data() {
     return {
@@ -280,6 +286,7 @@ export default {
       },
       gatewayInfosStagLoading: false,
       pageLoading: true,
+      isNetworkLoading: true,
       envs: [],
     };
   },
@@ -307,6 +314,13 @@ export default {
     // 基本信息是否为编辑态
     isModuleInfoEdit() {
       return this.$store.state.cloudApi.isModuleInfoEdit;
+    },
+
+    isPageLoading() {
+      if (!this.pageLoading && !this.isNetworkLoading) {
+        return false;
+      }
+      return true;
     },
   },
 
@@ -415,8 +429,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        this.pageLoading = false;
       }
     },
 
@@ -558,6 +570,10 @@ export default {
         document.getSelection().addRange(selected);
       }
       this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
+    },
+
+    setNetworkLoading(loading) {
+      this.isNetworkLoading = loading;
     },
   },
 };

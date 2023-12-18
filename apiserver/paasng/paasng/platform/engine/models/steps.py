@@ -90,7 +90,6 @@ class StepMetaSet(AuditedModel):
     builder_provider = models.ForeignKey(
         "modules.AppSlugBuilder",
         on_delete=models.CASCADE,
-        verbose_name=_("由 SlugBuild 提供"),
         null=True,
         blank=True,
         related_name="step_meta_sets",

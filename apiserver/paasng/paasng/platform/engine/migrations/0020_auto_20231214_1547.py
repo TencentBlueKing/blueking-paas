@@ -23,6 +23,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='stepmetaset',
             name='builder_provider',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='step_meta_sets', to='modules.appslugbuilder', verbose_name='由 SlugBuild 提供'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='step_meta_sets', to='modules.appslugbuilder'),
         ),
     ]

@@ -47,17 +47,17 @@ class Command(BaseCommand):
     help = "Update StepMetaSet and DeployStepMeta"
 
     def handle(self, *args, **options):
-        # upsert all step metas
-        self._upsert_step_metas()
-        # upsert step meta set
-        self._upsert_default_set()
-        self._upsert_cnb_set()
-        self._upsert_slug_pilot_set()
-        self._upsert_docker_build_set()
-        self._upsert_image_release_set()
+        # sync all step metas
+        self._sync_step_metas()
+        # sync step meta set
+        self._sync_default_set()
+        self._sync_cnb_set()
+        self._sync_slug_pilot_set()
+        self._sync_docker_build_set()
+        self._sync_image_release_set()
 
-    def _upsert_step_metas(self):
-        """upsert all step metas"""
+    def _sync_step_metas(self):
+        """sync all step metas"""
         for step_name, step in ALL_STEP_METAS.items():
             DeployStepMeta.objects.update_or_create(
                 name=step_name,
@@ -69,40 +69,40 @@ class Command(BaseCommand):
                     "finished_patterns": step.finished_patterns or [],
                 },
             )
-            self.stdout.write(f"Upserting step {step.name} successfully")
+            self.stdout.write(f"Sync step {step.name} successfully")
 
-    def _upsert_default_set(self):
+    def _sync_default_set(self):
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(
             name="default",
             is_default=True,
         )
-        self._readd_metas(step_meta_set_obj, DEFAULT_SET)
+        self._sync_metas(step_meta_set_obj, DEFAULT_SET)
 
-    def _upsert_cnb_set(self):
+    def _sync_cnb_set(self):
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name="cnb", is_default=True)
-        self._readd_metas(step_meta_set_obj, CNB_SET)
+        self._sync_metas(step_meta_set_obj, CNB_SET)
 
-    def _upsert_slug_pilot_set(self):
+    def _sync_slug_pilot_set(self):
         # slug-pilot 对应 tencent 版本的 builder_provider, slug-pilot-ieod 对应上云版本的 builder_provider
         for set_name in ["slug-pilot", "slug-pilot-ieod"]:
             # 可单独更新 builder_provider
             step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=set_name, is_default=False)
-            self._readd_metas(step_meta_set_obj, SLUG_PILOT_SET)
+            self._sync_metas(step_meta_set_obj, SLUG_PILOT_SET)
 
         # 私有化版本只有一个 slug-pilot, 并且绑定名字是 blueking 的 builder_provider
         if slug_builder := AppSlugBuilder.objects.filter(name="blueking").last():
             StepMetaSet.objects.filter(name="slug-pilot").update(builder_provider=slug_builder)
 
-    def _upsert_docker_build_set(self):
+    def _sync_docker_build_set(self):
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=DOCKER_BUILD_STEPSET_NAME, is_default=False)
-        self._readd_metas(step_meta_set_obj, DOCKER_BUILD_SET)
+        self._sync_metas(step_meta_set_obj, DOCKER_BUILD_SET)
 
-    def _upsert_image_release_set(self):
+    def _sync_image_release_set(self):
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=IMAGE_RELEASE_STEPSET_NAME, is_default=False)
-        self._readd_metas(step_meta_set_obj, IMAGE_RELEASE_SET)
+        self._sync_metas(step_meta_set_obj, IMAGE_RELEASE_SET)
 
-    def _readd_metas(self, step_meta_set_obj: StepMetaSet, expected_step_set: List[StepMetaData]):
-        """重新添加 metas. 如果 metas 已经和目标步骤集一致, 则直接返回
+    def _sync_metas(self, step_meta_set_obj: StepMetaSet, expected_step_set: List[StepMetaData]):
+        """同步 metas. 如果 metas 已经和目标步骤集一致, 则直接返回
 
         :param step_meta_set_obj: StepMetaSet 实例
         :param expected_step_set: 期望的步骤集

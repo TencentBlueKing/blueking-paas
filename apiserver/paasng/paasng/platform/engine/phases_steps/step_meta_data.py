@@ -34,7 +34,7 @@ class StepMetaData:
 
     def __attrs_post_init__(self):
         if self.name in ALL_STEP_METAS:
-            raise ValueError(f"Duplicate step name: {self.name}")
+            raise ValueError(f"Duplicated step name: {self.name}")
 
         ALL_STEP_METAS[self.name] = self
 

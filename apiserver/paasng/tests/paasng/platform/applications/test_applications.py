@@ -74,7 +74,7 @@ class BaseCaseWithApps:
             code="awesome-bk",
             language="PHP",
             region=settings.DEFAULT_REGION_NAME,
-            type=ApplicationType.BK_PLUGIN,
+            is_plugin_app=True,
         )
         register_iam_after_create_application(self.app_another1)
         create_default_module(self.app_another1, source_origin=SourceOrigin.AUTHORIZED_VCS, language="PHP")
@@ -160,5 +160,8 @@ class TestUserApplication(BaseCaseWithApps):
 
     def test_filter_by_type_(self):
         apps_filter = UserApplicationFilter(self.user)
-        assert set(apps_filter.filter(type_=ApplicationType.DEFAULT)) == {self.app1, self.app_another2}
-        assert set(apps_filter.filter(type_=ApplicationType.BK_PLUGIN)) == {self.app_another1}
+        assert set(apps_filter.filter(type_=ApplicationType.DEFAULT)) == {
+            self.app1,
+            self.app_another1,
+            self.app_another2,
+        }

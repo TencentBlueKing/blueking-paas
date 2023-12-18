@@ -16,7 +16,7 @@
 
       <!-- 查看态 -->
       <div class="content" v-if="!isCodeSourceEdit">
-        <div class="code-quality">
+        <div class="code-quality" :style="isInitTemplate ? { height: '158px' } : ''">
           <div>
             <span class="fraction">{{codeDetails.rdIndicatorsScore ?? '--'}}</span>
             {{$t('分')}}
@@ -31,16 +31,20 @@
             </bk-form-item>
             <bk-form-item :label="`${$t('代码仓库')}：`">
               <a
+                v-if="curAppModule.repo?.repo_url"
                 class="form-text code-link"
                 :href="curAppModule.repo?.repo_url"
                 target="_blank">
-                {{curAppModule.repo?.repo_url || '--'}}
+                {{curAppModule.repo?.repo_url}}
               </a>
+              <template v-else>
+                --
+              </template>
             </bk-form-item>
             <bk-form-item :label="`${$t('构建目录')}：`">
               <span class="form-text">{{curAppModule.repo?.source_dir || '--'}}</span>
             </bk-form-item>
-            <bk-form-item :label="`${$t('初始化模板')}：`">
+            <bk-form-item :label="`${$t('初始化模板')}：`" v-if="isInitTemplate">
               <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
               <a
                 class="download"
@@ -116,6 +120,8 @@
             :default-account="curAppModule.repo_auth_info?.username"
             :default-dir="curAppModule.repo?.source_dir"
             :deployment-is-show="true"
+            :source-dir-label="'构建目录'"
+            :is-cloud-created="true"
             @change="handleRepoInfoChange"
           />
         </template>
@@ -161,6 +167,12 @@ export default {
     repoInfo,
   },
   mixins: [appBaseMixin],
+  props: {
+    buildMethod: {
+      type: String,
+      default: '',
+    },
+  },
   data() {
     return {
       isCodeSourceEdit: false,
@@ -282,6 +294,9 @@ export default {
     // 代码检查无数据为未部署
     isDeploy() {
       return Object.keys(this.codeDetails).length;
+    },
+    isInitTemplate() {
+      return this.buildMethod === 'buildpack';
     },
   },
 
@@ -762,7 +777,6 @@ export default {
     justify-content: center;
     align-items: center;
     width: 190px;
-    height: 158px;
     background: #F5F7FA;
     border-radius: 2px;
     text-align: center;

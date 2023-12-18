@@ -246,10 +246,19 @@ class Application(OwnerTimestampedModel):
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
     type = models.CharField(
-        verbose_name="应用类型", max_length=16, default=ApplicationType.DEFAULT.value, db_index=True
+        verbose_name="应用类型",
+        max_length=16,
+        default=ApplicationType.DEFAULT.value,
+        db_index=True,
+        help_text="与应用部署方式相关的类型信息",
     )
     is_smart_app = models.BooleanField(verbose_name="是否为 S-Mart 应用", default=False)
     is_scene_app = models.BooleanField(verbose_name="是否为场景 SaaS 应用", default=False)
+    is_plugin_app = models.BooleanField(
+        verbose_name="是否为插件应用",
+        default=False,
+        help_text="蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑",
+    )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 
     creator = BkUserField()
@@ -365,7 +374,7 @@ class Application(OwnerTimestampedModel):
         """获取应用 Logo 图片地址，未设置时返回默认 Logo"""
         default_url = settings.APPLICATION_DEFAULT_LOGO
         # 插件应用使用独立的 Logo 以作区分
-        if self.type == ApplicationType.BK_PLUGIN.value:
+        if self.is_plugin_app:
             default_url = settings.PLUGIN_APP_DEFAULT_LOGO
 
         if self.logo:

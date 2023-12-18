@@ -236,7 +236,7 @@ export default {
       personnelSelectorList: [],
       // 部署日志
       logSidesliderData: {},
-      moduleValue: 'default',
+      moduleValue: '',
       filterEnv: [],
       yamlSidesliderConfig: {
         isShow: false,
@@ -271,6 +271,7 @@ export default {
 
   methods: {
     init() {
+      this.moduleValue = this.curAppModuleList[0].name || 'default';
       this.getDeployHistory();
     },
 

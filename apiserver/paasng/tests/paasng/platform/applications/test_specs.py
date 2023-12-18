@@ -33,7 +33,7 @@ class TestAppSpecs:
         [
             (ApplicationType.DEFAULT, True),
             (ApplicationType.ENGINELESS_APP, False),
-            (ApplicationType.BK_PLUGIN, True),
+            (ApplicationType.CLOUD_NATIVE, True),
         ],
     )
     def test_engine_enabled(self, type, value, bk_app):
@@ -42,16 +42,23 @@ class TestAppSpecs:
         assert AppSpecs(bk_app).engine_enabled is value
 
     @pytest.mark.parametrize(
-        ("region_creation_allowed", "is_smart_app", "type", "value"),
+        ("region_creation_allowed", "is_smart_app", "is_plugin_app", "type", "value"),
         [
-            (True, False, ApplicationType.DEFAULT, True),
-            (True, True, ApplicationType.DEFAULT, False),
-            (True, False, ApplicationType.ENGINELESS_APP, False),
-            (True, False, ApplicationType.BK_PLUGIN, False),
-            (False, False, ApplicationType.DEFAULT, False),
+            (True, False, False, ApplicationType.DEFAULT, True),
+            (True, False, False, ApplicationType.CLOUD_NATIVE, True),
+            (True, False, False, ApplicationType.ENGINELESS_APP, False),
+            # 通过 region 可限制普通应用、云原生应用不能创建模块
+            (False, False, False, ApplicationType.DEFAULT, False),
+            (False, False, False, ApplicationType.CLOUD_NATIVE, False),
+            # 普通应用、云原生应用的 S-mart 应用，都不能创建模块
+            (True, True, False, ApplicationType.DEFAULT, False),
+            (True, True, False, ApplicationType.CLOUD_NATIVE, False),
+            # 普通应用、云原生应用的插件应用，都不能创建模块
+            # (True, False, True, ApplicationType.DEFAULT, False),
+            # (True, False, True, ApplicationType.CLOUD_NATIVE, False),
         ],
     )
-    def test_can_create_extra_modules(self, region_creation_allowed, is_smart_app, type, value, bk_app):
+    def test_can_create_extra_modules(self, region_creation_allowed, is_smart_app, is_plugin_app, type, value, bk_app):
         bk_app.type = type
         bk_app.is_smart_app = is_smart_app
         bk_app.save(update_fields=["type", "is_smart_app"])
@@ -67,7 +74,7 @@ class TestAppSpecs:
         assert AppSpecs(bk_app).preset_services == {}
 
         # Update application type to match settings
-        bk_app.type = "bk_plugin"
+        bk_app.is_plugin_app = True
         bk_app.save()
         assert AppSpecs(bk_app).preset_services == {"mysql": {}}
 

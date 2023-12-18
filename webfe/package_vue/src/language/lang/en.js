@@ -2450,4 +2450,5 @@ export default {
   无权限: 'No permissions',
   已申请: 'Applied',
   当前应用不允许创建其他模块: 'The current application does not allow the creation of other modules.',
+  '格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符': 'The format is incorrect and can only contain: Chinese characters, English letters, numbers, hyphens (-), and the length is less than 20 characters',
 };

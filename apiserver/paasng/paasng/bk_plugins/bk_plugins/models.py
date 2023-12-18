@@ -33,7 +33,6 @@ from paasng.accessories.publish.entrance.exposer import env_is_deployed
 from paasng.accessories.publish.market.utils import ModuleEnvAvailableAddressHelper
 from paasng.bk_plugins.bk_plugins.constants import PluginTagIdType
 from paasng.infras.accounts.utils import id_to_username
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
@@ -286,7 +285,7 @@ class BkPluginAppQuerySet:
 
     def all(self) -> QuerySet:
         """Return all bk_plugin typed applications queryset"""
-        return Application.objects.filter(type=ApplicationType.BK_PLUGIN).only_active()
+        return Application.objects.filter(is_plugin_app=True).only_active()
 
     def filter(
         self,
@@ -301,7 +300,7 @@ class BkPluginAppQuerySet:
         :param has_deployed: If given, only return applications whose `has_deployed` property matches
         :param distributor_code_name: If given, only return results which have granted permissions to distributor
         """
-        applications = Application.objects.filter(type=ApplicationType.BK_PLUGIN)
+        applications = Application.objects.filter(is_plugin_app=True)
         # Reuse the original application filter
         # Use `prefetch_related` to reduce database queries
         applications = (
@@ -320,7 +319,7 @@ class BkPluginAppQuerySet:
 
 def is_bk_plugin(application: Application) -> bool:
     """Check if an application is a plugin"""
-    return application.type == ApplicationType.BK_PLUGIN
+    return application.is_plugin_app
 
 
 def make_bk_plugin(application: Application) -> BkPlugin:

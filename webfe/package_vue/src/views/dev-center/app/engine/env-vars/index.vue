@@ -162,7 +162,7 @@
               >
                 <bk-alert type="error">
                   <div slot="title">
-                    <span v-if="curAppInfo.application.type === 'bk_plugin'">
+                    <span v-if="curAppInfo.application.is_plugin_app">
                       {{ $t('应用已迁移到插件开发中心，本页面仅做展示用，如需操作请到') }}
                       <router-link :to="{ name: 'pluginDeployEnv', params: { id: curAppCode, pluginTypeId: 'bksaas' }}">{{ $t('插件开发- 配置管理页面') }}</router-link>
                       {{ $t('。') }}
@@ -538,11 +538,14 @@
       :mask-close="false"
       :draggable="false"
       :close-icon="!isRuntimeUpdaing"
-      :loading="isRuntimeUpdaing"
+      render-directive="if"
       @confirm="updateRuntimeInfo"
       @cancel="handleHideRuntimeDialog"
     >
-      <bk-form :label-width="localLanguage === 'en' ? 105 : 95">
+      <bk-form
+        :label-width="localLanguage === 'en' ? 105 : 95"
+        v-bkloading="{ isLoading: isRuntimeUpdaing, zIndex: 10 }"
+      >
         <bk-form-item :label="$t('基础镜像:')">
           <bk-select
             v-model="runtimeDialogConf.image"
@@ -564,14 +567,32 @@
         </bk-form-item>
         <bk-form-item :label="$t('构建工具')">
           <bk-transfer
+            ext-cls="tool-transfer-wrapper-cls"
             :key="runtimeDialogConf.image"
-            :target-list="runtimeDialogConf.buildpackValueList"
+            :target-list="targetListData"
             :source-list="runtimeBuildpacks"
             :title="[$t('可选的构建工具'), $t('选中的构建工具 (按选择顺序排序)')]"
             :display-key="'name'"
             :setting-key="'id'"
             @change="handleBuildpackChange"
-          />
+          >
+            <div
+              slot="source-option"
+              slot-scope="data"
+              class="transfer-source-item"
+              :data-id="data.id"
+            >
+              {{ data.name }}
+            </div>
+            <div
+              slot="target-option"
+              slot-scope="data"
+              class="transfer-source-item"
+              :data-id="data.id"
+            >
+              {{ data.name }}
+            </div>
+          </bk-transfer>
           <p
             class="mt10"
             style="color: #ea3636; font-size: 12px; line-height: 1;"
@@ -795,6 +816,7 @@
 import dropdown from '@/components/ui/Dropdown';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import transferDrag from '@/mixins/transfer-drag';
 import appTopBar from '@/components/paas-app-bar';
 
 export default {
@@ -803,7 +825,7 @@ export default {
     tooltipConfirm,
     appTopBar,
   },
-  mixins: [appBaseMixin],
+  mixins: [appBaseMixin, transferDrag],
   data() {
     return {
       envVarList: [],
@@ -919,6 +941,7 @@ export default {
         appRuntimeLoading: false,
         bkPlatformLoading: false,
       },
+      targetListData: [],
     };
   },
   computed: {
@@ -1283,6 +1306,7 @@ export default {
       }
     },
     async getRuntimeInfo() {
+      this.isRuntimeUpdaing = true;
       try {
         const res = await this.$store.dispatch('envVar/getRuntimeInfo', {
           appCode: this.appCode,
@@ -1292,12 +1316,18 @@ export default {
         this.runtimeImage = res.image ? res.image : '';
         if (res.buildpacks) {
           this.runtimeBuild = res.buildpacks.map(item => item.id);
+          this.targetListData = _.cloneDeep(this.runtimeBuild);
+          this.curBuildpacks = _.cloneDeep(this.runtimeBuild);
         }
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        setTimeout(() => {
+          this.isRuntimeUpdaing = false;
+        }, 500);
       }
     },
     async updateRuntimeInfo() {
@@ -1315,7 +1345,7 @@ export default {
           return false;
         }
         // 如果左边有列表，必须要选择一个
-        if (this.runtimeBuildpacks.length && !this.runtimeDialogConf.buildpacks.length) {
+        if (this.runtimeBuildpacks.length && !this.targetListData.length) {
           this.$paasMessage({
             theme: 'error',
             message: this.$t('请选择构建工具！'),
@@ -1325,19 +1355,22 @@ export default {
           });
           return false;
         }
+        // 使用拖拽排序后的数据
+        const buildpacksIds = this.mixinTargetBuildpackIds || this.runtimeDialogConf.buildpacks;
 
         await this.$store.dispatch('envVar/updateRuntimeInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           data: {
             image: this.runtimeDialogConf.image,
-            buildpacks_id: this.runtimeDialogConf.buildpacks,
+            buildpacks_id: buildpacksIds,
           },
         });
         this.$paasMessage({
           theme: 'success',
           message: this.$t('保存成功'),
         });
+        this.getRuntimeInfo();
         this.runtimeImage = this.runtimeDialogConf.image;
         this.runtimeBuild = this.runtimeDialogConf.buildpacks;
         this.runtimeDialogConf.visiable = false;
@@ -1516,16 +1549,42 @@ export default {
     skipRelease() {
       this.isEdited = false;
     },
-    handleShowRuntimeDialog() {
+    async handleShowRuntimeDialog() {
       this.runtimeDialogConf.visiable = true;
+      // 获取选择列表
+      await this.getRuntimeInfo();
       this.runtimeDialogConf.image = this.runtimeImage;
       this.runtimeDialogConf.buildpacks = this.runtimeBuild;
       this.runtimeDialogConf.buildpackValueList = this.runtimeBuild;
-    },
-    handleHideRuntimeDialog() {},
 
-    handleBuildpackChange(sourceList, targetList, targetValueList) {
+      this.mixinTargetBuildpackIds = null;
+      // 绑定拖拽事件
+      this.$nextTick(() => {
+        this.transferDragInit();
+      });
+    },
+
+    // 拖拽初始化
+    transferDragInit() {
+      const targetLiClass = '.tool-transfer-wrapper-cls .target-list .content li';
+      // 设置拖拽prop
+      this.mixinSetDraggableProp(targetLiClass);
+      // 目标容器拖拽
+      this.mixinBindDragEvent(document.querySelector('.tool-transfer-wrapper-cls .target-list .content'), targetLiClass);
+    },
+
+    // 数据还原
+    handleHideRuntimeDialog() {
+      setTimeout(() => {
+        this.targetListData = _.cloneDeep(this.curBuildpacks);
+      }, 200);
+    },
+
+    handleBuildpackChange(listEl, targetList, targetValueList) {
       this.runtimeDialogConf.buildpacks = targetValueList;
+      this.$nextTick(() => {
+        this.transferDragInit();
+      });
     },
 
     handleImageChange() {
@@ -2030,4 +2089,19 @@ export default {
         font-size: 13px;
         color: #ff9c01;
     }
+
+    /* 穿梭框样式设置 */
+    .tool-transfer-wrapper-cls .transfer-source-item {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+</style>
+
+<style lang="scss">
+.tool-transfer-wrapper-cls .target-list .content li.moving {
+  background: transparent;
+  color: transparent;
+  border: 1px dashed #ccc;
+}
 </style>

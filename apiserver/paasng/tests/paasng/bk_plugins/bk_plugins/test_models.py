@@ -52,7 +52,7 @@ def test_get_deployed_statuses(bk_plugin_app):
 
 
 def test_make_bk_plugin_normal(bk_app):
-    bk_app.type = ApplicationType.BK_PLUGIN
+    bk_app.is_plugin_app = True
     assert make_bk_plugin(bk_app) is not None, 'should succeed for "bk_plugin" type'
 
 

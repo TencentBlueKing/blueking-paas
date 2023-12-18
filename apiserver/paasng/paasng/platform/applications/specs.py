@@ -62,21 +62,30 @@ class AppSpecs:
         """Whether an application can create new modules"""
         if not self.region.mul_modules_config.creation_allowed:
             return False
-        if self.application.is_smart_app:
+        # S-mart 应用、插件应用，不允许新增模块
+        if self.application.is_smart_app or self.application.is_plugin_app:
             return False
         return self.type_specs.can_create_extra_modules
 
     @property
     def require_templated_source(self) -> bool:
         """Whether an application must choose source template"""
+        # 插件应用不需要模板
+        if self.application.is_plugin_app:
+            return False
         return self.type_specs.require_templated_source
 
     @property
     def language_by_default(self) -> str:
+        # 插件应用的默认语言为 python
+        if self.application.is_plugin_app:
+            return "Python"
         return self.type_specs.language_by_default
 
     @property
     def preset_services(self) -> Dict[str, Dict]:
+        if self.application.is_plugin_app:
+            return settings.PRESET_SERVICES_BY_APP_TYPE.get("bk_plugin", {})
         return self.type_specs.preset_services
 
     @property
@@ -170,16 +179,6 @@ class EnginelessAppTypeSpecs(AppTypeSpecs):
     engine_enabled = False
     can_create_extra_modules = False
     require_templated_source = False
-
-
-class BkPluginTypeSpecs(AppTypeSpecs):
-    """Specs for bk_plugin type"""
-
-    type_ = ApplicationType.BK_PLUGIN
-    engine_enabled = True
-    can_create_extra_modules = False
-    require_templated_source = False
-    language_by_default = "Python"
 
 
 class CloudNativeTypeSpecs(AppTypeSpecs):

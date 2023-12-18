@@ -8,21 +8,35 @@
       :is-transition="false"
       class="middle"
     >
-      <!-- lesscode/smart应用 源码信息 -->
-      <packages-view v-if="isLesscodeApp || isSmartApp" />
-      <!-- 代码源 -->
-      <code-source v-else :build-method="buildMethod" />
-      <!-- 镜像信息 -->
-      <mirror @close-content-loader="closeContentLoader" @set-build-method="setBuildMethod" />
+      <!-- 仅镜像 -->
+      <template v-if="isCustomImage && !allowMultipleImage">
+        <image-info
+          :credential-list="credentialList"
+          @close-content-loader="closeContentLoader"
+        ></image-info>
+        <image-credential
+          :list="credentialList"
+          @reacquire="getCredentialList"
+        ></image-credential>
+      </template>
+      <template v-else>
+        <!-- lesscode/smart应用 源码信息 -->
+        <packages-view v-if="isLesscodeApp || isSmartApp" />
+        <!-- 代码源 -->
+        <code-source v-else />
+        <!-- 镜像信息 -->
+        <mirror @close-content-loader="closeContentLoader" />
+      </template>
     </paas-content-loader>
   </div>
 </template>
 
-<script>
-import codeSource from './comps/deploy-build/code-source.vue';
+<script>import codeSource from './comps/deploy-build/code-source.vue';
 import mirror from './comps/deploy-build/mirror.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import packagesView from '@/views/dev-center/app/engine/packages/index.vue';
+import imageInfo from './image-info';
+import imageCredential from './image-credential';
 
 export default {
   name: 'DeployBuild',
@@ -30,20 +44,70 @@ export default {
     codeSource,
     mirror,
     packagesView,
+    imageInfo,
+    imageCredential,
   },
   mixins: [appBaseMixin],
   data() {
     return {
       isLoading: true,
       buildMethod: '',
+      credentialList: [],
+      allowMultipleImage: false,
     };
+  },
+  computed: {
+    isCustomImage() {
+      return this.curAppModule?.web_config?.runtime_type === 'custom_image';
+    },
+  },
+  async created() {
+    if (this.isCustomImage) {
+      await this.getCredentialList();
+      this.getProcessInfo();
+    }
   },
   methods: {
     closeContentLoader() {
       this.isLoading = false;
     },
+
     setBuildMethod(data) {
       this.buildMethod = data;
+    },
+
+    // 获取凭证列表
+    async getCredentialList() {
+      // loading处理
+      try {
+        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode: this.appCode });
+        this.credentialList = res;
+        this.credentialList.forEach((item) => {
+          item.password = '';
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+
+    async getProcessInfo() {
+      try {
+        const res = await this.$store.dispatch('deploy/getAppProcessInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
   },
 };

@@ -181,10 +181,7 @@ export default {
       if (!this.userFeature.PHALANX) {
         this.panels = this.panels.filter(v => v.ref !== 'observability');
       }
-      if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
-        return this.panels;
-      }
-      return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
+      return this.panels;
     },
 
     // 是否需要保存操作按钮

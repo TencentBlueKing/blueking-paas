@@ -162,7 +162,7 @@
               >
                 <bk-alert type="error">
                   <div slot="title">
-                    <span v-if="curAppInfo.application.type === 'bk_plugin'">
+                    <span v-if="curAppInfo.application.is_plugin_app">
                       {{ $t('应用已迁移到插件开发中心，本页面仅做展示用，如需操作请到') }}
                       <router-link :to="{ name: 'pluginDeployEnv', params: { id: curAppCode, pluginTypeId: 'bksaas' }}">{{ $t('插件开发- 配置管理页面') }}</router-link>
                       {{ $t('。') }}

@@ -32,7 +32,6 @@ class TestModuleSpecs:
         [
             (ApplicationType.DEFAULT, True),
             (ApplicationType.ENGINELESS_APP, False),
-            (ApplicationType.BK_PLUGIN, False),
         ],
     )
     @pytest.mark.parametrize(

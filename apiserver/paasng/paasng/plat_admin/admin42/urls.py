@@ -29,6 +29,7 @@ from .views.engine import (
     custom_domain,
     deployments,
     egress,
+    log_config,
     operator,
     package,
     proc_spec,
@@ -371,6 +372,12 @@ urlpatterns = [
         r"^applications/(?P<code>[^/]+)/engine/custom_domain/$",
         custom_domain.CustomDomainManageView.as_view(),
         name="admin.applications.engine.custom_domain",
+    ),
+    # 应用详情-日志采集管理
+    url(
+        r"^applications/(?P<code>[^/]+)/engine/log_config/$",
+        log_config.LogConfigView.as_view(),
+        name="admin.applications.engine.log_config.manage",
     ),
     # 用户管理-首页
     url(r"^accountmgr/$", accountmgr.UserProfilesManageView.as_view(), name="admin.accountmgr.index"),

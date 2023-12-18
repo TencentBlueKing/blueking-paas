@@ -30,7 +30,7 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -214,7 +214,7 @@ class TestApplicationCreateWithEngine:
         ("type", "desired_type", "creation_succeeded"),
         [
             ("default", "default", True),
-            ("bk_plugin", "bk_plugin", True),
+            ("cloud_native", "cloud_native", True),
             ("engineless_app", "engineless_app", False),
         ],
     )
@@ -444,7 +444,7 @@ class TestCreateBkPlugin:
         response = self._send_creation_request(api_client)
 
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
-        assert response.json()["application"]["type"] == "bk_plugin"
+        assert response.json()["application"]["is_plugin_app"] is True
         # TODO: Update tests when bk_plugin supports multiple languages
         assert response.json()["application"]["language"] == "Python"
         assert response.json()["application"]["modules"][0]["repo"] is not None
@@ -461,7 +461,8 @@ class TestCreateBkPlugin:
             "/api/bkapps/applications/v2/",
             data={
                 "region": settings.DEFAULT_REGION_NAME,
-                "type": "bk_plugin",
+                "type": ApplicationType.CLOUD_NATIVE,
+                "is_plugin_app": True,
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",
                 "engine_params": {

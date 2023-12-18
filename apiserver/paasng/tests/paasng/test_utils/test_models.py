@@ -136,6 +136,7 @@ class TestBkUserField:
             name_en=generate_random_string(6),
             type_=ApplicationType.DEFAULT,
             operator=user_id_encoder.encode(ProviderType.BK, "foo"),
+            is_plugin_app=False,
         )
         assert application.creator.username == "foo"
 

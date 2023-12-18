@@ -374,6 +374,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
+        this.$emit('set-build-method', results.build_method);
         this.mirrorData = results || {};
         // 基础镜像
         if (!this.mirrorData.bp_stack_name) {

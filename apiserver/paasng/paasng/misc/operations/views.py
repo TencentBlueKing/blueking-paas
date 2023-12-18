@@ -30,7 +30,6 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.operations import serializers
 from paasng.misc.operations.serializers import RecentOperationsByAppSLZ
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 
@@ -92,7 +91,7 @@ class LatestApplicationsViewSet(APIView):
         applications = UserApplicationFilter(self.request.user).filter()
         # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
-            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+            applications = applications.exclude(is_plugin_app=True)
 
         application_ids = applications.values_list("id", flat=True)
 

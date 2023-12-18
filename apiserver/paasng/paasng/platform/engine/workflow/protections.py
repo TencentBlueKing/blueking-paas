@@ -25,7 +25,7 @@ from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.iam.helpers import fetch_user_roles
-from paasng.platform.applications.constants import AppEnvironment, ApplicationType
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -135,7 +135,7 @@ class PluginTagValidationCondition(DeployCondition):
 
     def validate(self):
         application = self.env.module.application
-        if application.type != ApplicationType.BK_PLUGIN:
+        if not application.is_plugin_app:
             return
 
         if self.env.environment not in [AppEnvironment.PRODUCTION.value]:

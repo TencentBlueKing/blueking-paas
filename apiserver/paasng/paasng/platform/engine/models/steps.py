@@ -87,14 +87,6 @@ class StepMetaSet(AuditedModel):
     metas = models.ManyToManyField(DeployStepMeta, "关联步骤元信息", default=[])
     is_default = models.BooleanField(_("是否为默认步骤集"), default=False)
 
-    builder_provider = models.ForeignKey(
-        "modules.AppSlugBuilder",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="step_meta_sets",
-    )
-
     objects = StepMetaSetManager()
 
     def __str__(self):

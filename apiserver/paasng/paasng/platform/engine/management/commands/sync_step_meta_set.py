@@ -59,16 +59,22 @@ class Command(BaseCommand):
     def _sync_step_metas(self):
         """sync all step metas"""
         for step_name, step in ALL_STEP_METAS.items():
-            DeployStepMeta.objects.update_or_create(
-                name=step_name,
-                phase=step.phase,
-                defaults={
-                    "display_name_en": step.display_name_en,
-                    "display_name_zh_cn": step.display_name_zh_cn,
-                    "started_patterns": step.started_patterns or [],
-                    "finished_patterns": step.finished_patterns or [],
-                },
-            )
+            if query_set := DeployStepMeta.objects.filter(name=step_name, phase=step.phase):
+                query_set.update(
+                    display_name_en=step.display_name_en,
+                    display_name_zh_cn=step.display_name_zh_cn,
+                    started_patterns=step.started_patterns or [],
+                    finished_patterns=step.finished_patterns or [],
+                )
+            else:
+                DeployStepMeta.objects.create(
+                    name=step_name,
+                    phase=step.phase,
+                    display_name_en=step.display_name_en,
+                    display_name_zh_cn=step.display_name_zh_cn,
+                    started_patterns=step.started_patterns or [],
+                    finished_patterns=step.finished_patterns or [],
+                )
             self.stdout.write(f"Sync step {step.name} successfully")
 
     def _sync_default_set(self):
@@ -90,8 +96,7 @@ class Command(BaseCommand):
             self._sync_metas(step_meta_set_obj, SLUG_PILOT_SET)
 
         # 私有化版本只有一个 slug-pilot, 并且绑定名字是 blueking 的 builder_provider
-        if slug_builder := AppSlugBuilder.objects.filter(name="blueking").last():
-            StepMetaSet.objects.filter(name="slug-pilot").update(builder_provider=slug_builder)
+        AppSlugBuilder.objects.filter(name="blueking").update(step_meta_set=StepMetaSet.objects.get(name="slug-pilot"))
 
     def _sync_docker_build_set(self):
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=DOCKER_BUILD_STEPSET_NAME, is_default=False)
@@ -117,6 +122,8 @@ class Command(BaseCommand):
         # 步骤正确直接返回
         if current_step_names == expected_step_names:
             return
+
+        self.stdout.write(f"current step names: {current_step_names}, expected step names: {expected_step_names}")
 
         step_meta_set_obj.metas.clear()
         for step_meta in expected_step_set:

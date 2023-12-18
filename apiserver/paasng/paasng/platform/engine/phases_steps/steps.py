@@ -74,9 +74,9 @@ class DeployStepPicker:
     def _pick_default_meta_set(cls, m: ModuleRuntimeManager):
         """以 SlugBuilder 匹配为主, 不存在绑定直接走缺省步骤集"""
         if builder := m.get_slug_builder(raise_exception=False):  # noqa: SIM102
-            # NOTE: 目前一个 builder 只会关联一个 StepMetaSet
-            if meta_set := StepMetaSet.objects.filter(builder_provider=builder).order_by("-created").first():
-                return meta_set
+            # NOTE: 一个 builder 只会关联一个 StepMetaSet
+            if builder.step_meta_set:
+                return builder.step_meta_set
 
         if m.module.application.type == ApplicationType.CLOUD_NATIVE.value:
             return StepMetaSet.objects.filter(is_default=True, name="cnb").order_by("-created").first()

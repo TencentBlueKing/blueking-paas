@@ -1448,10 +1448,10 @@ export default {
       }
     },
 
-    // 跳转模块信息
+    // 跳转构建配置
     handleToModuleInfo() {
       this.$store.commit('cloudApi/updateModuleInfoEdit', true);
-      this.$emit('tab-change', 'moduleInfo');
+      this.$emit('tab-change', 'cloudAppDeployForBuild');
     },
 
     // 保存

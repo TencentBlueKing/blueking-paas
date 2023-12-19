@@ -138,10 +138,21 @@ export default {
       }
       return this.$t('源代码');
     },
+    // 基本信息是否为编辑态
+    isModuleInfoEdit() {
+      return this.$store.state.cloudApi.isModuleInfoEdit;
+    },
   },
   created() {
     // 获取基本信息
     this.getBaseInfo();
+  },
+  mounted() {
+    // 默认为编辑态
+    this.isModuleInfoEdit && this.handleEdit('isBasePageEdit');
+  },
+  beforeDestroy() {
+    this.$store.commit('cloudApi/updateModuleInfoEdit', false);
   },
   methods: {
     // 获取info信息

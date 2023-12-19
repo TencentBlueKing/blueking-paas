@@ -1529,6 +1529,13 @@ export default {
     // 处理进程状态
     handleProcessStatus(v) {
       this.scaleTargetReplicas = v || 0;
+      // 处理进程期望实例数
+      this.allProcesses.forEach((e) => {
+        if (e.name === this.curUpdateProcess.name) {
+          e.available_instance_count = this.scaleTargetReplicas;
+        }
+      });
+
       // 进程之后请求列表数据
       // bus.$emit('get-release-info');
     },

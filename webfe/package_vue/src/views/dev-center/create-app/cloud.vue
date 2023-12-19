@@ -406,7 +406,7 @@
           </template>
 
           <bk-form
-            v-if="isAdvancedOptions"
+            v-if="isShowAdvancedOptions"
             ref="formSourceRef"
             :model="formData"
             :rules="rules"
@@ -824,9 +824,6 @@ export default {
     userFeature() {
       return this.$store.state.userFeature;
     },
-    isAdvancedOptions() {
-      return this.$store.state.createApp.isAdvancedOptions;
-    },
     mirrorExamplePlaceholder() {
       return `${this.$t('示例镜像：')}${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
     },
@@ -873,6 +870,9 @@ export default {
       this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
 
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
+    },
+    isShowAdvancedOptions(value) {
+      this.$store.commit('createApp/updateAdvancedOptions', value);
     },
   },
   mounted() {

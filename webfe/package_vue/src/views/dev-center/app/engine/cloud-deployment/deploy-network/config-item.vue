@@ -571,6 +571,7 @@ export default {
   position: relative;
   padding: 12px 24px 12px 0;
   background: #fff;
+  border-bottom: 1px solid #dcdee5;
 
   .title {
     display: flex;

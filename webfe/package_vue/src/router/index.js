@@ -608,7 +608,7 @@ const router = new Router({
           component: cloudAppDeployments,
           name: 'cloudAppDeploy',
           redirect: {
-            name: 'cloudAppDeployForProcess',
+            name: 'cloudAppDeployForBuild',
           },
           children: [
             {

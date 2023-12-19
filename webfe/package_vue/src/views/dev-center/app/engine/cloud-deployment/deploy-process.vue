@@ -20,8 +20,6 @@
       </bk-exception>
     </section>
     <template v-else>
-      <!-- 钩子命令-创建应用、模块不展示 -->
-      <deploy-hook v-if="!isCreate" />
       <!-- 进程配置 -->
       <paas-content-loader
         :is-loading="isLoading"
@@ -838,6 +836,9 @@
           </bk-form>
         </bk-dialog>
       </paas-content-loader>
+
+      <!-- 钩子命令-创建应用、模块不展示 -->
+      <deploy-hook v-if="!isCreate" />
     </template>
     <!-- 指南 -->
     <user-guide ref="userGuideRef" />

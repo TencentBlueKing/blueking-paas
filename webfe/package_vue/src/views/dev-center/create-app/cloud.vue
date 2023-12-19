@@ -1211,9 +1211,6 @@ export default {
       //   });
       // }
 
-      console.log('params', params);
-      debugger;
-
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
           appCode: this.appCode,

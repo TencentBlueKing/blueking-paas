@@ -177,6 +177,11 @@ class TestReleaseStages:
         assert release.current_stage.status == PluginReleaseStatus.SUCCESSFUL
         # 最后一个步骤成功, 自动部署成功
         assert release.status == PluginReleaseStatus.SUCCESSFUL
+        # release 已经成功完成后，再更新 stage 的信息时，不会再触发 release 状态的更新
+        release.current_stage.status = PluginReleaseStatus.FAILED
+        release.current_stage.operator = "xxxxxx"
+        release.current_stage.save(update_fields=["status", "operator"])
+        assert release.status == PluginReleaseStatus.SUCCESSFUL
 
 
 class TestOperationRecord:

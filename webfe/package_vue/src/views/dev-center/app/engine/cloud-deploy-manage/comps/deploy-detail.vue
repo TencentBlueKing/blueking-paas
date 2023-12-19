@@ -193,7 +193,7 @@
               <div class="operate-process-wrapper mr15">
                 <bk-popconfirm
                   v-bk-tooltips="$t('停止进程')"
-                  v-if="row.targetStatus === 'start'"
+                  v-if="!!row.available_instance_count"
                   :content="$t('确认停止该进程？')"
                   width="288"
                   trigger="click"

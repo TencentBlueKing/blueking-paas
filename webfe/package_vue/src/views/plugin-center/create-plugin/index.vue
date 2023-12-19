@@ -11,7 +11,8 @@
       </div>
       <bk-form
         ref="pluginForm"
-        style="width: 730px;"
+        style="width: 730px"
+        :label-width="170"
         :model="form"
         :rules="rules"
       >
@@ -25,38 +26,36 @@
             <bk-select
               v-model="form.pd_id"
               class="w480"
-              ext-cls="slot-class"
+              ext-popover-cls="plugin-type-custom"
               searchable
               :clearable="false"
               :placeholder="$t('插件类型')"
               @change="changePluginType"
             >
               <bk-option
-                v-for="(option, index) in pluginTypeList"
+                v-for="option in pluginTypeList"
                 :id="option.plugin_type.id"
-                :key="index"
+                :key="option.plugin_type.id"
                 v-bind="option"
               >
                 <div
                   id="guide-wrap"
                   class="guide-container"
                 >
-                  <div class="guide-list">
-                    <div class="flex-row align-items-center guide-item">
-                      <img
-                        :src="option.plugin_type.logo"
-                        onerror="this.src='/static/images/plugin-default.svg'"
+                  <div class="flex-row align-items-center guide-item">
+                    <img
+                      :src="option.plugin_type.logo"
+                      onerror="this.src='/static/images/plugin-default.svg'"
+                    />
+                    <div class="guide-right pl10">
+                      <div class="guide-plugin-name">
+                        {{ option.plugin_type.name }}
+                      </div>
+                      <div
+                        v-bk-overflow-tips="option.plugin_type.description"
+                        class="guide-plugin-desc"
                       >
-                      <div class="guide-right pl10">
-                        <div class="guide-plugin-name">
-                          {{ option.plugin_type.name }}
-                        </div>
-                        <div
-                          v-bk-tooltips.right="option.plugin_type.description"
-                          class="guide-plugin-desc"
-                        >
-                          {{ option.plugin_type.description }}
-                        </div>
+                        {{ option.plugin_type.description }}
                       </div>
                     </div>
                   </div>
@@ -69,24 +68,31 @@
               target="_blank"
               :href="curPluginItem.plugin_type.docs"
               class="plugin-guide"
+              :style="{ right: `${localLanguage === 'en' ? -14 : 7}px`}"
             >
               <i class="paasng-icon paasng-question-circle" />
               {{ $t('插件指引') }}
             </a>
           </div>
           <div
-            v-if="curPluginItem.plugin_type && curPluginItem.plugin_type.approval_config && curPluginItem.plugin_type.approval_config.enabled"
+            v-if="
+              curPluginItem.plugin_type &&
+                curPluginItem.plugin_type.approval_config &&
+                curPluginItem.plugin_type.approval_config.enabled
+            "
             class="plugin-info w480 mt15"
           >
             <i
-              style="color: #3A84FF;"
+              style="color: #3a84ff"
               class="paasng-icon paasng-info-circle"
             />
             {{ curPluginItem.plugin_type.approval_config.tips }}
             <a
               target="_blank"
               :href="curPluginItem.plugin_type.approval_config.docs"
-            >{{ $t('详见文档') }}</a>
+            >
+              {{ $t('详见文档') }}
+            </a>
           </div>
         </bk-form-item>
         <bk-form-item
@@ -134,9 +140,9 @@
             @change="changePluginLanguage"
           >
             <bk-option
-              v-for="(option, index) in pluginLanguage"
+              v-for="option in pluginLanguage"
               :id="option.id"
-              :key="index"
+              :key="option.id"
               :name="option.language"
             />
           </bk-select>
@@ -155,9 +161,9 @@
             :placeholder="$t('适用语言')"
           >
             <bk-option
-              v-for="(option, index) in applicableLanguageList"
+              v-for="option in applicableLanguageList"
               :id="option.id"
-              :key="index"
+              :key="option.id"
               :name="option.text"
             />
           </bk-select>
@@ -175,9 +181,9 @@
             :placeholder="$t('初始化模板')"
           >
             <bk-option
-              v-for="(option, index) in pluginTemplateList"
+              v-for="option in pluginTemplateList"
               :id="option.id"
-              :key="index"
+              :key="option.id"
               :name="option.name"
             />
           </bk-select>
@@ -213,8 +219,10 @@
             v-model="schemaFormData"
             ref="bkForm"
             :http-adapter="{ request }"
-            :schema="schema">
-          </BkSchemaForm>
+            :label-width="170"
+            :schema="schema"
+            :layout="layout"
+          ></BkSchemaForm>
         </bk-form>
       </template>
 
@@ -240,8 +248,7 @@
     </paas-content-loader>
   </div>
 </template>
-<script>
-import http from '@/api';
+<script>import http from '@/api';
 import { quillEditor } from 'vue-quill-editor';
 import 'quill/dist/quill.core.css';
 import 'quill/dist/quill.snow.css';
@@ -340,6 +347,13 @@ export default {
       isLoading: true,
       schemaFormData: {},
       schema: {},
+      layout: {
+        prop: 0,
+        container: {
+          display: 'grid',
+          gridGap: '0',
+        },
+      },
     };
   },
   computed: {
@@ -349,6 +363,9 @@ export default {
     },
     defaultPluginType() {
       return this.$route.query.type;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -379,15 +396,19 @@ export default {
             isQuery = true;
           }
           e.name = e.plugin_type.name;
-          e.properties = e.schema.extra_fields;
+          // 多选表单添加必填校验
+          e.properties = this.addValidation(e.schema.extra_fields);
           return e;
         });
         // 参数指定插件类型，没有指定默认为第一项
         this.form.pd_id = isQuery ? this.defaultPluginType : res[0].plugin_type.id;
 
-        console.log('res', res);
-        const properties = res[0]?.schema.extra_fields;
-        this.schema = { type: 'object', properties };
+        // 默认为第一项
+        const properties = this.pluginTypeList[0]?.schema?.extra_fields;
+        // 根据 extra_fields_order 字段排序
+        const extraFieldsOrder = this.pluginTypeList[0]?.schema.extra_fields_order || [];
+        const sortdProperties = this.sortdSchema(extraFieldsOrder, properties);
+        this.schema = { type: 'object', required: this.getRequiredFields(sortdProperties), properties: sortdProperties };
         this.addRules();
         this.changePlaceholder();
       } catch (e) {
@@ -401,6 +422,52 @@ export default {
           this.isLoading = false;
         }, 200);
       }
+    },
+    // 多选添加校验
+    addValidation(properties) {
+      if (!Object.keys(properties).length) {
+        return properties;
+      }
+      for (const key in properties) {
+        if (Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules') && Array.isArray(properties[key].default)) {
+          // 多选校验
+          properties[key]['ui:rules'] = [
+            {
+              validator: '{{ $self.value.length > 0 }}',
+              message: this.$t('必填项'),
+            },
+          ];
+        }
+      }
+      return properties;
+    },
+    /**
+     * 根据 fieldsOrder 字段排序 schema
+     * @param  {Array} fieldsOrder 排序字段列表
+     * @param  {Object} properties 数据
+     */
+    sortdSchema(fieldsOrder = [], properties) {
+      const sortdProperties = {};
+      if (fieldsOrder.length) {
+        fieldsOrder.map((key) => {
+          sortdProperties[key] = properties[key];
+        });
+        return sortdProperties;
+      }
+      return properties;
+    },
+    // 获取必填项字段列表
+    getRequiredFields(properties) {
+      if (!Object.keys(properties).length) {
+        return;
+      }
+      const requiredFields = [];
+      for (const key in properties) {
+        if (Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules')) {
+          requiredFields.push(key);
+        }
+      }
+      return requiredFields;
     },
     // 添加校验规则
     addRules() {
@@ -419,33 +486,34 @@ export default {
       rulesPluginId.push({
         regex: new RegExp(this.curPluginInfo.schema.id.pattern),
         message: this.$t(this.curPluginInfo.schema.id.description),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       rulesPluginId.push({
         max: this.curPluginInfo.schema.id.maxlength || 16,
         message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       // 插件名称
       rulesName.push({
         regex: new RegExp(this.curPluginInfo.schema.name.pattern),
         message: this.$t(this.curPluginInfo.schema.name.description),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       rulesName.push({
         max: this.curPluginInfo.schema.name.maxlength || 20,
         message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
-        trigger: 'blur change',
+        trigger: 'blur',
       });
       this.rules.plugin_id = rulesPluginId;
       this.rules.name = rulesName;
     },
     changePlaceholder() {
-      this.pdIdPlaceholder = this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
-      this.namePlaceholder = this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
+      this.pdIdPlaceholder = this.$t(this.curPluginInfo.schema.id.description) || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
+      this.namePlaceholder = this.$t(this.curPluginInfo.schema.name.description) || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
     },
     // 选中具体插件类型
     changePluginType(value) {
+      this.resetPluinParams();
       this.form.pd_id = value;
       this.pluginTypeData = this.pluginTypeList.find(e => e.plugin_type.id === value);
       this.form.repositoryTemplateUrl = this.form.plugin_id
@@ -453,13 +521,23 @@ export default {
         : this.pluginTypeData.schema.repository_template;
       this.pluginLanguage = this.pluginTypeData.schema.init_templates;
       this.extraFields = this.pluginTypeData.schema.extra_fields;
-      this.schema = { type: 'object', properties: this.pluginTypeData.properties };
+      // schema 排序
+      const extraFieldsOrder = this.pluginTypeData.schema?.extra_fields_order || [];
+      const properties = this.sortdSchema(extraFieldsOrder, this.pluginTypeData.properties);
+      // 根据数据添加必填字段
+      this.schema = { type: 'object', required: this.getRequiredFields(properties), properties };
+    },
+    // 切换插件重置参数
+    resetPluinParams() {
+      this.form.language = '';
+      this.form.templateName = '';
     },
     // 选中具体插件开发语言
     changePluginLanguage(value) {
-      this.languageData = this.pluginLanguage.find(e => e.id === value);
+      this.languageData = this.pluginLanguage.find(e => e.id === value) || {};
       // 初始化模板
       this.pluginTemplateList = this.pluginLanguage.filter(e => e.language === this.languageData.language);
+      this.form.templateName = '';
     },
     // 富文本编辑
     onEditorChange(e) {
@@ -467,12 +545,17 @@ export default {
     },
 
     submitPluginForm() {
-      this.$refs.pluginForm.validate().then(() => {
+      const formArray = [this.$refs.pluginForm.validate()];
+      if (this.$refs.bkForm) {
+        formArray.push(this.$refs.bkForm.validate());
+      }
+      Promise.all(formArray).then(() => {
         this.buttonLoading = true;
         this.save();
       })
-        .catch(() => {
+        .catch((validator) => {
           this.buttonLoading = false;
+          console.warn(validator);
         });
     },
 
@@ -492,8 +575,9 @@ export default {
           theme: 'success',
           message: this.$t('插件创建成功！'),
         });
+        // 版本管理
         this.$router.push({
-          name: 'pluginSummary',
+          name: 'pluginVersionManager',
           params: { pluginTypeId: res.pd_id, id: res.id },
         });
       } catch (e) {
@@ -519,7 +603,7 @@ export default {
         const data = await http.get(url);
         return data.map(e => ({ label: e.name, value: e.code_name }));
       } catch (error) {
-        console.log('error', error);
+        console.warn(error);
       }
     },
   },
@@ -527,81 +611,101 @@ export default {
 </script>
 <style lang="scss" scoped>
 .bk-create-plugin-warp {
-    padding: 28px 0 44px;
-    width: calc(100% - 120px);
-    margin: 0 auto;
-    min-height: calc(100vh - 120px);
-    .base-info-tit{
-        margin: 5px 0 20px;
-        font-weight: Bold;
-        color: #63656E;
-        padding: 5px 16px;
-        background: #F5F7FA;
-        border-radius: 2px;
+  padding: 28px 0 44px;
+  width: calc(100% - 120px);
+  margin: 0 auto;
+  min-height: calc(100vh - 120px);
+  .base-info-tit {
+    margin: 5px 0 20px;
+    font-weight: Bold;
+    color: #63656e;
+    padding: 5px 16px;
+    background: #f5f7fa;
+    border-radius: 2px;
+  }
+  .w480 {
+    width: 480px;
+  }
+  .tips {
+    color: #979ba5;
+    font-size: 12px;
+  }
+  .plugin-info {
+    background: #f0f8ff;
+    border: 1px solid #a3c5fd;
+    font-size: 12px;
+    color: #666666;
+    padding: 0 9px;
+  }
+  .edit-form-item {
+    height: 300px;
+    .editor {
+      width: 800px;
+      height: 200px;
     }
-    .w480{
-        width: 480px;
-    }
-    .tips{
-        color: #979ba5;
-        font-size: 12px;
-    }
-    .plugin-info{
-        background: #F0F8FF;
-        border: 1px solid #A3C5FD;
-        font-size: 12px;
-        color: #666666;
-        padding: 0 9px;
-    }
-    .edit-form-item{
-        height: 300px;
-        .editor{
-            width: 800px;
-            height: 200px;
-        }
-    }
+  }
 }
 .button-warp {
-    margin: 30px 0 0 150px;
+  margin: 30px 0 0 170px;
 }
-.guide-container{
-    background: #fff;
-    .guide-item{
-        cursor: pointer;
-        height: 64px;
-        img{
-            width: 48px;
-            height: 48px;
-        }
-        .guide-plugin-name{
-            font-size: 14px;
-            color: #313238;
-        }
-        .guide-plugin-desc{
-            line-height: 24px;
-            font-size: 12px;
-            color: #63656E;
-        }
+.guide-container {
+  background: #fff;
+  .guide-item {
+    cursor: pointer;
+    height: 64px;
+    img {
+      width: 48px;
+      height: 48px;
     }
-    .guide-item:hover {
-        background: #e7f1fe;
+    .guide-plugin-name {
+      font-size: 14px;
+      color: #313238;
     }
+    .guide-plugin-desc {
+      line-height: 24px;
+      font-size: 12px;
+      // 宽度
+      color: #63656e;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    .guide-right {
+      overflow: hidden;
+    }
+  }
+  .guide-item:hover {
+    background: #e7f1fe;
+  }
 }
 .plugin-guide {
-    font-size: 12px;
-    cursor: pointer;
-    margin-left: 10px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 10px;
+  position: absolute;
 }
 .plugin-top-title {
-    margin: 12px 0 14px;
+  margin: 12px 0 14px;
+}
+.bk-form-warp /deep/ .bk-schema-form-item--error {
+  [error] {
+    border-color: #f5222d !important;
+  }
+  .bk-schema-form-item__error-tips{
+    color: #f5222d;
+  }
 }
 </style>
-<style>
-  .bk-form-warp{
-    width: 630px !important;
-  }
-  .guide-input input {
-      border: none;
-      border-bottom: 1px solid #c4c6cc;
-  }
+<style lang="scss">
+.bk-form-warp {
+  width: 630px !important;
+}
+.guide-input input {
+  border: none;
+  border-bottom: 1px solid #c4c6cc;
+}
+
+.plugin-type-custom .is-selected .guide-container {
+  background-color: #f4f6fa !important;
+}
 </style>

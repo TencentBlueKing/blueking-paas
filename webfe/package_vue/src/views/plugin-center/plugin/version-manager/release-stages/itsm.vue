@@ -1,7 +1,7 @@
 <template>
   <div class="itsm">
     <status-bar :type="curStatusBarData.type">
-      <template v-slot:left>
+      <template #left>
         <!-- 等待审批 -->
         <span class="warning-check-wrapper" v-if="curStatusBarData.type === 'warning'">
           <i class="paasng-icon paasng-paas-remind-fill" />
@@ -19,10 +19,10 @@
           <i class="paasng-icon paasng-back2" />
         </span>
         <span class="info-time pl10">
-          <span class="info-pending-text"> {{ curStatusBarData.title }} </span>
+          <span class="info-pending-text"> {{ $t(curStatusBarData.title) }} </span>
         </span>
       </template>
-      <template v-slot:right>
+      <template #right>
         <bk-button
           size="small"
           theme="primary"
@@ -45,123 +45,101 @@
         </bk-button>
       </template>
     </status-bar>
-    
+
     <itsm-info-item :title="$t('提单信息')" :data="ladingData"></itsm-info-item>
     <itsm-info-item :title="$t('申请内容')" :data="applyData"></itsm-info-item>
   </div>
 </template>
 <script>
-  import stageBaseMixin from './stage-base-mixin';
-  import statusBar from './comps/status-bar';
-  import itsmInfoItem from './comps/itsm-info-item';
-  import i18n from '@/language/i18n';
-  import { PLUGIN_ITSM_APPLY, PLUGIN_ITSM_LADING } from '@/common/constants';
+import stageBaseMixin from './stage-base-mixin';
+import statusBar from './comps/status-bar';
+import itsmInfoItem from './comps/itsm-info-item';
+import { PLUGIN_ITSM_APPLY, PLUGIN_ITSM_LADING, APPROVALSTATUS, STATUSBARDATA } from '@/common/constants';
 
-  // 提单信息
-  const ladingMap = PLUGIN_ITSM_LADING;
+// 提单信息
+const ladingMap = PLUGIN_ITSM_LADING;
 
-  // 申请内容
-  const applyMap = PLUGIN_ITSM_APPLY;
+// 申请内容
+const applyMap = PLUGIN_ITSM_APPLY;
 
-  const approvalStatus = {
-    'pending': 'approval',
-    'initial': 'approval',
-    'successful': 'successful',
-    'failed': 'failed',
-    'interrupted': 'interrupted',
-  };
-
-  const statusBarData = {
-    'approval': {
-      title: i18n.t('等待审批'),
-      type: 'warning',
+export default {
+  components: {
+    statusBar,
+    itsmInfoItem,
+  },
+  mixins: [stageBaseMixin],
+  props: {
+    pluginData: {
+      type: Object,
+      default: () => {},
     },
-    'successful': {
-      title: i18n.t('审批通过'),
-      type: 'success',
+    stageData: {
+      type: Object,
+      default: () => {},
     },
-    'failed': {
-      title: i18n.t('审批不通过'),
-      type: 'failed',
+  },
+  data() {
+    return {
+      ladingData: [],
+      applyData: [],
+    };
+  },
+  computed: {
+    // 手动切换步骤预览，使用详情数据，步骤预览不会改变当前发布的步骤顺序
+    itsmData() {
+      return this.pluginData.current_stage.itsm_detail?.fields || this.stageData.detail?.fields || [];
     },
-    'interrupted': {
-      title: i18n.t('已撤销提单'),
-      type: 'interrupted',
-    }
-  };
-
-  export default {
-    mixins: [stageBaseMixin],
-    components: {
-      statusBar,
-      itsmInfoItem
+    itsmDetail() {
+      return this.pluginData.current_stage?.itsm_detail || this.stageData.detail || {};
     },
-    props: {
-      pluginData: {
-        type: Object,
-        default: () => {}
-      },
-      stageData: {
-        type: Object,
-        default: () => {}
-      }
+    curStatusBarData() {
+      // approval successful failed interrupted
+      const status = this.stageData.status || this.pluginData.current_stage.status;
+      const curStatus = APPROVALSTATUS[status];
+      return STATUSBARDATA[curStatus];
     },
-    data () {
-      return {
-        ladingData: [],
-        applyData: []
-      };
+    isCancelBtn() {
+      return this.stageData.detail?.can_withdraw;
     },
-    computed: {
-      itsmData () {
-        return this.pluginData.current_stage.itsm_detail?.fields || [];
-      },
-      itsmDetail () {
-        return this.pluginData.current_stage?.itsm_detail || {};
-      },
-      curStatusBarData () {
-        // approval successful failed interrupted
-        const curStatus = approvalStatus[this.pluginData.current_stage.status];
-        return statusBarData[curStatus];
-      },
-      isCancelBtn () {
-        return this.stageData.detail?.can_withdraw;
-      }
-    },
-    watch: {
-      itsmData () {
-        this.init();
-      }
-    },
-    mounted () {
+  },
+  watch: {
+    itsmData() {
       this.init();
     },
-    methods: {
-      init () {
-        if (this.ladingData.length && this.applyData.length) {
-          return;
-        }
-        this.itsmData.forEach(item => {
-          if (ladingMap[item.key]) {
-            const data = { ...item, name: ladingMap[item.key] };
-            this.ladingData.unshift(data);
-          }
-          if (applyMap[item.key]) {
-            const data = { ...item, name: applyMap[item.key] };
-            this.applyData.push(data);
-          }
-        });
-        this.ladingData.unshift({
-          name: '单号',
-          value: this.itsmDetail['sn']
-        });
-      },
-      // 查看详情
-      handlerApprovalDetails () {
-        window.open(this.itsmDetail['ticket_url'], '_blank');
+  },
+  mounted() {
+    this.init();
+  },
+  methods: {
+    init() {
+      if (this.ladingData.length && this.applyData.length) {
+        return;
       }
-    }
-  };
+      this.itsmData.forEach((item) => {
+        if (ladingMap[item.key]) {
+          const data = { ...item, name: ladingMap[item.key] };
+          this.ladingData.unshift(data);
+        }
+        if (applyMap[item.key]) {
+          const data = { ...item, name: applyMap[item.key] };
+          this.applyData.push(data);
+        }
+      });
+      this.ladingData.unshift({
+        name: '单号',
+        value: this.itsmDetail.sn,
+      });
+    },
+    // 查看详情
+    handlerApprovalDetails() {
+      let url = this.pluginData.current_stage?.itsm_detail?.ticket_url;
+      if (!url) {
+        url = this.stageData?.detail?.ticket_url;
+      }
+      window.open(url, '_blank');
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

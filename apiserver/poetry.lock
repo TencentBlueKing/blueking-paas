@@ -362,7 +362,6 @@ optional = false
 python-versions = ">=3.6,<4.0"
 files = [
     {file = "bkpaas-auth-2.0.6.tar.gz", hash = "sha256:3cf0168784c0c8763b5630de05464041d255fef4dbcd8ba08e6dc31ce997a5b4"},
-    {file = "bkpaas_auth-2.0.6-py3-none-any.whl", hash = "sha256:4bf02a06c13eef0c24008306f397b738b55995dbda74e18614cf6a9446fc3bfa"},
 ]
 
 [package.dependencies]
@@ -1047,7 +1046,7 @@ files = [
 cffi = ">=1.12"
 
 [package.extras]
-docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
+docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx_rtd_theme"]
 docstest = ["doc8", "pyenchant (>=1.6.11)", "sphinxcontrib-spelling (>=4.0.1)", "twine (>=1.12.0)"]
 pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
 sdist = ["setuptools-rust (>=0.11.4)"]
@@ -3615,14 +3614,14 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "pytest-xdist"
-version = "3.5.0"
+version = "3.3.1"
 description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-xdist-3.5.0.tar.gz", hash = "sha256:cbb36f3d67e0c478baa57fa4edc8843887e0f6cfc42d677530a36d7472b32d8a"},
-    {file = "pytest_xdist-3.5.0-py3-none-any.whl", hash = "sha256:d075629c7e00b611df89f490a5063944bee7a4362a5ff11c7cc7824a03dfce24"},
+    {file = "pytest-xdist-3.3.1.tar.gz", hash = "sha256:d5ee0520eb1b7bcca50a60a518ab7a7707992812c578198f8b44fdfac78e8c93"},
+    {file = "pytest_xdist-3.3.1-py3-none-any.whl", hash = "sha256:ff9daa7793569e6a68544850fd3927cd257cc03a7ef76c95e86915355e82b5f2"},
 ]
 
 [package.dependencies]
@@ -4989,4 +4988,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "66ae79763aebfca9a067dde080e929ccae790bbb5e2679aa23d4413ed6deb969"
+content-hash = "7bd45d38b8f960bac96fb0c93089f46c17fad44a41baff0140eebe5048b028a0"

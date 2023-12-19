@@ -10,6 +10,12 @@
           {{ $t('插件已发布成功') }}
         </h3>
         <span
+          class="tips-link mr10"
+          @click="handleJumpToUseLink"
+        >
+          {{ $t('去使用') }}
+        </span>
+        <span
           class="tips-link"
           @click="goVersionManager"
         >
@@ -20,21 +26,48 @@
   </div>
 </template>
 <script>
-    import stageBaseMixin from './stage-base-mixin';
+import stageBaseMixin from './stage-base-mixin';
 
 export default {
   mixins: [stageBaseMixin],
-  data: function () {
+  props: {
+    stageData: {
+      type: Object,
+      default: () => {},
+    },
+  },
+  data() {
     return {
-      winHeight: 300
+      winHeight: 300,
     };
   },
   methods: {
-    goVersionManager () {
+    goVersionManager() {
       this.$router.push({
-          name: 'pluginVersionManager'
+        name: 'pluginVersionManager',
       });
-    }
-  }
+    },
+    handleJumpToUseLink() {
+      const url = this.stageData.detail?.link;
+      window.open(url, '_blank');
+    },
+  },
 };
 </script>
+
+<style lang="scss" scoped>
+  .successful-container {
+    .title {
+      font-size: 20px;
+      font-weight: 400;
+      color: #313238;
+      line-height: 28px;
+    }
+    .tips-link {
+      font-size: 14px;
+      color: #3A84FF;
+      line-height: 22px;
+      cursor: pointer;
+    }
+  }
+</style>

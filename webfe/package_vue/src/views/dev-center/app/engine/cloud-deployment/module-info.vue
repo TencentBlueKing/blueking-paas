@@ -1,113 +1,14 @@
 <template>
   <paas-content-loader
-    :is-loading="pageLoading"
+    :is-loading="isPageLoading"
     placeholder="deploy-module-info-loading"
     :offset-top="0"
     :is-transition="false"
     class="deploy-action-box"
   >
     <div class="module-info-container">
-      <div
-        class="base-info-container"
-        v-if="isCustomImage && !allowMultipleImage"
-      >
-        <div class="flex-row align-items-center">
-          <span class="base-info-title">
-            {{ $t('基本信息-title') }}
-          </span>
-          <div class="edit-container" @click="handleEdit('isBasePageEdit')" v-if="!isBasePageEdit">
-            <i class="paasng-icon paasng-edit-2 pl10" />
-            {{ $t('编辑') }}
-          </div>
-        </div>
-        <div
-          class="form-detail mt20 pb20 pl40 border-b" v-if="!isBasePageEdit">
-          <bk-form
-            :model="buildConfig">
-            <bk-form-item
-              :label="`${$t('托管方式')}：`">
-              <span class="form-text">{{ artifactType || '--' }}</span>
-            </bk-form-item>
-            <bk-form-item
-              :label="`${$t('镜像仓库')}：`">
-              <span class="form-text">{{ buildConfig.image_repository || '--' }}</span>
-            </bk-form-item>
-            <bk-form-item
-              :label="`${$t('镜像凭证')}：`">
-              <span class="form-text">{{ buildConfig.image_credential_name || '--' }}</span>
-            </bk-form-item>
-          </bk-form>
-        </div>
-
-        <div
-          class="form-edit mt20 pb20 border-b" v-if="isBasePageEdit">
-          <bk-form
-            :model="buildConfig"
-            :rules="rules"
-            ref="baseInfoRef"
-          >
-            <bk-form-item
-              :label="`${$t('托管方式')}：`">
-              <span class="form-text">{{ artifactType || '--' }}</span>
-            </bk-form-item>
-
-            <bk-form-item
-              :label="`${$t('镜像仓库')}：`"
-              :required="true"
-              :property="'image'"
-              error-display-type="normal"
-            >
-              <bk-input
-                ref="imageRef"
-                v-model="buildConfig.image_repository"
-                style="width: 450px;"
-                :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
-              >
-              </bk-input>
-              <p slot="tip" class="input-tips">{{ $t('一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。') }}</p>
-            </bk-form-item>
-
-            <bk-form-item
-              :label="`${$t('镜像凭证')}：`">
-              <bk-select
-                v-model="buildConfig.image_credential_name"
-                style="width: 450px;"
-                searchable
-              >
-                <bk-option
-                  v-for="option in credentialList"
-                  :id="option.name"
-                  :key="option.name"
-                  :name="option.name"
-                />
-              </bk-select>
-            </bk-form-item>
-          </bk-form>
-
-          <div class="ml150">
-            <bk-button
-              theme="primary"
-              title="保存"
-              class="mr20 mt20"
-              @click="handleSave">
-              {{ $t('保存') }}
-            </bk-button>
-
-            <bk-button
-              :theme="'default'"
-              title="取消"
-              class="mt20"
-              @click="handleCancel">
-              {{ $t('取消') }}
-            </bk-button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 镜像凭证 -->
-      <div class="mirror-credentials-container" v-if="isCustomImage && !allowMultipleImage">
-        <image-credential :list="credentialList" @reacquire="getCredentialList"></image-credential>
-      </div>
+      <!-- 网络配置 -->
+      <deploy-network @set-network-loading="setNetworkLoading" />
 
       <!-- 部署限制 -->
       <div class="base-info-container">
@@ -126,7 +27,7 @@
             {{ $t('开启部署权限控制，仅管理员可部署、下架该模块。') }}
           </div>
         </div>
-        <div class="form-detail mt20 pb20 pl40 border-b" v-if="!isDeployLimitEdit">
+        <div class="form-detail mt20 pb20 border-b" v-if="!isDeployLimitEdit">
           <bk-form>
             <bk-form-item
               :label="`${$t('预发布环境')}：`">
@@ -180,7 +81,7 @@
             {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
           </div>
         </div>
-        <div class="form-detail mt20 pb20 pl40 flex-row" v-if="!isIpInfoEdit">
+        <div class="form-detail mt20 pb20 flex-row" v-if="!isIpInfoEdit">
           <bk-form>
             <bk-form-item
               :label="`${$t('预发布环境')}：`">
@@ -356,12 +257,11 @@
   </paas-content-loader>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
-import imageCredential from './image-credential';
 import moment from 'moment';
-import _ from 'lodash';
+import deployNetwork from './deploy-network';
 export default {
   components: {
-    imageCredential,
+    deployNetwork,
   },
   mixins: [appBaseMixin],
   data() {
@@ -369,7 +269,6 @@ export default {
       isLoading: false,
       deployLimit: { stag: false, prod: false },
       isDeployLimitEdit: false,
-      isBasePageEdit: false,
       isIpInfoEdit: false,
       gatewayInfos: {
         stag: {
@@ -387,39 +286,13 @@ export default {
       },
       gatewayInfosStagLoading: false,
       pageLoading: true,
+      isNetworkLoading: true,
       envs: [],
-      credentialList: [],
-      rules: {
-        image: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-          {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
-            message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
-            trigger: 'blur',
-          },
-        ],
-      },
-      buildConfig: {},
-      buildConfigClone: {},
-      allowMultipleImage: false,
     };
   },
   computed: {
     curAppModule() {
       return this.$store.state.curAppModule;
-    },
-    artifactType() {
-      if (this.buildConfig.build_method === 'custom_image') {
-        return this.$t('仅镜像');
-      }
-      if (this.buildConfig.build_method === 'slug') {
-        return this.$t('仅源码');
-      }
-      return this.$t('源代码');
     },
 
     curStagDisabled() {
@@ -443,23 +316,17 @@ export default {
       return this.$store.state.cloudApi.isModuleInfoEdit;
     },
 
-    isCustomImage() {
-      return this.curAppModule?.web_config?.runtime_type === 'custom_image';
+    isPageLoading() {
+      if (!this.pageLoading && !this.isNetworkLoading) {
+        return false;
+      }
+      return true;
     },
   },
 
   mounted() {
     // 部署限制
     this.fetchEnvProtection();
-
-    // 镜像凭证列表
-    this.getCredentialList();
-
-    // 默认为编辑态
-    this.isModuleInfoEdit && this.handleEdit('isBasePageEdit');
-
-    // 获取基本信息
-    this.getBaseInfo();
 
     // 出口IP管理
     this.getGatewayInfos('stag');
@@ -470,50 +337,8 @@ export default {
       // 关闭基本信息编辑态
       this.$store.commit('cloudApi/updateModuleInfoEdit', false);
     });
-
-    // 镜像需要调用进程配置
-    if (this.isCustomImage) {
-      this.init();
-    }
   },
   methods: {
-    async init() {
-      try {
-        this.isLoading = true;
-        const res = await this.$store.dispatch('deploy/getAppProcessInfo', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message,
-        });
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    // 获取info信息
-    async getBaseInfo() {
-      try {
-        const res = await this.$store.dispatch('deploy/getAppBuildConfigInfo', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.buildConfig = { ...res };
-        this.buildConfigClone = _.cloneDeep(this.buildConfig);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message,
-        });
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    handleProcessNameEdit() {},
-
     // 编辑
     handleEdit(value) {
       this[value] = true;
@@ -522,42 +347,11 @@ export default {
       });
     },
 
-
-    async handleSave() {
-      // 基本信息页面保存
-      if (this.isBasePageEdit) {
-        try {
-          await this.$refs.baseInfoRef.validate();
-          if (this.buildConfig.image_credential_name === '') {
-            this.buildConfig.image_credential_name = null;
-          }
-          await this.$store.dispatch('deploy/SaveAppBuildConfigInfo', {
-            appCode: this.appCode,
-            moduleId: this.curModuleId,
-            params: { ...this.buildConfig },
-          });
-          this.$paasMessage({
-            theme: 'success',
-            message: this.$t('操作成功'),
-          });
-          this.$refs.baseInfoRef?.clearError();
-          this.isBasePageEdit = false;
-        } catch (error) {
-          console.log(error);
-        }
-      }
-    },
-
     handleCancel() {
       this.isDeployLimitEdit = false;
       this.isIpInfoEdit = false;
-      if (this.isBasePageEdit) {
-        this.buildConfig = _.cloneDeep(this.buildConfigClone);
-        this.isBasePageEdit = false;
-      }
       this.$refs.baseInfoRef?.clearError();
     },
-
 
     handleSaveEnv() {
       this.envs = Object.keys(this.deployLimit).reduce((p, v) => {
@@ -635,11 +429,8 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        this.pageLoading = false;
       }
     },
-
 
     getGatewayInfos(env) {
       const appCode = this.$route.params.id;
@@ -666,7 +457,6 @@ export default {
           this.pageLoading = false;
         });
     },
-
 
     gatewayInfosHandler(payload, env) {
       this.curEnv = env;
@@ -719,7 +509,6 @@ export default {
       }
     },
 
-
     enableGatewayInfos() {
       const appCode = this.$route.params.id;
       const env = this.curEnv;
@@ -763,31 +552,6 @@ export default {
         });
     },
 
-
-    // 获取凭证列表
-    async getCredentialList() {
-      this.tableLoading = true;
-      try {
-        const { appCode } = this;
-        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
-        this.credentialList = res;
-        this.credentialList.forEach((item) => {
-          item.password = '';
-        });
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || this.$t('接口异常'),
-        });
-      } finally {
-        this.tableLoading = false;
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 500);
-      }
-    },
-
-
     // 复制功能
     handleCopyIp(env) {
       const copyIp = this.gatewayInfos[env].node_ip_addresses.map(item => item.internal_ip_address).join(';');
@@ -806,6 +570,10 @@ export default {
         document.getSelection().addRange(selected);
       }
       this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
+    },
+
+    setNetworkLoading(loading) {
+      this.isNetworkLoading = loading;
     },
   },
 };

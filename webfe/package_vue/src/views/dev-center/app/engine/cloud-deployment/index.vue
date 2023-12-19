@@ -125,15 +125,13 @@ export default {
       panels: [
         { name: 'cloudAppDeployForBuild', label: this.$t('构建配置'), ref: 'build' },
         { name: 'cloudAppDeployForProcess', label: this.$t('进程配置'), ref: 'process' },
-        { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook' },
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env' },
         { name: 'cloudAppDeployForVolume', label: this.$t('挂载卷'), ref: 'volume' },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },
-        { name: 'observabilityConfig', label: this.$t('可观测性配置'), ref: 'observability' },
-        { name: 'networkConfig', label: this.$t('网络配置'), ref: 'network-config' },
-        { name: 'moduleInfo', label: this.$t('模块信息'), ref: 'info' },
+        { name: 'observabilityConfig', label: this.$t('可观测性'), ref: 'observability' },
+        { name: 'moduleInfo', label: this.$t('更多配置'), ref: 'info' },
       ],
-      active: 'cloudAppDeployForProcess',
+      active: 'cloudAppDeployForBuild',
       envValidate: true,
       isTab: true,
       dialogCloudAppData: [],
@@ -181,10 +179,7 @@ export default {
       if (!this.userFeature.PHALANX) {
         this.panels = this.panels.filter(v => v.ref !== 'observability');
       }
-      if (this.curAppModule?.web_config?.runtime_type !== 'custom_image') {
-        return this.panels;
-      }
-      return this.panels.filter(item => item.name !== 'cloudAppDeployForBuild');
+      return this.panels;
     },
 
     // 是否需要保存操作按钮

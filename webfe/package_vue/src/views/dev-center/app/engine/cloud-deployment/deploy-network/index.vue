@@ -62,9 +62,9 @@ export default {
       dnsServeFormData: [],
     };
   },
-  created() {
+  async created() {
     // 服务发现
-    this.getServiceDiscoveryData();
+    await this.getServiceDiscoveryData();
     this.getDomainResolutionData();
   },
   methods: {
@@ -111,6 +111,8 @@ export default {
         this.serviceData.list = [];
         this.domainRuleDFormData = [];
         this.dnsServeFormData = [];
+      } finally {
+        this.$emit('set-network-loading', false);
       }
     },
     handleSave(data) {

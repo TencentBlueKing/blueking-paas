@@ -183,8 +183,7 @@
                 >
                 <span class="pl10" style="white-space: nowrap;">
                   <span
-                    v-if="row.instances.length < row.available_instance_count
-                      || row.available_instance_count < scaleTargetReplicas">
+                    v-if="row.instances.length < row.available_instance_count">
                     {{ $t('启动中...') }}
                   </span>
                   <span v-else>{{ $t('停止中...') }}</span>
@@ -772,39 +771,23 @@ export default {
       const { instances } = processesData;
       // 如果是下架的进程则processesData.proc_specs会有数据
       if (processesData.proc_specs.length) {
-        if (!processesData.processes.length) {
-          processesData.processes = [   // 默认值
-            {
-              module_name: 'default',
+        const processName = processesData.processes.map(e => e.type);
+        processesData.proc_specs.forEach((e) => {
+          if (!processName.includes(e.name)) {
+            processesData.processes.push({
+              module_name: e.plan_name,
               name: '',
-              type: 'web',
+              type: e.name,
               command: '',
               replicas: 0,
               success: 0,
               failed: 0,
               version: 0,
               cluster_link: '',
-            },
-          ];
-        } else {
-          const processName = processesData.processes.map(e => e.type);
-          processesData.proc_specs.forEach((e) => {
-            if (!processName.includes(e.name)) {
-              processesData.processes.push({
-                module_name: e.plan_name,
-                name: '',
-                type: e.name,
-                command: '',
-                replicas: 0,
-                success: 0,
-                failed: 0,
-                version: 0,
-                cluster_link: '',
-                available_instance_count: e.target_replicas,
-              });
-            }
-          });
-        }
+              available_instance_count: e.target_replicas,
+            });
+          }
+        });
       }
       processesData.processes.forEach((processItem) => {
         const { type } = processItem;

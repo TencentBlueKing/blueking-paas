@@ -587,6 +587,8 @@ LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE
 # 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
 SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("SOURCE_PACKAGE_APP_CLOUD_NATIVE", False)
 
+# 新建插件应用是否为云原生应用，包括开发者中心页面创建的，插件开发者中心 API 创建的
+PLUGIN_APP_USE_CLOUD_NATIVE_TYPE = settings.get("PLUGIN_APP_USE_CLOUD_NATIVE_TYPE", False)
 
 # 开发者中心使用的 k8s 集群组件（helm chart 名称）
 BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(

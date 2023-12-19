@@ -22,15 +22,18 @@
               {{ $t('新建版本') }}
             </bk-button>
           </div>
-          <bk-button
-            v-if="pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS"
-            text
-            theme="primary"
-            @click="handleOpenLink"
-          >
-            {{ $t('插件访问入口') }}
-            <i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" />
-          </bk-button>
+          <span v-bk-tooltips="{ content: accessDisabledTips, disabled: !isAccessDisabled }">
+            <bk-button
+              v-if="pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS"
+              text
+              theme="primary"
+              :disabled="isAccessDisabled"
+              @click="handleOpenLink"
+            >
+              {{ $t('插件访问入口') }}
+              <i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" />
+            </bk-button>
+          </span>
           <bk-input
             v-model="keyword"
             class="fr"
@@ -319,6 +322,9 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
+      // 插件访问入口禁用
+      isAccessDisabled: false,
+      accessDisabledTips: '',
     };
   },
   computed: {
@@ -549,11 +555,10 @@ export default {
           pluginId: this.pluginId,
         });
         this.pluginDefaultInfo = res;
+        this.isAccessDisabled = false;
       } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.isAccessDisabled = true;
+        this.accessDisabledTips = e.detail || e.message || this.$t('接口异常');
       }
     },
     handleOpenLink() {

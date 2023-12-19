@@ -699,7 +699,7 @@ export const PAAS_STATIC_CONFIG = {
                         "iconfontName": "squares",
                         "supportModule": false,
                         "destRoute": {
-                          "name": "cloudAppDeployForProcess"
+                          "name": "cloudAppDeployForBuild"
                         },
                         "children": []
                     },

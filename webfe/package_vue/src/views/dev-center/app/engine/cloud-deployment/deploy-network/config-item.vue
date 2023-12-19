@@ -1,7 +1,7 @@
 <template>
   <section class="config-item">
     <div class="title">
-      {{ config.title }}
+      <span class="text">{{ config.title }}</span>
       <div class="edit-container" @click="handleEdit" v-if="!isEdit">
         <i class="paasng-icon paasng-edit-2 pl10" />
         {{ $t('编辑') }}
@@ -355,6 +355,16 @@ export default {
             message: this.$t('必填项'),
             trigger: 'blur',
           },
+          {
+            validator(val) {
+              if (val) {
+                return true;
+              }
+              return false;
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
         ],
         hostnames: [
           {
@@ -362,10 +372,30 @@ export default {
             message: this.$t('必填项'),
             trigger: 'blur',
           },
+          {
+            validator(val) {
+              if (val) {
+                return true;
+              }
+              return false;
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
         ],
         name: [
           {
             required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+          {
+            validator(val) {
+              if (val) {
+                return true;
+              }
+              return false;
+            },
             message: this.$t('必填项'),
             trigger: 'blur',
           },
@@ -539,15 +569,18 @@ export default {
 <style lang="scss" scoped>
 .config-item {
   position: relative;
-  padding: 12px 24px;
+  padding: 12px 24px 12px 0;
   background: #fff;
+  border-bottom: 1px solid #dcdee5;
 
   .title {
     display: flex;
-    font-weight: 700;
-    font-size: 14px;
-    color: #313238;
     line-height: 22px;
+    .text {
+      font-weight: 700;
+      font-size: 14px;
+      color: #313238;
+    }
     .edit-container{
       color: #3A84FF;
       font-size: 12px;

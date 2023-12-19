@@ -169,7 +169,8 @@ def pytest_sessionstart(session):
 @pytest.fixture()
 def legacy_app_code():
     """The legacy App code using for Unit test"""
-    return getattr(settings, "FOR_TESTS_LEGACY_APP_CODE", "document")
+    # return getattr(settings, "FOR_TESTS_LEGACY_APP_CODE", "document")
+    return generate_random_string(8)
 
 
 @pytest.fixture(autouse=True)

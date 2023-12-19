@@ -28,7 +28,7 @@
                     <img :src="curPluginInfo.logo || '/static/images/default_logo.png'" />
                   </div>
                   <div
-                    v-if="canEditPluginBasicInfo"
+                    v-if="isChangePluginLogo"
                     class="preview-btn pl20"
                   >
                     <template>
@@ -520,6 +520,7 @@ export default {
     };
   },
   computed: {
+    // 下架插件输入id是否一致
     formRemoveValidated() {
       return this.pluginInfo.id === this.formRemovePluginId;
     },
@@ -529,7 +530,8 @@ export default {
     infoHeight() {
       return this.isUnfold ? Number(this.editorHeight) + 32 : 232;
     },
-    canEditPluginBasicInfo() {
+    // 是否可以更换插件logo
+    isChangePluginLogo() {
       // administrator 的角色id 是 2
       return this.curPluginInfo.role && [2].indexOf(this.curPluginInfo.role.id) !== -1;
     },

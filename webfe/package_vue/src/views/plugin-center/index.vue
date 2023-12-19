@@ -324,11 +324,8 @@ export default {
         // 查询未下架的所有状态
         return 'status=developing&status=releasing&status=released&status=waiting-approval&status=approval-failed';
       }
-      let paramsText = '';
-      this[dataName].forEach((item) => {
-        paramsText += `${key}=${item}&`;
-      });
-      return paramsText.substring(0, paramsText.length - 1);
+
+      return this[dataName].reduce((paramsText, item) => `${paramsText}${key}=${item}&`, '').slice(0, -1);
     },
 
     async getPluginFilterParams() {

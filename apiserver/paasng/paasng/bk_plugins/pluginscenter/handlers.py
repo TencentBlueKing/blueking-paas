@@ -30,6 +30,10 @@ def update_release_status_when_stage_status_change(sender, instance: PluginRelea
     if created:
         return
     release = instance.release
+    # 如果发布 release 已经是终止状态，则不需要再更新状态
+    if release.status in PluginReleaseStatus.terminated_status():
+        return
+
     # 发布中断或失败
     if instance.status in PluginReleaseStatus.abnormal_status():
         release.status = instance.status

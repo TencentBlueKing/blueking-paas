@@ -835,7 +835,7 @@ export default {
           status: 'Stopped',
           cmd: processInfo.command,
           desired_replicas: processInfo.replicas,
-          available_instance_count: processInfo.target_status === 'start' ? processInfo.target_replicas : processInfo.success,
+          available_instance_count: processInfo.target_status === 'start' ? processInfo.target_replicas : 0,
           failed: processInfo.failed,
           resourceLimit: processInfo.resource_limit,
           cpuLimit: processInfo.cpu_limit,

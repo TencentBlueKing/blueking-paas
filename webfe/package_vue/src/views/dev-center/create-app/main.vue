@@ -9,12 +9,12 @@
     <div
       class="tab-box mt10"
     >
-      <li
+      <!-- <li
         :class="['tab-item', { 'active': appType === 'default' }]"
         @click="handleToggleType('default')"
       >
         {{ $t('普通应用') }}
-      </li>
+      </li> -->
       <li
         v-if="cloudFlag"
         :class="['tab-item', { 'active': appType === 'cloud' }]"
@@ -64,7 +64,7 @@ export default {
   },
   data() {
     return {
-      appType: 'default',
+      appType: 'cloud',
     };
   },
   computed: {

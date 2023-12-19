@@ -183,8 +183,7 @@
                 >
                 <span class="pl10" style="white-space: nowrap;">
                   <span
-                    v-if="row.instances.length < row.available_instance_count
-                      || row.available_instance_count < scaleTargetReplicas">
+                    v-if="row.instances.length < row.available_instance_count">
                     {{ $t('启动中...') }}
                   </span>
                   <span v-else>{{ $t('停止中...') }}</span>

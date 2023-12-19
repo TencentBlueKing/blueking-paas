@@ -114,18 +114,11 @@
           </div>
           <bk-table-column
             label="id"
+            type="selection"
             :render-header="renderHeader"
+            :selectable="selectable"
             width="60"
           >
-            <template slot-scope="props">
-              <bk-checkbox
-                v-model="props.row.checked"
-                :true-value="true"
-                :false-value="false"
-                :disabled="!props.row.permission_action"
-                @change="columChage(...arguments, props.row)"
-              />
-            </template>
           </bk-table-column>
           <bk-table-column
             label="API"
@@ -966,6 +959,11 @@ export default {
 
     updateTableEmptyConfig() {
       this.tableEmptyConf.keyword = this.searchValue;
+    },
+
+    // 勾选是否禁用
+    selectable(row) {
+      return row.permission_action;
     },
   },
 };

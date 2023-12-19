@@ -1,207 +1,179 @@
 <template>
-  <paas-content-loader
-    :is-loading="isLoading"
-    placeholder="deploy-hook-loading"
-    :offset-top="0"
-    :offset-left="0"
-    :is-transition="false"
-    class="deploy-action-box"
-  >
-    <!-- 若托管方式为源码&镜像，钩子命令页面都为当前空页面状态 -->
-    <section
-      v-if="!isCustomImage && !isCreate"
-      style="margin-top: 38px;"
+  <div class="deploy-hook-container">
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="deploy-hook-loading"
+      :offset-top="0"
+      :offset-left="0"
+      :local-loading="false"
+      :is-transition="false"
+      class="deploy-action-box"
     >
-      <bk-exception
-        class="exception-wrap-item exception-part"
-        type="empty"
-        scene="part"
-      >
-        <p
-          class="mt10"
-          style="color: #979BA5;font-size: 12px;"
-        >
-          {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
-        </p>
-        <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
-      </bk-exception>
-    </section>
-    <div
-      v-else
-      class="form-pre"
-    >
-      <div class="flex-row align-items-center">
-        <div class="item-title-container">
-          <div class="item-title">
-            {{ $t('部署前置命令') }}
+      <div class="form-pre">
+        <div class="flex-row align-items-center pl20 pr20">
+          <div class="item-title-container">
+            <div class="item-title">
+              {{ $t('部署前置命令') }}
+            </div>
+          </div>
+
+          <div
+            class="edit-container"
+            @click="handleEditClick"
+            v-if="!isPageEdit && !isCreate"
+          >
+            <i class="paasng-icon paasng-edit-2" />
+            {{ $t('编辑') }}
           </div>
         </div>
-
-        <div
-          class="edit-container"
-          @click="handleEditClick"
+        <!-- 不启用时隐藏 -->
+        <bk-form
+          v-if="isPageEdit"
+          ref="commandRef"
+          :model="preFormData"
+          class="info-special-form form-pre-command"
+        >
+          <bk-form-item
+            :label="$t('是否启用')"
+            class="pt20"
+            style="position: relative;"
+          >
+            <bk-switcher
+              v-if="isPageEdit"
+              v-model="preFormData.enabled"
+              theme="primary"
+              @change="switcherChange"
+            />
+          </bk-form-item>
+          <bk-form-item
+            v-if="preFormData.enabled"
+            :label="$t('启动命令')"
+            :required="true"
+            :rules="rules.command"
+            :error-display-type="'normal'"
+            style="position: relative;"
+          >
+            <bk-tag-input
+              v-model="preFormData.command"
+              style="width: 500px"
+              :placeholder="$t('请输入启动命令，并按 Enter 键结束')"
+              :allow-create="allowCreate"
+              :allow-auto-match="true"
+              :has-delete-icon="hasDeleteIcon"
+              :paste-fn="copyCommand"
+            />
+            <span
+              slot="tip"
+              class="whole-item-tips"
+            >
+              {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}./bin/pre-task.sh
+            </span>
+          </bk-form-item>
+          <bk-form-item
+            v-if="preFormData.enabled"
+            :label="$t('命令参数')"
+            class="pt20 hook-form-cls"
+            style="position: relative;"
+          >
+            <bk-tag-input
+              v-model="preFormData.args"
+              style="width: 500px"
+              ext-cls="tag-extra"
+              :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
+              :allow-create="allowCreate"
+              :allow-auto-match="true"
+              :has-delete-icon="hasDeleteIcon"
+              :paste-fn="copyCommandParameter"
+            />
+            <span class="whole-item-tips">{{ $t('示例：--env prod，多个参数可用回车键分隔') }}</span>
+          </bk-form-item>
+        </bk-form>
+        <bk-form
           v-if="!isPageEdit"
+          :model="preFormData"
+          class="info-special-form form-pre-command"
         >
-          <i class="paasng-icon paasng-edit-2" />
-          {{ $t('编辑') }}
+          <bk-form-item
+            :label="`${$t('是否启用')}：`"
+            class="pt20"
+            style="position: relative;"
+          >
+            <span :class="['hook-tag', { 'enabled': preFormData.enabled } ]">
+              {{ preFormData.enabled ? $t('已启用') : $t('未启用') }}
+            </span>
+          </bk-form-item>
+          <bk-form-item
+            v-if="preFormData.enabled"
+            :label="`${$t('启动命令')}：`"
+            style="position: relative;"
+          >
+            <div v-if="preFormData.command.length">
+              <bk-tag
+                v-for="item in preFormData.command"
+                :key="item"
+              >
+                {{ item }}
+              </bk-tag>
+            </div>
+            <div
+              v-else
+              class="pl10"
+            >
+              --
+            </div>
+          </bk-form-item>
+          <bk-form-item
+            v-if="preFormData.enabled"
+            :label="`${$t('命令参数')}：`"
+            class="pt20 hook-form-cls"
+            style="position: relative;"
+          >
+            <div v-if="preFormData.args.length">
+              <bk-tag
+                v-for="item in preFormData.args"
+                :key="item"
+              >
+                {{ item }}
+              </bk-tag>
+            </div>
+            <div
+              v-else
+              class="pl10"
+            >
+              --
+            </div>
+          </bk-form-item>
+        </bk-form>
+        <!-- 创建应用/模块不展示 -->
+        <div
+          class="hook-btn-wrapper"
+          v-if="isPageEdit && !isCreate"
+        >
+          <bk-button
+            :loading="saveLoading"
+            class="pl20 pr20"
+            :theme="'primary'"
+            @click="handleSave"
+          >
+            {{ $t('保存') }}
+          </bk-button>
+          <bk-button
+            class="pl20 pr20 ml20"
+            @click="handleCancel"
+          >
+            {{ $t('取消') }}
+          </bk-button>
         </div>
       </div>
-      <!-- 不启用时隐藏 -->
-      <bk-form
-        v-if="isPageEdit"
-        ref="commandRef"
-        :model="preFormData"
-        :label-width="158"
-        class="info-special-form form-pre-command"
-      >
-        <bk-form-item
-          :label="$t('是否启用')"
-          class="pt20"
-          style="position: relative;"
-        >
-          <bk-switcher
-            v-if="isPageEdit"
-            v-model="preFormData.enabled"
-            theme="primary"
-            @change="switcherChange"
-          />
-        </bk-form-item>
-        <bk-form-item
-          v-if="preFormData.enabled"
-          :label="$t('启动命令')"
-          :required="true"
-          :rules="rules.command"
-          :error-display-type="'normal'"
-          style="position: relative;"
-        >
-          <bk-tag-input
-            v-model="preFormData.command"
-            style="width: 500px"
-            :placeholder="$t('请输入启动命令，并按 Enter 键结束')"
-            :allow-create="allowCreate"
-            :allow-auto-match="true"
-            :has-delete-icon="hasDeleteIcon"
-            :paste-fn="copyCommand"
-          />
-          <span
-            slot="tip"
-            class="whole-item-tips"
-          >
-            {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}./bin/pre-task.sh
-          </span>
-        </bk-form-item>
-        <bk-form-item
-          v-if="preFormData.enabled"
-          :label="$t('命令参数')"
-          class="pt20 hook-form-cls"
-          style="position: relative;"
-        >
-          <bk-tag-input
-            v-model="preFormData.args"
-            style="width: 500px"
-            ext-cls="tag-extra"
-            :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
-            :allow-create="allowCreate"
-            :allow-auto-match="true"
-            :has-delete-icon="hasDeleteIcon"
-            :paste-fn="copyCommandParameter"
-          />
-          <span class="whole-item-tips">{{ $t('示例：--env prod，多个参数可用回车键分隔') }}</span>
-        </bk-form-item>
-      </bk-form>
-      <bk-form
-        v-if="!isPageEdit"
-        :model="preFormData"
-        :label-width="158"
-        class="info-special-form form-pre-command pl40"
-      >
-        <bk-form-item
-          :label="`${$t('是否启用')}：`"
-          class="pt20"
-          style="position: relative;"
-        >
-          <bk-tag
-            :key="preFormData.enabled ? $t('已启用') : $t('未启用')"
-            :theme="preFormData.enabled ? 'info' : ''"
-          >
-            {{ preFormData.enabled ? $t('已启用') : $t('未启用') }}
-          </bk-tag>
-        </bk-form-item>
-        <bk-form-item
-          v-if="preFormData.enabled"
-          :label="`${$t('启动命令')}：`"
-          style="position: relative;"
-        >
-          <div v-if="preFormData.command.length">
-            <bk-tag
-              v-for="item in preFormData.command"
-              :key="item"
-            >
-              {{ item }}
-            </bk-tag>
-          </div>
-          <div
-            v-else
-            class="pl10"
-          >
-            --
-          </div>
-        </bk-form-item>
-        <bk-form-item
-          v-if="preFormData.enabled"
-          :label="`${$t('命令参数')}：`"
-          class="pt20 hook-form-cls"
-          style="position: relative;"
-        >
-          <div v-if="preFormData.args.length">
-            <bk-tag
-              v-for="item in preFormData.args"
-              :key="item"
-            >
-              {{ item }}
-            </bk-tag>
-          </div>
-          <div
-            v-else
-            class="pl10"
-          >
-            --
-          </div>
-        </bk-form-item>
-      </bk-form>
-      <div
-        class="hook-btn-wrapper"
-        v-if="isPageEdit && isComponentBtn"
-      >
-        <bk-button
-          :loading="saveLoading"
-          class="pl20 pr20"
-          :theme="'primary'"
-          @click="handleSave"
-        >
-          {{ $t('保存') }}
-        </bk-button>
-        <bk-button
-          class="pl20 pr20 ml20"
-          @click="handleCancel"
-        >
-          {{ $t('取消') }}
-        </bk-button>
-      </div>
-    </div>
 
-    <user-guide name="hook" ref="userGuideRef" />
-  </paas-content-loader>
+    </paas-content-loader>
+  </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>import { cloneDeep } from 'lodash';
 import i18n from '@/language/i18n.js';
-import userGuide from './comps/user-guide/index.vue';
 
 export default {
-  components: {
-    userGuide,
-  },
   props: {
     moduleId: {
       type: String,
@@ -224,6 +196,7 @@ export default {
 
   data() {
     return {
+      isPageEdit: false,
       panels: [],
       preFormData: {
         enabled: false,
@@ -254,9 +227,6 @@ export default {
   },
 
   computed: {
-    isPageEdit() {
-      return this.$store.state.cloudApi.isPageEdit || this.$store.state.cloudApi.hookPageEdit;
-    },
     curAppModule() {
       return this.$store.state.curAppModule;
     },
@@ -290,7 +260,7 @@ export default {
           moduleId: this.curModuleId,
         });
         this.preFormData = { ...res };
-        this.rawData = _.cloneDeep(this.preFormData);
+        this.rawData = cloneDeep(res);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -351,11 +321,8 @@ export default {
 
     // 编辑
     handleEditClick() {
-      if (this.isCreate) {
-        this.$store.commit('cloudApi/updateHookPageEdit', true);
-      } else {
-        this.$store.commit('cloudApi/updatePageEdit', true);
-      }
+      // 使用页面编辑
+      this.isPageEdit = true;
     },
 
     // 校验
@@ -394,8 +361,7 @@ export default {
           theme: 'success',
           message: this.$t('保存成功！'),
         });
-        this.$store.commit('cloudApi/updateHookPageEdit', false);
-        this.$store.commit('cloudApi/updatePageEdit', false);
+        this.isPageEdit = false;
         this.init();
       } catch (error) {
         this.$paasMessage({
@@ -407,14 +373,8 @@ export default {
 
     // 数据还原
     handleCancel() {
-      this.init();
-      this.$store.commit('cloudApi/updatePageEdit', false);
-      this.$store.commit('cloudApi/updateHookPageEdit', false);
-    },
-
-    // 查看指南
-    handleViewGuide() {
-      this.$refs.userGuideRef.showSideslider();
+      this.isPageEdit = false;
+      this.preFormData = cloneDeep(this.rawData);
     },
   },
 };
@@ -422,7 +382,7 @@ export default {
 
 <style lang="scss" scoped>
 .form-pre {
-  padding: 0 20px 20px;
+  padding-bottom: 20px;
 
   .item-title-container {
     display: flex;
@@ -432,6 +392,7 @@ export default {
   .item-title {
     font-size: 14px;
     font-weight: bold;
+    color: #313238;
   }
 
   .item-info {
@@ -447,7 +408,7 @@ export default {
   }
 
   .hook-btn-wrapper {
-    margin-left: 105px;
+    margin-left: 150px;
     margin-top: 24px;
   }
 }
@@ -467,12 +428,30 @@ export default {
   color: #313238;
 }
 .edit-container {
-  color: #3a84ff;
+  color: #3A84FF;
   font-size: 12px;
   cursor: pointer;
-  padding-left: 10px;
+  padding-left: 12px;
   i {
     padding-left: 10px;
   }
+}
+.hook-tag {
+  margin-left: 6px;
+  display: inline-block;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 22px;
+  color: #63656E;
+  background: #F0F1F5;
+  border-radius: 2px;
+  &.enabled {
+    color: #14A568;
+    background: #E4FAF0;
+  }
+}
+.deploy-hook-container {
+  min-height: 200px;
 }
 </style>

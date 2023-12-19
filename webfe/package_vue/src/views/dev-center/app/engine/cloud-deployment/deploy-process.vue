@@ -1,15 +1,7 @@
 <template>
-  <paas-content-loader
-    :is-loading="isLoading"
-    placeholder="deploy-process-loading"
-    :offset-top="0"
-    :is-transition="false"
-    :offset-left="20"
-    class="deploy-action-box"
-  >
-    <!-- 若托管方式为源码&镜像，进程配置页面都为当前空页面状态 -->
+  <div class="deploy-process-config">
     <section
-      v-if="!isCustomImage && !isCreate"
+      v-if="isShowPage"
       style="margin-top: 38px;"
     >
       <bk-exception
@@ -17,69 +9,90 @@
         type="empty"
         scene="part"
       >
+        <div class="text-subtitle">{{ $t('暂无进程配置和命令钩子') }}</div>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"
         >
-          {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+          {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
         <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
       </bk-exception>
     </section>
-    <div
-      v-else
-      class="process-container"
-    >
-      <div
-        class="btn-container flex-row align-items-baseline"
-        :class="[isPageEdit ? '' : 'justify-content-between']"
+    <template v-else>
+      <!-- 进程配置 -->
+      <paas-content-loader
+        :is-loading="isLoading"
+        placeholder="deploy-process-loading"
+        :offset-top="0"
+        :is-transition="false"
+        :offset-left="20"
+        class="deploy-action-box"
       >
-        <div class="bk-button-group bk-button-group-cls">
-          <bk-button
-            v-for="(panel, index) in panels"
-            :key="index"
-            :class="[processNameActive === panel.name ? 'is-selected' : '', 'mb10']"
-            @click="handleBtnGroupClick(panel.name, index)"
+        <div class="title-wrapper" v-if="!isCreate">
+          <span class="title">{{ $t('进程配置') }}</span>
+          <div
+            v-if="!isPageEdit"
+            class="edit-container"
+            @click="handleEditClick"
           >
-            {{ panel.name }}
-            <i
-              v-if="processNameActive === panel.name && panel.name !== 'web' && isPageEdit"
-              class="paasng-icon paasng-edit-2 pl5 pr10"
-              ref="tooltipsHtml"
-              @click="handleProcessNameEdit(panel.name, index)"
-              v-bk-tooltips="$t('编辑')"
-            />
-
-            <bk-popconfirm
-              :content="$t('确认删除该进程')"
-              width="288"
-              style="display: inline-block"
-              class="item-close-icon"
-              trigger="click"
-              @confirm="handleDelete(panel.name, index)"
-            >
-              <i
-                v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
-                class="paasng-icon paasng-icon-close"
-                v-bk-tooltips="$t('删除')"
-              />
-            </bk-popconfirm>
-          </bk-button>
+            <i class="paasng-icon paasng-edit-2 pl10" />
+            {{ $t('编辑') }}
+          </div>
         </div>
-        <span
-          v-if="isPageEdit"
-          class="pl10"
+        <div
+          class="process-container"
         >
-          <bk-button
-            text
-            theme="primary"
-            @click="handleProcessNameEdit('')"
+          <div
+            class="btn-container flex-row align-items-baseline"
+            :class="[isPageEdit ? '' : 'justify-content-between']"
           >
-            <i class="paasng-icon paasng-plus-thick add-icon" />
-            {{ $t('新增进程') }}
-          </bk-button>
-        </span>
-        <bk-button
+            <div class="bk-button-group bk-button-group-cls">
+              <bk-button
+                v-for="(panel, index) in panels"
+                :key="index"
+                :class="[processNameActive === panel.name ? 'is-selected' : '', 'mb10']"
+                @click="handleBtnGroupClick(panel.name, index)"
+              >
+                {{ panel.name }}
+                <i
+                  v-if="processNameActive === panel.name && panel.name !== 'web' && isPageEdit"
+                  class="paasng-icon paasng-edit-2 pl5 pr10"
+                  ref="tooltipsHtml"
+                  @click="handleProcessNameEdit(panel.name, index)"
+                  v-bk-tooltips="$t('编辑')"
+                />
+
+                <bk-popconfirm
+                  :content="$t('确认删除该进程')"
+                  width="288"
+                  style="display: inline-block"
+                  class="item-close-icon"
+                  trigger="click"
+                  @confirm="handleDelete(panel.name, index)"
+                >
+                  <i
+                    v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
+                    class="paasng-icon paasng-icon-close"
+                    v-bk-tooltips="$t('删除')"
+                  />
+                </bk-popconfirm>
+              </bk-button>
+            </div>
+            <span
+              v-if="isPageEdit"
+              class="pl10"
+            >
+              <bk-button
+                text
+                theme="primary"
+                @click="handleProcessNameEdit('')"
+              >
+                <i class="paasng-icon paasng-plus-thick add-icon" />
+                {{ $t('新增进程') }}
+              </bk-button>
+            </span>
+            <!-- <bk-button
           v-if="!isPageEdit"
           class="fr"
           theme="primary"
@@ -88,197 +101,197 @@
           @click="handleEditClick"
         >
           {{ $t('编辑') }}
-        </bk-button>
-      </div>
-      <div
-        class="form-deploy"
-        v-if="isPageEdit"
-      >
-        <div
-          class="create-item"
-          data-test-id="createDefault_item_baseInfo"
-        >
-          <bk-form
-            ref="formDeploy"
-            :model="formData"
-            :rules="rules"
-            ext-cls="form-process"
+        </bk-button> -->
+          </div>
+          <div
+            class="form-deploy"
+            v-if="isPageEdit"
           >
-            <bk-form-item
-              :label="$t('镜像仓库')"
-              :label-width="labelWidth"
-              v-if="!allowMultipleImage"
+            <div
+              class="create-item"
+              data-test-id="createDefault_item_baseInfo"
             >
-              {{ formData.image || '--' }}
-              <i
-                v-if="!isCreate"
-                class="paasng-icon paasng-edit-2 image-store-icon"
-                @click="handleToModuleInfo"
-              />
-            </bk-form-item>
-            <bk-form-item
-              :label="$t('镜像地址')"
-              :required="true"
-              :label-width="labelWidth"
-              :property="'image'"
-              :rules="rules.image"
-              v-else-if="isCustomImage && allowMultipleImage"
-            >
-              <bk-input
-                ref="mirrorUrl"
-                v-model="formData.image"
-                style="width: 500px"
-                :placeholder="$t('请输入带标签的镜像仓库')"
-              />
-              <p class="whole-item-tips">
-                {{ $t('示例镜像：') }}
-                <span>
-                  {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
-                </span>
+              <bk-form
+                ref="formDeploy"
+                :model="formData"
+                :rules="rules"
+                ext-cls="form-process"
+              >
+                <bk-form-item
+                  :label="$t('镜像仓库')"
+                  :label-width="labelWidth"
+                  v-if="!allowMultipleImage"
+                >
+                  {{ formData.image || '--' }}
+                  <i
+                    v-if="!isCreate"
+                    class="paasng-icon paasng-edit-2 image-store-icon"
+                    @click="handleToModuleInfo"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :label="$t('镜像地址')"
+                  :required="true"
+                  :label-width="labelWidth"
+                  :property="'image'"
+                  :rules="rules.image"
+                  v-else-if="isCustomImage && allowMultipleImage"
+                >
+                  <bk-input
+                    ref="mirrorUrl"
+                    v-model="formData.image"
+                    style="width: 500px"
+                    :placeholder="$t('请输入带标签的镜像仓库')"
+                  />
+                  <p class="whole-item-tips">
+                    {{ $t('示例镜像：') }}
+                    <span>
+                      {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
+                    </span>
                 &nbsp;
-                <span
-                  class="whole-item-tips-text"
-                  @click.stop="useExample"
+                    <span
+                      class="whole-item-tips-text"
+                      @click.stop="useExample"
+                    >
+                      {{ $t('使用示例镜像') }}
+                    </span>
+                  </p>
+                  <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
+                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
+                    <a
+                      target="_blank"
+                      :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
+                    >
+                      {{ $t('帮助：如何构建镜像') }}
+                    </a>
+                  </p>
+                </bk-form-item>
+
+                <bk-form-item
+                  :label="$t('镜像凭证')"
+                  :label-width="labelWidth"
+                  v-if="!allowMultipleImage"
                 >
-                  {{ $t('使用示例镜像') }}
-                </span>
-              </p>
-              <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
-                <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
-                <a
-                  target="_blank"
-                  :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
+                  {{ formData.image_credential_name || '--' }}
+                </bk-form-item>
+
+                <!-- 镜像凭证 -->
+                <bk-form-item
+                  v-if="panels[panelActive] && allowMultipleImage"
+                  :label="$t('镜像凭证')"
+                  :label-width="labelWidth"
+                  :property="'command'"
                 >
-                  {{ $t('帮助：如何构建镜像') }}
-                </a>
-              </p>
-            </bk-form-item>
+                  <bk-select
+                    v-model="formData.image_credential_name"
+                    :disabled="false"
+                    style="width: 500px"
+                    ext-cls="select-custom"
+                    ext-popover-cls="select-popover-custom"
+                    searchable
+                  >
+                    <bk-option
+                      v-for="option in imageCredentialList"
+                      :id="option.name"
+                      :key="option.name"
+                      :name="option.name"
+                    />
+                    <div
+                      slot="extension"
+                      style="cursor: pointer"
+                      @click="handlerCreateImageCredential"
+                    >
+                      <i class="bk-icon icon-plus-circle mr5" />
+                      {{ $t('新建凭证') }}
+                    </div>
+                  </bk-select>
+                  <p class="whole-item-tips">
+                    {{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}
+                  </p>
+                </bk-form-item>
 
-            <bk-form-item
-              :label="$t('镜像凭证')"
-              :label-width="labelWidth"
-              v-if="!allowMultipleImage"
-            >
-              {{ formData.image_credential_name || '--' }}
-            </bk-form-item>
-
-            <!-- 镜像凭证 -->
-            <bk-form-item
-              v-if="panels[panelActive] && allowMultipleImage"
-              :label="$t('镜像凭证')"
-              :label-width="labelWidth"
-              :property="'command'"
-            >
-              <bk-select
-                v-model="formData.image_credential_name"
-                :disabled="false"
-                style="width: 500px"
-                ext-cls="select-custom"
-                ext-popover-cls="select-popover-custom"
-                searchable
-              >
-                <bk-option
-                  v-for="option in imageCredentialList"
-                  :id="option.name"
-                  :key="option.name"
-                  :name="option.name"
-                />
-                <div
-                  slot="extension"
-                  style="cursor: pointer"
-                  @click="handlerCreateImageCredential"
+                <bk-form-item
+                  :label="$t('启动命令')"
+                  :label-width="labelWidth"
+                  :property="'command'"
                 >
-                  <i class="bk-icon icon-plus-circle mr5" />
-                  {{ $t('新建凭证') }}
-                </div>
-              </bk-select>
-              <p class="whole-item-tips">
-                {{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}
-              </p>
-            </bk-form-item>
+                  <bk-tag-input
+                    v-model="formData.command"
+                    style="width: 500px"
+                    ext-cls="tag-extra"
+                    :placeholder="$t('留空将使用镜像的默认 entry point 命令')"
+                    :allow-create="allowCreate"
+                    :allow-auto-match="true"
+                    :has-delete-icon="hasDeleteIcon"
+                    :paste-fn="copyStartMommand"
+                    :key="tagInputIndex"
+                  />
+                  <p class="whole-item-tips">
+                    {{ $t('示例：start_server，多个命令可用回车键分隔') }}
+                  </p>
+                </bk-form-item>
 
-            <bk-form-item
-              :label="$t('启动命令')"
-              :label-width="labelWidth"
-              :property="'command'"
-            >
-              <bk-tag-input
-                v-model="formData.command"
-                style="width: 500px"
-                ext-cls="tag-extra"
-                :placeholder="$t('留空将使用镜像的默认 entry point 命令')"
-                :allow-create="allowCreate"
-                :allow-auto-match="true"
-                :has-delete-icon="hasDeleteIcon"
-                :paste-fn="copyStartMommand"
-                :key="tagInputIndex"
-              />
-              <p class="whole-item-tips">
-                {{ $t('示例：start_server，多个命令可用回车键分隔') }}
-              </p>
-            </bk-form-item>
+                <bk-form-item
+                  :label="$t('命令参数')"
+                  :label-width="labelWidth"
+                  :property="'args'"
+                >
+                  <bk-tag-input
+                    v-model="formData.args"
+                    style="width: 500px"
+                    ext-cls="tag-extra"
+                    :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
+                    :allow-create="allowCreate"
+                    :allow-auto-match="true"
+                    :has-delete-icon="hasDeleteIcon"
+                    :paste-fn="copyCommandParameter"
+                  />
+                  <p class="whole-item-tips">
+                    {{ $t('示例： -listen $PORT，多个参数可用回车键分隔') }}
+                  </p>
+                </bk-form-item>
 
-            <bk-form-item
-              :label="$t('命令参数')"
-              :label-width="labelWidth"
-              :property="'args'"
-            >
-              <bk-tag-input
-                v-model="formData.args"
-                style="width: 500px"
-                ext-cls="tag-extra"
-                :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
-                :allow-create="allowCreate"
-                :allow-auto-match="true"
-                :has-delete-icon="hasDeleteIcon"
-                :paste-fn="copyCommandParameter"
-              />
-              <p class="whole-item-tips">
-                {{ $t('示例： -listen $PORT，多个参数可用回车键分隔') }}
-              </p>
-            </bk-form-item>
-
-            <bk-form-item
-              :label="$t('容器端口')"
-              :label-width="labelWidth"
-              :property="'port'"
-            >
-              <bk-input
-                v-model="formData.port"
-                style="width: 500px"
-                :placeholder="$t('请输入 1 - 65535 的整数，非必填')"
-              />
-              <i
-                v-show="isTargetPortErrTips"
-                v-bk-tooltips.top-end="targetPortErrTips"
-                class="bk-icon icon-exclamation-circle-shape tooltips-icon"
-                tabindex="0"
-                style="right: 8px"
-              />
-              <p class="whole-item-tips">
-                {{ $t('接收 HTTP 请求的端口号．建议镜像直接监听 $PORT 环境变量不修改本值') }}
-              </p>
-            </bk-form-item>
-            <bk-form-item :label-width="40">
-              <bk-button
-                text
-                theme="primary"
-                :title="$t('更多配置')"
-                @click="ifopen = !ifopen"
-              >
-                {{ $t('更多配置') }}
-                <i
-                  class="paasng-icon"
-                  :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
-                />
-              </bk-button>
-            </bk-form-item>
-            <bk-form-item
-              v-if="ifopen"
-              :label="$t('配置环境')"
-              :label-width="labelWidth"
-            >
-              <!-- <bk-radio-group v-model="envName">
+                <bk-form-item
+                  :label="$t('容器端口')"
+                  :label-width="labelWidth"
+                  :property="'port'"
+                >
+                  <bk-input
+                    v-model="formData.port"
+                    style="width: 500px"
+                    :placeholder="$t('请输入 1 - 65535 的整数，非必填')"
+                  />
+                  <i
+                    v-show="isTargetPortErrTips"
+                    v-bk-tooltips.top-end="targetPortErrTips"
+                    class="bk-icon icon-exclamation-circle-shape tooltips-icon"
+                    tabindex="0"
+                    style="right: 8px"
+                  />
+                  <p class="whole-item-tips">
+                    {{ $t('接收 HTTP 请求的端口号．建议镜像直接监听 $PORT 环境变量不修改本值') }}
+                  </p>
+                </bk-form-item>
+                <bk-form-item :label-width="40">
+                  <bk-button
+                    text
+                    theme="primary"
+                    :title="$t('更多配置')"
+                    @click="ifopen = !ifopen"
+                  >
+                    {{ $t('更多配置') }}
+                    <i
+                      class="paasng-icon"
+                      :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+                    />
+                  </bk-button>
+                </bk-form-item>
+                <bk-form-item
+                  v-if="ifopen"
+                  :label="$t('配置环境')"
+                  :label-width="labelWidth"
+                >
+                  <!-- <bk-radio-group v-model="envName">
                 <bk-radio-button
                   class="radio-cls"
                   v-for="(item, index) in envsData"
@@ -287,556 +300,563 @@
                   {{ item.label }}
                 </bk-radio-button>
               </bk-radio-group> -->
-            </bk-form-item>
-            <bk-form-item
-              v-show="ifopen"
-              :label-width="40"
-            >
-              <div class="env-name w885">{{ $t('预发布环境') }}</div>
-              <div class="env-container">
-                <bk-form
-                  ref="formStagEnv"
-                  :model="formData.env_overlay.stag"
-                  ext-cls="form-envs"
+                </bk-form-item>
+                <bk-form-item
+                  v-show="ifopen"
+                  :label-width="40"
                 >
-                  <bk-form-item
-                    :label="$t('资源配额方案')"
-                    :label-width="labelWidth"
-                  >
-                    <div class="flex-row align-items-center">
-                      <bk-select
-                        v-model="formData.env_overlay.stag.plan_name"
-                        :disabled="false"
-                        style="width: 150px"
-                        searchable
-                        @change="handleChange($event, 'stag')"
+                  <div class="env-name w885">{{ $t('预发布环境') }}</div>
+                  <div class="env-container">
+                    <bk-form
+                      ref="formStagEnv"
+                      :model="formData.env_overlay.stag"
+                      ext-cls="form-envs"
+                    >
+                      <bk-form-item
+                        :label="$t('资源配额方案')"
+                        :label-width="labelWidth"
                       >
-                        <bk-option
-                          v-for="option in resQuotaData"
-                          :id="option"
-                          :key="option"
-                          :name="option"
-                        />
-                      </bk-select>
-                      <!-- tips内容不会双向绑定 需要重新渲染 -->
-                      <i
-                        v-if="quotaPlansFlag"
-                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                      />
-                      <quota-popver v-else :data="stagQuotaData" />
-                    </div>
-                  </bk-form-item>
-                  <bk-form-item
-                    :label="$t('扩缩容方式')"
-                    :label-width="labelWidth"
-                  >
-                    <section :class="{ 'flex-row': localLanguage !== 'en' }">
-                      <bk-radio-group
-                        v-model="formData.env_overlay.stag.autoscaling"
-                        @change="handleRadioChange('stag')"
-                        style="flex: 1"
+                        <div class="flex-row align-items-center">
+                          <bk-select
+                            v-model="formData.env_overlay.stag.plan_name"
+                            :disabled="false"
+                            style="width: 150px"
+                            searchable
+                            @change="handleChange($event, 'stag')"
+                          >
+                            <bk-option
+                              v-for="option in resQuotaData"
+                              :id="option"
+                              :key="option"
+                              :name="option"
+                            />
+                          </bk-select>
+                          <!-- tips内容不会双向绑定 需要重新渲染 -->
+                          <i
+                            v-if="quotaPlansFlag"
+                            class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                          />
+                          <quota-popver v-else :data="stagQuotaData" />
+                        </div>
+                      </bk-form-item>
+                      <bk-form-item
+                        :label="$t('扩缩容方式')"
+                        :label-width="labelWidth"
                       >
-                        <bk-radio-button
-                          class="radio-cls"
-                          :value="false"
-                        >
-                          {{ $t('手动调节') }}
-                        </bk-radio-button>
-                        <bk-radio-button
-                          class="radio-cls"
-                          :value="true"
-                          :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
-                          v-bk-tooltips="{
-                            content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
-                            disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
-                          }"
-                        >
-                          {{ $t('自动调节') }}
-                        </bk-radio-button>
-                      </bk-radio-group>
+                        <section :class="{ 'flex-row': localLanguage !== 'en' }">
+                          <bk-radio-group
+                            v-model="formData.env_overlay.stag.autoscaling"
+                            @change="handleRadioChange('stag')"
+                            style="flex: 1"
+                          >
+                            <bk-radio-button
+                              class="radio-cls"
+                              :value="false"
+                            >
+                              {{ $t('手动调节') }}
+                            </bk-radio-button>
+                            <bk-radio-button
+                              class="radio-cls"
+                              :value="true"
+                              :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
+                              v-bk-tooltips="{
+                                content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
+                                disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
+                              }"
+                            >
+                              {{ $t('自动调节') }}
+                            </bk-radio-button>
+                          </bk-radio-group>
 
-                      <bk-alert
+                          <bk-alert
+                            v-if="formData.env_overlay.stag.autoscaling"
+                            type="info"
+                            :class="{ mt10: localLanguage === 'en' }"
+                            style="margin-right: 60px"
+                          >
+                            <span slot="title">
+                              {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
+                              <a
+                                target="_blank"
+                                :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
+                                style="color: #3a84ff"
+                              >
+                                {{ $t('查看动态扩缩容计算规则') }}
+                              </a>
+                            </span>
+                          </bk-alert>
+                        </section>
+                      </bk-form-item>
+                      <bk-form-item
                         v-if="formData.env_overlay.stag.autoscaling"
-                        type="info"
-                        :class="{ mt10: localLanguage === 'en' }"
-                        style="margin-right: 60px"
+                        :label="$t('触发方式')"
+                        :label-width="labelWidth"
+                        class="desc-form-item"
                       >
-                        <span slot="title">
-                          {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
-                          <a
-                            target="_blank"
-                            :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
-                            style="color: #3a84ff"
+                        <div class="desc-container flex-row">
+                          <bk-select
+                            v-model="cpuLabel"
+                            disabled
+                            style="width: 150px"
                           >
-                            {{ $t('查看动态扩缩容计算规则') }}
-                          </a>
-                        </span>
-                      </bk-alert>
-                    </section>
-                  </bk-form-item>
-                  <bk-form-item
-                    v-if="formData.env_overlay.stag.autoscaling"
-                    :label="$t('触发方式')"
-                    :label-width="labelWidth"
-                    class="desc-form-item"
-                  >
-                    <div class="desc-container flex-row">
-                      <bk-select
-                        v-model="cpuLabel"
-                        disabled
-                        style="width: 150px"
-                      >
-                        <bk-option
-                          v-for="option in triggerMethodData"
-                          :id="option"
-                          :key="option"
-                          :name="option"
-                        />
-                      </bk-select>
-                      <div class="mr10 ml10">=</div>
-                      <bk-input
-                        disabled
-                        v-model="cpuValue"
-                        style="width: 150px"
-                      />
-                      <!-- <p>
+                            <bk-option
+                              v-for="option in triggerMethodData"
+                              :id="option"
+                              :key="option"
+                              :name="option"
+                            />
+                          </bk-select>
+                          <div class="mr10 ml10">=</div>
+                          <bk-input
+                            disabled
+                            v-model="cpuValue"
+                            style="width: 150px"
+                          />
+                          <!-- <p>
                         {{$t('响应时间')}} = 1000ms
                       </p> -->
-                    </div>
-                  </bk-form-item>
-                  <section
-                    v-if="formData.env_overlay.stag.autoscaling"
-                    class="mt20"
-                  >
-                    <bk-form-item
-                      :label="$t('最小副本数')"
-                      :label-width="labelWidth"
-                      :required="true"
-                      :property="'scaling_config.min_replicas'"
-                      :rules="rules.stagMinReplicas"
-                    >
-                      <bk-input
-                        v-model="formData.env_overlay.stag.scaling_config.min_replicas"
-                        type="number"
-                        :max="5"
-                        :min="1"
-                        style="width: 150px"
-                      />
-                    </bk-form-item>
-                    <bk-form-item
-                      :label="$t('最大副本数')"
-                      :label-width="labelWidth"
-                      :required="true"
-                      :property="'scaling_config.max_replicas'"
-                      :rules="rules.stagMaxReplicas"
-                    >
-                      <bk-input
-                        v-model="formData.env_overlay.stag.scaling_config.max_replicas"
-                        type="number"
-                        :max="5"
-                        :min="1"
-                        style="width: 150px"
-                      />
-                    </bk-form-item>
-                  </section>
-                  <section
-                    v-else
-                    class="mt20"
-                  >
-                    <bk-form-item
-                      :label="$t('副本数量')"
-                      :label-width="labelWidth"
-                      :required="true"
-                      :property="'target_replicas'"
-                      :rules="rules.formReplicas"
-                    >
-                      <bk-input
-                        v-model="formData.env_overlay.stag.target_replicas"
-                        type="number"
-                        :max="5"
-                        :min="1"
-                        style="width: 150px"
-                      />
-                    </bk-form-item>
-                  </section>
-                </bk-form>
-              </div>
-            </bk-form-item>
-            <bk-form-item
-              v-show="ifopen"
-              :label-width="40"
-            >
-              <div class="env-name w885">{{ $t('生产环境') }}</div>
-              <div class="env-container">
-                <bk-form
-                  ref="formProdEnv"
-                  :model="formData.env_overlay.prod"
-                  ext-cls="form-envs"
+                        </div>
+                      </bk-form-item>
+                      <section
+                        v-if="formData.env_overlay.stag.autoscaling"
+                        class="mt20"
+                      >
+                        <bk-form-item
+                          :label="$t('最小副本数')"
+                          :label-width="labelWidth"
+                          :required="true"
+                          :property="'scaling_config.min_replicas'"
+                          :rules="rules.stagMinReplicas"
+                        >
+                          <bk-input
+                            v-model="formData.env_overlay.stag.scaling_config.min_replicas"
+                            type="number"
+                            :max="5"
+                            :min="1"
+                            style="width: 150px"
+                          />
+                        </bk-form-item>
+                        <bk-form-item
+                          :label="$t('最大副本数')"
+                          :label-width="labelWidth"
+                          :required="true"
+                          :property="'scaling_config.max_replicas'"
+                          :rules="rules.stagMaxReplicas"
+                        >
+                          <bk-input
+                            v-model="formData.env_overlay.stag.scaling_config.max_replicas"
+                            type="number"
+                            :max="5"
+                            :min="1"
+                            style="width: 150px"
+                          />
+                        </bk-form-item>
+                      </section>
+                      <section
+                        v-else
+                        class="mt20"
+                      >
+                        <bk-form-item
+                          :label="$t('副本数量')"
+                          :label-width="labelWidth"
+                          :required="true"
+                          :property="'target_replicas'"
+                          :rules="rules.formReplicas"
+                        >
+                          <bk-input
+                            v-model="formData.env_overlay.stag.target_replicas"
+                            type="number"
+                            :max="5"
+                            :min="1"
+                            style="width: 150px"
+                          />
+                        </bk-form-item>
+                      </section>
+                    </bk-form>
+                  </div>
+                </bk-form-item>
+                <bk-form-item
+                  v-show="ifopen"
+                  :label-width="40"
                 >
-                  <bk-form-item
-                    :label="$t('资源配额方案')"
-                    :label-width="labelWidth"
-                  >
-                    <div class="flex-row align-items-center">
-                      <bk-select
-                        v-model="formData.env_overlay.prod.plan_name"
-                        :disabled="false"
-                        style="width: 150px"
-                        searchable
-                        @change="handleChange($event, 'prod')"
+                  <div class="env-name w885">{{ $t('生产环境') }}</div>
+                  <div class="env-container">
+                    <bk-form
+                      ref="formProdEnv"
+                      :model="formData.env_overlay.prod"
+                      ext-cls="form-envs"
+                    >
+                      <bk-form-item
+                        :label="$t('资源配额方案')"
+                        :label-width="labelWidth"
                       >
-                        <bk-option
-                          v-for="option in resQuotaData"
-                          :id="option"
-                          :key="option"
-                          :name="option"
-                        />
-                      </bk-select>
-                      <!-- tips内容不会双向绑定 需要重新渲染 -->
-                      <i
-                        v-if="quotaPlansFlag"
-                        class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                      />
-                      <quota-popver v-else :data="prodQuotaData" />
-                    </div>
-                  </bk-form-item>
-                  <bk-form-item
-                    :label="$t('扩缩容方式')"
-                    :label-width="labelWidth"
-                  >
-                    <section :class="{ 'flex-row': localLanguage !== 'en' }">
-                      <bk-radio-group
-                        v-model="formData.env_overlay.prod.autoscaling"
-                        @change="handleRadioChange('prod')"
-                        style="flex: 1"
-                      >
-                        <bk-radio-button
-                          class="radio-cls"
-                          :value="false"
-                        >
-                          {{ $t('手动调节') }}
-                        </bk-radio-button>
-                        <bk-radio-button
-                          class="radio-cls"
-                          :value="true"
-                          :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
-                          v-bk-tooltips="{
-                            content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
-                            disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
-                          }"
-                        >
-                          {{ $t('自动调节') }}
-                        </bk-radio-button>
-                      </bk-radio-group>
-
-                      <bk-alert
-                        v-if="formData.env_overlay.prod.autoscaling"
-                        type="info"
-                        :class="{ mt10: localLanguage === 'en' }"
-                        style="margin-right: 60px"
-                      >
-                        <span slot="title">
-                          {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
-                          <a
-                            target="_blank"
-                            :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
-                            style="color: #3a84ff"
+                        <div class="flex-row align-items-center">
+                          <bk-select
+                            v-model="formData.env_overlay.prod.plan_name"
+                            :disabled="false"
+                            style="width: 150px"
+                            searchable
+                            @change="handleChange($event, 'prod')"
                           >
-                            {{ $t('查看动态扩缩容计算规则') }}
-                          </a>
-                        </span>
-                      </bk-alert>
-                    </section>
-                  </bk-form-item>
-                  <bk-form-item
-                    v-if="formData.env_overlay.prod.autoscaling"
-                    :label="$t('触发方式')"
-                    :label-width="labelWidth"
-                    class="desc-form-item"
-                  >
-                    <div class="desc-container flex-row">
-                      <bk-select
-                        v-model="cpuLabel"
-                        disabled
-                        style="width: 150px"
+                            <bk-option
+                              v-for="option in resQuotaData"
+                              :id="option"
+                              :key="option"
+                              :name="option"
+                            />
+                          </bk-select>
+                          <!-- tips内容不会双向绑定 需要重新渲染 -->
+                          <i
+                            v-if="quotaPlansFlag"
+                            class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                          />
+                          <quota-popver v-else :data="prodQuotaData" />
+                        </div>
+                      </bk-form-item>
+                      <bk-form-item
+                        :label="$t('扩缩容方式')"
+                        :label-width="labelWidth"
                       >
-                        <bk-option
-                          v-for="option in triggerMethodData"
-                          :id="option"
-                          :key="option"
-                          :name="option"
-                        />
-                      </bk-select>
-                      <div class="mr10 ml10">=</div>
-                      <bk-input
-                        disabled
-                        v-model="cpuValue"
-                        style="width: 150px"
-                      />
-                      <!-- <p>
+                        <section :class="{ 'flex-row': localLanguage !== 'en' }">
+                          <bk-radio-group
+                            v-model="formData.env_overlay.prod.autoscaling"
+                            @change="handleRadioChange('prod')"
+                            style="flex: 1"
+                          >
+                            <bk-radio-button
+                              class="radio-cls"
+                              :value="false"
+                            >
+                              {{ $t('手动调节') }}
+                            </bk-radio-button>
+                            <bk-radio-button
+                              class="radio-cls"
+                              :value="true"
+                              :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
+                              v-bk-tooltips="{
+                                content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
+                                disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
+                              }"
+                            >
+                              {{ $t('自动调节') }}
+                            </bk-radio-button>
+                          </bk-radio-group>
+
+                          <bk-alert
+                            v-if="formData.env_overlay.prod.autoscaling"
+                            type="info"
+                            :class="{ mt10: localLanguage === 'en' }"
+                            style="margin-right: 60px"
+                          >
+                            <span slot="title">
+                              {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
+                              <a
+                                target="_blank"
+                                :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/paas3_autoscaling'"
+                                style="color: #3a84ff"
+                              >
+                                {{ $t('查看动态扩缩容计算规则') }}
+                              </a>
+                            </span>
+                          </bk-alert>
+                        </section>
+                      </bk-form-item>
+                      <bk-form-item
+                        v-if="formData.env_overlay.prod.autoscaling"
+                        :label="$t('触发方式')"
+                        :label-width="labelWidth"
+                        class="desc-form-item"
+                      >
+                        <div class="desc-container flex-row">
+                          <bk-select
+                            v-model="cpuLabel"
+                            disabled
+                            style="width: 150px"
+                          >
+                            <bk-option
+                              v-for="option in triggerMethodData"
+                              :id="option"
+                              :key="option"
+                              :name="option"
+                            />
+                          </bk-select>
+                          <div class="mr10 ml10">=</div>
+                          <bk-input
+                            disabled
+                            v-model="cpuValue"
+                            style="width: 150px"
+                          />
+                          <!-- <p>
                         {{$t('响应时间')}} = 1000ms
                       </p> -->
+                        </div>
+                      </bk-form-item>
+                      <section
+                        v-if="formData.env_overlay.prod.autoscaling"
+                        class="mt20"
+                      >
+                        <bk-form-item
+                          :label="$t('最小副本数')"
+                          :label-width="labelWidth"
+                          :required="true"
+                          :property="'scaling_config.min_replicas'"
+                          :rules="rules.prodMinReplicas"
+                        >
+                          <bk-input
+                            v-model="formData.env_overlay.prod.scaling_config.min_replicas"
+                            type="number"
+                            :max="5"
+                            :min="1"
+                            style="width: 150px"
+                          />
+                        </bk-form-item>
+                        <bk-form-item
+                          :label="$t('最大副本数')"
+                          :label-width="labelWidth"
+                          :required="true"
+                          :property="'scaling_config.max_replicas'"
+                          :rules="rules.prodMaxReplicas"
+                        >
+                          <bk-input
+                            v-model="formData.env_overlay.prod.scaling_config.max_replicas"
+                            type="number"
+                            :max="5"
+                            :min="1"
+                            style="width: 150px"
+                          />
+                        </bk-form-item>
+                      </section>
+                      <section
+                        v-else
+                        class="mt20"
+                      >
+                        <bk-form-item
+                          :label="$t('副本数量')"
+                          :label-width="labelWidth"
+                          :required="true"
+                          :property="'target_replicas'"
+                          :rules="rules.formReplicas"
+                        >
+                          <bk-input
+                            v-model="formData.env_overlay.prod.target_replicas"
+                            type="number"
+                            :max="5"
+                            :min="1"
+                            style="width: 150px"
+                          />
+                        </bk-form-item>
+                      </section>
+                    </bk-form>
+                  </div>
+                </bk-form-item>
+              </bk-form>
+            </div>
+          </div>
+
+          <!-- 查看态 -->
+          <div
+            class="form-detail mt20"
+            v-else
+          >
+            <bk-form :model="formData" :label-width="viewLabelWidth">
+              <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
+              <bk-form-item
+                v-if="!allowMultipleImage"
+                :label="`${$t('镜像仓库')}：`"
+              >
+                <span class="form-text">{{ formData.image || '--' }}</span>
+              </bk-form-item>
+              <bk-form-item
+                v-else-if="isCustomImage && allowMultipleImage"
+                :label="`${$t('镜像地址')}：`"
+              >
+                <span class="form-text">{{ formData.image || '--' }}</span>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('镜像凭证')}：`">
+                <span class="form-text">
+                  {{ formData.image_credential_name || '--' }}
+                </span>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('启动命令')}：`">
+                <span v-if="formData.command && formData.command.length">
+                  <bk-tag
+                    v-for="item in formData.command"
+                    :key="item"
+                  >
+                    {{ item }}
+                  </bk-tag>
+                </span>
+                <span
+                  class="form-text"
+                  v-else
+                >
+                  --
+                </span>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('命令参数')}：`">
+                <span v-if="formData.args && formData.args.length">
+                  <bk-tag
+                    v-for="item in formData.args"
+                    :key="item"
+                  >
+                    {{ item }}
+                  </bk-tag>
+                </span>
+                <span
+                  class="form-text"
+                  v-else
+                >
+                  --
+                </span>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('容器端口')}：`">
+                <span class="form-text">{{ formData.port || '--' }}</span>
+              </bk-form-item>
+              <bk-form-item :label-width="50">
+                <bk-button
+                  text
+                  theme="primary"
+                  :title="$t('更多配置')"
+                  @click="ifopen = !ifopen"
+                >
+                  {{ $t('更多配置') }}
+                  <i
+                    class="paasng-icon"
+                    :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+                  />
+                </bk-button>
+              </bk-form-item>
+              <section
+                class="mt20 extra-config-cls"
+                v-if="ifopen"
+              >
+                <bk-form-item :label="`${$t('配置环境')}：`">
+                  <div class="flex-row env-detail">
+                    <div
+                      v-for="item in envsData"
+                      :key="item.value"
+                      :class="item.value === 'prod' ? 'ml20' : ''"
+                    >
+                      <div class="env-name">{{ item.label }}</div>
+                      <div class="env-item">
+                        <bk-form-item
+                          :label="`${$t('资源配额方案')}：`"
+                          ext-cls="form-first-cls"
+                        >
+                          <span class="form-text">{{ formData.env_overlay[item.value].plan_name || '--' }}</span>
+                          <span slot="tip">
+                            <i
+                              v-if="quotaPlansFlag"
+                              class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                            />
+                            <quota-popver v-else :data="item.value === 'stag' ? stagQuotaData : prodQuotaData" />
+                          </span>
+                        </bk-form-item>
+
+                        <bk-form-item :label="`${$t('扩缩容方式')}：`">
+                          <span class="form-text">
+                            {{formData.env_overlay[item.value].autoscaling ? $t('自动调节') : $t('手动调节') }}
+                          </span>
+                        </bk-form-item>
+
+                        <section v-if="formData.env_overlay[item.value].autoscaling">
+                          <bk-form-item :label="`${$t('最小副本数')}：`">
+                            <span class="form-text">
+                              {{ formData.env_overlay[item.value].scaling_config.min_replicas || '--' }}
+                            </span>
+                          </bk-form-item>
+                          <bk-form-item :label="`${$t('最大副本数')}：`">
+                            <span class="form-text">
+                              {{ formData.env_overlay[item.value].scaling_config.max_replicas || '--' }}
+                            </span>
+                          </bk-form-item>
+                        </section>
+                        <section v-else>
+                          <bk-form-item :label="$t('副本数量：')">
+                            <span class="form-text">{{ formData.env_overlay[item.value].target_replicas || '--' }}</span>
+                          </bk-form-item>
+                        </section>
+                      </div>
                     </div>
-                  </bk-form-item>
-                  <section
-                    v-if="formData.env_overlay.prod.autoscaling"
-                    class="mt20"
-                  >
-                    <bk-form-item
-                      :label="$t('最小副本数')"
-                      :label-width="labelWidth"
-                      :required="true"
-                      :property="'scaling_config.min_replicas'"
-                      :rules="rules.prodMinReplicas"
-                    >
-                      <bk-input
-                        v-model="formData.env_overlay.prod.scaling_config.min_replicas"
-                        type="number"
-                        :max="5"
-                        :min="1"
-                        style="width: 150px"
-                      />
-                    </bk-form-item>
-                    <bk-form-item
-                      :label="$t('最大副本数')"
-                      :label-width="labelWidth"
-                      :required="true"
-                      :property="'scaling_config.max_replicas'"
-                      :rules="rules.prodMaxReplicas"
-                    >
-                      <bk-input
-                        v-model="formData.env_overlay.prod.scaling_config.max_replicas"
-                        type="number"
-                        :max="5"
-                        :min="1"
-                        style="width: 150px"
-                      />
-                    </bk-form-item>
-                  </section>
-                  <section
-                    v-else
-                    class="mt20"
-                  >
-                    <bk-form-item
-                      :label="$t('副本数量')"
-                      :label-width="labelWidth"
-                      :required="true"
-                      :property="'target_replicas'"
-                      :rules="rules.formReplicas"
-                    >
-                      <bk-input
-                        v-model="formData.env_overlay.prod.target_replicas"
-                        type="number"
-                        :max="5"
-                        :min="1"
-                        style="width: 150px"
-                      />
-                    </bk-form-item>
-                  </section>
-                </bk-form>
-              </div>
+                  </div>
+                </bk-form-item>
+              </section>
+            </bk-form>
+          </div>
+
+          <!-- 创建应用于与模块需隐藏 -->
+          <div
+            class="process-btn-wrapper"
+            v-if="isPageEdit && isComponentBtn"
+          >
+            <bk-button
+              class="pl20 pr20"
+              :theme="'primary'"
+              @click="handleSave"
+            >
+              {{ $t('保存') }}
+            </bk-button>
+            <bk-button
+              class="pl20 pr20 ml20"
+              @click="handleCancel"
+            >
+              {{ $t('取消') }}
+            </bk-button>
+          </div>
+        </div>
+
+        <bk-dialog
+          v-model="processDialog.visiable"
+          width="320"
+          :theme="'primary'"
+          :header-position="'left'"
+          :mask-close="false"
+          :title="processDialog.title"
+          :loading="processDialog.loading"
+          @confirm="handleConfirm"
+          @cancel="handleDialogCancel"
+        >
+          <bk-form
+            ref="formDialog"
+            :model="processDialog"
+            :label-width="0"
+          >
+            <bk-form-item
+              :required="true"
+              :property="'name'"
+              :rules="rules.processName"
+            >
+              <bk-input
+                class="path-input-cls"
+                v-model="processDialog.name"
+                :placeholder="$t('请输入进程名称')"
+                @enter="handleConfirm"
+              ></bk-input>
             </bk-form-item>
           </bk-form>
-        </div>
-      </div>
+        </bk-dialog>
+      </paas-content-loader>
 
-      <!-- 查看态 -->
-      <div
-        class="form-detail mt20"
-        v-else
-      >
-        <bk-form :model="formData" :label-width="viewLabelWidth">
-          <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
-          <bk-form-item
-            v-if="!allowMultipleImage"
-            :label="`${$t('镜像仓库')}：`"
-          >
-            <span class="form-text">{{ formData.image || '--' }}</span>
-          </bk-form-item>
-          <bk-form-item
-            v-else-if="isCustomImage && allowMultipleImage"
-            :label="`${$t('镜像地址')}：`"
-          >
-            <span class="form-text">{{ formData.image || '--' }}</span>
-          </bk-form-item>
-          <bk-form-item :label="`${$t('镜像凭证')}：`">
-            <span class="form-text">
-              {{ formData.image_credential_name || '--' }}
-            </span>
-          </bk-form-item>
-          <bk-form-item :label="`${$t('启动命令')}：`">
-            <span v-if="formData.command && formData.command.length">
-              <bk-tag
-                v-for="item in formData.command"
-                :key="item"
-              >
-                {{ item }}
-              </bk-tag>
-            </span>
-            <span
-              class="form-text"
-              v-else
-            >
-              --
-            </span>
-          </bk-form-item>
-          <bk-form-item :label="`${$t('命令参数')}：`">
-            <span v-if="formData.args && formData.args.length">
-              <bk-tag
-                v-for="item in formData.args"
-                :key="item"
-              >
-                {{ item }}
-              </bk-tag>
-            </span>
-            <span
-              class="form-text"
-              v-else
-            >
-              --
-            </span>
-          </bk-form-item>
-          <bk-form-item :label="`${$t('容器端口')}：`">
-            <span class="form-text">{{ formData.port || '--' }}</span>
-          </bk-form-item>
-          <bk-form-item :label-width="50">
-            <bk-button
-              text
-              theme="primary"
-              :title="$t('更多配置')"
-              @click="ifopen = !ifopen"
-            >
-              {{ $t('更多配置') }}
-              <i
-                class="paasng-icon"
-                :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
-              />
-            </bk-button>
-          </bk-form-item>
-          <section
-            class="mt20 extra-config-cls"
-            v-if="ifopen"
-          >
-            <bk-form-item :label="`${$t('配置环境')}：`">
-              <div class="flex-row env-detail">
-                <div
-                  v-for="item in envsData"
-                  :key="item.value"
-                  :class="item.value === 'prod' ? 'ml20' : ''"
-                >
-                  <div class="env-name">{{ item.label }}</div>
-                  <div class="env-item">
-                    <bk-form-item
-                      :label="`${$t('资源配额方案')}：`"
-                      ext-cls="form-first-cls"
-                    >
-                      <span class="form-text">{{ formData.env_overlay[item.value].plan_name || '--' }}</span>
-                      <span slot="tip">
-                        <i
-                          v-if="quotaPlansFlag"
-                          class="paasng-icon paasng-exclamation-circle uv-tips ml10"
-                        />
-                        <quota-popver v-else :data="item.value === 'stag' ? stagQuotaData : prodQuotaData" />
-                      </span>
-                    </bk-form-item>
-
-                    <bk-form-item :label="`${$t('扩缩容方式')}：`">
-                      <span class="form-text">
-                        {{formData.env_overlay[item.value].autoscaling ? $t('自动调节') : $t('手动调节') }}
-                      </span>
-                    </bk-form-item>
-
-                    <section v-if="formData.env_overlay[item.value].autoscaling">
-                      <bk-form-item :label="`${$t('最小副本数')}：`">
-                        <span class="form-text">
-                          {{ formData.env_overlay[item.value].scaling_config.min_replicas || '--' }}
-                        </span>
-                      </bk-form-item>
-                      <bk-form-item :label="`${$t('最大副本数')}：`">
-                        <span class="form-text">
-                          {{ formData.env_overlay[item.value].scaling_config.max_replicas || '--' }}
-                        </span>
-                      </bk-form-item>
-                    </section>
-                    <section v-else>
-                      <bk-form-item :label="$t('副本数量：')">
-                        <span class="form-text">{{ formData.env_overlay[item.value].target_replicas || '--' }}</span>
-                      </bk-form-item>
-                    </section>
-                  </div>
-                </div>
-              </div>
-            </bk-form-item>
-          </section>
-        </bk-form>
-      </div>
-
-      <!-- 创建应用于与模块需隐藏 -->
-      <div
-        class="process-btn-wrapper"
-        v-if="isPageEdit && isComponentBtn"
-      >
-        <bk-button
-          class="pl20 pr20"
-          :theme="'primary'"
-          @click="handleSave"
-        >
-          {{ $t('保存') }}
-        </bk-button>
-        <bk-button
-          class="pl20 pr20 ml20"
-          @click="handleCancel"
-        >
-          {{ $t('取消') }}
-        </bk-button>
-      </div>
-    </div>
-
-    <bk-dialog
-      v-model="processDialog.visiable"
-      width="320"
-      :theme="'primary'"
-      :header-position="'left'"
-      :mask-close="false"
-      :title="processDialog.title"
-      :loading="processDialog.loading"
-      @confirm="handleConfirm"
-      @cancel="handleDialogCancel"
-    >
-      <bk-form
-        ref="formDialog"
-        :model="processDialog"
-        :label-width="0"
-      >
-        <bk-form-item
-          :required="true"
-          :property="'name'"
-          :rules="rules.processName"
-        >
-          <bk-input
-            class="path-input-cls"
-            v-model="processDialog.name"
-            :placeholder="$t('请输入进程名称')"
-            @enter="handleConfirm"
-          ></bk-input>
-        </bk-form-item>
-      </bk-form>
-    </bk-dialog>
+      <!-- 钩子命令-创建应用、模块不展示 -->
+      <deploy-hook v-if="!isCreate" />
+    </template>
     <!-- 指南 -->
-    <user-guide name="process" ref="userGuideRef" />
-  </paas-content-loader>
+    <user-guide ref="userGuideRef" />
+  </div>
 </template>
 
 <script>import _ from 'lodash';
 import { RESQUOTADATA, ENV_OVERLAY } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 import quotaPopver from './comps/quota-popver';
+import deployHook from './deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 
 export default {
   components: {
     userGuide,
     quotaPopver,
+    deployHook,
   },
   props: {
     moduleId: {
@@ -1079,10 +1099,13 @@ export default {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
     labelWidth() {
-      return this.localLanguage === 'en' ? 190 : 120;
+      return this.localLanguage === 'en' ? 190 : 150;
     },
     viewLabelWidth() {
       return this.localLanguage === 'en' ? 190 : 150;
+    },
+    isShowPage() {
+      return !this.isCustomImage && !this.isCreate;
     },
   },
   watch: {
@@ -1426,10 +1449,10 @@ export default {
       }
     },
 
-    // 跳转模块信息
+    // 跳转构建配置
     handleToModuleInfo() {
       this.$store.commit('cloudApi/updateModuleInfoEdit', true);
-      this.$emit('tab-change', 'moduleInfo');
+      this.$emit('tab-change', 'cloudAppDeployForBuild');
     },
 
     // 保存
@@ -1529,7 +1552,6 @@ export default {
 }
 
 .form-deploy {
-  margin: 10px 40px 20px;
   .item-title {
     font-weight: Bold;
     font-size: 14px;
@@ -1655,11 +1677,29 @@ export default {
   }
 }
 .process-btn-wrapper {
-  margin-left: 80px;
+  margin-left: 150px;
 }
 .image-store-icon {
   margin-left: 5px;
   cursor: pointer;
   color: #3a84ff;
+}
+.title-wrapper {
+  display: flex;
+  color: #313238;
+  line-height: 22px;
+  padding: 0 24px;
+  margin-bottom: 12px;
+  .title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #313238;
+  }
+  .edit-container{
+    color: #3A84FF;
+    font-size: 12px;
+    cursor: pointer;
+    padding-left: 10px;
+  }
 }
 </style>

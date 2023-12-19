@@ -105,6 +105,18 @@
           :render-header="$renderHeader"
         />
         <bk-table-column
+          :label="$t('是否已下架')"
+          prop="status"
+          column-key="status"
+          :filter-multiple="false"
+          :filters="statusFilters"
+          :render-header="$renderHeader"
+        >
+          <template #default="{ row }">
+            {{ row.status === 'archived' ? $t('是') : $t('否') }}
+          </template>
+        </bk-table-column>
+        <bk-table-column
           :label="$t('版本')"
         >
           <template #default="{ row }">
@@ -212,6 +224,14 @@ export default {
       filterLanguage: [],
       filterPdName: [],
       languageFilters: [],
+      filterStatus: [],
+      statusFilters: [{
+        value: 'archived',
+        text: this.$t('是'),
+      }, {
+        value: 'no',
+        text: this.$t('否'),
+      }],
       pluginTypeFilters: [],
       removePluginDialog: {
         visiable: false,
@@ -248,6 +268,9 @@ export default {
     filterPdName() {
       this.fetchPluginsList();
     },
+    filterStatus() {
+      this.fetchPluginsList();
+    },
   },
   mounted() {
     this.fetchPluginsList();
@@ -263,25 +286,9 @@ export default {
           order_by: 'id',
           search_term: this.filterKey,
         };
-        const statusParams = '';
-        let languageParams = '';
-        let pdIdParams = '';
-        if (this.filterLanguage.length) {
-          // pageParams.language = this.filterLanguage;
-          let paramsText = '';
-          this.filterLanguage.forEach((item) => {
-            paramsText += `language=${item}&`;
-          });
-          languageParams = paramsText.substring(0, paramsText.length - 1);
-        }
-        if (this.filterPdName.length) {
-          // pageParams.pd__identifier = this.filterPdName;
-          let paramsText = '';
-          this.filterPdName.forEach((item) => {
-            paramsText += `pd__identifier=${item}&`;
-          });
-          pdIdParams = paramsText.substring(0, paramsText.length - 1);
-        }
+        const statusParams = this.formatFilterParams('filterStatus', 'status');
+        const languageParams = this.formatFilterParams('filterLanguage', 'language');
+        const pdIdParams = this.formatFilterParams('filterPdName', 'pd__identifier');
         this.isDataLoading = true;
         const res = await this.$store.dispatch('plugin/getPlugins', {
           pageParams,
@@ -307,25 +314,37 @@ export default {
       }
     },
 
+    /**
+     * 格式化query参数
+     * dataName: 数据源key
+     * key：query参数名
+     */
+    formatFilterParams(dataName, key) {
+      if (key === 'status' && this[dataName].includes('no')) {
+        // 查询未下架的所有状态
+        return 'status=developing&status=releasing&status=released&status=waiting-approval&status=approval-failed';
+      }
+
+      return this[dataName].reduce((paramsText, item) => `${paramsText}${key}=${item}&`, '').slice(0, -1);
+    },
+
     async getPluginFilterParams() {
       try {
         const res = await this.$store.dispatch('plugin/getPluginFilterParams');
-        for (const key in res) {
-          res[key].forEach((value) => {
-            if (key === 'languages') {
-              this.languageFilters.push({
-                value,
-                text: value,
-              });
-            }
-            if (key === 'plugin_types') {
-              this.pluginTypeFilters.push({
-                value: value.id,
-                text: value.name,
-              });
-            }
+        // 开发语言
+        res.languages.forEach((value) => {
+          this.languageFilters.push({
+            value,
+            text: value,
           });
-        }
+        });
+        // 插件类型
+        res.plugin_types.forEach((value) => {
+          this.pluginTypeFilters.push({
+            value: value.id,
+            text: value.name,
+          });
+        });
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -380,6 +399,11 @@ export default {
 
       if (filters.pd_name) {
         this.filterPdName = filters.pd_name.length ? filters.pd_name : [];
+      }
+
+      // 是否下架筛选
+      if (filters.status) {
+        this.filterStatus = filters.status.length ? filters.status : [];
       }
     },
 
@@ -447,7 +471,7 @@ export default {
     },
 
     updateTableEmptyConfig() {
-      if (this.filterKey || this.filterLanguage.length || this.filterPdName.length) {
+      if (this.filterKey || this.filterLanguage.length || this.filterPdName.length || this.filterStatus.length) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }

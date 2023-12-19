@@ -18,12 +18,18 @@
   </div>
 </template>
 <script>
-  export default {
-    props: {
-      type: {
-        type: String,
-        default: 'primary'
-      }
-    }
-  };
+export default {
+  props: {
+    type: {
+      type: String,
+      default: 'primary',
+    },
+  },
+};
 </script>
+<style scoped lang="scss">
+.info-left-warp,
+.info-right-warp {
+  transform: translateY(1px);
+}
+</style>

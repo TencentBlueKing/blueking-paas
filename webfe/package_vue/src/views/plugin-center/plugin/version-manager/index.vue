@@ -11,7 +11,7 @@
           <!-- 有发布任务，禁用 -->
           <div
             v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !curIsPending }"
-            style="display: inline-block;"
+            style="display: inline-block"
           >
             <bk-button
               theme="primary"
@@ -23,7 +23,7 @@
             </bk-button>
           </div>
           <bk-button
-            v-if="pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS && isPluginAccessEntry"
+            v-if="pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS"
             text
             theme="primary"
             @click="handleOpenLink"
@@ -37,7 +37,7 @@
             :clearable="true"
             :placeholder="$t('版本号、代码分支')"
             :right-icon="'bk-icon icon-search'"
-            style="width: 480px;"
+            style="width: 480px"
             @enter="handleSearch"
           />
         </div>
@@ -72,9 +72,11 @@
               <span
                 v-bk-tooltips="row.version"
                 :class="{ 'version-num': row.version }"
-                style="cursor: pointer;"
+                style="cursor: pointer"
                 @click="handleDetail(row)"
-              >{{ row.version || '--' }}</span>
+              >
+                {{ row.version || '--' }}
+              </span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -151,7 +153,7 @@
                 {{ $t('发布进度') }}
               </bk-button>
               <bk-button
-                v-if="row.retryable && row.status === 'interrupted' || row.status === 'failed'"
+                v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
                 theme="primary"
                 text
                 @click="handleRelease(row, 'reset')"
@@ -178,7 +180,7 @@
         v-bkloading="{ isLoading: versionDetailLoading, opacity: 1 }"
         class="p20"
       >
-        <ul class="detail-wrapper">
+        <ul :class="['detail-wrapper', { en: localLanguage === 'en' }]">
           <li class="item-info">
             <div class="describe">
               {{ $t('版本号') }}
@@ -197,7 +199,9 @@
                 :href="versionDetail.source_location"
                 class="active"
                 target="_blank"
-              >{{ versionDetail.source_location }}</a>
+              >
+                {{ versionDetail.source_location }}
+              </a>
             </div>
           </li>
           <li class="item-info">
@@ -238,12 +242,18 @@
                 <span
                   v-bk-tooltips="$t(versionStatus[versionDetail.status])"
                   class="pl5"
-                >{{ $t(versionStatus[versionDetail.status]) || '--' }}</span>
+                >
+                  {{ $t(versionStatus[versionDetail.status]) || '--' }}
+                </span>
                 <template v-if="versionDetail.status === 'failed'">
-                  （{{ $t('部署失败，查看') }} <span
+                  （{{ $t('部署失败，查看') }}
+                  <span
                     class="active"
                     @click="handleRelease(versionDetail)"
-                  >{{ $t('详情') }}</span>）
+                  >
+                    {{ $t('详情') }}
+                  </span>
+                  ）
                 </template>
               </div>
             </div>
@@ -262,472 +272,473 @@
   </div>
 </template>
 
-<script>
-    import paasPluginTitle from '@/components/pass-plugin-title';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import { PLUGIN_VERSION_STATUS } from '@/common/constants';
-    import i18n from '@/language/i18n.js';
-    import { formatDate } from '@/common/tools';
-    import { clearFilter } from '@/common/utils';
+<script>import paasPluginTitle from '@/components/pass-plugin-title';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import { PLUGIN_VERSION_STATUS } from '@/common/constants';
+import i18n from '@/language/i18n.js';
+import { formatDate } from '@/common/tools';
+import { clearFilter } from '@/common/utils';
 
-    const PLUGIN_VERSION_STATUS_FILTER = {
-        'successful': i18n.t('已上线'),
-        'failed': i18n.t('失败'),
-        'pending': i18n.t('发布中'),
-        'interrupted': i18n.t('已中断')
+export default {
+  components: {
+    paasPluginTitle,
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    // 是否根据version判断
+    this.versionTypeMap = {
+      major: i18n.t('重大版本'),
+      minor: i18n.t('次版本'),
+      patch: i18n.t('修正版本'),
     };
-
-    export default {
-        components: {
-            paasPluginTitle
-        },
-        mixins: [pluginBaseMixin],
-        data () {
-            // 是否根据version判断
-            this.versionTypeMap = {
-                major: i18n.t('重大版本'),
-                minor: i18n.t('次版本'),
-                patch: i18n.t('修正版本')
-            };
-            return {
-                isLoading: true,
-                keyword: '',
-                versionList: [],
-                versionDetail: {},
-                isTableLoading: false,
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10
-                },
-                versionDetailConfig: {
-                    isShow: false
-                },
-                versionDetailLoading: true,
-                versionStatus: PLUGIN_VERSION_STATUS,
-                filterCreator: '',
-                filterStatus: '',
-                curIsPending: '',
-                statusFilter: PLUGIN_VERSION_STATUS_FILTER,
-                formatDate,
-                isPluginAccessEntry: true,
-                pluginDefaultInfo: {
-                    exposed_link: ''
-                },
-                tableEmptyConf: {
-                    keyword: '',
-                    isAbnormal: false
-                }
-            };
-        },
-        computed: {
-            statusFilters () {
-                const statusList = [];
-                for (const key in this.statusFilter) {
-                    statusList.push({
-                        value: key,
-                        text: this.statusFilter[key]
-                    });
-                }
-                return statusList;
-            },
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            }
-        },
-        watch: {
-            '$route' () {
-                this.init();
-            },
-            keyword (newVal, oldVal) {
-                if (oldVal && !newVal) {
-                    this.handleSearch();
-                }
-            },
-            filterStatus () {
-                this.getVersionList();
-            },
-            filterCreator () {
-                this.getVersionList();
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            init () {
-                this.getVersionList();
-                this.getPluginAccessEntry();
-            },
-
-            // 切换表格每页显示条数
-            limitChange (limit) {
-                this.pagination.limit = limit;
-                this.pagination.current = 1;
-                this.getVersionList(this.pagination.current);
-            },
-
-            // 切换分页时会触发的事件
-            pageChange (newPage) {
-                this.pagination.current = newPage;
-                this.getVersionList(newPage);
-            },
-
-            // 获取版本列表
-            async getVersionList (page = 1) {
-                this.isTableLoading = true;
-                const curPage = page || this.pagination.current;
-                const pageParams = {
-                    order_by: '-created',
-                    search_term: this.keyword,
-                    limit: this.pagination.limit,
-                    offset: this.pagination.limit * (curPage - 1)
-                };
-                if (this.filterCreator) {
-                    pageParams.creator = this.filterCreator;
-              }
-                // 选择发布中直接传递 status=pending&status=inital
-                let statusParams = '';
-                if (this.filterStatus.length) {
-                    // pageParams.status = this.filterStatus;
-                    let paramsText = '';
-                    this.filterStatus.forEach(item => {
-                        if (item === 'pending') {
-                            paramsText += `status=pending&status=initial&`;
-                        } else {
-                            paramsText += `status=${item}&`;
-                        }
-                    });
-                    statusParams = paramsText.substring(0, paramsText.length - 1);
-                }
-                this.isDataLoading = true;
-                const data = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId
-                };
-                try {
-                    const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
-                      data,
-                      pageParams,
-                      statusParams
-                    });
-                    this.versionList = res.results;
-                    this.pagination.count = res.count;
-                    // 当前是否已有任务进行中
-                    this.curIsPending = this.versionList.find(item => item.status === 'pending');
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (e) {
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isTableLoading = false;
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-
-            // 获取版本详情
-            async getReleaseDetail (curData) {
-                const data = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    releaseId: curData.id
-                };
-                try {
-                    const res = await this.$store.dispatch('plugin/getReleaseDetail', data);
-                    this.versionDetail = res;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.versionDetailLoading = false;
-                    }, 300);
-                }
-            },
-
-            handleFilterChange (filters) {
-                if (filters.status) {
-                    this.filterStatus = filters.status.length ? filters.status : [];
-                }
-
-                if (filters.creator) {
-                    this.filterCreator = filters.creator[0] ? filters.creator[0] : '';
-                }
-            },
-
-            handleCreateVersion (difference) {
-                // 正式版 / 测试版
-                // formal / test
-                this.$router.push({
-                    name: 'pluginVersionEditor',
-                    params: {
-                        pluginTypeId: this.pdId,
-                        id: this.pluginId
-                    },
-                    query: {
-                        isPending: this.curIsPending
-                    }
-                });
-            },
-
-            // 根据关键字搜索
-            handleSearch () {
-                this.pagination.count = 0;
-                this.getVersionList();
-            },
-
-            handleDetail (row) {
-                this.versionDetailConfig.isShow = true;
-                this.versionDetailLoading = true;
-                this.getReleaseDetail(row);
-            },
-
-            // 发布
-            handleRelease (data, isReset) {
-                if (isReset) {
-                  this.republish(data);
-                } else {
-                  this.$router.push({
-                      name: 'pluginVersionRelease',
-                      query: {
-                          release_id: data.id
-                      }
-                  });
-                }
-            },
-
-            // 重新发布前状态
-            async republish (data) {
-                const params = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId,
-                    releaseId: data.id
-                };
-                try {
-                    const res = await this.$store.dispatch('plugin/republishRelease', params);
-                    this.$router.push({
-                      name: 'pluginVersionRelease',
-                      query: {
-                          stage_id: res.current_stage && res.current_stage.stage_id,
-                          release_id: data.id
-                      }
-                  });
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-            clearFilterKey () {
-                this.keyword = '';
-                this.$refs.versionTable.clearFilter();
-                if (this.$refs.versionTable.$refs.tableHeader) {
-                    const tableHeader = this.$refs.versionTable.$refs.tableHeader;
-                    clearFilter(tableHeader);
-                }
-            },
-            async getPluginAccessEntry () {
-                try {
-                    const res = await this.$store.dispatch('plugin/getPluginAccessEntry', {
-                        pluginId: this.pluginId
-                    });
-                    this.pluginDefaultInfo = res;
-                } catch (e) {
-                    // 接口error不展示插件访问入口
-                    this.isPluginAccessEntry = false;
-                }
-            },
-            handleOpenLink () {
-                if (this.isPluginAccessEntry) {
-                    window.open(this.pluginDefaultInfo.exposed_link.url, '_blank');
-                }
-            },
-
-            updateTableEmptyConfig () {
-                if (this.keyword || this.filterStatus.length || this.filterCreator.length) {
-                    this.tableEmptyConf.keyword = 'placeholder';
-                    return;
-                }
-                this.tableEmptyConf.keyword = '';
-            }
-        }
+    return {
+      isLoading: true,
+      keyword: '',
+      versionList: [],
+      versionDetail: {},
+      isTableLoading: false,
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      versionDetailConfig: {
+        isShow: false,
+      },
+      versionDetailLoading: true,
+      versionStatus: PLUGIN_VERSION_STATUS,
+      filterCreator: '',
+      filterStatus: '',
+      curIsPending: '',
+      formatDate,
+      isPluginAccessEntry: true,
+      pluginDefaultInfo: {
+        exposed_link: '',
+      },
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
     };
+  },
+  computed: {
+    statusFilters() {
+      const statusList = [];
+      for (const key in this.versionStatus) {
+        statusList.push({
+          value: key,
+          text: this.$t(this.versionStatus[key]),
+        });
+      }
+      return statusList;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  watch: {
+    $route() {
+      this.init();
+    },
+    keyword(newVal, oldVal) {
+      if (oldVal && !newVal) {
+        this.handleSearch();
+      }
+    },
+    filterStatus() {
+      this.getVersionList();
+    },
+    filterCreator() {
+      this.getVersionList();
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.getVersionList();
+      if (this.pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS) {
+        this.getPluginAccessEntry();
+      }
+    },
+
+    // 切换表格每页显示条数
+    limitChange(limit) {
+      this.pagination.limit = limit;
+      this.pagination.current = 1;
+      this.getVersionList(this.pagination.current);
+    },
+
+    // 切换分页时会触发的事件
+    pageChange(newPage) {
+      this.pagination.current = newPage;
+      this.getVersionList(newPage);
+    },
+
+    // 获取版本列表
+    async getVersionList(page = 1) {
+      this.isTableLoading = true;
+      const curPage = page || this.pagination.current;
+      const pageParams = {
+        order_by: '-created',
+        search_term: this.keyword,
+        limit: this.pagination.limit,
+        offset: this.pagination.limit * (curPage - 1),
+      };
+      if (this.filterCreator) {
+        pageParams.creator = this.filterCreator;
+      }
+      // 选择发布中直接传递 status=pending&status=inital
+      let statusParams = '';
+      if (this.filterStatus.length) {
+        // pageParams.status = this.filterStatus;
+        let paramsText = '';
+        this.filterStatus.forEach((item) => {
+          if (item === 'pending') {
+            paramsText += 'status=pending&status=initial&';
+          } else {
+            paramsText += `status=${item}&`;
+          }
+        });
+        statusParams = paramsText.substring(0, paramsText.length - 1);
+      }
+      this.isDataLoading = true;
+      const data = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+      };
+      try {
+        const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
+          data,
+          pageParams,
+          statusParams,
+        });
+        this.versionList = res.results;
+        this.pagination.count = res.count;
+        // 当前是否已有任务进行中
+        this.curIsPending = this.versionList.find(item => item.status === 'pending');
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isTableLoading = false;
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+
+    // 获取版本详情
+    async getReleaseDetail(curData) {
+      const data = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: curData.id,
+      };
+      try {
+        const res = await this.$store.dispatch('plugin/getReleaseDetail', data);
+        this.versionDetail = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.versionDetailLoading = false;
+        }, 300);
+      }
+    },
+
+    handleFilterChange(filters) {
+      if (filters.status) {
+        this.filterStatus = filters.status.length ? filters.status : [];
+      }
+
+      if (filters.creator) {
+        this.filterCreator = filters.creator[0] ? filters.creator[0] : '';
+      }
+    },
+
+    handleCreateVersion(difference) {
+      // 正式版 / 测试版
+      // formal / test
+      this.$router.push({
+        name: 'pluginVersionEditor',
+        params: {
+          pluginTypeId: this.pdId,
+          id: this.pluginId,
+        },
+        query: {
+          isPending: this.curIsPending,
+        },
+      });
+    },
+
+    // 根据关键字搜索
+    handleSearch() {
+      this.pagination.count = 0;
+      this.getVersionList();
+    },
+
+    handleDetail(row) {
+      this.versionDetailConfig.isShow = true;
+      this.versionDetailLoading = true;
+      this.getReleaseDetail(row);
+    },
+
+    // 发布
+    handleRelease(data, isReset) {
+      if (isReset) {
+        this.republish(data);
+      } else {
+        this.$router.push({
+          name: 'pluginVersionRelease',
+          query: {
+            release_id: data.id,
+          },
+        });
+      }
+    },
+
+    // 重新发布前状态
+    async republish(data) {
+      const params = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: data.id,
+      };
+      try {
+        const res = await this.$store.dispatch('plugin/republishRelease', params);
+        this.$router.push({
+          name: 'pluginVersionRelease',
+          query: {
+            stage_id: res.current_stage && res.current_stage.stage_id,
+            release_id: data.id,
+          },
+        });
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+    clearFilterKey() {
+      this.keyword = '';
+      this.$refs.versionTable.clearFilter();
+      if (this.$refs.versionTable.$refs.tableHeader) {
+        const { tableHeader } = this.$refs.versionTable.$refs;
+        clearFilter(tableHeader);
+      }
+    },
+    // 获取访问入口链接
+    async getPluginAccessEntry() {
+      try {
+        const res = await this.$store.dispatch('plugin/getPluginAccessEntry', {
+          pluginId: this.pluginId,
+        });
+        this.pluginDefaultInfo = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+    handleOpenLink() {
+      if (this.isPluginAccessEntry) {
+        window.open(this.pluginDefaultInfo.exposed_link.url, '_blank');
+      }
+    },
+
+    updateTableEmptyConfig() {
+      if (this.keyword || this.filterStatus.length || this.filterCreator.length) {
+        this.tableEmptyConf.keyword = 'placeholder';
+        return;
+      }
+      this.tableEmptyConf.keyword = '';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
+.ps-main {
+  margin-top: 15px;
+}
+.plugin-top-title {
+  margin-top: 12px;
+}
+.app-container {
+  padding-top: 2px;
+}
+.header-title {
+  margin: 16px 0;
+  max-width: 980px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: #313238;
+  .app-code {
+    color: #979ba5;
+  }
+  .arrows {
+    margin: 0 9px;
+    transform: rotate(-90deg);
+    font-size: 12px;
+    font-weight: 600;
+    color: #979ba5;
+  }
+}
 
-    .ps-main {
-        margin-top: 15px;
+.ag-top-header {
+  margin-top: 16px;
+}
+
+.ps-version-list {
+  margin-top: 22px;
+
+  .version-num {
+    color: #3a84ff;
+    font-weight: 700;
+  }
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 3px;
+}
+// .successful {
+//     background: #E5F6EA;
+//     border: 1px solid #3FC06D;
+// }
+
+.successful {
+  background: #e5f6ea;
+  border: 1px solid #3fc06d;
+}
+
+.failed,
+.interrupted {
+  background: #ffe6e6;
+  border: 1px solid #ea3636;
+}
+
+.tag {
+  border-radius: 2px;
+  display: inline-block;
+  padding: 3px 8px;
+
+  &.success {
+    color: #14a568;
+    background: #e4faf0;
+  }
+
+  &.danger {
+    color: #fe9c00;
+    background: #fff1db;
+  }
+
+  &.warning {
+    background: #ffe8c3;
+  }
+}
+
+.detail-wrapper {
+  &.en {
+    .item-info .describe {
+      width: 150px;
     }
-    .plugin-top-title {
-      margin-top: 12px;
-    }
-    .app-container {
-        padding-top: 2px;
-    }
-    .header-title {
-        margin: 16px 0;
-        max-width: 980px;
-        display: flex;
-        align-items: center;
-        font-size: 16px;
-        color: #313238;
-        .app-code {
-            color: #979BA5;
-        }
-        .arrows {
-            margin: 0 9px;
-            transform: rotate(-90deg);
-            font-size: 12px;
-            font-weight: 600;
-            color: #979ba5;
-        }
+  }
+  .item-info {
+    display: flex;
+    height: 40px;
+    line-height: 40px;
+    border-top: 1px solid #dfe0e5;
+
+    &:last-child {
+      border-bottom: 1px solid #dfe0e5;
     }
 
-    .ag-top-header {
-        margin-top: 16px;
+    .describe,
+    .content {
+      display: flex;
+      align-items: center;
     }
 
-    .ps-version-list {
-        margin-top: 22px;
-
-        .version-num {
-            color: #3A84FF;
-            font-weight: 700;
-        }
+    .version-log {
+      display: block;
     }
 
-    .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 3px;
+    .describe {
+      flex-direction: row-reverse;
+      width: 130px;
+      text-align: right;
+      padding-right: 16px;
+      font-size: 12px;
+      color: #979ba5;
+      line-height: normal;
+      background: #fafbfd;
     }
-    // .successful {
-    //     background: #E5F6EA;
-    //     border: 1px solid #3FC06D;
-    // }
-
-    .successful {
-        background: #E5F6EA;
-        border: 1px solid #3FC06D;
+    .content {
+      flex: 1;
+      font-size: 12px;
+      color: #63656e;
+      padding: 10px 0 10px 16px;
+      border-left: 1px solid #f0f1f5;
     }
-
-    .failed,
-    .interrupted {
-        background: #FFE6E6;
-        border: 1px solid #EA3636;
+    .status-wrapper {
+      display: flex;
+      align-items: center;
     }
-
+    .active {
+      color: #3a84ff;
+      cursor: pointer;
+    }
     .tag {
-        border-radius: 2px;
-        display: inline-block;
-        padding: 3px 8px;
-
-        &.success {
-            color: #14A568;
-            background: #E4FAF0;
-        }
-
-        &.danger {
-            color: #FE9C00;
-            background: #FFF1DB;
-        }
-
-        &.warning {
-            background: #FFE8C3;
-        }
+      display: inline-block;
+      padding: 0 3px;
+      font-size: 12px;
+      height: 16px;
+      line-height: 16px;
+      background: #64baa1;
+      border-radius: 2px;
+      color: #fff;
+      margin-right: 5px;
     }
+  }
 
-    .detail-wrapper {
-        .item-info {
-            display: flex;
-            height: 40px;
-            line-height: 40px;
-            border-top: 1px solid #dfe0e5;
-
-            &:last-child {
-                border-bottom: 1px solid #dfe0e5;
-            }
-
-            .describe,
-            .content {
-                display: flex;
-                align-items: center;
-            }
-
-            .version-log {
-                display: block;
-            }
-
-            .describe {
-                flex-direction: row-reverse;
-                width: 130px;
-                text-align: right;
-                padding-right: 16px;
-                font-size: 12px;
-                color: #979BA5;
-                background: #FAFBFD;
-            }
-            .content {
-                flex: 1;
-                font-size: 12px;
-                color: #63656E;
-                padding: 10px 0 10px 16px;
-                border-left: 1px solid #F0F1F5;
-            }
-            .status-wrapper {
-                display: flex;
-                align-items: center;
-            }
-            .active {
-                color: #3A84FF;
-                cursor: pointer;
-            }
-            .tag {
-                display: inline-block;
-                padding: 0 3px;
-                font-size: 12px;
-                height: 16px;
-                line-height: 16px;
-                background: #64BAA1;
-                border-radius: 2px;
-                color: #fff;
-                margin-right: 5px;
-            }
-        }
-
-        .h-auto {
-            height: auto;
-            line-height: 22px;
-        }
-    }
-    .empty-tips {
-        margin-top: 5px;
-        color: #979BA5;
-        .clear-search {
-            cursor: pointer;
-            color: #3a84ff;
-        }
-    }
+  .h-auto {
+    height: auto;
+    line-height: 22px;
+  }
+}
+.empty-tips {
+  margin-top: 5px;
+  color: #979ba5;
+  .clear-search {
+    cursor: pointer;
+    color: #3a84ff;
+  }
+}
 </style>
 
 <style>
-    .biz-create-success .bk-table th .bk-table-column-filter-trigger.is-filtered {
-        color: #3a84ff !important;
-    }
+.biz-create-success .bk-table th .bk-table-column-filter-trigger.is-filtered {
+  color: #3a84ff !important;
+}
 </style>

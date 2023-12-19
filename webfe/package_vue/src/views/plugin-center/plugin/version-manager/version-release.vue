@@ -209,7 +209,7 @@ export default {
       };
       if (this.stageData?.detail?.next_step_disabled_tips) {
         config.content = this.stageData.detail?.next_step_disabled_tips || '';
-        config.disabled = false;
+        config.disabled = this.isAllowNext;
       }
       return config;
     },

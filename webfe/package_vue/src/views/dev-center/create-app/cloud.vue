@@ -244,7 +244,7 @@
                     {{ $t('默认模块需要在') }}
                     <a
                       target="_blank"
-                      :href="GLOBAL.DOC.BUILD_PHASE_HOOK"
+                      :href="GLOBAL.LINK.LESSCODE_INDEX"
                       style="color: #3a84ff">
                       {{$t('蓝鲸运维开发平台')}}
                     </a>

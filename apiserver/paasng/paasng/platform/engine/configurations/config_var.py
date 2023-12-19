@@ -216,17 +216,29 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
     return {**app_info_envs, **runtime_envs, **bk_address_envs, **envs_by_region_and_env}
 
 
-def get_cnative_builtin_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+def get_cnative_builtin_env_variables(
+    env: ModuleEnvironment, deployment: Optional[Deployment] = None
+) -> Dict[str, str]:
     """Get env vars for current environment of cloud-native app, this will includes:
     - built-in env vars
     - env vars from services
+    - (optional) vars defined by deployment description file,for example app_desc.yaml
 
-    TODO: 与 get_env_variables 合并
+    与普通应用获取环境变了 get_env_variables 的差异点有:
+    - 无对象存储相关环境变量
+        - generate_blobstore_env_vars(engine_app): BKREPO_CONF
+    - 无 sub domains/paths 相关环境变量:
+        - AppDefaultDomains(env).as_env_vars():BKPAAS_ENGINE_APP_DEFAULT_SUBDOMAINS
+        - AppDefaultSubpaths(env).as_env_vars():BKPAAS_SUB_PATH、BKPAAS_DEFAULT_SUBPATH_ADDRESS
     """
+    result = {}
     engine_app = env.engine_app
 
+    # Part: Gather values from registered env variables providers, it has lowest priority
+    result.update(env_vars_providers.gather(env, deployment))
+
     # Part: system-wide env vars
-    result = get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
 
     # Part: Address for bk_docs_center saas
     result.update({"BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix()})

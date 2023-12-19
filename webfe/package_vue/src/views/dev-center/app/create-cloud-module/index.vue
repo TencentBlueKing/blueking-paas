@@ -1201,7 +1201,7 @@ export default {
 
     // 处理应用示例填充
     handleSetMirrorUrl() {
-      this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
+      this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'docker.io/library/nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
       this.$refs.validate2.clearError();
     },
 

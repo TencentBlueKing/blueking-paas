@@ -56,11 +56,11 @@ class TestDeployStepPicker:
 
         def _make_step_meta_set(step_set_name: str, slug_provider_name: str):
             meta_set = StepMetaSet.objects.create(name=step_set_name)
+            AppSlugBuilder.objects.filter(name=slug_provider_name).update(step_meta_set=meta_set)
             meta_set.metas.add(
                 DeployStepMeta.objects.create(
                     phase=DeployPhaseTypes.BUILD.value,
                     name="BUILDER-PROVIDER-STEP",
-                    builder_provider=AppSlugBuilder.objects.get(name=slug_provider_name),
                 )
             )
             return meta_set
@@ -83,7 +83,19 @@ class TestDeployStepPicker:
                 # 预期获取到的步骤集 name
                 "dummy+step+set+1",
             ),
-            # 绑定的镜像没有创建对应的步骤集，直接使用 default 步骤集
+            (
+                # 预设的步骤集
+                [
+                    # step_set_name, builder_name
+                    ("dummy+step+set+1", "dummy+image+1"),
+                    ("dummy+step+set+2", "dummy+image+2"),
+                ],
+                # engine_app 绑定的 builder_name
+                "dummy+image+2",
+                # 预期获取到的步骤集 name
+                "dummy+step+set+2",
+            ),
+            # 绑定的镜像没有创建对应的步骤集，直接使用最新的默认步骤集
             (
                 [
                     ("dummy+step+set+1", "dummy+image+1"),
@@ -91,15 +103,6 @@ class TestDeployStepPicker:
                 ],
                 "dummy+image+3",
                 "default",
-            ),
-            # 匹配到多个步骤集, 使用最新创建的
-            (
-                [
-                    ("dummy+step+set+2", "dummy+image+1"),
-                    ("dummy+step+set+1", "dummy+image+1"),
-                ],
-                "dummy+image+1",
-                "dummy+step+set+1",
             ),
         ],
     )

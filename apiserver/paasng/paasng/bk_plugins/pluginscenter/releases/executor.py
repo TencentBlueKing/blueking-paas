@@ -93,10 +93,10 @@ class PluginReleaseExecutor:
         if not api_call_success:
             raise error_codes.THIRD_PARTY_API_ERROR.f(_("当前步骤前置命令执行异常"))
 
-        # 执行当前步骤
-        controller.execute(operator)
         current_stage.operator = operator
         current_stage.save(update_fields=["operator"])
+        # 执行当前步骤
+        controller.execute(operator)
         current_stage.refresh_from_db()
         # 设置步骤状态为 Pending, 避免被重复执行
         if current_stage.status == constants.PluginReleaseStatus.INITIAL:

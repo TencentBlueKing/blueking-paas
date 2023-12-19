@@ -125,7 +125,6 @@ export default {
       panels: [
         { name: 'cloudAppDeployForBuild', label: this.$t('构建配置'), ref: 'build' },
         { name: 'cloudAppDeployForProcess', label: this.$t('进程配置'), ref: 'process' },
-        { name: 'cloudAppDeployForHook', label: this.$t('钩子命令'), ref: 'hook' },
         { name: 'cloudAppDeployForEnv', label: this.$t('环境变量'), ref: 'env' },
         { name: 'cloudAppDeployForVolume', label: this.$t('挂载卷'), ref: 'volume' },
         { name: 'appServices', label: this.$t('增强服务'), ref: 'services' },

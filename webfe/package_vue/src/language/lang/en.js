@@ -2474,4 +2474,7 @@ export default {
   '只有在当前步骤成功完成后，才可进行下一步操作。': 'The next step can only be performed after the current step has been successfully completed.',
   '请选择版本，已经发布过的版本不可选择。': 'Please select a version. Versions that have already been released cannot be selected.',
   去使用: 'To use',
+  暂无进程配置和命令钩子: 'No process configuration and command hooks available currently.',
+  '进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。': 'Process configuration and hook commands are defined in the \'app_desc.yaml\' file located in the build directory.',
+  查看使用指南: 'View the user guide',
 };

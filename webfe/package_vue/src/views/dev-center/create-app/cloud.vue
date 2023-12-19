@@ -175,13 +175,14 @@
                   ext-cls="form-item-cls"
                   :label="$t('模板来源')"
                 >
-                  <div class="flex-row align-items-center tab-container mb20">
+                  <!-- <div class="flex-row align-items-center tab-container mb20">
                     <div
                       class="tab-item template" v-for="(item) in tabData"
                       :class="[{ 'active': activeIndex === item.value }]"
                       :key="item.value"
                       @click="handleCodeTypeChange(item.value)">{{ item.label }}</div>
-                  </div>
+                  </div> -->
+                  <div>{{ $t('蓝鲸开发框架') }}</div>
                 </bk-form-item>
                 <bk-form-item
                   error-display-type="normal"
@@ -784,10 +785,6 @@ export default {
         formData: {},
       },
       curCodeSource: 'default',
-      tabData: [
-        { value: 1, label: this.$t('蓝鲸开发框架') },
-        { value: 5, label: this.$t('场景模版') }],
-      activeIndex: 1,
     };
   },
   computed: {

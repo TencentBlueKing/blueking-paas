@@ -1125,7 +1125,7 @@ export default {
       const params = {
         // 插件应用、场景应用切换为云原生应用
         type: this.sourceOrigin == 5 || this.isBkPlugin ? 'cloud_native' : 'default',
-        is_plugin_app: this.isBkPlugin ? true : false,
+        is_plugin_app: !!this.isBkPlugin,
         region: this.regionChoose || formData.region,
         code: formData.code,
         name: formData.name,

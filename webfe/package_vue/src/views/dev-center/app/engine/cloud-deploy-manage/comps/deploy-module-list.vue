@@ -283,6 +283,7 @@ export default {
         this.deploymentInfoData = this.deploymentInfoDataBackUp
           .filter(module => module.module_name === value);
       }
+      this.init();
     },
     isWatchOfflineing(newVal, oldVal) {
       if (oldVal && !newVal) {    // 从true变为false，则代表下架完成

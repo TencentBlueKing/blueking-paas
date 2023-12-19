@@ -91,167 +91,169 @@
     </paas-content-loader>
   </div>
 </template>
-<script>
-    import paasPluginTitle from '@/components/pass-plugin-title';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import user from '@/components/user';
-    import { quillEditor } from 'vue-quill-editor';
-    import { addQuillTitle } from '@/common/quill-title.js';
-    import { TOOLBAR_OPTIONS } from '@/common/constants';
-    import 'quill/dist/quill.core.css';
-    import 'quill/dist/quill.snow.css';
-    import 'quill/dist/quill.bubble.css';
-    import _ from 'lodash';
-    export default {
-        components: {
-            paasPluginTitle,
-            quillEditor,
-            user
+<script>import paasPluginTitle from '@/components/pass-plugin-title';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import user from '@/components/user';
+import { quillEditor } from 'vue-quill-editor';
+import { addQuillTitle } from '@/common/quill-title.js';
+import { TOOLBAR_OPTIONS } from '@/common/constants';
+import 'quill/dist/quill.core.css';
+import 'quill/dist/quill.snow.css';
+import 'quill/dist/quill.bubble.css';
+import _ from 'lodash';
+export default {
+  components: {
+    paasPluginTitle,
+    quillEditor,
+    user,
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    return {
+      form: {
+        category: '',
+        introduction: '',
+        description: '',
+        contact: [],
+      },
+      categoryList: [],
+      cateLoading: true,
+      isLoading: true,
+      editorOption: {
+        placeholder: this.$t('开始编辑...'),
+        modules: {
+          toolbar: TOOLBAR_OPTIONS,
         },
-        mixins: [pluginBaseMixin],
-        data () {
-            return {
-              form: {
-                  category: '',
-                  introduction: '',
-                  description: '',
-                  contact: []
-              },
-              categoryList: [],
-              cateLoading: true,
-              isLoading: true,
-              editorOption: {
-                  placeholder: this.$t('开始编辑...'),
-                  modules: {
-                      toolbar: TOOLBAR_OPTIONS
-                  }
-              },
-              rules: {
-                  category: [
-                      {
-                          required: true,
-                          message: this.$t('该字段为必填项'),
-                          trigger: 'blur'
-                      }
-                  ],
-                  introduction: [
-                      {
-                          required: true,
-                          message: this.$t('该字段为必填项'),
-                          trigger: 'blur'
-                      }
-                  ],
-                  description: [
-                      {
-                          required: true,
-                          message: this.$t('请输入'),
-                          trigger: 'blur'
-                      }
-                  ],
-                  contact: [
-                      {
-                          required: true,
-                          message: this.$t('该字段为必填项'),
-                          trigger: 'blur'
-                      }
-                  ]
-              }
-            };
-        },
-        computed: {
-            administratorStr () {
-                const administrators = this.curPluginInfo.pd_administrator || [];
-                return administrators.join(';');
-            }
-        },
-        watch: {
-            'form.description' (newDescription) {
-                if (newDescription) {
-                    this.$refs.editor.options.placeholder = '';
-                }
-            }
-        },
-        mounted () {
-            this.fetchMarketInfo();
-            this.fetchCategoryList();
-            this.$nextTick(() => {
-                addQuillTitle();
-            });
-        },
-        methods: {
-            // 应用分类
-            async fetchCategoryList () {
-                try {
-                    const params = {
-                        pdId: this.pdId
-                    };
-                    const res = await this.$store.dispatch('plugin/getCategoryList', params);
-                    this.categoryList = res.category;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.cateLoading = false;
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 300);
-                }
-            },
-            // 获取市场信息
-            async fetchMarketInfo () {
-                try {
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId
-                    };
-                    const res = await this.$store.dispatch('plugin/getMarketInfo', params);
-                    this.form = res;
-                    this.form.contact = res.contact && res.contact.split(',') || [];
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 300);
-                }
-            },
-            // 保存
-            async handlerSave () {
-                this.$refs.visitForm.validate().then(async () => {
-                    try {
-                        const data = _.cloneDeep(this.form);
-                        data.contact = data.contact.join(',');
-                        const params = {
-                            pdId: this.pdId,
-                            pluginId: this.pluginId,
-                            data
-                        };
-                        await this.$store.dispatch('plugin/saveMarketInfo', params);
-                        this.$bkMessage({
-                            theme: 'success',
-                            message: this.$t('保存成功!')
-                        });
-                        this.goBack();
-                    } catch (e) {
-                        this.$bkMessage({
-                            theme: 'error',
-                            message: e.detail || e.message || this.$t('接口异常')
-                        });
-                    } finally {
-                        this.cateLoading = false;
-                    }
-                });
-            },
-            goBack () {
-                this.$router.go(-1);
-            }
-        }
+      },
+      rules: {
+        category: [
+          {
+            required: true,
+            message: this.$t('该字段为必填项'),
+            trigger: 'blur',
+          },
+        ],
+        introduction: [
+          {
+            required: true,
+            message: this.$t('该字段为必填项'),
+            trigger: 'blur',
+          },
+        ],
+        description: [
+          {
+            required: true,
+            message: this.$t('请输入'),
+            trigger: 'blur',
+          },
+        ],
+        contact: [
+          {
+            required: true,
+            message: this.$t('该字段为必填项'),
+            trigger: 'blur',
+          },
+        ],
+      },
     };
+  },
+  computed: {
+    administratorStr() {
+      const administrators = this.curPluginInfo.pd_administrator || [];
+      return administrators.join(';');
+    },
+  },
+  watch: {
+    'form.description'(newDescription) {
+      if (newDescription) {
+        this.$refs.editor.options.placeholder = '';
+      }
+    },
+  },
+  mounted() {
+    this.fetchMarketInfo();
+    this.fetchCategoryList();
+    this.$nextTick(() => {
+      addQuillTitle();
+    });
+  },
+  methods: {
+    // 应用分类
+    async fetchCategoryList() {
+      try {
+        const params = {
+          pdId: this.pdId,
+        };
+        const res = await this.$store.dispatch('plugin/getCategoryList', params);
+        this.categoryList = res.category;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.cateLoading = false;
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 300);
+      }
+    },
+    // 获取市场信息
+    async fetchMarketInfo() {
+      try {
+        const params = {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+        };
+        const res = await this.$store.dispatch('plugin/getMarketInfo', params);
+        this.form = res;
+        this.form.contact = res.contact && res.contact.split(',') || [];
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 300);
+      }
+    },
+    // 保存
+    async handlerSave() {
+      this.$refs.visitForm.validate().then(async () => {
+        try {
+          const data = _.cloneDeep(this.form);
+          data.contact = data.contact.join(',');
+          const params = {
+            pdId: this.pdId,
+            pluginId: this.pluginId,
+            data,
+          };
+          await this.$store.dispatch('plugin/saveMarketInfo', params);
+          this.$bkMessage({
+            theme: 'success',
+            message: this.$t('保存成功!'),
+          });
+          this.goBack();
+        } catch (e) {
+          this.$bkMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('接口异常'),
+          });
+        } finally {
+          this.cateLoading = false;
+        }
+      }, (validator) => {
+        // 显示第一个出错位置
+        console.warn(validator.content);
+      });
+    },
+    goBack() {
+      this.$router.go(-1);
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .market-Info {

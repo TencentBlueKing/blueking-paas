@@ -6,7 +6,7 @@
     theme="primary"
     :width="480"
     :mask-close="false"
-    :title="$t('web 进程扩缩容')"
+    :title="$t(`${processPlan.processType}进程扩缩容`)"
   >
     <template #footer>
       <bk-button

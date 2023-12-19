@@ -331,9 +331,7 @@ export default {
       pluginTypeList: [],
       pluginTypeData: { plugin_type: {}, schema: {} },
       pluginLanguage: [],
-      languageData: {
-        languageData: '',
-      },
+      languageData: {},
       applicableLanguageList: [],
       pluginTemplateList: [],
       extraFields: {},

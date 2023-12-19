@@ -173,9 +173,15 @@
                 <bk-form-item
                   error-display-type="normal"
                   ext-cls="form-item-cls"
-                  :label="$t('模版来源')"
+                  :label="$t('模板来源')"
                 >
-                  <div>{{ $t('蓝鲸开发框架') }}</div>
+                  <div class="flex-row align-items-center tab-container mb20">
+                    <div
+                      class="tab-item template" v-for="(item) in tabData"
+                      :class="[{ 'active': activeIndex === item.value }]"
+                      :key="item.value"
+                      @click="handleCodeTypeChange(item.value)">{{ item.label }}</div>
+                  </div>
                 </bk-form-item>
                 <bk-form-item
                   error-display-type="normal"
@@ -226,7 +232,7 @@
                 <bk-form-item
                   error-display-type="normal"
                   ext-cls="form-item-cls"
-                  :label="$t('模版来源')"
+                  :label="$t('模板来源')"
                 >
                   <div>{{ $t('蓝鲸运维开发平台') }}</div>
                 </bk-form-item>
@@ -778,6 +784,10 @@ export default {
         formData: {},
       },
       curCodeSource: 'default',
+      tabData: [
+        { value: 1, label: this.$t('蓝鲸开发框架') },
+        { value: 5, label: this.$t('场景模版') }],
+      activeIndex: 1,
     };
   },
   computed: {
@@ -1087,6 +1097,12 @@ export default {
         }
       }
 
+      // 选择了lesscode代码来源
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
+        await this.$refs.formBaseRef.validate();
+        this.formData.sourceInitTemplate = 'nodejs_bk_magic_vue_spa';
+      }
+
       this.formLoading = true;
       const params = {
         region: this.regionChoose,
@@ -1182,6 +1198,14 @@ export default {
         params.source_config.source_repo_url = this.formData.url;   // 镜像
       }
 
+      // lesscode应用
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
+        params.source_config = {
+          source_init_template: this.formData.sourceInitTemplate,
+          source_origin: this.sourceOrigin,
+        };
+      }
+
       // 过滤空值容器端口
       // if (params.manifest?.spec) {
       //   params.manifest.spec.processes = params.manifest.spec.processes.map((process) => {
@@ -1189,6 +1213,9 @@ export default {
       //     return (targetPort === '' || targetPort === null) ? processValue : process;
       //   });
       // }
+
+      console.log('params', params);
+      debugger;
 
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
@@ -1326,37 +1353,12 @@ export default {
     // 模版来源切换
     handleCodeTypeChange(payload) {
       console.log('payload', payload);
-      // this.localSourceOrigin = payload;
-      // this.sceneLocalSourceOrigin = 0;
-      // this.deploymentIsShow = true;
-      // if (payload !== 5) {
-      //   this.sceneInitTemplate = '';
-      // }
-      // if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP) {
-      //   this.sourceOrigin = payload;
-      //   this.curLanguages = _.cloneDeep(this.languages);
-      //   this.language = 'Python';
-      //   this.isBkPlugin = false;
-      // } else {
-      //   if (payload === 2) {
-      //     this.curLanguages = _.cloneDeep({
-      //       NodeJS: [this.languages.NodeJS[0]],
-      //     });
-      //     this.language = 'NodeJS';
-      //     this.isBkPlugin = false;
-      //     this.sourceOrigin = payload;
-      //   } else if (payload === 3) {
-      //     this.isBkPlugin = true;
-      //     this.sourceOrigin = 1;
-      //   } else if (payload === 5) {
-      //     this.isBkPlugin = false;
-      //     this.sourceOrigin = 1;
-      //     this.sceneLocalSourceOrigin = 5;
-      //     this.deploymentIsShow = false;
-      //     this.cartActive(this.sceneTemplateList[0]);
-      //   }
-      // }
-      // this.sourceInitTemplate = this.curLanguages[this.language][0].name;
+      this.activeIndex = payload;
+      if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP || payload === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
+        this.sourceOrigin = payload;
+      } else {
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
+      }
     },
   },
 };

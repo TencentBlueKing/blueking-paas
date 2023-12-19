@@ -178,3 +178,31 @@
   width: 56%;
   font-size: 12px;
 }
+
+.tab-container{
+  .tab-item{
+    margin-right: 10px;
+    width: 144px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    background: #f0f1f5;
+    border-radius: 2px;
+    font-size: 14px;
+    color: #63656e;
+    cursor: pointer;
+    position: relative;
+  }
+  .template{
+    width: 200px;
+    height: 48px;
+    line-height: 48px;
+  }
+  .active{
+    background: #fff;
+    border: 2px solid #3a84ff;
+    border-radius: 2px;
+    color: #3a84ff;
+    @include border-active-logo;
+  }
+}

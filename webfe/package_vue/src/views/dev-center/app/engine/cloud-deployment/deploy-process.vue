@@ -1676,7 +1676,7 @@ export default {
   }
 }
 .process-btn-wrapper {
-  margin-left: 80px;
+  margin-left: 150px;
 }
 .image-store-icon {
   margin-left: 5px;

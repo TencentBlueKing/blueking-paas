@@ -92,12 +92,15 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
         )
 
+        app_type = (
+            ApplicationType.CLOUD_NATIVE if settings.PLUGIN_APP_USE_CLOUD_NATIVE_TYPE else ApplicationType.DEFAULT
+        )
         application = create_application(
             region=region,
             code=data["id"],
             name=data["name_zh_cn"],
             name_en=data["name_en"],
-            type_=ApplicationType.CLOUD_NATIVE,
+            type_=app_type,
             operator=encoded_operator,
             is_plugin_app=True,
         )

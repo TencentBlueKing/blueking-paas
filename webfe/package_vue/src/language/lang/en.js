@@ -2476,4 +2476,5 @@ export default {
   暂无进程配置和命令钩子: 'No process configuration and command hooks available currently.',
   '进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。': 'Process configuration and hook commands are defined in the \'app_desc.yaml\' file located in the build directory.',
   查看使用指南: 'View the user guide',
+  不能操作平台内置规则: 'Unable to manipulate platform built-in rules',
 };

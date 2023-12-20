@@ -224,17 +224,19 @@ def get_cnative_builtin_env_variables(
     - env vars from services
     - (optional) vars defined by deployment description file,for example app_desc.yaml
 
-    与普通应用获取环境变了 get_env_variables 的差异点有:
+    与普通应用获取环境变量 get_env_variables 的差异点有:
     - 无对象存储相关环境变量
         - generate_blobstore_env_vars(engine_app): BKREPO_CONF
     - 无 sub domains/paths 相关环境变量:
         - AppDefaultDomains(env).as_env_vars():BKPAAS_ENGINE_APP_DEFAULT_SUBDOMAINS
         - AppDefaultSubpaths(env).as_env_vars():BKPAAS_SUB_PATH、BKPAAS_DEFAULT_SUBPATH_ADDRESS
+    TODO: 与 get_env_variables 合并
     """
     result = {}
     engine_app = env.engine_app
 
     # Part: Gather values from registered env variables providers, it has lowest priority
+    # Contains environment variables defined by users in yaml files
     result.update(env_vars_providers.gather(env, deployment))
 
     # Part: system-wide env vars

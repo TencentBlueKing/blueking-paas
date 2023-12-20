@@ -77,8 +77,8 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     def _get_webconsole_command(self, module: "Module", runtime_type: str, is_cnb_runtime: bool):
         """获取进入 webconsole 的默认命令"""
         if runtime_type == RuntimeType.BUILDPACK:
-            # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack、运行镜像为 cnb
-            # 但是在流水线中单独构建的镜像，不支持 cnb 的 launcher 命令
+            # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack
+            # 但是在流水线中单独构建的镜像，还是使用的原来的 heruku buildpack，而不是 CNB buildpack，没有 launcher 命令
             if self._is_smart_app(module) or not is_cnb_runtime:
                 return "bash"
 

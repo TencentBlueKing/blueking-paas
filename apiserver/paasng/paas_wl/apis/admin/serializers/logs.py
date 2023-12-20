@@ -16,27 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import uuid
-
-from django.db import models
-
-from paasng.utils.models import BkUserField, TimestampedModel
-
-from ..constants import JobStatus
+from rest_framework import serializers
 
 
-class OneOffCommand(TimestampedModel):
-    id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
-    deployment = models.ForeignKey(
-        "engine.Deployment", on_delete=models.CASCADE, related_name="oneoffcommands", null=True
-    )
-    engine_cmd_id = models.UUIDField("engine command id", max_length=32, null=True)
-    is_pre_run = models.BooleanField(default=True)
-    exit_code = models.SmallIntegerField("ExitCode", null=True)
-    status = models.CharField(choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value)
-    command = models.TextField()
-    operator = BkUserField()
-
-    class Meta:
-        get_latest_by = "created"
-        ordering = ["-created"]
+class ModuleEnvLogsConfigSLZ(serializers.Serializer):
+    module_name = serializers.CharField(help_text="模块名")
+    environment = serializers.CharField(help_text="运行环境")
+    mount_log_to_host = serializers.BooleanField(help_text="是否允许挂载日志到宿主机")

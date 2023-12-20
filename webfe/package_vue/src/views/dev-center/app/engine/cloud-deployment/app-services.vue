@@ -666,7 +666,7 @@ export default {
         } else {    // 直接启动
           if (this.isCloudNativeApp) {
             this.$router.push({
-              name: 'cloudAppServiceInner',
+              name: 'cloudAppServiceInnerWithModule',
               params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
             });
             return;

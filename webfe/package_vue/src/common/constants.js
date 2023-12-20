@@ -76,8 +76,8 @@ export const PLUGIN_STATUS = {
 export const PLUGIN_VERSION_STATUS = {
   successful: '成功',
   failed: '失败',
-  pending: '发布中',
-  initial: '发布中',
+  pending: '等待',
+  initial: '初始化',
   interrupted: '已中断',
 };
 
@@ -191,3 +191,40 @@ export const THRESHOLD_MAP = {
 export const LEVEL_MAP = ['致命', '预警', '提醒'];
 
 export const TE_MIRROR_EXAMPLE = 'mirrors.tencent.com/bkpaas/django-helloworld';
+
+export const APPROVALSTATUS = {
+  pending: 'approval',
+  initial: 'approval',
+  successful: 'successful',
+  failed: 'failed',
+  interrupted: 'interrupted',
+};
+
+export const STATUSBARDATA = {
+  approval: {
+    title: '等待审批',
+    type: 'warning',
+  },
+  successful: {
+    title: '审批通过',
+    type: 'success',
+  },
+  failed: {
+    title: '审批不通过',
+    type: 'failed',
+  },
+  interrupted: {
+    title: '已撤销提单',
+    type: 'interrupted',
+  },
+};
+
+/**
+ * 插件新建版本对应阶段
+ */
+export const PLUGIN_VERSION_MAP = {
+  pipeline: 'build',
+  deployAPI: 'deploy',
+  subpage: 'test',
+  itsm: 'itsm',
+};

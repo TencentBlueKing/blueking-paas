@@ -128,8 +128,24 @@
     }
 }
 
+.plugiun-highly-adaptive {
+    min-height: 0;
+}
+
+.plugiun-test-stage {
+    height: calc(100vh - 50px);
+}
+
 .overview-fright-plugin {
     margin-left: 240px;
+}
+
+// 嵌入插件iframe样式
+.plugiun-iframe-summary {
+    padding-bottom: 0;
+    .right-main-plugin {
+        height: 100%;
+    }
 }
 
 .overview-fright-plugin h2 {

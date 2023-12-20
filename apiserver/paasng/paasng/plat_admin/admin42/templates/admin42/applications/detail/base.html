@@ -65,6 +65,10 @@
                     name: 'Egress 管理',
                     url: '{% url "admin.applications.engine.egress.manage" application.code %}'
                 },
+                {
+                    name: '日志采集管理',
+                    url: '{% url "admin.applications.engine.log_config.manage" application.code %}'
+                },
             ]
         },
         {

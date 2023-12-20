@@ -286,6 +286,16 @@ class AppSlugBuilder(AppImage):
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField("modules.Module", related_name="slugbuilders")
 
+    step_meta_set = models.ForeignKey(
+        "engine.StepMetaSet",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_constraint=False,
+        related_name="slugbuilders",
+        help_text="构建步骤集",
+    )
+
     objects = AppImageStackManager()
 
     def get_buildpack_choices(self, module: "Module", *args, **kwargs) -> List[AppBuildPack]:

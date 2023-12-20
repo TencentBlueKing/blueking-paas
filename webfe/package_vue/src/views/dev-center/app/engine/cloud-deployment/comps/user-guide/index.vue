@@ -6,6 +6,19 @@
     quick-close
   >
     <div slot="content">
+      <bk-tab
+        :active.sync="active"
+        type="unborder-card"
+        ext-cls="guide-tab-cls"
+        @tab-change="handleChange">
+        <bk-tab-panel
+          v-for="(panel, index) in panels"
+          v-bind="panel"
+          :key="index"
+        >
+        </bk-tab-panel>
+      </bk-tab>
+      <!-- eslint-disable-next-line vue/no-v-html -->
       <div class="markdown-body" v-html="markdownContent" />
     </div>
   </bk-sideslider>
@@ -14,13 +27,15 @@
 <script>
 import MarkdownIt from 'markdown-it';
 export default {
-  props: {
-    name: String,
-  },
   data() {
     return {
       isShow: false,
       markdownContent: '',
+      active: 'procss',
+      panels: [
+        { name: 'procss', label: this.$t('进程配置') },
+        { name: 'hook', label: this.$t('钩子命令') },
+      ],
     };
   },
   methods: {
@@ -28,11 +43,15 @@ export default {
       this.isShow = true;
       this.loadMarkdownFile();
     },
+    handleChange(name) {
+      this.active = name;
+      this.loadMarkdownFile();
+    },
     loadMarkdownFile() {
       const md = new MarkdownIt();
       let markdownContent = '';
       // 引入md文件
-      if (this.name === 'hook') {
+      if (this.active === 'hook') {
         markdownContent = require('!!raw-loader!@/assets/md/guide-hook.md').default;
       } else {
         markdownContent = require('!!raw-loader!@/assets/md/guide-process.md').default;
@@ -58,5 +77,8 @@ export default {
       list-style: decimal !important;
     }
   }
+}
+.guide-tab-cls {
+  padding: 0 24px;
 }
 </style>

@@ -57,6 +57,7 @@
           <bk-input
             v-model="crdlParams.description"
             type="textarea"
+            :maxlength="500"
             :placeholder="$t('描述')"
           />
         </bk-form-item>

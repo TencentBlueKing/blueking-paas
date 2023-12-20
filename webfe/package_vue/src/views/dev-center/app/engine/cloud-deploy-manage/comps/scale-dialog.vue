@@ -6,7 +6,7 @@
     theme="primary"
     :width="480"
     :mask-close="false"
-    :title="$t('web 进程扩缩容')"
+    :title="$t(`${processPlan.processType}进程扩缩容`)"
   >
     <template #footer>
       <bk-button
@@ -287,7 +287,7 @@ export default {
       };
 
       try {
-        await this.$store.dispatch('processes/updateProcess', {
+        const res = await this.$store.dispatch('processes/updateProcess', {
           appCode: this.appCode,
           moduleId: this.moduleName,
           env: this.environment,
@@ -297,7 +297,7 @@ export default {
           theme: 'success',
           message: this.$t('扩缩容策略已更新'),
         });
-        this.$emit('updateStatus');
+        this.$emit('updateStatus', res.target_status === 'stop' ? 0 : res.target_replicas);
         this.scaleDialog.visible = false;
       } catch (err) {
         this.$paasMessage({

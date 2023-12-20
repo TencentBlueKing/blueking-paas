@@ -34,7 +34,7 @@
                 </td>
                 <td>{{ moduleName || '--' }}</td>
               </tr>
-              <tr v-if="curAppInfo.application.type === 'bk_plugin'">
+              <tr v-if="curAppInfo.application.is_plugin_app">
                 <td
                   class="has-right-border"
                   style="width: 220px;"

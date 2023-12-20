@@ -685,12 +685,13 @@ export const PAAS_STATIC_CONFIG = {
                             'appServiceInner',
                             'cloudAppServiceInnerShared',
                             'cloudAppServiceInner',
+                            'cloudAppServiceInnerWithModule',
                             'networkConfig'
                         ],
                         "iconfontName": "squares",
                         "supportModule": false,
                         "destRoute": {
-                          "name": "cloudAppDeployForProcess"
+                          "name": "cloudAppDeployForBuild"
                         },
                         "children": []
                     },
@@ -808,7 +809,8 @@ export const PAAS_STATIC_CONFIG = {
                         },
                         "matchRouters": [
                             "pluginBaseInfo",
-                            "marketInfoEdit"
+                            "marketInfoEdit",
+                            "moreInfoEdit"
                         ]
                     },
                     {

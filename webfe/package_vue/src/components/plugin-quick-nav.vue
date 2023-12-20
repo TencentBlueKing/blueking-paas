@@ -64,10 +64,8 @@
                   :src="item.logo"
                   onerror="this.src='/static/images/plugin-default.svg'"
                 >
-                <div class="plugin-name ft12 pl10">
+                <div class="plugin-name ft12 pl10" :title="`${item.name_zh_cn}(${item.id})`">
                   {{ item.name_zh_cn }}
-                </div>
-                <div class="plugin-desc ft12 pl10">
                   ( {{ item.id }} )
                 </div>
               </div>
@@ -101,107 +99,105 @@
   </div>
 </template>
 <script>
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import _ from 'lodash';
-    export default {
-        components: {
-        },
-        mixins: [pluginBaseMixin],
-        data () {
-            return {
-                showSelectData: false,
-                searchValue: '',
-                pluginList: [],
-                viewPluinList: [],
-                isHover: false,
-                isLoading: true
-            };
-        },
-        computed: {
-            pluginId () {
-                return this.$route.params.id;
-            }
-        },
-        watch: {
-            searchValue (newVal, oldVal) {
-                this.searchPlugin();
-            },
-            showSelectData (val) {
-                if (!val) {
-                  this.searchValue = '';
-                }
-            }
-        },
-        created () {
-            this.fetchPluginsList();
-        },
-        methods: {
-            async fetchPluginsList () {
-                try {
-                    const pageParams = {
-                        limit: 1000,
-                        offset: 0
-                    };
-                    const res = await this.$store.dispatch('plugin/getPlugins', {
-                        pageParams
-                    });
-                    this.pluginList = res.results;
-                    this.viewPluinList = res.results;
-                    // 根据id排序
-                    this.viewPluinList.sort((a, b) => {
-                        return ('' + a.id).localeCompare(b.id);
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                } finally {
-                    this.isLoading = false;
-                }
-            },
-            hanlerCurPlugin () {
-                this.showSelectData = !this.showSelectData;
-            },
-            hideSelectData () {
-                this.showSelectData = false;
-            },
-            goPage (v) {
-                this.$router.push({
-                    name: v === 'list' ? 'plugin' : 'createPlugin'
-                });
-            },
-            async changePlugin (data) {
-                // 如果去往当前的路由没有权限则去往概览页
-                const parmas = this.getTarget(data.id, data.pd_id);
-                this.hideSelectData();
-                this.$router.push(parmas);
-            },
-            searchPlugin: _.debounce(function () {
-                if (this.searchValue === '') {
-                    this.viewPluinList = this.pluginList;
-                }
-                this.viewPluinList = this.pluginList.filter(item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1);
-            }, 100),
-
-            getTarget (pluginId, pdId) {
-                const target = {
-                    name: this.$route.name,
-                    params: {
-                        ...this.$route.params,
-                        id: pluginId,
-                        pluginTypeId: pdId
-                    },
-                    query: {
-                        ...this.$route.query
-                    }
-                };
-
-                return target;
-            }
-        }
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import _ from 'lodash';
+export default {
+  components: {
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    return {
+      showSelectData: false,
+      searchValue: '',
+      pluginList: [],
+      viewPluinList: [],
+      isHover: false,
+      isLoading: true,
     };
+  },
+  computed: {
+    pluginId() {
+      return this.$route.params.id;
+    },
+  },
+  watch: {
+    searchValue(newVal, oldVal) {
+      this.searchPlugin();
+    },
+    showSelectData(val) {
+      if (!val) {
+        this.searchValue = '';
+      }
+    },
+  },
+  created() {
+    this.fetchPluginsList();
+  },
+  methods: {
+    async fetchPluginsList() {
+      try {
+        const pageParams = {
+          limit: 1000,
+          offset: 0,
+        };
+        const res = await this.$store.dispatch('plugin/getPlugins', {
+          pageParams,
+        });
+        this.pluginList = res.results;
+        this.viewPluinList = res.results;
+        // 根据id排序
+        this.viewPluinList.sort((a, b) => (`${a.id}`).localeCompare(b.id));
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    hanlerCurPlugin() {
+      this.showSelectData = !this.showSelectData;
+    },
+    hideSelectData() {
+      this.showSelectData = false;
+    },
+    goPage(v) {
+      this.$router.push({
+        name: v === 'list' ? 'plugin' : 'createPlugin',
+      });
+    },
+    async changePlugin(data) {
+      // 如果去往当前的路由没有权限则去往概览页
+      const parmas = this.getTarget(data.id, data.pd_id);
+      this.hideSelectData();
+      this.$router.push(parmas);
+    },
+    searchPlugin: _.debounce(function () {
+      if (this.searchValue === '') {
+        this.viewPluinList = this.pluginList;
+      }
+      this.viewPluinList = this.pluginList.filter(item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1);
+    }, 100),
+
+    getTarget(pluginId, pdId) {
+      const target = {
+        name: this.$route.name,
+        params: {
+          ...this.$route.params,
+          id: pluginId,
+          pluginTypeId: pdId,
+        },
+        query: {
+          ...this.$route.query,
+        },
+      };
+
+      return target;
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
 @import '~@/assets/css/mixins/ellipsis.scss';
@@ -259,6 +255,12 @@
                     .ft12{
                         font-size: 12px;
                     }
+                    .plugin-name{
+                        width: 100%;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
                 }
                 .item:hover{
                     background: #E1ECFF;
@@ -285,6 +287,7 @@
                     i {
                         font-size: 16px;
                         color: #979BA5;
+                        transform: translateY(0px);
                     }
                 }
                 .footer-left::after {

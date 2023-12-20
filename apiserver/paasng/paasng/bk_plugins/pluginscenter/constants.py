@@ -108,6 +108,10 @@ class PluginReleaseStatus(str, StructuredEnum):
     def running_status(cls):
         return [cls.INITIAL, cls.PENDING]
 
+    @classmethod
+    def terminated_status(cls):
+        return [cls.FAILED, cls.INTERRUPTED, cls.SUCCESSFUL]
+
 
 class LogTimeChoices(str, StructuredEnum):
     """日志搜索-日期范围可选值"""

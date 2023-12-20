@@ -38,8 +38,26 @@
               </div>
               <!-- 最后一次是部署成功状态则展示 -->
               <template v-if="deploymentInfo.state.deployment.latest_succeeded">
-                <!-- buildpack、dockerfile 展示版本/分支 -->
-                <div v-if="deploymentInfo.build_method !== 'custom_image'">
+                <!-- smart应用 -->
+                <div class="flex-row" v-if="isSmartApp">
+                  <div class="version">
+                    <span class="label">{{$t('版本：')}}</span>
+                    <span class="value">
+                      {{ deploymentInfo.version_info.revision }}
+                    </span>
+                  </div>
+                </div>
+                <!-- 仅镜像 -->
+                <div class="flex-row" v-else-if="deploymentInfo.build_method === 'custom_image'">
+                  <div class="version">
+                    <span class="label">{{$t('镜像Tag：')}}</span>
+                    <span class="value">
+                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
+                    </span>
+                  </div>
+                </div>
+                <!-- buildpack、dockerfile 展示版本/分支, smartApp 展示版本 -->
+                <div v-else>
                   <!-- 源码分支 -->
                   <div
                     class="flex-row"
@@ -50,29 +68,15 @@
                         {{ deploymentInfo.version_info.revision.substring(0,8) }}
                       </span>
                     </div>
-                    <div class="line"></div>
-                    <div class="branch">
-                      <span class="label">{{$t('分支：')}}</span>
-                      <span class="value">
-                        {{ deploymentInfo.version_info.version_name }}
-                      </span>
-                    </div>
-                  </div>
-                  <!-- 镜像构建 -->
-                  <div class="version" v-else>
-                    <span class="label">{{$t('镜像Tag：')}}</span>
-                    <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
-                    </span>
-                  </div>
-                </div>
-                <!-- 仅镜像 -->
-                <div class="flex-row" v-else>
-                  <div class="version">
-                    <span class="label">{{$t('镜像Tag：')}}</span>
-                    <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0,16) }}
-                    </span>
+                    <template v-if="!isSmartApp">
+                      <div class="line"></div>
+                      <div class="branch">
+                        <span class="label">{{$t('分支：')}}</span>
+                        <span class="value">
+                          {{ deploymentInfo.version_info.version_name }}
+                        </span>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </template>
@@ -138,7 +142,8 @@
               :index="index"
               :deployment-info="deploymentInfo"
               :environment="environment"
-              :module-name="deploymentInfo.module_name" />
+              :module-name="deploymentInfo.module_name"
+              :is-dialog-show-sideslider="isDialogShowSideslider" />
             <!-- 预览 -->
             <deploy-preview
               :deployment-info="deploymentInfo"
@@ -181,7 +186,8 @@
       :environment="environment"
       :deployment-info="curDeploymentInfoItem"
       :rv-data="rvData"
-      @refresh="handleRefresh">
+      @refresh="handleListRefresh"
+      @showSideslider="isDialogShowSideslider = true">
     </deploy-dialog>
 
     <bk-sideslider
@@ -255,6 +261,7 @@ export default {
       intervalTimer: null,
       yamlLoading: false,
       curDeployItemIndex: '',
+      isDialogShowSideslider: false,  // 部署的侧边栏
     };
   },
 
@@ -276,6 +283,7 @@ export default {
         this.deploymentInfoData = this.deploymentInfoDataBackUp
           .filter(module => module.module_name === value);
       }
+      this.init();
     },
     isWatchOfflineing(newVal, oldVal) {
       if (oldVal && !newVal) {    // 从true变为false，则代表下架完成
@@ -301,6 +309,10 @@ export default {
     // this.isExpand = this.isDeploy;
   },
 
+  beforeDestroy() {
+    bus.$off('get-release-info');
+  },
+
   mounted() {
     this.initPage = true;   // 进入页面
     bus.$on('get-release-info', () => {
@@ -314,6 +326,11 @@ export default {
       this.getModuleReleaseInfo();
     },
     handleChangePanel(payload) {
+      this.deploymentInfoData.forEach((e) => {
+        if (e.module_name !== payload.module_name) {
+          e.isExpand = false;
+        }
+      });
       payload.isExpand = !payload.isExpand;
       if (payload.isExpand) {
         this.handleRefresh();
@@ -377,7 +394,8 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      if (this.intervalTimer) return;  // 如果已经有了timer则return
+      if (this.intervalTimer || this.isShowSideslider
+      || this.isDialogShowSideslider) return;  // 如果已经有了timer则return 打开了侧边栏也不需要watch
       try {
         this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
@@ -448,19 +466,20 @@ export default {
 
     // 刷新列表
     handleRefresh() {
-      if (this.intervalTimer) return;
+      if (this.intervalTimer || this.isDialogShowSideslider) return;
       this.getModuleReleaseInfo(false);
     },
 
     // 关闭进程的事件流
     handleCloseProcessWatch() {
-      this.handleRefresh();
       this.isShowSideslider = false;
+      this.handleRefresh();
     },
 
     // 关闭侧边栏
     handleCloseSideslider() {
       this.isShowSideslider = false;
+      this.handleRefresh();
     },
 
     // 将模块的进程实例全部收起
@@ -492,6 +511,13 @@ export default {
         name: 'cloudAppDeployForProcess',
         params: { id: this.appCode, moduleId: moduleName },
       });
+    },
+
+    // dialog里的slider关闭
+    handleListRefresh() {
+      console.log('this.curDeploymentInfoItem.isExpand', this.curDeploymentInfoItem.isExpand);
+      this.isDialogShowSideslider = false;
+      this.handleRefresh();
     },
   },
 };

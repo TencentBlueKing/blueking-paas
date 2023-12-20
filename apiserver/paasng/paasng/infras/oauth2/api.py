@@ -50,8 +50,13 @@ def wrap_request_exc():
     try:
         yield
     except requests.RequestException as e:
-        logger.exception(f"unable to fetch response from {e.request.url}, curl: {curlify.to_curl(e.request)}")
-        raise BkOauthApiException(f"something wrong happened when fetching {e.request.url}") from e
+        # Handle the potential NoneType of e.request
+        request_info = e.request.url if e.request else "unknown"
+        curl_command = curlify.to_curl(e.request) if e.request else "unavailable"
+        logger.exception(f"Unable to fetch response from {request_info}, curl: {curl_command}")
+
+        error_msg = f"Something wrong happened when fetching {request_info}"
+        raise BkOauthApiException(error_msg) from e
     except json.decoder.JSONDecodeError as e:
         logger.exception(f"invalid json response: {e.doc}")
         raise BkOauthApiException(f"invalid json response: {e.doc}") from e

@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional
+from typing import Dict, Literal, Optional
 
 from django.conf import settings
 from elasticsearch_dsl import Search
@@ -30,15 +30,20 @@ post_tag: str = settings.BK_LOG_HIGHLIGHT_TAG[1]
 
 
 class SmartSearch:
-    """Proxy to elasticsearch_dsl.Search, will inject time range filter automatically"""
+    """Proxy to elasticsearch_dsl.Search, will inject time range filter automatically.
+
+    :param time_field: The name of "timestamp" field.
+    :param time_range: The time range.
+    :param time_order: The order for sorting using time field.
+    """
 
     search: Search
 
-    def __init__(self, time_field: str, time_range: SmartTimeRange):
+    def __init__(self, time_field: str, time_range: SmartTimeRange, time_order: Literal["asc", "desc"] = "desc"):
         self.time_field = time_field
         self.time_range = time_range
         self.search = Search().filter("range", **time_range.get_time_range_filter(time_field))
-        self.search = self.search.sort({time_field: {"order": "desc"}})
+        self.search = self.search.sort({time_field: {"order": time_order}})
 
     def filter(self, *args, **kwargs):
         """add filter to search dsl"""

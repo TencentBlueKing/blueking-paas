@@ -60,13 +60,14 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 
 // 需要控制的菜单项
 const PLUGIN_NAV_MAP = {
   API_GATEWAY: 'pluginCloudAPI',
   PROCESS_MANAGE: 'pluginProcess',
   STRUCTURE_LOG: 'pluginLog',
+  CONFIGURATION_MANAGE: 'pluginDeployEnv',
 };
 
 export default {
@@ -77,6 +78,7 @@ export default {
         'pluginVersionRelease',
         'pluginVersionEditor',
         'marketInfoEdit',
+        'moreInfoEdit',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -181,7 +183,7 @@ export default {
         'pluginVersionRelease',
         'pluginVersionEditor',
         'marketInfoEdit',
-
+        'moreInfoEdit',
       ];
 
       this.navTree.forEach((nav) => {

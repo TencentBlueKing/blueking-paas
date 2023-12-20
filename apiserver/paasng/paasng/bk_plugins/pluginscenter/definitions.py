@@ -223,6 +223,7 @@ class ReleaseStageDefinition(BaseModel):
         description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)"
     )
     nextStepDisabledTips: Optional[str] = Field(description="下一步按钮 Disabled 时的提示，用于辅助展示")
+    link: Optional[str] = Field(description="online 步骤使用")
 
 
 @register

@@ -1123,7 +1123,9 @@ export default {
       const formData = this.$form.serializeObject();
 
       const params = {
-        type: this.isBkPlugin ? 'bk_plugin' : 'default',
+        // 插件应用、场景应用切换为云原生应用
+        type: this.sourceOrigin == 5 || this.isBkPlugin ? 'cloud_native' : 'default',
+        is_plugin_app: !!this.isBkPlugin,
         region: this.regionChoose || formData.region,
         code: formData.code,
         name: formData.name,

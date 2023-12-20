@@ -20,7 +20,6 @@ from .base import EngineApp, MarkStatusMixin, OperationVersionBase
 from .config_var import ConfigVar
 from .deployment import Deployment
 from .offline import OfflineOperation
-from .oneoffcmd import OneOffCommand
 from .operations import ModuleEnvironmentOperations
 from .phases import DeployPhase, DeployPhaseTypes
 from .steps import DeployStep
@@ -28,7 +27,6 @@ from .steps import DeployStep
 __all__ = [
     "EngineApp",
     "MarkStatusMixin",
-    "OneOffCommand",
     "Deployment",
     "ModuleEnvironmentOperations",
     "OperationVersionBase",

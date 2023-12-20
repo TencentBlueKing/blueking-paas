@@ -314,13 +314,15 @@ export default {
     this.isDeployReady = true;
   },
   beforeDestroy() {
-    // 页面销毁 关闭stream
+    // 页面销毁 关闭右边的部署进程watch事件
     this.closeServerPush();
+    // 关闭左边的timeline时间轴watch事件
+    this.serverLogEvent && this.serverLogEvent.close();
   },
   methods: {
     init() {
       this.getPreDeployDetail();
-      this.getModuleProcessList();
+      // this.getModuleProcessList();
     },
     /**
      * 监听部署进度，打印日志
@@ -381,7 +383,7 @@ export default {
             this.isDeploySuccess = true;
             this.isWatchDeploying = false;
             // 更新当前模块信息
-            this.getModuleProcessList();
+            // this.getModuleProcessList();
           } else if (item.status === 'failed') {
             // 部署失败
             this.isDeployFail = true;
@@ -404,14 +406,16 @@ export default {
 
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
-            this.releaseId = item.bk_release_id;
-            this.getModuleProcessList(true);
-
-            // 发起服务监听
-            this.watchServerPush();
-            this.$nextTick(() => {
-              this.$refs.deployLogRef && this.$refs.deployLogRef.handleScrollToLocation('release');
-            });
+            this.releaseId = item.bkapp_release_id;
+            if (!this.processLoading) {
+              this.getModuleProcessList(true).then(() => {
+                // 发起服务监听
+                this.watchServerPush();
+                this.$nextTick(() => {
+                  this.$refs.deployLogRef && this.$refs.deployLogRef.handleScrollToLocation('release');
+                });
+              });
+            }
           }
 
           if (['failed', 'successful'].includes(item.status)) {
@@ -419,7 +423,7 @@ export default {
           }
 
           if (item.status === 'successful' && item.name === this.$t('检测部署结果')) {
-            this.serverProcessEvent.close();  // 关闭进程的watch事件流
+            this.serverProcessEvent && this.serverProcessEvent.close();  // 关闭进程的watch事件流
           }
           this.$nextTick(() => {
             // eslint-disable-next-line max-len
@@ -657,7 +661,7 @@ export default {
             value: displays[key].source_dir,
           });
         }
-        if (this.curAppInfo.application.type === 'bk_plugin') {
+        if (this.curAppInfo.application.is_plugin_app) {
           sourceInfo.push({
             text: this.$t('模块类型'),
             value: this.$t('蓝鲸插件'),
@@ -811,8 +815,10 @@ export default {
           deployId: this.deploymentId,
         });
         this.curModuleInfo = res.data.find(e => e.module_name === this.curModuleId);
+        console.log('this.curModuleId', this.curModuleId, this.curModuleInfo);
         this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
         this.formatProcesses(this.curModuleInfo);
+        return Promise.resolve(true);
       } catch (e) {
         // 无法获取进程目前状态
         console.error(e);
@@ -903,13 +909,14 @@ export default {
           if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {
-          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          if (data.object.module_name !== this.curModuleId
+          || data.object.version !== this.releaseId) return;   // 更新当前模块的进程且是当前版本
           this.updateInstanceData(data);
-          if (data.type === 'ADDED') {
-            if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
-            console.warn(this.$t('重新拉取进程...'));
-            this.getModuleProcessList(false);
-          }
+          // if (data.type === 'ADDED') {
+          //   if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          //   console.warn(this.$t('重新拉取进程...'));
+          //   this.getModuleProcessList(false);
+          // }
         } else if (data.type === 'ERROR') {
           // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
           clearTimeout(this.timer);
@@ -933,14 +940,15 @@ export default {
 
       // 服务结束
       this.serverProcessEvent.addEventListener('EOF', () => {
+        // 侧栏监听到EOF就不需要重新watch了 一般不会再侧栏看状态
         this.serverProcessEvent.close();
 
-        if (!this.isDeploySseEof) {
-          // 推迟调用，防止过于频繁导致服务性能问题
-          this.watchServerTimer = setTimeout(() => {
-            this.watchServerPush();
-          }, 3000);
-        }
+        // if (!this.isDeploySseEof) {
+        //   // 推迟调用，防止过于频繁导致服务性能问题
+        //   this.watchServerTimer = setTimeout(() => {
+        //     this.watchServerPush();
+        //   }, 3000);
+        // }
       });
     },
 
@@ -977,12 +985,12 @@ export default {
           // 新增
           if (data.type === 'ADDED') {
             // 防止在短时间内重复推送
-            // process.instances.forEach((instance, index) => {
-            //     if (instance.name === instanceData.name) {
-            //         process.instances.splice(index, 1)
-            //     }
-            // })
-            // process.instances.push(instanceData)
+            process.instances.forEach((instance, index) => {
+              if (instance.name === instanceData.name) {
+                process.instances.splice(index, 1);
+              }
+            });
+            process.instances.push(instanceData);
           } else {
             process.instances.forEach((instance, index) => {
               if (instance.name === instanceData.name) {

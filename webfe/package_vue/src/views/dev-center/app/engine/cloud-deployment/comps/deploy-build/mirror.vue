@@ -137,13 +137,27 @@
                   :source-list="sourceToolList"
                   :target-list="targetToolList"
                   :display-key="'name'"
-                  :sort-key="'id'"
                   :setting-key="'id'"
-                  :sortable="true"
                   :searchable="true"
                   ext-cls="build-tool-cls"
                   @change="transferChange"
                 >
+                  <div
+                    slot="source-option"
+                    slot-scope="data"
+                    class="transfer-source-item"
+                    :data-id="data.id"
+                  >
+                    {{ data.name }}
+                  </div>
+                  <div
+                    slot="target-option"
+                    slot-scope="data"
+                    class="transfer-source-item"
+                    :data-id="data.id"
+                  >
+                    {{ data.name }}
+                  </div>
                 </bk-transfer>
               </bk-form-item>
             </template>
@@ -238,11 +252,12 @@
 </template>
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
+import transferDrag from '@/mixins/transfer-drag';
 import { TAG_MAP } from '@/common/constants.js';
 import { cloneDeep } from 'lodash';
 
 export default {
-  mixins: [appBaseMixin],
+  mixins: [appBaseMixin, transferDrag],
   data() {
     return {
       isMirrorEdit: false,
@@ -359,6 +374,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
+        this.$emit('set-build-method', results.build_method);
         this.mirrorData = results || {};
         // 基础镜像
         if (!this.mirrorData.bp_stack_name) {
@@ -424,11 +440,24 @@ export default {
     setTools() {
       // 筛选当前镜像构建工具列表
       const curTools = this.baseImageList.find(item => item.image === this.mirrorData.bp_stack_name);
-      this.sourceToolList = curTools?.buildpacks || [];
+      const buildpacks = curTools?.buildpacks ? [...curTools?.buildpacks] : [];
+      const result = [];
+      // 兼容穿梭框右侧排序问题
+      const selectedToolList = this.mirrorData?.buildpacks || [];
+      // 已选择构建工具对左侧列表数据进行排序
+      selectedToolList.forEach((tool) => {
+        buildpacks.forEach((item, index) => {
+          if (item.id === tool.id) {
+            result.push(item);
+            buildpacks.splice(index, 1);
+          }
+        });
+      });
+      this.sourceToolList = result.concat(buildpacks);
 
       // 当已选工具项
-      if (this.mirrorData.buildpacks) {
-        this.targetToolList = this.mirrorData.buildpacks.map(tool => tool.id);
+      if (selectedToolList.length) {
+        this.targetToolList = selectedToolList.map(tool => tool.id);
       }
     },
 
@@ -491,8 +520,9 @@ export default {
       const data = this.mirrorData;
 
       if (data.build_method === 'buildpack') {
+        const targetToolIds = this.mixinTargetBuildpackIds || this.targetToolValues;
         // 构建工具
-        data.buildpacks = this.sourceToolList.filter(tool => this.targetToolValues.includes(tool.id));
+        data.buildpacks = targetToolIds.map(id => this.sourceToolList.find(tool => tool.id === id));
       } else {
         data.bp_stack_name = null;
 
@@ -523,6 +553,10 @@ export default {
     handleEdit() {
       this.isMirrorEdit = true;
       this.setTools();
+      this.mixinTargetBuildpackIds = null;
+      this.$nextTick(() => {
+        this.transferDragInit();
+      });
     },
     handleCancel() {
       this.$refs.mirrorInfoRef?.clearError();
@@ -534,6 +568,17 @@ export default {
     },
     transferChange(sourceList, targetList, targetValueList) {
       this.targetToolValues = targetValueList;
+      this.$nextTick(() => {
+        this.transferDragInit();
+      });
+    },
+    // 拖拽初始化
+    transferDragInit() {
+      const targetLiClass = '.build-tool-cls .target-list .content li';
+      // 设置拖拽prop
+      this.mixinSetDraggableProp(targetLiClass);
+      // 目标容器拖拽
+      this.mixinBindDragEvent(document.querySelector('.build-tool-cls .target-list .content'), targetLiClass);
     },
   },
 };
@@ -703,6 +748,19 @@ export default {
 :deep(.build-tool-cls) {
   .content {
     padding-bottom: 42px;
+  }
+
+   /* 穿梭框样式设置 */
+ .transfer-source-item {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  .target-list .content li.moving {
+    background: transparent;
+    color: transparent;
+    border: 1px dashed #ccc;
   }
 }
 .left-header label,

@@ -225,10 +225,6 @@ const moduleInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/vie
   window.showDeployTip(error);
 });
 
-const networkConfig = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/engine/cloud-deployment/deploy-network').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const appBasicInfo = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/info').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -612,7 +608,7 @@ const router = new Router({
           component: cloudAppDeployments,
           name: 'cloudAppDeploy',
           redirect: {
-            name: 'cloudAppDeployForProcess',
+            name: 'cloudAppDeployForBuild',
           },
           children: [
             {
@@ -689,14 +685,6 @@ const router = new Router({
               },
             },
             {
-              path: 'network-config',
-              component: networkConfig,
-              name: 'networkConfig',
-              meta: {
-                module: 'network-config',
-              },
-            },
-            {
               path: 'module-info',
               path: 'info',
               component: moduleInfo,
@@ -714,12 +702,17 @@ const router = new Router({
               },
             },
             {
-              path: 'service/:category_id/service_inner/:service',
+              path: 'service/:id/:moduleId/service/:category_id/service_inner/:service',
               component: appServicesInstance,
               name: 'cloudAppServiceInner',
             },
             {
-              path: 'service/:category_id/service_inner_shared/:service',
+              path: 'service/:category_id/service_inner/:service',
+              component: appServicesInstance,
+              name: 'cloudAppServiceInnerWithModule',
+            },
+            {
+              path: ':id/:moduleId/service/:category_id/service_inner_shared/:service',
               component: appServicesSharedInstance,
               name: 'cloudAppServiceInnerShared',
             },

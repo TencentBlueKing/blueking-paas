@@ -20,7 +20,9 @@
       <div class="module-operate">
         <!-- 新增模块 -->
         <div
-          class="icon-warapper"
+          v-bk-tooltips="{ content: $t('当前应用不允许创建其他模块'), disabled: isCreatedModule }"
+          class="icon-warapper mr8"
+          :class="{ disabled: !isCreatedModule }"
           :title="$t('新增模块')"
           @click="handleToAddCloudModulePage"
         >
@@ -52,13 +54,16 @@
         type="error"
         :title="$t('主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通')"
       ></bk-alert>
-      <bk-button
-        theme="primary"
-        @click="handleToAddCloudModulePage"
-      >
-        <i class="paasng-icon paasng-plus-thick add-icon" />
-        {{ $t('新增模块') }}
-      </bk-button>
+      <span v-bk-tooltips="{ content: $t('当前应用不允许创建其他模块'), disabled: isCreatedModule }">
+        <bk-button
+          theme="primary"
+          :disabled="!isCreatedModule"
+          @click="handleToAddCloudModulePage"
+        >
+          <i class="paasng-icon paasng-plus-thick add-icon" />
+          {{ $t('新增模块') }}
+        </bk-button>
+      </span>
 
       <div
         class="module-item flex-row justify-content-between align-items-center"
@@ -129,6 +134,7 @@
 import store from '@/store';
 import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
+import { bus } from '@/common/bus';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -180,12 +186,22 @@ export default defineComponent({
       visiable: false,
       isLoading: false,
     });
+    const { curAppInfo } = store.state;
+
+    bus.$on('cloud-change-module', (data) => {
+      active.value = data.params.moduleId;
+      // 切换路由至该服务的分享模块
+      router.push(data);
+    });
 
     // 输入的文案和选中模块相同
     const formRemoveValidated = computed(() => curAppModuleName.value === formRemoveConfirmCode.value);
 
     // 当前语言
     const localLanguage = computed(() => store.state.localLanguage);
+
+    // 是否展示新建模块入口
+    const isCreatedModule = computed(() => curAppInfo.application?.config_info?.can_create_extra_modules);
 
     // 切换tab
     const handleTabChange = async () => {
@@ -217,6 +233,9 @@ export default defineComponent({
 
     // 新增云原生应用模块
     const handleToAddCloudModulePage = () => {
+      if (!isCreatedModule.value) {
+        return;
+      }
       router.push({
         name: 'appCreateCloudModule',
         params: {
@@ -289,6 +308,7 @@ export default defineComponent({
       curAppModuleName,
       formRemoveConfirmCode,
       localLanguage,
+      isCreatedModule,
     };
   },
 });
@@ -332,16 +352,22 @@ export default defineComponent({
     border-radius: 2px;
     cursor: pointer;
     i {
-      line-height: 26px;
       color: #3a84ff;
     }
-    &:first-child {
-      margin-right: 8px;
+    i.paasng-plus {
+      font-weight: 700;
+      font-size: 12px;
+    }
+    &.disabled  {
+      background: #F5F7FA;
+      cursor: not-allowed;
       i {
-        font-weight: 700;
-        font-size: 12px;
+        color: #DCDEE5;
       }
     }
+  }
+  .mr8 {
+    margin-right: 8px;
   }
 }
 

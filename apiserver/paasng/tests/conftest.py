@@ -48,7 +48,7 @@ from paasng.core.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.core.core.storages.utils import SADBManager
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
@@ -430,8 +430,8 @@ def bk_cnative_app(request, bk_user):
 
 @pytest.fixture()
 def bk_plugin_app(bk_app):
-    bk_app.type = ApplicationType.BK_PLUGIN
-    bk_app.save(update_fields=["type"])
+    bk_app.is_plugin_app = True
+    bk_app.save(update_fields=["is_plugin_app"])
 
     # Create the related profile object
     BkPluginProfile.objects.get_or_create_by_application(bk_app)

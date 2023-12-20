@@ -21,6 +21,7 @@ import logging
 
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.bk_app.processes.controllers import get_proc_ctl
+from paas_wl.bk_app.processes.exceptions import ScaleProcessError
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -43,4 +44,10 @@ class ArchiveOperationController:
         lister = ProcessManager(env=self.env)
         for proc_spec in lister.list_processes_specs():
             proc_type = proc_spec["name"]
-            ctl.stop(proc_type=proc_type)
+            try:
+                ctl.stop(proc_type=proc_type)
+            except ScaleProcessError as e:
+                # Consider the process is already stopped when the resource can not be found
+                if e.caused_by_not_found():
+                    continue
+                raise

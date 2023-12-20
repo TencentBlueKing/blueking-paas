@@ -17,6 +17,12 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Custom exceptions for processes module"""
+import re
+from typing import Optional
+
+from django.utils.encoding import force_text
+from kubernetes.dynamic.exceptions import NotFoundError
+
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityDeserializeError
 
 
@@ -29,7 +35,37 @@ class ProcessNotFound(Exception):
 
 
 class ScaleProcessError(Exception):
-    """Unable to scale process due to internal errors"""
+    """Unable to scale process due to internal errors.
+
+    :param proc_type: The process type, optional.
+    :param exception: The original exception, optional.
+    :param message: An extra error message, optional.
+    """
+
+    def __init__(
+        self, proc_type: Optional[str] = None, exception: Optional[Exception] = None, message: Optional[str] = None
+    ):
+        self.proc_type = proc_type
+        self.exception = exception
+        self.message = message
+
+        # Build and initialize error message
+        messages = []
+        if proc_type:
+            messages.append(f"scale {proc_type} failed")
+        if exception:
+            messages.append(f"reason: {exception}")
+        if message:
+            messages.append(message)
+        super().__init__(", ".join(messages))
+
+    def caused_by_not_found(self) -> bool:
+        """Check if the error was caused by missing namespace."""
+        if isinstance(self.exception, NotFoundError) and re.search(
+            r"namespaces .* not found", force_text(self.exception.summary())
+        ):
+            return True
+        return False
 
 
 class UnknownProcessTypeError(AppEntityDeserializeError):

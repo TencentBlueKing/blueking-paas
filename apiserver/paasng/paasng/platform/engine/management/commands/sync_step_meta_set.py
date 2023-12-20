@@ -21,7 +21,7 @@ to the current version of the project delivered to anyone in the future.
 paasng/platform/engine/migrations/0005_auto_20210110_1917.py
 paasng/platform/engine/migrations/0010_auto_20211126_1751.py
 paasng/platform/engine/migrations/0017_reset_step_meta_set.py
-paasng/platform/engine/migrations/0020_auto_20231214_1547.py
+paasng/platform/engine/migrations/0020_auto_20231218_1740.py
 
 最终数据通过 step_meta_data.py 维护
 """

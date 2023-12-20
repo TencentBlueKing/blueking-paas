@@ -347,6 +347,10 @@
                 :type="sourceControlType"
                 :source-dir-label="'构建目录'"
                 :is-cloud-created="true"
+                :default-url="repoData.url"
+                :default-account="repoData.account"
+                :default-password="repoData.password"
+                :default-dir="repoData.sourceDir"
               />
               <!-- 用户自定义git、svn账号信息 end -->
             </template>
@@ -1201,7 +1205,7 @@ export default {
 
     // 处理应用示例填充
     handleSetMirrorUrl() {
-      this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
+      this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'docker.io/library/nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
       this.$refs.validate2.clearError();
     },
 

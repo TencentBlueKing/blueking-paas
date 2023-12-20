@@ -295,7 +295,7 @@ ensure-runtimes() {
 }
 
 ensure-init-data() {
-    python manage.py better_loaddata fixtures/* -e engine.deploystepmeta -e engine.stepmetaset -e templates.template
+    python manage.py better_loaddata fixtures/* -e templates.template
     # 之前是在 paasng/fixtures/accounts.yaml 通过 fixture 添加可调用系统 API 的应用，后续添加直接通过命令更方便
     python manage.py create_authed_app_user --bk_app_code=bk_dataweb  --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_bkdata  --role=50
@@ -304,7 +304,7 @@ ensure-init-data() {
 }
 
 ensure-runtime-steps() {
-    python manage.py loaddata fixtures/step_meta.yaml
+    python manage.py sync_step_meta_set
 }
 
 ensure-templates() {

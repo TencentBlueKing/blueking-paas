@@ -24,7 +24,7 @@
             </bk-form-item>
             <bk-form-item :label="`${$t('构建方式')}：`">
               <span class="form-text">
-                {{ methodType[mirrorData.build_method] || '--' }}
+                {{ $t(methodType[mirrorData.build_method]) || '--' }}
               </span>
             </bk-form-item>
             <!-- 蓝鲸 Buildpack -->
@@ -332,7 +332,7 @@ export default {
       const tagStrList = [];
       for (const key in tagOptions) {
         if (tagOptions[key] && key !== 'prefix') {
-          tagStrList.push(TAG_MAP[key]);
+          tagStrList.push(this.$t(TAG_MAP[key]));
         }
       }
       if (tagOptions.prefix) {

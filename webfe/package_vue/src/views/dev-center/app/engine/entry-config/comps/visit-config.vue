@@ -115,7 +115,8 @@
                       <bk-input
                         class="path-input-cls"
                         v-model="e.address.pathPrefix"
-                        :placeholder="$t('请输入路径')"></bk-input>
+                        :placeholder="$t('请输入路径')"
+                        @change="handlePathChange($event, i)"></bk-input>
                     </bk-form-item>
                   </bk-form>
                 </div>
@@ -299,8 +300,12 @@ export default {
         ],
         pathPrefix: [
           {
-            regex: /^\/[a-z-z0-9_-]*\/?$/,
-            message: `${this.$t('路径必须以')}"/"${this.$t('开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)')}`,
+            validator: () => {
+              const val = this.curPathPrefix[this.curInputIndex];
+              const reg = /^\/[a-z-z0-9_-]*\/?$/;
+              return reg.test(val);
+            },
+            message: () => this.$t('路径必须以"/"开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)'),
             trigger: 'blur',
           },
         ],
@@ -313,6 +318,8 @@ export default {
       defaultItem: {},
       tipIndex: 0,
       isIpConsistent: true,
+      isSaveLoading: false,
+      curPathPrefix: {},
     };
   },
   computed: {
@@ -613,6 +620,7 @@ export default {
 
     // 保存一条数据
     async handleSubmit(index, envIndex, payload, envType) {
+      this.curInputIndex = envIndex;
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
       const readDataLength =  (payload?.envs[envType] || [])
         .filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
@@ -625,6 +633,11 @@ export default {
         module_name: payload.name,
         id: payload.envs[envType][envIndex].address.id || '',
       };
+      // 接口响应时，防止多次请求
+      if (this.isSaveLoading) {
+        return;
+      }
+      this.isSaveLoading = true;
       try {
         const params = {
           data: curUrlParams,
@@ -655,6 +668,8 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        this.isSaveLoading = false;
       }
     },
 
@@ -665,6 +680,7 @@ export default {
         maskClose: true,
         confirmFn: () => {
           this.handleDelete(envIndex, payload, envType);
+          delete this.curPathPrefix[envIndex];
         },
       });
     },
@@ -701,6 +717,7 @@ export default {
           e.envs[envType][envIndex].address.pathPrefix = u.pathname;
           this.hostInfo.hostName = u.hostname;
           this.hostInfo.pathName = u.pathname;
+          this.curPathPrefix[envIndex] = e.envs[envType][envIndex].address.pathPrefix;
         }
         return e;
       });
@@ -742,6 +759,12 @@ export default {
 
     handleCopyIp() {
       copy(this.defaultIp, this);
+    },
+
+    // 路径change，保存当前值用于校验使用
+    handlePathChange(val, i) {
+      this.curPathPrefix[i] = val;
+      this.curInputIndex = i;
     },
   },
 };

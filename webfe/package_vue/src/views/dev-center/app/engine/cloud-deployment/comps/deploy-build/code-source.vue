@@ -16,7 +16,7 @@
 
       <!-- 查看态 -->
       <div class="content" v-if="!isCodeSourceEdit">
-        <div class="code-quality" :style="isInitTemplate ? { height: '158px' } : ''">
+        <div v-if="isCodeQuality" class="code-quality" :style="isInitTemplate ? { height: '158px' } : ''">
           <div>
             <span class="fraction">{{codeDetails.rdIndicatorsScore ?? '--'}}</span>
             {{$t('分')}}
@@ -297,6 +297,9 @@ export default {
     },
     isInitTemplate() {
       return this.buildMethod === 'buildpack';
+    },
+    isCodeQuality() {
+      return this.curAppInfo.feature?.CI;
     },
   },
 

@@ -817,7 +817,7 @@ export default {
       for (const key in tagOptions) {
         console.log('tagOptions[key]', tagOptions[key]);
         if (tagOptions[key] && key !== 'prefix') {
-          tagStrList.push(TAG_MAP[key]);
+          tagStrList.push(this.$t(TAG_MAP[key]));
         }
       }
       if (tagOptions.prefix) {

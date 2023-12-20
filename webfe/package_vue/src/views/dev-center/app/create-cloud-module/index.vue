@@ -1,5 +1,5 @@
 <template>
-  <div class="paas-content">
+  <div class="paas-content created-module-container">
     <div
       v-en-class="'en-label'"
       class="wrap"
@@ -1320,6 +1320,9 @@ export default {
 
 <style lang="scss" scoped>
 @import "./index.scss";
+.created-module-container{
+  background: #F5F7FA;
+}
 .item-cls {
   /deep/ .bk-form-control .group-text {
     color: #3a84ff !important;

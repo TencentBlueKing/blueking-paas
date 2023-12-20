@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import TYPE_CHECKING
 
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -38,9 +39,13 @@ from paasng.misc.feature_flags.constants import PlatformFeatureFlag as PFF
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.processes import serializers as slzs
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.error_codes import error_codes
+
+if TYPE_CHECKING:
+    from paasng.platform.modules.models import Module
 
 # Create your views here.
 
@@ -56,6 +61,9 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     def _is_whitelisted_user(self, request):
         return user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self)
 
+    def _is_smart_app(self, module):
+        return module.get_source_origin() == SourceOrigin.S_MART
+
     def _get_webconsole_docs_from_advisor(self):
         """从智能顾问中获取 web-console 相关的文档"""
         tag = get_dynamic_tag("app-feature:web-console")
@@ -65,6 +73,21 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
             raise error_codes.CANNOT_OPERATE_PROCESS.f(_("当前运行镜像不支持 WebConsole 功能，请尝试绑定最新运行时"))
         link = links[0]
         return DocumentaryLinkSLZ(link).data
+
+    def _get_webconsole_command(self, module: "Module", runtime_type: str, is_cnb_runtime: bool):
+        """获取进入 webconsole 的默认命令"""
+        if runtime_type == RuntimeType.BUILDPACK:
+            # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack、运行镜像为 cnb
+            # 但是在流水线中单独构建的镜像，不支持 cnb 的 launcher 命令
+            if self._is_smart_app(module) or not is_cnb_runtime:
+                return "bash"
+
+            # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
+            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+            return "launcher bash"
+
+        # 如果不是 buildpack 构建类型，直接使用 sh 命令
+        return "sh"
 
     @swagger_auto_schema(
         query_serializer=slzs.WebConsoleOpenSLZ, responses={200: slzs.WebConsoleResultSLZ}, tags=["获取控制台入口"]
@@ -83,9 +106,9 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
             # 平台不支持 WebConsole 功能
             raise error_codes.FEATURE_FLAG_DISABLED
 
-        # 进入 WebConsole 的默认命令
-        command = "sh"
-        if ModuleSpecs(module).runtime_type == RuntimeType.BUILDPACK:
+        runtime_type = ModuleSpecs(module).runtime_type
+        is_cnb_runtime = False
+        if runtime_type == RuntimeType.BUILDPACK:
             runtime_manager = ModuleRuntimeManager(module)
             is_encrypted_image = runtime_manager.is_secure_encrypted_runtime
 
@@ -94,9 +117,10 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
                 docs = self._get_webconsole_docs_from_advisor()
                 return Response(data=docs, status=HTTP_403_FORBIDDEN)
 
-            # 在 CNB 中，构建阶段会产生一个叫做 launcher 的可执行文件，这个 launcher 用于在启动应用时设置正确的环境并执行启动命令。
-            command = "launcher bash" if runtime_manager.is_cnb_runtime else "bash"
+            is_cnb_runtime = runtime_manager.is_cnb_runtime
 
+        # 进入 WebConsole 的默认命令
+        command = self._get_webconsole_command(module, runtime_type, is_cnb_runtime)
         try:
             result = manager.create_webconsole(
                 request.user.username,

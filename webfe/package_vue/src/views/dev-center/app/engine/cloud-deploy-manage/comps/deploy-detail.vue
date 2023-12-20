@@ -348,7 +348,6 @@
       :is-show.sync="processSlider.isShow"
       :title="processSlider.title"
       :quick-close="true"
-      :before-close="handleBeforeClose"
     >
       <div
         id="log-container"
@@ -921,10 +920,6 @@ export default {
           processes,
         });
       });
-    },
-
-    async handleBeforeClose() {
-      return this.$isSidebarClosed(JSON.stringify(this.curLogTimeRange));
     },
 
     /**
@@ -1891,7 +1886,7 @@ export default {
       border-radius: 2px;
       line-height: 19px;
       font-size: 12px;
-      padding: 10px 20px 10px 20px;
+      padding: 50px 20px 10px 20px;
 
       p {
           padding: 0px 0;

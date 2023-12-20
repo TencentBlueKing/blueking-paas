@@ -338,6 +338,7 @@
             <bk-button
               v-else
               theme="primary"
+              class="mr10"
               :disabled="!mirrorData.url"
               :loading="switchLoading"
               @click="switchDocker"

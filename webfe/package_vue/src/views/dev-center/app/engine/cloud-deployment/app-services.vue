@@ -153,7 +153,7 @@
           :model="startFormData">
           <bk-form-item
             v-for="(item, index) in definitions" :key="index"
-            :label="item.display_name"
+            :label="$t(item.display_name)"
           >
             <!-- <span class="form-text">{{ artifactType || '--' }}</span> -->
             <bk-radio-group
@@ -164,7 +164,7 @@
                 :key="childrenItem"
                 :value="childrenItem"
               >
-                {{ childrenItem }}
+                {{ $t(childrenItem) }}
               </bk-radio>
             </bk-radio-group>
           </bk-form-item>

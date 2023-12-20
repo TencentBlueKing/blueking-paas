@@ -295,7 +295,7 @@ export const PLATFORM_CONFIG = {
         // 镜像地址
         MIRROR_PREFIX: '',
         // 镜像示例
-        MIRROR_EXAMPLE: 'nginx',
+        MIRROR_EXAMPLE: 'docker.io/library/nginx',
         // region
         REGION_CHOOSE: 'default',
         // 市场信息

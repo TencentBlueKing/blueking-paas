@@ -114,18 +114,11 @@
           </div>
           <bk-table-column
             label="id"
+            type="selection"
             :render-header="renderHeader"
+            :selectable="selectable"
             width="60"
           >
-            <template slot-scope="props">
-              <bk-checkbox
-                v-model="props.row.checked"
-                :true-value="true"
-                :false-value="false"
-                :disabled="!props.row.permission_action"
-                @change="columChage(...arguments, props.row)"
-              />
-            </template>
           </bk-table-column>
           <bk-table-column
             label="API"
@@ -425,6 +418,7 @@ export default {
       },
       statusFilters: [
         { text: this.$t('已申请'), value: 'owned' },
+        { text: this.$t('无限制'), value: 'unlimited' },
         { text: this.$t('未申请'), value: 'need_apply' },
         { text: this.$t('已过期'), value: 'expired' },
         { text: this.$t('已拒绝'), value: 'rejected' },
@@ -558,14 +552,6 @@ export default {
       }
     },
     allData() {
-      const list = [
-        { text: this.$t('已申请'), value: 'owned' },
-        { text: this.$t('未申请'), value: 'need_apply' },
-        { text: this.$t('已过期'), value: 'expired' },
-        { text: this.$t('已拒绝'), value: 'rejected' },
-        { text: this.$t('申请中'), value: 'pending' },
-      ];
-      this.statusFilters = list.filter(item => this.allData.map(_ => _.permission_status).includes(item.value));
       this.tableKey = +new Date();
     },
   },
@@ -973,6 +959,11 @@ export default {
 
     updateTableEmptyConfig() {
       this.tableEmptyConf.keyword = this.searchValue;
+    },
+
+    // 勾选是否禁用
+    selectable(row) {
+      return row.permission_action;
     },
   },
 };

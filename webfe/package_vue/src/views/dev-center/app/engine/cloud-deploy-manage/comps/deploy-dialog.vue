@@ -135,7 +135,7 @@
             <div>{{ isSmartApp ? $t('版本') : $t('代码分支选择') }}</div>
             <!-- smartAPP 不展示，代码版本差异 -->
             <div
-              v-if="!isSmartApp"
+              v-if="isShowCodeDifferences"
               class="version-code"
               @click="handleShowCommits"
             >
@@ -320,7 +320,7 @@ export default {
       branchList: [],
       branchesData: [],
       branchValue: '',
-      overview: '',
+      overview: {},
       isBranchesLoading: false,
       branchesMap: {},
       curSelectData: {},
@@ -411,6 +411,14 @@ export default {
     lastSelectedImagePullStrategy() {
       return this.deploymentInfoBackUp.state?.deployment.latest?.advanced_options?.image_pull_policy || '';
     },
+
+    // 是否显示代码差异
+    isShowCodeDifferences() {
+      if (!this.isSmartApp && !this.isLesscodeApp && this.overview?.repo?.diff_feature?.enabled) {
+        return true;
+      }
+      return false;
+    },
   },
   watch: {
     show: {
@@ -429,6 +437,7 @@ export default {
         } else {
           this.getAppProcessData(); // 获取镜像地址
         }
+        this.getModuleRuntimeOverview();
         // 上次选择的镜像拉取策略
         if (this.lastSelectedImagePullStrategy) {
           this.imagePullStrategy = this.lastSelectedImagePullStrategy;

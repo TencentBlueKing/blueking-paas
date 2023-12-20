@@ -2151,7 +2151,7 @@ msgstr ""
 #: paasng/platform/engine/deploy/building.py:331
 #: paasng/platform/engine/deploy/building.py:434
 msgid "发布时自动构建"
-msgstr ""
+msgstr "Automatically build when deploying"
 
 #: paasng/platform/engine/deploy/interruptions.py:27
 msgid "无法中断由他人发起的部署"

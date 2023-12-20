@@ -300,7 +300,9 @@ export default {
           theme: 'success',
           message: this.$t('扩缩容策略已更新'),
         });
-        this.$emit('updateStatus', res.target_status === 'stop' ? 0 : res.target_replicas);
+        // 是否切换了扩缩容方式
+        const isChangeScaleType = this.autoscaling !== this.autoscalingBackUp;
+        this.$emit('updateStatus', res.target_status === 'stop' ? 0 : res.target_replicas, isChangeScaleType);
         this.scaleDialog.visible = false;
       } catch (err) {
         this.$paasMessage({

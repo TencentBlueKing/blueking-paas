@@ -374,11 +374,11 @@ export default defineComponent({
 .module-item {
   width: 592px;
   height: 40px;
-  background: #fafbfd;
-  border: 1px solid #dcdee5;
+  background: #FAFBFD;
+  border: 1px solid #DCDEE5;
   border-radius: 2px;
   padding: 0 20px;
-  margin-top: 20px;
+  margin-top: 12px;
   cursor: pointer;
   .delete-module-icon {
     color: #ea3636;

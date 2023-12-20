@@ -175,49 +175,80 @@
                   ext-cls="form-item-cls"
                   :label="$t('模板来源')"
                 >
-                  <!-- <div class="flex-row align-items-center tab-container mb20">
+                  <div class="flex-row align-items-center tab-container mb20">
                     <div
-                      class="tab-item template" v-for="(item) in tabData"
-                      :class="[{ 'active': activeIndex === item.value }]"
-                      :key="item.value"
-                      @click="handleCodeTypeChange(item.value)">{{ item.label }}</div>
-                  </div> -->
-                  <div>{{ $t('蓝鲸开发框架') }}</div>
-                </bk-form-item>
-                <bk-form-item
-                  error-display-type="normal"
-                  ext-cls="form-item-cls mt10"
-                >
-                  <div class="flex-row justify-content-between">
-                    <div class="bk-button-group">
-                      <bk-button
-                        v-for="(item, key) in languagesData"
-                        :key="key"
-                        :class="buttonActive === key ? 'is-selected' : ''"
-                        @click="handleSelected(item, key)"
-                      >
-                        {{ $t(defaultlangName[key]) }}
-                      </bk-button>
+                      class="tab-item template"
+                      :class="[{ 'active': activeIndex === 1 }]"
+                      @click="handleCodeTypeChange(1)">{{ $t('蓝鲸开发框架') }}
                     </div>
-                    <div class="build-info" @click="showBuildDialog">
-                      <i class="row-icon paasng-icon paasng-page-fill"></i>
-                      {{ $t('构建信息') }}
+                    <div
+                      v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION"
+                      class="tab-item template"
+                      :class="[{ 'active': activeIndex === 3 }]"
+                      @click="handleCodeTypeChange(3)">{{ $t('蓝鲸插件') }}
                     </div>
                   </div>
                 </bk-form-item>
-                <div class="languages-card">
-                  <bk-radio-group v-model="formData.sourceInitTemplate">
-                    <div v-for="(item) in languagesList" :key="item.name" class="pb20">
-                      <bk-radio :value="item.name">
-                        <div class="languages-name pl5">
-                          {{ item.display_name }}
-                        </div>
-                        <div class="languages-desc pl5">
-                          {{ item.description }}
-                        </div>
-                      </bk-radio>
+                <section v-show="isBkDevOps">
+                  <bk-form-item
+                    error-display-type="normal"
+                    ext-cls="form-item-cls mt10"
+                  >
+                    <div class="flex-row justify-content-between">
+                      <div class="bk-button-group">
+                        <bk-button
+                          v-for="(item, key) in languagesData"
+                          :key="key"
+                          :class="buttonActive === key ? 'is-selected' : ''"
+                          @click="handleSelected(item, key)"
+                        >
+                          {{ $t(defaultlangName[key]) }}
+                        </bk-button>
+                      </div>
+                      <div class="build-info" @click="showBuildDialog">
+                        <i class="row-icon paasng-icon paasng-page-fill"></i>
+                        {{ $t('构建信息') }}
+                      </div>
                     </div>
-                  </bk-radio-group>
+                  </bk-form-item>
+                  <div class="languages-card">
+                    <bk-radio-group v-model="formData.sourceInitTemplate">
+                      <div v-for="(item) in languagesList" :key="item.name" class="pb20">
+                        <bk-radio :value="item.name">
+                          <div class="languages-name pl5">
+                            {{ item.display_name }}
+                          </div>
+                          <div class="languages-desc pl5">
+                            {{ item.description }}
+                          </div>
+                        </bk-radio>
+                      </div>
+                    </bk-radio-group>
+                  </div>
+                </section>
+                <div
+                  v-show="isBkPlugin"
+                  class="plugin-container"
+                >
+                  <ul class="establish-main-list">
+                    <li>
+                      <label class="pointer">
+                        <bk-radio-group v-model="isOpenSupportPlus">
+                          <bk-radio
+                            :value="'yes'"
+                            disabled
+                          > {{ $t('Python 语言') }} </bk-radio>
+                        </bk-radio-group>
+                      </label>
+                      <p class="f12">
+                        <a
+                          target="_blank"
+                          :href="GLOBAL.LINK.BK_PLUGIN"
+                          style="color: #3a84ff"
+                        >Python + bk-plugin-framework，{{ $t('集成插件开发框架，插件版本管理，插件运行时等模块') }}</a>
+                      </p>
+                    </li>
+                  </ul>
                 </div>
               </bk-form>
             </section>
@@ -789,6 +820,9 @@ export default {
         formData: {},
       },
       curCodeSource: 'default',
+      activeIndex: 1,
+      isOpenSupportPlus: 'yes',
+      isShowAdvancedOptions: false,
     };
   },
   computed: {
@@ -838,6 +872,17 @@ export default {
     // 代码仓库
     isBkDefaultCode() {
       return this.curCodeSource === 'default';
+    },
+    // 蓝鲸插件
+    isBkPlugin() {
+      return this.activeIndex === 3;
+    },
+    // 蓝鲸开发
+    isBkDevOps() {
+      return this.activeIndex === 1;
+    },
+    curUserFeature() {
+      return this.$store.state.userFeature;
     },
   },
   watch: {
@@ -1106,6 +1151,7 @@ export default {
 
       this.formLoading = true;
       const params = {
+        is_plugin_app: !!this.isBkPlugin,
         region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
@@ -1350,7 +1396,6 @@ export default {
 
     // 模版来源切换
     handleCodeTypeChange(payload) {
-      console.log('payload', payload);
       this.activeIndex = payload;
       if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP || payload === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
         this.sourceOrigin = payload;

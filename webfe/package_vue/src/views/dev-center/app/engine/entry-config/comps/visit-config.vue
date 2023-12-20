@@ -133,7 +133,7 @@
                     <img
                       class="custom-image ml10"
                       v-if="e.address.type === 'custom'"
-                      src="/static/images/custom.png"
+                      :src="`/static/images/${localLanguage === 'en' ? 'custom_en.png' : 'custom.png' }`"
                     >
                   </div>
                 </section>
@@ -941,7 +941,6 @@ export default {
         }
         .custom-image{
           height: 22px;
-          width: 38px;
         }
       }
     }

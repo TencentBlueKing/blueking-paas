@@ -328,6 +328,10 @@
                   :type="sourceControlTypeItem"
                   :source-dir-label="'构建目录'"
                   :is-cloud-created="true"
+                  :default-url="repoData.url"
+                  :default-account="repoData.account"
+                  :default-password="repoData.password"
+                  :default-dir="repoData.sourceDir"
                 />
               </section>
 

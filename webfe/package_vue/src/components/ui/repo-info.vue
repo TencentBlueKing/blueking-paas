@@ -148,6 +148,10 @@
       type: String,
       default: '',
     },
+    defaultPassword: {
+      type: String,
+      default: '',
+    },
     defaultDir: {
       type: String,
       default: '',
@@ -170,7 +174,7 @@
       info: {
         url: this.defaultUrl,
         account: this.defaultAccount,
-        password: '',
+        password: this.defaultPassword,
         sourceDir: this.defaultDir,
       },
       rules: {

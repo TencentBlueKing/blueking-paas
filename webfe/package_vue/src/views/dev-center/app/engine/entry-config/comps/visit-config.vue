@@ -55,7 +55,7 @@
             </section>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls">
+        <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls table-colum-stag-cls">
           <template slot-scope="{ row, $index }">
             <div v-for="(item, i) in row.envsData" :key="item">
               <div
@@ -90,7 +90,7 @@
                       </bk-button>
                     </span>
                   </div>
-                  <div v-if="i !== row.envsData.length - 1" class="line"></div>
+                  <div v-if="i !== row.envsData.length - 1" class="stag-line"></div>
                 </div>
               </div>
             </div>
@@ -133,7 +133,7 @@
                     <img
                       class="custom-image ml10"
                       v-if="e.address.type === 'custom'"
-                      src="/static/images/custom.png"
+                      :src="`/static/images/${localLanguage === 'en' ? 'custom_en.png' : 'custom.png' }`"
                     >
                   </div>
                 </section>
@@ -895,9 +895,6 @@ export default {
         position: relative;
         display: flex;
         align-items: center;
-        .text{
-          border-bottom: 1px dashed #979ba5;
-        }
       }
       .btn-container{
         position: absolute;
@@ -941,7 +938,6 @@ export default {
         }
         .custom-image{
           height: 22px;
-          width: 38px;
         }
       }
     }
@@ -963,7 +959,6 @@ export default {
 
     /deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even){
         padding: 0;
-        background: #FAFBFD;
         z-index: 1;
       }
 
@@ -978,6 +973,20 @@ export default {
       }
     /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
       padding: 0 !important;
+    }
+
+    /deep/ .bk-table-body-wrapper .table-colum-cls.table-colum-stag-cls .cell {
+      div {
+        width: 100%;
+        .stag-line {
+          height: 1px;
+          background: #dfe0e5;
+          position: absolute;
+          top: 100%;
+          left: 0;
+          z-index: 3;
+        }
+      }
     }
 
     /deep/ .bk-table-body-wrapper .table-colum-module-cls {

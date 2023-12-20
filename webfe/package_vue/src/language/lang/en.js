@@ -2479,4 +2479,6 @@ export default {
   查看使用指南: 'View the user guide',
   不能操作平台内置规则: 'Unable to manipulate platform built-in rules',
   '需要先部署该环境后，才能添加自定义访问地址': 'Custom access addresses can only be added after deploying the environment.',
+  共享实例: 'Shared',
+  独占实例: 'Exclusive',
 };

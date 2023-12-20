@@ -201,7 +201,7 @@
                           v-bk-tooltips="$t('文件内容不能为空')"></i>
                       </div>
                       <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
-                        <i class="paasng-icon paasng-edit2" @click="handleEditLabel(item)" />
+                        <i class="paasng-icon paasng-edit-2 mr5" @click="handleEditLabel(item)" />
                         <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(item.value, index)" />
                       </div>
                     </div>
@@ -682,6 +682,17 @@ export default {
 .header-sub-name{
   color: #979ba5 !important;
   font-size: 14px;
+}
+
+.label-icon i {
+  cursor: pointer;
+  font-size: 12px;
+  color: #979BA5;
+  padding: 3px;
+
+  &:hover {
+    color: #3A84FF;
+  }
 }
 
 .bk-sideslider {

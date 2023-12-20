@@ -1278,7 +1278,7 @@ export default {
       return '';
     },
     canShowCommits() {
-      return !this.isLesscodeApp && !!this.deploymentInfo && (this.overview.repo && this.overview.repo.diff_feature && this.overview.repo.diff_feature.enabled);
+      return !this.isLesscodeApp && !!this.deploymentInfo && this.overview?.repo?.diff_feature?.enabled;
     },
     envName() {
       return this.environment === 'stag' ? this.$t('预发布环境') : this.$t('生产环境');
@@ -2181,13 +2181,20 @@ export default {
       const fromVersion = this.deploymentInfo.repo.revision;
       const toVersion = this.branchSelection;
       const win = window.open();
-      const res = await this.$store.dispatch('deploy/getGitCompareUrl', {
-        appCode: this.appCode,
-        moduleId: this.curModuleId,
-        fromVersion,
-        toVersion,
-      });
-      win.location.href = res.result;
+      try {
+        const res = await this.$store.dispatch('deploy/getGitCompareUrl', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          fromVersion,
+          toVersion,
+        });
+        win.location.href = res.result;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
 
     /**

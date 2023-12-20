@@ -328,6 +328,10 @@
                   :type="sourceControlTypeItem"
                   :source-dir-label="'构建目录'"
                   :is-cloud-created="true"
+                  :default-url="repoData.url"
+                  :default-account="repoData.account"
+                  :default-password="repoData.password"
+                  :default-dir="repoData.sourceDir"
                 />
               </section>
 
@@ -813,7 +817,7 @@ export default {
       for (const key in tagOptions) {
         console.log('tagOptions[key]', tagOptions[key]);
         if (tagOptions[key] && key !== 'prefix') {
-          tagStrList.push(TAG_MAP[key]);
+          tagStrList.push(this.$t(TAG_MAP[key]));
         }
       }
       if (tagOptions.prefix) {
@@ -1243,7 +1247,7 @@ export default {
 
     // 处理应用示例填充
     handleSetMirrorUrl() {
-      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
+      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'docker.io/library/nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
       this.$refs.formImageRef.clearError();
     },
 

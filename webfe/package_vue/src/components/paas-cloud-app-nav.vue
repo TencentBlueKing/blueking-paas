@@ -283,8 +283,8 @@ export default {
     },
 
     /**
-             * 根据接口来展示对应的导航项
-             */
+     * 根据接口来展示对应的导航项
+     */
     async initNavByRegion(navTree) {
       try {
         const { region } = this.curAppInfo.application;
@@ -377,7 +377,7 @@ export default {
         // 一级
         navTree = navTree.filter((nav) => {
           const key = featureMaps[nav.name];
-          if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
+          if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
             return this.curAppInfo.feature[key];
           }
           return true;
@@ -391,7 +391,7 @@ export default {
           const children = nav.children.filter((sub) => {
             const key = subFeatureMaps[sub.destRoute.name];
             // 如果有相应key，根据key来处理是否启用
-            if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
+            if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
               return this.curAppInfo.feature[key];
             }
             return true;
@@ -469,18 +469,18 @@ export default {
           // 如果有子项，先遍历匹配
           if (nav.children && nav.children.length) {
             nav.isActived = false;
-            nav.isExpanded = true;
+            // nav.isExpanded = true;
 
             nav.children.forEach((child) => {
               // 优先使用matchRouters来匹配，其次是destRoute
               if (child.matchRouters && child.matchRouters.includes(routeName)) {
                 child.isSelected = true;
                 nav.isActived = true;
-                nav.isExpanded = true;
+                // nav.isExpanded = true;
               } else if (child.destRoute && child.destRoute.name === routeName) {
                 child.isSelected = true;
                 nav.isActived = true;
-                nav.isExpanded = true;
+                // nav.isExpanded = true;
               } else {
                 child.isSelected = false;
               }
@@ -498,7 +498,7 @@ export default {
             });
           } else {
             // 优先使用matchRouters来匹配，其次是destRoute
-            nav.isExpanded = true;
+            // nav.isExpanded = true;
             nav.hasChildSelected = false;
 
             if (nav.matchRouters && nav.matchRouters.includes(this.curRouteName)) {
@@ -639,10 +639,10 @@ export default {
     },
 
     /**
-             * 切换展开状态
-             *
-             * @param {Object} category 父导航项
-             */
+     * 切换展开状态
+     *
+     * @param {Object} category 父导航项
+     */
     toggleNavCategory(category) {
       this.navTree.forEach((item) => {
         if (category.name === item.name) {

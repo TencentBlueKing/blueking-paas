@@ -57,7 +57,7 @@
         </bk-table-column>
         <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls table-colum-stag-cls">
           <template slot-scope="{ row, $index }">
-            <div v-for="(item, i) in row.envsData" :key="item">
+            <div class="cell-container-width" v-for="(item, i) in row.envsData" :key="item">
               <div
                 v-if="row.envs[item].length"
                 :style="{height: `${46 * row.envs[item].length}px`}"
@@ -530,7 +530,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.setModuleLoading = false;
@@ -881,6 +881,10 @@ export default {
           bottom: -7px;
           white-space: nowrap;
         }
+      }
+
+      .cell-container-width{
+        width: 159px;
       }
 
       .cell-container{

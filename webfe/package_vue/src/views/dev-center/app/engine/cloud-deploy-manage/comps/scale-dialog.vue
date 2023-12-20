@@ -235,6 +235,9 @@ export default {
   watch: {
     value(val) {
       this.scaleDialog.visible = val;
+      if (val) {
+        this.handleCancel();
+      }
     },
   },
 
@@ -424,9 +427,11 @@ export default {
       this.scaleDialog.visible = false;
       this.isLoading = false;
       this.autoscaling = false;
-      this.scalingConfig.maxReplicas = 0;
-      this.scalingConfig.minReplicas = 0;
-      this.scalingConfig.targetReplicas = 0;
+      setTimeout(() => {
+        this.scalingConfig.maxReplicas = 0;
+        this.scalingConfig.minReplicas = 0;
+        this.scalingConfig.targetReplicas = 0;
+      }, 500);
     },
 
     /**
@@ -456,7 +461,7 @@ export default {
       this.curActiveType = process.autoscaling ? 'automatic' : 'manual';
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || maxReplicasNum;
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || minReplicasNum;
-      this.scalingConfig.targetReplicas = process.targetReplicas;
+      this.scalingConfig.targetReplicas = process.available_instance_count;
 
       this.initScalingConfig = { ...this.scalingConfig };
       console.log('this.processPlan', this.processPlan);

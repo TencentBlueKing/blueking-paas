@@ -48,7 +48,7 @@ def get_default_failure_hint() -> DeploymentFailureHint:
     helpers = [
         {
             "text": _("日志查询"),
-            "link": settings.BKPAAS_URL + "/developer-center/apps/{application_code}/{module_name}/log?tab=stream",
+            "link": settings.BKPAAS_URL + "/developer-center/apps/{application_code}/{module_name}/logging?tab=stream",
         },
         {"text": _("去 FAQ 查询试试"), "link": settings.PLATFORM_FAQ_URL},
     ]

@@ -96,7 +96,9 @@ class Command(BaseCommand):
             self._sync_metas(step_meta_set_obj, SLUG_PILOT_SET)
 
         # 私有化版本只有一个 slug-pilot, 并且绑定名字是 blueking 的 builder_provider
-        AppSlugBuilder.objects.filter(name="blueking").update(step_meta_set=StepMetaSet.objects.get(name="slug-pilot"))
+        AppSlugBuilder.objects.filter(name="blueking").update(
+            step_meta_set=StepMetaSet.objects.filter(name="slug-pilot", is_default=False).last()
+        )
 
     def _sync_docker_build_set(self):
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=DOCKER_BUILD_STEPSET_NAME, is_default=False)

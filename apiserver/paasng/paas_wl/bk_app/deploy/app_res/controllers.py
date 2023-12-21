@@ -91,6 +91,11 @@ class ProcessesHandler(ResourceHandlerBase):
         self.mapper_version.replica_set(process=process).delete_collection()
         self.mapper_version.pod(process=process).delete_individual()
 
+    def delete_gracefully(self, app: "WlApp", process_type: str):
+        """Delete a process gracefully."""
+        res_name = get_proc_deployment_name(app, process_type)
+        KDeployment(self.client).delete(res_name, namespace=app.namespace)
+
     def scale(self, app: "WlApp", process_type: str, replicas: int):
         """Scale a process's replicas to given value.
 

@@ -1,4 +1,4 @@
-"""An admin tool that helps archive applications.
+"""An admin tool that helps migrate applications that using resource mapper v1 to v2.
 
 # 使用说明：
 

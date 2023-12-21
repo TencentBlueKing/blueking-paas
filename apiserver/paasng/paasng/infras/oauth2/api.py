@@ -83,7 +83,7 @@ class BkOauthClient:
             logger.error("request bkAuth api: %s", curlify.to_curl(resp.request))
             request_url = resp.request.url or ""
             raise BkOauthApiResponseError(
-                f"stauts code is invalid: {resp.status_code}",
+                f"status code is invalid: {resp.status_code}",
                 status_code=resp.status_code,
                 request_url=request_url,
                 response_text=resp.text,

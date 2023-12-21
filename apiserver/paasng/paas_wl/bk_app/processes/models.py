@@ -322,6 +322,7 @@ class ProcessProbe(models.Model):
 
 def initialize_default_proc_spec_plans():
     """Initialize default process spec plan objects which were defined in settings"""
+    # TODO 优化: 目前该方法放到了 ready 里面, 多个 worker 同时启动的时候, 可能产生重复记录?
     plans = settings.DEFAULT_PROC_SPEC_PLANS
 
     for name, config in plans.items():

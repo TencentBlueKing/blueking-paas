@@ -103,6 +103,7 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
           @filter-change="handleFilterChange"
+          @selection-change="handleSelectionChange"
         >
           <div slot="empty">
             <table-empty
@@ -115,7 +116,6 @@
           <bk-table-column
             label="id"
             type="selection"
-            :render-header="renderHeader"
             :selectable="selectable"
             width="60"
           >
@@ -381,7 +381,6 @@ export default {
       apiList: [],
       allData: [],
       tableList: [],
-      selectedAPIList: [],
       searchValue: '',
       isFilter: false,
       pagination: {
@@ -436,6 +435,7 @@ export default {
       },
       filterStatus: [],
       filterData: [],
+      selectedList: [],
     };
   },
   computed: {
@@ -451,11 +451,13 @@ export default {
     curFetchDispatchMethod() {
       return this.isComponentApi ? 'getComponents' : 'getResources';
     },
+    // 是否允许批量申请
     isApplyDisabled() {
-      return !this.selectedAPIList.some(item => item.permission_action === 'apply');
+      return !this.selectedList.some(item => item.permission_action === 'apply');
     },
+    // 是否允许批量续期
     isRenewalDisabled() {
-      return !this.selectedAPIList.some(item => item.permission_action === 'renew');
+      return !this.selectedList.some(item => item.permission_action === 'renew');
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -639,60 +641,6 @@ export default {
       this.applyDialog.name = '';
     },
 
-    columChage(newVal, modelVal, trueVal, item) {
-      if (newVal) {
-        this.selectedAPIList.push(item);
-      } else {
-        const len = this.selectedAPIList.length;
-        for (let i = 0; i < len; i++) {
-          if (item.id === this.selectedAPIList[i].id) {
-            this.selectedAPIList.splice(i, 1);
-            break;
-          }
-        }
-      }
-      this.indeterminate = !!this.selectedAPIList.length && this.selectedAPIList.length < this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length;
-      this.allChecked = this.selectedAPIList.length === this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length && !!this.tableList.length;
-    },
-
-    tableAllClick() {
-      if (this.isPageDisabled) {
-        return;
-      }
-
-      this.allChecked = !this.allChecked;
-      if (this.allChecked) {
-        this.indeterminate = false;
-        this.selectedAPIList.splice(0, this.selectedAPIList.length, ...this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned' && !!api.permission_action));
-      } else {
-        this.selectedAPIList.splice(0, this.selectedAPIList.length, ...[]);
-      }
-      this.tableList.forEach((api) => {
-        if (api.permission_action) {
-          this.$set(api, 'checked', this.allChecked);
-        }
-      });
-    },
-
-    renderHeader(h, { column }) {
-      return h(
-        'div',
-        [
-          h('bk-checkbox', {
-            style: 'margin-right: 10px;',
-            props: {
-              disabled: this.isPageDisabled,
-              indeterminate: this.indeterminate,
-              checked: this.allChecked,
-            },
-            nativeOn: {
-              click: () => this.tableAllClick(),
-            },
-          }),
-        ],
-      );
-    },
-
     handleSearch: _.debounce(function () {
       if (this.searchValue === '') {
         return;
@@ -755,7 +703,6 @@ export default {
     pageChange(page = 1) {
       this.allChecked = false;
       this.indeterminate = false;
-      this.selectedAPIList = [];
       this.tableList.forEach((api) => {
         if (api.hasOwnProperty('checked')) {
           api.checked = false;
@@ -792,10 +739,9 @@ export default {
       return this.allData.slice(startIndex, endIndex);
     },
 
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.allChecked = false;
       this.indeterminate = false;
-      this.selectedAPIList = [];
       this.tableList.forEach((api) => {
         if (api.hasOwnProperty('checked')) {
           api.checked = false;
@@ -809,7 +755,6 @@ export default {
     async fetchList(payload) {
       this.allChecked = false;
       this.indeterminate = false;
-      this.selectedAPIList = [];
       this.loading = true;
       try {
         const params = {
@@ -891,24 +836,24 @@ export default {
     },
 
     handleBatchRenwal() {
-      if (!this.selectedAPIList.length) {
+      if (!this.selectedList.length) {
         return;
       }
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('批量续期权限');
-      const applyRows = this.selectedAPIList.filter(item => item.permission_action === 'apply');
-      const renewalRows = this.selectedAPIList.filter(item => item.permission_action === 'renew');
+      const applyRows = this.selectedList.filter(item => item.permission_action === 'apply');
+      const renewalRows = this.selectedList.filter(item => item.permission_action === 'renew');
       this.renewalDialog.rows = renewalRows.concat(applyRows);
     },
 
     handleBatchApply() {
-      if (!this.selectedAPIList.length) {
+      if (!this.selectedList.length) {
         return;
       }
       this.applyDialog.visiable = true;
       this.applyDialog.title = this.$t('批量申请权限');
-      const applyRows = this.selectedAPIList.filter(item => item.permission_action === 'apply');
-      const renewalRows = this.selectedAPIList.filter(item => item.permission_action === 'renew');
+      const applyRows = this.selectedList.filter(item => item.permission_action === 'apply');
+      const renewalRows = this.selectedList.filter(item => item.permission_action === 'renew');
       this.applyDialog.rows = applyRows.concat(renewalRows);
     },
 
@@ -964,6 +909,11 @@ export default {
     // 勾选是否禁用
     selectable(row) {
       return row.permission_action;
+    },
+
+    // 表格change事件
+    handleSelectionChange(selected) {
+      this.selectedList = selected;
     },
   },
 };

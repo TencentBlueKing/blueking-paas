@@ -3,7 +3,7 @@
     <div class="search-wrapper">
       <bk-button
         theme="primary"
-        :disabled="selectedAPIList.length < 1"
+        :disabled="selectedList.length < 1"
         @click="handleBatchRenewal"
       >
         {{ $t('批量续期') }}
@@ -34,7 +34,7 @@
             :false-value="false"
             @change="handleChange"
           >
-            {{ $t('可续期权限--------') }}
+            {{ $t('可续期权限') }}
           </bk-checkbox>
         </div>
         <div class="input-wrapper">
@@ -79,6 +79,7 @@
           @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
+          @selection-change="handleSelectionChange"
         >
           <div slot="empty">
             <table-empty
@@ -90,18 +91,10 @@
           </div>
           <bk-table-column
             label="id"
-            :render-header="renderHeader"
+            type="selection"
+            :selectable="selectable"
             width="60"
           >
-            <template slot-scope="props">
-              <bk-checkbox
-                v-model="props.row.checked"
-                :true-value="true"
-                :false-value="false"
-                :disabled="props.row.permission_action !== 'renew'"
-                @change="columChage(...arguments, props.row)"
-              />
-            </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('API类型')"
@@ -310,7 +303,6 @@ export default {
       apiList: [],
       allData: [],
       tableList: [],
-      selectedAPIList: [],
       searchValue: '',
       isFilter: false,
       pagination: {
@@ -363,6 +355,7 @@ export default {
         isAbnormal: false,
       },
       allFilterData: {},
+      selectedList: [],
     };
   },
   computed: {
@@ -398,14 +391,6 @@ export default {
       }
     },
     allData(value) {
-      const list = [
-        { text: this.$t('已拥有'), value: 'owned' },
-        { text: this.$t('未申请'), value: 'need_apply' },
-        { text: this.$t('已过期'), value: 'expired' },
-        { text: this.$t('已拒绝'), value: 'rejected' },
-        { text: this.$t('申请中'), value: 'pending' },
-      ];
-      this.statusFilters = list.filter(item => this.allData.map(_ => _.permission_status).includes(item.value));
       this.tableKey = +new Date();
     },
   },
@@ -424,12 +409,12 @@ export default {
   },
   methods: {
     handleBatchRenewal() {
-      if (!this.selectedAPIList.length) {
+      if (!this.selectedList.length) {
         return;
       }
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('批量续期权限');
-      this.renewalDialog.rows = this.selectedAPIList.filter(item => item.permission_action === 'renew');
+      this.renewalDialog.rows = this.selectedList.filter(item => item.permission_action === 'renew');
     },
 
     nameFilterMethod(value, row, column) {
@@ -535,60 +520,6 @@ export default {
       this.pagination.count = total;
     },
 
-    columChage(newVal, modelVal, trueVal, item) {
-      if (newVal) {
-        this.selectedAPIList.push(item);
-      } else {
-        const len = this.selectedAPIList.length;
-        for (let i = 0; i < len; i++) {
-          if (item.id === this.selectedAPIList[i].id) {
-            this.selectedAPIList.splice(i, 1);
-            break;
-          }
-        }
-      }
-      this.indeterminate = !!this.selectedAPIList.length && this.selectedAPIList.length < this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length;
-      this.allChecked = this.selectedAPIList.length === this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned').length && !!this.tableList.length;
-    },
-
-    tableAllClick() {
-      if (this.isPageDisabled) {
-        return;
-      }
-
-      this.allChecked = !this.allChecked;
-      if (this.allChecked) {
-        this.indeterminate = false;
-        this.selectedAPIList.splice(0, this.selectedAPIList.length, ...this.tableList.filter(api => api.status !== 'pending' && api.status !== 'owned' && !!api.permission_action));
-      } else {
-        this.selectedAPIList.splice(0, this.selectedAPIList.length, ...[]);
-      }
-      this.tableList.forEach((api) => {
-        if (api.permission_action) {
-          this.$set(api, 'checked', this.allChecked);
-        }
-      });
-    },
-
-    renderHeader(h, { column }) {
-      return h(
-        'div',
-        [
-          h('bk-checkbox', {
-            style: 'margin-right: 10px;',
-            props: {
-              disabled: this.isPageDisabled,
-              indeterminate: this.indeterminate,
-              checked: this.allChecked,
-            },
-            nativeOn: {
-              click: () => this.tableAllClick(),
-            },
-          }),
-        ],
-      );
-    },
-
     /**
              * 翻页回调
              *
@@ -597,7 +528,6 @@ export default {
     pageChange(page = 1) {
       this.allChecked = false;
       this.indeterminate = false;
-      this.selectedAPIList = [];
       this.tableList.forEach((api) => {
         if (api.hasOwnProperty('checked')) {
           api.checked = false;
@@ -633,7 +563,6 @@ export default {
     limitChange(currentLimit, prevLimit) {
       this.allChecked = false;
       this.indeterminate = false;
-      this.selectedAPIList = [];
       this.tableList.forEach((api) => {
         if (api.hasOwnProperty('checked')) {
           api.checked = false;
@@ -758,7 +687,6 @@ export default {
     },
 
     resetSelectedAPIList() {
-      this.selectedAPIList.splice(0, this.selectedAPIList.length, ...[]);
       this.tableList.forEach((item) => {
         this.$set(item, 'checked', false);
       });
@@ -813,6 +741,16 @@ export default {
         }
       };
       return isFilter;
+    },
+
+    // 勾选是否禁用
+    selectable(row) {
+      return row.permission_action === 'renew';
+    },
+
+    // 表格change事件
+    handleSelectionChange(selected) {
+      this.selectedList = selected;
     },
   },
 };

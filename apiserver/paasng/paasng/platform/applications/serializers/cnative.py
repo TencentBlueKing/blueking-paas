@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, Optional
 
 from django.utils.translation import gettext_lazy as _
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.engine.constants import RuntimeType
@@ -33,6 +34,7 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
     source_config = ModuleSourceConfigSLZ(required=True, help_text=_("源码/镜像配置"))
     bkapp_spec = BkAppSpecSLZ()
     advanced_options = AdvancedCreationParamsMixin(required=False)
+    is_plugin_app = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         attrs = super().validate(attrs)

@@ -80,6 +80,7 @@ from paasng.platform.bkapp_model.utils import merge_env_vars
 from paasng.platform.engine.configurations.config_var import get_cnative_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
@@ -443,6 +444,7 @@ def get_bkapp_resource_for_deploy(
     force_image: Optional[str] = None,
     image_pull_policy: Optional[str] = None,
     use_cnb: bool = False,
+    deployment: Optional[Deployment] = None,
 ) -> BkAppResource:
     """Get the BkApp manifest for deploy.
 
@@ -471,7 +473,7 @@ def get_bkapp_resource_for_deploy(
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
-    apply_builtin_env_vars(model_res, env)
+    apply_builtin_env_vars(model_res, env, deployment)
 
     # TODO: Missing parts: "build", "hooks", "service-disc"
     return model_res
@@ -496,7 +498,7 @@ def apply_env_annots(model_res: BkAppResource, env: ModuleEnvironment, deploy_id
         model_res.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
 
-def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
+def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, deployment: Optional[Deployment] = None):
     """Apply the builtin environment vars to the resource object. These vars are hidden from
     the default manifest view and should only be used in the deploying procedure.
 
@@ -504,7 +506,7 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     :param env: The environment object.
     """
     env_vars = [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
-    for name, value in get_cnative_builtin_env_variables(env).items():
+    for name, value in get_cnative_builtin_env_variables(env, deployment).items():
         env_vars.append(EnvVar(name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones

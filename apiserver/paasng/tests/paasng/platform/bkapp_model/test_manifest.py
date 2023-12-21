@@ -70,11 +70,13 @@ from paasng.platform.bkapp_model.models import (
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
+from paasng.platform.declarative.deployment.controller import DeploymentDescription
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -431,8 +433,36 @@ def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env):
     assert blank_resource.metadata.annotations["bkapp.paas.bk.tencent.com/bkpaas-deploy-id"] == "foo-id"
 
 
-def test_apply_builtin_env_vars(blank_resource, bk_stag_env):
-    apply_builtin_env_vars(blank_resource, bk_stag_env)
-    var_names = {item.name for item in blank_resource.spec.configuration.env}
-    for name in ("BKPAAS_APP_ID", "BKPAAS_APP_SECRET", "BK_LOGIN_URL", "BK_DOCS_URL_PREFIX"):
-        assert name in var_names
+def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
+    G(
+        DeploymentDescription,
+        deployment=bk_deployment,
+        env_variables=[
+            {"key": "FOO", "value": "1"},
+            {"key": "BAR", "value": "2"},
+        ],
+        runtime={
+            "svc_discovery": {
+                "bk_saas": [
+                    {"bk_app_code": "foo-app"},
+                    {"bk_app_code": "bar-app", "module_name": "api"},
+                ]
+            },
+        },
+    )
+    with mock_cluster_service():
+        apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment)
+        var_names = {item.name for item in blank_resource.spec.configuration.env}
+        for name in (
+            "BKPAAS_APP_ID",
+            "BKPAAS_APP_SECRET",
+            "BK_LOGIN_URL",
+            "BK_DOCS_URL_PREFIX",
+            "BKPAAS_DEFAULT_PREALLOCATED_URLS",
+        ):
+            assert name in var_names
+        # 应用描述文件中声明的环境变量会写入到 DeploymentDescription 表中，验证 DeploymentDescription 中的 env_variables 都写入到了环境变量
+        assert "FOO" in var_names
+        assert "BAR" in var_names
+        # 应用描述文件中申明了服务发现的话，也需要写入相关的环境变量
+        assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" in var_names

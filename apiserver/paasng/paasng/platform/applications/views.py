@@ -472,6 +472,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         cluster_name = None
         return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
 
+    def _create_app_in_lesscode(self, request, code: str, name: str):
+        """在开发者中心产品页面上创建 Lesscode 应用时，需要同步在 Lesscode 产品上创建应用"""
+        bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
+        try:
+            make_bk_lesscode_client(login_cookie=bk_token).create_app(code, name, ModuleName.DEFAULT.value)
+        except (LessCodeApiError, LessCodeGatewayServiceError) as e:
+            raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
+
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateCloudNativeAppSLZ, tags=["创建应用"])
     def create_cloud_native(self, request):
@@ -501,6 +509,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
             module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
 
+        # lesscode app needs to create an application on the bk_lesscode platform first
+        if source_origin == SourceOrigin.BK_LESS_CODE:
+            # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
+            self._create_app_in_lesscode(request, params["code"], params["name_zh_cn"])
+
         application = create_application(
             region=params["region"],
             code=params["code"],
@@ -508,7 +521,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             name_en=params["name_en"],
             type_=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
-            is_plugin_app=False,
+            is_plugin_app=params["is_plugin_app"],
         )
         module = create_default_module(application, **module_src_cfg)
 

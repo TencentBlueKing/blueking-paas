@@ -690,15 +690,15 @@ export default {
       immediate: true,
       // deep: true,
     },
-    isDialogShowSideslider: {
-      handler(value) {
-        // 在没有侧栏的情况下
-        if (!value
-        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
-          this.watchServerPush();
-        }
-      },
-    },
+    // isDialogShowSideslider: {
+    //   handler(value) {
+    //     // 在没有侧栏的情况下
+    //     if (!value
+    //     && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+    //       this.watchServerPush();
+    //     }
+    //   },
+    // },
     rvData: {
       handler(newVal, oldVal) {
         if (this.isDialogShowSideslider || !oldVal) return;

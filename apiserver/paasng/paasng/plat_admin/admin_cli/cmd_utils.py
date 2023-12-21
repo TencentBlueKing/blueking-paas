@@ -6,10 +6,12 @@ class CommandBasicMixin:
     """Provide some basic functionalities for adm cli commands"""
 
     style: Any
+    stdout: Any
+    stderr: Any
 
     def exit_with_error(self, message: str, code: int = 2):
         """Exit execution and print error message"""
-        self.print(self.style.NOTICE(f"Error: {message}"))
+        self.stderr.write(self.style.NOTICE(f"Error: {message}"))
         sys.exit(2)
 
     def print(self, message: str, title: str = "") -> None:
@@ -19,6 +21,6 @@ class CommandBasicMixin:
         :param title: Use this title to distinguish different print messages
         """
         if title:
-            print(self.style.SUCCESS(f"[{title.upper()}] ") + message)
+            self.stdout.write(self.style.SUCCESS(f"[{title.upper()}] ") + message)
         else:
-            print(message)
+            self.stdout.write(message)

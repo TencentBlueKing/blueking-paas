@@ -14,18 +14,18 @@ class Command(BaseCommand, CommandBasicMixin):
     help = "This command archives applications."
 
     def add_arguments(self, parser):
-        parser.add_argument("--app-ids", required=True, type=str, nargs="+", help="The application ids")
+        parser.add_argument("--app-codes", required=True, type=str, nargs="+", help="The application codes.")
 
     def handle(self, *args, **options):
-        for app_id in options["app_ids"]:
-            self._archive_app_id(app_id)
+        for app_code in options["app_codes"]:
+            self._archive_app(app_code)
 
-    def _archive_app_id(self, app_id: str):
-        """Archive an application by app id."""
+    def _archive_app(self, app_code: str):
+        """Archive an application by app code."""
         try:
-            app = Application.objects.get(code=app_id)
+            app = Application.objects.get(code=app_code)
         except Application.DoesNotExist:
-            self.print(f"Application {app_id} not found.")
+            self.print(f"Application {app_code} not found.")
             return
 
         self.print(f"# Archive application {app.code}, name: {app.name}, created by {app.creator.username}.")
@@ -37,7 +37,7 @@ class Command(BaseCommand, CommandBasicMixin):
                 deployed_envs.append(env)
             else:
                 deployed_status = "(not deployed)"
-            print("{:16} {:8} {}".format(env.module.name, env.environment, deployed_status))
+            self.print("{:16} {:8} {}".format(env.module.name, env.environment, deployed_status))
 
         if not deployed_envs:
             self.print("No deployed environments, skipped.")

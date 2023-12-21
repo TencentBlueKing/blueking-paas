@@ -67,7 +67,7 @@ class AppProcessesController:
         try:
             self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
         except Exception as e:
-            raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
+            raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
     def stop(self, proc_type: str):
         """Stop a process by setting replicas to zero, WILL NOT delete the service.
@@ -81,7 +81,7 @@ class AppProcessesController:
         try:
             self.client.shutdown_process(self.app, proc_spec.name)
         except Exception as e:
-            raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
+            raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
     def scale(
         self,
@@ -121,14 +121,16 @@ class AppProcessesController:
         try:
             self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
         except Exception as e:
-            raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
+            raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
     def _deploy_autoscaling(self, scaling: ProcAutoscaling):
         """Set autoscaling policy for process"""
         proc_spec = self._get_spec(scaling.name)
         # 普通应用：最大副本数 <= 进程规格方案允许的最大副本数
         if scaling.spec.max_replicas > proc_spec.plan.max_replicas:
-            raise ScaleProcessError(f"max_replicas in scaling config can't more than {proc_spec.plan.max_replicas}")
+            raise ScaleProcessError(
+                message=f"max_replicas in scaling config can't more than {proc_spec.plan.max_replicas}"
+            )
 
         proc_spec.autoscaling = True
         proc_spec.scaling_config = AutoscalingConfig(

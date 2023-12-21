@@ -91,6 +91,9 @@ class Command(BaseCommand):
     def _sync_slug_pilot_set(self):
         # slug-pilot 对应 tencent 版本的 builder_provider, slug-pilot-ieod 对应上云版本的 builder_provider
         for set_name in ["slug-pilot", "slug-pilot-ieod"]:
+            # 清理旧版本 is_default=True 的脏数据
+            StepMetaSet.objects.filter(name=set_name, is_default=True).delete()
+
             # 可单独更新 builder_provider
             step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=set_name, is_default=False)
             self._sync_metas(step_meta_set_obj, SLUG_PILOT_SET)
@@ -101,10 +104,16 @@ class Command(BaseCommand):
         )
 
     def _sync_docker_build_set(self):
+        # 清理旧版本 is_default=True 的脏数据
+        StepMetaSet.objects.filter(name=DOCKER_BUILD_STEPSET_NAME, is_default=True).delete()
+
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=DOCKER_BUILD_STEPSET_NAME, is_default=False)
         self._sync_metas(step_meta_set_obj, DOCKER_BUILD_SET)
 
     def _sync_image_release_set(self):
+        # 清理旧版本 is_default=True 的脏数据
+        StepMetaSet.objects.filter(name=IMAGE_RELEASE_STEPSET_NAME, is_default=True).delete()
+
         step_meta_set_obj, _ = StepMetaSet.objects.update_or_create(name=IMAGE_RELEASE_STEPSET_NAME, is_default=False)
         self._sync_metas(step_meta_set_obj, IMAGE_RELEASE_SET)
 

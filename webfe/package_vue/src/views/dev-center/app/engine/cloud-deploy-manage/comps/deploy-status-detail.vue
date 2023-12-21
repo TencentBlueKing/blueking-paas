@@ -177,6 +177,7 @@ import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from './deploy-timeline';
 import deployLog from './deploy-log';
 import moment from 'moment';
+import _ from 'lodash';
 export default {
   components: {
     deployTimeline,
@@ -260,6 +261,7 @@ export default {
         stage: '',
       },
       serverTimeout: 30,
+      watchRvData: {},
     };
   },
   computed: {
@@ -286,6 +288,13 @@ export default {
             this.watchDeployStatus(v);
           }, 1000);
         });
+      },
+      immediate: true,
+    },
+    // 接受父组件传过来的rvData
+    rvData: {
+      handler(v) {
+        this.watchRvData = _.cloneDeep(v);
       },
       immediate: true,
     },
@@ -815,6 +824,11 @@ export default {
           deployId: this.deploymentId,
         });
         this.curModuleInfo = res.data.find(e => e.module_name === this.curModuleId);
+        // 获取到新的rv_inst数据 重新赋值
+        this.watchRvData = {
+          rvInst: res.rv_inst,
+          rvProc: res.rv_proc,
+        };
         console.log('this.curModuleId', this.curModuleId, this.curModuleInfo);
         this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
         this.formatProcesses(this.curModuleInfo);
@@ -896,7 +910,7 @@ export default {
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
       };
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.watchRvData.rvProc}&rv_inst=${this.watchRvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });

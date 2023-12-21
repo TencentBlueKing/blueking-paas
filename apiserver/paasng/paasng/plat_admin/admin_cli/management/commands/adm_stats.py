@@ -39,7 +39,7 @@ class Command(BaseCommand, CommandBasicMixin):
             return
 
         # Print table header
-        cols_placeholder = "{:<12} {:16} {:12} {:8} {} {}"
+        cols_placeholder = "{:<12} {:16} {:12} {:8} {:16} {}"
         self.print(cols_placeholder.format("EnvId", "AppId", "ModuleName", "EnvName", "Creator", "LastDeployed"))
         # Print table data
         for env in sorted(envs, key=attrgetter("id")):

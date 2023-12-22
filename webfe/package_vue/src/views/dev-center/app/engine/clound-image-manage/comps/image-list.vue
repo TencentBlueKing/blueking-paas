@@ -124,11 +124,13 @@
           :show-overflow-tooltip="true"
         />
         <bk-table-column
+          width="120"
           :label="$t('大小（B）')"
           prop="size"
           sortable
         />
         <bk-table-column
+          width="160"
           :label="$t('更新时间')"
           prop="updated"
           :show-overflow-tooltip="true"

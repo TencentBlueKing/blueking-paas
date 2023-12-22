@@ -13,6 +13,7 @@
           style="width: 250px;"
           ext-cls="select-custom"
           ext-popover-cls="select-popover-custom"
+          prefix-icon="paasng-icon paasng-project"
           searchable>
           <bk-option
             v-for="(module, index) in moduleList"
@@ -120,6 +121,12 @@ export default {
   }
   .module-select-wrapper {
     background: #fff;
+  }
+}
+
+.select-custom {
+  /deep/ i.paasng-project {
+    color: #a3c5fd;
   }
 }
 </style>

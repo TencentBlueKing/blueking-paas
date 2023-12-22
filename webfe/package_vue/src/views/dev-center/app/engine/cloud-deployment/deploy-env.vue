@@ -215,6 +215,7 @@
             <template slot-scope="{ row }">
               <div v-if="isPageEdit || row.isEdit">
                 <bk-form
+                  :model="row"
                   form-type="inline"
                   :ref="`envRefDescription`"
                   class="env-from-cls"
@@ -598,7 +599,7 @@ export default {
               if (!value) {
                 return true;
               }
-              return value.trim().length <= 200;
+              return value.trim().length < 200;
             },
             message: i18n.t('不能超过200个字符'),
             trigger: 'blur',

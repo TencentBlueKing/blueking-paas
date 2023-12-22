@@ -583,22 +583,22 @@
         >
           <bk-form
             :model="buildDialog.formData"
-            :label-width="130">
-            <bk-form-item :label="$t('镜像仓库：')">
+            :label-width="localLanguage === 'en' ? 150 : 130">
+            <bk-form-item :label="`${$t('镜像仓库')}：`">
               <span class="build-text">
                 {{ imageRepositoryTemplate }}
               </span>
             </bk-form-item>
-            <bk-form-item :label="$t('镜像 tag 规则：')">
+            <bk-form-item :label="`${$t('镜像 tag 规则')}：`">
               {{ mirrorTag }}
             </bk-form-item>
-            <bk-form-item :label="$t('构建方式：')">
+            <bk-form-item :label="`${$t('构建方式')}：`">
               {{ buildDialog.formData.buildMethod }}
             </bk-form-item>
-            <bk-form-item :label="$t('基础镜像：')">
+            <bk-form-item :label="`${$t('基础镜像')}：`">
               {{ buildDialog.formData.imageName }}
             </bk-form-item>
-            <bk-form-item :label="$t('构建工具：')">
+            <bk-form-item :label="`${$t('构建工具')}：`">
               <p
                 class="config-item" v-for="item in buildDialog.formData.buildConfig"
                 :key="item.id"
@@ -883,6 +883,9 @@ export default {
     },
     curUserFeature() {
       return this.$store.state.userFeature;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {

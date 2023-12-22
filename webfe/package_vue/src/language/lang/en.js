@@ -2072,7 +2072,7 @@ export default {
   上标: 'Superscript',
   向右缩进: 'Indent right',
   向左缩进: 'Indent left',
-  '由汉字、英文字母、数字、连字符和下划线组成，长度小于 20 个字符': 'Composed of Chinese characters, English letters, numbers, hyphens and underscores, the length is less than 20 characters',
+  '由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符': 'Composed of Chinese characters, English letters, numbers, hyphens (-), and less than 20 characters in length',
   '分类由插件管理员定义，如分类不满足需求可联系插件管理员：': 'The classification is defined by the plug-in administrator. If the classification does not meet the requirements, you can contact the plug-in administrator: ',
   请选择版本类型: 'Please select version type',
   上一步: 'Previous',

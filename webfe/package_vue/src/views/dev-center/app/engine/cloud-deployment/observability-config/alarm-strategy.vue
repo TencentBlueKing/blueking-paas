@@ -225,7 +225,7 @@ export default {
     color: #313238;
     padding: 0;
     margin-right: 16px;
-    font-weight: 400;
+    font-weight: 700;
   }
 }
 .alarm-strategy {

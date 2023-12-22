@@ -343,7 +343,7 @@
                         :label="$t('扩缩容方式')"
                         :label-width="labelWidth"
                       >
-                        <section :class="{ 'flex-row': localLanguage !== 'en' }">
+                        <section>
                           <bk-radio-group
                             v-model="formData.env_overlay.stag.autoscaling"
                             @change="handleRadioChange('stag')"
@@ -371,7 +371,7 @@
                           <bk-alert
                             v-if="formData.env_overlay.stag.autoscaling"
                             type="info"
-                            :class="{ mt10: localLanguage === 'en' }"
+                            class="mt10"
                             style="margin-right: 60px"
                           >
                             <span slot="title">
@@ -517,7 +517,7 @@
                         :label="$t('扩缩容方式')"
                         :label-width="labelWidth"
                       >
-                        <section :class="{ 'flex-row': localLanguage !== 'en' }">
+                        <section>
                           <bk-radio-group
                             v-model="formData.env_overlay.prod.autoscaling"
                             @change="handleRadioChange('prod')"
@@ -545,7 +545,7 @@
                           <bk-alert
                             v-if="formData.env_overlay.prod.autoscaling"
                             type="info"
-                            :class="{ mt10: localLanguage === 'en' }"
+                            class="mt10"
                             style="margin-right: 60px"
                           >
                             <span slot="title">

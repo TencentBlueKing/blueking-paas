@@ -294,7 +294,7 @@ export default {
               const domainReg = new RegExp(`^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(${validDomainsPart})$`);
               return domainReg.test(value);
             },
-            message: () => `${this.$t('请输入有效域名，并以这些后缀结尾：')}${this.placeholderText}`,
+            message: () => (this.placeholderText ? `${this.$t('请输入有效域名，并以这些后缀结尾：')}${this.placeholderText}` : `${this.$t('请输入有效域名')}`),
             trigger: 'blur',
           },
         ],

@@ -391,6 +391,7 @@ export default {
             // 部署成功
             this.isDeploySuccess = true;
             this.isWatchDeploying = false;
+            this.getExposedLink();
             // 更新当前模块信息
             // this.getModuleProcessList();
           } else if (item.status === 'failed') {
@@ -601,6 +602,17 @@ export default {
           message: e.detail || e.message,
         });
       }
+    },
+
+    // 获取部署成功访问链接
+    async getExposedLink() {
+      const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+        appCode: this.appCode,
+      });
+      const curModuleInfo = res.find(e => e.name === this.curModuleInfo.module_name);
+      const curDatabase = curModuleInfo?.envs[this.environment] || [];
+      const exposedData = curDatabase.find(e => e.address.type !== 'custom') || {};   // 访问链接
+      this.exposedLink = exposedData?.address?.url || '';
     },
 
     /**
@@ -830,7 +842,6 @@ export default {
           rvProc: res.rv_proc,
         };
         console.log('this.curModuleId', this.curModuleId, this.curModuleInfo);
-        this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
         this.formatProcesses(this.curModuleInfo);
         return Promise.resolve(true);
       } catch (e) {

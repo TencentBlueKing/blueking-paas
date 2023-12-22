@@ -1388,7 +1388,6 @@ export default {
           this.handleCodeTypeChange(2);
         } else if (codeSource === 'default') {
           // 普通应用
-          this.regionChoose = this.defaultRegionChoose;
           this.handleCodeTypeChange(1);
         }
       });

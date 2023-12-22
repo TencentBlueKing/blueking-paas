@@ -2481,4 +2481,6 @@ export default {
   '需要先部署该环境后，才能添加自定义访问地址': 'Custom access addresses can only be added after deploying the environment.',
   共享实例: 'Shared',
   独占实例: 'Exclusive',
+  '挂载卷新增、编辑后，需要重新部署应用才能生效。': 'After adding or editing a volume mount, the application must be redeployed to take effect.',
+  '挂载卷删除后，需要重新部署应用才能生效。': 'After deleting a volume mount, the application must be redeployed to take effect.',
 };

@@ -161,3 +161,6 @@ apiserver/paasng/support-files/iam
 webfe/package_vue/.bk.local.env
 .codecc
 .vscode
+
+
+pre-*-bkcodeai

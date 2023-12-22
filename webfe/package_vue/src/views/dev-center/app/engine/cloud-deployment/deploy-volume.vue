@@ -113,6 +113,7 @@
       </div>
       <div slot="content">
         <div class="slider-volume-content">
+          <bk-alert type="error" class="mb10" :title="$t('挂载卷新增、编辑后，需要重新部署应用才能生效。')"></bk-alert>
           <bk-form :label-width="200" form-type="vertical" :model="volumeFormData" ref="formRef">
             <bk-form-item
               :label="$t('名称')"
@@ -125,7 +126,6 @@
                 v-model="volumeFormData.name"
                 :placeholder="$t('请输入 2-30 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               ></bk-input>
-              <p class="mt5 mb0 f12 name-tip" slot="tip">{{ $t('唯一标识，创建后不可修改') }}</p>
             </bk-form-item>
             <bk-form-item
               :label="$t('挂载目录')"
@@ -453,7 +453,9 @@ export default {
     // 删除挂载卷
     handleDelete(row) {
       this.$bkInfo({
+        extCls: 'delete-volume-info-cls',
         title: this.$t('确认删除挂载卷：') + row.name,
+        subTitle: this.$t('挂载卷删除后，需要重新部署应用才能生效。'),
         confirmFn: () => {
           this.deleteVolume(row);
         },
@@ -667,6 +669,9 @@ export default {
       height: calc(100vh - 129px);
     }
   }
+}
+.delete-volume-info-cls .bk-dialog-header-inner {
+  word-break: break-word !important;
 }
 </style>
 

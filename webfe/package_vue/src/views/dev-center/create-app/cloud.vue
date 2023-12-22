@@ -76,9 +76,6 @@
                 <bk-radio :value="'dockerfile'">
                   Dockerfile
                 </bk-radio>
-                <bk-radio :value="'image'">
-                  {{ $t('仅镜像') }}
-                </bk-radio>
               </bk-radio-group>
             </div>
           </bk-form-item>
@@ -1379,7 +1376,6 @@ export default {
     // 切换应用类型
     handleSwitchAppType(codeSource) {
       this.curCodeSource = codeSource;
-      console.log('codeSource', codeSource);
       this.$nextTick(() => {
         // 蓝鲸可视化平台推送的源码包
         if (codeSource === 'bkLesscode') {
@@ -1389,6 +1385,10 @@ export default {
         } else if (codeSource === 'default') {
           // 普通应用
           this.handleCodeTypeChange(1);
+        } else if (codeSource === 'image') {
+          this.curCodeSource = 'default';
+          this.formData.sourceOrigin = codeSource;
+          this.formData.buildMethod = codeSource;
         }
       });
     },

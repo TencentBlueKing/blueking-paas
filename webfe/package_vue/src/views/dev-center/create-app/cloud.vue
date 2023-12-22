@@ -56,13 +56,13 @@
             </bk-input>
           </bk-form-item>
 
-          <!-- 构建方式 -->
+          <!-- 镜像仓库不需要展示构建方式 -->
           <bk-form-item
             :required="true"
             error-display-type="normal"
             ext-cls="form-item-cls mt20"
             :label="$t('构建方式')"
-            v-if="isBkDefaultCode"
+            v-if="isBkDefaultCode && formData.buildMethod !== 'image'"
           >
             <div class="mt5">
               <bk-radio-group
@@ -1376,11 +1376,11 @@ export default {
     // 切换应用类型
     handleSwitchAppType(codeSource) {
       this.curCodeSource = codeSource;
+      this.formData.buildMethod = 'buildpack';
       this.$nextTick(() => {
         // 蓝鲸可视化平台推送的源码包
         if (codeSource === 'bkLesscode') {
           this.regionChoose = this.GLOBAL.CONFIG.REGION_CHOOSE;
-          this.structureType = 'soundCode';
           this.handleCodeTypeChange(2);
         } else if (codeSource === 'default') {
           // 普通应用
@@ -1389,6 +1389,8 @@ export default {
           this.curCodeSource = 'default';
           this.formData.sourceOrigin = codeSource;
           this.formData.buildMethod = codeSource;
+          // 云原生仅镜像
+          this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;
         }
       });
     },

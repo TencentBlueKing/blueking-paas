@@ -187,7 +187,14 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
             slz = ConfigVarImportSLZ(data=request.FILES, context={"module": module})
             slz.is_valid(raise_exception=True)
         except ValidationError as e:
-            raise getattr(error_codes, e.get_codes()["error"], e)
+            error_codes_dict = e.get_codes()
+            if "error" in error_codes_dict:
+                error_key = error_codes_dict["error"]
+                # 获取相应的错误代码或者如果不存在则使用原始异常
+                raise getattr(error_codes, error_key, e)
+            else:
+                # 如果没有'error'键, 可以选择抛出原始异常
+                raise
 
         # Import config vars
         env_variables = slz.validated_data["env_variables"]

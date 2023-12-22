@@ -179,6 +179,24 @@ class TestConfigVarImportSLZ:
 
         assert ctx.value.get_codes()["error"] == "ERROR_FILE_FORMAT"
 
+    def test_key_error(self, bk_module, bk_stag_env, bk_prod_env):
+        """变量 key 不能包含小写字母"""
+        file = ContentFile(
+            dedent(
+                """
+        env_variables:
+            -   key: "foo"
+                value: "bar"
+                description: ""
+                environment_name: "stag"
+        """
+            ),
+            "dummy",
+        )
+        slz = slzs.ConfigVarImportSLZ(data=dict(file=file), context={"module": bk_module})
+        with pytest.raises(ValidationError):
+            slz.is_valid(raise_exception=True)
+
 
 @pytest.mark.django_db()
 class TestConfigVarFormatSLZ:

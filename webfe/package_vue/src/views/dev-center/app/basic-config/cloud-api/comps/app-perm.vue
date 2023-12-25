@@ -248,36 +248,22 @@
           </template>
           <bk-table-column
             :label="$t('操作')"
-            :width="localLanguage === 'en' ? 130 : 110"
+            width="90"
           >
             <template slot-scope="{ row }">
               <div class="table-operate-buttons">
                 <bk-button
                   style="padding: 0 0 0 10px;"
                   theme="primary"
-                  :disabled="row.applyDisabled"
-                  size="small"
-                  text
-                  @click="handleApply(row)"
-                >
-                  <span
-                    v-bk-tooltips="{
-                      content: $t(row.applyTips),
-                      disabled: !row.applyDisabled
-                    }"> {{ $t('申请') }} </span>
-                </bk-button>
-                <bk-button
-                  style="padding: 0 0 0 10px;"
-                  theme="primary"
-                  :disabled="row.renewDisabled"
+                  :disabled="row._renewDisabled"
                   size="small"
                   text
                   @click="handleRenewal(row)"
                 >
                   <span
                     v-bk-tooltips="{
-                      content: $t(row.renewTips),
-                      disabled: !row.renewDisabled
+                      content: $t(row._renewTips),
+                      disabled: !row._renewDisabled
                     }"> {{ $t('续期') }} </span>
                 </bk-button>
               </div>
@@ -286,19 +272,6 @@
         </bk-table>
       </div>
     </paas-content-loader>
-
-    <!-- 申请权限 -->
-    <batch-dialog
-      :show.sync="applyDialog.visiable"
-      :title="applyDialog.title"
-      :rows="applyDialog.rows"
-      :api-id="applyDialog.superiorId"
-      :api-name="applyDialog.superiorName"
-      :app-code="appCode"
-      :is-component="isComponentApi"
-      @on-apply="handleSuccessApply"
-      @after-leave="handleAfterLeave"
-    />
 
     <renewal-dialog
       :show.sync="renewalDialog.visiable"
@@ -314,17 +287,15 @@
 </template>
 
 <script>import RenewalDialog from './batch-renewal-dialog';
-import BatchDialog from './batch-apply-dialog';
 import PaasngAlert from './paasng-alert';
 import { clearFilter } from '@/common/utils';
-import { formatRenewFun, formatApplyFun } from '@/common/cloud-api';
+import { formatRenewFun } from '@/common/cloud-api';
 
 export default {
   name: '',
   components: {
     RenewalDialog,
     PaasngAlert,
-    BatchDialog,
   },
   data() {
     return {
@@ -385,14 +356,6 @@ export default {
       },
       allFilterData: {},
       selectedList: [],
-      // 申请权限弹窗数据
-      applyDialog: {
-        visiable: false,
-        title: '',
-        rows: [],
-        superiorId: '',
-        superiorName: '',
-      },
     };
   },
   computed: {
@@ -407,9 +370,6 @@ export default {
     },
     curDispatchMethod() {
       return this.typeValue === 'component' ? 'getSysAppPermissions' : 'getAppPermissions';
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -483,7 +443,6 @@ export default {
       });
       this.nameFilters = [];
       this.fetchList();
-      this.fetchFilterList();
     },
 
     sortTable() {
@@ -671,16 +630,12 @@ export default {
         // 权限续期处理
         if (res.data.length) {
           res.data = res.data.map((v) => {
-            // 申请
-            const apply = formatApplyFun(v.permission_status);
             // 续期
             const renew = formatRenewFun(v.permission_status);
             return {
               ...v,
-              applyDisabled: apply.disabled,
-              applyTips: apply.tips,
-              renewDisabled: renew.disabled,
-              renewTips: renew.tips,
+              _renewDisabled: renew.disabled,
+              _renewTips: renew.tips,
             };
           });
         }
@@ -796,37 +751,6 @@ export default {
     // 表格change事件
     handleSelectionChange(selected) {
       this.selectedList = selected;
-    },
-
-    // 申请权限弹窗
-    handleApply(item) {
-      const id = this.isComponentApi ? 'system_id' : 'gateway_id';
-      const name = this.isComponentApi ? 'system_name' : 'api_name';
-      // 获取对应权限的网关、组件数据
-      this.applyDialog.superiorId = item[id];
-      this.applyDialog.superiorName = item[name];
-      this.applyDialog.visiable = true;
-      this.applyDialog.title = this.$t('申请权限');
-      this.applyDialog.rows = [item];
-    },
-
-    // 申请
-    handleSuccessApply() {
-      this.applyDialog.visiable = false;
-      this.allChecked = false;
-      // 获取列表
-      this.fetchList(this.id);
-    },
-
-    // 取消
-    handleAfterLeave() {
-      this.applyDialog = Object.assign({}, {
-        visiable: false,
-        title: '',
-        rows: [],
-        superiorId: '',
-        superiorName: '',
-      });
     },
   },
 };

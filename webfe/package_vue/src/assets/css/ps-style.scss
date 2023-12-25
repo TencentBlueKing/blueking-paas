@@ -817,7 +817,7 @@ span.ellipsis {
     font-size: 14px;
     color: #333;
     background: #FFF;
-    line-height: 50px;
+    line-height: 52px;
     z-index: 1;
 
     .header-title,
@@ -826,6 +826,10 @@ span.ellipsis {
         margin: auto;
         position: relative;
         // border-bottom: 1px solid #e6e9ea;
+
+        &.box-shadow {
+            box-shadow: 0 3px 4px 0 #0000000a;
+        }
     }
 
     .guide-wrapper {

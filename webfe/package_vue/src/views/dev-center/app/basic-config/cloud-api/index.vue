@@ -3,7 +3,7 @@
     :class="[{ 'plugin-cloud-box': isPlugin }, 'cloud-wrapper']"
   >
     <!-- 云原生应用没有头部导航 -->
-    <div class="ps-top-bar">
+    <div class="ps-top-bar cloud-api-permission">
       <div class="header-title">
         {{ $t('云API权限管理') }}
         <div class="guide-wrapper">
@@ -103,14 +103,13 @@
   </div>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import RenderApi from './comps/render-api';
 import AppPerm from './comps/app-perm';
 import ApplyRecord from './comps/apply-record';
 
 export default {
-  components: {
+  components:  {
     AppPerm,
     ApplyRecord,
     RenderApi,
@@ -228,6 +227,10 @@ export default {
                 margin: 0 50px;
             }
         }
+    }
+
+    .ps-top-bar.cloud-api-permission {
+      box-shadow: 0 3px 4px 0 #0000000a;
     }
 
     .cloud-wrapper /deep/ .bk-tab-section {

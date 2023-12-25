@@ -32,7 +32,8 @@
           >
             <bk-input
               v-model="formData.code"
-              :placeholder="$t('由小写字母、数字、连字符（-）组成，首字母必须是字母，长度小于16个字符')"
+              :placeholder="isBkLesscode ? $t('由小写字母组成，长度小于 16 个字符') :
+                $t('由小写字母、数字、连字符（-）组成，首字母必须是字母，长度小于16个字符')"
               class="form-input-width"
             >
             </bk-input>
@@ -50,7 +51,7 @@
           >
             <bk-input
               v-model="formData.name"
-              :placeholder="$t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
+              :placeholder="isBkLesscode ? $t('由汉字、英文字母、数字组成，长度小于 20 个字符') : $t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
               class="form-input-width"
             >
             </bk-input>
@@ -740,19 +741,19 @@ export default {
             trigger: 'blur',
           },
           {
-            validator(val) {
-              const reg = /^[a-z][a-z0-9-]*$/;
+            validator: (val) => {
+              const reg = this.isBkLesscode ? /^[a-z]+/ : /^[a-z][a-z0-9-]*$/;
               return reg.test(val);
             },
-            message: this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母'),
+            message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母')),
             trigger: 'blur',
           },
           {
-            validator(val) {
-              const reg = /^[a-z][a-z0-9-]{3,16}$/;
+            validator: (val) => {
+              const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{3,16}$/;
               return reg.test(val);
             },
-            message: this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
+            message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')),
             trigger: 'blur',
           },
         ],
@@ -768,11 +769,11 @@ export default {
             trigger: 'blur',
           },
           {
-            validator(val) {
-              const reg = /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
+            validator: (val) => {
+              const reg =  this.isBkLesscode ? /^[\u4e00-\u9fa5a-zA-Z0-9]{1,20}$/ : /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
               return reg.test(val);
             },
-            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符'),
+            message: () => (this.isBkLesscode ? this.$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符') : this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符')),
             trigger: 'blur',
           },
         ],
@@ -1375,8 +1376,11 @@ export default {
 
     // 切换应用类型
     handleSwitchAppType(codeSource) {
+      this.curStep = 1;
+      this.$refs.formBaseRef.clearError();
       this.curCodeSource = codeSource;
       this.formData.buildMethod = 'buildpack';
+      this.formData.sourceOrigin = 'soundCode';
       this.$nextTick(() => {
         // 蓝鲸可视化平台推送的源码包
         if (codeSource === 'bkLesscode') {

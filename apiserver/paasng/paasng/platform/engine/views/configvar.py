@@ -24,7 +24,6 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -47,7 +46,6 @@ from paasng.platform.engine.serializers import (
     ConfigVarSLZ,
     ListConfigVarsSLZ,
 )
-from paasng.utils.error_codes import error_codes
 
 
 @method_decorator(name="update", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"]))
@@ -183,18 +181,8 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         """从文件导入环境变量"""
         module = self.get_module_via_path()
         # Check file format
-        try:
-            slz = ConfigVarImportSLZ(data=request.FILES, context={"module": module})
-            slz.is_valid(raise_exception=True)
-        except ValidationError as e:
-            error_codes_dict = e.get_codes()
-            if "error" in error_codes_dict:
-                error_key = error_codes_dict["error"]
-                # 获取相应的错误代码或者如果不存在则使用原始异常
-                raise getattr(error_codes, error_key, e)
-            else:
-                # 如果没有'error'键, 可以选择抛出原始异常
-                raise
+        slz = ConfigVarImportSLZ(data=request.FILES, context={"module": module})
+        slz.is_valid(raise_exception=True)
 
         # Import config vars
         env_variables = slz.validated_data["env_variables"]

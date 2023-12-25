@@ -20,6 +20,7 @@ from textwrap import dedent
 
 import pytest
 import yaml
+from blue_krill.web.std_error import APIError
 from django.core.files.base import ContentFile
 from rest_framework.serializers import ValidationError
 
@@ -174,10 +175,8 @@ class TestConfigVarImportSLZ:
             "dummy",
         )
         slz = slzs.ConfigVarImportSLZ(data=dict(file=file), context={"module": bk_module})
-        with pytest.raises(ValidationError) as ctx:
+        with pytest.raises(APIError):
             slz.is_valid(raise_exception=True)
-
-        assert ctx.value.get_codes()["error"] == "ERROR_FILE_FORMAT"
 
     def test_key_error(self, bk_module, bk_stag_env, bk_prod_env):
         """变量 key 不能包含小写字母"""

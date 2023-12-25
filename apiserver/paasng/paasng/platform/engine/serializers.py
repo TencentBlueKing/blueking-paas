@@ -272,9 +272,9 @@ class ConfigVarImportSLZ(serializers.Serializer):
         try:
             content = yaml.safe_load(data["file"])
         except yaml.YAMLError:
-            raise error_codes.NOT_YAML_FILE.f("Not A Yaml File.")
+            raise error_codes.NOT_YAML_FILE
         if "env_variables" not in content:
-            raise error_codes.ERROR_FILE_FORMAT.f("Invalid Yaml File.")
+            raise error_codes.ERROR_FILE_FORMAT
         data["env_variables"] = content["env_variables"]
         return super().to_internal_value(data)
 

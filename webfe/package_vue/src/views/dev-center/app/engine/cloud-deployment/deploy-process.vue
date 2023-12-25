@@ -123,11 +123,6 @@
                   v-if="!allowMultipleImage"
                 >
                   {{ formData.image || '--' }}
-                  <i
-                    v-if="!isCreate"
-                    class="paasng-icon paasng-edit-2 image-store-icon"
-                    @click="handleToModuleInfo"
-                  />
                 </bk-form-item>
                 <bk-form-item
                   :label="$t('镜像地址')"
@@ -165,14 +160,6 @@
                       {{ $t('帮助：如何构建镜像') }}
                     </a>
                   </p>
-                </bk-form-item>
-
-                <bk-form-item
-                  :label="$t('镜像凭证')"
-                  :label-width="labelWidth"
-                  v-if="!allowMultipleImage"
-                >
-                  {{ formData.image_credential_name || '--' }}
                 </bk-form-item>
 
                 <!-- 镜像凭证 -->
@@ -672,11 +659,6 @@
               >
                 <span class="form-text">{{ formData.image || '--' }}</span>
               </bk-form-item>
-              <bk-form-item :label="`${$t('镜像凭证')}：`">
-                <span class="form-text">
-                  {{ formData.image_credential_name || '--' }}
-                </span>
-              </bk-form-item>
               <bk-form-item :label="`${$t('启动命令')}：`">
                 <span v-if="formData.command && formData.command.length">
                   <bk-tag
@@ -773,7 +755,9 @@
                         </section>
                         <section v-else>
                           <bk-form-item :label="$t('副本数量：')">
-                            <span class="form-text">{{ formData.env_overlay[item.value].target_replicas || '--' }}</span>
+                            <span class="form-text">
+                              {{ formData.env_overlay[item.value].target_replicas || '--' }}
+                            </span>
                           </bk-form-item>
                         </section>
                       </div>
@@ -1447,12 +1431,6 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
-    },
-
-    // 跳转构建配置
-    handleToModuleInfo() {
-      this.$store.commit('cloudApi/updateModuleInfoEdit', true);
-      this.$emit('tab-change', 'cloudAppDeployForBuild');
     },
 
     // 保存

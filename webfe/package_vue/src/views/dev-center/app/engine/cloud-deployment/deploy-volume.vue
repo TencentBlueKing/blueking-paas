@@ -85,6 +85,7 @@
     <bk-dialog
       v-model="fileDialogConfig.visiable"
       :width="fileDialogConfig.dialogWidth"
+      :position="{ top: fileDialogConfig.top }"
       theme="primary"
       header-position="left"
       :title="$t('文件内容详情')"
@@ -94,6 +95,7 @@
         ref="resourceEditorRef"
         key="editor"
         v-model="detail"
+        readonly
         v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
         :height="fullScreen ? clientHeight : fileDialogConfig.height"
       />
@@ -475,6 +477,15 @@ export default {
       const _detail = cloneDeep(this.detail);
       const resultFormatDetail = this.convertToObjectIfPossible(_detail);
       this.$refs.resourceEditorRef?.setValue(resultFormatDetail);
+      if (window.innerWidth < 1366) {
+        this.fileDialogConfig.dialogWidth = 800;
+        this.fileDialogConfig.top = 80;
+        this.fileDialogConfig.height = 400;
+      } else {
+        this.fileDialogConfig.dialogWidth = 1100;
+        this.fileDialogConfig.top = 120;
+        this.fileDialogConfig.height = 520;
+      }
     },
     // 筛选生效环境
     sourceFilterMethod(value, row, column) {

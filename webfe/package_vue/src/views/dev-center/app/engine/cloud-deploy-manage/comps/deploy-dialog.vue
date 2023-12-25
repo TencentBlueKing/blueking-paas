@@ -447,7 +447,8 @@ export default {
     },
     deploymentInfo(v) {
       this.deploymentInfoBackUp = _.cloneDeep(v);
-      this.curModulemirrorTag = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info?.version_name;
+      console.log('this.deploymentInfoBackUp', this.deploymentInfoBackUp);
+      this.curModulemirrorTag = '5b51e9e4-6236-4008-b34d-15a34b9ea29d';
     },
   },
   methods: {

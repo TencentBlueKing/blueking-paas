@@ -584,7 +584,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
     def validate_region_perm(self, region: str):
         if not user_can_create_in_region(self.request.user, region):
-            raise ValidationError(_("你无法在所指定的 region 中创建应用"))
+            raise error_codes.CANNOT_CREATE_APP.f(_("你无法在所指定的 region 中创建应用"))
 
     def _get_bk_plugin_configs(self) -> Iterable[Dict]:
         """Get configs for bk_plugin module"""

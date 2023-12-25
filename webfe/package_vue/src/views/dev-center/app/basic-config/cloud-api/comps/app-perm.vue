@@ -393,7 +393,6 @@ export default {
         superiorId: '',
         superiorName: '',
       },
-      filterList: [],
     };
   },
   computed: {
@@ -660,7 +659,6 @@ export default {
 
     init() {
       this.fetchList();
-      this.fetchFilterList();
     },
 
     async fetchList() {
@@ -798,22 +796,6 @@ export default {
     // 表格change事件
     handleSelectionChange(selected) {
       this.selectedList = selected;
-    },
-
-    // 获取组件api、网关api列表
-    async fetchFilterList() {
-      const method = this.isComponentApi ? 'getSystems' : 'getApis';
-      try {
-        const res = await this.$store.dispatch(`cloudApi/${method}`, {
-          appCode: this.appCode,
-        });
-        this.filterList = Object.freeze(res.data);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('服务暂不可用，请稍后再试'),
-        });
-      }
     },
 
     // 申请权限弹窗

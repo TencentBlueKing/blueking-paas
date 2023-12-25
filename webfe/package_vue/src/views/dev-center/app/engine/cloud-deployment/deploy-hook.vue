@@ -10,7 +10,7 @@
       class="deploy-action-box"
     >
       <div class="form-pre">
-        <div class="flex-row align-items-center pl20 pr20">
+        <div class="flex-row align-items-center pl20 pr20" v-if="!isCreate">
           <div class="item-title-container">
             <div class="item-title">
               {{ $t('部署前置命令') }}

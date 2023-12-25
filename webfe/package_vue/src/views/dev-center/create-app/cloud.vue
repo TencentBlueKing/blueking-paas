@@ -479,27 +479,12 @@
             <bk-alert
               type="info">
               <div slot="title">
-                {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
                 <a
                   target="_blank"
                   :href="GLOBAL.DOC.APP_PROCESS_INTRODUCTION"
                   style="color: #3a84ff">
                   {{$t('应用进程介绍')}}
-                </a>
-              </div>
-            </bk-alert>
-          </collapseContent>
-
-          <collapseContent :title="$t('钩子命令')" class="mt20" :fold="false">
-            <bk-alert
-              type="info">
-              <div slot="title">
-                {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
-                <a
-                  target="_blank"
-                  :href="GLOBAL.DOC.BUILD_PHASE_HOOK"
-                  style="color: #3a84ff">
-                  {{$t('部署阶段钩子')}}
                 </a>
               </div>
             </bk-alert>
@@ -521,7 +506,7 @@
           <collapseContent
             active-name="hook"
             collapse-item-name="hook"
-            :title="$t('钩子命令')"
+            :title="$t('部署前置命令')"
             class="mt20"
           >
             <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>

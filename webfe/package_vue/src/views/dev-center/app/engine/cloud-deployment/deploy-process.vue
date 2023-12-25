@@ -322,6 +322,7 @@
                             :disabled="false"
                             style="width: 150px"
                             searchable
+                            ext-cls="form-style-cls"
                             @change="handleChange($event, 'stag')"
                           >
                             <bk-option
@@ -496,6 +497,7 @@
                             :disabled="false"
                             style="width: 150px"
                             searchable
+                            ext-cls="form-style-cls"
                             @change="handleChange($event, 'prod')"
                           >
                             <bk-option
@@ -1644,12 +1646,12 @@ export default {
   font-size: 14px;
   height: 32px;
   line-height: 32px;
-  background: #f0f1f5;
+  background: #F0F1F5;
   padding-left: 20px;
 }
 
 .env-item {
-  background: #fafbfd;
+  background: #FAFBFD;
   height: 180px;
   /deep/ .bk-form-item {
     margin-top: 10px;
@@ -1661,7 +1663,7 @@ export default {
 }
 .env-container {
   width: 885px;
-  background: #f5f7fa;
+  background: #FAFBFD;
   border-radius: 2px;
   padding: 20px 24px;
 }
@@ -1705,5 +1707,9 @@ export default {
 
 .more-config-item .bk-form-content {
   margin-left: 55px !important;
+}
+
+.form-style-cls {
+  background-color: #fff;
 }
 </style>

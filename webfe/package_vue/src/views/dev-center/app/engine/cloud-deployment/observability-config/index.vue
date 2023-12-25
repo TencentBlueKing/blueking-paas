@@ -39,8 +39,6 @@
         >
           <div
             slot-scope="{ row }"
-            class="strategy-name"
-            @click="handleToLink(row)"
           >
             {{ row.name_en }}
           </div>
@@ -69,9 +67,17 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('操作')"
-          width="150"
+          width="180"
         >
           <template slot-scope="{ row }">
+            <bk-button
+              class="mr10"
+              theme="primary"
+              text
+              @click="handleToLink(row)"
+            >
+              {{ $t('检索') }}
+            </bk-button>
             <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
               <bk-button
                 class="mr10"

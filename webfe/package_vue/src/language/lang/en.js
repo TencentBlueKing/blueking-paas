@@ -2486,4 +2486,5 @@ export default {
   暂未启用告警策略: 'Warning policy not enabled yet',
   '在应用部署成功后，才会配置相应环境的告警策略': 'A warning policy for the respective environment will be configured only after the application is successfully deployed',
   去部署: 'Deploy',
+  检索: 'Search',
 };

@@ -11,7 +11,7 @@
         </a>
       </p>
     </div>
-    <bk-loading :is-loading="isLoading">
+    <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
       <!-- 策略列表 -->
       <bk-table
         v-if="alarmStrategyList?.length"
@@ -22,12 +22,6 @@
         :header-border="false"
         :pagination="pagination"
       >
-        <div slot="empty">
-          <table-empty
-            :explanation="$t('应用任意模块部署成功后，将会给该应用下相应环境配置的默认告警策略。')"
-            empty
-          />
-        </div>
         <bk-table-column
           :label="$t('策略名')"
           :show-overflow-tooltip="true"
@@ -121,7 +115,7 @@
           </bk-button>
         </div>
       </div>
-    </bk-loading>
+    </div>
   </div>
 </template>
 
@@ -310,7 +304,7 @@ export default {
 }
 
 .empty {
-  margin-top: 20px;
+  margin-top: 26px;
   display: flex;
   justify-content: center;
   .empty-content {

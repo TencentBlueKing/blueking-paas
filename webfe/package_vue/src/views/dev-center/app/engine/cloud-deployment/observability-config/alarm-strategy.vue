@@ -277,8 +277,8 @@ export default {
       background: #F0F1F5;
     }
     &.enable {
-      color: #18B456;
-      background: #DCFFE2;
+      color: #14A568;
+      background: #E4FAF0;
     }
   }
 

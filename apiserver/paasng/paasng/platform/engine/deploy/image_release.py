@@ -206,11 +206,10 @@ class ImageReleaseMgr(DeployStep):
             self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
             logger.exception("Exception while processing app description file, skip.")
 
-        # complete scripts command
+        # complete scripts command because s-mart app utilizes the image which use entrypoint /runner/init to set run envs
         description = DeploymentDescription.objects.get(deployment=self.deployment)
-
         scripts = cattr.structure(description.scripts, Scripts)
-        scripts.pre_release_hook = f"{(' ').join(DEFAULT_SLUG_RUNNER_ENTRYPOINT)} {scripts.pre_release_hook}"
-        description.scripts = cattr.unstructure(scripts)
-
-        description.save(update_fields=["scripts"])
+        if scripts.pre_release_hook:
+            scripts.pre_release_hook = f"{(' ').join(DEFAULT_SLUG_RUNNER_ENTRYPOINT)} {scripts.pre_release_hook}"
+            description.scripts = cattr.unstructure(scripts)
+            description.save(update_fields=["scripts"])

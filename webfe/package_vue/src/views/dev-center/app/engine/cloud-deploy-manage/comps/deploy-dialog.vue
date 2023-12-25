@@ -447,8 +447,7 @@ export default {
     },
     deploymentInfo(v) {
       this.deploymentInfoBackUp = _.cloneDeep(v);
-      console.log('this.deploymentInfoBackUp', this.deploymentInfoBackUp);
-      this.curModulemirrorTag = '5b51e9e4-6236-4008-b34d-15a34b9ea29d';
+      this.curModulemirrorTag = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info?.version_name;
     },
   },
   methods: {
@@ -619,6 +618,13 @@ export default {
       try {
         if (this.$refs?.imageFormRef) {
           await this.$refs.imageFormRef?.validate();
+        }
+        if (this.buttonActive === 'image' && !this.tagData.tagValue) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('请选择镜像Tag'),
+          });
+          return;
         }
         this.handleConfirm();
       } catch (error) {

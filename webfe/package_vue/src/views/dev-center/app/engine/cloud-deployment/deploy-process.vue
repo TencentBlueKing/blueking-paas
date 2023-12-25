@@ -272,7 +272,7 @@
                     {{ $t('接收 HTTP 请求的端口号．建议镜像直接监听 $PORT 环境变量不修改本值') }}
                   </p>
                 </bk-form-item>
-                <bk-form-item :label-width="40">
+                <bk-form-item :label-width="70">
                   <bk-button
                     text
                     theme="primary"
@@ -303,7 +303,7 @@
                 </bk-form-item>
                 <bk-form-item
                   v-show="ifopen"
-                  :label-width="40"
+                  :label-width="70"
                 >
                   <div class="env-name w885">{{ $t('预发布环境') }}</div>
                   <div class="env-container">
@@ -477,7 +477,7 @@
                 </bk-form-item>
                 <bk-form-item
                   v-show="ifopen"
-                  :label-width="40"
+                  :label-width="70"
                 >
                   <div class="env-name w885">{{ $t('生产环境') }}</div>
                   <div class="env-container">
@@ -712,7 +712,7 @@
               <bk-form-item :label="`${$t('容器端口')}：`">
                 <span class="form-text">{{ formData.port || '--' }}</span>
               </bk-form-item>
-              <bk-form-item :label-width="50">
+              <bk-form-item :label-width="55">
                 <bk-button
                   text
                   theme="primary"
@@ -790,14 +790,14 @@
             v-if="isPageEdit && isComponentBtn"
           >
             <bk-button
-              class="pl20 pr20"
+              class="pl20"
               :theme="'primary'"
               @click="handleSave"
             >
               {{ $t('保存') }}
             </bk-button>
             <bk-button
-              class="pl20 pr20 ml20"
+              class="pr20 ml8"
               @click="handleCancel"
             >
               {{ $t('取消') }}
@@ -1701,5 +1701,9 @@ export default {
     cursor: pointer;
     padding-left: 10px;
   }
+}
+
+.more-config-item .bk-form-content {
+  margin-left: 55px !important;
 }
 </style>

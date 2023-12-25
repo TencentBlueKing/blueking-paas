@@ -296,14 +296,13 @@
           v-if="isPageEdit && isComponentBtn"
         >
           <bk-button
-            class="pl20 pr20"
             :theme="'primary'"
             @click="saveEnvData"
           >
             {{ $t('保存') }}
           </bk-button>
           <bk-button
-            class="pl20 pr20 ml20"
+            class="ml8"
             @click="$emit('cancel')"
           >
             {{ $t('取消') }}

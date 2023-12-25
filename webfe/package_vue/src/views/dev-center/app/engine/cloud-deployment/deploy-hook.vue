@@ -151,14 +151,13 @@
         >
           <bk-button
             :loading="saveLoading"
-            class="pl20 pr20"
             :theme="'primary'"
             @click="handleSave"
           >
             {{ $t('保存') }}
           </bk-button>
           <bk-button
-            class="pl20 pr20 ml20"
+            class="ml8"
             @click="handleCancel"
           >
             {{ $t('取消') }}

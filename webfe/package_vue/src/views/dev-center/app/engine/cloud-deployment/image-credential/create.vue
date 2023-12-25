@@ -64,14 +64,13 @@
       </bk-form>
       <div slot="footer">
         <bk-button
-          class="mr15"
           theme="primary"
           :loading="versionDialogConf.loading"
           @click="handleCreate"
         >
           {{ $t('确定') }}
         </bk-button>
-        <bk-button @click="handleCancel">
+        <bk-button class="ml8" @click="handleCancel">
           {{ $t('取消') }}
         </bk-button>
       </div>

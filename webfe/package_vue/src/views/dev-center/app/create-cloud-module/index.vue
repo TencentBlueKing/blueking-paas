@@ -1135,7 +1135,7 @@ export default {
 
         this.$store.commit('addAppModule', res.module);
         this.$router.push({
-          name: 'cloudAppDeployForProcess',
+          name: 'cloudAppDeployForBuild',
           params: {
             id: this.appCode,
             moduleId: res.module.name,

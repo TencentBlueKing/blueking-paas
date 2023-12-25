@@ -9,7 +9,6 @@
         type="empty"
         scene="part"
       >
-        <div class="text-subtitle">{{ $t('暂无进程配置和命令钩子') }}</div>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"

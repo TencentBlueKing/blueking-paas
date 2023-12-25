@@ -4,7 +4,7 @@
       <bk-button :theme="'default'" class="mr10" @click="handleSetCloseExpand">
         <i class="paasng-icon paasng-shouqi" v-if="isExpand"></i>
         <i class="paasng-icon paasng-zhankai" v-else></i>
-        {{ isExpand ? $t('全部收起') : $t('全部展开') }}
+        {{ isExpand ? $t('收起实例详情') : $t('展示实例详情') }}
       </bk-button>
       <div class="module-select-wrapper">
         <bk-select

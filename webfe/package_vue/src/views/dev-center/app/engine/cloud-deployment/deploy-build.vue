@@ -23,9 +23,9 @@
         <!-- lesscode/smart应用 源码信息 -->
         <packages-view v-if="isLesscodeApp || isSmartApp" />
         <!-- 代码源 -->
-        <code-source v-else />
+        <code-source v-else :build-method="buildMethod" />
         <!-- 镜像信息 -->
-        <mirror @close-content-loader="closeContentLoader" />
+        <mirror @close-content-loader="closeContentLoader" @set-build-method="setBuildMethod" />
       </template>
     </paas-content-loader>
   </div>

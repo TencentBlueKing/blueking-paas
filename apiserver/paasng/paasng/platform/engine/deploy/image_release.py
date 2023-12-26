@@ -214,5 +214,5 @@ class ImageReleaseMgr(DeployStep):
             description.scripts = cattr.unstructure(scripts)
             description.save(update_fields=["scripts"])
 
-        # 为了让 self.deployment.get_deploy_hooks() 能够拿到上面的更新值
+        # refresh_from_db 的目的是 self.deployment.get_deploy_hooks() 能够拿到更新后的 scripts
         self.deployment.refresh_from_db()

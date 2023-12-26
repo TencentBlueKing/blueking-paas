@@ -11,7 +11,7 @@
 import { computed, defineComponent, ref, toRefs, watch, onMounted, onBeforeMount } from 'vue';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.main.js';
 import yamljs from 'js-yaml';
-import BcsEditorTheme from './theme.json';
+import PsEditorTheme from './theme.json';
 
 export default defineComponent({
   name: 'ResourceEditor',
@@ -22,7 +22,7 @@ export default defineComponent({
     height: { type: [String, Number], default: '100%' },
     original: { type: [String, Object], default: () => ({}) }, // 只有在diff模式下有效
     language: { type: String, default: 'yaml' },
-    theme: { type: String, default: 'bcs-theme' },
+    theme: { type: String, default: 'ps-theme' },
     readonly: { type: Boolean, default: false },
     options: { type: Object, default: () => ({}) },
     ignoreKeys: { type: [Array, String], default: () => '' },
@@ -124,7 +124,7 @@ export default defineComponent({
     const initMonaco = () => {
       if (!editorRef.value) return;
 
-      monaco.editor.defineTheme('bcs-theme', BcsEditorTheme);
+      monaco.editor.defineTheme('ps-theme', PsEditorTheme);
       const opt = {
         value: yaml.value,
         language: language.value,
@@ -221,6 +221,11 @@ export default defineComponent({
       });
     };
 
+    // 触发editor的focus事件
+    const handleFocus = () => {
+      editor && editor.focus();
+    };
+
     return {
       diffStat,
       editorRef,
@@ -232,6 +237,7 @@ export default defineComponent({
       getValue,
       setValue,
       handleSetDiffStat,
+      handleFocus,
     };
   },
 });

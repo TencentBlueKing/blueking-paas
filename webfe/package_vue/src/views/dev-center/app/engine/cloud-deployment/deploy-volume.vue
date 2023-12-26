@@ -612,6 +612,7 @@ export default {
           this.$refs?.editFileInputRef[0].blur();
         });
       }
+      this.$refs.editorRefSlider?.handleFocus();
     },
 
     // 点击label

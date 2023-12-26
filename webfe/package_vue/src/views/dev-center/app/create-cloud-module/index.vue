@@ -117,7 +117,7 @@
                 <div class="form-input-flex">
                   <bk-input
                     v-model="mirrorData.url"
-                    style="width: 520px;"
+                    style="width: 650px;"
                     clearable
                     :placeholder="mirrorExamplePlaceholder"
                   >
@@ -134,7 +134,7 @@
                 <bk-select
                   v-model="imageCredentialsData.name"
                   :disabled="false"
-                  style="width: 500px;"
+                  style="width: 650px;"
                   ext-cls="select-custom"
                   ext-popover-cls="select-popover-custom"
                   searchable

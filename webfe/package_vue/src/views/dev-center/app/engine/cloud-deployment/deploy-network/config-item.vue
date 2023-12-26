@@ -264,7 +264,6 @@
     >
       <bk-button
         :theme="'primary'"
-        class="mr10"
         @click="handleSave"
       >
         {{ $t('保存') }}
@@ -272,6 +271,7 @@
       <bk-button
         :theme="'default'"
         type="submit"
+        class="ml8"
         @click="handleCancel"
       >
         {{ $t('取消') }}

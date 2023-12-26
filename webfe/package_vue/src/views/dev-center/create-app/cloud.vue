@@ -112,15 +112,8 @@
                 clearable
                 :placeholder="mirrorExamplePlaceholder"
               >
-
-                <template slot="append">
-                  <div
-                    class="group-text form-text-append"
-                    @click="handleSetMirrorUrl"
-                  >{{$t('使用示例镜像')}}</div>
-                </template>
               </bk-input>
-              <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
+              <p slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</p>
             </bk-form-item>
             <bk-form-item
               error-display-type="normal"
@@ -1276,13 +1269,6 @@ export default {
       } finally {
         this.formLoading = false;
       }
-    },
-
-
-    // 处理应用示例填充
-    handleSetMirrorUrl() {
-      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'docker.io/library/nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
-      this.$refs.formImageRef.clearError();
     },
 
     // 初始化应用编排数据

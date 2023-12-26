@@ -147,13 +147,6 @@
                     <span>
                       {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
                     </span>
-                &nbsp;
-                    <span
-                      class="whole-item-tips-text"
-                      @click.stop="useExample"
-                    >
-                      {{ $t('使用示例镜像') }}
-                    </span>
                   </p>
                   <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
                     <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
@@ -1132,7 +1125,7 @@ export default {
             this.formData.args = [];
             this.formData.port = 80;
           } else if (this.formData.image === TE_MIRROR_EXAMPLE) {
-            this.formData.command = ['bash', '/app/start_web.sh'];
+            this.formData.command = [];
             this.formData.args = [];
             this.formData.port = 5000;
           }

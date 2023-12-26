@@ -121,16 +121,9 @@
                     clearable
                     :placeholder="mirrorExamplePlaceholder"
                   >
-
-                    <template slot="append">
-                      <div
-                        class="group-text"
-                        @click="handleSetMirrorUrl"
-                      >{{$t('使用示例镜像')}}</div>
-                    </template>
                   </bk-input>
                 </div>
-                <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
+                <p slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</p>
               </bk-form-item>
 
               <bk-form-item
@@ -1186,12 +1179,6 @@ export default {
     // 上一步
     handlePrev() {
       this.curStep = 1;
-    },
-
-    // 处理应用示例填充
-    handleSetMirrorUrl() {
-      this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'docker.io/library/nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
-      this.$refs.validate2.clearError();
     },
 
     // 初始化部署配置数据

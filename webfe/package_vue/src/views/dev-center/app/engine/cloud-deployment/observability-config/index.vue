@@ -141,6 +141,7 @@
           <!-- 编辑禁用 -->
           <bk-select v-model="formData.ruleId" :disabled="!collectionRulesConfig.isCreate">
             <bk-option
+              v-bkloading="{ isLoading: isRuleLoading }"
               v-for="option in collectionRules"
               :key="option.collector_config_id"
               :id="option.collector_config_id"
@@ -148,11 +149,21 @@
             ></bk-option>
             <div
               slot="extension"
-              style="cursor: pointer;text-align: center;"
-              @click="handleToLink(customCollectorData)"
+              class="select-extension-cls"
             >
-              <i class="bk-icon icon-plus-circle"></i>
-              {{ $t('新增采集规则') }}
+              <div class="add-rules" @click="handleToLink(customCollectorData)">
+                <i class="bk-icon icon-plus-circle"></i>
+                {{ $t('新增采集规则') }}
+              </div>
+              <div class="refresh">
+                <div class="line"></div>
+                <round-loading v-if="isRuleLoading" />
+                <i
+                  v-else
+                  class="paasng-icon paasng-refresh-line"
+                  @click.self.stop="getCustomLogCollectionRule"
+                ></i>
+              </div>
             </div>
           </bk-select>
         </bk-form-item>
@@ -263,6 +274,7 @@ export default {
         ],
       },
       collectionRules: [],
+      isRuleLoading: false,
     };
   },
   computed: {
@@ -356,6 +368,7 @@ export default {
 
     // 获取自定义日志采集规则
     async getCustomLogCollectionRule() {
+      this.isRuleLoading = true;
       try {
         const res = await this.$store.dispatch('observability/getCustomLogCollectionRule', {
           appCode: this.appCode,
@@ -368,6 +381,10 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        setTimeout(() => {
+          this.isRuleLoading = false;
+        }, 300);
       }
     },
 
@@ -535,6 +552,35 @@ export default {
 .hide-path-cls {
   /deep/ .bk-label {
     display: none;
+  }
+}
+.select-extension-cls {
+  text-align: center;
+  display: flex;
+
+  .add-rules {
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .refresh {
+    width: 33px;
+    transform: translateX(7px);
+    display: flex;
+    align-items: center;
+    .line {
+      width: 1px;
+      height: 16px;
+      background: #DCDEE5;
+      margin-right: 10px;
+    }
+    .paasng-refresh-line {
+      padding: 4px;
+      color: #979BA5;
+      font-size: 14px;
+      cursor: pointer;
+      transform: translateY(0);
+    }
   }
 }
 </style>

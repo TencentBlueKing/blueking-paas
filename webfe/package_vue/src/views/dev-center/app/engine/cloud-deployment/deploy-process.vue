@@ -372,7 +372,6 @@
                             v-if="formData.env_overlay.stag.autoscaling"
                             type="info"
                             class="mt10"
-                            style="margin-right: 60px"
                           >
                             <span slot="title">
                               {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
@@ -547,7 +546,6 @@
                             v-if="formData.env_overlay.prod.autoscaling"
                             type="info"
                             class="mt10"
-                            style="margin-right: 60px"
                           >
                             <span slot="title">
                               {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}

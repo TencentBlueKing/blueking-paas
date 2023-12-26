@@ -3,7 +3,7 @@
     :class="[{ 'plugin-cloud-box': isPlugin }, 'cloud-wrapper']"
   >
     <!-- 云原生应用没有头部导航 -->
-    <div class="ps-top-bar cloud-api-permission">
+    <div :class="['ps-top-bar', { 'cloud-api-permission': !isCloudNativeApp }]">
       <div class="header-title">
         {{ $t('云API权限管理') }}
         <div class="guide-wrapper">

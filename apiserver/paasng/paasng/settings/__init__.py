@@ -331,7 +331,6 @@ REST_FRAMEWORK = {
     # 增加为蓝鲸 API 规范设计的 Renderer
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
         # 可将 Response 转换为蓝鲸 API 规范所规定的格式： {"result": true, "message": "error", ...}
         "paasng.utils.views.BkStandardApiJSONRenderer",
     ],

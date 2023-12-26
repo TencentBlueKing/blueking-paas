@@ -212,12 +212,12 @@
             :label="$t('描述')"
             class-name="table-colum-module-cls"
           >
-            <template slot-scope="{ row }">
+            <template slot-scope="{ row, $index }">
               <div v-if="isPageEdit || row.isEdit">
                 <bk-form
                   :model="row"
                   form-type="inline"
-                  :ref="`envRefDescription`"
+                  :ref="`envRefDescription${$index}`"
                   class="env-from-cls"
                 >
                   <bk-form-item
@@ -723,6 +723,9 @@ export default {
           try {
             await this.$refs[`envRefKey${flag[index].i}`].validate();
             await this.$refs[`envRefValue${flag[index].i}`].validate();
+            if (flag[index]?.description) {
+              await this.$refs[`envRefDescription${flag[index].i}`].validate();
+            }
           } catch (error) {
             validate = false;
             break;
@@ -733,6 +736,9 @@ export default {
         try {
           await this.$refs.envRefKey0.validate();
           await this.$refs.envRefValue0.validate();
+          if (this.envVarList[0]?.description) {
+            await this.$refs?.envRefDescription0?.validate();
+          }
         } catch (error) {
           validate = false;
         }
@@ -748,6 +754,9 @@ export default {
       try {
         await this.$refs[`envRefKey${i}`].validate();
         await this.$refs[`envRefValue${i}`].validate();
+        if (this.envVarList[i]?.description) {
+          await this.$refs[`envRefDescription${i}`].validate();
+        }
         const data = _.cloneDeep(this.envVarList[i]);
         // 单条新建编辑操作
         type === 'add' ? this.createdEnvVariable(data, i) : this.updateEnvVariable(data, i);

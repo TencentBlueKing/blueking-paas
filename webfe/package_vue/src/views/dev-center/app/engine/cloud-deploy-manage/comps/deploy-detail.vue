@@ -30,7 +30,9 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5">{{ row.instances.length }} / {{ row.available_instance_count }}</span>
+              <span class="ml5" v-if="!row.autoscaling">
+                {{ row.instances.length }} / {{ row.available_instance_count }}
+              </span>
               <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <img

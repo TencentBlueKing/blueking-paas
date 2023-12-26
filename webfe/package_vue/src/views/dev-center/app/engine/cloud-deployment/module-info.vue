@@ -12,7 +12,7 @@
 
       <!-- 部署限制 -->
       <div class="base-info-container">
-        <div class="mt20">
+        <div class="mt24">
           <div class="title-wrapper">
             <span class="base-info-title">
               {{ $t('部署限制') }}
@@ -27,7 +27,7 @@
             {{ $t('开启部署权限控制，仅管理员可部署、下架该模块。') }}
           </div>
         </div>
-        <div class="form-detail mt20 pb20 border-b" v-if="!isDeployLimitEdit">
+        <div class="form-detail mt20 pb24 border-b" v-if="!isDeployLimitEdit">
           <bk-form>
             <bk-form-item
               :label="`${$t('预发布环境')}：`">
@@ -66,7 +66,7 @@
 
       <!-- 出口IP -->
       <div class="base-info ip-info-container">
-        <div class="mt20">
+        <div class="mt24">
           <div class="title-wrapper">
             <span class="base-info-title">
               {{ $t('出口IP') }}
@@ -81,7 +81,7 @@
             {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }}
           </div>
         </div>
-        <div class="form-detail mt20 pb20 flex-row" v-if="!isIpInfoEdit">
+        <div class="form-detail mt20 pb24 flex-row" v-if="!isIpInfoEdit">
           <bk-form>
             <bk-form-item
               :label="`${$t('预发布环境')}：`">
@@ -614,7 +614,7 @@ export default {
     }
 
     .border-b{
-      border-bottom: 1px solid #dcdee5;
+      border-bottom: 1px solid #eaebf0;
     }
 
     .copy-icon {
@@ -782,6 +782,12 @@ export default {
     }
     .mt8 {
       margin-top: 8px;
+    }
+    .mt24 {
+      margin-top: 24px;
+    }
+    .pb24 {
+      padding-bottom: 24px;
     }
   }
 </style>

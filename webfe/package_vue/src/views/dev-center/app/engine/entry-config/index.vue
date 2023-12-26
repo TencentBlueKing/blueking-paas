@@ -12,7 +12,7 @@
       v-else
       class="ps-top-bar"
     >
-      <h2>
+      <h2 class="box-shadow">
         {{ $t('访问管理') }}
       </h2>
     </div>

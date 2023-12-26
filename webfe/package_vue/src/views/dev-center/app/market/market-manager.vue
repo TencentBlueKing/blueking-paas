@@ -14,6 +14,7 @@
         <div class="flex-row justify-content-between align-items-center">
           <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
           <bk-button
+            v-if="isSaveMarketInfo"
             theme="primary"
             outline
             class="mr10  market-info-btn"

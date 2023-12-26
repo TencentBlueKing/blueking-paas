@@ -156,7 +156,7 @@
             :text="true"
             style="width: 90px; height: 30px; line-height: 30px;"
           >
-            {{ isDropdownShow ? $t('隐藏示例') : $t('显示示例') }}
+            {{ $t('显示示例') }}
             <i
               :class="['paasng-icon paasng-down-shape f12',{ 'icon-flip': isDropdownShow }]"
               style="top: -1px;"
@@ -196,487 +196,487 @@
   </div>
 </template>
 
-<script>
-    import moment from 'moment';
-    import i18n from '@/language/i18n.js';
+<script>import moment from 'moment';
+import i18n from '@/language/i18n.js';
 
-    const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
-    const dateTextMap = {
-        '5m': '最近5分钟',
-        '1h': '最近1小时',
-        '3h': '最近3小时',
-        '12h': '最近12小时',
-        '1d': '最近1天',
-        '7d': '最近7天'
+const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = moment().subtract(1, 'hours')
+  .format('YYYY-MM-DD HH:mm:ss');
+const dateTextMap = {
+  '5m': '最近5分钟',
+  '1h': '最近1小时',
+  '3h': '最近3小时',
+  '12h': '最近12小时',
+  '1d': '最近1天',
+  '7d': '最近7天',
+};
+let timeRangeCache = '';
+let timeShortCutText = '';
+
+export default {
+  props: {
+    logCount: {
+      type: Number,
+      default: 0,
+    },
+    envList: {
+      type: Array,
+      default() {
+        return [];
+      },
+    },
+    processList: {
+      type: Array,
+      default() {
+        return [];
+      },
+    },
+    streamList: {
+      type: Array,
+      default() {
+        return [];
+      },
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+    isUseStreamFilter: {
+      type: Boolean,
+      default: true,
+    },
+    type: {
+      type: String,
+      default: '',
+    },
+  },
+  data() {
+    const dateShortCut = [
+      {
+        text: i18n.t('最近5分钟'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 60 * 1000 * 5);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '5m';
+          timeShortCutText = i18n.t('最近5分钟');
+        },
+      },
+      {
+        text: i18n.t('最近1小时'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 1);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '1h';
+          timeShortCutText = i18n.t('最近1小时');
+        },
+      },
+      {
+        text: i18n.t('最近3小时'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 3);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '3h';
+          timeShortCutText = i18n.t('最近3小时');
+        },
+      },
+      {
+        text: i18n.t('最近12小时'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 12);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '12h';
+          timeShortCutText = i18n.t('最近12小时');
+        },
+      },
+      {
+        text: i18n.t('最近1天'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 24);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '1d';
+          timeShortCutText = i18n.t('最近1天');
+        },
+      },
+    ];
+
+    if (this.type === 'customLog' || this.type === 'accessLog') {
+      dateShortCut.push({
+        text: i18n.t('最近7天'),
+        value() {
+          const end = new Date();
+          const start = new Date();
+          start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+          return [start, end];
+        },
+        onClick(picker) {
+          timeRangeCache = '7d';
+          timeShortCutText = i18n.t('最近7天');
+        },
+      });
+    }
+    return {
+      env: 'all',
+      stream: 'all',
+      timerDisplay: this.$t('最近1小时'),
+      pickerRenderIndex: 0,
+      isDatePickerOpen: false,
+      isDropdownShow: false,
+      isAutoPanelShow: false,
+      keyword: '',
+      autoTimer: 0,
+      datePickerOption: {
+        // 小于今天的都不能选
+        disabledDate(date) {
+          return date && date.valueOf() > Date.now() - 86400;
+        },
+      },
+      autoTimeConf: {
+        label: this.$t('自动刷新'),
+        name: this.$t('关闭自动刷新'),
+        value: 0,
+      },
+      autoTimeList: [
+        {
+          name: this.$t('关闭自动刷新'),
+          label: this.$t('自动刷新'),
+          value: 0,
+        },
+        {
+          name: this.$t('5秒'),
+          label: this.$t('5秒 自动刷新'),
+          value: 5 * 1000,
+        },
+        {
+          name: this.$t('15秒'),
+          label: this.$t('15秒 自动刷新'),
+          value: 15 * 1000,
+        },
+        {
+          name: this.$t('1分钟'),
+          label: this.$t('1分钟 自动刷新'),
+          value: 60 * 1000,
+        },
+      ],
+      dateParams: {
+        start_time: initStartDate,
+        end_time: initEndDate,
+      },
+      logParams: {
+        start_time: initStartDate,
+        end_time: initEndDate,
+        environment: '',
+        process_id: '',
+        stream: '',
+        keyword: '',
+        levelname: '',
+        time_range: '1h',
+      },
+      initDateTimeRange: [initStartDate, initEndDate],
+      logSearchExamples: this.type === 'customLog' ? [
+        {
+          label: this.$t('错误级别的日志'),
+          key: 'json.levelname',
+          command: 'json.levelname:ERROR',
+        },
+        {
+          label: this.$t('精确匹配错误信息'),
+          key: 'json.message',
+          command: 'json.message:"error msg"',
+        },
+        {
+          label: this.$t('多个关键字的匹配'),
+          key: 'response_time',
+          command: 'json.funcName:get_user_info AND json.levelname:ERROR',
+        },
+      ] : [
+        {
+          label: this.$t('50X的日志'),
+          key: 'status_code_50X',
+          command: 'status_code:[500 TO 504]',
+        },
+        {
+          label: this.$t('404的日志'),
+          key: 'status_code_404',
+          command: 'status_code:404',
+        },
+        {
+          label: this.$t('响应时间大于500ms的日志'),
+          key: 'response_time',
+          command: 'response_time:>0.5',
+        },
+      ],
+      dateShortCut,
+
+      searchHistoryList: [],
+      searchHistoryDisplayList: [],
+      isShowHistoryPanel: false,
+      curActiveIndex: -1,
     };
-    let timeRangeCache = '';
-    let timeShortCutText = '';
+  },
+  computed: {
+    isShowExample() {
+      return ['customLog', 'accessLog'].includes(this.type);
+    },
+  },
+  watch: {
+    keyword(newVal, oldVal) {
+      if (!newVal && oldVal) {
+        this.handleSearch();
+      }
+    },
+    autoTimeConf: {
+      deep: true,
+      handler(time) {
+        this.setAutoLoad();
+      },
+    },
+  },
+  created() {
+    const query = this.$route.query || {};
+    this.logParams = {
+      start_time: query.start_time || initStartDate,
+      end_time: query.end_time || initEndDate,
+      environment: query.environment || '',
+      process_id: query.process_id || '',
+      stream: query.stream || '',
+      keyword: query.keyword || '',
+      levelname: query.levelname || '',
+      time_range: query.time_range || '1h',
+    };
+    this.keyword = query.keyword || '';
+    const dates = [
+      this.logParams.start_time || initStartDate,
+      this.logParams.end_time || initEndDate,
+    ];
+    if (query.time_range) {
+      timeRangeCache = query.time_range;
+      timeShortCutText = dateTextMap[timeRangeCache] || '';
+    } else if (!query.start_time && !query.end_time) {
+      timeRangeCache = '1h';
+      timeShortCutText = '最近1小时';
+    }
+    this.handlerChange(dates);
+    this.$watch('logParams', (newDate, oldDate) => {
+      if (newDate.start_time !== oldDate.start_time || newDate.start_time !== oldDate.end_time || newDate.time_range !== oldDate.time_range) {
+        // 判断日期是否调整，如果改变需要重新加载filter
+        this.logParams.isDateChange = true;
+      } else {
+        this.logParams.isDateChange = false;
+      }
 
-    export default {
-        props: {
-            logCount: {
-                type: Number,
-                default: 0
-            },
-            envList: {
-                type: Array,
-                default () {
-                    return [];
-                }
-            },
-            processList: {
-                type: Array,
-                default () {
-                    return [];
-                }
-            },
-            streamList: {
-                type: Array,
-                default () {
-                    return [];
-                }
-            },
-            loading: {
-                type: Boolean,
-                default: false
-            },
-            isUseStreamFilter: {
-                type: Boolean,
-                default: true
-            },
-            type: {
-                type: String,
-                default: ''
-            }
-        },
-        data () {
-            const dateShortCut = [
-                {
-                    text: i18n.t('最近5分钟'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 60 * 1000 * 5);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '5m';
-                        timeShortCutText = i18n.t('最近5分钟');
-                    }
-                },
-                {
-                    text: i18n.t('最近1小时'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 1);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '1h';
-                        timeShortCutText = i18n.t('最近1小时');
-                    }
-                },
-                {
-                    text: i18n.t('最近3小时'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 3);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '3h';
-                        timeShortCutText = i18n.t('最近3小时');
-                    }
-                },
-                {
-                    text: i18n.t('最近12小时'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 12);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '12h';
-                        timeShortCutText = i18n.t('最近12小时');
-                    }
-                },
-                {
-                    text: i18n.t('最近1天'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 24);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '1d';
-                        timeShortCutText = i18n.t('最近1天');
-                    }
-                }
-            ];
+      this.$emit('change', this.logParams);
+    }, { deep: true });
+  },
+  methods: {
+    handleInput(payload) {
+      this.searchHistoryDisplayList = this.searchHistoryList.filter(item => item.indexOf(this.keyword) > -1);
+      if (!this.isShowHistoryPanel) {
+        this.isShowHistoryPanel = true;
+      }
+      this.curActiveIndex = this.searchHistoryDisplayList.findIndex(item => item === this.keyword);
+    },
 
-            if (this.type === 'customLog' || this.type === 'accessLog') {
-                dateShortCut.push({
-                    text: i18n.t('最近7天'),
-                    value () {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-                        return [start, end];
-                    },
-                    onClick (picker) {
-                        timeRangeCache = '7d';
-                        timeShortCutText = i18n.t('最近7天');
-                    }
-                });
-            }
-            return {
-                env: 'all',
-                stream: 'all',
-                timerDisplay: this.$t('最近1小时'),
-                pickerRenderIndex: 0,
-                isDatePickerOpen: false,
-                isDropdownShow: false,
-                isAutoPanelShow: false,
-                keyword: '',
-                autoTimer: 0,
-                datePickerOption: {
-                    // 小于今天的都不能选
-                    disabledDate (date) {
-                        return date && date.valueOf() > Date.now() - 86400;
-                    }
-                },
-                autoTimeConf: {
-                    label: this.$t('自动刷新'),
-                    name: this.$t('关闭自动刷新'),
-                    value: 0
-                },
-                autoTimeList: [
-                    {
-                        name: this.$t('关闭自动刷新'),
-                        label: this.$t('自动刷新'),
-                        value: 0
-                    },
-                    {
-                        name: this.$t('5秒'),
-                        label: this.$t('5秒 自动刷新'),
-                        value: 5 * 1000
-                    },
-                    {
-                        name: this.$t('15秒'),
-                        label: this.$t('15秒 自动刷新'),
-                        value: 15 * 1000
-                    },
-                    {
-                        name: this.$t('1分钟'),
-                        label: this.$t('1分钟 自动刷新'),
-                        value: 60 * 1000
-                    }
-                ],
-                dateParams: {
-                    start_time: initStartDate,
-                    end_time: initEndDate
-                },
-                logParams: {
-                    start_time: initStartDate,
-                    end_time: initEndDate,
-                    environment: '',
-                    process_id: '',
-                    stream: '',
-                    keyword: '',
-                    levelname: '',
-                    time_range: '1h'
-                },
-                initDateTimeRange: [initStartDate, initEndDate],
-                logSearchExamples: this.type === 'customLog' ? [
-                    {
-                        label: this.$t('错误级别的日志'),
-                        key: 'json.levelname',
-                        command: 'json.levelname:ERROR'
-                    },
-                    {
-                        label: this.$t('精确匹配错误信息'),
-                        key: 'json.message',
-                        command: 'json.message:"error msg"'
-                    },
-                    {
-                        label: this.$t('多个关键字的匹配'),
-                        key: 'response_time',
-                        command: 'json.funcName:get_user_info AND json.levelname:ERROR'
-                    }
-                ] : [
-                    {
-                        label: this.$t('50X的日志'),
-                        key: 'status_code_50X',
-                        command: 'status_code:[500 TO 504]'
-                    },
-                    {
-                        label: this.$t('404的日志'),
-                        key: 'status_code_404',
-                        command: 'status_code:404'
-                    },
-                    {
-                        label: this.$t('响应时间大于500ms的日志'),
-                        key: 'response_time',
-                        command: 'response_time:>0.5'
-                    }
-                ],
-                dateShortCut: dateShortCut,
+    handleFocus() {
+      this.searchHistoryList = JSON.parse(window.localStorage.getItem(`paas-log-search-history-${this.type}`) || '[]').filter(Boolean);
+      if (this.searchHistoryDisplayList.length < 1) {
+        this.searchHistoryDisplayList = JSON.parse(JSON.stringify(this.searchHistoryList));
+      }
+      this.curActiveIndex = this.searchHistoryDisplayList.findIndex(item => item === this.keyword);
+      this.isShowHistoryPanel = true;
+    },
 
-                searchHistoryList: [],
-                searchHistoryDisplayList: [],
-                isShowHistoryPanel: false,
-                curActiveIndex: -1
-            };
-        },
-        computed: {
-            isShowExample () {
-                return ['customLog', 'accessLog'].includes(this.type);
-            }
-        },
-        watch: {
-            keyword (newVal, oldVal) {
-                if (!newVal && oldVal) {
-                    this.handleSearch();
-                }
-            },
-            autoTimeConf: {
-                deep: true,
-                handler (time) {
-                    this.setAutoLoad();
-                }
-            }
-        },
-        created () {
-            const query = this.$route.query || {};
-            this.logParams = {
-                start_time: query.start_time || initStartDate,
-                end_time: query.end_time || initEndDate,
-                environment: query.environment || '',
-                process_id: query.process_id || '',
-                stream: query.stream || '',
-                keyword: query.keyword || '',
-                levelname: query.levelname || '',
-                time_range: query.time_range || '1h'
-            };
-            this.keyword = query.keyword || '';
-            const dates = [
-                this.logParams.start_time || initStartDate,
-                this.logParams.end_time || initEndDate
-            ];
-            if (query.time_range) {
-                timeRangeCache = query.time_range;
-                timeShortCutText = dateTextMap[timeRangeCache] || '';
-            } else if (!query.start_time && !query.end_time) {
-                timeRangeCache = '1h';
-                timeShortCutText = '最近1小时';
-            }
-            this.handlerChange(dates);
-            this.$watch('logParams', (newDate, oldDate) => {
-                if (newDate.start_time !== oldDate.start_time || newDate.start_time !== oldDate.end_time || newDate.time_range !== oldDate.time_range) {
-                    // 判断日期是否调整，如果改变需要重新加载filter
-                    this.logParams.isDateChange = true;
-                } else {
-                    this.logParams.isDateChange = false;
-                }
+    handleKeyup() {
+      const len = this.searchHistoryList.length;
+      this.curActiveIndex--;
+      this.curActiveIndex = this.curActiveIndex < 0 ? -1 : this.curActiveIndex;
+      if (this.curActiveIndex === -1) {
+        this.curActiveIndex = len - 1;
+      }
+      this.keyword = this.searchHistoryList[this.curActiveIndex];
+    },
 
-                this.$emit('change', this.logParams);
-            }, { deep: true });
-        },
-        methods: {
-            handleInput (payload) {
-                this.searchHistoryDisplayList = this.searchHistoryList.filter(item => item.indexOf(this.keyword) > -1);
-                if (!this.isShowHistoryPanel) {
-                    this.isShowHistoryPanel = true;
-                }
-                this.curActiveIndex = this.searchHistoryDisplayList.findIndex(item => item === this.keyword);
-            },
+    handleKeydown() {
+      const len = this.searchHistoryList.length;
+      this.curActiveIndex++;
+      this.curActiveIndex = this.curActiveIndex > len - 1
+        ? len
+        : this.curActiveIndex;
+      if (this.curActiveIndex === len) {
+        this.curActiveIndex = 0;
+      }
+      this.keyword = this.searchHistoryList[this.curActiveIndex];
+    },
 
-            handleFocus () {
-                this.searchHistoryList = JSON.parse(window.localStorage.getItem(`paas-log-search-history-${this.type}`) || '[]').filter(Boolean);
-                if (this.searchHistoryDisplayList.length < 1) {
-                    this.searchHistoryDisplayList = JSON.parse(JSON.stringify(this.searchHistoryList));
-                }
-                this.curActiveIndex = this.searchHistoryDisplayList.findIndex(item => item === this.keyword);
-                this.isShowHistoryPanel = true;
-            },
+    handleRemove(payload, index) {
+      console.log('icon');
+      this.searchHistoryDisplayList.splice(index, 1);
+      const curIndex = this.searchHistoryList.findIndex(item => item === payload);
+      this.searchHistoryList.splice(curIndex, 1);
+      window.localStorage.setItem(`paas-log-search-history-${this.type}`, JSON.stringify(this.searchHistoryList));
+      this.curActiveIndex = -1;
+    },
 
-            handleKeyup () {
-                const len = this.searchHistoryList.length;
-                this.curActiveIndex--;
-                this.curActiveIndex = this.curActiveIndex < 0 ? -1 : this.curActiveIndex;
-                if (this.curActiveIndex === -1) {
-                    this.curActiveIndex = len - 1;
-                }
-                this.keyword = this.searchHistoryList[this.curActiveIndex];
-            },
+    handleSelectKeyword(payload, index) {
+      this.keyword = payload;
+      this.logParams.keyword = this.keyword;
+      this.curActiveIndex = index;
+      this.isShowHistoryPanel = false;
+    },
 
-            handleKeydown () {
-                const len = this.searchHistoryList.length;
-                this.curActiveIndex++;
-                this.curActiveIndex = this.curActiveIndex > len - 1
-                    ? len
-                    : this.curActiveIndex;
-                if (this.curActiveIndex === len) {
-                    this.curActiveIndex = 0;
-                }
-                this.keyword = this.searchHistoryList[this.curActiveIndex];
-            },
+    handleClickoutside() {
+      const curDom = Array.from(arguments)[0];
+      const { className } = curDom.target;
+      if (className.indexOf('bk-form-input') > -1) {
+        this.isShowHistoryPanel = true;
+        return;
+      }
+      this.isShowHistoryPanel = false;
+      this.curActiveIndex = -1;
+    },
 
-            handleRemove (payload, index) {
-                console.log('icon');
-                this.searchHistoryDisplayList.splice(index, 1);
-                const curIndex = this.searchHistoryList.findIndex(item => item === payload);
-                this.searchHistoryList.splice(curIndex, 1);
-                window.localStorage.setItem(`paas-log-search-history-${this.type}`, JSON.stringify(this.searchHistoryList));
-                this.curActiveIndex = -1;
-            },
+    toggleDatePicker() {
+      this.isDatePickerOpen = !this.isDatePickerOpen;
+    },
 
-            handleSelectKeyword (payload, index) {
-                this.keyword = payload;
-                this.logParams.keyword = this.keyword;
-                this.curActiveIndex = index;
-                this.isShowHistoryPanel = false;
-            },
+    handleSearch() {
+      // 只存储最近10条记录
+      const MAX_LEN = 10;
+      if (!this.searchHistoryList.includes(this.keyword)) {
+        if (this.searchHistoryList.length === MAX_LEN) {
+          this.searchHistoryList.shift();
+        }
+        this.searchHistoryList.push(this.keyword);
+        window.localStorage.setItem(`paas-log-search-history-${this.type}`, JSON.stringify(this.searchHistoryList));
+      }
+      this.logParams.keyword = this.keyword;
+      this.isShowHistoryPanel = false;
+    },
 
-            handleClickoutside () {
-                const curDom = Array.from(arguments)[0];
-                const className = curDom.target.className;
-                if (className.indexOf('bk-form-input') > -1) {
-                    this.isShowHistoryPanel = true;
-                    return;
-                }
-                this.isShowHistoryPanel = false;
-                this.curActiveIndex = -1;
-            },
+    dropdownShow() {
+      this.isDropdownShow = true;
+    },
 
-            toggleDatePicker () {
-                this.isDatePickerOpen = !this.isDatePickerOpen;
-            },
+    dropdownHide() {
+      this.isDropdownShow = false;
+    },
 
-            handleSearch () {
-                // 只存储最近10条记录
-                const MAX_LEN = 10;
-                if (!this.searchHistoryList.includes(this.keyword)) {
-                    if (this.searchHistoryList.length === MAX_LEN) {
-                        this.searchHistoryList.shift();
-                    }
-                    this.searchHistoryList.push(this.keyword);
-                    window.localStorage.setItem(`paas-log-search-history-${this.type}`, JSON.stringify(this.searchHistoryList));
-                }
-                this.logParams.keyword = this.keyword;
-                this.isShowHistoryPanel = false;
-            },
+    handleTriggerSearch(example) {
+      this.keyword = example.command;
+      this.logParams.keyword = example.command;
+    },
 
-            dropdownShow () {
-                this.isDropdownShow = true;
-            },
+    clearTimer() {
+      this.clearInterval(this.autoTimer);
+    },
 
-            dropdownHide () {
-                this.isDropdownShow = false;
-            },
-
-            handleTriggerSearch (example) {
-                this.keyword = example.command;
-                this.logParams.keyword = example.command;
-            },
-
-            clearTimer () {
-                this.clearInterval(this.autoTimer);
-            },
-
-            /**
+    /**
              * 选择自定义时间
              */
-            handlerChange (dates, type) {
-                this.dateParams.start_time = dates[0];
-                this.dateParams.end_time = dates[1];
-                this.dateParams.time_range = timeRangeCache || 'customized';
-                if (timeShortCutText) {
-                    this.timerDisplay = timeShortCutText;
-                } else {
-                    this.timerDisplay = `${dates[0]} - ${dates[1]}`;
-                }
-                timeShortCutText = ''; // 清空
-                timeRangeCache = ''; // 清空
-                this.pickerRenderIndex++;
-            },
+    handlerChange(dates, type) {
+      this.dateParams.start_time = dates[0];
+      this.dateParams.end_time = dates[1];
+      this.dateParams.time_range = timeRangeCache || 'customized';
+      if (timeShortCutText) {
+        this.timerDisplay = timeShortCutText;
+      } else {
+        this.timerDisplay = `${dates[0]} - ${dates[1]}`;
+      }
+      timeShortCutText = ''; // 清空
+      timeRangeCache = ''; // 清空
+      this.pickerRenderIndex++;
+    },
 
-            /**
+    /**
              * 选择自定义时间，并确定
              */
-            handlerPickSuccess () {
-                this.isDatePickerOpen = false;
+    handlerPickSuccess() {
+      this.isDatePickerOpen = false;
 
-                setTimeout(() => {
-                    this.logParams = Object.assign(this.logParams, {
-                        start_time: this.dateParams.start_time,
-                        end_time: this.dateParams.end_time,
-                        levelname: '',
-                        time_range: this.dateParams.time_range
-                    });
-                }, 200);
-            },
+      setTimeout(() => {
+        this.logParams = Object.assign(this.logParams, {
+          start_time: this.dateParams.start_time,
+          end_time: this.dateParams.end_time,
+          levelname: '',
+          time_range: this.dateParams.time_range,
+        });
+      }, 200);
+    },
 
-            handleSetParams () {
-                // const isExistEnv = this.envList.some(item => item.id === this.logParams.environment)
-                // const isExistStream = this.streamList.some(item => item.id === this.logParams.stream)
-                // const isExistProcess = this.processList.some(item => item.id === this.logParams.process_id)
-                // if (!isExistEnv) this.logParams.environment = ''
-                // if (!isExistStream) this.logParams.stream = ''
-                // if (!isExistProcess) this.logParams.process_id = ''
-            },
+    handleSetParams() {
+      // const isExistEnv = this.envList.some(item => item.id === this.logParams.environment)
+      // const isExistStream = this.streamList.some(item => item.id === this.logParams.stream)
+      // const isExistProcess = this.processList.some(item => item.id === this.logParams.process_id)
+      // if (!isExistEnv) this.logParams.environment = ''
+      // if (!isExistStream) this.logParams.stream = ''
+      // if (!isExistProcess) this.logParams.process_id = ''
+    },
 
-            /**
+    /**
              * 清空查询条件
              */
-            clearConditionParams () {
-                this.logParams.environment = '';
-                this.logParams.process_id = '';
-                this.logParams.stream = '';
-                this.logParams.levelname = '';
-            },
+    clearConditionParams() {
+      this.logParams.environment = '';
+      this.logParams.process_id = '';
+      this.logParams.stream = '';
+      this.logParams.levelname = '';
+    },
 
-            hideDatePicker () {
-                if (['standartLog', 'customLog', 'accessLog'].includes(this.type)) {
-                    this.isDatePickerOpen = false;
-                }
-            },
+    hideDatePicker() {
+      if (['standartLog', 'customLog', 'accessLog'].includes(this.type)) {
+        this.isDatePickerOpen = false;
+      }
+    },
 
-            setAutoLoad () {
-                clearInterval(this.autoTimer);
-                if (this.autoTimeConf.value) {
-                    this.autoTimer = setInterval(() => {
-                        this.$emit('reload', false);
-                    }, this.autoTimeConf.value);
-                }
-            },
+    setAutoLoad() {
+      clearInterval(this.autoTimer);
+      if (this.autoTimeConf.value) {
+        this.autoTimer = setInterval(() => {
+          this.$emit('reload', false);
+        }, this.autoTimeConf.value);
+      }
+    },
 
-            handleReload () {
-                if (this.loading) {
-                    return false;
-                }
-                this.setAutoLoad();
-                this.$emit('reload', true);
-            },
+    handleReload() {
+      if (this.loading) {
+        return false;
+      }
+      this.setAutoLoad();
+      this.$emit('reload', true);
+    },
 
-            handleAuto (conf) {
-                this.autoTimeConf = conf;
-            },
+    handleAuto(conf) {
+      this.autoTimeConf = conf;
+    },
 
-            handleClickOutSide () {
-                this.isAutoPanelShow = false;
-            },
+    handleClickOutSide() {
+      this.isAutoPanelShow = false;
+    },
 
-            clearKeyword () {
-                this.keyword = '';
-            }
-        }
-    };
+    clearKeyword() {
+      this.keyword = '';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

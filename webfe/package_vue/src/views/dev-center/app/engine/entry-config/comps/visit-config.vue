@@ -75,7 +75,7 @@
                       v-bk-tooltips="isIpConsistent ? { disabled: true } : configIpTip">{{ $t(entryEnv[item]) }}</div>
                     <div class="ml15 mr15" v-else>{{ $t(entryEnv[item]) }}</div>
                     <span
-                      class="btn-container"
+                      :class="['btn-container', { 'en': localLanguage === 'en' }]"
                       v-bk-tooltips="{content: $t(row.envs[item][0].is_running ?
                         '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
                       v-if="rowIndex === $index && row.envs[item]">
@@ -908,6 +908,9 @@ export default {
         width: 50px;
         .disable-add-icon{
           color: #dcdee5;
+        }
+        &.en {
+          left: 100px;
         }
       }
 

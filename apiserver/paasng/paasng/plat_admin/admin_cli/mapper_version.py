@@ -2,6 +2,7 @@ import datetime
 import uuid
 from typing import Dict, Iterable
 
+from django.conf import settings
 from typing_extensions import TypeAlias
 
 from paas_wl.bk_app.applications.models.config import Config
@@ -24,8 +25,7 @@ def get_mapper_v1_envs() -> Iterable[ModuleEnvironment]:
         processed[config.app_id] = config.created
 
         m = config.metadata or {}
-        if ver := m.get("mapper_version"):
-            version_map[config.app_id] = ver
+        version_map[config.app_id] = m.get("mapper_version", settings.GLOBAL_DEFAULT_MAPPER_VERSION)
 
     # Filter and print all envs that use v1
     for app_id, ver in version_map.items():

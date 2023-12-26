@@ -70,6 +70,7 @@ from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
@@ -86,9 +87,6 @@ from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
 
 logger = logging.getLogger(__name__)
-
-# legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
 
 class ManifestConstructor(ABC):

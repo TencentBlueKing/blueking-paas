@@ -278,7 +278,7 @@ class TestApplicationCreateWithEngine:
             (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", False, True),
         ],
     )
-    def test_create_nondefault_origin(
+    def test_create_non_default_origin(
         self,
         api_client,
         bk_user,
@@ -357,7 +357,7 @@ class TestApplicationCreateWithoutEngine:
                     "market_params": {},
                 },
             )
-            desired_status_code = 201 if creation_success else 403
+            desired_status_code = 201 if creation_success else 400
             assert response.status_code == desired_status_code
 
 

@@ -287,6 +287,7 @@ class Deployment(OperationVersionBase):
         return VersionInfo(self.source_revision, self.source_version_name, self.source_version_type)
 
     def get_deploy_hooks(self) -> HookList:
+        # TODO 必须优化 !!!! 现在的写法会导致首次记录到 ModuleDeployHook 中的 hook 覆盖 app_desc.yaml 中的配置
         try:
             hooks = self.declarative_config.get_deploy_hooks()
         except Exception:

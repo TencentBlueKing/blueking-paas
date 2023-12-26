@@ -1,7 +1,7 @@
 <template>
   <div class="right-main">
     <div class="ps-top-bar" v-if="!isCloudNativeApp">
-      <h2> {{ $t('应用市场') }} </h2>
+      <h2 class="box-shadow"> {{ $t('应用市场') }} </h2>
     </div>
     <paas-content-loader
       :is-loading="isDataLoading || isManagerDataLoading"

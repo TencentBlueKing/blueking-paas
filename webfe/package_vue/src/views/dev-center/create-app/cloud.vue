@@ -110,15 +110,8 @@
                 clearable
                 :placeholder="mirrorExamplePlaceholder"
               >
-
-                <template slot="append">
-                  <div
-                    class="group-text form-text-append"
-                    @click="handleSetMirrorUrl"
-                  >{{$t('使用示例镜像')}}</div>
-                </template>
               </bk-input>
-              <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
+              <p slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</p>
             </bk-form-item>
             <bk-form-item
               error-display-type="normal"
@@ -477,27 +470,12 @@
             <bk-alert
               type="info">
               <div slot="title">
-                {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
                 <a
                   target="_blank"
                   :href="GLOBAL.DOC.APP_PROCESS_INTRODUCTION"
                   style="color: #3a84ff">
                   {{$t('应用进程介绍')}}
-                </a>
-              </div>
-            </bk-alert>
-          </collapseContent>
-
-          <collapseContent :title="$t('钩子命令')" class="mt20" :fold="false">
-            <bk-alert
-              type="info">
-              <div slot="title">
-                {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
-                <a
-                  target="_blank"
-                  :href="GLOBAL.DOC.BUILD_PHASE_HOOK"
-                  style="color: #3a84ff">
-                  {{$t('部署阶段钩子')}}
                 </a>
               </div>
             </bk-alert>
@@ -519,7 +497,7 @@
           <collapseContent
             active-name="hook"
             collapse-item-name="hook"
-            :title="$t('钩子命令')"
+            :title="$t('部署前置命令')"
             class="mt20"
           >
             <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>
@@ -581,22 +559,22 @@
         >
           <bk-form
             :model="buildDialog.formData"
-            :label-width="130">
-            <bk-form-item :label="$t('镜像仓库：')">
+            :label-width="localLanguage === 'en' ? 150 : 130">
+            <bk-form-item :label="`${$t('镜像仓库')}：`">
               <span class="build-text">
                 {{ imageRepositoryTemplate }}
               </span>
             </bk-form-item>
-            <bk-form-item :label="$t('镜像 tag 规则：')">
+            <bk-form-item :label="`${$t('镜像 tag 规则')}：`">
               {{ mirrorTag }}
             </bk-form-item>
-            <bk-form-item :label="$t('构建方式：')">
+            <bk-form-item :label="`${$t('构建方式')}：`">
               {{ buildDialog.formData.buildMethod }}
             </bk-form-item>
-            <bk-form-item :label="$t('基础镜像：')">
+            <bk-form-item :label="`${$t('基础镜像')}：`">
               {{ buildDialog.formData.imageName }}
             </bk-form-item>
-            <bk-form-item :label="$t('构建工具：')">
+            <bk-form-item :label="`${$t('构建工具')}：`">
               <p
                 class="config-item" v-for="item in buildDialog.formData.buildConfig"
                 :key="item.id"
@@ -881,6 +859,9 @@ export default {
     },
     curUserFeature() {
       return this.$store.state.userFeature;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -1286,13 +1267,6 @@ export default {
       } finally {
         this.formLoading = false;
       }
-    },
-
-
-    // 处理应用示例填充
-    handleSetMirrorUrl() {
-      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'docker.io/library/nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
-      this.$refs.formImageRef.clearError();
     },
 
     // 初始化应用编排数据

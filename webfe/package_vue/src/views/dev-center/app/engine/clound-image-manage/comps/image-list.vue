@@ -27,7 +27,15 @@
       </div>
       <div class="right">
         <!-- 构建历史 -->
-        <div class="deploy-history flex-row align-items-center" @click="handleDeploymentHistory">
+        <div
+          class="deploy-history flex-row align-items-center"
+          :class="{ 'disabled': isCustomImage }"
+          v-bk-tooltips="{
+            content: $t('当前模块直接提供镜像部署，无构建历史'),
+            disabled: !isCustomImage,
+          }"
+          @click="handleDeploymentHistory"
+        >
           <i class="paasng-icon paasng-lishijilu"></i>
           <p>{{ $t('构建历史') }}</p>
         </div>
@@ -124,11 +132,13 @@
           :show-overflow-tooltip="true"
         />
         <bk-table-column
+          width="120"
           :label="$t('大小（B）')"
           prop="size"
           sortable
         />
         <bk-table-column
+          width="160"
           :label="$t('更新时间')"
           prop="updated"
           :show-overflow-tooltip="true"
@@ -143,8 +153,7 @@
   </div>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 export default {
   name: 'ClundImageList',
   mixins: [appBaseMixin],
@@ -164,6 +173,12 @@ export default {
         isAbnormal: false,
       },
     };
+  },
+  computed: {
+    isCustomImage() {
+      const curModule = this.curAppModuleList.find(module => module.name === this.moduleName);
+      return curModule?.web_config?.runtime_type === 'custom_image';
+    },
   },
   watch: {
     searchValue(val) {
@@ -333,6 +348,10 @@ export default {
           transform: translateY(0);
           margin-left: 12px;
           margin-right: 5px;
+        }
+        &.disabled {
+          color: #dcdee5;
+          cursor: not-allowed;
         }
       }
     }

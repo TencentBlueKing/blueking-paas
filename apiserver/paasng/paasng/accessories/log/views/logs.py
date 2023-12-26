@@ -47,6 +47,7 @@ from paasng.accessories.log.utils import clean_logs, parse_request_to_es_dsl
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
+from paasng.infras.bk_log.exceptions import BkLogGatewayServiceError
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
@@ -66,6 +67,19 @@ def transform_noindex_error(func):
             return func(*args, **kwargs)
         except NoIndexError:
             raise error_codes.QUERY_LOG_FAILED.f(_("无可用日志索引, 请稍后重试"))
+
+    return wrapped
+
+
+def transform_bklog_error(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except BkLogGatewayServiceError as e:
+            raise error_codes.QUERY_LOG_FAILED.f(
+                _("日志平台接口返回异常<{message}>, 请稍后重试").format(message=e.message)
+            ) from e
 
     return wrapped
 
@@ -182,6 +196,7 @@ class LogAPIView(LogBaseAPIView):
         request_body=serializers.LogQueryBodySLZ,
     )
     @transform_noindex_error
+    @transform_bklog_error
     def query_logs(self, request, code, module_name, environment):
         """查询日志"""
         log_client, log_config = self.instantiate_log_client()
@@ -222,6 +237,7 @@ class LogAPIView(LogBaseAPIView):
         request_body=serializers.LogQueryBodySLZ,
     )
     @transform_noindex_error
+    @transform_bklog_error
     def query_logs_scroll(self, request, code, module_name, environment):
         """查询标准输出日志"""
         log_client, log_config = self.instantiate_log_client()
@@ -268,6 +284,7 @@ class LogAPIView(LogBaseAPIView):
         request_body=serializers.LogQueryBodySLZ,
     )
     @transform_noindex_error
+    @transform_bklog_error
     def aggregate_date_histogram(self, request, code, module_name, environment):
         """统计日志的日志数-事件直方图"""
         log_client, log_config = self.instantiate_log_client()
@@ -297,6 +314,7 @@ class LogAPIView(LogBaseAPIView):
         request_body=serializers.LogQueryBodySLZ,
     )
     @transform_noindex_error
+    @transform_bklog_error
     def aggregate_fields_filters(self, request, code, module_name, environment):
         """统计日志的字段分布"""
         log_client, log_config = self.instantiate_log_client()

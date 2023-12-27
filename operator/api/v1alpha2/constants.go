@@ -133,4 +133,4 @@ var AllowedResQuotaPlans = []ResQuotaPlan{
 var AllowedImagePullPolicies = []corev1.PullPolicy{corev1.PullIfNotPresent, corev1.PullAlways, corev1.PullNever}
 
 // FilePathPattern 文件路径正则
-const FilePathPattern = `^/([^/\x00]+(/)?)*$`
+const FilePathPattern = `^/([^/\x00]+(/)?)+$`

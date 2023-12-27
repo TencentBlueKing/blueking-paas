@@ -78,7 +78,7 @@
           <bk-button
             theme="primary"
             title="保存"
-            class="mr20 mt20"
+            class="mt20"
             @click="handleSave">
             {{ $t('保存') }}
           </bk-button>
@@ -86,7 +86,7 @@
           <bk-button
             :theme="'default'"
             title="取消"
-            class="mt20"
+            class="mt20 ml8"
             @click="handleCancel">
             {{ $t('取消') }}
           </bk-button>

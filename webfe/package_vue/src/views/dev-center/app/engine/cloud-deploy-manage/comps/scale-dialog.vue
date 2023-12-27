@@ -40,7 +40,7 @@
           <span class="form-text">{{ processPlan.targetReplicas }}</span>
         </bk-form-item>
         <bk-form-item :label="$t('扩缩容方式')">
-          <div class="tab-box">
+          <div class="tab-box mb15">
             <li
               v-for="item in scaleTypes"
               :key="item.type"
@@ -519,6 +519,7 @@ export default {
   :deep(.replica-count-cls) {
     display: flex;
     justify-content: space-between;
+    margin-top: 8px;
     .bk-form-item {
       margin-top: 8px;
     }

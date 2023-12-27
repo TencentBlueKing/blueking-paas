@@ -4,7 +4,7 @@
       <bk-button :theme="'default'" class="mr10" @click="handleSetCloseExpand">
         <i class="paasng-icon paasng-shouqi" v-if="isExpand"></i>
         <i class="paasng-icon paasng-zhankai" v-else></i>
-        {{ isExpand ? $t('全部收起') : $t('全部展开') }}
+        {{ isExpand ? $t('收起实例详情') : $t('展示实例详情') }}
       </bk-button>
       <div class="module-select-wrapper">
         <bk-select
@@ -13,6 +13,7 @@
           style="width: 250px;"
           ext-cls="select-custom"
           ext-popover-cls="select-popover-custom"
+          prefix-icon="paasng-icon paasng-project"
           searchable>
           <bk-option
             v-for="(module, index) in moduleList"
@@ -120,6 +121,12 @@ export default {
   }
   .module-select-wrapper {
     background: #fff;
+  }
+}
+
+.select-custom {
+  /deep/ i.paasng-project {
+    color: #a3c5fd;
   }
 }
 </style>

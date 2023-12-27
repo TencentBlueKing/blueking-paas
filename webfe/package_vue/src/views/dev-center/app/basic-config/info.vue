@@ -1,7 +1,7 @@
 <template lang="html">
   <div class="right-main">
     <div class="ps-top-bar" v-if="!isCloudNativeApp">
-      <h2> {{ $t('基本信息') }} </h2>
+      <h2 class="box-shadow"> {{ $t('基本信息') }} </h2>
     </div>
     <paas-content-loader
       class="app-container middle base-info-container"
@@ -1652,6 +1652,10 @@ export default {
     }
     .action-box {
         z-index: 11 !important;
+    }
+
+    h2.basic-information {
+      box-shadow: 0 3px 4px 0 #0000000a;
     }
 </style>
 <style lang="scss">

@@ -10,6 +10,8 @@
           v-model="moduleName"
           style="width: 150px"
           :clearable="false"
+          ext-cls="module-select-custom"
+          prefix-icon="paasng-icon paasng-project"
           @change="handleModuleChange"
         >
           <bk-option
@@ -294,6 +296,11 @@ export default {
       /deep/ .paas-deploy-log-wrapper {
           height: 100%;
       }
+  }
+}
+.module-select-custom {
+  /deep/ i.paasng-project {
+    color: #a3c5fd;
   }
 }
 </style>

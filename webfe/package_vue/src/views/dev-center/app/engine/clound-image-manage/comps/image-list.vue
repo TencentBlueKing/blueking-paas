@@ -116,7 +116,6 @@
                         <span class="dynamic-time">{{ item.at }}</span>
                       </p>
                     </li>
-                    <li />
                   </template>
                   <template v-else>
                     <table-empty empty />
@@ -436,12 +435,12 @@ export default {
     font-size: 12px;
     color: #979BA5;
     cursor: default;
-    margin-top: 3px;
+    margin-top: 5px;
   }
   .dynamic-content {
+    font-size: 14px;
     display: flex;
     flex-direction: column;
-    line-height: 24px;
     height: 48px;
     overflow: hidden;
     color: #63656e;

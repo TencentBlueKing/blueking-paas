@@ -47,6 +47,7 @@ class TestAppUserCredentialViewSet:
         assert response.status_code == 204
 
     def test_destroy_error(self, api_client, bk_app, bk_module, image_credential, build_config):
+        """测试镜像凭证已被绑定的情况下，删除镜像凭证"""
         url = "/svc_workloads/api/credentials/applications/" f"{bk_app.code}/image_credentials/{image_credential.name}"
         response = api_client.delete(url)
         assert response.status_code == 400

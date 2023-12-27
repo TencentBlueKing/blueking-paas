@@ -1125,9 +1125,7 @@ export default {
       // 选择了lesscode代码来源
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
         await this.$refs.formBaseRef.validate();
-        this.formData.sourceInitTemplate = 'nodejs_bk_magic_vue_spa';
       }
-
       this.formLoading = true;
       const params = {
         is_plugin_app: !!this.isBkPlugin,
@@ -1226,8 +1224,9 @@ export default {
 
       // lesscode应用
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
+        const languageName = this.languagesData.NodeJS[0]?.name;
         params.source_config = {
-          source_init_template: this.formData.sourceInitTemplate,
+          source_init_template: languageName,
           source_origin: this.sourceOrigin,
         };
       }

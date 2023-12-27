@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from rest_framework import permissions
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
-from paasng.infras.accounts.models import AccountFeatureFlag
+from paasng.infras.accounts.models import AccountFeatureFlag, User, UserProfile
 
 
 def user_has_feature(key: AccountFeatureFlagConst):
@@ -30,3 +30,9 @@ def user_has_feature(key: AccountFeatureFlagConst):
             return AccountFeatureFlag.objects.has_feature(request.user, key)
 
     return Permission
+
+
+def user_can_create_in_region(user: User, region: str) -> bool:
+    """Check if user can create applications in the specified region."""
+    user_profile = UserProfile.objects.get_profile(user)
+    return user_profile.enable_regions.has_region_by_name(region)

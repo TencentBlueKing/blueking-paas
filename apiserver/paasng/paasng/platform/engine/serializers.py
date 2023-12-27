@@ -46,6 +46,7 @@ from paasng.platform.engine.phases_steps.display_blocks import DeployDisplayBloc
 from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
+from paasng.utils.error_codes import error_codes
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField, field_env_var_key
 
@@ -271,9 +272,9 @@ class ConfigVarImportSLZ(serializers.Serializer):
         try:
             content = yaml.safe_load(data["file"])
         except yaml.YAMLError:
-            raise ValidationError({"error": "Not A Yaml File."}, code="NOT_YAML_FILE")
+            raise error_codes.NOT_YAML_FILE
         if "env_variables" not in content:
-            raise ValidationError({"error": "Invalid Yaml File."}, code="ERROR_FILE_FORMAT")
+            raise error_codes.ERROR_FILE_FORMAT
         data["env_variables"] = content["env_variables"]
         return super().to_internal_value(data)
 

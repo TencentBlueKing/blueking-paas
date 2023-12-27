@@ -134,6 +134,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.api_doc",
     "paasng.plat_admin.admin42",
     "paasng.plat_admin.system",
+    "paasng.plat_admin.admin_cli",
     "paasng.misc.monitoring.monitor",
     "paasng.misc.monitoring.healthz",
     "paasng.misc.search",
@@ -330,7 +331,6 @@ REST_FRAMEWORK = {
     # 增加为蓝鲸 API 规范设计的 Renderer
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
         # 可将 Response 转换为蓝鲸 API 规范所规定的格式： {"result": true, "message": "error", ...}
         "paasng.utils.views.BkStandardApiJSONRenderer",
     ],
@@ -588,7 +588,7 @@ LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE
 SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("SOURCE_PACKAGE_APP_CLOUD_NATIVE", True)
 
 # 新建插件应用是否为云原生应用，包括开发者中心页面创建的，插件开发者中心 API 创建的
-PLUGIN_APP_USE_CLOUD_NATIVE_TYPE = settings.get("PLUGIN_APP_USE_CLOUD_NATIVE_TYPE", False)
+PLUGIN_APP_USE_CLOUD_NATIVE_TYPE = settings.get("PLUGIN_APP_USE_CLOUD_NATIVE_TYPE", True)
 
 # 开发者中心使用的 k8s 集群组件（helm chart 名称）
 BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(

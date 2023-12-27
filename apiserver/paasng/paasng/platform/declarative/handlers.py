@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
     spec_version = detect_spec_version(json_data)
+    # TODO 删除 SMartDescriptionHandler 分支. VER_1 存量版本基本不再支持
     if spec_version == AppSpecVersion.VER_1:
         return SMartDescriptionHandler(json_data)
     else:

@@ -348,7 +348,6 @@
       :is-show.sync="processSlider.isShow"
       :title="processSlider.title"
       :quick-close="true"
-      :before-close="handleBeforeClose"
     >
       <div
         id="log-container"
@@ -704,7 +703,6 @@ export default {
       handler(newVal, oldVal) {
         if (this.isDialogShowSideslider || !oldVal) return;
         // 进入页面启动事件流
-        console.log(newVal, oldVal);
         if (JSON.stringify(newVal) !== JSON.stringify(oldVal)
         && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
           this.watchServerPush();
@@ -921,10 +919,6 @@ export default {
           processes,
         });
       });
-    },
-
-    async handleBeforeClose() {
-      return this.$isSidebarClosed(JSON.stringify(this.curLogTimeRange));
     },
 
     /**
@@ -1285,12 +1279,6 @@ export default {
         if (this.serverProcessEvent === serverProcessEvent) {
           // 服务结束请求列表接口
           bus.$emit('get-release-info');
-          // 有侧边栏的时候不需要持续watch
-          // if (this.isDialogShowSideslider) return;
-          // this.watchServerTimer = setTimeout(() => {
-          //   console.log('testetst');
-          //   this.watchServerPush();
-          // }, 500);
         }
       });
     },
@@ -1510,7 +1498,7 @@ export default {
     },
 
     // 处理进程状态
-    handleProcessStatus(v) {
+    handleProcessStatus(v, isChangeScaleType = false) {
       this.scaleTargetReplicas = v || 0;
       // 处理进程期望实例数
       this.allProcesses.forEach((e) => {
@@ -1518,9 +1506,10 @@ export default {
           e.available_instance_count = this.scaleTargetReplicas;
         }
       });
-
-      // 进程之后请求列表数据
-      // bus.$emit('get-release-info');
+      // 切换了扩缩容方式之后立即请求列表数据
+      if (isChangeScaleType) {
+        bus.$emit('get-release-info');
+      }
     },
 
     handleMouseEnter(name) {
@@ -1891,7 +1880,7 @@ export default {
       border-radius: 2px;
       line-height: 19px;
       font-size: 12px;
-      padding: 10px 20px 10px 20px;
+      padding: 50px 20px 10px 20px;
 
       p {
           padding: 0px 0;

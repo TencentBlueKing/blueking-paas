@@ -55,9 +55,9 @@
             </section>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls">
+        <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls table-colum-stag-cls">
           <template slot-scope="{ row, $index }">
-            <div v-for="(item, i) in row.envsData" :key="item">
+            <div class="cell-container-width" v-for="(item, i) in row.envsData" :key="item">
               <div
                 v-if="row.envs[item].length"
                 :style="{height: `${46 * row.envs[item].length}px`}"
@@ -90,7 +90,7 @@
                       </bk-button>
                     </span>
                   </div>
-                  <div v-if="i !== row.envsData.length - 1" class="line"></div>
+                  <div v-if="i !== row.envsData.length - 1" class="stag-line"></div>
                 </div>
               </div>
             </div>
@@ -115,7 +115,8 @@
                       <bk-input
                         class="path-input-cls"
                         v-model="e.address.pathPrefix"
-                        :placeholder="$t('请输入路径')"></bk-input>
+                        :placeholder="$t('请输入路径')"
+                        @change="handlePathChange($event, i)"></bk-input>
                     </bk-form-item>
                   </bk-form>
                 </div>
@@ -132,7 +133,7 @@
                     <img
                       class="custom-image ml10"
                       v-if="e.address.type === 'custom'"
-                      src="/static/images/custom.png"
+                      :src="`/static/images/${localLanguage === 'en' ? 'custom_en.png' : 'custom.png' }`"
                     >
                   </div>
                 </section>
@@ -299,8 +300,12 @@ export default {
         ],
         pathPrefix: [
           {
-            regex: /^\/[a-z-z0-9_-]*\/?$/,
-            message: `${this.$t('路径必须以')}"/"${this.$t('开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)')}`,
+            validator: () => {
+              const val = this.curPathPrefix[this.curInputIndex];
+              const reg = /^\/[a-z-z0-9_-]*\/?$/;
+              return reg.test(val);
+            },
+            message: () => this.$t('路径必须以"/"开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)'),
             trigger: 'blur',
           },
         ],
@@ -313,6 +318,8 @@ export default {
       defaultItem: {},
       tipIndex: 0,
       isIpConsistent: true,
+      isSaveLoading: false,
+      curPathPrefix: {},
     };
   },
   computed: {
@@ -523,7 +530,7 @@ export default {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       } finally {
         this.setModuleLoading = false;
@@ -613,6 +620,7 @@ export default {
 
     // 保存一条数据
     async handleSubmit(index, envIndex, payload, envType) {
+      this.curInputIndex = envIndex;
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
       const readDataLength =  (payload?.envs[envType] || [])
         .filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
@@ -625,6 +633,11 @@ export default {
         module_name: payload.name,
         id: payload.envs[envType][envIndex].address.id || '',
       };
+      // 接口响应时，防止多次请求
+      if (this.isSaveLoading) {
+        return;
+      }
+      this.isSaveLoading = true;
       try {
         const params = {
           data: curUrlParams,
@@ -655,6 +668,8 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        this.isSaveLoading = false;
       }
     },
 
@@ -665,6 +680,7 @@ export default {
         maskClose: true,
         confirmFn: () => {
           this.handleDelete(envIndex, payload, envType);
+          delete this.curPathPrefix[envIndex];
         },
       });
     },
@@ -701,6 +717,7 @@ export default {
           e.envs[envType][envIndex].address.pathPrefix = u.pathname;
           this.hostInfo.hostName = u.hostname;
           this.hostInfo.pathName = u.pathname;
+          this.curPathPrefix[envIndex] = e.envs[envType][envIndex].address.pathPrefix;
         }
         return e;
       });
@@ -742,6 +759,12 @@ export default {
 
     handleCopyIp() {
       copy(this.defaultIp, this);
+    },
+
+    // 路径change，保存当前值用于校验使用
+    handlePathChange(val, i) {
+      this.curPathPrefix[i] = val;
+      this.curInputIndex = i;
     },
   },
 };
@@ -860,6 +883,10 @@ export default {
         }
       }
 
+      .cell-container-width{
+        width: 159px;
+      }
+
       .cell-container{
         width: 100%;
         position: relative;
@@ -872,9 +899,6 @@ export default {
         position: relative;
         display: flex;
         align-items: center;
-        .text{
-          border-bottom: 1px dashed #979ba5;
-        }
       }
       .btn-container{
         position: absolute;
@@ -918,7 +942,6 @@ export default {
         }
         .custom-image{
           height: 22px;
-          width: 38px;
         }
       }
     }
@@ -940,7 +963,6 @@ export default {
 
     /deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even){
         padding: 0;
-        background: #FAFBFD;
         z-index: 1;
       }
 
@@ -955,6 +977,20 @@ export default {
       }
     /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
       padding: 0 !important;
+    }
+
+    /deep/ .bk-table-body-wrapper .table-colum-cls.table-colum-stag-cls .cell {
+      div {
+        width: 100%;
+        .stag-line {
+          height: 1px;
+          background: #dfe0e5;
+          position: absolute;
+          top: 100%;
+          left: 0;
+          z-index: 3;
+        }
+      }
     }
 
     /deep/ .bk-table-body-wrapper .table-colum-module-cls {

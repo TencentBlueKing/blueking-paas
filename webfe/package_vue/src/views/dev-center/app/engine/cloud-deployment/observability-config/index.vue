@@ -72,21 +72,27 @@
           width="150"
         >
           <template slot-scope="{ row }">
-            <bk-button
-              class="mr10"
-              theme="primary"
-              text
-              @click="handleCollectionRuleEdit(row)"
-            >
-              {{ $t('编辑') }}
-            </bk-button>
-            <bk-button
-              theme="primary"
-              text
-              @click="handleCollectionRuleDelete(row)"
-            >
-              {{ $t('删除') }}
-            </bk-button>
+            <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+              <bk-button
+                class="mr10"
+                theme="primary"
+                text
+                :disabled="row.is_builtin"
+                @click="handleCollectionRuleEdit(row)"
+              >
+                {{ $t('编辑') }}
+              </bk-button>
+            </span>
+            <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+              <bk-button
+                theme="primary"
+                text
+                :disabled="row.is_builtin"
+                @click="handleCollectionRuleDelete(row)"
+              >
+                {{ $t('删除') }}
+              </bk-button>
+            </span>
           </template>
         </bk-table-column>
       </bk-table>
@@ -244,7 +250,7 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^(\/[^/\0]+)+$/,
+            regex: /^(\/[^/\0]+)+\/?$/,
             message: this.$t('请输入正确路径格式'),
             trigger: 'blur',
           },

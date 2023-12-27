@@ -72,7 +72,7 @@ class DeploymentDeclarativeController:
 
         # 根据配置，对 probe 进行全量更新
         for process_type, process in desc.processes.items():
-            self.updata_probes(process_type=process_type, probes=process.probes)
+            self.update_probes(process_type=process_type, probes=process.probes)
 
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""
@@ -88,7 +88,7 @@ class DeploymentDeclarativeController:
             env=self.deployment.app_environment,
         )
 
-    def updata_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
+    def update_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
         """更新 SaaS 探针配置"""
         if not probes:
             return

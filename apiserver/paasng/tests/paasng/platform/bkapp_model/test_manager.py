@@ -36,10 +36,10 @@ class TestModuleProcessSpecManager:
         assert not ProcessSpecEnvOverlay.objects.filter(proc_spec=process_web).exists()
 
         # Set replicas for both environments
-        ModuleProcessSpecManager(bk_module).set_replicas("web", "stag", 1)
+        ModuleProcessSpecManager(bk_module).set_replicas("web", "stag", 2)
         ModuleProcessSpecManager(bk_module).set_replicas("web", "prod", 3)
         assert ProcessSpecEnvOverlay.objects.filter(proc_spec=process_web).count() == 2
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name="stag").target_replicas == 1
+        assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name="stag").target_replicas == 2
         assert ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name="prod").target_replicas == 3
 
         # Update existent data

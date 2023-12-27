@@ -19,6 +19,8 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import asdict
 from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
+from django.conf import settings
+
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
@@ -177,6 +179,11 @@ class ModuleProcessSpecManager:
         )
         # update spec objects end
 
+        # 根据环境, 设置副本数
+        for name, process in processes_map.items():
+            for env_name in AppEnvName.get_values():
+                self.set_replicas(name, env_name, process.replicas or self.get_default_replicas(name, env_name))
+
     def delete_outdated_procs(self, cur_procs_name: Iterable[str]):
         """Delete all ModuleProcessSpec not existed in cur_procs_name"""
         proc_specs = ModuleProcessSpec.objects.filter(module=self.module)
@@ -248,11 +255,12 @@ class ModuleProcessSpecManager:
     def set_replicas(self, proc_name: str, env_name: str, replicas: int):
         """Set the replicas for the given process and environment."""
         proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
-        ProcessSpecEnvOverlay.objects.update_or_create(
-            proc_spec=proc_spec,
-            environment_name=AppEnvName(env_name).value,
-            defaults={"target_replicas": replicas},
-        )
+        if proc_spec.target_replicas != replicas:
+            ProcessSpecEnvOverlay.objects.update_or_create(
+                proc_spec=proc_spec,
+                environment_name=AppEnvName(env_name).value,
+                defaults={"target_replicas": replicas},
+            )
 
     def set_autoscaling(
         self, proc_name: str, env_name: str, enabled: bool, config: Optional[AutoscalingConfig] = None
@@ -268,6 +276,11 @@ class ModuleProcessSpecManager:
             environment_name=AppEnvName(env_name).value,
             defaults=defaults,
         )
+
+    @staticmethod
+    def get_default_replicas(process_type: str, environment: str):
+        """Get default replicas for current process type"""
+        return settings.ENGINE_PROC_REPLICAS_BY_TYPE.get((process_type, environment), PROC_DEFAULT_REPLICAS)
 
 
 def sync_hooks(module: Module, hooks: HookList):

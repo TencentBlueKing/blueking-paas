@@ -22,6 +22,7 @@ import logging
 from typing import Dict, Optional
 
 from django.http import StreamingHttpResponse
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -75,7 +76,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module_env = self.get_env_via_path()
         if module_env.is_offlined:
             logger.warning("Unable to update process, environment %s has gone offline.", module_env)
-            raise error_codes.CANNOT_OPERATE_PROCESS.f("环境已下架")
+            raise error_codes.CANNOT_OPERATE_PROCESS.f(_("环境未就绪或已下架, 请尝试重新部署"))
 
         wl_app = self.get_wl_app_via_path()
         process_type = data["process_type"]

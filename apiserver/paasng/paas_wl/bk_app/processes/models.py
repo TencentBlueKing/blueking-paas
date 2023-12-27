@@ -195,6 +195,11 @@ class ProcessSpecManager:
         def process_spec_updator(process: "ProcessTmpl") -> Tuple[bool, ProcessSpec]:
             process_spec = proc_specs.get(name=process.name)
             recorder = AttrSetter(process_spec)
+
+            # 目前 sync 方法都在部署阶段调用, 因此 target_status 需要设置为 start
+            if process_spec.target_status != ProcessTargetStatus.START.value:
+                recorder.setattr("target_status", ProcessTargetStatus.START.value)
+
             if (command := process.command) and command != process_spec.proc_command:
                 recorder.setattr("proc_command", command)
             if (plan_name := process.plan) and (plan := self.get_plan(plan_name, None)):
@@ -216,6 +221,7 @@ class ProcessSpecManager:
                 "autoscaling",
                 "scaling_config",
                 "target_replicas",
+                "target_status",
                 "updated",
             ],
         )
@@ -322,6 +328,7 @@ class ProcessProbe(models.Model):
 
 def initialize_default_proc_spec_plans():
     """Initialize default process spec plan objects which were defined in settings"""
+    # TODO 优化: 目前该方法放到了 ready 里面, 多个 worker 同时启动的时候, 可能产生重复记录?
     plans = settings.DEFAULT_PROC_SPEC_PLANS
 
     for name, config in plans.items():

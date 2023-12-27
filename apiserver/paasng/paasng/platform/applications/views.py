@@ -56,7 +56,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
-from paasng.infras.accounts.permissions.permissions import HasPostRegionPermission
+from paasng.infras.accounts.permissions.user import user_can_create_in_region
 from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
@@ -361,7 +361,7 @@ class ApplicationViewSet(viewsets.ViewSet):
 
 class ApplicationCreateViewSet(viewsets.ViewSet):
     serializer_class = None
-    permission_classes = [IsAuthenticated, HasPostRegionPermission]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(request_body=slzs.CreateThirdPartyApplicationSLZ, tags=["创建应用"])
     def create_third_party(self, request):
@@ -369,6 +369,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer = slzs.CreateThirdPartyApplicationSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.data
+        self.validate_region_perm(data["region"])
+
         market_params = data["market_params"]
         operator = request.user.pk
 
@@ -396,11 +398,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer = slzs.CreateApplicationV2SLZ(data=request.data, context={"region": request.data["region"]})
         serializer.is_valid(raise_exception=True)
         params = serializer.data
-        engine_params = params.get("engine_params", {})
-
         if not params["engine_enabled"]:
             return self.create_third_party(request)
 
+        self.validate_region_perm(params["region"])
         # Handle advanced options
         advanced_options = params.get("advanced_options", {})
         cluster_name = None
@@ -412,6 +413,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             cluster_name = advanced_options.get("cluster_name")
 
         # Permission check for non-default source origin
+        engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
 
@@ -462,6 +464,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer = serializer_class(data=request.data, context={"region": request.data["region"]})
         serializer.is_valid(raise_exception=True)
         params = serializer.data
+        self.validate_region_perm(params["region"])
 
         engine_params = params.get("engine_params", {})
 
@@ -471,6 +474,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         cluster_name = None
         return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
+
+    def _create_app_in_lesscode(self, request, code: str, name: str):
+        """在开发者中心产品页面上创建 Lesscode 应用时，需要同步在 Lesscode 产品上创建应用"""
+        bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
+        try:
+            make_bk_lesscode_client(login_cookie=bk_token).create_app(code, name, ModuleName.DEFAULT.value)
+        except (LessCodeApiError, LessCodeGatewayServiceError) as e:
+            raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
 
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateCloudNativeAppSLZ, tags=["创建应用"])
@@ -482,6 +493,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer = slzs.CreateCloudNativeAppSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
+        self.validate_region_perm(params["region"])
 
         advanced_options = params.get("advanced_options", {})
         cluster_name = None
@@ -501,6 +513,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
             module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
 
+        # lesscode app needs to create an application on the bk_lesscode platform first
+        if source_origin == SourceOrigin.BK_LESS_CODE:
+            # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
+            self._create_app_in_lesscode(request, params["code"], params["name_zh_cn"])
+
         application = create_application(
             region=params["region"],
             code=params["code"],
@@ -508,7 +525,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             name_en=params["name_en"],
             type_=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
-            is_plugin_app=False,
+            is_plugin_app=params["is_plugin_app"],
         )
         module = create_default_module(application, **module_src_cfg)
 
@@ -564,6 +581,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             "adv_region_clusters": adv_region_clusters,
         }
         return Response(options)
+
+    def validate_region_perm(self, region: str):
+        if not user_can_create_in_region(self.request.user, region):
+            raise error_codes.CANNOT_CREATE_APP.f(_("你无法在所指定的 region 中创建应用"))
 
     def _get_bk_plugin_configs(self) -> Iterable[Dict]:
         """Get configs for bk_plugin module"""

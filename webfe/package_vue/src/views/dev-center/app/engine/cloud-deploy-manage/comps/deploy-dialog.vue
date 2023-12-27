@@ -431,12 +431,13 @@ export default {
         this.pagination.limit = 10;
         this.imageTagListCount = 0;
         // 仅镜像部署不需要获取分支数据
-        console.log('this.deploymentInfoBackUp.build_method', this.deploymentInfoBackUp.build_method);
         if (this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches(); // 获取分支数据
         } else {
           this.getAppProcessData(); // 获取镜像地址
         }
+
+        this.setCurData();
         this.getModuleRuntimeOverview();
         // 上次选择的镜像拉取策略
         if (this.lastSelectedImagePullStrategy) {
@@ -447,10 +448,16 @@ export default {
     },
     deploymentInfo(v) {
       this.deploymentInfoBackUp = _.cloneDeep(v);
+      this.setCurData();
+    },
+  },
+  methods: {
+    setCurData() {
       const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
       if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
       this.curModulemirrorTag = versionInfo?.version_name;
       // smartApp下, 代码差异
+      console.log('this.isSmartApp', this.isSmartApp);
       if (this.isSmartApp) {
         this.branchValue = `${versionInfo?.version_type}:${versionInfo?.version_name}`;
         this.curSelectData = {
@@ -460,8 +467,6 @@ export default {
         };
       }
     },
-  },
-  methods: {
     async getAppProcessData() {
       try {
         const res = await this.$store.dispatch('deploy/getAppProcessInfo', {

@@ -61,23 +61,19 @@ class TestModuleInitializer:
         assert raw_module.envs.get(environment="stag").get_engine_app() is not None
 
     @pytest.mark.parametrize(
-        ("services_in_template", "services_in_type", "is_default", "expected_bind_service_cnt"),
+        ("services_in_template", "is_default", "expected_bind_service_cnt"),
         [
             ({}, {}, True, 0),
-            ({"mysql": {"specs": {}}}, {}, True, 1),
-            ({"mysql": {"specs": {}}}, {"redis": {}}, True, 2),
-            ({"mysql": {"specs": {}}}, {"redis": {}}, False, 1),  # non-default module should not use services by type
+            ({"mysql": {"specs": {}}}, True, 1),
+            ({"mysql": {"specs": {}}}, False, 1),
         ],
     )
     def test_bind_default_services(
-        self, services_in_template, services_in_type, is_default, expected_bind_service_cnt, settings, raw_module
+        self, services_in_template, is_default, expected_bind_service_cnt, settings, raw_module
     ):
         raw_module.source_init_template = "dj18_with_auth"
         raw_module.is_default = is_default
         raw_module.save()
-
-        # Setup default services defined by application type
-        settings.PRESET_SERVICES_BY_APP_TYPE = {raw_module.application.type: services_in_type}
 
         module_initializer = ModuleInitializer(raw_module)
         with mock.patch("paasng.platform.templates.manager.Template.objects.get") as mocked_get_tmpl, mock.patch(

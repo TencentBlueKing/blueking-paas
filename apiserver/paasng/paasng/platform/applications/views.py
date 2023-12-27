@@ -94,7 +94,6 @@ from paasng.platform.applications.signals import (
     post_create_application,
     pre_delete_application,
 )
-from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import (
     create_application,
@@ -629,9 +628,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             operator=operator,
         )
 
-        app_specs = AppSpecs(application)
-        language = app_specs.language_by_default
-
+        language = ""
         # Create engine related data
         # `source_init_template` is optional
         source_init_template = engine_params.get("source_init_template", "")

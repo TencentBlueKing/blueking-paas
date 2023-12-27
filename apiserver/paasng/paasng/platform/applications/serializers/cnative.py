@@ -60,3 +60,10 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
 
         if not image_credential.get("password") or not image_credential.get("username"):
             raise ValidationError("image credential missing valid username and password")
+
+    def to_internal_value(self, data: Dict):
+        data = super().to_internal_value(data)
+        # TODO 前端创建插件应用传了正确的 source_init_template 后，去掉这段兼容逻辑
+        if data["is_plugin_app"]:
+            data["source_init_template"] = "bk-saas-plugin-python"
+        return data

@@ -262,6 +262,7 @@ export default {
       },
       serverTimeout: 30,
       watchRvData: {},
+      exposedLink: '',
     };
   },
   computed: {
@@ -609,7 +610,7 @@ export default {
       const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
         appCode: this.appCode,
       });
-      const curModuleInfo = res.find(e => e.name === this.curModuleInfo.module_name);
+      const curModuleInfo = res.find(e => e.name === this.curModuleId);
       const curDatabase = curModuleInfo?.envs[this.environment] || [];
       const exposedData = curDatabase.find(e => e.address.type !== 'custom') || {};   // 访问链接
       this.exposedLink = exposedData?.address?.url || '';

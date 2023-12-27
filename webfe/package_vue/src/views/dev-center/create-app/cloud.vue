@@ -1351,7 +1351,7 @@ export default {
     // 切换应用类型
     handleSwitchAppType(codeSource) {
       this.curStep = 1;
-      this.$refs.formBaseRef.clearError();
+      this.$refs.formBaseRef?.clearError();
       this.curCodeSource = codeSource;
       this.formData.buildMethod = 'buildpack';
       this.formData.sourceOrigin = 'soundCode';

@@ -213,3 +213,6 @@ class ImageReleaseMgr(DeployStep):
             scripts.pre_release_hook = f"{(' ').join(DEFAULT_SLUG_RUNNER_ENTRYPOINT)} {scripts.pre_release_hook}"
             description.scripts = cattr.unstructure(scripts)
             description.save(update_fields=["scripts"])
+
+        # refresh_from_db 的目的是 self.deployment.get_deploy_hooks() 能够拿到更新后的 scripts
+        self.deployment.refresh_from_db()

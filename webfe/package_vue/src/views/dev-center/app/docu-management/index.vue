@@ -1,7 +1,7 @@
 <template>
   <div class="right-main paas-docu-manager-wrapper">
     <div class="ps-top-bar">
-      <h2>
+      <h2 class="box-shadow">
         {{ $t('文档管理') }}
         <a
           v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
@@ -311,176 +311,177 @@
     </paas-content-loader>
   </div>
 </template>
-<script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 
-    export default {
-        name: '',
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isLoading: false,
-                notCompletedCount: 0,
-                tableList: []
-            };
-        },
-        computed: {
-            curTitle () {
-                return `${this.$t('文档中有')} ${this.notCompletedCount} ${this.$t('项必填未填写，请继续完善。')}`;
-            }
-        },
-        watch: {
-            '$route' () {
-                this.notCompletedCount = 0;
-                this.fetchData();
-            }
-        },
-        created () {
-            this.fetchData();
-        },
-        methods: {
-            async fetchData () {
-                this.isLoading = true;
-                try {
-                    const res = await this.$store.dispatch('docuManagement/getDocumentInstance', {
-                        appCode: this.curAppCode
-                    });
-                    const docuList = JSON.parse(JSON.stringify(res));
-                    const childrenList = [];
-                    let count = 0;
-                    docuList.forEach(item => {
-                        item.children = [];
-                        item.instance = item.instance || {
-                            is_used: true
-                        };
-                        if (item.is_required && item.instance.is_used && !item.instance.url) {
-                            ++count;
-                        }
-                        docuList.forEach(subItem => {
-                            if (subItem.parent && subItem.parent === item.id) {
-                                item.children.push(subItem);
-                                childrenList.push(subItem);
-                            }
-                        });
-                    });
-                    const templateList = docuList.filter(item => !childrenList.map(_ => _.id).includes(item.id));
-                    this.notCompletedCount = count;
-                    this.tableList = JSON.parse(JSON.stringify(templateList));
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: res.message
-                    });
-                } finally {
-                    this.isLoading = false;
-                }
-            },
-
-            handleEdit (payload) {
-                this.$set(payload, 'isEdit', true);
-                this.$set(payload, 'isUseBackup', payload.instance.is_used);
-                this.$set(payload, 'urlBackup', payload.instance.url || '');
-            },
-
-            handleSave (payload) {
-                this.$delete(payload, 'isEdit');
-                const flag = !payload.instance.url;
-                if (flag) {
-                    this.updateDocumentInstance(payload);
-                } else {
-                    this.updateDocumentInstanceByExist(payload);
-                }
-            },
-
-            async updateDocumentInstance (payload) {
-                const params = {
-                    url: payload.urlBackup,
-                    is_used: payload.isUseBackup,
-                    doc_template: payload.id,
-                    appCode: this.curAppCode
-                };
-                try {
-                    const res = await this.$store.dispatch('docuManagement/updateDocumentInstance', params);
-                    payload.instance = Object.assign(payload.instance, { ...res });
-                    this.$delete(payload, 'isUseBackup');
-                    this.$delete(payload, 'urlBackup');
-                    if (payload.is_required && payload.instance.is_used && !payload.instance.url) {
-                        ++this.notCompletedCount;
-                    }
-                    if (!(payload.is_required && payload.instance.is_used && !payload.instance.url) && this.notCompletedCount) {
-                        --this.notCompletedCount;
-                    }
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: res.message
-                    });
-                }
-            },
-
-            async updateDocumentInstanceByExist (payload) {
-                const params = {
-                    url: payload.urlBackup,
-                    is_used: payload.isUseBackup,
-                    id: payload.instance.id,
-                    appCode: this.curAppCode
-                };
-                try {
-                    const res = await this.$store.dispatch('docuManagement/updateDocumentInstanceByExist', params);
-                    payload.instance.is_used = res.is_used;
-                    payload.instance.url = res.url;
-                    payload.instance.latest_operator = res.latest_operator;
-                    payload.instance.updated = res.updated;
-                    this.$delete(payload, 'isUseBackup');
-                    this.$delete(payload, 'urlBackup');
-                    if (payload.is_required && payload.instance.is_used && !payload.instance.url) {
-                        ++this.notCompletedCount;
-                    }
-                    if (!(payload.is_required && payload.instance.is_used && !payload.instance.url) && this.notCompletedCount) {
-                        --this.notCompletedCount;
-                    }
-                } catch (res) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: res.message
-                    });
-                }
-            },
-
-            handleCopy (payload) {
-                const el = document.createElement('textarea');
-                el.value = payload.instance.url;
-                el.setAttribute('readonly', '');
-                el.style.position = 'absolute';
-                el.style.left = '-9999px';
-                document.body.appendChild(el);
-                const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                if (selected) {
-                    document.getSelection().removeAllRanges();
-                    document.getSelection().addRange(selected);
-                }
-                this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
-            },
-
-            handleUrlInput (value, $event, payload) {
-                this.$set(payload, 'urlBackup', value);
-            },
-
-            handleCancel (payload) {
-                this.$delete(payload, 'isEdit');
-            },
-
-            handleSwitchChange (value, payload) {
-                this.$set(payload, 'isUseBackup', value);
-            }
-        }
+export default {
+  name: 'PaasDocuManager',
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isLoading: false,
+      notCompletedCount: 0,
+      tableList: [],
     };
+  },
+  computed: {
+    curTitle() {
+      return `${this.$t('文档中有')} ${this.notCompletedCount} ${this.$t('项必填未填写，请继续完善。')}`;
+    },
+  },
+  watch: {
+    '$route'() {
+      this.notCompletedCount = 0;
+      this.fetchData();
+    },
+  },
+  created() {
+    this.fetchData();
+  },
+  methods: {
+    async fetchData() {
+      this.isLoading = true;
+      try {
+        const res = await this.$store.dispatch('docuManagement/getDocumentInstance', {
+          appCode: this.curAppCode,
+        });
+        const docuList = JSON.parse(JSON.stringify(res));
+        const childrenList = [];
+        let count = 0;
+        docuList.forEach((item) => {
+          item.children = [];
+          item.instance = item.instance || {
+            is_used: true,
+          };
+          if (item.is_required && item.instance.is_used && !item.instance.url) {
+            ++count;
+          }
+          docuList.forEach((subItem) => {
+            if (subItem.parent && subItem.parent === item.id) {
+              item.children.push(subItem);
+              childrenList.push(subItem);
+            }
+          });
+        });
+        const templateList = docuList.filter(item => !childrenList.map(_ => _.id).includes(item.id));
+        this.notCompletedCount = count;
+        this.tableList = JSON.parse(JSON.stringify(templateList));
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    handleEdit(payload) {
+      this.$set(payload, 'isEdit', true);
+      this.$set(payload, 'isUseBackup', payload.instance.is_used);
+      this.$set(payload, 'urlBackup', payload.instance.url || '');
+    },
+
+    handleSave(payload) {
+      this.$delete(payload, 'isEdit');
+      const flag = !payload.instance.url;
+      if (flag) {
+        this.updateDocumentInstance(payload);
+      } else {
+        this.updateDocumentInstanceByExist(payload);
+      }
+    },
+
+    async updateDocumentInstance(payload) {
+      const params = {
+        url: payload.urlBackup,
+        is_used: payload.isUseBackup,
+        doc_template: payload.id,
+        appCode: this.curAppCode,
+      };
+      try {
+        const res = await this.$store.dispatch('docuManagement/updateDocumentInstance', params);
+        payload.instance = Object.assign(payload.instance, { ...res });
+        this.$delete(payload, 'isUseBackup');
+        this.$delete(payload, 'urlBackup');
+        if (payload.is_required && payload.instance.is_used && !payload.instance.url) {
+          // eslint-disable-next-line no-plusplus
+          ++this.notCompletedCount;
+        }
+        if (!(payload.is_required && payload.instance.is_used && !payload.instance.url) && this.notCompletedCount) {
+          // eslint-disable-next-line no-plusplus
+          --this.notCompletedCount;
+        }
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.message,
+        });
+      }
+    },
+
+    async updateDocumentInstanceByExist(payload) {
+      const params = {
+        url: payload.urlBackup,
+        is_used: payload.isUseBackup,
+        id: payload.instance.id,
+        appCode: this.curAppCode,
+      };
+      try {
+        const res = await this.$store.dispatch('docuManagement/updateDocumentInstanceByExist', params);
+        payload.instance.is_used = res.is_used;
+        payload.instance.url = res.url;
+        payload.instance.latest_operator = res.latest_operator;
+        payload.instance.updated = res.updated;
+        this.$delete(payload, 'isUseBackup');
+        this.$delete(payload, 'urlBackup');
+        if (payload.is_required && payload.instance.is_used && !payload.instance.url) {
+          ++this.notCompletedCount;
+        }
+        if (!(payload.is_required && payload.instance.is_used && !payload.instance.url) && this.notCompletedCount) {
+          --this.notCompletedCount;
+        }
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.message,
+        });
+      }
+    },
+
+    handleCopy(payload) {
+      const el = document.createElement('textarea');
+      el.value = payload.instance.url;
+      el.setAttribute('readonly', '');
+      el.style.position = 'absolute';
+      el.style.left = '-9999px';
+      document.body.appendChild(el);
+      const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      if (selected) {
+        document.getSelection().removeAllRanges();
+        document.getSelection().addRange(selected);
+      }
+      this.$bkMessage({ theme: 'primary', message: this.$t('复制成功'), delay: 2000, dismissable: false });
+    },
+
+    handleUrlInput(value, $event, payload) {
+      this.$set(payload, 'urlBackup', value);
+    },
+
+    handleCancel(payload) {
+      this.$delete(payload, 'isEdit');
+    },
+
+    handleSwitchChange(value, payload) {
+      this.$set(payload, 'isUseBackup', value);
+    },
+  },
+};
 </script>
 <style lang="scss">
     @import '~@/assets/css/mixins/ellipsis.scss';

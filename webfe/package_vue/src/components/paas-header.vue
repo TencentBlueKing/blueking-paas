@@ -174,19 +174,6 @@
               </div>
             </dropdown>
           </li>
-          <li
-            v-if="userFeature.PHALANX"
-            v-bk-tooltips.bottom="{ content: $t('我的告警'), distance: 20 }"
-            class="ps-head-last my-alarm"
-          >
-            <a
-              class="link-text"
-              href="javascript:"
-              @click="handleToMonitor"
-            >
-              <i class="paasng-icon paasng-monitor-fill monitor-icon" />
-            </a>
-          </li>
           <!-- 语言切换 -->
           <bk-popover
             theme="light navigation-message"

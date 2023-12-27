@@ -1195,6 +1195,7 @@ export default {
 
 .table-wrapper {
   width: auto;
+  overflow: auto;
 }
 
 .tooltip-icon {

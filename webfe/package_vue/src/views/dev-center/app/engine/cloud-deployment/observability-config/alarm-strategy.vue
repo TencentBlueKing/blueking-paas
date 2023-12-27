@@ -11,102 +11,111 @@
         </a>
       </p>
     </div>
-    <!-- 策略列表 -->
-    <bk-table
-      :data="alarmStrategyList"
-      size="small"
-      ext-cls="alarm-strategy-cls"
-      :outer-border="false"
-      :header-border="false"
-      :pagination="pagination"
-    >
-      <div slot="empty">
-        <table-empty
-          :explanation="$t('应用任意模块部署成功后，将会给该应用下相应环境配置的默认告警策略。')"
-          empty
-        />
+    <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
+      <!-- 策略列表 -->
+      <bk-table
+        v-if="alarmStrategyList?.length"
+        :data="alarmStrategyList"
+        size="small"
+        ext-cls="alarm-strategy-cls"
+        :outer-border="false"
+        :header-border="false"
+        :pagination="pagination"
+      >
+        <bk-table-column
+          :label="$t('策略名')"
+          :show-overflow-tooltip="true"
+        >
+          <template slot-scope="{ row }">
+            <a :href="row.detail_link" target="_blank">
+              {{ row.name }}
+            </a>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('标签')">
+          <template slot-scope="{ row }">
+            <div
+              v-if="row.labels?.length"
+              v-bk-overflow-tips="{ content: row.labels.join(', ') }"
+            >
+              <span
+                v-for="item in row.labels"
+                :key="item"
+                class="td-tag"
+              >
+                {{ item }}
+              </span>
+            </div>
+            <span v-else>--</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('阈值')"
+        >
+          <template slot-scope="{ row }">
+            {{ row.maxThresholdConfig && row.maxThresholdConfig.text }}
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('触发条件')"
+          :show-overflow-tooltip="false"
+        >
+          <template slot-scope="{ row }">
+            <span v-bk-tooltips="$t(`在 ${row.algorithm} 个周期内累计满足 ${row.cycle} 次检测算法，触发告警通知`)">
+              {{ `${row.cycle || '--'}/${row.algorithm || '--'}` }}
+            </span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('级别')"
+        >
+          <template slot-scope="{ row }">
+            <span :class="['level-border', `level${row.levelText?.id}`]">
+              {{ row.levelText && $t(row.levelText.text) }}
+            </span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('通知组')"
+        >
+          <template slot-scope="{ row }">
+            <div
+              v-if="row.noticeGroupNames?.length"
+              v-bk-overflow-tips="{ content: row.noticeGroupNames.join(', ') }"
+            >
+              <span
+                v-for="item in row.noticeGroupNames"
+                :key="item"
+                class="td-tag"
+              >
+                <template v-if="item !== null">{{ item }}</template>
+              </span>
+            </div>
+            <span v-else>--</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('是否启用')"
+          prop="is_enabled"
+        >
+          <template slot-scope="{ row }">
+            <span :class="['tag', row.is_enabled ? 'enable' : 'deactivate' ]">{{ row.is_enabled ? '启用' : '停用' }}</span>
+          </template>
+        </bk-table-column>
+      </bk-table>
+      <div
+        v-else
+        class="empty"
+      >
+        <div class="empty-content">
+          <div class="title">{{ $t('暂未启用告警策略') }}</div>
+          <div class="sub-title">{{ $t('在应用部署成功后，才会配置相应环境的告警策略') }}</div>
+          <bk-button :text="true" title="primary" size="small" @click="handleToDeploy">
+            {{ $t('去部署') }}
+          </bk-button>
+        </div>
       </div>
-      <bk-table-column
-        :label="$t('策略名')"
-        :show-overflow-tooltip="true"
-      >
-        <template slot-scope="{ row }">
-          <a :href="row.detail_link" target="_blank">
-            {{ row.name }}
-          </a>
-        </template>
-      </bk-table-column>
-      <bk-table-column :label="$t('标签')">
-        <template slot-scope="{ row }">
-          <div
-            v-if="row.labels?.length"
-            v-bk-overflow-tips="{ content: row.labels.join(', ') }"
-          >
-            <span
-              v-for="item in row.labels"
-              :key="item"
-              class="td-tag"
-            >
-              {{ item }}
-            </span>
-          </div>
-          <span v-else>--</span>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('阈值')"
-      >
-        <template slot-scope="{ row }">
-          {{ row.maxThresholdConfig && row.maxThresholdConfig.text }}
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('触发条件')"
-        :show-overflow-tooltip="false"
-      >
-        <template slot-scope="{ row }">
-          <span v-bk-tooltips="$t(`在 ${row.algorithm} 个周期内累计满足 ${row.cycle} 次检测算法，触发告警通知`)">
-            {{ `${row.cycle || '--'}/${row.algorithm || '--'}` }}
-          </span>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('级别')"
-      >
-        <template slot-scope="{ row }">
-          <span :class="['level-border', `level${row.levelText?.id}`]">
-            {{ row.levelText && $t(row.levelText.text) }}
-          </span>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('通知组')"
-      >
-        <template slot-scope="{ row }">
-          <div
-            v-if="row.noticeGroupNames?.length"
-            v-bk-overflow-tips="{ content: row.noticeGroupNames.join(', ') }"
-          >
-            <span
-              v-for="item in row.noticeGroupNames"
-              :key="item"
-              class="td-tag"
-            >
-              <template v-if="item !== null">{{ item }}</template>
-            </span>
-          </div>
-          <span v-else>--</span>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('是否启用')"
-        prop="is_enabled"
-      >
-        <template slot-scope="{ row }">
-          <span :class="['tag', row.is_enabled ? 'enable' : 'deactivate' ]">{{ row.is_enabled ? '启用' : '停用' }}</span>
-        </template>
-      </bk-table-column>
-    </bk-table>
+    </div>
   </div>
 </template>
 
@@ -124,6 +133,7 @@ export default {
         limit: 10,
       },
       strategyLink: '',
+      isLoading: false,
     };
   },
   computed: {
@@ -137,6 +147,7 @@ export default {
   methods: {
     // 获取告警策略
     async getAlarmStrategies() {
+      this.isLoading = true;
       try {
         const res = await this.$store.dispatch('alarm/getAlarmStrategies', {
           appCode: this.appCode,
@@ -207,7 +218,17 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally  {
+        this.isLoading = false;
       }
+    },
+    handleToDeploy() {
+      this.$router.push({
+        name: 'cloudAppDeployManageStag',
+        params: {
+          id: this.appCode,
+        },
+      });
     },
   },
 };
@@ -225,7 +246,7 @@ export default {
     color: #313238;
     padding: 0;
     margin-right: 16px;
-    font-weight: 400;
+    font-weight: 700;
   }
 }
 .alarm-strategy {
@@ -256,8 +277,8 @@ export default {
       background: #F0F1F5;
     }
     &.enable {
-      color: #18B456;
-      background: #DCFFE2;
+      color: #14A568;
+      background: #E4FAF0;
     }
   }
 
@@ -279,6 +300,27 @@ export default {
 .alarm-strategy-cls {
   /deep/ .bk-table-row-last td {
     border-bottom: none !important;
+  }
+}
+
+.empty {
+  margin-top: 26px;
+  display: flex;
+  justify-content: center;
+  .empty-content {
+    text-align: center;
+    .title {
+      font-size: 14px;
+      color: #63656E;
+      line-height: 24px;
+    }
+
+    .sub-title {
+      margin: 8px 0;
+      font-size: 12px;
+      color: #979BA5;
+      line-height: 20px;
+    }
   }
 }
 </style>

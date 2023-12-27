@@ -10,7 +10,7 @@
       class="deploy-action-box"
     >
       <div class="form-pre">
-        <div class="flex-row align-items-center pl20 pr20">
+        <div class="flex-row align-items-center pl20 pr20" v-if="!isCreate">
           <div class="item-title-container">
             <div class="item-title">
               {{ $t('部署前置命令') }}
@@ -151,14 +151,13 @@
         >
           <bk-button
             :loading="saveLoading"
-            class="pl20 pr20"
             :theme="'primary'"
             @click="handleSave"
           >
             {{ $t('保存') }}
           </bk-button>
           <bk-button
-            class="pl20 pr20 ml20"
+            class="ml8"
             @click="handleCancel"
           >
             {{ $t('取消') }}

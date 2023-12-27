@@ -9,7 +9,6 @@
         type="empty"
         scene="part"
       >
-        <div class="text-subtitle">{{ $t('暂无进程配置和命令钩子') }}</div>
         <p
           class="mt10"
           style="color: #979BA5;font-size: 12px;"
@@ -123,11 +122,6 @@
                   v-if="!allowMultipleImage"
                 >
                   {{ formData.image || '--' }}
-                  <i
-                    v-if="!isCreate"
-                    class="paasng-icon paasng-edit-2 image-store-icon"
-                    @click="handleToModuleInfo"
-                  />
                 </bk-form-item>
                 <bk-form-item
                   :label="$t('镜像地址')"
@@ -148,13 +142,6 @@
                     <span>
                       {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
                     </span>
-                &nbsp;
-                    <span
-                      class="whole-item-tips-text"
-                      @click.stop="useExample"
-                    >
-                      {{ $t('使用示例镜像') }}
-                    </span>
                   </p>
                   <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
                     <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
@@ -165,14 +152,6 @@
                       {{ $t('帮助：如何构建镜像') }}
                     </a>
                   </p>
-                </bk-form-item>
-
-                <bk-form-item
-                  :label="$t('镜像凭证')"
-                  :label-width="labelWidth"
-                  v-if="!allowMultipleImage"
-                >
-                  {{ formData.image_credential_name || '--' }}
                 </bk-form-item>
 
                 <!-- 镜像凭证 -->
@@ -272,7 +251,7 @@
                     {{ $t('接收 HTTP 请求的端口号．建议镜像直接监听 $PORT 环境变量不修改本值') }}
                   </p>
                 </bk-form-item>
-                <bk-form-item :label-width="40">
+                <bk-form-item :label-width="70">
                   <bk-button
                     text
                     theme="primary"
@@ -303,7 +282,7 @@
                 </bk-form-item>
                 <bk-form-item
                   v-show="ifopen"
-                  :label-width="40"
+                  :label-width="70"
                 >
                   <div class="env-name w885">{{ $t('预发布环境') }}</div>
                   <div class="env-container">
@@ -322,6 +301,7 @@
                             :disabled="false"
                             style="width: 150px"
                             searchable
+                            ext-cls="form-style-cls"
                             @change="handleChange($event, 'stag')"
                           >
                             <bk-option
@@ -343,7 +323,7 @@
                         :label="$t('扩缩容方式')"
                         :label-width="labelWidth"
                       >
-                        <section :class="{ 'flex-row': localLanguage !== 'en' }">
+                        <section>
                           <bk-radio-group
                             v-model="formData.env_overlay.stag.autoscaling"
                             @change="handleRadioChange('stag')"
@@ -371,8 +351,7 @@
                           <bk-alert
                             v-if="formData.env_overlay.stag.autoscaling"
                             type="info"
-                            :class="{ mt10: localLanguage === 'en' }"
-                            style="margin-right: 60px"
+                            class="mt10"
                           >
                             <span slot="title">
                               {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
@@ -477,7 +456,7 @@
                 </bk-form-item>
                 <bk-form-item
                   v-show="ifopen"
-                  :label-width="40"
+                  :label-width="70"
                 >
                   <div class="env-name w885">{{ $t('生产环境') }}</div>
                   <div class="env-container">
@@ -496,6 +475,7 @@
                             :disabled="false"
                             style="width: 150px"
                             searchable
+                            ext-cls="form-style-cls"
                             @change="handleChange($event, 'prod')"
                           >
                             <bk-option
@@ -517,7 +497,7 @@
                         :label="$t('扩缩容方式')"
                         :label-width="labelWidth"
                       >
-                        <section :class="{ 'flex-row': localLanguage !== 'en' }">
+                        <section>
                           <bk-radio-group
                             v-model="formData.env_overlay.prod.autoscaling"
                             @change="handleRadioChange('prod')"
@@ -545,8 +525,7 @@
                           <bk-alert
                             v-if="formData.env_overlay.prod.autoscaling"
                             type="info"
-                            :class="{ mt10: localLanguage === 'en' }"
-                            style="margin-right: 60px"
+                            class="mt10"
                           >
                             <span slot="title">
                               {{ $t('根据当前负载和触发条件中设置的阈值自动扩缩容') }}
@@ -672,11 +651,6 @@
               >
                 <span class="form-text">{{ formData.image || '--' }}</span>
               </bk-form-item>
-              <bk-form-item :label="`${$t('镜像凭证')}：`">
-                <span class="form-text">
-                  {{ formData.image_credential_name || '--' }}
-                </span>
-              </bk-form-item>
               <bk-form-item :label="`${$t('启动命令')}：`">
                 <span v-if="formData.command && formData.command.length">
                   <bk-tag
@@ -712,7 +686,7 @@
               <bk-form-item :label="`${$t('容器端口')}：`">
                 <span class="form-text">{{ formData.port || '--' }}</span>
               </bk-form-item>
-              <bk-form-item :label-width="50">
+              <bk-form-item :label-width="55">
                 <bk-button
                   text
                   theme="primary"
@@ -773,7 +747,9 @@
                         </section>
                         <section v-else>
                           <bk-form-item :label="$t('副本数量：')">
-                            <span class="form-text">{{ formData.env_overlay[item.value].target_replicas || '--' }}</span>
+                            <span class="form-text">
+                              {{ formData.env_overlay[item.value].target_replicas || '--' }}
+                            </span>
                           </bk-form-item>
                         </section>
                       </div>
@@ -790,14 +766,14 @@
             v-if="isPageEdit && isComponentBtn"
           >
             <bk-button
-              class="pl20 pr20"
+              class="pl20"
               :theme="'primary'"
               @click="handleSave"
             >
               {{ $t('保存') }}
             </bk-button>
             <bk-button
-              class="pl20 pr20 ml20"
+              class="pr20 ml8"
               @click="handleCancel"
             >
               {{ $t('取消') }}
@@ -1133,7 +1109,7 @@ export default {
             this.formData.args = [];
             this.formData.port = 80;
           } else if (this.formData.image === TE_MIRROR_EXAMPLE) {
-            this.formData.command = ['bash', '/app/start_web.sh'];
+            this.formData.command = [];
             this.formData.args = [];
             this.formData.port = 5000;
           }
@@ -1449,12 +1425,6 @@ export default {
       }
     },
 
-    // 跳转构建配置
-    handleToModuleInfo() {
-      this.$store.commit('cloudApi/updateModuleInfoEdit', true);
-      this.$emit('tab-change', 'cloudAppDeployForBuild');
-    },
-
     // 保存
     async handleSave() {
       await this.$refs?.formStagEnv?.validate();
@@ -1644,12 +1614,12 @@ export default {
   font-size: 14px;
   height: 32px;
   line-height: 32px;
-  background: #f0f1f5;
+  background: #F0F1F5;
   padding-left: 20px;
 }
 
 .env-item {
-  background: #fafbfd;
+  background: #FAFBFD;
   height: 180px;
   /deep/ .bk-form-item {
     margin-top: 10px;
@@ -1661,7 +1631,7 @@ export default {
 }
 .env-container {
   width: 885px;
-  background: #f5f7fa;
+  background: #FAFBFD;
   border-radius: 2px;
   padding: 20px 24px;
 }
@@ -1701,5 +1671,13 @@ export default {
     cursor: pointer;
     padding-left: 10px;
   }
+}
+
+.more-config-item .bk-form-content {
+  margin-left: 55px !important;
+}
+
+.form-style-cls {
+  background-color: #fff;
 }
 </style>

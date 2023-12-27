@@ -116,7 +116,7 @@
                 autocomplete="off"
                 name="source_tp_url"
                 :data-parsley-required-message="$t('该字段是必填项')"
-                data-parsley-pattern="^((https|http|ftp|rtsp|mms)?:\/\/)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/?[A-Za-z0-9+&@#/%=~_|]+(\/?))*$"
+                data-parsley-pattern="^((https|http|ftp|rtsp|mms)?:\/\/)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/?[A-Za-z0-9+&@#/%=~_|-]+(\/?))*$"
                 :data-parsley-pattern-message="$t('地址格式不正确')"
                 data-parsley-trigger="input blur"
                 class="ps-form-control"

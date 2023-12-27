@@ -73,9 +73,17 @@
               >
                 <bk-radio :value="'buildpack'">
                   {{ $t('蓝鲸 Buildpack') }}
+                  <span class="tips" @click.stop>
+                    <bk-icon type="info-circle" />
+                    {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架模板') }}
+                  </span>
                 </bk-radio>
                 <bk-radio :value="'dockerfile'">
                   Dockerfile
+                  <span class="tips" @click.stop>
+                    <bk-icon type="info-circle" />
+                    {{ $t('基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架') }}
+                  </span>
                 </bk-radio>
               </bk-radio-group>
             </div>

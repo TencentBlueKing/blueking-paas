@@ -73,9 +73,17 @@
               >
                 <bk-radio :value="'buildpack'">
                   {{ $t('蓝鲸 Buildpack') }}
+                  <span class="tips" @click.stop>
+                    <bk-icon type="info-circle" />
+                    {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能') }}
+                  </span>
                 </bk-radio>
                 <bk-radio :value="'dockerfile'">
                   Dockerfile
+                  <span class="tips" @click.stop>
+                    <bk-icon type="info-circle" />
+                    {{ $t('基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架') }}
+                  </span>
                 </bk-radio>
               </bk-radio-group>
             </div>
@@ -1125,9 +1133,7 @@ export default {
       // 选择了lesscode代码来源
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
         await this.$refs.formBaseRef.validate();
-        this.formData.sourceInitTemplate = 'nodejs_bk_magic_vue_spa';
       }
-
       this.formLoading = true;
       const params = {
         is_plugin_app: !!this.isBkPlugin,
@@ -1226,8 +1232,9 @@ export default {
 
       // lesscode应用
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
+        const languageName = this.languagesData.NodeJS[0]?.name;
         params.source_config = {
-          source_init_template: this.formData.sourceInitTemplate,
+          source_init_template: languageName,
           source_origin: this.sourceOrigin,
         };
       }

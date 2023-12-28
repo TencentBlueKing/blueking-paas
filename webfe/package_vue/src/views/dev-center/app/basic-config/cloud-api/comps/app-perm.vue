@@ -515,6 +515,7 @@ export default {
         count: 0,
       });
       this.nameFilters = [];
+      this.selectedList = [];
       this.fetchList();
       this.fetchFilterList();
     },
@@ -658,6 +659,7 @@ export default {
     },
 
     async handlePageSearch() {
+      this.selectedList = [];
       try {
         await this.fetchList();
         this.handleSearch();

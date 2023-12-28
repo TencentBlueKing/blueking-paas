@@ -26,18 +26,18 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
-def build_config(bk_app, bk_module):
-    """创建一个 BuildConfig 对象"""
-    build_config = BuildConfig.objects.get_or_create_by_module(bk_module)
-    build_config.image_credential_name = "test"
-    build_config.save(update_fields=["image_credential_name"])
-    return build_config
-
-
-@pytest.fixture()
 def image_credential(bk_app):
     """创建一个 AppUserCredential 对象"""
     return G(AppUserCredential, application_id=bk_app.id, name="test")
+
+
+@pytest.fixture()
+def build_config(bk_app, bk_module, image_credential):
+    """创建一个 BuildConfig 对象"""
+    build_config = BuildConfig.objects.get_or_create_by_module(bk_module)
+    build_config.image_credential_name = image_credential.name
+    build_config.save(update_fields=["image_credential_name"])
+    return build_config
 
 
 class TestAppUserCredentialViewSet:
@@ -46,7 +46,7 @@ class TestAppUserCredentialViewSet:
         response = api_client.delete(url)
         assert response.status_code == 204
 
-    def test_destroy_error(self, api_client, bk_app, bk_module, image_credential, build_config):
+    def test_destroy_when_used(self, api_client, bk_app, bk_module, image_credential, build_config):
         """测试镜像凭证已被绑定的情况下，删除镜像凭证"""
         url = f"/svc_workloads/api/credentials/applications/{bk_app.code}/image_credentials/{image_credential.name}"
         response = api_client.delete(url)

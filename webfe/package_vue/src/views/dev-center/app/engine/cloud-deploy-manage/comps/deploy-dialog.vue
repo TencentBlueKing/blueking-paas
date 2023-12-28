@@ -448,7 +448,18 @@ export default {
     },
     deploymentInfo(v) {
       this.deploymentInfoBackUp = _.cloneDeep(v);
-      this.setCurData();
+      const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
+      if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
+      this.curModulemirrorTag = versionInfo?.version_name;
+      // smartApp下, 代码差异
+      if (this.isSmartApp) {
+        this.branchValue = `${versionInfo?.version_type}:${versionInfo?.version_name}`;
+        this.curSelectData = {
+          revision: versionInfo?.revision,
+          name: versionInfo?.version_name,
+          type: versionInfo?.version_type,
+        };
+      }
     },
   },
   methods: {

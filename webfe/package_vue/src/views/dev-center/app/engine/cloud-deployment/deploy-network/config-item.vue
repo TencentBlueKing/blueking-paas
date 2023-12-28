@@ -22,17 +22,17 @@
       class="content"
       v-if="!isEdit"
     >
-      <template v-if="config.list?.length">
-        <div class="header">
-          <div
-            v-for="(col, index) in config.headerCol"
-            :key="index"
-            class="header-item"
-            :class="`header-${index + 1}`"
-          >
-            {{ col }}
-          </div>
+      <div class="header">
+        <div
+          v-for="(col, index) in config.headerCol"
+          :key="index"
+          class="header-item"
+          :class="`header-${index + 1}`"
+        >
+          {{ col }}
         </div>
+      </div>
+      <template v-if="config.list?.length">
         <div
           class="body"
           v-if="dataName !== 'dnsServerData'"
@@ -62,14 +62,16 @@
           </div>
         </div>
       </template>
-
       <!-- 无数据状态 -->
-      <bk-exception
+      <div
         v-else
-        class="exception-wrap-item exception-part"
-        type="empty"
-        scene="part"
-      ></bk-exception>
+        class="body"
+      >
+        <div class="row">
+          <div class="col">--</div>
+          <div class="col" v-if="dataName !== 'dnsServerData'">--</div>
+        </div>
+      </div>
     </div>
 
     <template v-else>
@@ -262,7 +264,6 @@
     >
       <bk-button
         :theme="'primary'"
-        class="mr10"
         @click="handleSave"
       >
         {{ $t('保存') }}
@@ -270,6 +271,7 @@
       <bk-button
         :theme="'default'"
         type="submit"
+        class="ml8"
         @click="handleCancel"
       >
         {{ $t('取消') }}
@@ -569,9 +571,13 @@ export default {
 <style lang="scss" scoped>
 .config-item {
   position: relative;
-  padding: 12px 24px 12px 0;
+  padding: 24px 24px 24px 0;
   background: #fff;
-  border-bottom: 1px solid #dcdee5;
+  border-bottom: 1px solid #eaebf0;
+
+  &:first-child {
+    padding-top: 0px;
+  }
 
   .title {
     display: flex;

@@ -30,7 +30,9 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5">{{ row.instances.length }} / {{ row.available_instance_count }}</span>
+              <span class="ml5" v-if="!row.autoscaling">
+                {{ row.instances.length }} / {{ row.available_instance_count }}
+              </span>
               <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
               <div class="icon-expand" v-if="row.instances.length > 1">
                 <img
@@ -690,15 +692,15 @@ export default {
       immediate: true,
       // deep: true,
     },
-    isDialogShowSideslider: {
-      handler(value) {
-        // 在没有侧栏的情况下
-        if (!value
-        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
-          this.watchServerPush();
-        }
-      },
-    },
+    // isDialogShowSideslider: {
+    //   handler(value) {
+    //     // 在没有侧栏的情况下
+    //     if (!value
+    //     && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+    //       this.watchServerPush();
+    //     }
+    //   },
+    // },
     rvData: {
       handler(newVal, oldVal) {
         if (this.isDialogShowSideslider || !oldVal) return;
@@ -1646,6 +1648,8 @@ export default {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
           }
 
           // .hoverBackground {

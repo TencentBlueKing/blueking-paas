@@ -23,6 +23,11 @@ const dashed = {
       el.style.borderBottom = '0';
     }
   },
+  update(el, { value }) {
+    if (value && value.disabled) {
+      el.style.borderBottom = '0';
+    }
+  },
 };
 
 export default dashed;

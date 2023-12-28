@@ -312,7 +312,6 @@ export default {
 
 .mirror-credentials {
   padding: 20px 0;
-  border-bottom: 1px solid #dcdee5;
   .base-info-title {
     color: #313238;
     font-size: 14px;

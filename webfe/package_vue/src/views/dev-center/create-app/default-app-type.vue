@@ -33,6 +33,10 @@ const DEFAULT_APP_TYPE = [
     type: 'default',
   },
   {
+    title: i18n.t('镜像仓库'),
+    type: 'image',
+  },
+  {
     title: i18n.t('蓝鲸运维开发平台'),
     type: 'bkLesscode',
   },

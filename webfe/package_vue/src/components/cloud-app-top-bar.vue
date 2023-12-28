@@ -1,6 +1,6 @@
 <template>
   <div class="nav-wrapper">
-    <div :class="['title', 'pt15', { pb15: !navList.length }]">
+    <div :class="['title', 'pt15', { pb15: !navList.length }, { 'fixed-height': !navList.length }]">
       {{ title }}
       <!-- 模块列表 -->
       <div class="module-select-wrapper">
@@ -168,6 +168,9 @@ export default defineComponent({
     .slot-right {
       position: absolute;
       right: 24px;
+    }
+    &.fixed-height {
+      height: 52px;
     }
   }
   .module-select-custom {

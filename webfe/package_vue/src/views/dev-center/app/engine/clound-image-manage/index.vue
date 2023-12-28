@@ -2,7 +2,7 @@
   <div class="image-manage">
     <!-- 部署历史 -->
     <div class="ps-top-bar" v-if="isDeployHistory">
-      <div class="top-title flex-row align-items-center">
+      <div class="top-title flex-row align-items-center box-shadow">
         <i
           class="paasng-icon paasng-arrows-left icon-cls-back mr5"
           @click="goBack"

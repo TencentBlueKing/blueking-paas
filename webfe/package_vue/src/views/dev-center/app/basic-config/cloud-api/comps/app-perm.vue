@@ -3,7 +3,15 @@
     <div class="search-wrapper">
       <bk-button
         theme="primary"
-        :disabled="selectedList.length < 1"
+        :disabled="isApplyDisabled"
+        @click="handleBatchApply"
+      >
+        {{ $t('批量申请') }}
+      </bk-button>
+      <bk-button
+        style="margin-left: 6px;"
+        theme="primary"
+        :disabled="isRenewalDisabled"
         @click="handleBatchRenewal"
       >
         {{ $t('批量续期') }}
@@ -207,6 +215,9 @@
                 <template v-if="props.row.permission_status === 'owned'">
                   <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
                 </template>
+                <template v-else-if="props.row.permission_status === 'unlimited'">
+                  <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
+                </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
                   <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
                 </template>
@@ -230,6 +241,9 @@
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
                   <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'unlimited'">
+                  <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
                   <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
@@ -371,6 +385,7 @@ export default {
       },
       statusFilters: [
         { text: this.$t('已拥有'), value: 'owned' },
+        { text: this.$t('无限制'), value: 'unlimited' },
         { text: this.$t('未申请'), value: 'need_apply' },
         { text: this.$t('已过期'), value: 'expired' },
         { text: this.$t('已拒绝'), value: 'rejected' },
@@ -410,6 +425,14 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    // 是否允许批量申请
+    isApplyDisabled() {
+      return !this.selectedList.some(item => item.applyDisabled === false);
+    },
+    // 是否允许批量续期
+    isRenewalDisabled() {
+      return !this.selectedList.some(item => item.renewDisabled === false);
     },
   },
   watch: {
@@ -454,7 +477,17 @@ export default {
       }
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('批量续期权限');
-      this.renewalDialog.rows = this.selectedList.filter(item => item.permission_action === 'renew');
+      this.renewalDialog.rows = [...this.selectedList];
+    },
+
+    // 批量申请权限
+    handleBatchApply() {
+      if (!this.selectedList.length) {
+        return;
+      }
+      this.applyDialog.visiable = true;
+      this.applyDialog.title = this.$t('批量申请权限');
+      this.applyDialog.rows = [...this.selectedList];
     },
 
     nameFilterMethod(value, row, column) {
@@ -790,7 +823,7 @@ export default {
 
     // 勾选是否禁用
     selectable(row) {
-      return row.permission_action === 'renew';
+      return !row.applyDisabled || !row.renewDisabled;
     },
 
     // 表格change事件

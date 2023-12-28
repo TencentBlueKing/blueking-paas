@@ -552,10 +552,10 @@ export default {
     },
 
     /**
-             * 返回导航目录对应的Icon
-             * @param {Object} navItem 导航
-             * @return {Array} Classes
-             */
+     * 返回导航目录对应的Icon
+     * @param {Object} navItem 导航
+     * @return {Array} Classes
+     */
     getIconClass(navItem) {
       const classes = ['paasng-icon', 'app-nav-icon'];
       classes.push(`paasng-${navItem.iconfontName || 'gear'}`);
@@ -599,9 +599,9 @@ export default {
     },
 
     /**
-             * 权限管理添加子项
-             * @param {String} type 类型
-             */
+     * 权限管理添加子项
+     * @param {String} type 类型
+     */
     addPermissionNavItem(navTree, type) {
       const nav = {
         user_access_control: {
@@ -718,129 +718,130 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .app-nav {
-        padding-top: 9px;
-        width: 240px;
-        margin-top: 1px;
+.app-nav {
+  padding-top: 9px;
+  width: 240px;
+  margin-top: 1px;
 
-        > li {
-            width: 100%;
-            position: relative;
+  > li {
+    width: 100%;
+    position: relative;
 
-            &.on {
-                .overview-text {
-                    color: #313238 !important;
-                }
-                .app-nav-icon {
-                    color: #313238 !important;
-                }
-            }
+    &.on {
+      .overview-text {
+        color: #313238 !important;
 
-            &.no-child-actived,
-            &.has-child-selected {
-                .overview-text {
-                    color: #3A84FF !important;
-                    background: #E1ECFF;
-                }
-                .app-nav-icon {
-                    color: #3A84FF !important;
-                }
-            }
-
-            &:hover {
-                .overview-text {
-                    color: #3A84FF;
-                }
-                .app-nav-icon {
-                    color: #3A84FF;
-                }
-            }
-        }
+      }
+      .app-nav-icon {
+        color: #313238 !important;
+      }
     }
 
-    .overview-text {
-        color: #63656E;
-        padding-left: 50px;
-        z-index: 1;
-        line-height: 42px;
-        font-size: 14px;
-        display: block;
-
-        &:hover {
-            color: #63656E;
-        }
+    &.no-child-actived,
+    &.has-child-selected {
+      .overview-text {
+        color: #3a84ff !important;
+        background: #e1ecff;
+      }
+      .app-nav-icon {
+        color: #3a84ff !important;
+      }
     }
 
-    .overview-text-slide {
-        width: 100%;
-        position: relative;
-        overflow: hidden;
+    &:hover {
+      .overview-text {
+        color: #63656e;
+      }
+      .app-nav-icon {
+        color: #63656e;
+      }
+      background: #f5f7fa;
+    }
+  }
+}
 
-        > a {
-            width: 240px;
-            display: block;
-            line-height: 42px;
-            height: 42px;
-            display: block;
-            color: #63656E;
-            padding-left: 50px;
-            cursor: pointer;
-            position: relative;
+.overview-text {
+  color: #63656e;
+  padding-left: 50px;
+  z-index: 1;
+  line-height: 42px;
+  font-size: 14px;
+  display: block;
 
-            &:hover,
-            &.on {
-                color: #3A84FF;
-                background: #E1ECFF;
+  &:hover {
+    color: #63656e;
+  }
+}
 
-                &:after {
-                    background-color: #3A84FF;
-                }
-            }
+.overview-text-slide {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
 
-            &:after {
-                content: "";
-                width: 4px;
-                height: 4px;
-                position: absolute;
-                left: 28px;
-                top: 50%;
-                margin-top: -2px;
-                background-color: #DCDEE5;
-                border-radius: 50%;
-            }
-        }
+  > a {
+    width: 240px;
+    display: block;
+    line-height: 42px;
+    height: 42px;
+    display: block;
+    color: #63656e;
+    padding-left: 50px;
+    cursor: pointer;
+    position: relative;
+
+    &:hover,
+    &.on {
+      color: #3a84ff;
+      background: #e1ecff;
+
+      &:after {
+        background-color: #3a84ff;
+      }
     }
 
-    .app-nav {
-        .paasng-icon {
-            font-size: 12px;
-            font-weight: bold;
-            position: absolute;
-            top: 16px;
-            right: 14px;
-            color: #979BA5;
-            display: inline-block;
-            transition: all ease 0.3s;
+    &:after {
+      content: '';
+      width: 4px;
+      height: 4px;
+      position: absolute;
+      left: 28px;
+      top: 50%;
+      margin-top: -2px;
+      background-color: #dcdee5;
+      border-radius: 50%;
+    }
+  }
+}
 
-            &.app-nav-icon {
-                position: absolute;
-                font-weight: normal;
-                top: 12px;
-                left: 20px;
-                right: auto;
-                z-index: 2;
-                color: #666;
-                font-size: 18px;
-            }
+.app-nav {
+  .paasng-icon {
+    font-size: 12px;
+    font-weight: bold;
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    color: #979ba5;
+    display: inline-block;
+    transition: all ease 0.3s;
 
-            &.down {
-                transform: rotate(90deg);
-            }
-        }
-
-        li.active i.paasng-icon {
-            color: #313238;
-        }
+    &.app-nav-icon {
+      position: absolute;
+      font-weight: normal;
+      top: 12px;
+      left: 20px;
+      right: auto;
+      z-index: 2;
+      color: #666;
+      font-size: 18px;
     }
 
+    &.down {
+      transform: rotate(90deg);
+    }
+  }
+
+  li.active i.paasng-icon {
+    color: #313238;
+  }
+}
 </style>

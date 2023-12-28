@@ -297,7 +297,7 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^\/([^/\0]+(\/)?)*$/,
+            regex: /^\/([^/\0]+(\/)?)+$/,
             message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径'),
             trigger: 'blur',
           },

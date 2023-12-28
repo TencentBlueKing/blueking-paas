@@ -2487,6 +2487,6 @@ export default {
   '在应用部署成功后，才会配置相应环境的告警策略': 'A warning policy for the respective environment will be configured only after the application is successfully deployed',
   去部署: 'Deploy',
   检索: 'Search',
-  '使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架模板': 'Use build tools to construct images from code repositories, offering multiple language frameworks',
+  '使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能': 'Use build tools to construct images from code repositories, offering multiple language frameworks',
   '基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架': 'Directly build images from repository Dockerfile (similar to `docker build`)',
 };

@@ -75,7 +75,7 @@
                   {{ $t('蓝鲸 Buildpack') }}
                   <span class="tips" @click.stop>
                     <bk-icon type="info-circle" />
-                    {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架模板') }}
+                    {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能') }}
                   </span>
                 </bk-radio>
                 <bk-radio :value="'dockerfile'">

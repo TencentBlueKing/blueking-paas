@@ -436,9 +436,9 @@
                   {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
                   <a
                     target="_blank"
-                    :href="GLOBAL.DOC.APP_PROCESS_INTRODUCTION"
+                    :href="GLOBAL.DOC.APP_DESC_DOC"
                     style="color: #3a84ff">
-                    {{$t('应用进程介绍')}}
+                    {{$t('应用描述文件')}}
                   </a>
                 </div>
               </bk-alert>

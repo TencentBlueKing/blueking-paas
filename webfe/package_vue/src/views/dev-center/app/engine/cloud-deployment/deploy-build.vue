@@ -9,8 +9,9 @@
       class="middle"
     >
       <!-- 仅镜像 -->
-      <template v-if="isCustomImage && !allowMultipleImage">
+      <template v-if="isCustomImage">
         <image-info
+          v-if="!allowMultipleImage"
           :credential-list="credentialList"
           @close-content-loader="closeContentLoader"
         ></image-info>

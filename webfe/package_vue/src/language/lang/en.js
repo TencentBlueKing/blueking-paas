@@ -2352,7 +2352,7 @@ export default {
   '唯一标识，创建后不可修改': 'Unique identifier, cannot be modified after creation',
   文件内容: 'Document Content',
   添加文件: 'Add files',
-  '请输入以斜杆(/)开头，且不包含空字符串的路径': 'Please enter a path that starts with a slash (/) and does not contain an empty string.',
+  '请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）': 'Please enter a path that starts with a slash (/) and does not contain empty strings (excluding the root directory "/")',
   同环境和路径挂载卷已存在: 'The volume mounted with the same environment and path already exists',
   '删除失败，请重新操作': 'Deletion failed, please try again',
   '文件同名，请重新编辑': 'The file has the same name, please edit it again',

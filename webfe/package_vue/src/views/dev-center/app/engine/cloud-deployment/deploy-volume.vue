@@ -138,7 +138,7 @@
             >
               <bk-input
                 v-model="volumeFormData.mount_path"
-                :placeholder="$t('请输入以斜杆(/)开头，且不包含空字符串的路径')"
+                :placeholder="mountPathTip"
               ></bk-input>
             </bk-form-item>
             <bk-form-item
@@ -298,7 +298,7 @@ export default {
           },
           {
             regex: /^\/([^/\0]+(\/)?)+$/,
-            message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径'),
+            message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）'),
             trigger: 'blur',
           },
         ],
@@ -328,6 +328,7 @@ export default {
       hoverKey: '',
       curValue: '',
       addLoading: false,
+      mountPathTip: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）'),
     };
   },
   computed: {

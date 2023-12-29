@@ -45,15 +45,15 @@ from paasng.platform.modules.models import Module
 class CreatedAppInfo(NamedTuple):
     uuid: UUID
     name: str
+    type: WlAppType
 
 
 def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType) -> CreatedAppInfo:
-    """Create an WlApp object, return directly if the object already exists"""
-    try:
-        obj = WlApp.objects.get(region=region, name=name)
-    except WlApp.DoesNotExist:
-        obj = WlApp.objects.create(region=region, name=name, type=type_)
-    return CreatedAppInfo(obj.uuid, obj.name)
+    """Create an WlApp object, if the object already exists, return it directly. The object's type
+    will be set to the given type.
+    """
+    obj, _ = WlApp.objects.update_or_create(region=region, name=name, defaults={"type": type_.value})
+    return CreatedAppInfo(obj.uuid, obj.name, WlAppType(obj.type))
 
 
 def get_metadata_by_env(env: ModuleEnvironment) -> WlAppMetadata:

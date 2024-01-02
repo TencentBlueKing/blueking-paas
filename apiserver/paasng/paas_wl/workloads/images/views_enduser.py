@@ -28,9 +28,10 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppUserCredential
 from paas_wl.workloads.images.serializers import UsernamePasswordPairSLZ
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.modules.models.build_cfg import BuildConfig
 
 
 class AppUserCredentialViewSet(ApplicationCodeInPathMixin, GenericViewSet):
@@ -71,7 +72,8 @@ class AppUserCredentialViewSet(ApplicationCodeInPathMixin, GenericViewSet):
     def destroy(self, request, code, name):
         """delete a username password pair"""
         application = self.get_application()
-
+        if BuildConfig.objects.filter(module__application=application, image_credential_name=name).exists():
+            raise error_codes.DELETE_CREDENTIALS_FAILED.f(_("该凭证已被应用使用"))
         instance = get_object_or_404(AppUserCredential, application_id=application.id, name=name)
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -67,11 +67,6 @@ class AppSpecs:
         return self.type_specs.can_create_extra_modules
 
     @property
-    def require_templated_source(self) -> bool:
-        """Whether an application must choose source template"""
-        return self.type_specs.require_templated_source
-
-    @property
     def confirm_required_when_publish(self) -> bool:
         """Whether an extra confirmation is required when publishing application to market"""
         module = self.application.get_default_module()
@@ -99,7 +94,6 @@ class AppSpecs:
         return {
             "engine_enabled": self.engine_enabled,
             "can_create_extra_modules": self.can_create_extra_modules,
-            "require_templated_source": self.require_templated_source,
             "confirm_required_when_publish": self.confirm_required_when_publish,
             "market_published": self.market_published,
         }
@@ -115,9 +109,6 @@ class AppTypeSpecs(ABC):
 
     # Whether an application can create new modules besides the "default" one
     can_create_extra_modules: bool = True
-
-    # Whether an application needs templated source codes when being created
-    require_templated_source: bool = True
 
     _spec_types: Dict[ApplicationType, Type["AppTypeSpecs"]] = {}
 
@@ -143,7 +134,6 @@ class DefaultTypeSpecs(AppTypeSpecs):
     type_ = ApplicationType.DEFAULT
     engine_enabled = True
     can_create_extra_modules = True
-    require_templated_source = True
 
 
 class EnginelessAppTypeSpecs(AppTypeSpecs):
@@ -152,7 +142,6 @@ class EnginelessAppTypeSpecs(AppTypeSpecs):
     type_ = ApplicationType.ENGINELESS_APP
     engine_enabled = False
     can_create_extra_modules = False
-    require_templated_source = False
 
 
 class CloudNativeTypeSpecs(AppTypeSpecs):
@@ -161,4 +150,3 @@ class CloudNativeTypeSpecs(AppTypeSpecs):
     type_ = ApplicationType.CLOUD_NATIVE
     engine_enabled = True
     can_create_extra_modules = True
-    require_templated_source = False

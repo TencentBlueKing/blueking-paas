@@ -31,7 +31,6 @@ from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
-from paasng.platform.applications.specs import AppTypeSpecs
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
@@ -64,12 +63,6 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
 
         self._validate_source_init_template(attrs)
         return attrs
-
-    def _validate_source_init_template(self, attrs):
-        """'source_init_template' can only be optional for some special application types"""
-        type_specs = AppTypeSpecs.get_by_type(ApplicationType(attrs["type"]))
-        if type_specs.require_templated_source and not attrs.get("engine_params", {}).get("source_init_template"):
-            raise ValidationError(_("engine_params.source_init_template: 必须选择一个应用模板"))
 
 
 class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):

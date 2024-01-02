@@ -1,6 +1,6 @@
+<!-- 源码库为 bare_svn、bk_svn 的创建成功页面 -->
 <template lang="html">
   <div class="app-success-wrapper">
-    <!-- bare_svn、bk_svn  -->
     <top-bar />
     <div class="container biz-create-success">
       <div class="success-wrapper">
@@ -13,22 +13,21 @@
             <bk-button
               :theme="'primary'"
               class="mr10"
-              @click="handlePageJump('appDeploy')"
+              @click="handlePageJump('cloudAppDeployManageStag')"
             >
               {{ $t('部署应用') }}
             </bk-button>
             <bk-button
               :theme="'default'"
               type="submit"
-              @click="handlePageJump('appSummary')"
+              @click="handlePageJump('process', 'default')"
             >
-              {{ $t('应用概览') }}
+              {{ $t('模块配置') }}
             </bk-button>
           </p>
         </div>
         <div class="content">
           <div
-            v-if="application.config_info.require_templated_source"
             class="input-wrapper"
           >
             <div class="input-item">
@@ -47,23 +46,6 @@
               >
                 {{ $t('签出代码') }}
               </a>
-            </div>
-          </div>
-          <div class="btn-check-svn spacing-x4">
-            <div class="tips-wrapper">
-              <div class="title">
-                {{ $t('初始化插件项目') }}
-                <div
-                  class="icon-wrapper"
-                  v-copy="pluginTips"
-                >
-                  <i class="paasng-icon paasng-general-copy copy-icon" />
-                  {{ $t('复制') }}
-                </div>
-              </div>
-              <div class="tips">
-                <code>{{ pluginTips }}</code>
-              </div>
             </div>
           </div>
         </div>

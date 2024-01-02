@@ -17,7 +17,19 @@ kaniko-shim 的使用方式与 [kaniko](https://github.com/GoogleContainerTools/
 | INSECURE_REGISTRIES        | 使用纯 HTTP 推送和拉取的不安全仓库。用 ';' 连接多个仓库。                                                     |
 | SKIP_TLS_VERIFY_REGISTRIES | 忽略 TLS 验证以推送和拉取的不安全仓库。用 ';' 连接多个仓库。                                                   |
 
-### Example
+
+## 开发说明
+
+1. 构建继承 kaniko-shim 的 builder 镜像
+
+```bash
+❯ cd kaniko-shim
+❯ make image
+```
+
+## 使用示例
+
+`kaniko-shim` 的所有参数都通过环境变量传递, 构建镜像后, 只需要通过环境变量传递对应参数即可进行源码构建。
 
 ```bash
 # 启动 Builder 构建镜像, 构建上下文是当前目录

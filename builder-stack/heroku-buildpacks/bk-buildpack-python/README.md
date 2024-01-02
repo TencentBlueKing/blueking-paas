@@ -61,30 +61,6 @@ OPTIONS:
 2. 在蓝盾流水线上执行发布, 将自动归档至蓝盾制品库
 3. 修改 PaaS 3.0 引用的构建工具下载链接
 
-## 从 heroku S3 下载构建依赖
-
-本项目使用 `paas-devops` 工具从 S3 下载构建依赖, 可通过以下方式安装:
-
-```bash
-❯ pip install paas-devops
-```
-
-### 下载 common 目录
-
-common 目录存储着与 PIP 相关的文件, 可使用以下方式进行下载
-
-```bash
-paas-devops download-from-s3 https://heroku-buildpack-python.s3.us-east-1.amazonaws.com -p "common/*"
-```
-
-### 下载 heroku-18 目录
-
-heroku-18 目录存储着与安装 Python 相关的文件, 可使用以下方式进行下载
-
-```bash
-paas-devops download-from-s3 https://heroku-buildpack-python.s3.us-east-1.amazonaws.com -p "heroku-18/runtimes/*"
-```
-
 # 特性开关
 
 python buildpack 可通过环境变量开启部分特性

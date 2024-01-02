@@ -447,8 +447,9 @@ class TestCreateBkPlugin:
             ("bk-saas-plugin-go", "Python"),
         ],
     )
-    def test_normal(self, api_client, mock_wl_services_in_creation, settings, source_init_template, language):
+    def test_normal(self, api_client, mock_wl_services_in_creation, settings, bk_user, source_init_template, language):
         settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
+        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
         response = self._send_creation_request(api_client, source_init_template)
 
         assert response.status_code == 201, f'error: {response.json()["detail"]}'

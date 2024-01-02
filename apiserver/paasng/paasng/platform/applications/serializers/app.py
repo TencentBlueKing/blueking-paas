@@ -41,7 +41,7 @@ from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParams
 
 
 class CreateApplicationV2SLZ(AppBasicInfoMixin):
-    """新版创建应用表单，支持更丰富的自定义选项"""
+    """普通应用创建应用表单，目前产品上已经没有入口，但是暂时先保留 API"""
 
     type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), default=ApplicationType.DEFAULT.value)
     engine_enabled = serializers.BooleanField(default=True, required=False)
@@ -61,7 +61,6 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
         elif attrs["type"] == ApplicationType.ENGINELESS_APP.value:
             raise ValidationError(_('已开启引擎，类型不能为 "engineless_app"'))
 
-        self._validate_source_init_template(attrs)
         return attrs
 
 

@@ -224,6 +224,18 @@ class RemoteServiceClient:
             self.validate_resp(resp)
             return resp.json()
 
+    # def retrieve_instance_by_name(self, name: str) -> Dict:
+    #     """Retrieve a provisioned instance info
+    #
+    #     :raises: RemoteClientError
+    #     :return: <instance dict>
+    #     """
+    #     url = self.config.retrieve_instance_url.format(instance_id=instance_id)
+    #     with wrap_request_exc(self):
+    #         resp = requests.get(url, auth=self.auth, timeout=self.REQUEST_LIST_TIMEOUT)
+    #         self.validate_resp(resp)
+    #         return resp.json()
+
     def delete_instance(self, instance_id: str):
         """Delete a provisioned instance
 

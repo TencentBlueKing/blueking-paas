@@ -666,6 +666,24 @@ class RemoteServiceMgr(BaseServiceMgr):
                 env_list.append(env.environment)
         return env_list
 
+    # def get_service_insance_by_name(self, service: ServiceObj, name: str) -> Optional[ServiceInstanceObj]:
+    #     """Get service instance by name"""
+    #     service_id = str(service.uuid)
+    #     remote_config = self.store.get_source_config(service_id)
+    #     remote_client = RemoteServiceClient(remote_config)
+    #
+    #     # TODO: failure tolerance
+    #     instance_data = remote_client.retrieve_instance_by_name(name=name)
+    #
+    #     create_time = arrow.get(instance_data.get("created"))  # type: ignore
+    #     return create_svc_instance_obj_from_remote(
+    #         uuid=instance_data["uuid"],
+    #         credentials=instance_data["credentials"],
+    #         config=instance_data["config"],
+    #         field_prefix=service.name,
+    #         create_time=create_time.datetime,
+    #     )
+
 
 class RemotePlanMgr(BasePlanMgr):
     """Remote REST plans manager"""

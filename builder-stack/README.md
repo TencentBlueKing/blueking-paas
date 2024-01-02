@@ -1,29 +1,29 @@
-# 项目简介
+## 项目简介
 
-## cnb-builder-shim
-蓝鲸 SaaS Builder shim, 提供在容器内运行 SaaS Builder 的能力。
+本项目包含以下两个核心组件：
 
-## kaniko-shim
-蓝鲸 Docker Builder shim, 提供在容器内构建镜像的能力。
+1. **云原生构建工具**：用于构建蓝鲸 SaaS 的构建工具（基于云原生 buildpack）, 提供在容器中构建 SaaS 的能力，其功能依赖一个有效的“云原生 builder 镜像”
+    - 目录：`cnb-builder-shim`
+2. **容器镜像构建工具**：用于构建蓝鲸 SaaS 的构建工具（基于 Dockerfile）, 提供在容器内基于 Dockerfile 文件来构建镜像的能力。
+    - 目录：`kaniko-shim`
 
-## cloudnative-buildpacks/builders/heroku-builder
-蓝鲸 SaaS Builder, 基于 [heroku-18](https://github.com/heroku/stack-images/tree/v23/heroku-18) 镜像, 底层镜像是 ubuntu:bionic.
+“云原生 builder 镜像”是基于 [pack](https://github.com/buildpacks/pack) 命令打包而成的构建镜像，其通过内嵌 buildpacks 来满足多种编程语言的构建需求。项目当前共实现了两种“builder 镜像”：
 
-## cloudnative-buildpacks/builders/paketo-builder(WIP)
-蓝鲸 SaaS Builder, 基于 [paketo-buildpacks/bionic-base-stack](https://github.com/paketo-buildpacks/bionic-base-stack), 底层镜像是 ubuntu:bionic.
+- **heroku**：基于 [heroku-18](https://github.com/heroku/stack-images/tree/v23/heroku-18) 镜像, 底层镜像是 ubuntu:bionic
+    - 目录：`cloudnative-buildpacks/builders/heroku-builder`
+- WIP：**paketo**：基于 [paketo-buildpacks/bionic-base-stack](https://github.com/paketo-buildpacks/bionic-base-stack) 的 builder 镜像，测试中，请勿使用。
+    - 目录：`cloudnative-buildpacks/builders/paketo-builder`
 
-## cloudnative-buildpacks/buildpacks/bk-buildpack-python
-蓝鲸 SaaS 应用（Python 语言）构建工具, 基于 heroku-buildpack-python.
+其中，heroku builder 镜像所使用的 buildpack 在原有代码上做了一些改动，维护在 `heroku-buildpacks` 目录中：
 
-## cloudnative-buildpacks/buildpacks/bk-buildpack-nodejs
-蓝鲸 SaaS 应用（NodeJS 语言）构建工具, 基于 heroku-buildpack-nodejs.
+- `bk-buildpack-python`：Python 语言, 基于 heroku-buildpack-python
+- `bk-buildpack-nodejs`：Node.js 语言, 基于 heroku-buildpack-nodejs
+- `bk-buildpack-go`：Go 语言, 基于 heroku-buildpack-go
 
-## cloudnative-buildpacks/buildpacks/bk-buildpack-go
-蓝鲸 SaaS 应用（Go 语言）构建工具, 基于 heroku-buildpack-go.
+## 开发说明
 
-# 开发说明
+### ⚠️ 注意事项
 
-## ⚠️ 注意事项
 本项目使用了 submodule, 在执行 `make` 命令前, 请确保已初始化 submodule
 ```bash
 ❯ git submodule init
@@ -32,69 +32,16 @@
 ❯ git submodule update --init
 ```
 
-## 构建流程
-### CloudNative Builder
-1. 构建 buildpacks
-```bash
-❯ cd cloudnative-buildpacks/buildpacks
-❯ make all
-```
+安装必要的依赖工具：[pack](https://github.com/buildpacks/pack)。
 
-2. 构建 builder 基础镜像
-```bash
-❯ cd cloudnative-buildpacks/builders/heroku-builder
-❯ make builder
-```
+### 云原生构建工具
 
-3. 构建集成 cnb-builder-shim 的 builder 镜像
-```bash
-❯ cd cnb-builder-shim
-❯ make heroku-builder
-```
+请参考 [./cnb-builder-shim/README.md](./cnb-builder-shim/README.md)，依赖“云原生 builder 镜像”。
 
-### Kaniko Builder
-1. 构建继承 kaniko-shim 的 builder 镜像
-```bash
-❯ cd kaniko-shim
-❯ make image
-```
+### 云原生 builder 镜像
 
-## 使用说明
-`cnb-builder-shim` 和 `kaniko-shim` 的所有参数都通过环境变量传递, 构建镜像后, 只需要通过环境变量传递对应参数即可进行源码构建。
+请参考 [./cloudnative-buildpacks/README.md](./cloudnative-buildpacks/README.md)。
 
-### CloudNative Builder
+### 容器镜像构建工具（kaniko builder）
 
-```bash
-# 压缩源码成 tar 归档包
-❯ tar -czvf source.tgz -C {源码目录} .
-# 启动 Builder 构建镜像
-❯ docker run --rm \
-    # TODO: 修改成你需要构建的镜像名
-    -e OUTPUT_IMAGE="mirrors.tencent.com/foo:latest" \
-    -e CNB_RUN_IMAGE="mirrors.tencent.com/bkpaas/run-heroku-bionic:latest" \
-    -e SOURCE_GET_URL="file:///tmp/source.tgz" \
-    -e REQUIRED_BUILDPACKS="tgz bk-buildpack-apt ... v2;tgz bk-buildpack-python ... v213" \
-    # TODO: 修改成你的镜像源访问凭证, 结构为 Dict[str, str], key 是镜像仓库名称, value 是 Basic Auth 格式的用户凭证
-    -e CNB_REGISTRY_AUTH='{"mirrors.tencent.com":"Basic YQ=="}' \
-    # TODO: 修改 source 路径为你本地的应用源码
-    --mount type=bind,source="$(pwd)"/source.tgz,target=/tmp/source.tgz \
-    mirrors.tencent.com/bkpaas/heroku-builder-all-in-one:bionic
-```
-
-### Kaniko Builder
-
-```bash
-# 压缩构建上下文成 tar 归档包
-❯ tar -czvf context.tgz -C {源码目录} .
-# 启动 Builder 构建镜像
-❯ docker run --rm \
-    # TODO: 修改成你需要构建的镜像名
-    -e OUTPUT_IMAGE="mirrors.tencent.com/foo:latest" \
-    -e SOURCE_GET_URL="file:///tmp/source.tgz" \
-    -e DOCKERFILE_PATH="Dockerfile" \
-    # TODO: 修改成你的镜像源访问凭证, 值为 base64 编码后的 docker config json
-    -e DOCKER_CONFIG_JSON='...' \
-    # TODO: 修改 source 路径为你本地的应用源码
-    --mount type=bind,source="$(pwd)"/source.tgz,target=/tmp/source.tgz \
-    mirrors.tencent.com/bkpaas/kaniko-executor
-```
+请参考 [./kaniko-shim/README.md](./kaniko-shim/README.md)。

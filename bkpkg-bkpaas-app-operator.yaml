@@ -1,0 +1,7 @@
+bkpkg: v1
+name: bkpaas-app-operator
+type: file+tar
+description: paas operator
+contains:
+relations:
+bkimports:

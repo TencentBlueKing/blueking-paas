@@ -2352,7 +2352,7 @@ export default {
   '唯一标识，创建后不可修改': 'Unique identifier, cannot be modified after creation',
   文件内容: 'Document Content',
   添加文件: 'Add files',
-  '请输入以斜杆(/)开头，且不包含空字符串的路径': 'Please enter a path that starts with a slash (/) and does not contain an empty string.',
+  '请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）': 'Please enter a path that starts with a slash (/) and does not contain empty strings (excluding the root directory "/")',
   同环境和路径挂载卷已存在: 'The volume mounted with the same environment and path already exists',
   '删除失败，请重新操作': 'Deletion failed, please try again',
   '文件同名，请重新编辑': 'The file has the same name, please edit it again',
@@ -2487,4 +2487,6 @@ export default {
   '在应用部署成功后，才会配置相应环境的告警策略': 'A warning policy for the respective environment will be configured only after the application is successfully deployed',
   去部署: 'Deploy',
   检索: 'Search',
+  '使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能': 'Use build tools to construct images from code repositories, offering multiple language frameworks',
+  '基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架': 'Directly build images from repository Dockerfile (similar to `docker build`)',
 };

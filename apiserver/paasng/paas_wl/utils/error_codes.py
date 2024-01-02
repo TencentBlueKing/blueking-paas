@@ -58,6 +58,7 @@ class ErrorCodes:
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode(_("Failed to create credentials"))
     INVALID_CREDENTIALS = ErrorCode(_("Image credentials is invalid"))
+    DELETE_CREDENTIALS_FAILED = ErrorCode(_("Failed to delete credentials"))
 
     # 集群组件相关
     CLUSTER_COMPONENT_NOT_EXIST = ErrorCode(_("Cluster component not exist"))

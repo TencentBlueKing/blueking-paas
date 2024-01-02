@@ -439,14 +439,22 @@ class TestCreateBkPlugin:
     """Test 'bk_plugin' type application's creation"""
 
     @pytest.mark.usefixtures("_init_tmpls")
-    def test_normal(self, api_client, mock_wl_services_in_creation, settings):
+    @pytest.mark.parametrize(
+        ("source_init_template", "language"),
+        [
+            ("bk-saas-plugin-python", "Python"),
+            # TODO 目前兼容前端，不管参数 source_init_template 传什么值，都会固定为 bk-saas-plugin-python
+            ("bk-saas-plugin-go", "Python"),
+        ],
+    )
+    def test_normal(self, api_client, mock_wl_services_in_creation, settings, source_init_template, language):
         settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
-        response = self._send_creation_request(api_client)
+        response = self._send_creation_request(api_client, source_init_template)
 
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         assert response.json()["application"]["is_plugin_app"] is True
         # TODO: Update tests when bk_plugin supports multiple languages
-        assert response.json()["application"]["language"] == "Python"
+        assert response.json()["application"]["modules"][0]["language"] == language
         assert response.json()["application"]["modules"][0]["repo"] is not None
 
     def test_forbidden_via_config(self, api_client, settings):
@@ -455,20 +463,23 @@ class TestCreateBkPlugin:
 
         assert response.status_code == 400, "the creation of bk_plugin must fail"
 
-    def _send_creation_request(self, api_client):
+    def _send_creation_request(self, api_client, source_init_template=""):
         random_suffix = generate_random_string(length=6)
         return api_client.post(
-            "/api/bkapps/applications/v2/",
+            "/api/bkapps/cloud-native/",
             data={
                 "region": settings.DEFAULT_REGION_NAME,
                 "type": ApplicationType.CLOUD_NATIVE,
                 "is_plugin_app": True,
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",
-                "engine_params": {
-                    "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
+                "source_config": {
                     "source_control_type": "dft_gitlab",
-                    "source_repo_url": "http://example.com/default/git.git",
+                    "source_repo_url": "http://example.com/default/git.gi",
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                    "source_dir": "",
+                    "source_init_template": source_init_template,
                 },
             },
         )

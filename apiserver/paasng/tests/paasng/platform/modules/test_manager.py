@@ -63,7 +63,7 @@ class TestModuleInitializer:
     @pytest.mark.parametrize(
         ("services_in_template", "is_default", "expected_bind_service_cnt"),
         [
-            ({}, {}, True, 0),
+            ({}, True, 0),
             ({"mysql": {"specs": {}}}, True, 1),
             ({"mysql": {"specs": {}}}, False, 1),
         ],

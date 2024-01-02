@@ -509,9 +509,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config["source_init_template"]:
-            tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+            tmpl = Template.objects.get(name=tmpl_name)
             module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
-
         # lesscode app needs to create an application on the bk_lesscode platform first
         if source_origin == SourceOrigin.BK_LESS_CODE:
             # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
@@ -636,7 +635,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             language = Template.objects.get(
                 name=source_init_template, type__in=TemplateType.normal_app_types()
             ).language
-
         module = create_default_module(
             application,
             source_init_template=source_init_template,

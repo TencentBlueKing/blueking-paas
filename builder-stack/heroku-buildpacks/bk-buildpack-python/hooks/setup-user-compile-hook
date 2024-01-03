@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
 # 在 compile 脚本正式开始之前执行
-# - 兼容 pre-compile 和 post-compile
+# - heroku buildpack 只支持使用下划线的 hook 文件名（pre_compile），不支持中划线（pre-compile）
+# - 此脚本在探测到存在中划线钩子时，将其重命名为下划线
+# - 涉及文件：pre-compile 和 post-compile
 
 make_hook() {
     name="$1"

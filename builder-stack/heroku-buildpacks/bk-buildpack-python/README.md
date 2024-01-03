@@ -7,7 +7,7 @@
 .
 ├── buildpack      -- heroku-buildpack-python
 ├── hooks          -- 钩子脚本
-├── patchs         -- 修改补丁
+├── patches        -- 修改补丁
 ├── tests          -- 基于 bats 的脚本测试
 ├── integration    -- 基于 `bk-saas-pack` 的集成测试
 ├── Makefile       -- make 命令集
@@ -16,8 +16,14 @@
 ```
 
 # 开发指引
-尽量不修改原构建工具中的内容, 而是使用 hook 的方式在原脚本中埋点修改, 或者使用 patch 的方式非侵入式地修改原脚本。
-> **引入新的 hook 或 patch 后, 请维护下列的文件说明**
+
+为尽量降低维护成本，推荐不修改原 buildpack 文件, 而是使用 hook 和 patch 的方式来调整 buildpack 行为：
+
+- hook（钩子）：存放在 hooks 目录中，是独立的 Bash 脚本，在 buildpack 的不同阶段被显式调用
+   - TODO: **hooks/setup-utils 当前未被实际安装，待确认后启用**
+- patch（补丁）：存放在 patches 目录中， 基于打补丁的方式修改原脚本
+
+> **增加新文件后, 请维护以下文件说明**
 
 ## 已有 hook
 - setup-user-compile-hook: 兼容 pre-compile/post-compile
@@ -35,6 +41,10 @@
 如果本机已安装 `shellcheck`, 可直接执行 `make lint` 进行校验。
 
 如果本机未安装 `shellcheck`, 可执行 `make lint-in-container` 在容器内进行校验。
+
+## 单元测试
+
+首先执行 `make patch` 将 hooks 和 patches 补丁文件应用到官方 buildpack 中，然后执行 `make test` 运行所有单元测试。
 
 ## 本地调试
 

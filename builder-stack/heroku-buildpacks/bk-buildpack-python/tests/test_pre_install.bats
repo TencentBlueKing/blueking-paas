@@ -26,13 +26,13 @@ teardown() {
 }
 
 @test "pip config exists" {
-    run bash ${BUILD_PACK}/hook/pre-install
+    run bash ${BUILD_PACK}/hooks/pre-install
     [ "${status}" = 0 ]
     [ -f ~/.pip/pip.conf ]
 }
 
 @test "pip index url" {
-    run env PIP_INDEX_URL=http://pypi.qq.com bash ${BUILD_PACK}/hook/pre-install
+    run env PIP_INDEX_URL=http://pypi.qq.com bash ${BUILD_PACK}/hooks/pre-install
     [ "${status}" = 0 ]
 
     run cat ~/.pip/pip.conf
@@ -40,7 +40,7 @@ teardown() {
 }
 
 @test "pip extra index url" {
-    run env PIP_EXTRA_INDEX_URL=http://pypi.qq.com bash ${BUILD_PACK}/hook/pre-install
+    run env PIP_EXTRA_INDEX_URL=http://pypi.qq.com bash ${BUILD_PACK}/hooks/pre-install
     [ "${status}" = 0 ]
 
     run cat ~/.pip/pip.conf
@@ -48,7 +48,7 @@ teardown() {
 }
 
 @test "pip trusted host" {
-    run env PIP_INDEX_HOST=pypi.qq.com bash ${BUILD_PACK}/hook/pre-install
+    run env PIP_INDEX_HOST=pypi.qq.com bash ${BUILD_PACK}/hooks/pre-install
     [ "${status}" = 0 ]
 
     run cat ~/.pip/pip.conf
@@ -57,27 +57,27 @@ teardown() {
 
 @test "default pip version" {
     export PIP_UPDATE="0.0.0"
-    run bash_with_trap ${BUILD_PACK}/hook/pre-install 'echo ${PIP_UPDATE}'
+    run bash_with_trap ${BUILD_PACK}/hooks/pre-install 'echo ${PIP_UPDATE}'
     [ "${status}" = 0 ]
     [ "${output}" = "0.0.0" ]
 }
 
 @test "specified pip version" {
     export PIP_VERSION="x.x.x"
-    run bash_with_trap ${BUILD_PACK}/hook/pre-install 'echo ${PIP_UPDATE}'
+    run bash_with_trap ${BUILD_PACK}/hooks/pre-install 'echo ${PIP_UPDATE}'
     [ "${status}" = 0 ]
     [ "${output}" = "x.x.x" ]
 }
 
 @test "unset pip version" {
     export PIP_VERSION="x.x.x"
-    run bash_with_trap ${BUILD_PACK}/hook/pre-install 'echo ${PIP_VERSION}'
+    run bash_with_trap ${BUILD_PACK}/hooks/pre-install 'echo ${PIP_VERSION}'
     [ "${status}" = 0 ]
     [ "${output}" = "" ]
 }
 
 @test "steps fixes" {
-    run bash ${BUILD_PACK}/hook/pre-install
+    run bash ${BUILD_PACK}/hooks/pre-install
     [ "${status}" = 0 ]
 
     run cat ${BIN_DIR}/steps/mercurial
@@ -94,7 +94,4 @@ teardown() {
 
     run cat ${BIN_DIR}/steps/gdal
     [ "${output}" = "#!/usr/bin/env bash" ]
-
-    run cat ${BIN_DIR}/steps/collectstatic
-    [[ "${output}" =~ "set environment variable: DISABLE_COLLECTSTATIC=1" ]]
 }

@@ -25,14 +25,14 @@ teardown() {
     mkdir -p ${APP_DIR}/.heroku/src
     touch ${APP_DIR}/.heroku/src/test
 
-    run bash -c "source ${BUILD_PACK}/bin/utils; source ${BUILD_PACK}/hook/post-install"
+    run bash -c "source ${BUILD_PACK}/bin/utils; source ${BUILD_PACK}/hooks/post-install"
 
     [ "${status}" = 0 ]
     [ -f "${BUILD_DIR}/.heroku/src/test" ]
 }
 
 @test "export enviroments" {
-    run "${BUILD_PACK}/hook/post-install"
+    run "${BUILD_PACK}/hooks/post-install"
 
     [ "${status}" = 0 ]
     [ -f "${BUILD_PACK}/export" ]
@@ -45,7 +45,7 @@ teardown() {
     touch "${test_path}"
     [ -f "${test_path}" ]
 
-    run "${BUILD_PACK}/hook/post-install"
+    run "${BUILD_PACK}/hooks/post-install"
 
     [ "${status}" = 0 ]
     [ ! -f "${test_path}" ]
@@ -58,7 +58,7 @@ teardown() {
     touch "${test_path}"
     [ -f "${test_path}" ]
 
-    run "${BUILD_PACK}/hook/post-install"
+    run "${BUILD_PACK}/hooks/post-install"
 
     [ "${status}" = 0 ]
     [ ! -f "${test_path}" ]

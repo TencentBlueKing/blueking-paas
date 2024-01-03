@@ -130,6 +130,14 @@ class TestVolumeMountViewSet:
                 "source_type": "ConfigMap",
             },
             {
+                # 创建错误挂载路径的 Mount
+                "environment_name": "_global_",
+                "source_config_data": {"configmap_z": "configmap_z_data"},
+                "mount_path": "/",
+                "name": "mount-configmap-test",
+                "source_type": "ConfigMap",
+            },
+            {
                 # 创建空挂载内容的 Mount
                 "environment_name": "_global_",
                 "source_config_data": {},

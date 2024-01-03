@@ -35,6 +35,7 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     CONFIGURATION_MANAGE = FeatureFlagField(label="配置管理", default=True)
     STDOUT_LOG = FeatureFlagField(label="标准输出日志", default=True)
     ACCESS_LOG = FeatureFlagField(label="访问日志日志", default=True)
+    ALLOW_MULTIPLE_TEST_VERSIONS = FeatureFlagField(label="允许多个测试版本", default=False)
 
 
 class PluginFeatureFlagsManager:

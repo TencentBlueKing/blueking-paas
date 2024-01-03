@@ -523,7 +523,13 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     )
     def create(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
-        if plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists():
+        allow_multiple_test_versions = PluginFeatureFlagsManager(plugin).has_feature(
+            PluginFeatureFlag.ALLOW_MULTIPLE_TEST_VERSIONS
+        )
+        is_running_version_exist = plugin.all_versions.filter(
+            status__in=constants.PluginReleaseStatus.running_status()
+        ).exists()
+        if not allow_multiple_test_versions and is_running_version_exist:
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
         version_type = request.data["source_version_type"]
@@ -583,12 +589,17 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def back_to_previous_stage(self, request, pd_id, plugin_id, release_id):
         """返回上一发布步骤, 重置当前步骤和上一步骤的执行状态, 并重新执行上一步。"""
         plugin = self.get_plugin_instance()
-        if (
+        allow_multiple_test_versions = PluginFeatureFlagsManager(plugin).has_feature(
+            PluginFeatureFlag.ALLOW_MULTIPLE_TEST_VERSIONS
+        )
+        is_running_version_exist = (
             plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status())
             .exclude(pk=release_id)
             .exists()
-        ):
+        )
+        if not allow_multiple_test_versions and is_running_version_exist:
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
+
         release = self.get_queryset().get(pk=release_id)
         PluginReleaseExecutor(release).back_to_previous_stage(operator=request.user.username)
         release.refresh_from_db()
@@ -598,7 +609,13 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def re_release(self, request, pd_id, plugin_id, release_id):
         """重新发布版本"""
         plugin = self.get_plugin_instance()
-        if plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists():
+        allow_multiple_test_versions = PluginFeatureFlagsManager(plugin).has_feature(
+            PluginFeatureFlag.ALLOW_MULTIPLE_TEST_VERSIONS
+        )
+        is_running_version_exists = plugin.all_versions.filter(
+            status__in=constants.PluginReleaseStatus.running_status()
+        ).exists()
+        if not allow_multiple_test_versions and is_running_version_exists:
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
         release = self.get_queryset().get(pk=release_id)

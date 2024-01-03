@@ -16,7 +16,7 @@
             <bk-button
               theme="primary"
               class="mr10"
-              :disabled="curIsPending ? true : false"
+              :disabled="curIsPending && !pluginFeatureFlags.ALLOW_MULTIPLE_TEST_VERSIONS"
               @click="handleCreateVersion('formal')"
             >
               {{ $t('新建版本') }}

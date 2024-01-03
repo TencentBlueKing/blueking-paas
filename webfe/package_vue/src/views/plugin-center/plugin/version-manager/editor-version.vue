@@ -166,7 +166,7 @@
                 <bk-button
                   theme="primary"
                   :loading="isSubmitLoading"
-                  :disabled="isPending ? true : false"
+                  :disabled="isPending && !pluginFeatureFlags.ALLOW_MULTIPLE_TEST_VERSIONS"
                   @click="submitVersionForm"
                 >
                   {{ $t('提交并发布') }}

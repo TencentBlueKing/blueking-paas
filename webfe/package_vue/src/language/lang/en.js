@@ -2489,4 +2489,6 @@ export default {
   检索: 'Search',
   '使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能': 'Use build tools to construct images from code repositories, offering multiple language frameworks',
   '基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架': 'Directly build images from repository Dockerfile (similar to `docker build`)',
+  暂未配置日志采集规则: 'No log collection rules configured',
+  '当前模块任意环境部署成功后，将会给改模块配置默认的日志采集规则': 'After successful deployment in any environment, default log collection rules will be configured for the module',
 };

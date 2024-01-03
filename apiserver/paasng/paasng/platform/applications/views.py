@@ -630,11 +630,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # Create engine related data
         # `source_init_template` is optional
         source_init_template = engine_params.get("source_init_template", "")
-        language = (
-            Template.objects.get(name=source_init_template, type__in=TemplateType.normal_app_types()).language
-            if source_init_template
-            else ""
-        )
+        language = ""
+        if source_init_template:
+            language = Template.objects.get(
+                name=source_init_template, type__in=TemplateType.normal_app_types()
+            ).language
         module = create_default_module(
             application,
             source_init_template=source_init_template,

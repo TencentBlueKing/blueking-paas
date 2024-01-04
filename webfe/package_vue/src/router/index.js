@@ -456,14 +456,6 @@ const router = new Router({
           name: 'appSummaryEmpty',
         },
         {
-          path: ':id/base-info',
-          component: appBasicInfo,
-          name: 'appBaseInfo',
-          meta: {
-            capture403Error: false,
-          },
-        },
-        {
           path: ':id/:moduleId/module-manage',
           component: moduleManage,
           name: 'moduleManage',
@@ -484,15 +476,23 @@ const router = new Router({
           component: appConfigs,
           name: 'appConfigs',
           redirect: {
-            name: 'cloudAppMarket',
+            name: 'appMarket',
           },
           children: [
             {
               path: 'market',
               component: appMarket,
-              name: 'cloudAppMarket',
+              name: 'appMarket',
               meta: {
                 module: 'market',
+              },
+            },
+            {
+              path: 'mobile-market',
+              component: appMobileMarket,
+              name: 'appMobileMarket',
+              meta: {
+                module: 'appMobileMarket',
               },
             },
             {
@@ -552,14 +552,6 @@ const router = new Router({
               },
             },
           ],
-        },
-        {
-          path: ':id/roles',
-          component: appMembers,
-          name: 'appRoles',
-          meta: {
-            capture403Error: false,
-          },
         },
         {
           path: ':id/:moduleId/deploy',
@@ -813,16 +805,6 @@ const router = new Router({
           name: 'appCloudAPI',
         },
         {
-          path: ':id/market',
-          component: appMarket,
-          name: 'appMarket',
-        },
-        {
-          path: ':id/mobile-market',
-          component: appMobileMarket,
-          name: 'appMobileMarket',
-        },
-        {
           path: ':id/app_entry_config',
           component: appEntryConfig,
           name: 'appEntryConfig',
@@ -837,35 +819,46 @@ const router = new Router({
           component: monitorAlarm,
           name: 'monitorAlarm',
         },
+        // 普通应用访问统计路由配置
         {
-          path: ':id/:moduleId/web-analysis',
-          component: appWebAnalysis,
-          name: 'appWebAnalysis',
-        },
-        {
-          path: ':id/web-analysis',
-          component: appWebAnalysis,
-          name: 'appWebAnalysisWithModule',
-        },
-        {
-          path: ':id/:moduleId/log-analysis',
-          component: appLogAnalysis,
-          name: 'appLogAnalysis',
-        },
-        {
-          path: ':id/log-analysis',
-          component: appLogAnalysis,
-          name: 'appLogAnalysisWithModule',
-        },
-        {
-          path: ':id/:moduleId/event-analysis',
-          component: appEventAnalysis,
-          name: 'appEventAnalysis',
-        },
-        {
-          path: ':id/event-analysis',
-          component: appEventAnalysis,
-          name: 'appEventAnalysisWithModule',
+          path: ':id',
+          component: cloudAppAnalysis,
+          name: 'appAnalysis',
+          redirect: {
+            name: 'appWebAnalysis',
+          },
+          children: [
+            {
+              path: ':moduleId/web-analysis',
+              component: appWebAnalysis,
+              name: 'appWebAnalysis',
+            },
+            {
+              path: 'web-analysis',
+              component: appWebAnalysis,
+              name: 'appWebAnalysisWithModule',
+            },
+            {
+              path: ':moduleId/log-analysis',
+              component: appLogAnalysis,
+              name: 'appLogAnalysis',
+            },
+            {
+              path: 'log-analysis',
+              component: appLogAnalysis,
+              name: 'appLogAnalysisWithModule',
+            },
+            {
+              path: ':moduleId/event-analysis',
+              component: appEventAnalysis,
+              name: 'appEventAnalysis',
+            },
+            {
+              path: 'event-analysis',
+              component: appEventAnalysis,
+              name: 'appEventAnalysisWithModule',
+            },
+          ],
         },
         {
           path: ':id/:moduleId/code-review',

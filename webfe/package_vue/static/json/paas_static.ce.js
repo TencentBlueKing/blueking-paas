@@ -699,7 +699,7 @@ export const PAAS_STATIC_CONFIG = {
                         "name": staticI18n.$t("应用配置"),
                         "matchRouters": [
                             'appConfigs',
-                            'cloudAppMarket',
+                            'appMarket',
                             'appBasicInfo',
                             'appMembers',
                         ],
@@ -913,17 +913,13 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appCloudAPI",
-                "label": staticI18n.$t("云 API 管理"),
+                "label": staticI18n.$t("云 API 权限"),
                 "iconfontName": "cloudapi",
                 "supportModule": false,
-                "children": [
-                    {
-                        "name": staticI18n.$t("云 API 权限"),
-                        "destRoute": {
-                            "name": "appCloudAPI"
-                        }
-                    }
-                ]
+                "destRoute": {
+                    "name": "appCloudAPI"
+                },
+                "children": []
             },
             {
                 "name": "monitorAlarm",
@@ -941,67 +937,34 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appAnalysis",
-                "label": staticI18n.$t("数据统计"),
+                "label": staticI18n.$t("访问统计"),
                 "iconfontName": "analysis",
+                "matchRouters": [
+                    "appWebAnalysis",
+                    "appLogAnalysis",
+                    "appEventAnalysis"
+                ],
                 "supportModule": true,
-                "children": [
-                    {
-                        "name": staticI18n.$t("网站访问统计"),
-                        "destRoute": {
-                            "name": "appWebAnalysis"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("访问日志统计"),
-                        "destRoute": {
-                            "name": "appLogAnalysis"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("自定义事件统计"),
-                        "destRoute": {
-                            "name": "appEventAnalysis"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "appMarketing",
-                "label": staticI18n.$t("应用推广"),
-                "iconfontName": "volumn",
-                "children": [
-                    {
-                        "name": staticI18n.$t("应用市场"),
-                        "destRoute": {
-                            "name": "appMarket"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("应用市场 (移动端)"),
-                        "destRoute": {
-                            "name": "appMobileMarket"
-                        }
-                    }
-                ]
+                "destRoute": {
+                    "name": "appAnalysis"
+                },
+                "children": []
             },
             {
                 "name": "appConfigs",
-                "label": staticI18n.$t("基本设置"),
                 "iconfontName": "gear",
-                "children": [
-                    {
-                        "name": staticI18n.$t("基本信息"),
-                        "destRoute": {
-                            "name": "appBaseInfo"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("成员管理"),
-                        "destRoute": {
-                            "name": "appRoles"
-                        }
-                    }
-                ]
+                "label": staticI18n.$t("应用配置"),
+                "matchRouters": [
+                    'appConfigs',
+                    'appMarket',
+                    'appBasicInfo',
+                    'appMembers',
+                    'appMobileMarket',
+                ],
+                "destRoute": {
+                  "name": "appConfigs"
+                },
+                "children": []
             },
             {
                 "name": "docuManagement",

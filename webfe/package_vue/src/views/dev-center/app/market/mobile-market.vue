@@ -1,8 +1,5 @@
 <template>
   <div class="right-main">
-    <div class="ps-top-bar" v-if="!isCloudNativeApp">
-      <h2 class="box-shadow"> {{ $t('应用市场 (移动端)') }} </h2>
-    </div>
     <paas-content-loader
       class="app-container middle mobile-market-container"
       :is-loading="isDataLoading"

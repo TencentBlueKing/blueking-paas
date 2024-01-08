@@ -1,15 +1,13 @@
 <template>
   <div class="right-main">
-    <div class="ps-top-bar" v-if="!isCloudNativeApp">
-      <h2 class="box-shadow"> {{ $t('应用市场') }} </h2>
-    </div>
     <paas-content-loader
       :is-loading="isDataLoading || isManagerDataLoading"
       placeholder="market-loading"
       :offset-top="25"
       class="app-container overview-middle"
     >
-      <section v-show="!isDataLoading && !isManagerDataLoading">
+      <!-- loading高度问题 -->
+      <section style="min-height: 500px;">
         <!-- <bk-tab
           class="mt5"
           :active.sync="active"

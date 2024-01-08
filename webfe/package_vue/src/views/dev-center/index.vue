@@ -955,8 +955,10 @@ export default {
     },
 
     toAppSummary(appItem) {
+      const routeName = appItem.application?.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary';
+
       this.$router.push({
-        name: 'appSummary',
+        name: routeName,
         params: {
           id: appItem.application.code,
           moduleId: appItem.application.modules.find(item => item.is_default).name,

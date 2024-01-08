@@ -43,7 +43,6 @@ from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.engine.constants import ImagePullPolicy, RuntimeType
 from paasng.platform.engine.models import EngineApp
@@ -501,16 +500,8 @@ class DefaultServicesBinder:
         - Module's source template config
         - Application's specs(for default modules only)
         """
-        services = self.find_services_from_app_specs()
-        services.update(self.find_services_from_template())
+        services = self.find_services_from_template()
         self._bind(services)
-
-    def find_services_from_app_specs(self) -> PresetServiceSpecs:
-        """find default services for current application"""
-        # Only affects default module
-        if not self.module.is_default:
-            return {}
-        return AppSpecs(self.application).preset_services
 
     def find_services_from_template(self) -> PresetServiceSpecs:
         """find default services defined in module template"""

@@ -60,6 +60,5 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}
 |-------------------------------|----------|------------------------------|
 | engine_enabled                | bool     | 是否启用应用引擎                 |
 | can_create_extra_modules      | bool     | 是否允许创建额外模块             |
-| require_templated_source      | bool     | 创建模块时是否需要选择初始化模板 |
 | confirm_required_when_publish | bool     | 发布到市场时是否需要二次确认     |
 | market_published              | bool     | 是否已经发布到应用市场           |

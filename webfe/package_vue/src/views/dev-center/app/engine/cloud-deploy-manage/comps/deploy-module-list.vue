@@ -626,7 +626,7 @@ export default {
       }
       .paasng-configuration-line {
         font-size: 14px;
-        color: #979BA5;
+        color: #63656E;
         transform: translateY(0px);
       }
     }

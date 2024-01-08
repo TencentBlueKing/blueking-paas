@@ -85,6 +85,7 @@
     <bk-dialog
       v-model="fileDialogConfig.visiable"
       :width="fileDialogConfig.dialogWidth"
+      :position="{ top: fileDialogConfig.top }"
       theme="primary"
       header-position="left"
       :title="$t('文件内容详情')"
@@ -94,6 +95,7 @@
         ref="resourceEditorRef"
         key="editor"
         v-model="detail"
+        readonly
         v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
         :height="fullScreen ? clientHeight : fileDialogConfig.height"
       />
@@ -113,6 +115,7 @@
       </div>
       <div slot="content">
         <div class="slider-volume-content">
+          <bk-alert type="error" class="mb10" :title="$t('挂载卷新增、编辑后，需要重新部署应用才能生效。')"></bk-alert>
           <bk-form :label-width="200" form-type="vertical" :model="volumeFormData" ref="formRef">
             <bk-form-item
               :label="$t('名称')"
@@ -125,7 +128,6 @@
                 v-model="volumeFormData.name"
                 :placeholder="$t('请输入 2-30 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               ></bk-input>
-              <p class="mt5 mb0 f12 name-tip" slot="tip">{{ $t('唯一标识，创建后不可修改') }}</p>
             </bk-form-item>
             <bk-form-item
               :label="$t('挂载目录')"
@@ -136,7 +138,7 @@
             >
               <bk-input
                 v-model="volumeFormData.mount_path"
-                :placeholder="$t('请输入以斜杆(/)开头，且不包含空字符串的路径')"
+                :placeholder="mountPathTip"
               ></bk-input>
             </bk-form-item>
             <bk-form-item
@@ -295,8 +297,8 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^\/([^/\0]+(\/)?)*$/,
-            message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径'),
+            regex: /^\/([^/\0]+(\/)?)+$/,
+            message: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）'),
             trigger: 'blur',
           },
         ],
@@ -326,6 +328,7 @@ export default {
       hoverKey: '',
       curValue: '',
       addLoading: false,
+      mountPathTip: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）'),
     };
   },
   computed: {
@@ -453,7 +456,9 @@ export default {
     // 删除挂载卷
     handleDelete(row) {
       this.$bkInfo({
+        extCls: 'delete-volume-info-cls',
         title: this.$t('确认删除挂载卷：') + row.name,
+        subTitle: this.$t('挂载卷删除后，需要重新部署应用才能生效。'),
         confirmFn: () => {
           this.deleteVolume(row);
         },
@@ -475,6 +480,15 @@ export default {
       const _detail = cloneDeep(this.detail);
       const resultFormatDetail = this.convertToObjectIfPossible(_detail);
       this.$refs.resourceEditorRef?.setValue(resultFormatDetail);
+      if (window.innerWidth < 1366) {
+        this.fileDialogConfig.dialogWidth = 800;
+        this.fileDialogConfig.top = 80;
+        this.fileDialogConfig.height = 400;
+      } else {
+        this.fileDialogConfig.dialogWidth = 1100;
+        this.fileDialogConfig.top = 120;
+        this.fileDialogConfig.height = 520;
+      }
     },
     // 筛选生效环境
     sourceFilterMethod(value, row, column) {
@@ -601,6 +615,7 @@ export default {
           this.$refs?.editFileInputRef[0].blur();
         });
       }
+      this.$refs.editorRefSlider?.handleFocus();
     },
 
     // 点击label
@@ -667,6 +682,9 @@ export default {
       height: calc(100vh - 129px);
     }
   }
+}
+.delete-volume-info-cls .bk-dialog-header-inner {
+  word-break: break-word !important;
 }
 </style>
 

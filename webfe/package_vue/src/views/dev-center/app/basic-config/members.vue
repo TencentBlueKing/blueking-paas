@@ -1,7 +1,7 @@
 <template lang="html">
   <div class="right-main">
     <div class="ps-top-bar" v-if="!isCloudNativeApp">
-      <h2>
+      <h2 class="box-shadow">
         {{ $t('成员管理') }}
         <template v-if="pagination.count">
           ({{ pagination.count }}{{ $t('人') }})
@@ -258,8 +258,7 @@
   </div>
 </template>
 
-<script>
-import { APP_ROLE_NAMES } from '@/common/constants';
+<script>import { APP_ROLE_NAMES } from '@/common/constants';
 import auth from '@/auth';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';

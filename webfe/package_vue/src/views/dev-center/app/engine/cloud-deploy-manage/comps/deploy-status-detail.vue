@@ -177,6 +177,7 @@ import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from './deploy-timeline';
 import deployLog from './deploy-log';
 import moment from 'moment';
+import _ from 'lodash';
 export default {
   components: {
     deployTimeline,
@@ -260,6 +261,8 @@ export default {
         stage: '',
       },
       serverTimeout: 30,
+      watchRvData: {},
+      exposedLink: '',
     };
   },
   computed: {
@@ -286,6 +289,13 @@ export default {
             this.watchDeployStatus(v);
           }, 1000);
         });
+      },
+      immediate: true,
+    },
+    // 接受父组件传过来的rvData
+    rvData: {
+      handler(v) {
+        this.watchRvData = _.cloneDeep(v);
       },
       immediate: true,
     },
@@ -382,6 +392,7 @@ export default {
             // 部署成功
             this.isDeploySuccess = true;
             this.isWatchDeploying = false;
+            this.getExposedLink();
             // 更新当前模块信息
             // this.getModuleProcessList();
           } else if (item.status === 'failed') {
@@ -592,6 +603,17 @@ export default {
           message: e.detail || e.message,
         });
       }
+    },
+
+    // 获取部署成功访问链接
+    async getExposedLink() {
+      const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+        appCode: this.appCode,
+      });
+      const curModuleInfo = res.find(e => e.name === this.curModuleId);
+      const curDatabase = curModuleInfo?.envs[this.environment] || [];
+      const exposedData = curDatabase.find(e => e.address.type !== 'custom') || {};   // 访问链接
+      this.exposedLink = exposedData?.address?.url || '';
     },
 
     /**
@@ -815,8 +837,12 @@ export default {
           deployId: this.deploymentId,
         });
         this.curModuleInfo = res.data.find(e => e.module_name === this.curModuleId);
+        // 获取到新的rv_inst数据 重新赋值
+        this.watchRvData = {
+          rvInst: res.rv_inst,
+          rvProc: res.rv_proc,
+        };
         console.log('this.curModuleId', this.curModuleId, this.curModuleInfo);
-        this.exposedLink = this.curModuleInfo?.exposed_url;   // 访问链接
         this.formatProcesses(this.curModuleInfo);
         return Promise.resolve(true);
       } catch (e) {
@@ -896,7 +922,7 @@ export default {
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
       };
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.watchRvData.rvProc}&rv_inst=${this.watchRvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
       this.serverProcessEvent = new EventSource(url, {
         withCredentials: true,
       });

@@ -1,7 +1,7 @@
 <template>
   <bk-sideslider
     :is-show.sync="isShow"
-    :title="name === 'hook' ? $t('钩子命令') : $t('进程配置')"
+    :title="active === 'hook' ? $t('钩子命令') : $t('进程配置')"
     :width="960"
     quick-close
   >
@@ -59,6 +59,7 @@ export default {
       const htmlStr = md.render(markdownContent);
       // 替换a标签属性，使用新标签页打开
       this.markdownContent = htmlStr.replace(/<a/g, '<a target="_blank"');
+      this.markdownContent = htmlStr.replace(/<a href="enbVariables">/g, `<a href="${this.GLOBAL.DOC.APP_DESC_DOC}" target="_blank">`);
     },
   },
 };

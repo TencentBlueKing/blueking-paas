@@ -431,12 +431,13 @@ export default {
         this.pagination.limit = 10;
         this.imageTagListCount = 0;
         // 仅镜像部署不需要获取分支数据
-        console.log('this.deploymentInfoBackUp.build_method', this.deploymentInfoBackUp.build_method);
         if (this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches(); // 获取分支数据
         } else {
           this.getAppProcessData(); // 获取镜像地址
         }
+
+        this.setCurData();
         this.getModuleRuntimeOverview();
         // 上次选择的镜像拉取策略
         if (this.lastSelectedImagePullStrategy) {
@@ -447,10 +448,36 @@ export default {
     },
     deploymentInfo(v) {
       this.deploymentInfoBackUp = _.cloneDeep(v);
-      this.curModulemirrorTag = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info?.version_name;
+      const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
+      if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
+      this.curModulemirrorTag = versionInfo?.version_name;
+      // smartApp下, 代码差异
+      if (this.isSmartApp) {
+        this.branchValue = `${versionInfo?.version_type}:${versionInfo?.version_name}`;
+        this.curSelectData = {
+          revision: versionInfo?.revision,
+          name: versionInfo?.version_name,
+          type: versionInfo?.version_type,
+        };
+      }
     },
   },
   methods: {
+    setCurData() {
+      const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
+      if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
+      this.curModulemirrorTag = versionInfo?.version_name;
+      // smartApp下, 代码差异
+      console.log('this.isSmartApp', this.isSmartApp);
+      if (this.isSmartApp) {
+        this.branchValue = `${versionInfo?.version_type}:${versionInfo?.version_name}`;
+        this.curSelectData = {
+          revision: versionInfo?.revision,
+          name: versionInfo?.version_name,
+          type: versionInfo?.version_type,
+        };
+      }
+    },
     async getAppProcessData() {
       try {
         const res = await this.$store.dispatch('deploy/getAppProcessInfo', {
@@ -619,6 +646,13 @@ export default {
         if (this.$refs?.imageFormRef) {
           await this.$refs.imageFormRef?.validate();
         }
+        if (this.buttonActive === 'image' && !this.tagData.tagValue) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('请选择镜像Tag'),
+          });
+          return;
+        }
         this.handleConfirm();
       } catch (error) {
         console.error(error);
@@ -741,6 +775,7 @@ export default {
 
     // 选择分支
     handleChangeBranch() {
+      if (!this.branchesData.length) return;
       this.curSelectData = this.branchesData.find((e) => {
         if (this.branchValue.includes(e.name)) {
           return e;

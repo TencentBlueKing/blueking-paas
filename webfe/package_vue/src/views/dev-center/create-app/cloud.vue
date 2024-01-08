@@ -32,7 +32,8 @@
           >
             <bk-input
               v-model="formData.code"
-              :placeholder="$t('由小写字母、数字、连字符（-）组成，首字母必须是字母，长度小于16个字符')"
+              :placeholder="isBkLesscode ? $t('由小写字母组成，长度小于 16 个字符') :
+                $t('由小写字母、数字、连字符（-）组成，首字母必须是字母，长度小于16个字符')"
               class="form-input-width"
             >
             </bk-input>
@@ -50,19 +51,19 @@
           >
             <bk-input
               v-model="formData.name"
-              :placeholder="$t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
+              :placeholder="isBkLesscode ? $t('由汉字、英文字母、数字组成，长度小于 20 个字符') : $t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
               class="form-input-width"
             >
             </bk-input>
           </bk-form-item>
 
-          <!-- 构建方式 -->
+          <!-- 镜像仓库不需要展示构建方式 -->
           <bk-form-item
             :required="true"
             error-display-type="normal"
             ext-cls="form-item-cls mt20"
             :label="$t('构建方式')"
-            v-if="isBkDefaultCode"
+            v-if="isBkDefaultCode && formData.buildMethod !== 'image'"
           >
             <div class="mt5">
               <bk-radio-group
@@ -72,12 +73,17 @@
               >
                 <bk-radio :value="'buildpack'">
                   {{ $t('蓝鲸 Buildpack') }}
+                  <span class="tips" @click.stop>
+                    <bk-icon type="info-circle" />
+                    {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能') }}
+                  </span>
                 </bk-radio>
                 <bk-radio :value="'dockerfile'">
                   Dockerfile
-                </bk-radio>
-                <bk-radio :value="'image'">
-                  {{ $t('仅镜像') }}
+                  <span class="tips" @click.stop>
+                    <bk-icon type="info-circle" />
+                    {{ $t('基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架') }}
+                  </span>
                 </bk-radio>
               </bk-radio-group>
             </div>
@@ -112,15 +118,8 @@
                 clearable
                 :placeholder="mirrorExamplePlaceholder"
               >
-
-                <template slot="append">
-                  <div
-                    class="group-text form-text-append"
-                    @click="handleSetMirrorUrl"
-                  >{{$t('使用示例镜像')}}</div>
-                </template>
               </bk-input>
-              <span slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
+              <p slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</p>
             </bk-form-item>
             <bk-form-item
               error-display-type="normal"
@@ -479,27 +478,12 @@
             <bk-alert
               type="info">
               <div slot="title">
-                {{ $t('进程名和启动命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
                 <a
                   target="_blank"
-                  :href="GLOBAL.DOC.APP_PROCESS_INTRODUCTION"
+                  :href="GLOBAL.DOC.APP_DESC_DOC"
                   style="color: #3a84ff">
-                  {{$t('应用进程介绍')}}
-                </a>
-              </div>
-            </bk-alert>
-          </collapseContent>
-
-          <collapseContent :title="$t('钩子命令')" class="mt20" :fold="false">
-            <bk-alert
-              type="info">
-              <div slot="title">
-                {{ $t('钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
-                <a
-                  target="_blank"
-                  :href="GLOBAL.DOC.BUILD_PHASE_HOOK"
-                  style="color: #3a84ff">
-                  {{$t('部署阶段钩子')}}
+                  {{$t('应用描述文件')}}
                 </a>
               </div>
             </bk-alert>
@@ -521,7 +505,7 @@
           <collapseContent
             active-name="hook"
             collapse-item-name="hook"
-            :title="$t('钩子命令')"
+            :title="$t('部署前置命令')"
             class="mt20"
           >
             <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>
@@ -583,22 +567,22 @@
         >
           <bk-form
             :model="buildDialog.formData"
-            :label-width="130">
-            <bk-form-item :label="$t('镜像仓库：')">
+            :label-width="localLanguage === 'en' ? 150 : 130">
+            <bk-form-item :label="`${$t('镜像仓库')}：`">
               <span class="build-text">
                 {{ imageRepositoryTemplate }}
               </span>
             </bk-form-item>
-            <bk-form-item :label="$t('镜像 tag 规则：')">
+            <bk-form-item :label="`${$t('镜像 tag 规则')}：`">
               {{ mirrorTag }}
             </bk-form-item>
-            <bk-form-item :label="$t('构建方式：')">
+            <bk-form-item :label="`${$t('构建方式')}：`">
               {{ buildDialog.formData.buildMethod }}
             </bk-form-item>
-            <bk-form-item :label="$t('基础镜像：')">
+            <bk-form-item :label="`${$t('基础镜像')}：`">
               {{ buildDialog.formData.imageName }}
             </bk-form-item>
-            <bk-form-item :label="$t('构建工具：')">
+            <bk-form-item :label="`${$t('构建工具')}：`">
               <p
                 class="config-item" v-for="item in buildDialog.formData.buildConfig"
                 :key="item.id"
@@ -743,19 +727,19 @@ export default {
             trigger: 'blur',
           },
           {
-            validator(val) {
-              const reg = /^[a-z][a-z0-9-]*$/;
+            validator: (val) => {
+              const reg = this.isBkLesscode ? /^[a-z]+/ : /^[a-z][a-z0-9-]*$/;
               return reg.test(val);
             },
-            message: this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母'),
+            message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母')),
             trigger: 'blur',
           },
           {
-            validator(val) {
-              const reg = /^[a-z][a-z0-9-]{3,16}$/;
+            validator: (val) => {
+              const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{3,16}$/;
               return reg.test(val);
             },
-            message: this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
+            message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')),
             trigger: 'blur',
           },
         ],
@@ -771,11 +755,11 @@ export default {
             trigger: 'blur',
           },
           {
-            validator(val) {
-              const reg = /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
+            validator: (val) => {
+              const reg =  this.isBkLesscode ? /^[\u4e00-\u9fa5a-zA-Z0-9]{1,20}$/ : /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
               return reg.test(val);
             },
-            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符'),
+            message: () => (this.isBkLesscode ? this.$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符') : this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符')),
             trigger: 'blur',
           },
         ],
@@ -883,6 +867,9 @@ export default {
     },
     curUserFeature() {
       return this.$store.state.userFeature;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -1146,9 +1133,7 @@ export default {
       // 选择了lesscode代码来源
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
         await this.$refs.formBaseRef.validate();
-        this.formData.sourceInitTemplate = 'nodejs_bk_magic_vue_spa';
       }
-
       this.formLoading = true;
       const params = {
         is_plugin_app: !!this.isBkPlugin,
@@ -1247,8 +1232,9 @@ export default {
 
       // lesscode应用
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
+        const languageName = this.languagesData.NodeJS[0]?.name;
         params.source_config = {
-          source_init_template: this.formData.sourceInitTemplate,
+          source_init_template: languageName,
           source_origin: this.sourceOrigin,
         };
       }
@@ -1288,13 +1274,6 @@ export default {
       } finally {
         this.formLoading = false;
       }
-    },
-
-
-    // 处理应用示例填充
-    handleSetMirrorUrl() {
-      this.formData.url = this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'docker.io/library/nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE;
-      this.$refs.formImageRef.clearError();
     },
 
     // 初始化应用编排数据
@@ -1378,18 +1357,25 @@ export default {
 
     // 切换应用类型
     handleSwitchAppType(codeSource) {
+      this.curStep = 1;
+      this.$refs.formBaseRef?.clearError();
       this.curCodeSource = codeSource;
-      console.log('codeSource', codeSource);
+      this.formData.buildMethod = 'buildpack';
+      this.formData.sourceOrigin = 'soundCode';
       this.$nextTick(() => {
         // 蓝鲸可视化平台推送的源码包
         if (codeSource === 'bkLesscode') {
           this.regionChoose = this.GLOBAL.CONFIG.REGION_CHOOSE;
-          this.structureType = 'soundCode';
           this.handleCodeTypeChange(2);
         } else if (codeSource === 'default') {
           // 普通应用
-          this.regionChoose = this.defaultRegionChoose;
           this.handleCodeTypeChange(1);
+        } else if (codeSource === 'image') {
+          this.curCodeSource = 'default';
+          this.formData.sourceOrigin = codeSource;
+          this.formData.buildMethod = codeSource;
+          // 云原生仅镜像
+          this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;
         }
       });
     },

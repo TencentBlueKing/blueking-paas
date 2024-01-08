@@ -167,8 +167,7 @@
   </div>
 </template>
 
-<script>
-import dropdown from '@/components/ui/Dropdown';
+<script>import dropdown from '@/components/ui/Dropdown';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import { formatDate } from '@/common/tools';
 
@@ -313,16 +312,16 @@ export default {
         color: #333333;
         background: #FFF;
         z-index: 1;
-        height: 50px;
+        height: 52px;
         .bar-container {
             // max-width: 1180px;
             /*padding: 0 30px;*/
             margin: auto;
             /*box-shadow: 0px 1px 2px 0px rgba(0,0,0,0.1); */
-            border-bottom: 1px solid #e6e9ea;
-            height: 50px;
-            line-height: 50px;
+            height: 52px;
+            line-height: 52px;
             padding: 0 24px;
+            box-shadow: 0 3px 4px 0 #0000000a;
         }
 
         .title {

@@ -41,6 +41,7 @@
                 data-parsley-trigger="input blur"
                 class="ps-form-control"
                 :placeholder="$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
+                @input="handleInput('code')"
               >
             </p>
             <p class="whole-item-tips">
@@ -63,6 +64,7 @@
               data-parsley-trigger="input blur"
               class="ps-form-control"
               :placeholder="$t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
+              @input="handleInput('name')"
             >
           </p>
         </div>
@@ -170,6 +172,7 @@ export default {
       regionChoices: [],
       regionDescription: '',
       regionChoose: 'default',
+      errorFields: [],
     };
   },
   computed: {
@@ -238,9 +241,7 @@ export default {
                   field.$element.focus();
                   fieldFocused = true;
                 }
-                setTimeout(() => {
-                  field.removeError('serverError', { updateClass: true });
-                }, 3000);
+                this.errorFields.push(key);
               } else {
                 this.globalErrorMessage = detail[0];
                 window.scrollTo(0, 0);
@@ -274,6 +275,16 @@ export default {
       this.$router.push({
         name: 'myApplications',
       });
+    },
+    handleInput(key) {
+      if (this.errorFields.length) {
+        if (this.errorFields.includes(key)) {
+          // 输入清除错误提示
+          const field = this.$form.find(`input[name="${key}"]`).parsley();
+          field.removeError('serverError', { updateClass: true });
+          this.errorFields.splice(this.errorFields.indexOf(key), 1);
+        }
+      }
     },
   },
 };

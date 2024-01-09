@@ -164,11 +164,11 @@ export default {
         li {
             line-height: 32px;
             padding: 0 20px;
-            font-size: 14px;
+            font-size: 12px;
 
             a {
                 color: $appMainFontColor;
-                font-size: 14px;
+                font-size: 12px;
                 display: block;
                 overflow: hidden;
                 white-space: nowrap;

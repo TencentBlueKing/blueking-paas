@@ -37,7 +37,7 @@
     <div class="secrectList">
       <bk-table :data="appSecretList" size="medium">
         <bk-table-column :label="$t('应用 ID (bk_app_code)')" prop="bk_app_code" width="190"></bk-table-column>
-        <bk-table-column :label="$t('应用密钥 (bk_app_secret)')" width="315">
+        <bk-table-column :label="$t('应用密钥 (bk_app_secret)')" min-width="315">
           <template slot-scope="props">
             <span>
               {{ appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret }}&nbsp;
@@ -53,10 +53,7 @@
               v-else
               class="paasng-icon paasng-general-copy icon-color copy"
               style="cursor: pointer"
-              @click="copySecretText"
-              :data-clipboard-text="
-                appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret
-              "
+              v-copy="appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret"
             />
           </template>
         </bk-table-column>
@@ -110,8 +107,7 @@
           v-else
           class="paasng-icon paasng-general-copy icon-color copy"
           style="cursor: pointer"
-          @click="copySecretText"
-          :data-clipboard-text="appSecret"
+          v-copy="appSecret"
         />
       </div>
 
@@ -285,8 +281,7 @@
   </div>
 </template>
 
-<script>
-import appBaseMixin from '@/mixins/app-base-mixin';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 import _ from 'lodash';
 export default {
@@ -371,17 +366,13 @@ export default {
     },
   },
   watch: {
-    'curAppInfo.application.code': {
-      handler(newValue) {
-        console.log(newValue);
-        this.getSecretList();
-        this.getDefaultSecret();
-        this.getDeployedSecret();
-      },
-      deep: true,
+    appCode() {
+      this.getSecretList();
+      this.getDefaultSecret();
+      this.getDeployedSecret();
     },
   },
-  mounted() {
+  created() {
     this.getSecretList();
     this.getDefaultSecret();
     this.getDeployedSecret();
@@ -392,7 +383,6 @@ export default {
         const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verifications/`;
         this.$http.post(url, { verification_code: '' }).then(
           (res) => {
-            console.log('res--appSecret', res);
             this.appSecret = res.app_secret;
             this.togeFlag = true;
           },
@@ -524,26 +514,6 @@ export default {
             return;
           }
         });
-      });
-    },
-    // 复制密钥文本
-    copySecretText() {
-      // eslint-disable-next-line no-undef
-      const clipboard = new Clipboard('.copy');
-      clipboard.on('success', () => {
-        this.$paasMessage({
-          theme: 'primary',
-          message: this.$t('复制成功'),
-        });
-        clipboard.destroy();
-      });
-      clipboard.on('error', () => {
-        this.$bkMessage({
-          message: '该浏览器不支持复制',
-          offsetY: 80,
-          theme: 'error',
-        });
-        clipboard.destroy();
       });
     },
     // 确认提交验证码
@@ -743,7 +713,6 @@ export default {
             }
             return arr;
           }, []);
-          console.log(formatRes);
           this.DeployedSecret = formatRes;
         })
         .catch((err) => {

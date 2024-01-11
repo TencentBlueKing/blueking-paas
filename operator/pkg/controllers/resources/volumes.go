@@ -19,11 +19,30 @@
 package resources
 
 import (
+	"fmt"
+	"path"
+
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
+)
+
+const (
+	// VOLUME_NAME_APP_LOGGING 应用日志(legacy)-挂载卷名称
+	VOLUME_NAME_APP_LOGGING = "applogs"
+	// VOLUME_HOST_PATH_APP_LOGGING_DIR 应用日志(legacy)-宿主机挂载路径
+	VOLUME_HOST_PATH_APP_LOGGING_DIR = "/data/bkapp/logs"
+	// VOLUME_MOUNT_APP_LOGGING_DIR 应用日志(legacy)-容器内挂载点
+	VOLUME_MOUNT_APP_LOGGING_DIR = "/app/logs"
+	// MUL_MODULE_VOLUME_NAME_APP_LOGGING 应用日志-挂载卷名称
+	MUL_MODULE_VOLUME_NAME_APP_LOGGING = "appv3logs"
+	// MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR 应用日志-宿主机挂载路径
+	MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR = "/data/bkapp/v3logs"
+	// MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR 应用日志-容器内挂载点
+	MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR = "/app/v3logs"
 )
 
 // VolumeMount with volume source configurer
@@ -108,5 +127,55 @@ func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountN
 		},
 	)
 
+	return nil
+}
+
+// BuiltinLogsVolume 内置日志挂载卷
+type BuiltinLogsVolume struct{}
+
+// ApplyToDeployment 将内置日志挂载卷应用到 deployment
+func (s BuiltinLogsVolume) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error {
+	var legacyLogPath, moduleLogPath string
+	if appInfo, err := applications.GetBkAppInfo(bkapp); err != nil {
+		return errors.Wrap(err, "InvalidAnnotations: missing bkapp info")
+	} else {
+		// {region}-{dns-safe-wl-app-name}
+		legacyLogPath = fmt.Sprintf("%s-%s", appInfo.Region, paasv1alpha2.DNSSafeName(appInfo.WlAppName))
+		// {region}-bkapp-{app_code}-{environment}/{module_name}
+		moduleLogPath = fmt.Sprintf("%s-bkapp-%s-%s/%s", appInfo.Region, appInfo.AppCode, appInfo.Environment, appInfo.ModuleName)
+	}
+
+	containers := deployment.Spec.Template.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Name:      VOLUME_NAME_APP_LOGGING,
+			MountPath: VOLUME_MOUNT_APP_LOGGING_DIR,
+		})
+
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Name:      MUL_MODULE_VOLUME_NAME_APP_LOGGING,
+			MountPath: MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
+		})
+	}
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: VOLUME_NAME_APP_LOGGING,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: path.Join(VOLUME_HOST_PATH_APP_LOGGING_DIR, legacyLogPath),
+				},
+			},
+		})
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: MUL_MODULE_VOLUME_NAME_APP_LOGGING,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: path.Join(MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR, moduleLogPath),
+				},
+			},
+		})
 	return nil
 }

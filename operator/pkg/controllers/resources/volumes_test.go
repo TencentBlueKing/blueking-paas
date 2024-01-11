@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Get VolumeMountMap", func() {
@@ -164,5 +165,55 @@ var _ = Describe("test apply to deployment", func() {
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
 
 		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
+	})
+})
+
+var _ = Describe("test builtin logs", func() {
+	var bkapp *paasv1alpha2.BkApp
+	var deployment *appsv1.Deployment
+
+	BeforeEach(func() {
+		bkapp = &paasv1alpha2.BkApp{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "bkapp-sample",
+				Namespace:   "default",
+				Annotations: map[string]string{paasv1alpha2.EnvironmentKey: string(paasv1alpha2.ProdEnv)},
+			},
+			Spec: paasv1alpha2.AppSpec{},
+		}
+
+		deployment = &appsv1.Deployment{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-deployment",
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: paasv1alpha2.ReplicasOne,
+				Selector: &metav1.LabelSelector{},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "nginx", Image: "nginx:latest"}}},
+				},
+			},
+		}
+	})
+
+	It("test builtin logs", func() {
+		bkapp = testing.WithAppInfoAnnotations(bkapp)
+		source := &BuiltinLogsVolume{}
+		Expect(source.ApplyToDeployment(bkapp, deployment)).To(BeNil())
+	})
+
+	It("test missing bkapp info", func() {
+		source := &BuiltinLogsVolume{}
+		Expect(
+			source.ApplyToDeployment(bkapp, deployment),
+		).To(HaveOccurred())
 	})
 })

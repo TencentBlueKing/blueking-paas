@@ -29,6 +29,7 @@ type ProjectConfigReader interface {
 
 	// Platform related methods
 	GetIngressClassName() string
+	RequireMountLogsToHostPath() bool
 	IsAutoscalingEnabled() bool
 }
 
@@ -54,6 +55,10 @@ func (d defaultConfig) GetProcDefaultMemLimits() string {
 
 func (d defaultConfig) GetIngressClassName() string {
 	return "nginx"
+}
+
+func (d defaultConfig) RequireMountLogsToHostPath() bool {
+	return false
 }
 
 func (d defaultConfig) IsAutoscalingEnabled() bool {

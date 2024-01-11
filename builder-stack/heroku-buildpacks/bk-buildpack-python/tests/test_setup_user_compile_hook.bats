@@ -27,7 +27,7 @@ teardown() {
 
 @test "compile hook created" {
     mkdir -p ${BUILD_DIR}/bin
-    run "${BUILD_PACK}/hook/setup-user-compile-hook"
+    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
 
     run cat "${BUILD_DIR}/bin/pre_compile"
     [ "${status}" = 0 ]
@@ -41,7 +41,7 @@ teardown() {
 }
 
 @test "compile hook not create because bin directory not exists" {
-    run "${BUILD_PACK}/hook/setup-user-compile-hook"
+    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
 
     [ "${status}" = 0 ]
     [ ! -f "${BUILD_DIR}/bin/pre_compile" ]
@@ -52,7 +52,7 @@ teardown() {
     mkdir -p ${BUILD_DIR}/bin
     touch ${BUILD_DIR}/bin/pre_compile
     touch ${BUILD_DIR}/bin/post_compile
-    run "${BUILD_PACK}/hook/setup-user-compile-hook"
+    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
 
     [ "${status}" = 0 ]
 
@@ -67,7 +67,7 @@ teardown() {
 
 @test "trace_call hook" {
     mkdir -p ${BUILD_DIR}/bin
-    run "${BUILD_PACK}/hook/setup-user-compile-hook"
+    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
     echo "I'm Groooooot!" > ${BUILD_DIR}/bin/pre-compile
 
     [ "${status}" = 0 ]
@@ -79,7 +79,7 @@ teardown() {
 
 @test "make sure script executable" {
     mkdir -p ${BUILD_DIR}/bin
-    "${BUILD_PACK}/hook/setup-user-compile-hook"
+    "${BUILD_PACK}/hooks/setup-user-compile-hook"
     echo "" > ${BUILD_DIR}/bin/pre-compile
 
     hooked_bash 'shopt -s expand_aliases; alias trace_call=cat' "${BUILD_DIR}/bin/pre_compile"
@@ -91,7 +91,7 @@ teardown() {
 
 @test "make sure failed when hook error" {
     mkdir -p ${BUILD_DIR}/bin
-    "${BUILD_PACK}/hook/setup-user-compile-hook"
+    "${BUILD_PACK}/hooks/setup-user-compile-hook"
     echo "" > ${BUILD_DIR}/bin/pre-compile
 
     run hooked_bash 'shopt -s expand_aliases; alias trace_call=false' "${BUILD_DIR}/bin/pre_compile"
@@ -101,7 +101,7 @@ teardown() {
 
 @test "make sure script not exists after run" {
     mkdir -p ${BUILD_DIR}/bin
-    "${BUILD_PACK}/hook/setup-user-compile-hook"
+    "${BUILD_PACK}/hooks/setup-user-compile-hook"
     echo "" > ${BUILD_DIR}/bin/pre-compile
 
     run hooked_bash 'shopt -s expand_aliases; alias trace_call=cat' "${BUILD_DIR}/bin/pre_compile"

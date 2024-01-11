@@ -4179,9 +4179,6 @@ definitions:
           can_create_extra_modules:
             type: boolean
             description: "是否允许创建新模块"
-          require_templated_source:
-            type: boolean
-            description: "创建时是否必须选择应用源码模板"
           confirm_required_when_publish:
             type: boolean
             description: "发布到市场时是否需要二次确认"

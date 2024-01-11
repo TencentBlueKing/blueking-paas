@@ -25,7 +25,6 @@ import logging
 from abc import ABC
 from typing import Any, Dict, Type
 
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.core.region.models import get_region
@@ -68,27 +67,6 @@ class AppSpecs:
         return self.type_specs.can_create_extra_modules
 
     @property
-    def require_templated_source(self) -> bool:
-        """Whether an application must choose source template"""
-        # 插件应用不需要模板
-        if self.application.is_plugin_app:
-            return False
-        return self.type_specs.require_templated_source
-
-    @property
-    def language_by_default(self) -> str:
-        # 插件应用的默认语言为 python
-        if self.application.is_plugin_app:
-            return "Python"
-        return self.type_specs.language_by_default
-
-    @property
-    def preset_services(self) -> Dict[str, Dict]:
-        if self.application.is_plugin_app:
-            return settings.PRESET_SERVICES_BY_APP_TYPE.get("bk_plugin", {})
-        return self.type_specs.preset_services
-
-    @property
     def confirm_required_when_publish(self) -> bool:
         """Whether an extra confirmation is required when publishing application to market"""
         module = self.application.get_default_module()
@@ -116,7 +94,6 @@ class AppSpecs:
         return {
             "engine_enabled": self.engine_enabled,
             "can_create_extra_modules": self.can_create_extra_modules,
-            "require_templated_source": self.require_templated_source,
             "confirm_required_when_publish": self.confirm_required_when_publish,
             "market_published": self.market_published,
         }
@@ -132,12 +109,6 @@ class AppTypeSpecs(ABC):
 
     # Whether an application can create new modules besides the "default" one
     can_create_extra_modules: bool = True
-
-    # Whether an application needs templated source codes when being created
-    require_templated_source: bool = True
-
-    # When user hasn't provided any source template, use this language by default
-    language_by_default: str = ""
 
     _spec_types: Dict[ApplicationType, Type["AppTypeSpecs"]] = {}
 
@@ -156,12 +127,6 @@ class AppTypeSpecs(ABC):
         except KeyError:
             raise RuntimeError(f"{type_} is not a valid application type, no TypeSpecs can be found!")
 
-    @property
-    def preset_services(self) -> Dict[str, Dict]:
-        """Bind default module with below services when application was created"""
-        services = settings.PRESET_SERVICES_BY_APP_TYPE.get(self.type_.value, {})
-        return services
-
 
 class DefaultTypeSpecs(AppTypeSpecs):
     """Specs for default type"""
@@ -169,7 +134,6 @@ class DefaultTypeSpecs(AppTypeSpecs):
     type_ = ApplicationType.DEFAULT
     engine_enabled = True
     can_create_extra_modules = True
-    require_templated_source = True
 
 
 class EnginelessAppTypeSpecs(AppTypeSpecs):
@@ -178,7 +142,6 @@ class EnginelessAppTypeSpecs(AppTypeSpecs):
     type_ = ApplicationType.ENGINELESS_APP
     engine_enabled = False
     can_create_extra_modules = False
-    require_templated_source = False
 
 
 class CloudNativeTypeSpecs(AppTypeSpecs):
@@ -187,4 +150,3 @@ class CloudNativeTypeSpecs(AppTypeSpecs):
     type_ = ApplicationType.CLOUD_NATIVE
     engine_enabled = True
     can_create_extra_modules = True
-    require_templated_source = False

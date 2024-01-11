@@ -63,7 +63,7 @@ def test_create_then_release(
 ):
     # mock spec when creating application
     with patch(
-        "paasng.platform.applications.views.AppSpecs.confirm_required_when_publish",
+        "paasng.platform.applications.specs.AppSpecs.confirm_required_when_publish",
         new_callable=PropertyMock,
         return_value=confirm_required_when_publish,
     ):

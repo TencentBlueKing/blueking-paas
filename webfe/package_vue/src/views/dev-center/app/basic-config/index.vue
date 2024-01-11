@@ -26,12 +26,28 @@ export default {
     return {
       active: 'url',
       routeIndex: 0,
-      panels: [
-        { name: 'market', label: this.$t('应用市场'), routeName: 'cloudAppMarket' },
+    };
+  },
+  computed: {
+    isEngineEnabled() {
+      return this.curAppInfo.web_config.engine_enabled;
+    },
+    panels() {
+      // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
+      if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
+        return [
+          { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
+          { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
+          { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
+        ];
+      }
+      return [
+        { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
+        { name: 'appMobileMarket', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
         { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
         { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
-      ],
-    };
+      ];
+    },
   },
   watch: {
     $route: {

@@ -718,6 +718,44 @@ def _init_tmpls():
             "runtime_type": RuntimeType.DOCKERFILE,
         },
     )
+    Template.objects.get_or_create(
+        name="bk-saas-plugin-python",
+        defaults={
+            "type": TemplateType.PLUGIN,
+            "display_name_zh_cn": "Python 语言",
+            "display_name_en": "Python",
+            "description_zh_cn": "Python + bk-plugin-framework，集成插件开发框架，插件版本管理，插件运行时等模块",
+            "description_en": "Integrate plugin development framework, plugin version management, and plugin runtime modules.",
+            "language": "Python",
+            "market_ready": False,
+            "preset_services_config": {"mysql": {}},
+            "blob_url": {},
+            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "required_buildpacks": [],
+            "processes": {},
+            "tags": [],
+            "runtime_type": RuntimeType.BUILDPACK,
+        },
+    )
+    Template.objects.get_or_create(
+        name="bk-saas-plugin-go",
+        defaults={
+            "type": TemplateType.PLUGIN,
+            "display_name_zh_cn": "Go 语言",
+            "display_name_en": "Go",
+            "description_zh_cn": "Go + bk-plugin-framework，集成插件开发框架，插件版本管理，插件运行时等模块",
+            "description_en": "Integrate Go development framework, plugin version management, and plugin runtime modules.",
+            "language": "Go",
+            "market_ready": False,
+            "preset_services_config": {"mysql": {}},
+            "blob_url": {},
+            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "required_buildpacks": [],
+            "processes": {},
+            "tags": [],
+            "runtime_type": RuntimeType.BUILDPACK,
+        },
+    )
 
 
 @pytest.fixture()

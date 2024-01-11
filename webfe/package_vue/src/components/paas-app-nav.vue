@@ -183,7 +183,7 @@ export default {
             if (nav.name === 'appMarketing') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
-            return ['appSummary', 'appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
+            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
           });
         }
 
@@ -239,20 +239,24 @@ export default {
 
         // 接入feature flag来控制应用导航
         const featureMaps = {
-          appAnalysis: 'ANALYTICS', // 数据统计
+          appAnalysis: 'ANALYTICS', // 访问统计
           docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
           appCloudAPI: 'API_GATEWAY', // 云API权限管理
         };
         const subFeatureMaps = {
-          appWebAnalysis: 'PA_WEBSITE_ANALYTICS', // 网站访问统计
-          appLogAnalysis: 'PA_INGRESS_ANALYTICS', // 访问日志统计
-          appEventAnalysis: 'PA_CUSTOM_EVENT_ANALYTICS', // 自定义事件统计
           codeReview: 'CI', // 代码检查
           monitorAlarm: 'PHALANX', // 告警记录
         };
         // 一级
         navTree = navTree.filter((nav) => {
           const key = featureMaps[nav.name];
+          if (nav.name === 'appAnalysis') {
+            const result = ['PA_WEBSITE_ANALYTICS', 'PA_INGRESS_ANALYTICS', 'PA_CUSTOM_EVENT_ANALYTICS'].some(key => this.curAppInfo.feature[key]);
+            // 访问统计三项都为false，不展示一级导航
+            if (!result) {
+              return false;
+            }
+          }
           if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
             return this.curAppInfo.feature[key];
           }
@@ -291,7 +295,16 @@ export default {
       const appRole = this.curAppInfo.role;
       const allowRouters = this.roleAllowRouters[appRole.name] || [];
 
-      this.allowedRouterName = [];
+      // 访问统计合并为一级导航，feature flag在页面进行控制
+      this.allowedRouterName = [
+        'appWebAnalysis', // 网站访问统计
+        'appLogAnalysis', // 访问日志统计
+        'appEventAnalysis', // 自定义事件统计
+        'appMarket', // 应用市场
+        'appMobileMarket', // 应用市场(移动端)
+        'appBasicInfo', // 基本信息
+        'appMembers', // 成员管理
+      ];
 
       this.navTree.forEach((nav) => {
         if (allowRouters.includes(nav.name)) {

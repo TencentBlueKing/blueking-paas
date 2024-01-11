@@ -378,6 +378,7 @@ export default {
     .entrances-wrapper {
         margin-top: 30px;
         .entrances-adress {
+            font-size: 12px;
             margin-top: 12px;
             p {
               height: 32px;
@@ -404,13 +405,13 @@ export default {
 
     .overview-title-text {
         display: inline-block;
-        margin-top: 3px;
+        margin-top: 7px;
 
         p {
             font-size: 12px;
             color: #979BA5;
             margin-top: -3px;
-            line-height: 12px;
+            line-height: 14px;
             font-weight: normal;
         }
     }
@@ -422,7 +423,7 @@ export default {
         .link {
             margin-top: 9px;
             a {
-                font-size: 14px;
+                font-size: 12px;
                 line-height: 28px;
                 display: block;
             }
@@ -430,7 +431,7 @@ export default {
 
         h3 {
             line-height: 1;
-            font-size: 14px;
+            font-size: 12px;
             color: #313238;
             padding-bottom: 8px;
             font-weight: normal;
@@ -448,7 +449,7 @@ export default {
 
         h3 {
             line-height: 1;
-            font-size: 14px;
+            font-size: 12px;
             color: #313238;
             padding: 17px 20px 8px 20px;
             font-weight: normal;
@@ -605,6 +606,7 @@ export default {
     .nav-dropdown {
         width: 540px;
         display: flex;
+        font-size: 12px;
 
         .quick-access {
             width: 240px;

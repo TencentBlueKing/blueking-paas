@@ -61,7 +61,7 @@
       <div
         v-if="isWatchOfflineing"
         id="offlineing-box"
-        class="summary-box"
+        class="summary-box mb20"
         :style="scrollStyle.summary"
       >
         <div class="wrapper primary">

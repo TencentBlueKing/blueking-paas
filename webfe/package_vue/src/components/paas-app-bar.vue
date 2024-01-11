@@ -325,6 +325,7 @@ export default {
         }
 
         .title {
+            font-size: 16px;
             font-weight: normal;
             color: #313238;
             font-weight: normal;

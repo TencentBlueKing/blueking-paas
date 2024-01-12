@@ -58,6 +58,13 @@ def initialize_deployment(
     application = module.application
     if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
         source_location = ""
+    elif advanced_options and (build_id := advanced_options.get("build_id")):
+        # 查询第一个引用 build_id 的 Deployment
+        ref = Deployment.objects.filter(build_id=build_id).order_by("created").first()
+        # Note: views 已判断 Deployment 存在, 理论上这里并不会抛异常
+        if not ref:
+            raise ValueError(f"No build found for build_id: {build_id}")
+        source_location = ref.source_location
     else:
         version_service = get_version_service(module, operator=operator)
         source_location = version_service.build_url(version_info)

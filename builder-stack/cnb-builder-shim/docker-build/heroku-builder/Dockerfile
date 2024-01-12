@@ -11,7 +11,7 @@ RUN go mod download
 COPY ./cmd ./cmd
 COPY ./pkg ./pkg
 COPY ./Makefile ./Makefile
-RUN make devserver
+RUN make build
 
 FROM ${BUILDER_IMAGE_NAME}:${BUILDER_IMAGE_TAG}
 

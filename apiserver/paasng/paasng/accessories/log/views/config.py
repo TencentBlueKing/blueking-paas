@@ -162,7 +162,7 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["日志采集"])
     def get_builtin_config(self, request, code, module_name, log_type):
-        """获取平台内置的对应类型的日志采集配置
+        """获取平台内置的对应类型的日志采集配置，若有多个配置，默认返回第一个
         :param log_type: 日志类型，可选项：json、stdout，在paasng.infras.bk_log.constatns.BkLogType 中定义的类型
         """
         module = self.get_module_via_path()

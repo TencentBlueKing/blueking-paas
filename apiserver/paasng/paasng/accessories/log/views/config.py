@@ -159,3 +159,18 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DELETE_CUSTOM_COLLECTOR.f(_("内置采集规则只能停用, 不能删除"))
         cfg.delete()
         return Response()
+
+    @swagger_auto_schema(tags=["日志采集"])
+    def get_builtin_config(self, request, code, module_name, log_type):
+        """获取平台内置的对应类型的日志采集配置
+        :param log_type: 日志类型，可选项：json、stdout，在paasng.infras.bk_log.constatns.BkLogType 中定义的类型
+        """
+        module = self.get_module_via_path()
+        builtin_json_configs = CustomCollectorConfig.objects.filter(module=module, is_builtin=True, log_type=log_type)
+        if not builtin_json_configs.exists():
+            raise error_codes.CUSTOM_COLLECTOR_NOT_EXISTED.f(_("平台内置结构化日志采集规则"))
+        return Response(
+            data=ModuleCustomCollectorConfigSLZ(
+                builtin_json_configs.first(), context=self.get_serializer_context()
+            ).data
+        )

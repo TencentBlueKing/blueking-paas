@@ -1,12 +1,12 @@
 <template lang="html">
   <div class="container biz-create-success">
+    <paas-plugin-title />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="plugin-new-version-loading"
       class="app-container middle"
     >
       <div class="new-version">
-        <paas-plugin-title />
         <div
           v-if="curVersion.current_release"
           class="summary-box status"
@@ -63,7 +63,7 @@
               <bk-select
                 v-model="curVersion.source_versions"
                 :disabled="false"
-                ext-cls="select-custom"
+                ext-cls="select-custom-cls"
                 :placeholder="$t('请选择版本，已经发布过的版本不可选择。')"
                 searchable
                 :loading="isBranchLoading"
@@ -527,9 +527,11 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.new-version {
+  margin-top: 24px;
+}
 .app-container {
   padding: 0;
-  margin-top: 8px;
 }
 .header-title {
   display: flex;
@@ -610,6 +612,11 @@ export default {
     font-size: 16px;
     padding-right: 6px;
     color: #979ba5;
+
+    a,
+    .icon-cls-copy {
+      transform: translateY(0px);
+    }
 
     .icon-cls-link:hover,
     .icon-cls-copy:hover {
@@ -746,11 +753,6 @@ export default {
   min-width: 1080px;
   border-top: 1px solid #f0f1f5;
 }
-
-.plugin-top-title {
-  margin: 16px 0;
-}
-
 .version-info-wrapper div {
   font-size: 14px;
   color: #63656e;
@@ -761,6 +763,10 @@ export default {
 .code-branch-tip {
   font-size: 12px;
   color: #979ba5;
+}
+
+.select-custom-cls {
+  background: #fff;
 }
 </style>
 

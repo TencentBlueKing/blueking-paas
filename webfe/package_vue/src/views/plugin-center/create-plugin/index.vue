@@ -4,7 +4,7 @@
       :is-loading="isLoading"
       placeholder="create-plugin-loading"
     >
-      <paas-plugin-title />
+      <paas-plugin-title :no-shadow="true" />
       <!-- 返回 -->
       <div class="base-info-tit">
         {{ $t('基本信息') }}

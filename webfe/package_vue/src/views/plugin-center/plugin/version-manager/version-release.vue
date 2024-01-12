@@ -17,7 +17,7 @@
           <div class="bg-top">
             <div class="bg-content">
               <div class="title-warp flex-row align-items-center justify-content-between">
-                <paas-plugin-title :version="curVersion" />
+                <paas-plugin-title :no-shadow="true" :version="curVersion" />
                 <!-- 结束发布流程禁用终止发布 -->
                 <bk-button
                   v-if="pluginFeatureFlags.CANCEL_RELEASE"

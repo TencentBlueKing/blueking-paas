@@ -4,7 +4,12 @@
     :style="{ 'min-height': localLoading && height ? height + 'px' : 'calc(100% - 50px)' }"
   >
     <div
-      :class="['loading-placeholder', { 'hide': !isLoaderShow }, { 'transition': !isTransition }]"
+      :class="[
+        'loading-placeholder',
+        { 'hide': !isLoaderShow },
+        { 'transition': !isTransition },
+        { 'customize-width': isCustomizeWidth },
+      ]"
       :style="{ 'background-color': backgroundColor }"
     >
       <template v-if="placeholder">
@@ -13,6 +18,7 @@
           :style="{ 'padding-top': `${offsetTop}px`, 'margin-left': `${offsetLeft}px`, 'transform-origin': 'left' }"
           :base-width="baseWidth"
           :content-width="contentWidth"
+          :is-transform="isTransform"
         />
       </template>
     </div>
@@ -81,6 +87,7 @@ import BuildConfigLoading from './loading/clound-build-config.vue';
 import DeployModuleInfoLoading from './loading/deploy-module-info.vue';
 import ImageManageLoading from './loading/image-manage.vue';
 import ProcessServiceLoading from './loading/process-service.vue';
+import PluinVersionListLoading from './loading/pluin-version-list.vue';
 export default {
   components: {
     ByUserLoading,
@@ -144,6 +151,7 @@ export default {
     DeployModuleInfoLoading,
     ImageManageLoading,
     ProcessServiceLoading,
+    PluinVersionListLoading,
   },
   props: {
     isLoading: {
@@ -175,6 +183,14 @@ export default {
     isTransition: {
       type: Boolean,
       default: true,
+    },
+    isTransform: {
+      type: Boolean,
+      default: true,
+    },
+    isCustomizeWidth: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
@@ -317,6 +333,11 @@ export default {
         width: auto;
         svg {
           width: 100%;
+        }
+        &.customize-width {
+          svg {
+            width: calc(100% - 48px);
+          }
         }
     }
 }

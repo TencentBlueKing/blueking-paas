@@ -1,12 +1,13 @@
 <template lang="html">
   <div class="container biz-create-success">
+    <paas-plugin-title />
     <paas-content-loader
-      class="app-container middle"
+      class="app-container"
       :is-loading="isLoading"
-      placeholder="pluin-list-loading"
+      placeholder="pluin-version-list-Loading"
+      :is-transform="false"
     >
-      <div class="middle">
-        <paas-plugin-title />
+      <div class="version-management card-style">
         <div class="ag-top-header">
           <!-- 有发布任务，禁用 -->
           <div
@@ -15,7 +16,7 @@
           >
             <bk-button
               theme="primary"
-              class="mr10"
+              class="mr15"
               :disabled="curIsPending ? true : false"
               @click="handleCreateVersion('formal')"
             >
@@ -582,11 +583,9 @@ export default {
 .ps-main {
   margin-top: 15px;
 }
-.plugin-top-title {
-  margin-top: 12px;
-}
-.app-container {
-  padding-top: 2px;
+
+.version-management {
+  padding: 24px;
 }
 .header-title {
   margin: 16px 0;
@@ -605,10 +604,6 @@ export default {
     font-weight: 600;
     color: #979ba5;
   }
-}
-
-.ag-top-header {
-  margin-top: 16px;
 }
 
 .ps-version-list {

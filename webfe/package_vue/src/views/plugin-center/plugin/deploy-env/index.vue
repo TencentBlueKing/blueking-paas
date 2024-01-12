@@ -1,12 +1,13 @@
 <template lang="html">
   <div class="right-main">
+    <paas-plugin-title />
     <paas-content-loader
-      class="app-container middle"
+      class="app-container"
       :is-loading="loading"
       placeholder="roles-loading"
+      :is-transform="false"
     >
-      <paas-plugin-title />
-      <div class="plugin-deploy-wrapper">
+      <div class="plugin-deploy-wrapper card-style">
         <div class="ps-top-card mb15">
           <p class="main-title">
             {{ $t(configurationSchema.title) }}
@@ -187,221 +188,224 @@
 </template>
 
 <script>
-    import _ from 'lodash';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import tooltipConfirm from '@/components/ui/TooltipConfirm';
-    import paasPluginTitle from '@/components/pass-plugin-title';
+import _ from 'lodash';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import tooltipConfirm from '@/components/ui/TooltipConfirm';
+import paasPluginTitle from '@/components/pass-plugin-title';
 
-    export default {
-        components: {
-            tooltipConfirm,
-            paasPluginTitle
-        },
-        mixins: [pluginBaseMixin],
-        data () {
-            return {
-                loading: true,
-                isVarLoading: true,
-                envVarList: [],
-                envVarListBackup: [],
-                configurationSchema: {},
-                newVarConfig: {
-                    key: '',
-                    value: '',
-                    description: ''
-                },
-                editRowList: [],
-                varRules: {
-                    key: [
-                        {
-                            required: true,
-                            message: this.$t('KEY是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 64,
-                            message: this.$t('不能超过64个字符'),
-                            trigger: 'blur change'
-                        },
-                        {
-                            regex: /^[A-Z][A-Z0-9_]*$/,
-                            message: this.$t('只能以大写字母开头，仅包含大写字母、数字与下划线'),
-                            trigger: 'blur change'
-                        }
-                    ],
-                    value: [
-                        {
-                            required: true,
-                            message: this.$t('VALUE是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 2048,
-                            message: this.$t('不能超过2048个字符'),
-                            trigger: 'blur change'
-                        }
-                    ],
-                    description: [
-                        {
-                            validator: value => {
-                                if (value === '') {
-                                    return true;
-                                }
-                                return value.trim().length <= 200;
-                            },
-                            message: this.$t('不能超过200个字符'),
-                            trigger: 'blur'
-                        }
-                    ]
-                }
-            };
-        },
-        watch: {
-            '$route' () {
-                this.init();
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            init () {
-                this.getConfigurationSchema();
-                this.getEnvVarList();
+export default {
+  components: {
+    tooltipConfirm,
+    paasPluginTitle,
+  },
+  mixins: [pluginBaseMixin],
+  data() {
+    return {
+      loading: true,
+      isVarLoading: true,
+      envVarList: [],
+      envVarListBackup: [],
+      configurationSchema: {},
+      newVarConfig: {
+        key: '',
+        value: '',
+        description: '',
+      },
+      editRowList: [],
+      varRules: {
+        key: [
+          {
+            required: true,
+            message: this.$t('KEY是必填项'),
+            trigger: 'blur',
+          },
+          {
+            max: 64,
+            message: this.$t('不能超过64个字符'),
+            trigger: 'blur change',
+          },
+          {
+            regex: /^[A-Z][A-Z0-9_]*$/,
+            message: this.$t('只能以大写字母开头，仅包含大写字母、数字与下划线'),
+            trigger: 'blur change',
+          },
+        ],
+        value: [
+          {
+            required: true,
+            message: this.$t('VALUE是必填项'),
+            trigger: 'blur',
+          },
+          {
+            max: 2048,
+            message: this.$t('不能超过2048个字符'),
+            trigger: 'blur change',
+          },
+        ],
+        description: [
+          {
+            validator: (value) => {
+              if (value === '') {
+                return true;
+              }
+              return value.trim().length <= 200;
             },
-
-            isReadOnlyRow (rowIndex) {
-                return !_.includes(this.editRowList, rowIndex);
-            },
-
-            async getConfigurationSchema () {
-                try {
-                    const pdId = this.pdId;
-                    const res = await this.$store.dispatch('plugin/getConfigurationSchema', { pdId });
-                    this.configurationSchema = res;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                }
-            },
-
-            async getEnvVarList () {
-                this.isVarLoading = true;
-                try {
-                    const pdId = this.pdId;
-                    const pluginId = this.pluginId;
-                    const res = await this.$store.dispatch('plugin/getEnvVarList', { pdId, pluginId });
-                    this.envVarList = res;
-                    this.envVarListBackup = JSON.parse(JSON.stringify(this.envVarList));
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isVarLoading = false;
-                    this.loading = false;
-                }
-            },
-
-            verifyVarForm () {
-                this.$refs.newVarForm.validate().then(() => {
-                    this.createConfigVar();
-                });
-            },
-
-            async createConfigVar () {
-                const createForm = {
-                    key: this.newVarConfig.key,
-                    value: this.newVarConfig.value,
-                    description: this.newVarConfig.description
-                };
-                try {
-                    const pdId = this.pdId;
-                    const pluginId = this.pluginId;
-                    await this.$store.dispatch('plugin/editEnvVar', { pdId, pluginId, data: createForm });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('添加环境变量成功')
-                    });
-                    this.newVarConfig = {
-                        key: '',
-                        value: '',
-                        description: ''
-                    };
-                    this.getEnvVarList();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: `${this.$t('添加环境变量失败')}，${e.message}`
-                    });
-                }
-            },
-
-            editingRowToggle (rowItem = {}, rowIndex, type = '') {
-                if (type === 'cancel') {
-                    const currentItem = this.envVarListBackup.find(envItem => envItem.__id__ === rowItem.__id__);
-                    rowItem = currentItem;
-                    if (this.$refs[`${rowItem.key}`] && this.$refs[`${rowItem.key}`].length) {
-                        this.$refs[`${rowItem.key}`][0].formItems.forEach(item => {
-                            item.validator.content = '';
-                            item.validator.state = '';
-                        });
-                    }
-                }
-                if (_.includes(this.editRowList, rowIndex)) {
-                    this.editRowList.pop(rowIndex);
-                } else {
-                    this.editRowList.push(rowIndex);
-                }
-            },
-
-            // 更新环境变量
-            async updateConfigVar (configVarID, index, varItem) {
-                const curRef = varItem.key;
-                this.$refs[curRef][0].validate().then(async () => {
-                    const editForm = varItem;
-                    try {
-                        const pdId = this.pdId;
-                        const pluginId = this.pluginId;
-                        await this.$store.dispatch('plugin/editEnvVar', { pdId, pluginId, data: editForm });
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('修改环境变量成功')
-                        });
-                        this.getEnvVarList();
-                        this.editingRowToggle(varItem, index, 'cancel');
-                    } catch (e) {
-                        this.$bkMessage({
-                            theme: 'error',
-                            message: `${this.$t('修改环境变量失败')}，${e.message}`
-                        });
-                    }
-                });
-            },
-
-            // 删除环境变量
-            async deleteConfigVar (configVarID) {
-                try {
-                    const pdId = this.pdId;
-                    const pluginId = this.pluginId;
-                    await this.$store.dispatch('plugin/deleteEnvVar', { pdId, pluginId, configId: configVarID });
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('删除环境变量成功')
-                    });
-                    this.getEnvVarList();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: `${this.$t('删除环境变量失败')}，${e.message}`
-                    });
-                }
-            }
-        }
+            message: this.$t('不能超过200个字符'),
+            trigger: 'blur',
+          },
+        ],
+      },
     };
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.getConfigurationSchema();
+      this.getEnvVarList();
+    },
+
+    isReadOnlyRow(rowIndex) {
+      return !_.includes(this.editRowList, rowIndex);
+    },
+
+    async getConfigurationSchema() {
+      try {
+        const { pdId } = this;
+        const res = await this.$store.dispatch('plugin/getConfigurationSchema', { pdId });
+        this.configurationSchema = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    async getEnvVarList() {
+      this.isVarLoading = true;
+      try {
+        const { pdId } = this;
+        const { pluginId } = this;
+        const res = await this.$store.dispatch('plugin/getEnvVarList', { pdId, pluginId });
+        this.envVarList = res;
+        this.envVarListBackup = JSON.parse(JSON.stringify(this.envVarList));
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.isVarLoading = false;
+        this.loading = false;
+      }
+    },
+
+    verifyVarForm() {
+      this.$refs.newVarForm.validate().then(() => {
+        this.createConfigVar();
+      })
+        .catch((e) => {
+          console.error(e);
+        });
+    },
+
+    async createConfigVar() {
+      const createForm = {
+        key: this.newVarConfig.key,
+        value: this.newVarConfig.value,
+        description: this.newVarConfig.description,
+      };
+      try {
+        const { pdId } = this;
+        const { pluginId } = this;
+        await this.$store.dispatch('plugin/editEnvVar', { pdId, pluginId, data: createForm });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('添加环境变量成功'),
+        });
+        this.newVarConfig = {
+          key: '',
+          value: '',
+          description: '',
+        };
+        this.getEnvVarList();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: `${this.$t('添加环境变量失败')}，${e.message}`,
+        });
+      }
+    },
+
+    editingRowToggle(rowItem = {}, rowIndex, type = '') {
+      if (type === 'cancel') {
+        const currentItem = this.envVarListBackup.find(envItem => envItem.__id__ === rowItem.__id__);
+        rowItem = currentItem;
+        if (this.$refs[`${rowItem.key}`] && this.$refs[`${rowItem.key}`].length) {
+          this.$refs[`${rowItem.key}`][0].formItems.forEach((item) => {
+            item.validator.content = '';
+            item.validator.state = '';
+          });
+        }
+      }
+      if (_.includes(this.editRowList, rowIndex)) {
+        this.editRowList.pop(rowIndex);
+      } else {
+        this.editRowList.push(rowIndex);
+      }
+    },
+
+    // 更新环境变量
+    async updateConfigVar(configVarID, index, varItem) {
+      const curRef = varItem.key;
+      this.$refs[curRef][0].validate().then(async () => {
+        const editForm = varItem;
+        try {
+          const { pdId } = this;
+          const { pluginId } = this;
+          await this.$store.dispatch('plugin/editEnvVar', { pdId, pluginId, data: editForm });
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('修改环境变量成功'),
+          });
+          this.getEnvVarList();
+          this.editingRowToggle(varItem, index, 'cancel');
+        } catch (e) {
+          this.$bkMessage({
+            theme: 'error',
+            message: `${this.$t('修改环境变量失败')}，${e.message}`,
+          });
+        }
+      });
+    },
+
+    // 删除环境变量
+    async deleteConfigVar(configVarID) {
+      try {
+        const { pdId } = this;
+        const { pluginId } = this;
+        await this.$store.dispatch('plugin/deleteEnvVar', { pdId, pluginId, configId: configVarID });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除环境变量成功'),
+        });
+        this.getEnvVarList();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: `${this.$t('删除环境变量失败')}，${e.message}`,
+        });
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -439,10 +443,6 @@
     .ps-pr {
         padding-right: 15px;
         color: #999;
-    }
-
-    .middle {
-        padding-top: 15px;
     }
 
     .ps-table-width-overflowed {
@@ -498,7 +498,7 @@
         }
     }
     .plugin-deploy-wrapper {
-        margin-top: 16px;
+        padding: 24px;
     }
 </style>
 

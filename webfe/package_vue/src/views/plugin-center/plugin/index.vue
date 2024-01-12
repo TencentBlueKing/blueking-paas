@@ -1,5 +1,5 @@
 <template lang="html">
-  <div class="overview-content">
+  <div class="overview-content" :style="{ background: customBackground.includes($route.name) ? '#FFF' : '#F5F7FA' }">
     <template v-if="isPluginFound">
       <div class="wrap">
         <div class="overview">
@@ -85,7 +85,7 @@ import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import store from '@/store';
 
 // 当前路由页面不需要指定的min-height
-const ROUTE_NAME = ['pluginVersionRelease', 'marketInfoEdit'];
+const ROUTE_NAME = ['pluginVersionRelease'];
 
 export default {
   components: {
@@ -114,6 +114,7 @@ export default {
       routeNameMap: ROUTE_NAME,
       // 是否为发布的测试阶段
       isTestStage: false,
+      customBackground: ['pluginVersionRelease'],
     };
   },
   computed: {
@@ -270,6 +271,15 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.app-container{
+  padding-top: 0;
+}
+
+.container {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .no-permission {
   margin: 100px 30px 0 30px;
   font-size: 16px;

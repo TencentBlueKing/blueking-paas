@@ -128,6 +128,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if build_id := params["advanced_options"].get("build_id"):
             if not Build.objects.filter(pk=build_id, artifact_deleted=False).exists():
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
+            if not Deployment.objects.filter(build_id=build_id).exists():
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
             build = Build.objects.get(pk=build_id)
 
         if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:

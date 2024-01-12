@@ -31,6 +31,7 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
+from bk_notice_sdk import config
 from django.conf.urls import include, url
 from django.urls import path
 from django.views import i18n as django_i18n_views
@@ -84,4 +85,5 @@ urlpatterns = [
     path("", include("paas_wl.bk_app.processes.urls")),
     path("", include("paas_wl.bk_app.cnative.specs.urls")),
     url(r"^", include("paasng.accessories.paas_analysis.urls")),
+    url(r"^{}".format(config.ENTRANCE_URL), include(("bk_notice_sdk.urls", "notice"), namespace="notice")),
 ]

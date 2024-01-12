@@ -38,6 +38,7 @@ except ImportError:
         FeatureFlagField(name="APP_ID_ALIAS", label="应用标识别名", default=False),
         FeatureFlagField(name="DEVELOPMENT_TIME_RECORD", label="记录应用开时长", default=False),
         FeatureFlagField(name="SUPPORT_HTTPS", label="默认所有集群均支持 HTTPS", default=False),
+        FeatureFlagField(name="BK_NOTICE", label="蓝鲸通知公告", default=settings.ENABLE_BK_NOTICE),
     ]
 
 

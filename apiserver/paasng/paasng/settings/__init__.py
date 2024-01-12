@@ -171,6 +171,8 @@ INSTALLED_APPS = [
     "paas_wl.bk_app.cnative.specs",
     "paas_wl.bk_app.deploy",
     "paas_wl.infras.resources.generation",
+    # 蓝鲸通知中心
+    "bk_notice_sdk",
 ]
 
 # Allow extending installed apps
@@ -1266,6 +1268,18 @@ THIRD_APP_INIT_CODES = settings.get("THIRD_APP_INIT_CODES", "")
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
+
+# 蓝鲸通知中心的配置
+ENABLE_BK_NOTICE = settings.get("ENABLE_BK_NOTICE", True)
+# TODO 应用ID、Secret 的配置需要 bk_notice_sdk 修改后再确定
+BK_NOTICE = {
+    "STAGE": "stage",
+    "BK_API_URL_TMPL": BK_API_URL_TMPL,
+    "PLATFORM": BK_APP_CODE,
+    "ENTRANCE_URL": "notice/",
+    "LANGUAGE_COOKIE_NAME": LANGUAGE_COOKIE_NAME,
+    "DEFAULT_LANGUAGE": "en",
+}
 
 # 引入 workloads 相关配置
 # fmt: off

@@ -287,6 +287,25 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "bk-notice-sdk"
+version = "1.1.1"
+description = "A project for fetching and displaying announcement notifications."
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "bk-notice-sdk-1.1.1.tar.gz", hash = "sha256:7dc58e7ea222a837ab6073c2cc102991caaab85b2bd339badac4d326e7ed0e2e"},
+]
+
+[package.dependencies]
+bkapi-client-core = ">=1.0.2,<2.0.0"
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "bkapi-bk-apigateway"
 version = "1.0.11"
 description = "蓝鲸API网关"
@@ -1047,7 +1066,7 @@ files = [
 cffi = ">=1.12"
 
 [package.extras]
-docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx_rtd_theme"]
+docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
 docstest = ["doc8", "pyenchant (>=1.6.11)", "sphinxcontrib-spelling (>=4.0.1)", "twine (>=1.12.0)"]
 pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
 sdist = ["setuptools-rust (>=0.11.4)"]
@@ -4989,4 +5008,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "979e1a10cfa9e5892b17463d9c00ee05114b879a52d41c336ca62cb98c782b97"
+content-hash = "b669cf7f55ff3855a688f0171aec4f82db661ff29a60fc25f81b138e6df71887"

@@ -59,6 +59,7 @@ def initialize_deployment(
     if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
         source_location = ""
     elif advanced_options and (build_id := advanced_options.get("build_id")):
+        # 选择已构建的镜像部署，则直接从上次构建对应的 Deployment 中获取 源码仓库地址
         # 查询第一个引用 build_id 的 Deployment
         ref = Deployment.objects.filter(build_id=build_id).order_by("created").first()
         # Note: views 已判断 Deployment 存在, 理论上这里并不会抛异常

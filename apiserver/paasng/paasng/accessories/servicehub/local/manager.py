@@ -22,7 +22,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, Generator, Iterable, Iterator, List, Optional, cast
+from typing import Any, Dict, Generator, Iterator, List, Optional, cast
 from uuid import UUID
 
 from django.core.exceptions import ValidationError
@@ -336,18 +336,6 @@ class LocalServiceMgr(BaseServiceMgr):
         if service:
             qs = qs.filter(service_id=service.uuid)
         for attachment in qs:
-            yield self.transform_rel_db_obj(attachment)
-
-    def list_all_provisioned_rels(
-        self, services: Optional[List[ServiceObj]] = None
-    ) -> Iterable[LocalEngineAppInstanceRel]:
-        """Return all provisioned service instances"""
-        qs = ServiceEngineAppAttachment.objects.exclude(service_instance__isnull=True)
-        if services:
-            qs = qs.filter(service_id__in=[service.uuid for service in services])
-        for attachment in qs:
-            if not ModuleEnvironment.objects.filter(engine_app=attachment.engine_app).exists():
-                continue
             yield self.transform_rel_db_obj(attachment)
 
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):

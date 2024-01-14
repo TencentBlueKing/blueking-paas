@@ -82,6 +82,7 @@ class RemoteSvcConfig:
         self.update_plan_url = urljoin(self.endpoint_url, "plans/{plan_id}/")
 
         self.retrieve_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
+        self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
         self.delete_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
@@ -224,17 +225,17 @@ class RemoteServiceClient:
             self.validate_resp(resp)
             return resp.json()
 
-    # def retrieve_instance_by_name(self, name: str) -> Dict:
-    #     """Retrieve a provisioned instance info
-    #
-    #     :raises: RemoteClientError
-    #     :return: <instance dict>
-    #     """
-    #     url = self.config.retrieve_instance_url.format(instance_id=instance_id)
-    #     with wrap_request_exc(self):
-    #         resp = requests.get(url, auth=self.auth, timeout=self.REQUEST_LIST_TIMEOUT)
-    #         self.validate_resp(resp)
-    #         return resp.json()
+    def retrieve_instance_by_name(self, service_id: str, name: str) -> Dict:
+        """Retrieve a provisioned instance info by name
+
+        :raises: RemoteClientError
+        :return: <instance dict>
+        """
+        url = self.config.retrieve_instance_url.format(service_id=service_id, name=name)
+        with wrap_request_exc(self):
+            resp = requests.get(url, auth=self.auth, timeout=self.REQUEST_LIST_TIMEOUT)
+            self.validate_resp(resp)
+            return resp.json()
 
     def delete_instance(self, instance_id: str):
         """Delete a provisioned instance

@@ -217,9 +217,6 @@ class MixedServiceMgr:
     list_provisioned_rels = cast(
         Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_provisioned_rels")
     )
-    list_all_provisioned_rels = cast(
-        Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_all_provisioned_rels")
-    )
     list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
     list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
 

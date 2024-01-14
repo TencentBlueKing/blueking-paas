@@ -225,13 +225,13 @@ class RemoteServiceClient:
             self.validate_resp(resp)
             return resp.json()
 
-    def retrieve_instance_by_name(self, service_id: str, name: str) -> Dict:
+    def retrieve_instance_by_name(self, service_id: str, instance_name: str) -> Dict:
         """Retrieve a provisioned instance info by name
 
         :raises: RemoteClientError
         :return: <instance dict>
         """
-        url = self.config.retrieve_instance_url.format(service_id=service_id, name=name)
+        url = self.config.retrieve_instance_by_name_url.format(service_id=service_id, name=instance_name)
         with wrap_request_exc(self):
             resp = requests.get(url, auth=self.auth, timeout=self.REQUEST_LIST_TIMEOUT)
             self.validate_resp(resp)

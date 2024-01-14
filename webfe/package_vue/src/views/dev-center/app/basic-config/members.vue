@@ -1,13 +1,5 @@
 <template lang="html">
   <div class="right-main">
-    <div class="ps-top-bar" v-if="!isCloudNativeApp">
-      <h2 class="box-shadow">
-        {{ $t('成员管理') }}
-        <template v-if="pagination.count">
-          ({{ pagination.count }}{{ $t('人') }})
-        </template>
-      </h2>
-    </div>
 
     <paas-content-loader
       class="app-container middle role-container"

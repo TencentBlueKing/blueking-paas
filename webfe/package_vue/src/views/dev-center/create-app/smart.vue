@@ -136,6 +136,7 @@
       <uploader
         :key="renderUploaderIndex"
         :action="uploadUrl"
+        :validate-name="/^[a-zA-Z0-9-_. ]+$/"
         :with-credentials="true"
         :name="'package'"
         :accept-tips="$t('仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件')"

@@ -31,6 +31,10 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+REGISTRY_ALIASES = {
+    # Rewrite "docker.io" to the real endpoint "index.docker.io"
+    "docker.io": "index.docker.io"
+}
 
 
 class DockerRegistryController:
@@ -71,7 +75,8 @@ class DockerRegistryController:
             # Docker Official Images is store in the namespace `library`
             logger.warning("repo does not contain namespace, guess it as `library`")
             repo = f"library/{repo}"
-        self.endpoint = remove_suffix(endpoint, "/")
+        endpoint = remove_suffix(endpoint, "/")
+        self.endpoint = REGISTRY_ALIASES.get(endpoint, endpoint)
         self.repo = repo
         self._username = username
         self._password = password

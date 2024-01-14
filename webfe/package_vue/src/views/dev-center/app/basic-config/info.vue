@@ -1,8 +1,5 @@
 <template lang="html">
   <div class="right-main">
-    <div class="ps-top-bar" v-if="!isCloudNativeApp">
-      <h2 class="box-shadow"> {{ $t('基本信息') }} </h2>
-    </div>
     <paas-content-loader
       class="app-container middle base-info-container"
       :is-loading="isLoading"
@@ -426,99 +423,8 @@
           </div>
         </div>
         <!-- 鉴权信息 -->
-        <authentication-info ref="authenticationRef" />
-        <!-- <div
-          v-if="canViewSecret"
-          class="basic-info-item"
-        >
-          <div class="title">
-            {{ $t('鉴权信息') }}
-          </div>
-          <div class="info">
-            {{ $t('在调用蓝鲸云 API 时需要提供应用鉴权信息。使用方法请参考：') }} <a
-              :href="GLOBAL.DOC.APIGW_USER_API"
-              target="_blank"
-            > {{ $t('API调用指引') }} </a>
-          </div>
-          <div class="content">
-            <div class="content-item">
-              <label v-if="platformFeature.APP_ID_ALIAS">
-                <p class="title-p">app id</p>
-                <p class="title-p tip"> {{ $t('别名') }}：bk_app_code </p>
-              </label>
-              <label v-else>
-                <p class="title-p mt15">bk_app_code</p>
-              </label>
-              <div class="item-practical-content">
-                {{ curAppInfo.application.code }}
-              </div>
-            </div>
-            <div class="content-item">
-              <label v-if="platformFeature.APP_ID_ALIAS">
-                <p class="title-p">app secret</p>
-                <p class="title-p tip"> {{ $t('别名') }}：bk_app_secret </p>
-              </label>
-              <label v-else>
-                <p class="title-p mt15">bk_app_secret</p>
-              </label>
-              <div class="item-practical-content">
-                <span>{{ appSecretText }}</span>
-                <span
-                  v-if="!appSecret"
-                  v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
-                  class="paasng-icon paasng-eye"
-                  style="cursor: pointer;"
-                  @click="onSecretToggle"
-                />
-                <div
-                  v-if="isAcceptSMSCode"
-                  class="accept-vcode"
-                >
-                  <p> {{ $t('验证码已发送至您的企业微信，请注意查收！') }} </p>
-                  <p style="display: flex;align-items: center;">
-                    <b> {{ $t('验证码：') }} </b>
-                    <bk-input
-                      v-model="appSecretVerificationCode"
-                      type="text"
-                      :placeholder="$t('请输入验证码')"
-                      style="width: 200px; margin-right: 10px;"
-                    />
-                    <bk-button
-                      v-if="appSecretTimer !== 0"
-                      theme="default"
-                      :disabled="true"
-                    >
-                      {{ appSecretTimer }}s&nbsp;{{ $t('后重新获取') }}
-                    </bk-button>
-                    <bk-button
-                      v-else
-                      theme="default"
-                      @click="sendMsg"
-                    >
-                      {{ $t('重新获取') }}
-                    </bk-button>
-                  </p>
-                  <p style="display: flex;">
-                    <b style="visibility: hidden;"> {{ $t('验证码：') }} </b>
-                    <bk-button
-                      theme="primary"
-                      style="margin-right: 10px;"
-                      @click="getAppSecret"
-                    >
-                      {{ $t('提交') }}
-                    </bk-button>
-                    <bk-button
-                      theme="default"
-                      @click="isAcceptSMSCode = false"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div> -->
+        <authentication-info ref="authenticationRef" v-if="canViewSecret" />
+
         <div
           v-if="canDeleteApp"
           class="basic-info-item"

@@ -69,15 +69,6 @@ class TestAppSpecs:
         with override_region_configs(bk_app.region, update_region_hook):
             assert AppSpecs(bk_app).can_create_extra_modules is value
 
-    def test_preset_services(self, settings, bk_app):
-        settings.PRESET_SERVICES_BY_APP_TYPE = {"bk_plugin": {"mysql": {}}}
-        assert AppSpecs(bk_app).preset_services == {}
-
-        # Update application type to match settings
-        bk_app.is_plugin_app = True
-        bk_app.save()
-        assert AppSpecs(bk_app).preset_services == {"mysql": {}}
-
     def test_confirm_required_when_publish_with_no_template(self, bk_app):
         confirm_required_when_publish = AppSpecs(bk_app).confirm_required_when_publish
         assert confirm_required_when_publish is False

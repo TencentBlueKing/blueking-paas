@@ -2,7 +2,7 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="platform-clusters-list" class="p20">
-    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效；若执行集群扩缩容操作，请及时更新对应集群节点状态" class="mb15"></bk-alert>
+    <bk-alert type="warning" title="集群信息变更后, 需要重启 bkpaas3-apiserver-web、bkpaas3-apiserver-worker 进程才能生效；若执行集群扩缩容操作，请及时更新对应集群节点状态" class="mb15"></bk-alert>
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         创建集群
     </bk-button>

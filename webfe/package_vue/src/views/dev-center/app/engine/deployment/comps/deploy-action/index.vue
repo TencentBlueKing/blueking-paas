@@ -61,7 +61,7 @@
       <div
         v-if="isWatchOfflineing"
         id="offlineing-box"
-        class="summary-box"
+        class="summary-box mb20"
         :style="scrollStyle.summary"
       >
         <div class="wrapper primary">
@@ -785,11 +785,11 @@
                 <tr class="ps-table-slide-down">
                   <td colspan="4">
                     <pre>
-                                            <p
-v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
-:key="chagnItemIndex"
->{{ chagnItem[0] }} {{ chagnItem[1] }}</p>
-                                        </pre>
+                      <p
+                        v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
+                        :key="chagnItemIndex"
+                      >{{ chagnItem[0] }} {{ chagnItem[1] }}</p>
+                    </pre>
                   </td>
                 </tr>
               </tbody>
@@ -801,6 +801,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
 
     <bk-dialog
       v-model="offlineAppDialog.visiable"
+      ext-cls="remove-module-dialog-cls"
       width="450"
       :title="`${$t('下架模块')}${curAppModule.name}${environment === 'stag' ? $t('预发布环境') : $t('生产环境') }`"
       :theme="'primary'"
@@ -3291,6 +3292,9 @@ export default {
   color: #ea3636;
   line-height: 18px;
   margin-top: 2px;
+}
+.remove-module-dialog-cls {
+  z-index: 9999 !important;
 }
 </style>
 

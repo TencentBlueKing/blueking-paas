@@ -1,20 +1,5 @@
 <template lang="html">
   <div class="right-main">
-    <template v-if="appType !== 'cloud_native'">
-      <app-top-bar
-        v-if="isEngineEnabled"
-        :title="$t('网站访问统计')"
-        :can-create="canCreateModule"
-        :cur-module="curAppModule"
-        :module-list="curAppModuleList"
-      />
-      <div
-        v-else
-        class="ps-top-bar"
-      >
-        <h2> {{ $t('网站访问统计') }} </h2>
-      </div>
-    </template>
 
     <paas-content-loader
       :is-loading="isLoading"
@@ -46,8 +31,8 @@ export default {
   props: {
     appType: {
       type: String,
-      default: 'normal'
-    }
+      default: 'normal',
+    },
   },
   data() {
     return {

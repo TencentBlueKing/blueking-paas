@@ -267,7 +267,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config["source_init_template"]:
-            tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+            tmpl = Template.objects.get(name=tmpl_name)
             module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
 
         module = Module.objects.create(

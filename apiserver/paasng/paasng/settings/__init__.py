@@ -1227,6 +1227,24 @@ RABBITMQ_MONITOR_CONF = settings.get("RABBITMQ_MONITOR_CONF", {})
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get("BK_MONITOR_APIGW_SERVICE_STAGE", "stage")
 
 # ---------------------------------------------
+# 蓝鲸通知中心配置
+# ---------------------------------------------
+# 通知中心的功能可通过配置开启
+ENABLE_BK_NOTICE = settings.get("ENABLE_BK_NOTICE", False)
+# 对接通知中心的环境，默认为生产环境
+BK_NOTICE_ENV = settings.get("BK_NOTICE_ENV", "prod")
+BK_NOTICE = {
+    "STAGE": BK_NOTICE_ENV,
+    "ENTRANCE_URL": "notice/",  # 获取公告地址为: /notice/announcements
+    "LANGUAGE_COOKIE_NAME": LANGUAGE_COOKIE_NAME,
+    "DEFAULT_LANGUAGE": "en",
+    "PLATFORM": BK_APP_CODE,  # 平台注册的 code，用于获取系统通知消息时进行过滤
+    "BK_API_URL_TMPL": BK_API_URL_TMPL,
+    "BK_API_APP_CODE": BK_APP_CODE,  # 用于调用 apigw 认证
+    "BK_API_SECRET_KEY": BK_APP_SECRET,  # 用于调用 apigw 认证
+}
+
+# ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
 
@@ -1269,18 +1287,6 @@ THIRD_APP_INIT_CODES = settings.get("THIRD_APP_INIT_CODES", "")
 ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
-# 蓝鲸通知中心的配置
-ENABLE_BK_NOTICE = settings.get("ENABLE_BK_NOTICE", False)
-BK_NOTICE = {
-    "STAGE": "prod",  # 默认读取环境变量，如果读取不到默认为'prod'
-    "ENTRANCE_URL": "notice/",  # 获取公告地址未: /notice/announcements
-    "LANGUAGE_COOKIE_NAME": LANGUAGE_COOKIE_NAME,
-    "DEFAULT_LANGUAGE": "en",
-    "PLATFORM": BK_APP_CODE,  # 平台注册的 code，用于获取系统通知消息时进行过滤
-    "BK_API_URL_TMPL": BK_API_URL_TMPL,
-    "BK_API_APP_CODE": BK_APP_CODE,  # 用于调用 apigw 认证
-    "BK_API_SECRET_KEY": BK_APP_SECRET,  # 用于调用 apigw 认证
-}
 
 # 引入 workloads 相关配置
 # fmt: off

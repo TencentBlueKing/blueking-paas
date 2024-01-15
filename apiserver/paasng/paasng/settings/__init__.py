@@ -1270,15 +1270,16 @@ ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
 # 蓝鲸通知中心的配置
-ENABLE_BK_NOTICE = settings.get("ENABLE_BK_NOTICE", True)
-# TODO 应用ID、Secret 的配置需要 bk_notice_sdk 修改后再确定
+ENABLE_BK_NOTICE = settings.get("ENABLE_BK_NOTICE", False)
 BK_NOTICE = {
-    "STAGE": "stage",
-    "BK_API_URL_TMPL": BK_API_URL_TMPL,
-    "PLATFORM": BK_APP_CODE,
-    "ENTRANCE_URL": "notice/",
+    "STAGE": "prod",  # 默认读取环境变量，如果读取不到默认为'prod'
+    "ENTRANCE_URL": "notice/",  # 获取公告地址未: /notice/announcements
     "LANGUAGE_COOKIE_NAME": LANGUAGE_COOKIE_NAME,
     "DEFAULT_LANGUAGE": "en",
+    "PLATFORM": BK_APP_CODE,  # 平台注册的 code，用于获取系统通知消息时进行过滤
+    "BK_API_URL_TMPL": BK_API_URL_TMPL,
+    "BK_API_APP_CODE": BK_APP_CODE,  # 用于调用 apigw 认证
+    "BK_API_SECRET_KEY": BK_APP_SECRET,  # 用于调用 apigw 认证
 }
 
 # 引入 workloads 相关配置

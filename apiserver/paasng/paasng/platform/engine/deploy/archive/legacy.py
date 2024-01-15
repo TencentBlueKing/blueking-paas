@@ -35,4 +35,4 @@ class ApplicationArchiveManager(BaseArchiveManager):
         wait_for_all_stopped(env=self.env, result_handler=result_handler, extra_params={"operation_id": op_id})
         # 成功下架后，回收 service 和 pre-release-hook 相关资源
         # 该部分资源用户不可见，因此不论成功失败都不该阻塞下架操作
-        archive_related_resources.delay(env=self.env)
+        archive_related_resources.delay(str(self.env.wl_app.uuid))

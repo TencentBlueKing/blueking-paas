@@ -18,19 +18,19 @@ to the current version of the project delivered to anyone in the future.
 """
 from celery import shared_task
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
-from paasng.platform.applications.models import ModuleEnvironment
 
 
 @shared_task
-def archive_related_resources(env: ModuleEnvironment):
+def archive_related_resources(wl_app_id):
     """应用下架时，下架相关资源（service、pre-release-hook）
 
-    :param str env: the module environment
+    :param str wl_app_id: wl_app uuid
     """
-    wl_app = env.wl_app
+    wl_app = WlApp.objects.get(uuid=wl_app_id)
 
     # 回收 service
     services = service_kmodel.list_by_app(wl_app)

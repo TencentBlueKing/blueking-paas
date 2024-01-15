@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Generator, List, Optional
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.monitoring.metrics.clients import (
@@ -37,6 +38,7 @@ from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paasng.platform.applications.models import Application
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.processes.kres_entities import Process
@@ -186,3 +188,20 @@ def get_resource_metric_manager(app: WlApp, process_type: str):
         metric_client=metric_client,
         bcs_cluster_id=cluster.bcs_cluster_id,
     )
+
+
+class AppResourceUsageReport(models.Model):
+    """应用资源使用报告"""
+
+    app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
+    cpu_requests = models.IntegerField(verbose_name="CPU 请求", default=0)
+    mem_requests = models.IntegerField(verbose_name="内存请求", default=0)
+    cpu_limits = models.IntegerField(verbose_name="CPU 限制", default=0)
+    mem_limits = models.IntegerField(verbose_name="内存限制", default=0)
+    cpu_usage_avg = models.FloatField(verbose_name="CPU 平均使用率", default=0)
+    mem_usage_avg = models.FloatField(verbose_name="内存平均使用率", default=0)
+    pv = models.BigIntegerField(verbose_name="近一周页面访问量", default=0)
+    uv = models.BigIntegerField(verbose_name="近一周访问用户数", default=0)
+    summary = models.JSONField(verbose_name="资源使用详情汇总", default=dict)
+    operator = models.CharField(verbose_name="最后操作人", max_length=128)
+    collected_at = models.DateTimeField(verbose_name="数据统计时间")

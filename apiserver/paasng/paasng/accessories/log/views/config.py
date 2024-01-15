@@ -166,11 +166,11 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         :param log_type: 日志类型，可选项：json、stdout，在paasng.infras.bk_log.constatns.BkLogType 中定义的类型
         """
         module = self.get_module_via_path()
-        builtin_json_configs = CustomCollectorConfig.objects.filter(module=module, is_builtin=True, log_type=log_type)
-        if not builtin_json_configs.exists():
+        builtin_log_configs = CustomCollectorConfig.objects.filter(module=module, is_builtin=True, log_type=log_type)
+        if not builtin_log_configs.exists():
             raise error_codes.CUSTOM_COLLECTOR_NOT_EXISTED.f(_("平台内置日志采集规则"))
         return Response(
             data=ModuleCustomCollectorConfigSLZ(
-                builtin_json_configs.first(), context=self.get_serializer_context()
+                builtin_log_configs.first(), context=self.get_serializer_context()
             ).data
         )

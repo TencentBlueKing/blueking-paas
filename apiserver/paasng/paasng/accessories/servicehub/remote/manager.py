@@ -792,7 +792,6 @@ class RemoteServiceInstanceMgr:
         try:
             instance_data = client.retrieve_instance_by_name(service_id, instance_name)
         except Exception as e:
-            # TODO:修改异常处理
             raise exceptions.SvcInstanceNotFound(f"service instance {instance_name} not found") from e
         return instance_data.get("uuid")
 

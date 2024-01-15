@@ -1,15 +1,13 @@
 <template>
-  <div class="bk-plugin-wrapper mt30 right-main-plugin">
+  <div class="bk-plugin-wrapper right-main-plugin">
     <paas-content-loader
       :is-loading="loading"
       placeholder="pluin-list-loading"
       offset-top="20"
       class="wrap"
       :height="575"
+      :is-transform="false"
     >
-      <div class="paas-plugin-tit">
-        <h3> {{ $t('我的插件') }}</h3>
-      </div>
       <div class="flex-row justify-content-between">
         <bk-button
           theme="primary"
@@ -33,8 +31,6 @@
         size="small"
         ext-cls="plugin-list-table"
         :pagination="pagination"
-        :outer-border="false"
-        :header-border="false"
         :show-overflow-tooltip="true"
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
@@ -61,7 +57,7 @@
                 :src="row.logo"
                 onerror="this.src='/static/images/plugin-default.svg'"
                 class="plugin-logo-cls"
-              >
+              />
               {{ row.id || '--' }}
             </span>
           </template>
@@ -116,13 +112,9 @@
             {{ row.status === 'archived' ? $t('是') : $t('否') }}
           </template>
         </bk-table-column>
-        <bk-table-column
-          :label="$t('版本')"
-        >
+        <bk-table-column :label="$t('版本')">
           <template #default="{ row }">
-            <template
-              v-if="row.latest_release"
-            >
+            <template v-if="row.latest_release">
               <round-loading v-if="releaseStatusMap[row.latest_release.status]" />
               <div
                 v-else
@@ -130,11 +122,7 @@
               />
               {{ row.latest_release.version }}
             </template>
-            <template
-              v-else
-            >
-              --
-            </template>
+            <template v-else>--</template>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -159,7 +147,9 @@
                   text
                   @click="toNewVersion(row)"
                 >
-                  {{ row.ongoing_release && releaseStatusMap[row.ongoing_release.status] ? $t('发布进度') : $t('发布') }}
+                  {{
+                    row.ongoing_release && releaseStatusMap[row.ongoing_release.status] ? $t('发布进度') : $t('发布')
+                  }}
                 </bk-button>
                 <bk-button
                   class="versions-btn"
@@ -196,9 +186,7 @@
       :loading="removePluginDialog.isLoading"
       @confirm="handlerDeletePlugin"
     >
-      <div>
-        {{ $t('是否确定删除') }} {{ removePluginDialog.selectedPlugin.id }}
-      </div>
+      <div>{{ $t('是否确定删除') }} {{ removePluginDialog.selectedPlugin.id }}</div>
     </bk-dialog>
   </div>
 </template>
@@ -225,13 +213,16 @@ export default {
       filterPdName: [],
       languageFilters: [],
       filterStatus: [],
-      statusFilters: [{
-        value: 'archived',
-        text: this.$t('是'),
-      }, {
-        value: 'no',
-        text: this.$t('否'),
-      }],
+      statusFilters: [
+        {
+          value: 'archived',
+          text: this.$t('是'),
+        },
+        {
+          value: 'no',
+          text: this.$t('否'),
+        },
+      ],
       pluginTypeFilters: [],
       removePluginDialog: {
         visiable: false,
@@ -482,128 +473,130 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .bk-plugin-wrapper {
-        width: 100%;
-        padding: 28px 0 44px;
-        .paas-plugin-tit {
-            padding: 12px 0 16px;
-            color: #666;
-            line-height: 18px;
-            position: relative;
-        }
+.bk-plugin-wrapper {
+  margin-top: 74px;
+  width: 100%;
+  .paas-plugin-tit {
+    padding: 12px 0 16px;
+    color: #666;
+    line-height: 18px;
+    position: relative;
+  }
 
-        .paas-plugin-tit h3 {
-            font-size: 18px;
-            font-weight: normal;
-            display: inline-block;
-            color: #313238;
-        }
+  .paas-plugin-tit h3 {
+    font-size: 18px;
+    font-weight: normal;
+    display: inline-block;
+    color: #313238;
+  }
 
-        .paas-plugin-input{
-            width: 480px;
-        }
+  .paas-plugin-input {
+    width: 360px;
+  }
 
-        .plugin-list-table{
-            margin-top: 16px;
-            min-height: 600px;
-            .point{
-                height: 8px;
-                width: 8px;
-                display: inline-block;
-                border-radius: 50%;
-                margin-right: 3px;
-                border: 1px solid #FF9C01;
-            }
-            .waiting-approval{
-                background: #FFE8C3;
-                border: 1px solid #FF9C01;
-            }
-
-            .approval-failed{
-                background:#ffeded;
-                border-color:#ffdddd;
-            }
-
-            .developing{
-                background: #F0F1F5;
-                border: 1px solid #C4C6CC;
-            }
-
-            .released{
-                background: #E5F6EA;
-                border: 1px solid #3FC06D;
-            }
-            .failed{
-                background:#ffeded;
-                border-color:#ffdddd;
-            }
-
-            .dot {
-                height: 8px;
-                width: 8px;
-                display: inline-block;
-                border-radius: 50%;
-                margin-right: 3px;
-            }
-            .dot.successful {
-                background: #E5F6EA;
-                border: 1px solid #3FC06D;
-            }
-
-            .dot.failed,
-            .dot.interrupted {
-                background: #FFE6E6;
-                border: 1px solid #EA3636;
-            }
-        }
-
-        .bk-button-text.bk-button-small {
-            padding: 0 3px;
-            line-height: 26px;
-        }
+  .plugin-list-table {
+    margin-top: 16px;
+    :deep(.bk-table-pagination-wrapper) {
+      background: #fff;
     }
-    .wrap {
-        width: calc(100% - 120px)
+    .point {
+      height: 8px;
+      width: 8px;
+      display: inline-block;
+      border-radius: 50%;
+      margin-right: 3px;
+      border: 1px solid #ff9c01;
     }
-    .plugin-logo-cls {
-        width: 16px;
-        vertical-align: middle;
+    .waiting-approval {
+      background: #ffe8c3;
+      border: 1px solid #ff9c01;
     }
-    .empty-tips {
-        margin-top: 5px;
-        color: #979BA5;
-        .clear-search {
-            cursor: pointer;
-            color: #3a84ff;
-        }
+
+    .approval-failed {
+      background: #ffeded;
+      border-color: #ffdddd;
     }
-    .plugin-link {
-        color: #3a84ff;
-        cursor: pointer;
-        &:hover {
-            color: #699df4;
-        }
+
+    .developing {
+      background: #f0f1f5;
+      border: 1px solid #c4c6cc;
     }
+
+    .released {
+      background: #e5f6ea;
+      border: 1px solid #3fc06d;
+    }
+    .failed {
+      background: #ffeded;
+      border-color: #ffdddd;
+    }
+
+    .dot {
+      height: 8px;
+      width: 8px;
+      display: inline-block;
+      border-radius: 50%;
+      margin-right: 3px;
+    }
+    .dot.successful {
+      background: #e5f6ea;
+      border: 1px solid #3fc06d;
+    }
+
+    .dot.failed,
+    .dot.interrupted {
+      background: #ffe6e6;
+      border: 1px solid #ea3636;
+    }
+  }
+
+  .bk-button-text.bk-button-small {
+    padding: 0 3px;
+    line-height: 26px;
+  }
+}
+.wrap {
+  width: calc(100% - 120px);
+}
+.plugin-logo-cls {
+  width: 16px;
+  vertical-align: middle;
+}
+.empty-tips {
+  margin-top: 5px;
+  color: #979ba5;
+  .clear-search {
+    cursor: pointer;
+    color: #3a84ff;
+  }
+}
+.plugin-link {
+  color: #3a84ff;
+  cursor: pointer;
+  &:hover {
+    color: #699df4;
+  }
+}
 </style>
 
 <style lang="scss">
-    .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
-        height: 130px;
-    }
-    .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
-        color: #3a84ff !important;
-    }
-    .bk-plugin-wrapper {
-        .table-operate-buttons .bk-button-text>div {
-            text-align: left;
-        }
-        .table-operate-buttons.en-operate .bk-button-text>div {
-            width: 92px !important;
-        }
-        .table-operate-buttons.zh-operate .bk-button-text>div,
-        .table-operate-buttons.en-operate .versions-btn>div,
-        .table-operate-buttons.en-operate .del-btn>div {
-            width: 50px !important;
-        }
-    }
+.bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
+  height: 130px;
+}
+.bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
+  color: #3a84ff !important;
+}
+.bk-plugin-wrapper {
+  .table-operate-buttons .bk-button-text > div {
+    text-align: left;
+  }
+  .table-operate-buttons.en-operate .bk-button-text > div {
+    width: 92px !important;
+  }
+  .table-operate-buttons.zh-operate .bk-button-text > div,
+  .table-operate-buttons.en-operate .versions-btn > div,
+  .table-operate-buttons.en-operate .del-btn > div {
+    width: 50px !important;
+  }
+}
 </style>

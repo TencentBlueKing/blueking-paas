@@ -24,6 +24,7 @@ from paas_wl.bk_app.deploy.actions.archive import ArchiveOperationController
 from paasng.platform.engine.deploy.archive.base import BaseArchiveManager
 from paasng.platform.engine.deploy.bg_wait.wait_deployment import wait_for_all_stopped
 from paasng.platform.engine.models.offline import OfflineOperation
+from paasng.platform.engine.task import archive_related_resources
 
 
 class ApplicationArchiveManager(BaseArchiveManager):
@@ -32,3 +33,6 @@ class ApplicationArchiveManager(BaseArchiveManager):
         op_id = str(offline_operation.pk)
         ArchiveOperationController(env=self.env).start()
         wait_for_all_stopped(env=self.env, result_handler=result_handler, extra_params={"operation_id": op_id})
+        # 成功下架后，回收 service 和 pre-release-hook 相关资源
+        # 该部分资源用户不可见，因此不论成功失败都不该阻塞下架操作
+        archive_related_resources.delay(env=self.env)

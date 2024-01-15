@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Set
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -162,15 +163,16 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["日志采集"])
     def get_builtin_config(self, request, code, module_name, log_type):
-        """获取平台内置的对应类型的日志采集配置，若有多个配置，默认返回第一个
+        """获取平台内置的对应类型的日志采集配置
         :param log_type: 日志类型，可选项：json、stdout，在paasng.infras.bk_log.constatns.BkLogType 中定义的类型
         """
         module = self.get_module_via_path()
-        builtin_log_configs = CustomCollectorConfig.objects.filter(module=module, is_builtin=True, log_type=log_type)
-        if not builtin_log_configs.exists():
+        try:
+            # 业务逻辑保证了模块下一种类型的内置采集规则最多只有一个，name_en 中包含了 log_type
+            builtin_log_config = CustomCollectorConfig.objects.get(module=module, is_builtin=True, log_type=log_type)
+        except ObjectDoesNotExist:
             raise error_codes.CUSTOM_COLLECTOR_NOT_EXISTED.f(_("平台内置日志采集规则"))
+
         return Response(
-            data=ModuleCustomCollectorConfigSLZ(
-                builtin_log_configs.first(), context=self.get_serializer_context()
-            ).data
+            data=ModuleCustomCollectorConfigSLZ(builtin_log_config, context=self.get_serializer_context()).data
         )

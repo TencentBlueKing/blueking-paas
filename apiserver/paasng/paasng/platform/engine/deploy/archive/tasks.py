@@ -21,12 +21,13 @@ from celery import shared_task
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ingress_kmodel
 from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
 
 
 @shared_task
 def archive_related_resources(wl_app_id):
-    """应用下架时，下架相关资源（service、pre-release-hook）
+    """应用下架时，下架相关资源（service、pre-release-hook、ingress）
 
     :param str wl_app_id: wl_app uuid
     """
@@ -36,6 +37,11 @@ def archive_related_resources(wl_app_id):
     services = service_kmodel.list_by_app(wl_app)
     for service in services:
         service_kmodel.delete(service)
+
+    # 回收 ingress
+    ingresses = ingress_kmodel.list_by_app(wl_app)
+    for ingress in ingresses:
+        ingress_kmodel.delete(ingress)
 
     # 回收 pre-release-hook
     client = get_client_by_app(wl_app)

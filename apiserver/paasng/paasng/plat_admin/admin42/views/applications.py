@@ -16,10 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.bk_app.monitoring.metrics.models import AppResourceUsageReport
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
@@ -31,7 +33,13 @@ from paasng.infras.iam.helpers import (
     fetch_role_members,
     remove_user_all_roles,
 )
-from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
+from paasng.plat_admin.admin42.serializers.application import (
+    ApplicationDetailSLZ,
+    ApplicationSLZ,
+    AppResourceUsageReportListInputSLZ,
+    AppResourceUsageReportOutputSLZ,
+    BindEnvClusterSLZ,
+)
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
@@ -74,6 +82,7 @@ class ApplicationListView(GenericTemplateView):
         kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
+    # TODO Deprecated 应用资源配额 & 使用情况不在应用列表展示，另开独立页面
     def get_app_resource_context_data(self, app_resource_quotas, **kwargs):
         # 手动按资源的使用量排序分页
         offset = self.paginator.get_offset(self.request)
@@ -108,8 +117,30 @@ class ApplicationListView(GenericTemplateView):
         kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+
+class ApplicationResourceUsageListView(GenericTemplateView):
+    name = "资源使用概览"
+    template_name = "admin42/applications/list_resource_usage.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_context_data(self, **kwargs):
+        self.paginator.default_limit = 10
+
+        slz = AppResourceUsageReportListInputSLZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        queryset = AppResourceUsageReport.objects.all()
+        if search_term := params.get("search_term"):
+            queryset = queryset.filter(Q(app_code__icontains=search_term) | Q(app_name__icontains=search_term))
+
+        if order_by := params.get("order_by"):
+            queryset = queryset.order_by(order_by)
+
+        kwargs = super().get_context_data(**kwargs)
+        kwargs["usage_report_list"] = AppResourceUsageReportOutputSLZ(self.paginate_queryset(queryset), many=True).data
+        kwargs["pagination"] = self.get_pagination_context(self.request)
+        return kwargs
 
 
 class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin):

@@ -38,7 +38,6 @@ from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paasng.platform.applications.models import Application
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.processes.kres_entities import Process
@@ -193,7 +192,8 @@ def get_resource_metric_manager(app: WlApp, process_type: str):
 class AppResourceUsageReport(models.Model):
     """应用资源使用报告"""
 
-    app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
+    app_code = models.CharField(verbose_name="应用 Code", max_length=128, primary_key=True)
+    app_name = models.CharField(verbose_name="应用名称", max_length=128)
     cpu_requests = models.IntegerField(verbose_name="CPU 请求", default=0)
     mem_requests = models.IntegerField(verbose_name="内存请求", default=0)
     cpu_limits = models.IntegerField(verbose_name="CPU 限制", default=0)

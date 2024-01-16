@@ -69,8 +69,9 @@ def _update_or_create_usage_report(app: Application):
             total_uv += resp["result"]["results"]["uv"]
 
     AppResourceUsageReport.objects.update_or_create(
-        app=app,
+        app_code=app.code,
         defaults={
+            "app_name": app.name,
             "cpu_requests": cpu_requests,
             "mem_requests": mem_requests,
             "cpu_limits": cpu_limits,
@@ -96,9 +97,9 @@ def collect_and_update_app_res_usage_reports(app_codes: List[str]):
     total_cnt = applications.count()
     for idx, app in enumerate(applications, start=1):
         try:
-            logger.info(f"[{idx}/{total_cnt}] start collect app usage report: {app.code}.....")
+            logger.info("[%d/%d] start collect app usage report: %s.....", idx, total_cnt, app.code)
             _update_or_create_usage_report(app)
-        except Exception as e:
-            logger.warning(f"failed to collect app: {app.code} usage report, error: {str(e)}")
+        except Exception:
+            logger.exception("failed to collect app: %s usage report", app.code)
         else:
-            logger.info(f"successfully collect app: {app.code} usage report")
+            logger.info("successfully collect app: %s usage report", app.code)

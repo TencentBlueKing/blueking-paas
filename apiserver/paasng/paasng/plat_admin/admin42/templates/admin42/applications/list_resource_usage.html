@@ -1,0 +1,106 @@
+{% extends "../platformmgr/base.html" %}
+
+{% load admin_utils %}
+
+{% block main_content %}
+<div id="app-res-usage-list" class="p20">
+    <div class="mb15" style="width: 40%">
+        <bk-input
+            placeholder="输入应用 ID 或名称，按 Enter 进行模糊搜索"
+            :clearable="true"
+            :right-icon="'bk-icon icon-search'"
+            v-model="filterKey"
+            @enter="handleSearch">
+        </bk-input>
+    </div>
+    <bk-table :data="data" @sort-change="handleSortChange">
+        <bk-table-column label="应用 ID">
+            <template slot-scope="props">
+                <a class="cell" :href="AppDetailUrl(props.row.app_code)">$[props.row.app_code]</a>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="应用名称" prop="app_name"></bk-table-column>
+        <bk-table-column label="内存请求" prop="mem_requests" sortable="custom"></bk-table-column>
+        <bk-table-column label="内存限制" prop="mem_limits" sortable="custom"></bk-table-column>
+        <bk-table-column label="内存使用率（7d)" prop="mem_usage_avg" sortable="custom"></bk-table-column>
+        <bk-table-column label="CPU 请求" prop="cpu_requests" sortable="custom"></bk-table-column>
+        <bk-table-column label="CPU 限制" prop="cpu_limits" sortable="custom"></bk-table-column>
+        <bk-table-column label="CPU 使用率（7d)" prop="cpu_usage_avg" sortable="custom"></bk-table-column>
+        <bk-table-column label="PV (7d)" prop="pv" sortable="custom"></bk-table-column>
+        <bk-table-column label="UV (7d)" prop="uv" sortable="custom"></bk-table-column>
+        <bk-table-column label="最后操作人" prop="operator"></bk-table-column>
+        <bk-table-column label="报告生成时间" prop="collected_at"></bk-table-column>
+    </bk-table>
+    <pagination
+        class="mt15"
+        :current.sync="pagination.curPage"
+        :limit="pagination.limit"
+        :count="pagination.count"
+        :align="'right'"
+    ></pagination>
+</div>
+
+{% endblock %}
+
+{% block main_script %}
+<script>
+const pagination = {{ pagination | to_json }}
+const data = {{ usage_report_list | to_json }}
+const SEARCH_PARAM = "search_term"
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#app-res-usage-list",
+        delimiters: ['$[', ']'],
+        data: function () {
+            let prefix = window.location.href
+            let filterKey = undefined
+
+            if (prefix.indexOf("?") > 0) {
+                let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
+                filterKey = query[SEARCH_PARAM]
+            }
+            return {
+                data,
+                pagination,
+                baseUrl: '{% url "admin.applications.resource_usage" "${app_code}" %}',
+                SEARCH_PARAM,
+                filterKey,
+            }
+        },
+        methods: {
+            AppDetailUrl(code) {
+                return this.baseUrl.replace("${app_code}", code)
+            },
+            handleSortChange({column, prop, order}) {
+                if (!prop) {
+                    return
+                }
+                let query = {
+                    order_by: (order === 'ascending' ? prop : '-' + prop), offset:0
+                }
+                this.handleQueryChange(query)
+            },
+            handleSearch() {
+                let query = {
+                    [this.SEARCH_PARAM]: this.filterKey, offset:0
+                }
+                this.handleQueryChange(query)
+            },
+            handleQueryChange(query) {
+                let prefix = window.location.href
+
+                if (prefix.indexOf("?") > 0) {
+                    query = {...querystring.parse(prefix.substr(prefix.indexOf("?") + 1)), ...query}
+                    prefix = prefix.substr(0, prefix.indexOf("?"))
+                }
+                query = querystring.stringify(query)
+                window.location.href = `${prefix}?${query}`
+            }
+        },
+    })
+})
+
+</script>
+
+{% endblock %}

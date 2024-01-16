@@ -30,14 +30,12 @@ from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.region.models import get_region
 from paasng.infras.oauth2.utils import create_oauth2_client
-from paasng.platform.applications.cleaner import ApplicationCleaner
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.applications.signals import post_create_application, pre_delete_module
+from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
-from paasng.platform.modules.manager import ModuleCleaner
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
@@ -72,46 +70,6 @@ def create_default_module(
         exposed_url_type=region.entrance_config.exposed_url_type,
     )
     return module
-
-
-def delete_module_and_resources(module: Module, operator: str):
-    cleaner = ModuleCleaner(module)
-
-    logger.info("going to delete services related to Module<%s>", module)
-    cleaner.delete_services()
-
-    logger.info("going to delete EngineApp related to Module<%s>", module)
-    cleaner.delete_engine_apps()
-
-    # 数据记录删除(module 是真删除)
-    logger.info("going to delete Module<%s>", module)
-    cleaner.delete_module()
-
-
-def delete_module(application: Application, module_name: str, operator: str):
-    with transaction.atomic():
-        module = application.get_module_with_lock(module_name=module_name)
-        delete_module_and_resources(module, operator)
-
-
-def delete_all_modules(application: Application, operator: str):
-    """删除应用下的所有 Module"""
-    modules = application.modules.all()
-    for module in modules:
-        pre_delete_module.send(sender=Module, module=module, operator=operator)
-        delete_module_and_resources(module, operator)
-
-
-def delete_application(application: Application, operator: str):
-    """删除回收应用维度的相关的资源后, 删除应用"""
-    cleaner = ApplicationCleaner(application)
-
-    logger.info("going to delete iam resources for Application<%s>", application)
-    cleaner.delete_iam_resources()
-
-    # 软删除, 标记 is_deleted = True
-    logger.info("going to delete Application<%s>", application)
-    cleaner.delete_application()
 
 
 def create_application(

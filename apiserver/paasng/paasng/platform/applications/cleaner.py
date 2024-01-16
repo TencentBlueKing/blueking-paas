@@ -20,6 +20,9 @@ import logging
 
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.signals import pre_delete_module
+from paasng.platform.modules.manager import ModuleCleaner
+from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,15 @@ logger = logging.getLogger(__name__)
 class ApplicationCleaner:
     def __init__(self, application: Application):
         self.application = application
+
+    def clean(self):
+        """main entrance to clean application"""
+        logger.info("going to delete iam resources for Application<%s>", self.application)
+        self.delete_iam_resources()
+
+        # 软删除, 标记 is_deleted = True
+        logger.info("going to delete Application<%s>", self.application)
+        self.delete_application()
 
     def delete_iam_resources(self):
         """删除 IAM 相关资源"""
@@ -42,3 +54,11 @@ class ApplicationCleaner:
         """删除应用的数据库记录(软删除)"""
         # 不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
         self.application.delete()
+
+
+def delete_all_modules(application: Application, operator: str):
+    """删除应用下的所有 Module"""
+    modules = application.modules.all()
+    for module in modules:
+        pre_delete_module.send(sender=Module, module=module, operator=operator)
+        ModuleCleaner(module).clean()

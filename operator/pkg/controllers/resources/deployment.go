@@ -34,7 +34,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
@@ -148,8 +147,9 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 			log.Error(err, "Failed to inject mounts info to process", proc.Name)
 		}
 	}
-	if config.Global.RequireMountLogsToHostPath() {
-		source := BuiltinLogsVolume{}
+
+	source := BuiltinLogsVolume{}
+	if source.ShouldApply(app) {
 		if err := source.ApplyToDeployment(app, deployment); err != nil {
 			return nil, err
 		}

@@ -133,6 +133,12 @@ func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountN
 // BuiltinLogsVolume 内置日志挂载卷
 type BuiltinLogsVolume struct{}
 
+// ShouldApply 是否应用内置日志挂载卷
+// 仅当 bkapp 的日志采集器类型是 BuiltinElkCollector 时才挂载日志到宿主机
+func (s BuiltinLogsVolume) ShouldApply(bkapp *paasv1alpha2.BkApp) bool {
+	return bkapp.Annotations[paasv1alpha2.LogCollectorTypeAnnoKey] == paasv1alpha2.BuiltinElkCollector
+}
+
 // ApplyToDeployment 将内置日志挂载卷应用到 deployment
 func (s BuiltinLogsVolume) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error {
 	var legacyLogPath, moduleLogPath string

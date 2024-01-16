@@ -216,4 +216,15 @@ var _ = Describe("test builtin logs", func() {
 			source.ApplyToDeployment(bkapp, deployment),
 		).To(HaveOccurred())
 	})
+
+	DescribeTable(
+		"test shouldApply",
+		func(anno string, expected bool) {
+			source := &BuiltinLogsVolume{}
+			bkapp.Annotations[paasv1alpha2.LogCollectorTypeAnnoKey] = anno
+			Expect(source.ShouldApply(bkapp)).To(Equal(expected))
+		},
+		Entry("when type = builtin-elk", paasv1alpha2.BuiltinElkCollector, true),
+		Entry("when type = bklog", paasv1alpha2.BkLogCollector, false),
+	)
 })

@@ -34,8 +34,6 @@ type PlatformConfig struct {
 	SentryDSN string `json:"sentryDSN"`
 	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations
 	IngressClassName string `json:"ingressClassName"`
-	// if MountLogsToHostPath is true, will mount /app/logs and /app/v3logs to host path
-	MountLogsToHostPath bool `json:"mountLogsToHostPath,omitempty"`
 }
 
 // IngressPluginConfig contains the config for controlling ingress config
@@ -142,11 +140,6 @@ func (p *ProjectConfig) GetProcDefaultMemLimits() string {
 // GetIngressClassName returns the ingress class name
 func (p *ProjectConfig) GetIngressClassName() string {
 	return p.Platform.IngressClassName
-}
-
-// RequireMountLogsToHostPath returns whether mount logs to host path
-func (p *ProjectConfig) RequireMountLogsToHostPath() bool {
-	return p.Platform.MountLogsToHostPath
 }
 
 // IsAutoscalingEnabled returns whether autoscaling is enabled

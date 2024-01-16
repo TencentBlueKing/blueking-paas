@@ -197,10 +197,6 @@ spec:
                 description: if ingressClassName configured, kubernetes.io/ingress.class=$value
                   will be added to ingress's annotations
                 type: string
-              mountLogsToHostPath:
-                description: if MountLogsToHostPath is true, will mount /app/logs
-                  and /app/v3logs to host path
-                type: boolean
               sentryDSN:
                 description: sentry server dsn, all events waiting for report will
                   be dropped if unset

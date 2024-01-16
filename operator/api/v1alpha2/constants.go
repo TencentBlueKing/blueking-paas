@@ -69,6 +69,18 @@ const (
 	LegacyProcResAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
 )
 
+// 日志采集相关信息
+const (
+
+	// LogCollectorTypeAnnoKey 注解中存储日志采集类型相关的键名
+	LogCollectorTypeAnnoKey = "bkapp.paas.bk.tencent.com/log-collector-type"
+
+	// BuiltinElkCollector 平台内置的 ELK 采集方案(需要挂载日志目录到宿主机指定位置)
+	BuiltinElkCollector = "builtin-elk"
+	// BkLogCollector 日志平台采集器
+	BkLogCollector = "bk-log"
+)
+
 // 平台相关信息
 const (
 	// HookTypeKey 注解中存储钩子类型的键名

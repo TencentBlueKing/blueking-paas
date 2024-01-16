@@ -101,6 +101,7 @@ from paasng.platform.applications.utils import (
     create_market_config,
     create_third_app,
     delete_all_modules,
+    delete_application,
     get_app_overview,
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
@@ -309,7 +310,7 @@ class ApplicationViewSet(viewsets.ViewSet):
 
     def _delete_application(self, application: Application):
         try:
-            application.delete()
+            delete_application(application, self.request.user.pk)
         except Exception as e:
             logger.exception(f"unable to delete application {application.code}")
             raise error_codes.CANNOT_DELETE_APP.f(str(e))

@@ -472,7 +472,8 @@ def get_bkapp_resource_for_deploy(
     # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
     model_res.metadata.annotations[USE_CNB_ANNO_KEY] = "true" if use_cnb else "false"
 
-    # Set log collector type to inform operator whether to mount logs path to host
+    # Set log collector type to inform operator do some special logic.
+    # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
     # Apply other changes to the resource

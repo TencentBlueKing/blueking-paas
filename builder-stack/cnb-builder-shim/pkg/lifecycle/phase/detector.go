@@ -38,6 +38,5 @@ func MakeDetectorCmd(
 		"-layers", layersDir,
 		"-log-level", logLevel,
 	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "detector"), args...)
-	return cmd
+	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "detector"), args...)
 }

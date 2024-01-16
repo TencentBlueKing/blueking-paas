@@ -18,6 +18,28 @@
 
 package main
 
-func main() {
+import (
+	"fmt"
+	"os"
 
+	"github.com/BurntSushi/toml"
+	"github.com/buildpacks/lifecycle/launch"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
+)
+
+func main() {
+	logger := logging.Default()
+
+	var md launch.Metadata
+
+	if _, err := toml.DecodeFile(launch.GetMetadataFilePath(utils.EnvOrDefault("CNB_LAYERS_DIR", "/layers")), &md); err != nil {
+		logger.Error(err, "read metadata")
+		os.Exit(1)
+	}
+
+	for _, p := range md.Processes {
+		logger.Info(fmt.Sprintf("Process: %s", p.Command.Entries[0]))
+	}
 }

@@ -46,6 +46,5 @@ func MakeExporterCmd(
 		args = append(args, "-cache-image", cacheImage)
 	}
 	args = append(args, outputImage)
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "exporter"), args...)
-	return cmd
+	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "exporter"), args...)
 }

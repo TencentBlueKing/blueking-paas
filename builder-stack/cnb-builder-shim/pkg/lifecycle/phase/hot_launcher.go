@@ -25,5 +25,5 @@ import (
 
 // MakeHotLauncherCmd build the hot launcher cmd
 func MakeHotLauncherCmd(ctx context.Context) *exec.Cmd {
-	return nil
+	return exec.CommandContext(ctx, "/cnb/devcontainer/bin/hot-launcher")
 }

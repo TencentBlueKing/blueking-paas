@@ -16,16 +16,27 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main_test
+package utils
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"crypto/md5"
+	"encoding/hex"
+	"io"
+	"os"
 )
 
-func TestDevInit(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "DevInit Suite")
+func Md5(fileDist string) (string, error) {
+	file, err := os.Open(fileDist)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+
+	if _, err = io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

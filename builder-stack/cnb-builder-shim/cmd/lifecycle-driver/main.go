@@ -30,7 +30,10 @@ import (
 	"github.com/go-logr/logr"
 	flag "github.com/spf13/pflag"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/lifecycle/phase"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 const (
@@ -47,6 +50,9 @@ const (
 	CacheImageEnvVarKey = "CACHE_IMAGE"
 	// OutputImageEnvVarKey The env var key that store output image
 	OutputImageEnvVarKey = "OUTPUT_IMAGE"
+
+	// DevModeEnvVarKey The env var key that indicates whether to use the dev mode or not
+	DevModeEnvVarKey = "DEV_MODE"
 
 	// DefaultUid is the default uid to run lifecycle
 	DefaultUid uint32 = 2000
@@ -74,9 +80,15 @@ var (
 	gid = flag.Uint32("gid", DefaultGid, "GID of user's group in the stack's build and run images")
 
 	cacheImage  = flag.String("cache-image", os.Getenv(CacheImageEnvVarKey), "cache image tag name")
-	outputImage = flag.String("output-image", os.Getenv(OutputImageEnvVarKey), "The name of image that will get created by the lifecycle.")
+	outputImage = flag.String(
+		"output-image",
+		os.Getenv(OutputImageEnvVarKey),
+		"The name of image that will get created by the lifecycle.",
+	)
 
 	logLevel = flag.String("log-level", "info", "logging level")
+
+	dev = flag.Bool("dev", utils.BoolEnv(DevModeEnvVarKey), "use dev mode or not")
 )
 
 func init() {
@@ -97,6 +109,8 @@ type Step struct {
 	Name         string
 	EnterMessage string
 	Cmd          *exec.Cmd
+	uid          uint32
+	gid          uint32
 }
 
 func main() {
@@ -114,144 +128,12 @@ func main() {
 	}
 
 	ctx := context.Background()
-	// Starting from Platform API 0.7, the analyze phase runs before the detect phase.
-	steps := []Step{
-		{
-			"Analyze",
-			"Analyzing optimization plan...",
-			makeAnalyzerCmd(ctx, *lifecycleDir, *outputImage, *analyzedPath, *cacheImage, *layersDir, *logLevel, *uid, *gid),
-		},
-		{
-			"Detect",
-			"Detecting Buildpacks...",
-			makeDetectorCmd(ctx, *lifecycleDir, *appDir, *orderPath, *groupPath, *planPath, *layersDir, *logLevel),
-		},
-	}
-	if *cacheImage != "" {
-		steps = append(steps, Step{
-			"Restore",
-			"Restoring layers from the cache...",
-			makeRestorerCmd(ctx, *lifecycleDir, *cacheImage, *groupPath, *layersDir, *logLevel, *uid, *gid),
-		})
-	}
-	steps = append(steps, Step{
-		"Build",
-		"Building application...",
-		makeBuilderCmd(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel),
-	}, Step{
-		"Export",
-		"Exporting image...",
-		makeExporterCmd(ctx, *lifecycleDir, *outputImage, *appDir, *analyzedPath, *cacheImage, *groupPath, *layersDir, *logLevel, *uid, *gid),
-	})
 
-	lifecycleEnv := makeEnv(logger)
-	logger.Info("==================================================")
-	logger.Info("Starting builder...")
-	beginAt := time.Now()
-	for _, step := range steps {
-		beginAt := time.Now()
-		logger.Info(fmt.Sprintf("--> %s", step.EnterMessage))
-		// Redirect input and output
-		step.Cmd.Stdin = os.Stdin
-		step.Cmd.Stderr = os.Stderr
-		step.Cmd.Stdout = os.Stdout
-		// setup env var
-		step.Cmd.Env = lifecycleEnv
-		// set user and group
-		step.Cmd.SysProcAttr = makeSysProcAttr(*uid, *gid)
-		err = step.Cmd.Run()
-		if err != nil {
-			logger.Error(err, fmt.Sprintf("!! Step %s failed", step.Name))
-			os.Exit(1)
-		}
-		logger.Info(fmt.Sprintf("Step %s done, duration %s", step.Name, time.Since(beginAt)))
+	if *dev {
+		runDevLifecycle(ctx, logger)
+	} else {
+		runBuilderLifecycle(ctx, logger)
 	}
-	logger.Info("==================================================")
-	logger.Info(fmt.Sprintf("Build success, duration: %v", time.Since(beginAt)))
-}
-
-// build the detector cmd
-// detector will generate group.toml(to groupPath) and plan.toml(to planPath) based on order.toml(in orderPath) and source code(in appDir)
-func makeDetectorCmd(ctx context.Context, lifecycleDir, appDir, orderPath, groupPath, planPath, layersDir, logLevel string) *exec.Cmd {
-	args := []string{
-		"-app", appDir,
-		"-order", orderPath,
-		"-group", groupPath,
-		"-plan", planPath,
-		"-layers", layersDir,
-		"-log-level", logLevel,
-	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "detector"), args...)
-	return cmd
-}
-
-// build the analyzer cmd
-// analyzer will generate analyzed.toml(to analyzedPath) based on cacheImage
-func makeAnalyzerCmd(ctx context.Context, lifecycleDir, outputImage, analyzedPath, cacheImage, layersDir, logLevel string, uid, gid uint32) *exec.Cmd {
-	args := []string{
-		"-analyzed", analyzedPath,
-		"-layers", layersDir,
-		"-log-level", logLevel,
-		"-uid", fmt.Sprintf("%d", uid),
-		"-gid", fmt.Sprintf("%d", gid),
-	}
-	// analyze with cache when cacheImage is set
-	if cacheImage != "" {
-		args = append(args, "-cache-image", cacheImage)
-	}
-	args = append(args, outputImage)
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "analyzer"), args...)
-	return cmd
-}
-
-// build the restorer cmd
-// restorer will restore last build cache based on cacheImage and group.toml(in groupPath)
-func makeRestorerCmd(ctx context.Context, lifecycleDir, cacheImage, groupPath, layersDir, logLevel string, uid, gid uint32) *exec.Cmd {
-	args := []string{
-		"-cache-image", cacheImage,
-		"-group", groupPath,
-		"-layers", layersDir,
-		"-log-level", logLevel,
-		"-uid", fmt.Sprintf("%d", uid),
-		"-gid", fmt.Sprintf("%d", gid),
-	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "restorer"), args...)
-	return cmd
-}
-
-// build the builder cmd
-// builder will build the app(in appDir) based on group.toml(in groupPath) and plan.toml(in planPath)
-func makeBuilderCmd(ctx context.Context, lifecycleDir, appDir, groupPath, planPath, layersDir, logLevel string) *exec.Cmd {
-	args := []string{
-		"-app", appDir,
-		"-group", groupPath,
-		"-plan", planPath,
-		"-layers", layersDir,
-		"-log-level", logLevel,
-	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "builder"), args...)
-	return cmd
-}
-
-// build the exporter cmd
-// exporter will push the app image and cache image to container image registry
-func makeExporterCmd(ctx context.Context, lifecycleDir, outputImage, appDir, analyzedPath, cacheImage, groupPath, layersDir, logLevel string, uid, gid uint32) *exec.Cmd {
-	args := []string{
-		"-app", appDir,
-		"-analyzed", analyzedPath,
-		"-group", groupPath,
-		"-layers", layersDir,
-		"-log-level", logLevel,
-		"-uid", fmt.Sprintf("%d", uid),
-		"-gid", fmt.Sprintf("%d", gid),
-	}
-	// export cache when cacheImage is set
-	if cacheImage != "" {
-		args = append(args, "-cache-image", cacheImage)
-	}
-	args = append(args, outputImage)
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "exporter"), args...)
-	return cmd
 }
 
 // make envs for lifecycle command
@@ -279,4 +161,168 @@ func makeSysProcAttr(uid, gid uint32) *syscall.SysProcAttr {
 		NoSetGroups: false,
 	}
 	return &sysProcAttr
+}
+
+func runBuilderLifecycle(ctx context.Context, logger logr.Logger) {
+	logger.Info("==================================================")
+	logger.Info("Starting builder...")
+
+	beginAt := time.Now()
+
+	executeSteps(logger, getBuilderSteps(ctx))
+
+	logger.Info("==================================================")
+	logger.Info(fmt.Sprintf("Build success, duration: %v", time.Since(beginAt)))
+}
+
+func runDevLifecycle(ctx context.Context, logger logr.Logger) {
+	logger.Info("==================================================")
+	logger.Info("Hot starting devcontainer...")
+
+	beginAt := time.Now()
+
+	executeSteps(logger, getDevSteps(ctx))
+
+	logger.Info("==================================================")
+	logger.Info(fmt.Sprintf("Hot starting(reloading) success, duration: %v", time.Since(beginAt)))
+}
+
+func executeSteps(logger logr.Logger, steps []Step) {
+	lifecycleEnv := makeEnv(logger)
+
+	for _, step := range steps {
+		beginAt := time.Now()
+		logger.Info(fmt.Sprintf("--> %s", step.EnterMessage))
+		// Redirect input and output
+		step.Cmd.Stdin = os.Stdin
+		step.Cmd.Stderr = os.Stderr
+		step.Cmd.Stdout = os.Stdout
+		// setup env var
+		step.Cmd.Env = lifecycleEnv
+		// set user and group
+		step.Cmd.SysProcAttr = makeSysProcAttr(step.uid, step.gid)
+		if err := step.Cmd.Run(); err != nil {
+			logger.Error(err, fmt.Sprintf("!! Step %s failed", step.Name))
+			os.Exit(1)
+		}
+		logger.Info(fmt.Sprintf("Step %s done, duration %s", step.Name, time.Since(beginAt)))
+	}
+}
+
+func getBuilderSteps(ctx context.Context) []Step {
+	// Starting from Platform API 0.7, the analyze phase runs before the detect phase.
+	steps := []Step{
+		{
+			"Analyze",
+			"Analyzing optimization plan...",
+			phase.MakeAnalyzerCmd(
+				ctx,
+				*lifecycleDir,
+				*outputImage,
+				*analyzedPath,
+				*cacheImage,
+				*layersDir,
+				*logLevel,
+				*uid,
+				*gid,
+			),
+			*uid, *gid,
+		},
+		{
+			"Detect",
+			"Detecting Buildpacks...",
+			phase.MakeDetectorCmd(
+				ctx,
+				*lifecycleDir,
+				*appDir,
+				*orderPath,
+				*groupPath,
+				*planPath,
+				*layersDir,
+				*logLevel,
+			),
+			*uid, *gid,
+		},
+	}
+	if *cacheImage != "" {
+		steps = append(steps, Step{
+			"Restore",
+			"Restoring layers from the cache...",
+			phase.MakeRestorerCmd(ctx, *lifecycleDir, *cacheImage, *groupPath, *layersDir, *logLevel, *uid, *gid),
+			*uid, *gid,
+		})
+	}
+	steps = append(steps, Step{
+		"Build",
+		"Building application...",
+		phase.MakeBuilderCmd(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel),
+		*uid, *gid,
+	}, Step{
+		"Export",
+		"Exporting image...",
+		phase.MakeExporterCmd(
+			ctx,
+			*lifecycleDir,
+			*outputImage,
+			*appDir,
+			*analyzedPath,
+			*cacheImage,
+			*groupPath,
+			*layersDir,
+			*logLevel,
+			*uid,
+			*gid,
+		),
+		*uid, *gid,
+	})
+	return steps
+}
+
+func getDevSteps(ctx context.Context) []Step {
+	var steps []Step
+
+	if noBuildChange() {
+		steps = []Step{}
+	} else {
+		steps = []Step{
+			{
+				"Detect",
+				"Detecting Buildpacks...",
+				phase.MakeDetectorCmd(
+					ctx,
+					*lifecycleDir,
+					*appDir,
+					*orderPath,
+					*groupPath,
+					*planPath,
+					*layersDir,
+					*logLevel,
+				),
+				*uid, *gid,
+			},
+			{
+				"Build",
+				"Building application...",
+				phase.MakeBuilderCmd(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel),
+				*uid, *gid,
+			},
+		}
+	}
+
+	steps = append(
+		steps,
+		Step{
+			"Hot launcher",
+			"Hot launcher processes...",
+			phase.MakeHotLauncherCmd(ctx),
+			*uid,
+			*gid,
+		},
+	)
+	return steps
+}
+
+func noBuildChange() bool {
+	// TODO 可能的提速实现
+	return false
 }

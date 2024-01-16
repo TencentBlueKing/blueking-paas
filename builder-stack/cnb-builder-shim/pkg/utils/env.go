@@ -18,13 +18,25 @@
 
 package utils
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
-// GetEnv get env value or default
-func GetEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
+// EnvOrDefault get env value or default
+func EnvOrDefault(key string, defaultVal string) string {
+	if envVal := os.Getenv(key); envVal != "" {
+		return envVal
 	}
-	return value
+	return defaultVal
+}
+
+// BoolEnv parse env to bool
+func BoolEnv(k string) bool {
+	v := os.Getenv(k)
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
+	return b
 }

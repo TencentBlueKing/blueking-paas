@@ -30,7 +30,7 @@ import (
 func UploadFile(c *gin.Context) {
 	token := c.PostForm("token")
 
-	if token != utils.GetEnv("TOKEN", "jwram1lpbnuugmcv") {
+	if token != utils.EnvOrDefault("TOKEN", "jwram1lpbnuugmcv") {
 		c.String(http.StatusUnauthorized, "invalid token")
 		return
 	}
@@ -41,11 +41,13 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	filename := filepath.Base(file.Filename)
-	if err := c.SaveUploadedFile(file, utils.GetEnv("UPLOAD_DIR", "/cnb/devcontainer/src/")+filename); err != nil {
+	fileName := filepath.Base(file.Filename)
+	fileDst := utils.EnvOrDefault("UPLOAD_DIR", "/cnb/devcontainer/src/") + fileName
+	if err = c.SaveUploadedFile(file, fileDst); err != nil {
 		c.String(http.StatusBadRequest, "upload file err: %s", err.Error())
 		return
 	}
 
-	c.String(http.StatusOK, "File %s uploaded successfully %s", file.Filename, filename)
+	md5String, _ := utils.Md5(fileDst)
+	c.JSON(http.StatusOK, map[string]interface{}{"md5": md5String})
 }

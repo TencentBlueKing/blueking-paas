@@ -37,6 +37,5 @@ func MakeBuilderCmd(
 		"-layers", layersDir,
 		"-log-level", logLevel,
 	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "builder"), args...)
-	return cmd
+	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "builder"), args...)
 }

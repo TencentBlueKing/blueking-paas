@@ -12,7 +12,7 @@ build: build-init lifecycle-driver entrypoint  ## Build all binary
 
 
 .PHONY: build-dev
-build-dev: devserver dev-init lifecycle-driver
+build-dev: devserver dev-init lifecycle-driver hot-launcher
 
 
 .PHONY: build-init
@@ -37,7 +37,12 @@ devserver:
 
 .PHONY: dev-init
 dev-init:
-	go build -o $(LOCALBIN)/dev-init$(BINARY_SUFFIX) ./cmd/dev-init
+	go build -o $(LOCALBIN)/dev-init$(BINARY_SUFFIX) ./cmd/dev-entrypoint/dev-init
+
+
+.PHONY: hot-launcher
+hot-launcher:
+	go build -o $(LOCALBIN)/hot-launcher$(BINARY_SUFFIX) ./cmd/hot-launcher
 
 
 ##@ Build Image

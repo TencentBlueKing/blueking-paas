@@ -40,6 +40,5 @@ func MakeRestorerCmd(
 		"-uid", fmt.Sprintf("%d", uid),
 		"-gid", fmt.Sprintf("%d", gid),
 	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "restorer"), args...)
-	return cmd
+	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "restorer"), args...)
 }

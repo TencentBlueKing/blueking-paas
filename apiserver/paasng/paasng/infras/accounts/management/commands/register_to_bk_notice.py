@@ -16,21 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-
+from bk_notice_sdk.management.commands.register_application import Command as BkNoticeBaseCommand
 from django.conf import settings
-from django.core.management import call_command
-from django.core.management.base import BaseCommand
 
 
-class Command(BaseCommand):
-    help = "Register the bkpaas to the bk_notice service. If the bk_notice is not deployed, skip it."
+class Command(BkNoticeBaseCommand):
+    help = "Register the bkpaas to the bk_notice service. If the bk_notice is not enabled, skip it."
 
     def handle(self, *args, **options):
         if not settings.ENABLE_BK_NOTICE:
+            self.stdout.write(self.style.WARNING("the bk_notice is not enabled, skip register to it"))
             return
 
-        try:
-            call_command("register_application")
-        except Exception as e:
-            logging.warning(f"Register the bkpaas to the bk_notice service error:{e}")
+        super().handle(*args, **options)

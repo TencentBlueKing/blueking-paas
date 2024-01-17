@@ -3,7 +3,7 @@
  */
 @import '../components/conf.scss';
 .overview-content {
-    padding-top: 50px;
+    padding-top: var(--app-content-pd);
 }
 
 .overview-tit {

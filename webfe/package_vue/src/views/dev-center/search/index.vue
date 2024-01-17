@@ -100,307 +100,305 @@
   </div>
 </template>
 <script>
-    // import merge from 'webpack-merge';
-    import { bus } from '@/common/bus';
-    import App from './comps/application';
-    import Docu from './comps/docu';
-    import Iwiki from './comps/iwiki';
-    import Mk from './comps/mk';
+// import merge from 'webpack-merge';
+import { bus } from '@/common/bus';
+import App from './comps/application';
+import Docu from './comps/docu';
+import Iwiki from './comps/iwiki';
+import Mk from './comps/mk';
 
-    const getDefaultSearchData = () => {
-        return {
-            app: {
-                list: []
-            },
-            iwiki: {
-                list: []
-            },
-            docu: {
-                list: []
-            },
-            mk: {
-                list: []
-            }
-        };
+const getDefaultSearchData = () => ({
+  app: {
+    list: [],
+  },
+  iwiki: {
+    list: [],
+  },
+  docu: {
+    list: [],
+  },
+  mk: {
+    list: [],
+  },
+});
+
+export default {
+  name: '',
+  components: {
+    App,
+    Docu,
+    Iwiki,
+    Mk,
+  },
+  data() {
+    return {
+      minHeight: 550,
+      value: '',
+      searchData: getDefaultSearchData(),
+      curTab: 'app',
+      pageConf: {
+        count: 0,
+        curPage: 1,
+        totalPage: 0,
+        limit: 10,
+        limitList: [5, 10, 20, 50],
+      },
+      isLoading: false,
+      tableLoading: false,
+      isShowTab: true,
+      panels: [
+        { name: 'app', label: this.$t('应用'), count: 0 },
+        { name: 'iwiki', label: 'iwiki', count: 0 },
+        { name: 'docu', label: this.$t('资料库'), count: 0 },
+        { name: 'mk', label: this.$t('码客'), count: 0 },
+      ],
+      filterKey: '',
     };
+  },
+  computed: {
+    isEmpty() {
+      const curTabData = this.panels.find(item => item.name === this.curTab);
+      return curTabData.count < 1 && !this.isLoading && this.isShowTab;
+    },
+    isShowPageConf() {
+      const curTabData = this.panels.find(item => item.name === this.curTab);
+      return curTabData.count > 0;
+    },
+    isSetPadding() {
+      return ['docu', 'iwiki', 'mk'].includes(this.curTab);
+    },
+  },
+  beforeRouteLeave(to, from, next) {
+    bus.$emit('on-leave-search');
+    next();
+  },
+  created() {
+    bus.$emit('on-being-search');
+    this.value = this.$route.query.keyword || '';
+    this.filterKey = this.value;
+    this.fetchData();
+  },
+  mounted() {
+    const HEADER_HEIGHT = 50;
+    const FOOTER_HEIGHT = 70;
+    const winHeight = window.innerHeight;
+    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+    if (contentHeight > this.minHeight) {
+      this.minHeight = contentHeight;
+    }
+  },
+  methods: {
+    handleSearch() {
+      if (this.isLoading) {
+        return;
+      }
+      this.handleResetData();
+      if (this.value === '') {
+        this.isShowTab = false;
+        this.filterKey = '';
+        return;
+      }
+      this.fetchData();
+    },
 
-    export default {
-        name: '',
-        components: {
-            App,
-            Docu,
-            Iwiki,
-            Mk
-        },
-        data () {
-            return {
-                minHeight: 550,
-                value: '',
-                searchData: getDefaultSearchData(),
-                curTab: 'app',
-                pageConf: {
-                    count: 0,
-                    curPage: 1,
-                    totalPage: 0,
-                    limit: 10,
-                    limitList: [5, 10, 20, 50]
-                },
-                isLoading: false,
-                tableLoading: false,
-                isShowTab: true,
-                panels: [
-                    { name: 'app', label: this.$t('应用'), count: 0 },
-                    { name: 'iwiki', label: 'iwiki', count: 0 },
-                    { name: 'docu', label: this.$t('资料库'), count: 0 },
-                    { name: 'mk', label: this.$t('码客'), count: 0 }
-                ],
-                filterKey: ''
-            };
-        },
-        computed: {
-            isEmpty () {
-                const curTabData = this.panels.find(item => item.name === this.curTab);
-                return curTabData.count < 1 && !this.isLoading && this.isShowTab;
-            },
-            isShowPageConf () {
-                const curTabData = this.panels.find(item => item.name === this.curTab);
-                return curTabData.count > 0;
-            },
-            isSetPadding () {
-                return ['docu', 'iwiki', 'mk'].includes(this.curTab);
-            }
-        },
-        beforeRouteLeave (to, from, next) {
-            bus.$emit('on-leave-search');
-            next();
-        },
-        created () {
-            bus.$emit('on-being-search');
-            this.value = this.$route.query.keyword || '';
-            this.filterKey = this.value;
-            this.fetchData();
-        },
-        mounted () {
-            const HEADER_HEIGHT = 50;
-            const FOOTER_HEIGHT = 70;
-            const winHeight = window.innerHeight;
-            const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
-            if (contentHeight > this.minHeight) {
-                this.minHeight = contentHeight;
-            }
-        },
-        methods: {
-            handleSearch () {
-                if (this.isLoading) {
-                    return;
-                }
-                this.handleResetData();
-                if (this.value === '') {
-                    this.isShowTab = false;
-                    this.filterKey = '';
-                    return;
-                }
-                this.fetchData();
-            },
-
-            /**
+    /**
              * @param {Promise} p
              * 处理接口错误时返回的数据问题
             */
-            async promiseWithError (p) {
-                try {
-                    const res = await p;
-                    return {
-                        count: res.count || 0,
-                        results: res.results
-                    };
-                } catch (e) {
-                    return {
-                        count: 0,
-                        results: []
-                    };
-                }
-            },
+    async promiseWithError(p) {
+      try {
+        const res = await p;
+        return {
+          count: res.count || 0,
+          results: res.results,
+        };
+      } catch (e) {
+        return {
+          count: 0,
+          results: [],
+        };
+      }
+    },
 
-            async fetchData () {
-                this.isLoading = true;
-                try {
-                    const res = await Promise.all([this.fetchApp(), this.fetchIwiki(), this.fetchDocu(), this.fetchMk()].map(item => this.promiseWithError(item)));
-                    res.forEach((item, index) => {
-                        const { count, results } = item;
-                        this.panels[index].count = count || 0;
-                        if (index === 0) {
-                            this.searchData.app.list = [...results];
-                        }
-                        if (index === 1) {
-                            this.searchData.iwiki.list = [...results];
-                        }
-                        if (index === 2) {
-                            this.searchData.docu.list = [...results];
-                        }
-                        if (index === 3) {
-                            this.searchData.mk.list = [...results];
-                        }
-                    });
-                    this.filterKey = this.value;
-                    this.isShowTab = true;
-                    this.$nextTick(() => {
-                        this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
-                    });
+    async fetchData() {
+      this.isLoading = true;
+      try {
+        const res = await Promise.all([this.fetchApp(), this.fetchIwiki(), this.fetchDocu(), this.fetchMk()].map(item => this.promiseWithError(item)));
+        res.forEach((item, index) => {
+          const { count, results } = item;
+          this.panels[index].count = count || 0;
+          if (index === 0) {
+            this.searchData.app.list = [...results];
+          }
+          if (index === 1) {
+            this.searchData.iwiki.list = [...results];
+          }
+          if (index === 2) {
+            this.searchData.docu.list = [...results];
+          }
+          if (index === 3) {
+            this.searchData.mk.list = [...results];
+          }
+        });
+        this.filterKey = this.value;
+        this.isShowTab = true;
+        this.$nextTick(() => {
+          this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
+        });
 
-                    this.handleInitTab();
-                    this.handleInitPageConf();
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.isLoading = false;
-                    this.$router.push({
-                        query: Object.assign(this.$route.query, { keyword: this.filterKey })
-                    });
-                }
-            },
+        this.handleInitTab();
+        this.handleInitPageConf();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.isLoading = false;
+        this.$router.push({
+          query: Object.assign(this.$route.query, { keyword: this.filterKey }),
+        });
+      }
+    },
 
-            handleInitTab () {
-                const queryTab = this.$route.query.tab;
-                this.curTab = queryTab || 'app';
-            },
+    handleInitTab() {
+      const queryTab = this.$route.query.tab;
+      this.curTab = queryTab || 'app';
+    },
 
-            handleResetData () {
-                this.searchData = getDefaultSearchData();
-                this.pageConf = Object.assign(this.pageConf, {
-                    count: 0,
-                    curPage: 1,
-                    totalPage: 0,
-                    limit: 10
-                });
-                this.panels.forEach(item => {
-                    item.count = 0;
-                });
-                this.curTab = 'app';
+    handleResetData() {
+      this.searchData = getDefaultSearchData();
+      this.pageConf = Object.assign(this.pageConf, {
+        count: 0,
+        curPage: 1,
+        totalPage: 0,
+        limit: 10,
+      });
+      this.panels.forEach((item) => {
+        item.count = 0;
+      });
+      this.curTab = 'app';
 
-                if (!this.isShowTab) {
-                    return;
-                }
+      if (!this.isShowTab) {
+        return;
+      }
 
-                this.$nextTick(() => {
-                    this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
-                });
-            },
+      this.$nextTick(() => {
+        this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
+      });
+    },
 
-            handleInitPageConf () {
-                const curData = this.panels.find(item => item.name === this.curTab);
-                this.pageConf.count = curData.count;
-                this.pageConf.curPage = 1;
-                this.pageConf.limit = 10;
-                this.pageConf.totalPage = Math.ceil(curData.count / this.pageConf.limit);
-            },
+    handleInitPageConf() {
+      const curData = this.panels.find(item => item.name === this.curTab);
+      this.pageConf.count = curData.count;
+      this.pageConf.curPage = 1;
+      this.pageConf.limit = 10;
+      this.pageConf.totalPage = Math.ceil(curData.count / this.pageConf.limit);
+    },
 
-            fetchApp () {
-                return this.$store.dispatch('search/getSearchApp', {
-                    limit: this.pageConf.limit,
-                    offset: this.pageConf.limit * (this.pageConf.curPage - 1),
-                    keyword: this.value
-                });
-            },
+    fetchApp() {
+      return this.$store.dispatch('search/getSearchApp', {
+        limit: this.pageConf.limit,
+        offset: this.pageConf.limit * (this.pageConf.curPage - 1),
+        keyword: this.value,
+      });
+    },
 
-            fetchDocu () {
-                return this.$store.dispatch('search/getSearchDocs', {
-                    limit: this.pageConf.limit,
-                    offset: this.pageConf.limit * (this.pageConf.curPage - 1),
-                    keyword: this.value
-                });
-            },
+    fetchDocu() {
+      return this.$store.dispatch('search/getSearchDocs', {
+        limit: this.pageConf.limit,
+        offset: this.pageConf.limit * (this.pageConf.curPage - 1),
+        keyword: this.value,
+      });
+    },
 
-            fetchIwiki () {
-                return this.$store.dispatch('search/getSearchIwiki', {
-                    limit: this.pageConf.limit,
-                    offset: this.pageConf.limit * (this.pageConf.curPage - 1),
-                    keyword: this.value
-                });
-            },
+    fetchIwiki() {
+      return this.$store.dispatch('search/getSearchIwiki', {
+        limit: this.pageConf.limit,
+        offset: this.pageConf.limit * (this.pageConf.curPage - 1),
+        keyword: this.value,
+      });
+    },
 
-            fetchMk () {
-                return this.$store.dispatch('search/getSearchMk', {
-                    limit: this.pageConf.limit,
-                    offset: this.pageConf.limit * (this.pageConf.curPage - 1),
-                    keyword: this.value
-                });
-            },
+    fetchMk() {
+      return this.$store.dispatch('search/getSearchMk', {
+        limit: this.pageConf.limit,
+        offset: this.pageConf.limit * (this.pageConf.curPage - 1),
+        keyword: this.value,
+      });
+    },
 
-            handleSwitchTab () {
-                this.handleInitPageConf();
-                this.$nextTick(() => {
-                    this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
-                });
+    handleSwitchTab() {
+      this.handleInitPageConf();
+      this.$nextTick(() => {
+        this.$refs.tabRef && this.$refs.tabRef.$refs.tabLabel && this.$refs.tabRef.$refs.tabLabel.forEach(label => label.$forceUpdate());
+      });
 
-                this.$router.push({
-                    query: Object.assign(this.$route.query, { tab: this.curTab })
-                });
-            },
+      this.$router.push({
+        query: Object.assign(this.$route.query, { tab: this.curTab }),
+      });
+    },
 
-            async pageChange (page) {
-                this.pageConf.curPage = page;
-                this.tableLoading = true;
-                try {
-                    if (this.curTab === 'app') {
-                        const res = await this.fetchApp();
-                        this.searchData.app.list = [...res.results];
-                    } else if (this.curTab === 'docu') {
-                        const res = await this.fetchDocu();
-                        this.searchData.docu.list = [...res.results];
-                    } else if (this.curTab === 'iwiki') {
-                        const res = await this.fetchIwiki();
-                        this.searchData.iwiki.list = [...res.results];
-                    } else {
-                        const res = await this.fetchMk();
-                        this.searchData.mk.list = [...res.results];
-                    }
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.tableLoading = false;
-                }
-            },
-
-            async handlePageSizeChange (pageSize) {
-                this.pageConf.limit = pageSize;
-                this.tableLoading = true;
-                try {
-                    if (this.curTab === 'app') {
-                        const res = await this.fetchApp();
-                        this.searchData.app.list = [...res.results];
-                    } else if (this.curTab === 'docu') {
-                        const res = await this.fetchDocu();
-                        this.searchData.docu.list = [...res.results];
-                    } else if (this.curTab === 'iwiki') {
-                        const res = await this.fetchIwiki();
-                        this.searchData.iwiki.list = [...res.results];
-                    } else {
-                        const res = await this.fetchMk();
-                        this.searchData.mk.list = [...res.results];
-                    }
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.tableLoading = false;
-                }
-            }
+    async pageChange(page) {
+      this.pageConf.curPage = page;
+      this.tableLoading = true;
+      try {
+        if (this.curTab === 'app') {
+          const res = await this.fetchApp();
+          this.searchData.app.list = [...res.results];
+        } else if (this.curTab === 'docu') {
+          const res = await this.fetchDocu();
+          this.searchData.docu.list = [...res.results];
+        } else if (this.curTab === 'iwiki') {
+          const res = await this.fetchIwiki();
+          this.searchData.iwiki.list = [...res.results];
+        } else {
+          const res = await this.fetchMk();
+          this.searchData.mk.list = [...res.results];
         }
-    };
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.tableLoading = false;
+      }
+    },
+
+    async handlePageSizeChange(pageSize) {
+      this.pageConf.limit = pageSize;
+      this.tableLoading = true;
+      try {
+        if (this.curTab === 'app') {
+          const res = await this.fetchApp();
+          this.searchData.app.list = [...res.results];
+        } else if (this.curTab === 'docu') {
+          const res = await this.fetchDocu();
+          this.searchData.docu.list = [...res.results];
+        } else if (this.curTab === 'iwiki') {
+          const res = await this.fetchIwiki();
+          this.searchData.iwiki.list = [...res.results];
+        } else {
+          const res = await this.fetchMk();
+          this.searchData.mk.list = [...res.results];
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.tableLoading = false;
+      }
+    },
+  },
+};
 </script>
 <style lang="scss">
     .paas-search-wrapper {
         width: 1180px;
-        padding-top: 50px;
+        padding-top: var(--app-content-pd);
         margin: 0 auto;
         .title {
             font-size: 18px;

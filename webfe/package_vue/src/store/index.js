@@ -112,7 +112,7 @@ const mutations = {
   updatePlatformFeature(state, data) {
     state.platformFeature = data;
     // 将平台功能合并到用户功能
-    state.userFeature = { ...data };
+    state.userFeature = { ...state.userFeature, ...data };
 
     const appCode = state.curAppCode;
     if (appCode && state.appInfo[appCode]) {

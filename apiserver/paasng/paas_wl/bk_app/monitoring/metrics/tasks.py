@@ -97,7 +97,7 @@ def collect_and_update_app_res_usage_reports(app_codes: List[str]):
     total_cnt = applications.count()
     for idx, app in enumerate(applications, start=1):
         try:
-            logger.info("[%d/%d] start collect app usage report: %s.....", idx, total_cnt, app.code)
+            logger.info("[%d/%d] start collect app %s usage report.....", idx, total_cnt, app.code)
             _update_or_create_usage_report(app)
         except Exception:
             logger.exception("failed to collect app: %s usage report", app.code)

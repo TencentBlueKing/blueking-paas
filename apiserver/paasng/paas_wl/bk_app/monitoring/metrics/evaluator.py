@@ -88,6 +88,7 @@ class ProcSummary:
     memory: Optional[ResSummary] = None
     suitable: bool = False
     reasons: List[str] = field(default_factory=list)
+    current_plan: Optional[str] = None
     optimal_plan: Optional[str] = None
 
 
@@ -174,7 +175,7 @@ class AppResQuotaEvaluator:
         mem_summary = self._calc_res_summary(mem_metrics, trans_unit_func=lambda x: x / 1024 / 1024)
         res_quota = self._get_proc_res_quota(proc_spec)
         suitable, reasons = self._evaluate_quota_suitable(res_quota, cpu_summary, mem_summary)
-        plan = self._recommend_resource_plan(cpu_summary, mem_summary)
+        optimal_plan = self._recommend_resource_plan(cpu_summary, mem_summary)
         return ProcSummary(
             name=proc_spec["name"],
             replicas=replicas,
@@ -183,7 +184,8 @@ class AppResQuotaEvaluator:
             memory=mem_summary,
             suitable=suitable,
             reasons=reasons,
-            optimal_plan=plan,
+            current_plan=proc_spec["plan_name"],
+            optimal_plan=optimal_plan,
         )
 
     def _calc_res_summary(self, metrics: List, trans_unit_func: Callable) -> ResSummary:

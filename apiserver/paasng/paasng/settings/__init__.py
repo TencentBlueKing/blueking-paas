@@ -1235,7 +1235,6 @@ ENABLE_BK_NOTICE = settings.get("ENABLE_BK_NOTICE", False)
 BK_NOTICE_ENV = settings.get("BK_NOTICE_ENV", "prod")
 BK_NOTICE = {
     "STAGE": BK_NOTICE_ENV,
-    "ENTRANCE_URL": "notice/",  # 获取公告地址为: /notice/announcements
     "LANGUAGE_COOKIE_NAME": LANGUAGE_COOKIE_NAME,
     "DEFAULT_LANGUAGE": "en",
     "PLATFORM": BK_APP_CODE,  # 平台注册的 code，用于获取系统通知消息时进行过滤

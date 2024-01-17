@@ -30,6 +30,7 @@ from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.api import CreatedAppInfo
+from paas_wl.bk_app.applications.constants import WlAppType
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
@@ -391,7 +392,7 @@ def _mock_wl_services_in_creation():
     """
 
     def fake_create_app_ignore_duplicated(region: str, name: str, type_: str):
-        obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name)
+        obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
 
         # Store params in global, so we can manually create the objects later.
         _faked_wl_apps[obj.uuid] = (region, name, type_)

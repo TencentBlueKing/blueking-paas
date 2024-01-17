@@ -133,6 +133,10 @@ urlpatterns += [
         make_app_pattern(r"/log/custom-collector-metadata/$", include_envs=False),
         config.CustomCollectorConfigViewSet.as_view({"get": "get_metadata"}),
     ),
+    re_path(
+        make_app_pattern(r"/log/config/builtin/(?P<log_type>[^/]+)/$", include_envs=False),
+        config.CustomCollectorConfigViewSet.as_view({"get": "get_builtin_config"}),
+    ),
 ]
 
 

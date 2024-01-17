@@ -45,105 +45,159 @@ const (
 	MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR = "/app/v3logs"
 )
 
-// VolumeMount with volume source configurer
-type VolumeMount struct {
-	Name      string
+// VolumeMounter ...
+type VolumeMounter interface {
+	// ApplyToDeployment 将挂载卷应用到 deployment
+	ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error
+	// GetName 返回挂载卷的名字
+	GetName() string
+	// GetMountPath 返回挂载卷的挂载路径
+	GetMountPath() string
+}
+
+// Volume is a named VolumeSource
+type Volume struct {
+	Name   string
+	Source *paasv1alpha2.VolumeSource
+}
+
+// GenericVolumeMount is a Volume with a MountPath
+type GenericVolumeMount struct {
+	Volume    Volume
 	MountPath string
-	VolumeSourceConfigurer
 }
 
-// VolumeSourceConfigurer ...
-type VolumeSourceConfigurer interface {
-	// ApplyToDeployment 将 volume source 应用到 deployment
-	ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error
-}
-
-// VolumeMountMap is a map which key is mount name
-type VolumeMountMap map[string]VolumeMount
-
-// GetVolumeMountMap 结合 mounts 和 envoverlay.mounts, 生成 VolumeMountMap
-func GetVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMountMap {
-	volMountMap := make(VolumeMountMap)
-	for _, mount := range bkapp.Spec.Mounts {
-		// 因为 webhook 中已完成校验, 这里忽略错误
-		cfg, _ := ToVolumeSourceConfigurer(mount.Source)
-		volMountMap[mount.Name] = VolumeMount{
-			Name:                   mount.Name,
-			MountPath:              mount.MountPath,
-			VolumeSourceConfigurer: cfg,
-		}
-	}
-
-	if bkapp.Spec.EnvOverlay == nil {
-		return volMountMap
-	}
-
-	runEnv := GetEnvName(bkapp)
-
-	for _, mount := range bkapp.Spec.EnvOverlay.Mounts {
-		if mount.EnvName == runEnv {
-			// 因为 webhook 中已完成校验, 这里忽略错误
-			cfg, _ := ToVolumeSourceConfigurer(mount.Mount.Source)
-			volMountMap[mount.Mount.Name] = VolumeMount{
-				Name:                   mount.Mount.Name,
-				MountPath:              mount.Mount.MountPath,
-				VolumeSourceConfigurer: cfg,
-			}
-		}
-	}
-	return volMountMap
-}
-
-// ToVolumeSourceConfigurer ...
-func ToVolumeSourceConfigurer(vs *paasv1alpha2.VolumeSource) (VolumeSourceConfigurer, error) {
-	if vs.ConfigMap != nil {
-		return ConfigMapSource(*vs.ConfigMap), nil
-	}
-	return nil, errors.New("unknown volume source")
-}
-
-// ConfigMapSource ...
-type ConfigMapSource paasv1alpha2.ConfigMapSource
-
-// ApplyToDeployment 将 configmap source 应用到 deployment
-func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountName, mountPath string) error {
-	containers := deployment.Spec.Template.Spec.Containers
-	for idx := range containers {
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
-			Name:      mountName,
-			MountPath: mountPath,
-		})
+// ApplyToDeployment 将 GenericVolumeMount 应用到 deployment
+func (vm *GenericVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error {
+	vs, err := ToCoreV1VolumeSource(vm.Volume.Source)
+	if err != nil {
+		return err
 	}
 
 	deployment.Spec.Template.Spec.Volumes = append(
 		deployment.Spec.Template.Spec.Volumes,
 		corev1.Volume{
-			Name: mountName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: c.Name},
-				},
-			},
+			Name:         vm.Volume.Name,
+			VolumeSource: vs,
 		},
 	)
 
+	containers := deployment.Spec.Template.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Name:      vm.Volume.Name,
+			MountPath: vm.MountPath,
+		})
+	}
 	return nil
 }
 
-// BuiltinLogsVolume 内置日志挂载卷
-type BuiltinLogsVolume struct{}
+// GetName ...
+func (vm *GenericVolumeMount) GetName() string {
+	return vm.Volume.Name
+}
 
-// ShouldApply 是否应用内置日志挂载卷
-// 仅当 bkapp 的日志采集器类型是 BuiltinElkCollector 时才挂载日志到宿主机
-func (s BuiltinLogsVolume) ShouldApply(bkapp *paasv1alpha2.BkApp) bool {
-	return bkapp.Annotations[paasv1alpha2.LogCollectorTypeAnnoKey] == paasv1alpha2.BuiltinElkCollector
+// GetMountPath ...
+func (vm *GenericVolumeMount) GetMountPath() string {
+	return vm.MountPath
+}
+
+// ToCoreV1VolumeSource work as an adaptor between paas v1alpha2.Volume Source and corev1.VolumeSource.
+// The VolumeSource's type currently supported is that:
+// - ConfigMap
+func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSource, error) {
+	if source.ConfigMap != nil {
+		return corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: source.ConfigMap.Name},
+			},
+		}, nil
+	}
+	return corev1.VolumeSource{}, errors.New("unknown volume source")
+}
+
+// BuiltinLogsVolumeMount 内置日志挂载卷
+// TODO: when GenericVolumeMount support HostPath type, delete all code about BuiltinLogsVolumeMount and replace with GenericVolumeMount
+type BuiltinLogsVolumeMount struct {
+	Name      string
+	MountPath string
+	Source    *corev1.HostPathVolumeSource
 }
 
 // ApplyToDeployment 将内置日志挂载卷应用到 deployment
-func (s BuiltinLogsVolume) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error {
+func (v BuiltinLogsVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error {
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: v.Name,
+		VolumeSource: corev1.VolumeSource{
+			HostPath: v.Source,
+		},
+	})
+	containers := deployment.Spec.Template.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Name:      v.Name,
+			MountPath: v.MountPath,
+		})
+	}
+	return nil
+}
+
+// GetName ...
+func (v *BuiltinLogsVolumeMount) GetName() string {
+	return v.Name
+}
+
+// GetMountPath ...
+func (v *BuiltinLogsVolumeMount) GetMountPath() string {
+	return v.MountPath
+}
+
+// ShouldApplyBuiltinLogsVolume 判断是否应用内置日志挂载卷
+// 仅当 bkapp 的日志采集器类型是 BuiltinElkCollector 时才挂载日志到宿主机
+func ShouldApplyBuiltinLogsVolume(bkapp *paasv1alpha2.BkApp) bool {
+	return bkapp.Annotations[paasv1alpha2.LogCollectorTypeAnnoKey] == paasv1alpha2.BuiltinElkCollector
+}
+
+// VolumeMounterMap is a map of VolumeMounter, which key is the Volume name
+type VolumeMounterMap map[string]VolumeMounter
+
+// GetGenericVolumeMountMap 结合 mounts 和 envoverlay.mounts, 生成只含有 GenericVolumeMount 的 VolumeMounterMap
+func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
+	mounterMap := make(VolumeMounterMap)
+	for _, mount := range bkapp.Spec.Mounts {
+		mounterMap[mount.Name] = &GenericVolumeMount{
+			Volume: Volume{
+				Name:   mount.Name,
+				Source: mount.Source,
+			},
+			MountPath: mount.MountPath,
+		}
+	}
+
+	if bkapp.Spec.EnvOverlay == nil {
+		return mounterMap
+	}
+
+	runEnv := GetEnvName(bkapp)
+	for _, mount := range bkapp.Spec.EnvOverlay.Mounts {
+		if mount.EnvName == runEnv {
+			mounterMap[mount.Mount.Name] = &GenericVolumeMount{
+				Volume: Volume{
+					Name:   mount.Name,
+					Source: mount.Source,
+				},
+				MountPath: mount.Mount.MountPath,
+			}
+		}
+	}
+	return mounterMap
+}
+
+// GetBuiltinLogsVolumeMounts ...
+func GetBuiltinLogsVolumeMounts(bkapp *paasv1alpha2.BkApp) ([]BuiltinLogsVolumeMount, error) {
 	var legacyLogPath, moduleLogPath string
 	if appInfo, err := applications.GetBkAppInfo(bkapp); err != nil {
-		return errors.Wrap(err, "InvalidAnnotations: missing bkapp info")
+		return nil, errors.Wrap(err, "InvalidAnnotations: missing bkapp info")
 	} else {
 		// {region}-{dns-safe-wl-app-name}
 		legacyLogPath = fmt.Sprintf("%s-%s", appInfo.Region, paasv1alpha2.DNSSafeName(appInfo.WlAppName))
@@ -151,37 +205,41 @@ func (s BuiltinLogsVolume) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployme
 		moduleLogPath = fmt.Sprintf("%s-bkapp-%s-%s/%s", appInfo.Region, appInfo.AppCode, appInfo.Environment, appInfo.ModuleName)
 	}
 
-	containers := deployment.Spec.Template.Spec.Containers
-	for idx := range containers {
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+	return []BuiltinLogsVolumeMount{
+		{
 			Name:      VOLUME_NAME_APP_LOGGING,
 			MountPath: VOLUME_MOUNT_APP_LOGGING_DIR,
-		})
-
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Source: &corev1.HostPathVolumeSource{
+				Path: path.Join(VOLUME_HOST_PATH_APP_LOGGING_DIR, legacyLogPath),
+			},
+		},
+		{
 			Name:      MUL_MODULE_VOLUME_NAME_APP_LOGGING,
 			MountPath: MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
-		})
+			Source: &corev1.HostPathVolumeSource{
+				Path: path.Join(MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR, moduleLogPath),
+			},
+		},
+	}, nil
+}
+
+// GetAllVolumeMounterMap 返回属于 bkapp 的所有 VolumeMounter, 包括:
+// - GenericVolumeMount
+// - BuiltinLogsVolumeMount(优先级更高)
+func GetAllVolumeMounterMap(bkapp *paasv1alpha2.BkApp) (VolumeMounterMap, error) {
+	mounterMap := GetGenericVolumeMountMap(bkapp)
+
+	if ShouldApplyBuiltinLogsVolume(bkapp) {
+		volumes, err := GetBuiltinLogsVolumeMounts(bkapp)
+		if err != nil {
+			return nil, err
+		}
+		for idx, volume := range volumes {
+			if _, conflict := mounterMap[volume.GetName()]; conflict {
+				return nil, errors.New("user defined volume mount is conflicted with builtin log volume mount")
+			}
+			mounterMap[volume.GetName()] = &volumes[idx]
+		}
 	}
-
-	deployment.Spec.Template.Spec.Volumes = append(
-		deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: VOLUME_NAME_APP_LOGGING,
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: path.Join(VOLUME_HOST_PATH_APP_LOGGING_DIR, legacyLogPath),
-				},
-			},
-		})
-
-	deployment.Spec.Template.Spec.Volumes = append(
-		deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: MUL_MODULE_VOLUME_NAME_APP_LOGGING,
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: path.Join(MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR, moduleLogPath),
-				},
-			},
-		})
-	return nil
+	return mounterMap, nil
 }

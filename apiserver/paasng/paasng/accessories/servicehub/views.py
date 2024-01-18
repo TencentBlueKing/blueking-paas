@@ -39,7 +39,11 @@ from paasng.accessories.servicehub.exceptions import (
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceSetGroupByName
-from paasng.accessories.servicehub.remote.manager import RemoteServiceInstanceMgr, RemoteServiceMgr
+from paasng.accessories.servicehub.remote.manager import (
+    RemoteServiceInstanceMgr,
+    RemoteServiceMgr,
+    get_app_by_instance_name,
+)
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import ServiceObj, ServicePlansHelper, ServiceSpecificationHelper
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
@@ -668,7 +672,7 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
         services = service_mgr.get_mysql_services()
         for service in services:
             service_instance_mgr = RemoteServiceInstanceMgr(store, service)
-            app = service_instance_mgr.get_app_by_instance_name(db_name)
+            app = get_app_by_instance_name(service_instance_mgr, db_name)
             if app is None:
                 continue
             return Response(ApplicationMembersInfoSLZ(app).data)

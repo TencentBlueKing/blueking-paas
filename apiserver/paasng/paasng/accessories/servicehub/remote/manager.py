@@ -795,16 +795,17 @@ class RemoteServiceInstanceMgr:
             raise exceptions.SvcInstanceNotFound(f"service instance {instance_name} not found") from e
         return instance_data.get("uuid")
 
-    def get_app_by_instance_name(self, instance_name: str) -> Optional[Application]:
-        try:
-            service_instance_id = self.get_instance_by_name(instance_name=instance_name)
-        except exceptions.SvcInstanceNotFound:
-            return None
-        attachment = RemoteServiceEngineAppAttachment.objects.get(service_instance_id=service_instance_id)
-        env = ApplicationEnvironment.objects.get(engine_app=attachment.engine_app)
-        return env.application
-
     def _get_remote_client(self, service_id: str):
         remote_config = self.store.get_source_config(service_id)
         remote_client = RemoteServiceClient(remote_config)
         return remote_client
+
+
+def get_app_by_instance_name(mgr: RemoteServiceInstanceMgr, instance_name: str) -> Optional[Application]:
+    try:
+        service_instance_id = mgr.get_instance_by_name(instance_name=instance_name)
+    except exceptions.SvcInstanceNotFound:
+        return None
+    attachment = RemoteServiceEngineAppAttachment.objects.get(service_instance_id=service_instance_id)
+    env = ApplicationEnvironment.objects.get(engine_app=attachment.engine_app)
+    return env.application

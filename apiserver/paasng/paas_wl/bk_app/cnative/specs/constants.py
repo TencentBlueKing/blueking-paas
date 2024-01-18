@@ -160,3 +160,4 @@ class MountEnvName(str, StructuredEnum):
 
 class VolumeSourceType(str, StructuredEnum):
     ConfigMap = EnumField("ConfigMap")
+    PersistentVolumeClaim = EnumField("PersistentVolumeClaim")

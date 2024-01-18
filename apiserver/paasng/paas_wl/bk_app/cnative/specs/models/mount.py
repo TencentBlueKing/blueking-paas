@@ -33,6 +33,17 @@ from paasng.utils.models import make_json_field
 SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 
+class BaseSourceModel(TimestampedModel):
+    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    module = ModuleAttrFromID()
+
+    environment_name = models.CharField(
+        verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
+    )
+    name = models.CharField(max_length=63, help_text=_("挂载资源名"))
+
+
 class ConfigMapSourceQuerySet(models.QuerySet):
     def get_by_mount(self, m: "Mount"):
         if m.source_config.configMap:
@@ -44,19 +55,35 @@ class ConfigMapSourceQuerySet(models.QuerySet):
         raise ValueError(f"Mount {m.name} is invalid: source_config.configMap is none")
 
 
-class ConfigMapSource(TimestampedModel):
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
-    module = ModuleAttrFromID()
+class ConfigMapSource(BaseSourceModel):
+    """ConfigMap 类型的挂载资源"""
 
-    environment_name = models.CharField(
-        verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
-    )
-    # TODO name 的生成规则在具体的创建接口中定义
-    name = models.CharField(max_length=63, help_text=_("ConfigMap 名"))
     data = models.JSONField(default=dict)
 
     objects = ConfigMapSourceQuerySet.as_manager()
+
+    class Meta:
+        unique_together = ("name", "application_id", "environment_name")
+
+
+class PersistentVolumeClaimSourceQuerySet(models.QuerySet):
+    def get_by_mount(self, m: "Mount"):
+        if m.source_config.persistentVolumeClaim:
+            return self.get(
+                application_id=m.module.application_id,
+                environment_name=m.environment_name,
+                name=m.source_config.persistentVolumeClaim.name,
+            )
+        raise ValueError(f"Mount {m.name} is invalid: source_config.persistentVolumeClaim is none")
+
+
+class PersistentVolumeClaimSource(BaseSourceModel):
+    """PVC 类型的挂载资源"""
+
+    storage = models.CharField(max_length=63)
+    storage_class_name = models.CharField(max_length=63)
+
+    objects = PersistentVolumeClaimSourceQuerySet.as_manager()
 
     class Meta:
         unique_together = ("name", "application_id", "environment_name")
@@ -98,7 +125,7 @@ class MountManager(models.Manager):
     def upsert_source(self, m: "Mount", data: dict) -> Union[ConfigMapSource]:
         if m.source_type == VolumeSourceType.ConfigMap:
             if m.source_config.configMap is None:
-                raise ValueError(f"source_config {m.source_config} is null")
+                raise ValueError(f"configmap source_config {m.source_config} is null")
             config_source, _ = ConfigMapSource.objects.update_or_create(
                 name=m.source_config.configMap.name,
                 module_id=m.module.id,
@@ -109,6 +136,20 @@ class MountManager(models.Manager):
                 },
             )
             return config_source
+        elif m.source_type == VolumeSourceType.PersistentVolumeClaim:
+            if m.source_config.persistentVolumeClaim is None:
+                raise ValueError(f"persistentVolumeClaim source_config {m.source_config} is null")
+            pvc_source, _ = PersistentVolumeClaimSource.objects.update_or_create(
+                name=m.source_config.persistentVolumeClaim.name,
+                module_id=m.module.id,
+                application_id=m.module.application_id,
+                defaults={
+                    "environment_name": m.environment_name,
+                    "storage": data["storage"],
+                    "storage_class_name": data["storageClassName"],
+                },
+            )
+            return pvc_source
         raise ValueError(f"unsupported source type {m.source_type}")
 
 
@@ -132,7 +173,9 @@ class Mount(TimestampedModel):
         unique_together = ("module_id", "mount_path", "environment_name")
 
     @cached_property
-    def source(self) -> ConfigMapSource:
+    def source(self) -> Union[ConfigMapSource, PersistentVolumeClaimSource]:
         if self.source_type == VolumeSourceType.ConfigMap:
             return ConfigMapSource.objects.get_by_mount(self)
+        elif self.source_type == VolumeSourceType.PersistentVolumeClaim:
+            return PersistentVolumeClaimSource.objects.get_by_mount(self)
         raise ValueError(f"unsupported source type {self.source_type}")

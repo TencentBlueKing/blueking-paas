@@ -102,8 +102,14 @@ class ConfigMapSource(BaseModel):
 
 
 @register
+class PersistentVolumeClaim(BaseModel):
+    name: str
+
+
+@register
 class VolumeSource(BaseModel):
     configMap: Optional[ConfigMapSource]
+    persistentVolumeClaim: Optional[PersistentVolumeClaim]
 
 
 class Mount(BaseModel):

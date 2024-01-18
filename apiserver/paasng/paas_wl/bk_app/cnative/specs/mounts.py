@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap, configmap_kmodel
+from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -37,7 +38,25 @@ class VolumeSourceManager:
     def _upsert(self, mount: Mount):
         if mount.source_type == VolumeSourceType.ConfigMap:
             configmap_kmodel.upsert(ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.data))
+        elif mount.source_type == VolumeSourceType.PersistentVolumeClaim:
+            pvc_kmodel.upsert(
+                PersistentVolumeClaim(
+                    app=self.wl_app,
+                    name=mount.source.name,
+                    storage=mount.source.storage,
+                    storage_class_name=mount.source.storage_class_name,
+                )
+            )
 
     def delete_source_config(self, mount: Mount):
         if mount.source_type == VolumeSourceType.ConfigMap:
-            configmap_kmodel.delete(ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.data))
+            configmap_kmodel.delete(ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.storage))
+        elif mount.source_type == VolumeSourceType.PersistentVolumeClaim:
+            pvc_kmodel.delete(
+                PersistentVolumeClaim(
+                    app=self.wl_app,
+                    name=mount.source.name,
+                    storage=mount.source.storage,
+                    storage_class_name=mount.source.storage_class_name,
+                )
+            )

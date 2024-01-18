@@ -667,6 +667,10 @@ class KConfigMap(BaseKresource):
     kind = "ConfigMap"
 
 
+class KPersistentVolumeClaim(BaseKresource):
+    kind = "PersistentVolumeClaim"
+
+
 # Individual resource types end
 
 

@@ -27,11 +27,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+// DefaultAppDir is the default app dir
+const DefaultAppDir = "/app"
+
 // Run hot reload processes
 func Run(md *launch.Metadata) error {
 	headers, err := symlinkProcessLauncher(md)
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
+	}
+
+	if err = runPreReleaseHook(); err != nil {
+		return errors.Wrap(err, "run pre release hook")
 	}
 
 	if err = hotReloadProcesses(headers); err != nil {
@@ -73,7 +80,7 @@ func hotReloadProcesses(hdrs []*tar.Header) error {
 	for i, hdr := range hdrs {
 		processes[i] = Process{
 			ProcType: strings.TrimPrefix(hdr.Name, launch.ProcessDir+"/"),
-			Command:  hdr.Linkname,
+			Command:  hdr.Name,
 		}
 	}
 

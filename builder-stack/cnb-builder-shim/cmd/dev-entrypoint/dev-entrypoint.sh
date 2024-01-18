@@ -32,6 +32,7 @@ function entrypoint() {
     inotifywait -e create -m -r $CODE_SRC_DIR --exclude '/\.' | while read file; do
         sync_src "$file" "$CODE_SRC_DIR"
         /cnb/devcontainer/bin/lifecycle-driver
+        rm -f $CODE_SRC_DIR/*
     done
 }
 

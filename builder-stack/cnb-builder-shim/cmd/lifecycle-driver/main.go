@@ -57,6 +57,8 @@ const (
 	DefaultUid uint32 = 2000
 	// DefaultGid is the default gid to run lifecycle
 	DefaultGid uint32 = 2000
+
+	RootUid uint32 = 0
 )
 
 var (
@@ -196,8 +198,14 @@ func executeSteps(logger logr.Logger, steps []Step) {
 		step.Cmd.Stdin = os.Stdin
 		step.Cmd.Stderr = os.Stderr
 		step.Cmd.Stdout = os.Stdout
+
 		// setup env var
-		step.Cmd.Env = lifecycleEnv
+		if step.uid == RootUid {
+			step.Cmd.Env = os.Environ()
+		} else {
+			step.Cmd.Env = lifecycleEnv
+		}
+
 		// set user and group
 		step.Cmd.SysProcAttr = makeSysProcAttr(step.uid, step.gid)
 		if err := step.Cmd.Run(); err != nil {
@@ -314,8 +322,8 @@ func getDevSteps(ctx context.Context) []Step {
 			"Hot launcher",
 			"Hot launcher processes...",
 			phase.MakeHotLauncherCmd(ctx),
-			0,
-			0,
+			RootUid,
+			RootUid,
 		},
 	)
 	return steps

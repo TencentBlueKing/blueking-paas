@@ -19,13 +19,54 @@
 package launch
 
 import (
-	"os"
 	"text/template"
+	"os"
+	"fmt"
+	"bytes"
+	"os/exec"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 var supervisorDir = utils.EnvOrDefault("SUPERVISOR_DIR", "/cnb/devcontainer/supervisor")
+
+var confTemplate = `
+[unix_http_server]
+file = {{ .RootDir }}/supervisor.sock
+
+[supervisorctl]
+configuration = {{ .RootDir }}/dev.conf
+serverurl = unix://{{ .RootDir }}/supervisor.sock
+
+[supervisord]
+pidfile = {{ .RootDir }}/supervisord.pid
+logfile = {{ .RootDir }}/log/supervisord.log
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+{{ range .Processes }}
+[program:{{ .ProcType }}]
+command = {{ .Command }}
+stdout_logfile = {{ .ProcLogFile }}
+redirect_stderr = true
+{{ end }}
+`
+
+var reloadScript = fmt.Sprintf(`
+#!/bin/bash
+
+socket_file="%[1]s/supervisor.sock"
+
+# 检查supervisor的socket文件是否存在
+if [ -S "$socket_file" ]; then
+  echo "supervisord is already running. update and restart processes..."
+  supervisorctl -c %[2]s reload
+else
+  echo "supervisord is not running. start supervisord..."
+  supervisord -c %[2]s
+fi
+`, supervisorDir, supervisorDir+"/dev.conf")
 
 // Process is a process to launch
 type Process struct {
@@ -45,6 +86,7 @@ type SupervisorConf struct {
 	Processes []ProcessConf
 }
 
+// MakeSupervisorConf returns a new SupervisorConf
 func MakeSupervisorConf(processes []Process) *SupervisorConf {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
@@ -66,6 +108,7 @@ func NewSupervisorCtl() *SupervisorCtl {
 	}
 }
 
+// SupervisorCtl is a supervisorctl
 type SupervisorCtl struct {
 	RootDir string
 }
@@ -85,7 +128,7 @@ func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
 func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
 	tmplFile := "supervisord.conf.tmpl"
 
-	tmpl, err := template.New(tmplFile).ParseFiles("templates/" + tmplFile)
+	tmpl, err := template.New(tmplFile).Parse(confTemplate)
 	if err != nil {
 		return err
 	}
@@ -100,5 +143,17 @@ func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
 }
 
 func (ctl *SupervisorCtl) reload() error {
+
+	cmd := exec.Command("bash")
+
+	cmd.Env = os.Environ()
+	cmd.Stdin = bytes.NewBufferString(reloadScript)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
 	return nil
 }

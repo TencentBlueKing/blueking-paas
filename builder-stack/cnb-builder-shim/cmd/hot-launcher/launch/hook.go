@@ -16,32 +16,48 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package launch
 
 import (
 	"os"
-
-	"github.com/BurntSushi/toml"
-	"github.com/buildpacks/lifecycle/launch"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
-	hotlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/hot-launcher/launch"
+	"gopkg.in/yaml.v3"
+	"os/exec"
 )
 
-func main() {
-	logger := logging.Default()
+// DefaultAppDir ...
+const DefaultLifecycleDir = "/lifecycle"
 
-	var md launch.Metadata
+// AppDesc ...
+type AppDesc struct {
+	SpecVersion string `yaml:"spec_version"`
+	Module      struct {
+		Scripts struct {
+			PreReleaseHook string `yaml:"pre_release_hook"`
+		} `yaml:"scripts"`
+	} `yaml:"module"`
+}
 
-	if _, err := toml.DecodeFile(launch.GetMetadataFilePath(utils.EnvOrDefault("CNB_LAYERS_DIR", "/layers")), &md); err != nil {
-		logger.Error(err, "read metadata")
-		os.Exit(1)
+func runPreReleaseHook() error {
+	yamlFile, err := os.ReadFile(DefaultAppDir + "/app_desc.yaml")
+	if err != nil {
+		return err
 	}
 
-	if err := hotlaunch.Run(&md); err != nil {
-		logger.Error(err, "hot launch")
-		os.Exit(1)
+	desc := AppDesc{}
+	if err = yaml.Unmarshal(yamlFile, &desc); err != nil {
+		return err
 	}
 
+	cmd := exec.Command(DefaultLifecycleDir+"/launcher", desc.Module.Scripts.PreReleaseHook)
+
+	cmd.Dir = DefaultAppDir
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err = cmd.Run(); err != nil {
+		return err
+	}
+
+	return nil
 }

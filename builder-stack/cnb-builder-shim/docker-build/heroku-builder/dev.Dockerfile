@@ -24,7 +24,6 @@ ENV DEV_MODE=true
 RUN apt-get clean && apt-get update && apt-get -y install inotify-tools supervisor
 
 COPY ./cmd/dev-entrypoint/dev-entrypoint.sh /cnb/devcontainer/dev-entrypoint.sh
-COPY ./cmd/hot-launcher/launch/templates /cnb/devcontainer/bin/
 COPY --from=binary-builder /src/bin/* /cnb/devcontainer/bin/
 
 ENTRYPOINT /cnb/devcontainer/dev-entrypoint.sh

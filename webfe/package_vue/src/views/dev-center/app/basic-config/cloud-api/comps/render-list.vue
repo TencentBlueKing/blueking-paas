@@ -453,11 +453,11 @@ export default {
     },
     // 是否允许批量申请
     isApplyDisabled() {
-      return !this.selectedList.some(item => item.permission_action === 'apply');
+      return !this.selectedList.some(item => item.applyDisabled === false);
     },
     // 是否允许批量续期
     isRenewalDisabled() {
-      return !this.selectedList.some(item => item.permission_action === 'renew');
+      return !this.selectedList.some(item => item.renewDisabled === false);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -841,9 +841,7 @@ export default {
       }
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('批量续期权限');
-      const applyRows = this.selectedList.filter(item => item.permission_action === 'apply');
-      const renewalRows = this.selectedList.filter(item => item.permission_action === 'renew');
-      this.renewalDialog.rows = renewalRows.concat(applyRows);
+      this.renewalDialog.rows = [...this.selectedList];
     },
 
     handleBatchApply() {
@@ -852,9 +850,7 @@ export default {
       }
       this.applyDialog.visiable = true;
       this.applyDialog.title = this.$t('批量申请权限');
-      const applyRows = this.selectedList.filter(item => item.permission_action === 'apply');
-      const renewalRows = this.selectedList.filter(item => item.permission_action === 'renew');
-      this.applyDialog.rows = applyRows.concat(renewalRows);
+      this.applyDialog.rows = [...this.selectedList];
     },
 
     highlight({ name }) {
@@ -908,7 +904,7 @@ export default {
 
     // 勾选是否禁用
     selectable(row) {
-      return row.permission_action;
+      return !row.applyDisabled || !row.renewDisabled;
     },
 
     // 表格change事件

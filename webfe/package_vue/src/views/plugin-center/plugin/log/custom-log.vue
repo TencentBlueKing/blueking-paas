@@ -737,11 +737,12 @@ export default {
              * @param  {Number} page 第几页数据
              */
     async getPluginLogList(page = 1) {
+      const curPage = page || this.pagination.current;
       const { pdId } = this;
       const { pluginId } = this;
       const params = this.getParams();
-      params.offset = page - 1;
       params.limit = this.pagination.limit;
+      params.offset = this.pagination.limit * (curPage - 1);
       const filter = this.getFilterParams();
       this.isLogListLoading = true;
       try {

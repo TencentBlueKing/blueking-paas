@@ -1679,8 +1679,8 @@ export default {
   '下所有API的权限，包括未来新创建的API。': 'permissions for all APIs, including new ones created in the future.',
   'API列表：': 'API List.',
   API名称: 'API Name',
-  将申请: 'will apply',
-  将续期: 'will be renewed',
+  将申请: 'Will apply',
+  将续期: 'Will be renewed',
   '请联系网关负责人审批：': 'Please contact the person in charge of the gateway for approval:',
   'API主动上报你的自定义事件数据，具体代码如下：': 'API actively reports your custom event data. The specific code is as follows:',
   '5分钟': '5 minutes',
@@ -2491,4 +2491,6 @@ export default {
   '基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架': 'Directly build images from repository Dockerfile (similar to `docker build`)',
   暂未配置日志采集规则: 'No log collection rules configured',
   '当前模块任意环境部署成功后，将会给改模块配置默认的日志采集规则': 'After successful deployment in any environment, default log collection rules will be configured for the module',
+  '您将续期 <i>{n1}</i> 个权限；': 'Renewing <i>{n1}</i> authorizations;',
+  '您将续期 <i>{n1}</i> 个权限；<i class="n2">{n2}</i> 个权限不可续期，API 无权限、权限已过期、权限永久有效等情况不支持续期': 'Renewing <i>{n1}</i> authorizations; <i class="n2">{n2}</i> not renewable due to no API permission, expired or permanently valid permissions.',
 };

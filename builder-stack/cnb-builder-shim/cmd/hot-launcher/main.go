@@ -19,14 +19,13 @@
 package main
 
 import (
-	"fmt"
 	"os"
-
 	"github.com/BurntSushi/toml"
 	"github.com/buildpacks/lifecycle/launch"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
+	hotlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/hot-launcher/launch"
 )
 
 func main() {
@@ -39,7 +38,82 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, p := range md.Processes {
-		logger.Info(fmt.Sprintf("Process: %s", p.Command.Entries[0]))
+	if err := hotlaunch.Run(&md); err != nil {
+		logger.Error(err, "hot launch")
+		os.Exit(1)
 	}
+	//headers, err := symlinkProcessLauncher(&md)
+	//if err != nil {
+	//	logger.Error(err, "symlink process launcher")
+	//	os.Exit(1)
+	//}
+	//
+	//if err = hotReloadProcesses(headers); err != nil {
+	//	logger.Error(err, "hot reload processes")
+	//	os.Exit(1)
+	//}
+
 }
+
+//
+//func symlinkProcessLauncher(md *launch.Metadata) ([]*tar.Header, error) {
+//	hdrs := []*tar.Header{}
+//	if len(md.Processes) > 0 {
+//		for _, proc := range md.Processes {
+//			if len(proc.Type) == 0 {
+//				return nil, errors.New("type is required for all processes")
+//			}
+//			if err := validateProcessType(proc.Type); err != nil {
+//				return nil, errors.Wrapf(err, "invalid process type '%s'", proc.Type)
+//			}
+//			hdrs = append(hdrs, typeSymlink(launch.ProcessPath(proc.Type)))
+//		}
+//
+//		if err := createPath(launch.ProcessDir); err != nil {
+//			return nil, err
+//		}
+//
+//		for _, hdr := range hdrs {
+//			if err := createSymlink(hdr); err != nil {
+//				return nil, errors.Wrapf(err, "failed to create symlink %q with target %q", hdr.Name, hdr.Linkname)
+//			}
+//		}
+//	}
+//	return hdrs, nil
+//}
+//
+//func hotReloadProcesses(hdrs []*tar.Header) error {
+//
+//	return nil
+//}
+//
+//func validateProcessType(pType string) error {
+//	forbiddenCharacters := `/><:|&\`
+//	if strings.ContainsAny(pType, forbiddenCharacters) {
+//		return fmt.Errorf(`type may not contain characters '%s'`, forbiddenCharacters)
+//	}
+//	return nil
+//}
+//
+//func typeSymlink(path string) *tar.Header {
+//	return &tar.Header{
+//		Typeflag: tar.TypeSymlink,
+//		Name:     path,
+//		Linkname: launch.LauncherPath,
+//		Mode:     modePerm,
+//	}
+//}
+//
+//func createSymlink(hdr *tar.Header) error {
+//	if _, err := os.Stat(hdr.Name); os.IsNotExist(err) {
+//		return os.Symlink(hdr.Linkname, hdr.Name)
+//	}
+//	return nil
+//}
+//
+//func createPath(dir string) error {
+//	if _, err := os.Stat(dir); os.IsNotExist(err) {
+//		return os.Mkdir(dir, os.FileMode(modePerm))
+//	}
+//	return nil
+//}

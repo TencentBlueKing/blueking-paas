@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	platformDir = "/Users/jamesge/GitHubProjects/jamesgetx/bkpaas/builder-stack/cnb-builder-shim/platform"
-	cnbDir      = "/Users/jamesge/GitHubProjects/jamesgetx/bkpaas/builder-stack/cnb-builder-shim/cnb"
+	platformDir = "/platform"
+	cnbDir      = "/cnb"
 
 	RequiredBuildpacksEnvVarKey = "REQUIRED_BUILDPACKS"
 )

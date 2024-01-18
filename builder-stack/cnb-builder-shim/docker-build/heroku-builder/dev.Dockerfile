@@ -17,13 +17,14 @@ FROM ${BUILDER_IMAGE_NAME}:${BUILDER_IMAGE_TAG}
 
 USER root
 ENV HOME /app
+ENV CNB_APP_DIR /app
 ENV CNB_PLATFORM_API=0.11
 ENV DEV_MODE=true
 
 RUN apt-get clean && apt-get update && apt-get -y install inotify-tools supervisor
 
-#COPY ./docker-build/heroku-builder/supervisord.conf /cnb/devcontainer/supervisord.conf
 COPY ./cmd/dev-entrypoint/dev-entrypoint.sh /cnb/devcontainer/dev-entrypoint.sh
+COPY ./cmd/hot-launcher/launch/templates /cnb/devcontainer/bin/
 COPY --from=binary-builder /src/bin/* /cnb/devcontainer/bin/
 
 ENTRYPOINT /cnb/devcontainer/dev-entrypoint.sh

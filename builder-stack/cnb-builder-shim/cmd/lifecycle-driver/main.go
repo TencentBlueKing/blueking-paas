@@ -32,7 +32,6 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/lifecycle/phase"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
-
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -315,8 +314,8 @@ func getDevSteps(ctx context.Context) []Step {
 			"Hot launcher",
 			"Hot launcher processes...",
 			phase.MakeHotLauncherCmd(ctx),
-			*uid,
-			*gid,
+			0,
+			0,
 		},
 	)
 	return steps

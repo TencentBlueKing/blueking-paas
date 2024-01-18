@@ -1344,17 +1344,6 @@ export default {
           });
           return false;
         }
-        // 如果左边有列表，必须要选择一个
-        if (this.runtimeBuildpacks.length && !this.targetListData.length) {
-          this.$paasMessage({
-            theme: 'error',
-            message: this.$t('请选择构建工具！'),
-          });
-          this.$nextTick(() => {
-            this.isRuntimeUpdaing = false;
-          });
-          return false;
-        }
         // 使用拖拽排序后的数据
         const buildpacksIds = this.mixinTargetBuildpackIds || this.runtimeDialogConf.buildpacks;
 

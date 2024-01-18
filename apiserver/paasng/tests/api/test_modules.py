@@ -345,7 +345,7 @@ class TestModuleDeletion:
         initialize_module(module)
 
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
-        with mock.patch("paasng.platform.modules.views.delete_module", side_effect=Exception):
+        with mock.patch("paasng.platform.modules.views.ModuleCleaner.clean", side_effect=Exception):
             response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 400
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()

@@ -450,6 +450,18 @@ class ModuleCleaner:
     def __init__(self, module: Module):
         self.module = module
 
+    def clean(self):
+        """main entrance to clean module"""
+        logger.info("going to delete services related to Module<%s>", self.module)
+        self.delete_services()
+
+        logger.info("going to delete EngineApp related to Module<%s>", self.module)
+        self.delete_engine_apps()
+
+        # 数据记录删除(module 是真删除)
+        logger.info("going to delete Module<%s>", self.module)
+        self.delete_module()
+
     def delete_services(self, service_id: Optional[str] = None):
         """删除所有关联增强服务，以及所有被其他模块共享引用的服务关系
 

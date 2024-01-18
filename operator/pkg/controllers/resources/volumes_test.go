@@ -33,7 +33,6 @@ var _ = Describe("Get VolumeMountMap", func() {
 
 	nginxMountName, redisMountName := "nginx-conf", "redis-conf"
 	nginxPath, redisPath := "/etc/nginx", "/etc/redis"
-	nginxConfigName, redisConfigName := "nginx-configmap", "redis-configmap"
 
 	BeforeEach(func() {
 		bkapp = &paasv1alpha2.BkApp{
@@ -46,88 +45,173 @@ var _ = Describe("Get VolumeMountMap", func() {
 				Namespace:   "default",
 				Annotations: map[string]string{paasv1alpha2.EnvironmentKey: string(paasv1alpha2.ProdEnv)},
 			},
-			Spec: paasv1alpha2.AppSpec{
-				Mounts: []paasv1alpha2.Mount{
-					{
-						Name:      nginxMountName,
-						MountPath: nginxPath,
-						Source: &paasv1alpha2.VolumeSource{
-							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: nginxConfigName},
-						},
-					},
-					{
-						Name:      redisMountName,
-						MountPath: redisPath,
-						Source: &paasv1alpha2.VolumeSource{
-							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: redisConfigName},
-						},
-					},
-				},
-			},
 		}
-	})
-
-	It("mounts without overlay", func() {
-		volMountMap := GetVolumeMountMap(bkapp)
-
-		Expect(len(volMountMap)).To(Equal(2))
-		Expect(volMountMap[nginxMountName].MountPath).To(Equal(nginxPath))
-		Expect(volMountMap[redisMountName].MountPath).To(Equal(redisPath))
-	})
-
-	It("mounts with overlay", func() {
-		overlayPath := nginxPath + "/test"
-
-		etcdName := "etcd-conf"
-		etcdPath := "/etc/etcd"
-
-		bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
-			Mounts: []paasv1alpha2.MountOverlay{
-				{
-					Mount: paasv1alpha2.Mount{
-						Name:      nginxMountName,
-						MountPath: overlayPath,
-						Source: &paasv1alpha2.VolumeSource{
-							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: nginxConfigName},
-						},
-					},
-					EnvName: paasv1alpha2.ProdEnv,
-				},
-				{
-					Mount: paasv1alpha2.Mount{
-						Name:      etcdName,
-						MountPath: etcdPath,
-						Source: &paasv1alpha2.VolumeSource{
-							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
-						},
-					},
-					EnvName: paasv1alpha2.ProdEnv,
-				},
-				{
-					Mount: paasv1alpha2.Mount{
-						Name:      etcdName,
-						MountPath: etcdPath,
-						Source: &paasv1alpha2.VolumeSource{
-							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
-						},
-					},
-					EnvName: paasv1alpha2.StagEnv,
-				},
-			},
-		}
-
-		volMountMap := GetVolumeMountMap(bkapp)
-
-		Expect(len(volMountMap)).To(Equal(3))
-
-		Expect(volMountMap[nginxMountName].MountPath).To(Equal(overlayPath))
-		Expect(volMountMap[etcdName].MountPath).To(Equal(etcdPath))
 	})
 
 	It("no mounts", func() {
 		bkapp.Spec.Mounts = []paasv1alpha2.Mount{}
 		volMountMap := GetVolumeMountMap(bkapp)
 		Expect(len(volMountMap)).To(Equal(0))
+	})
+
+	Context("when mount source is ConfigMap", func() {
+		nginxConfigName, redisConfigName := "nginx-configmap", "redis-configmap"
+		BeforeEach(func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      nginxMountName,
+					MountPath: nginxPath,
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: nginxConfigName},
+					},
+				},
+				{
+					Name:      redisMountName,
+					MountPath: redisPath,
+					Source: &paasv1alpha2.VolumeSource{
+						ConfigMap: &paasv1alpha2.ConfigMapSource{Name: redisConfigName},
+					},
+				},
+			}
+		})
+
+		It("mounts with overlay", func() {
+			overlayPath := nginxPath + "/test"
+
+			etcdName := "etcd-conf"
+			etcdPath := "/etc/etcd"
+
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				Mounts: []paasv1alpha2.MountOverlay{
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      nginxMountName,
+							MountPath: overlayPath,
+							Source: &paasv1alpha2.VolumeSource{
+								ConfigMap: &paasv1alpha2.ConfigMapSource{Name: nginxConfigName},
+							},
+						},
+						EnvName: paasv1alpha2.ProdEnv,
+					},
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      etcdName,
+							MountPath: etcdPath,
+							Source: &paasv1alpha2.VolumeSource{
+								ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+							},
+						},
+						EnvName: paasv1alpha2.ProdEnv,
+					},
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      etcdName,
+							MountPath: etcdPath,
+							Source: &paasv1alpha2.VolumeSource{
+								ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+							},
+						},
+						EnvName: paasv1alpha2.StagEnv,
+					},
+				},
+			}
+
+			volMountMap := GetVolumeMountMap(bkapp)
+
+			Expect(len(volMountMap)).To(Equal(3))
+
+			Expect(volMountMap[nginxMountName].MountPath).To(Equal(overlayPath))
+			Expect(volMountMap[etcdName].MountPath).To(Equal(etcdPath))
+		})
+
+		It("mounts without overlay", func() {
+			volMountMap := GetVolumeMountMap(bkapp)
+
+			Expect(len(volMountMap)).To(Equal(2))
+			Expect(volMountMap[nginxMountName].MountPath).To(Equal(nginxPath))
+			Expect(volMountMap[redisMountName].MountPath).To(Equal(redisPath))
+		})
+	})
+
+	Context("when mount source is pvc", func() {
+		nginxConfigName, redisConfigName := "nginx-pvc", "redis-pvc"
+		BeforeEach(func() {
+			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
+				{
+					Name:      nginxMountName,
+					MountPath: nginxPath,
+					Source: &paasv1alpha2.VolumeSource{
+						PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: nginxConfigName},
+					},
+				},
+				{
+					Name:      redisMountName,
+					MountPath: redisPath,
+					Source: &paasv1alpha2.VolumeSource{
+						PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: redisConfigName},
+					},
+				},
+			}
+		})
+
+		It("mounts with overlay", func() {
+			overlayPath := nginxPath + "/test"
+
+			etcdName := "etcd-conf"
+			etcdPath := "/etc/etcd"
+
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				Mounts: []paasv1alpha2.MountOverlay{
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      nginxMountName,
+							MountPath: overlayPath,
+							Source: &paasv1alpha2.VolumeSource{
+								PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{
+									Name: nginxConfigName,
+								},
+							},
+						},
+						EnvName: paasv1alpha2.ProdEnv,
+					},
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      etcdName,
+							MountPath: etcdPath,
+							Source: &paasv1alpha2.VolumeSource{
+								PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "etcd-pvc"},
+							},
+						},
+						EnvName: paasv1alpha2.ProdEnv,
+					},
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      etcdName,
+							MountPath: etcdPath,
+							Source: &paasv1alpha2.VolumeSource{
+								PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "etcd-pvc"},
+							},
+						},
+						EnvName: paasv1alpha2.StagEnv,
+					},
+				},
+			}
+
+			volMountMap := GetVolumeMountMap(bkapp)
+
+			Expect(len(volMountMap)).To(Equal(3))
+
+			Expect(volMountMap[nginxMountName].MountPath).To(Equal(overlayPath))
+			Expect(volMountMap[etcdName].MountPath).To(Equal(etcdPath))
+		})
+
+		It("mounts without overlay", func() {
+			volMountMap := GetVolumeMountMap(bkapp)
+
+			Expect(len(volMountMap)).To(Equal(2))
+			Expect(volMountMap[nginxMountName].MountPath).To(Equal(nginxPath))
+			Expect(volMountMap[redisMountName].MountPath).To(Equal(redisPath))
+		})
 	})
 })
 
@@ -164,5 +248,20 @@ var _ = Describe("test apply to deployment", func() {
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
 
 		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
+	})
+
+	It("pvc source", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+
+		vs := &paasv1alpha2.VolumeSource{
+			PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "nginx-pvc"},
+		}
+		cfg, _ := ToVolumeSourceConfigurer(vs)
+		_ = cfg.ApplyToDeployment(deployment, mountName, mountPath)
+
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
+
+		Expect(deployment.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal("nginx-pvc"))
 	})
 })

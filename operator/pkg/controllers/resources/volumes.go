@@ -79,6 +79,8 @@ func GetVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMountMap {
 func ToVolumeSourceConfigurer(vs *paasv1alpha2.VolumeSource) (VolumeSourceConfigurer, error) {
 	if vs.ConfigMap != nil {
 		return ConfigMapSource(*vs.ConfigMap), nil
+	} else if vs.PersistentVolumeClaim != nil {
+		return PersistentVolumeClaimSource(*vs.PersistentVolumeClaim), nil
 	}
 	return nil, errors.New("unknown volume source")
 }
@@ -108,5 +110,35 @@ func (c ConfigMapSource) ApplyToDeployment(deployment *appsv1.Deployment, mountN
 		},
 	)
 
+	return nil
+}
+
+// PersistentVolumeClaimSource ...
+type PersistentVolumeClaimSource paasv1alpha2.PersistentVolumeClaimSource
+
+// ApplyToDeployment 将 configmap source 应用到 deployment
+func (p PersistentVolumeClaimSource) ApplyToDeployment(
+	deployment *appsv1.Deployment,
+	mountName, mountPath string,
+) error {
+	containers := deployment.Spec.Template.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
+			Name:      mountName,
+			MountPath: mountPath,
+		})
+	}
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: mountName,
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: p.Name,
+				},
+			},
+		},
+	)
 	return nil
 }

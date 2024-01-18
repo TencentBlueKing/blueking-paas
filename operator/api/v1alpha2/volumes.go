@@ -25,7 +25,8 @@ import (
 
 // VolumeSource 参考 k8s.io/api/core/v1.VolumeSource
 type VolumeSource struct {
-	ConfigMap *ConfigMapSource `json:"configMap"`
+	ConfigMap             *ConfigMapSource             `json:"configMap"`
+	PersistentVolumeClaim *PersistentVolumeClaimSource `json:"PersistentVolumeClaim"`
 }
 
 // ToValidator 将 volume source 转换成 VolumeSourceValidator
@@ -54,3 +55,16 @@ func (c ConfigMapSource) Validate() []string {
 }
 
 var _ VolumeSourceValidator = new(ConfigMapSource)
+
+// PersistentVolumeClaimSource represents a PersistentVolumeClaim that should populate this volume
+type PersistentVolumeClaimSource struct {
+	Name string `json:"name"`
+}
+
+// Validate PersistentVolumeClaim name
+func (p PersistentVolumeClaimSource) Validate() []string {
+	// To remain consistent with the validation rules of Kubernetes.
+	return validation.IsDNS1123Subdomain(p.Name)
+}
+
+var _ VolumeSourceValidator = new(PersistentVolumeClaimSource)

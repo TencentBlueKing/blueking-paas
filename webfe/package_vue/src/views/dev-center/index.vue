@@ -1,7 +1,10 @@
 <template lang="html">
   <div
     class="bk-apps-wrapper mt30"
-    :style="{ 'min-height': `${minHeight}px` }"
+    :style="{
+      'min-height': `${minHeight}px`,
+      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 28 : 28}px`
+    }"
     @click="resetAction()"
   >
     <div
@@ -793,6 +796,9 @@ export default {
     },
     enFormItemWidth() {
       return this.localLanguage === 'en' ? '120px' : '110px';
+    },
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
     },
   },
   watch: {

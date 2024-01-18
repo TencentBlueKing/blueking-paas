@@ -37,11 +37,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
+from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, MountEnvName, ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
 from paas_wl.bk_app.cnative.specs.events import list_events
-from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError, InvalidImageCredentials
+from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
 from paas_wl.bk_app.cnative.specs.models import (
     AppModelDeploy,
@@ -70,7 +70,7 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     UpsertMountSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
+from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -185,29 +185,18 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # Update the current manifest when "manifest" field was provided, the data
         # will be validated in `update_app_resource` function.
         # TODO: 当 manifest 提供时，检查 manifest 是否有变化
+        build = None
         if manifest := serializer.validated_data.get("manifest"):
             update_app_resource(application, module, manifest)
             import_manifest(module, manifest)
+            build = Build(image=manifest["spec"].get("build", {}).get("image"), artifact_metadata={"use_cnb": False})
 
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
-        # TODO: Allow use other revisions
         revision = model_resource.revision
 
-        # Try to get and validate the image credentials, will raise InvalidImageCredentials when any refs are invalid
         try:
-            credential_refs = get_references(revision.json_value)
-            validate_references(application, credential_refs)
-        except InvalidImageCredentials:
-            raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
-        # flush credentials if needed
-        if credential_refs:
-            AppImageCredential.objects.flush_from_refs(
-                application=application, wl_app=env.wl_app, references=credential_refs
-            )
-
-        try:
-            release_by_k8s_operator(env, revision, operator=request.user.pk)
+            release_by_k8s_operator(env, revision, operator=request.user.pk, build=build)
         except UnprocessibleEntityError as e:
             # 格式错误类异常（422），允许将错误信息提供给用户
             raise error_codes.DEPLOY_BKAPP_FAILED.f(

@@ -1156,6 +1156,30 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
+    post:
+      operationId: search_structured_log_with_post
+      description: 查询应用结构化日志
+      tags:
+      - 应用/模块信息查询
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/log/applications/{code}/modules/{module_name}/structured/list/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn:
   /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/addons/{service_name}/:
     get:
       operationId: get_addon_instance_info

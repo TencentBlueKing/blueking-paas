@@ -39,6 +39,7 @@ func main() {
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
-	r.POST("/upload", api.UploadFile)
+	r.POST("/deploy", api.Deploy)
+	r.GET("/deploy/:deployID", api.DeployResult)
 	return r
 }

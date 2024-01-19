@@ -25,6 +25,8 @@ import (
 
 	"github.com/buildpacks/lifecycle/launch"
 	"github.com/pkg/errors"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 // DefaultAppDir is the default app dir
@@ -60,12 +62,12 @@ func symlinkProcessLauncher(md *launch.Metadata) ([]*tar.Header, error) {
 			hdrs = append(hdrs, typeSymlink(launch.ProcessPath(proc.Type)))
 		}
 
-		if err := createDir(launch.ProcessDir); err != nil {
+		if err := utils.CreateDir(launch.ProcessDir); err != nil {
 			return nil, err
 		}
 
 		for _, hdr := range hdrs {
-			if err := createSymlink(hdr.Linkname, hdr.Name); err != nil {
+			if err := utils.CreateSymlink(hdr.Linkname, hdr.Name); err != nil {
 				return nil, errors.Wrapf(err, "failed to create symlink %q with target %q", hdr.Name, hdr.Linkname)
 			}
 		}

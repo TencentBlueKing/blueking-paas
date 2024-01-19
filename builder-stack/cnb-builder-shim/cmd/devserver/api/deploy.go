@@ -20,14 +20,16 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/devserver/api/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
-func UploadFile(c *gin.Context) {
+func Deploy(c *gin.Context) {
 	token := c.PostForm("token")
 
 	if token != utils.EnvOrDefault("TOKEN", "jwram1lpbnuugmcv") {
@@ -42,12 +44,40 @@ func UploadFile(c *gin.Context) {
 	}
 
 	fileName := filepath.Base(file.Filename)
-	fileDst := utils.EnvOrDefault("UPLOAD_DIR", "/cnb/devcontainer/src/") + fileName
-	if err = c.SaveUploadedFile(file, fileDst); err != nil {
+	fileDist := utils.EnvOrDefault("UPLOAD_DIR", "/cnb/devcontainer/src/") + fileName
+	if err = c.SaveUploadedFile(file, fileDist); err != nil {
 		c.String(http.StatusBadRequest, "upload file err: %s", err.Error())
 		return
 	}
 
-	md5String, _ := utils.Md5(fileDst)
-	c.JSON(http.StatusOK, map[string]interface{}{"md5": md5String})
+	mgr := service.DeployManager{}
+	deployID, err := mgr.Deploy(fileDist)
+	if err != nil {
+		c.String(http.StatusBadRequest, "deploy err: %s", err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"deployID": deployID})
+
+}
+
+func DeployResult(c *gin.Context) {
+	deployID := c.Param("deployID")
+	if deployID == "" {
+		c.String(http.StatusBadRequest, "wathn")
+	}
+	withLog, _ := strconv.ParseBool(c.Query("log"))
+
+	mgr := service.DeployManager{}
+	status, deployLog, err := mgr.Result(deployID, withLog)
+	if err != nil {
+		c.String(http.StatusBadRequest, "get deploy result err: %s", err.Error())
+		return
+	}
+
+	if withLog {
+		c.JSON(http.StatusOK, map[string]interface{}{"status": status, "log": deployLog})
+	} else {
+		c.JSON(http.StatusOK, map[string]interface{}{"status": status})
+	}
+
 }

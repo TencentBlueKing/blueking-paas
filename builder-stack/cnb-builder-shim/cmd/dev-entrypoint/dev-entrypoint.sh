@@ -1,40 +1,32 @@
 #!/bin/bash
 
+DEVCONTAINER_DIR="/cnb/devcontainer"
 
-function sync_src() {
-  # $1 e.g "/cnb/devcontainer/src/ CREATE demo_api_project.zip"
-  # $2 e.g "/cnb/devcontainer/src/"
-
-  rm -rf /app/*
-
-  filename=$(echo "$1" | awk '{print $NF}')
-  unzip -o -q "$2$filename" -d /tmp
-
-  folder_name=$(basename "$filename" .zip)
-  mv /tmp/$folder_name/* /app/
-
-  rm -rf /tmp/$folder_name
-
-  echo "$2$filename sync done"
+function update_deploy_result() {
+  echo $1 > $2
 }
 
+function hot_reload(){
+  $DEVCONTAINER_DIR/bin/lifecycle-driver 2>&1 | tee $DEVCONTAINER_DIR/deploy/log/$1.log
+  update_deploy_result ${PIPESTATUS[0]} $DEVCONTAINER_DIR/deploy/$1
+}
 
 function entrypoint() {
-    # do dev-init
-    /cnb/devcontainer/bin/dev-init
-    # start devserver
-    /cnb/devcontainer/bin/devserver &
+  # do dev-init
+  $DEVCONTAINER_DIR/bin/dev-init
+  # start devserver
+  $DEVCONTAINER_DIR/bin/devserver &
 
-    mkdir -p /cnb/devcontainer/log /cnb/devcontainer/src /cnb/devcontainer/releases
+  mkdir -p $DEVCONTAINER_DIR/src $DEVCONTAINER_DIR/deploy/log
 
-    CODE_SRC_DIR=${UPLOAD_DIR:-"/cnb/devcontainer/src/"}
+  CODE_SRC_DIR=${UPLOAD_DIR:-"$DEVCONTAINER_DIR/src/"}
+  inotifywait -e create -m -r $DEVCONTAINER_DIR/deploy/ --exclude '/\.' --exclude 'log/' | while read file; do
+      # extract filename from $file. $file like "/cnb/devcontainer/deploy/ CREATE 17b270b8f189359eb2895768bf34f6a6"
+      deploy_id=$(echo "$file" | awk '{print $NF}')
+      hot_reload $deploy_id
 
-    inotifywait -e create -m -r $CODE_SRC_DIR --exclude '/\.' | while read file; do
-        sync_src "$file" "$CODE_SRC_DIR"
-        /cnb/devcontainer/bin/lifecycle-driver
-        rm -f $CODE_SRC_DIR/*
-    done
+      rm -f $CODE_SRC_DIR/*
+  done
 }
-
 
 entrypoint

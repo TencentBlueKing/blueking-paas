@@ -27,12 +27,12 @@ import (
 )
 
 var _ = Describe("Test api", func() {
-	Describe("upload file", func() {
-		It("upload file failed without token", func() {
+	Describe("deploy", func() {
+		It("deploy failed without token", func() {
 			r := setupRouter()
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/upload", nil)
+			req, _ := http.NewRequest("POST", "/deploy", nil)
 			r.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(401))

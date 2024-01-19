@@ -20,8 +20,9 @@ package launch
 
 import (
 	"os"
-	"gopkg.in/yaml.v3"
 	"os/exec"
+
+	"gopkg.in/yaml.v3"
 )
 
 // DefaultAppDir ...
@@ -52,8 +53,8 @@ func runPreReleaseHook() error {
 
 	cmd.Dir = DefaultAppDir
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 
 	if err = cmd.Run(); err != nil {
 		return err

@@ -115,7 +115,7 @@ type SupervisorCtl struct {
 
 // Reload start or update/restart the processes
 func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
-	if err := createDir(ctl.RootDir + "/log"); err != nil {
+	if err := utils.CreateDir(ctl.RootDir + "/log"); err != nil {
 		return err
 	}
 
@@ -148,8 +148,8 @@ func (ctl *SupervisorCtl) reload() error {
 
 	cmd.Env = os.Environ()
 	cmd.Stdin = bytes.NewBufferString(reloadScript)
-	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 
 	if err := cmd.Run(); err != nil {
 		return err

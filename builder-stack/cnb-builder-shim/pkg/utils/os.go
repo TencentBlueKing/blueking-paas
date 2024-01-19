@@ -16,18 +16,20 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package launch
+package utils
 
 import "os"
 
-func createDir(dir string) error {
+// CreateDir create directory if the file not exist
+func CreateDir(dir string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return os.MkdirAll(dir, 0755)
 	}
 	return nil
 }
 
-func createSymlink(oldname, newname string) error {
+// CreateSymlink create symlink if the symlink not exist
+func CreateSymlink(oldname, newname string) error {
 	if _, err := os.Stat(newname); os.IsNotExist(err) {
 		return os.Symlink(oldname, newname)
 	}

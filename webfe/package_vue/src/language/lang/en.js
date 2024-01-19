@@ -2493,4 +2493,10 @@ export default {
   '当前模块任意环境部署成功后，将会给改模块配置默认的日志采集规则': 'After successful deployment in any environment, default log collection rules will be configured for the module',
   '您将续期 <i>{n1}</i> 个权限；': 'Renewing <i>{n1}</i> authorizations;',
   '您将续期 <i>{n1}</i> 个权限；<i class="n2">{n2}</i> 个权限不可续期，API 无权限、权限已过期、权限永久有效等情况不支持续期': 'Renewing <i>{n1}</i> authorizations; <i class="n2">{n2}</i> not renewable due to no API permission, expired or permanently valid permissions.',
+  '请完整输入应用 ID（{code}）确认': 'Please enter the full application ID ({code}) to confirm',
+  创建新令牌: 'Create New Token',
+  '令牌（access_token）创建成功！请复制该令牌，关闭弹窗后将无法再次看到它。': 'Token (access_token) created successfully! Please copy this token, as it will not be visible again after the popup is closed.',
+  '创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。': 'Creating a new token (access_token) will invalidate the original access_token. This action is irreversible. Please proceed with caution.',
+  '应用 ID 确认': 'Application ID Confirmation',
+  令牌查看: 'View Token',
 };

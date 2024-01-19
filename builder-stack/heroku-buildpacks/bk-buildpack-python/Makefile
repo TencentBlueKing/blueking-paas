@@ -21,12 +21,14 @@ pack: ${ROOT}/output patch  ## 打包 buildpack
 
 .PHONY: test
 test:  ## 单元测试
+	make patch
 	docker run --rm \
 			--network=host \
 			-v `pwd`:/data \
 			-w /data \
 			bats/bats:v1.4.1 \
 			/data/tests
+	make unpatch
 
 
 .PHONY: integration-test

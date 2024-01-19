@@ -6,28 +6,27 @@ setup() {
     BUILD_DIR=$(mktemp -d -t bp-pre-install-XXXXXXXX)
     CACHE_DIR=$(mktemp -d -t bp-pre-install-XXXXXXXX)
     ENV_DIR=$(mktemp -d -t bp-pre-install-XXXXXXXX)
-    BUILD_PACK=$(mktemp -d -t bp-pre-install-XXXXXXXX)
+    ROOT_DIR=$(mktemp -d -t bp-pre-install-XXXXXXXX)
     REAL_HOME=${HOME}
     HOME=${BUILD_DIR}
-    ROOT_DIR=${BUILD_PACK}
     BIN_DIR=${ROOT_DIR}/bin
 
-    cp -r buildpack/* ${BUILD_PACK}
+    cp -r buildpack/* ${ROOT_DIR}
 
-    export BUILD_DIR CACHE_DIR ENV_DIR BUILD_PACK HOME REAL_HOME ROOT_DIR BIN_DIR
+    export BUILD_DIR CACHE_DIR ENV_DIR HOME REAL_HOME ROOT_DIR BIN_DIR
 }
 
 teardown() {
-    #rm -rf "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}" "${BUILD_PACK}"
+    #rm -rf "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}" "${ROOT_DIR}"
     HOME=${REAL_HOME}
 
     export HOME
-    unset BUILD_DIR CACHE_DIR ENV_DIR BUILD_PACK REAL_HOME
+    unset BUILD_DIR CACHE_DIR ENV_DIR ROOT_DIR REAL_HOME
 }
 
 @test "compile hook created" {
     mkdir -p ${BUILD_DIR}/bin
-    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
+    run "${ROOT_DIR}/hooks/setup-user-compile-hook"
 
     run cat "${BUILD_DIR}/bin/pre_compile"
     [ "${status}" = 0 ]
@@ -41,7 +40,7 @@ teardown() {
 }
 
 @test "compile hook not create because bin directory not exists" {
-    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
+    run "${ROOT_DIR}/hooks/setup-user-compile-hook"
 
     [ "${status}" = 0 ]
     [ ! -f "${BUILD_DIR}/bin/pre_compile" ]
@@ -52,7 +51,7 @@ teardown() {
     mkdir -p ${BUILD_DIR}/bin
     touch ${BUILD_DIR}/bin/pre_compile
     touch ${BUILD_DIR}/bin/post_compile
-    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
+    run "${ROOT_DIR}/hooks/setup-user-compile-hook"
 
     [ "${status}" = 0 ]
 
@@ -67,7 +66,7 @@ teardown() {
 
 @test "trace_call hook" {
     mkdir -p ${BUILD_DIR}/bin
-    run "${BUILD_PACK}/hooks/setup-user-compile-hook"
+    run "${ROOT_DIR}/hooks/setup-user-compile-hook"
     echo "I'm Groooooot!" > ${BUILD_DIR}/bin/pre-compile
 
     [ "${status}" = 0 ]
@@ -79,7 +78,7 @@ teardown() {
 
 @test "make sure script executable" {
     mkdir -p ${BUILD_DIR}/bin
-    "${BUILD_PACK}/hooks/setup-user-compile-hook"
+    "${ROOT_DIR}/hooks/setup-user-compile-hook"
     echo "" > ${BUILD_DIR}/bin/pre-compile
 
     hooked_bash 'shopt -s expand_aliases; alias trace_call=cat' "${BUILD_DIR}/bin/pre_compile"
@@ -91,7 +90,7 @@ teardown() {
 
 @test "make sure failed when hook error" {
     mkdir -p ${BUILD_DIR}/bin
-    "${BUILD_PACK}/hooks/setup-user-compile-hook"
+    "${ROOT_DIR}/hooks/setup-user-compile-hook"
     echo "" > ${BUILD_DIR}/bin/pre-compile
 
     run hooked_bash 'shopt -s expand_aliases; alias trace_call=false' "${BUILD_DIR}/bin/pre_compile"
@@ -101,7 +100,7 @@ teardown() {
 
 @test "make sure script not exists after run" {
     mkdir -p ${BUILD_DIR}/bin
-    "${BUILD_PACK}/hooks/setup-user-compile-hook"
+    "${ROOT_DIR}/hooks/setup-user-compile-hook"
     echo "" > ${BUILD_DIR}/bin/pre-compile
 
     run hooked_bash 'shopt -s expand_aliases; alias trace_call=cat' "${BUILD_DIR}/bin/pre_compile"

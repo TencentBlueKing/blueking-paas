@@ -1,6 +1,6 @@
 37a38,40
 > # -- Added by blueking builder-stack --
-> source ${BUILD_PACK}/hooks/setup-user-compile-hook
+> source ${ROOT_DIR}/hooks/setup-user-compile-hook
 > 
 212c215
 < elif [[ -n "${CACHED_PYTHON_VERSION:-}" ]]; then
@@ -16,9 +16,9 @@
 >   echo "       To use a different version, see: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
 241a245,247
 > # -- Added by blueking builder-stack --
-> source ${BUILD_PACK}/hooks/pre-install
+> source ${ROOT_DIR}/hooks/pre-install
 > 
 352a359,361
 > 
 > # -- Added by blueking builder-stack --
-> source ${BUILD_PACK}/hooks/post-install
+> source ${ROOT_DIR}/hooks/post-install

@@ -20,7 +20,7 @@ pack: ${ROOT}/output patch  ## 打包 buildpack
 ##@ Test
 
 .PHONY: test
-test:  ## 单元测试
+test:  ## 单元测试 - 执行前需要先 patch
 	docker run --rm \
 			--network=host \
 			-v `pwd`:/data \

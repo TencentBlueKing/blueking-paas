@@ -19,7 +19,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -36,7 +35,7 @@ var _ = Describe("Test setupPlatformEnv", func() {
 	)
 
 	BeforeEach(func() {
-		platformDir, err = ioutil.TempDir("", "platform-env")
+		platformDir, err = os.MkdirTemp("", "platform-env")
 		Expect(err).To(BeNil())
 	})
 	AfterEach(func() {
@@ -46,8 +45,7 @@ var _ = Describe("Test setupPlatformEnv", func() {
 	It("test write env to file successfully", func() {
 		err := setupPlatformEnv(logging.Default(), platformDir, []string{"FOO=flag"})
 		Expect(err).To(BeNil())
-
-		content, _ := ioutil.ReadFile(filepath.Join(platformDir, "env", "FOO"))
+		content, _ := os.ReadFile(filepath.Join(platformDir, "env", "FOO"))
 		Expect(string(content)).To(Equal("flag"))
 	})
 })
@@ -59,7 +57,7 @@ var _ = Describe("Test setupBuildpacksOrder", func() {
 	)
 
 	BeforeEach(func() {
-		cnbDir, err = ioutil.TempDir("", "cnb-dir")
+		cnbDir, err = os.MkdirTemp("", "cnb-dir")
 		Expect(err).To(BeNil())
 	})
 	AfterEach(func() {
@@ -70,7 +68,7 @@ var _ = Describe("Test setupBuildpacksOrder", func() {
 		err := setupBuildpacksOrder(logging.Default(), "tgz apt https://example.com v;tgz bk-buildpack-python https://example.com v213", cnbDir)
 		Expect(err).To(BeNil())
 
-		content, _ := ioutil.ReadFile(filepath.Join(cnbDir, "order.toml"))
+		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))
 		Expect(string(content)).To(Equal(`[[order]]
 [[order.group]]
 id = 'apt'
@@ -86,7 +84,7 @@ version = 'v213'
 		err := setupBuildpacksOrder(logging.Default(), "tgz apt;tgz bk-buildpack-python https://example.com v213", cnbDir)
 		Expect(err).To(BeNil())
 
-		content, _ := ioutil.ReadFile(filepath.Join(cnbDir, "order.toml"))
+		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))
 		Expect(string(content)).To(Equal(`[[order]]
 [[order.group]]
 id = 'bk-buildpack-python'

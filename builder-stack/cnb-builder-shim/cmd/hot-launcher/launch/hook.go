@@ -39,17 +39,16 @@ type AppDesc struct {
 }
 
 func runPreReleaseHook() error {
-	yamlFile, err := os.ReadFile(DefaultAppDir + "/app_desc.yaml")
+	releaseHook, err := parsePreReleaseHook()
 	if err != nil {
 		return err
 	}
 
-	desc := AppDesc{}
-	if err = yaml.Unmarshal(yamlFile, &desc); err != nil {
-		return err
+	if releaseHook == "" {
+		return nil
 	}
 
-	cmd := exec.Command(DefaultLifecycleDir+"/launcher", desc.Module.Scripts.PreReleaseHook)
+	cmd := exec.Command(DefaultLifecycleDir+"/launcher", releaseHook)
 
 	cmd.Dir = DefaultAppDir
 	cmd.Env = os.Environ()
@@ -61,4 +60,18 @@ func runPreReleaseHook() error {
 	}
 
 	return nil
+}
+
+func parsePreReleaseHook() (string, error) {
+	yamlFile, err := os.ReadFile(DefaultAppDir + "/app_desc.yaml")
+	if err != nil {
+		return "", err
+	}
+
+	desc := AppDesc{}
+	if err = yaml.Unmarshal(yamlFile, &desc); err != nil {
+		return "", err
+	}
+
+	return desc.Module.Scripts.PreReleaseHook, nil
 }

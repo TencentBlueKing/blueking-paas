@@ -130,8 +130,8 @@ func (m DeployManager) syncToAppDir(filePath, md5String string) error {
 	return nil
 }
 
-func (m DeployManager) generateProcfile(distDir string) error {
-	yamlFile, err := os.ReadFile(distDir + "/app_desc.yaml")
+func (m DeployManager) generateProcfile(fileDir string) error {
+	yamlFile, err := os.ReadFile(fileDir + "/app_desc.yaml")
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (m DeployManager) generateProcfile(distDir string) error {
 		lines = append(lines, fmt.Sprintf("%s: %s", pType, p.Command))
 	}
 
-	return os.WriteFile(distDir+"/Procfile", []byte(strings.Join(lines, "\n")), 0644)
+	return os.WriteFile(fileDir+"/Procfile", []byte(strings.Join(lines, "\n")), 0644)
 
 }
 
@@ -166,8 +166,7 @@ func (m DeployManager) syncFiles(srcDir string) error {
 }
 
 func (m DeployManager) makeSyncScript(srcDir, distDir string) string {
-	return fmt.Sprintf(`
-#! /bin/bash
+	return fmt.Sprintf(`#! /bin/bash
 
 rm -rf %[2]s/*
 mv %[1]s/* %[2]s/

@@ -62,9 +62,6 @@ func Deploy(c *gin.Context) {
 
 func DeployResult(c *gin.Context) {
 	deployID := c.Param("deployID")
-	if deployID == "" {
-		c.String(http.StatusBadRequest, "wathn")
-	}
 	withLog, _ := strconv.ParseBool(c.Query("log"))
 
 	mgr := service.DeployManager{}

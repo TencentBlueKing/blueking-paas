@@ -30,7 +30,7 @@ import (
 )
 
 // DefaultAppDir is the default app dir
-const DefaultAppDir = "/app"
+var DefaultAppDir = "/app"
 
 // Run hot reload processes
 func Run(md *launch.Metadata) error {
@@ -50,26 +50,28 @@ func Run(md *launch.Metadata) error {
 }
 
 func symlinkProcessLauncher(md *launch.Metadata) ([]*tar.Header, error) {
+	if len(md.Processes) == 0 {
+		return nil, errors.New("processes is required")
+	}
+
 	hdrs := []*tar.Header{}
-	if len(md.Processes) > 0 {
-		for _, proc := range md.Processes {
-			if len(proc.Type) == 0 {
-				return nil, errors.New("type is required for all processes")
-			}
-			if err := validateProcessType(proc.Type); err != nil {
-				return nil, errors.Wrapf(err, "invalid process type '%s'", proc.Type)
-			}
-			hdrs = append(hdrs, typeSymlink(launch.ProcessPath(proc.Type)))
+	for _, proc := range md.Processes {
+		if len(proc.Type) == 0 {
+			return nil, errors.New("type is required for all processes")
 		}
-
-		if err := utils.CreateDir(launch.ProcessDir); err != nil {
-			return nil, err
+		if err := validateProcessType(proc.Type); err != nil {
+			return nil, errors.Wrapf(err, "invalid process type '%s'", proc.Type)
 		}
+		hdrs = append(hdrs, typeSymlink(launch.ProcessPath(proc.Type)))
+	}
 
-		for _, hdr := range hdrs {
-			if err := utils.CreateSymlink(hdr.Linkname, hdr.Name); err != nil {
-				return nil, errors.Wrapf(err, "failed to create symlink %q with target %q", hdr.Name, hdr.Linkname)
-			}
+	if err := utils.CreateDir(launch.ProcessDir); err != nil {
+		return nil, err
+	}
+
+	for _, hdr := range hdrs {
+		if err := utils.CreateSymlink(hdr.Linkname, hdr.Name); err != nil {
+			return nil, errors.Wrapf(err, "failed to create symlink %q with target %q", hdr.Name, hdr.Linkname)
 		}
 	}
 	return hdrs, nil

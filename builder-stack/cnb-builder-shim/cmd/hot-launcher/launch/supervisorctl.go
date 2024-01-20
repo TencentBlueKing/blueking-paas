@@ -28,10 +28,9 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
-var supervisorDir = utils.EnvOrDefault("SUPERVISOR_DIR", "/cnb/devcontainer/supervisor")
+var supervisorDir = utils.EnvOrDefault("SUPERVISOR_ROOT", "/cnb/devcontainer/supervisor")
 
-var confTemplate = `
-[unix_http_server]
+var confTemplate = `[unix_http_server]
 file = {{ .RootDir }}/supervisor.sock
 
 [supervisorctl]
@@ -44,17 +43,15 @@ logfile = {{ .RootDir }}/log/supervisord.log
 
 [rpcinterface:supervisor]
 supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
 {{ range .Processes }}
 [program:{{ .ProcType }}]
 command = {{ .Command }}
 stdout_logfile = {{ .ProcLogFile }}
 redirect_stderr = true
-{{ end }}
+{{ end -}}
 `
 
-var reloadScript = fmt.Sprintf(`
-#!/bin/bash
+var reloadScript = fmt.Sprintf(`#!/bin/bash
 
 socket_file="%[1]s/supervisor.sock"
 

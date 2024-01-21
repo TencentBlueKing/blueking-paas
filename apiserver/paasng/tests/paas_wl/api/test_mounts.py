@@ -38,6 +38,7 @@ def mount(bk_app, bk_module):
         name="mount-configmap",
         source_type=VolumeSourceType.ConfigMap.value,
         region=bk_app.region,
+        source_name="",
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
     Mount.objects.upsert_source(mount, source_data)
@@ -58,6 +59,7 @@ def mounts(bk_app, bk_module):
             name=f"mount-configmap-{i}",
             source_type=VolumeSourceType.ConfigMap.value,
             region=bk_app.region,
+            source_name="",
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
         Mount.objects.upsert_source(mount, source_data)

@@ -437,12 +437,13 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 mount_path=validated_data["mount_path"],
                 source_type=validated_data["source_type"],
                 region=application.region,
+                source_name=validated_data["source_name"],
             )
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 创建或更新 Mount source
-        Mount.objects.upsert_source(mount_instance, validated_data["source_config_data"])
+        mount_instance.upsert_source(mount_instance, validated_data["source_config_data"])
 
         try:
             slz = MountSLZ(mount_instance)
@@ -470,7 +471,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 创建或更新 Mount source
-        Mount.objects.upsert_source(mount_instance, validated_data["source_config_data"])
+        mount_instance.upsert_source(validated_data["source_config_data"])
 
         # 需要删除对应的 k8s volume 资源
         if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):

@@ -49,6 +49,9 @@ class VolumeSourceManager:
             )
 
     def delete_source_config(self, mount: Mount):
+        # 检查是否存在其他挂载
+        if Mount.objects.filter(source_config=mount.source_config).exclude(pk=mount.pk).exists():
+            return
         if mount.source_type == VolumeSourceType.ConfigMap:
             configmap_kmodel.delete(ConfigMap(app=self.wl_app, name=mount.source.name, data=mount.source.storage))
         elif mount.source_type == VolumeSourceType.PersistentVolumeClaim:

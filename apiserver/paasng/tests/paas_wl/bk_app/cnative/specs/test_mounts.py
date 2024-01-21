@@ -102,6 +102,7 @@ class TestVolumeSourceManager:
             name="mount-configmap",
             source_type=VolumeSourceType.ConfigMap.value,
             region=bk_app.region,
+            source_name="",
         )
         source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
         Mount.objects.upsert_source(mount, source_data)

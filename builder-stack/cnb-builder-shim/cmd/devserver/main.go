@@ -25,13 +25,14 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/devserver/api"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 func main() {
 	logger := logging.Default()
 
 	r := setupRouter()
-	if err := r.Run(":80"); err != nil {
+	if err := r.Run(utils.EnvOrDefault("DEV_SERVER_ADDR", ":30000")); err != nil {
 		logger.Error(err, "Start DevContainer Server Failed")
 		os.Exit(1)
 	}

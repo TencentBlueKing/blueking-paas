@@ -319,8 +319,8 @@ func getDevSteps(ctx context.Context) []Step {
 	steps = append(
 		steps,
 		Step{
-			"Hot launcher",
-			"Hot launcher processes...",
+			"Hot-launch",
+			"Hot-launch processes...",
 			phase.MakeHotLauncherCmd(ctx),
 			RootUid,
 			RootUid,

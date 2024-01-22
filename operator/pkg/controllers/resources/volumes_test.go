@@ -247,7 +247,7 @@ var _ = Describe("test builtin logs", func() {
 			bkapp.Annotations[paasv1alpha2.LogCollectorTypeAnnoKey] = anno
 			Expect(ShouldApplyBuiltinLogsVolume(bkapp)).To(Equal(expected))
 		},
-		Entry("when type = ELK", paasv1alpha2.BuiltinElkCollector, true),
+		Entry("when type = ELK", paasv1alpha2.BuiltinELKCollector, true),
 		Entry("when type = BK_LOG", paasv1alpha2.BkLogCollector, false),
 		Entry("when type is unknown", "something", false),
 	)

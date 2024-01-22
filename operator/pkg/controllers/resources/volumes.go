@@ -153,9 +153,9 @@ func (v *BuiltinLogsVolumeMount) GetMountPath() string {
 }
 
 // ShouldApplyBuiltinLogsVolume 判断是否应用内置日志挂载卷
-// 仅当 bkapp 的日志采集器类型是 BuiltinElkCollector 时才挂载日志到宿主机
+// 仅当 bkapp 的日志采集器类型是 BuiltinELKCollector 时才挂载日志到宿主机
 func ShouldApplyBuiltinLogsVolume(bkapp *paasv1alpha2.BkApp) bool {
-	return bkapp.Annotations[paasv1alpha2.LogCollectorTypeAnnoKey] == paasv1alpha2.BuiltinElkCollector
+	return bkapp.Annotations[paasv1alpha2.LogCollectorTypeAnnoKey] == paasv1alpha2.BuiltinELKCollector
 }
 
 // VolumeMounterMap is a map of VolumeMounter, which key is the Volume name
@@ -235,7 +235,7 @@ func GetAllVolumeMounterMap(bkapp *paasv1alpha2.BkApp) (VolumeMounterMap, error)
 			return nil, err
 		}
 		for idx, volume := range volumes {
-			if _, conflict := mounterMap[volume.GetName()]; conflict {
+			if _, existed := mounterMap[volume.GetName()]; existed {
 				return nil, errors.New("user defined volume mount is conflicted with builtin log volume mount")
 			}
 			mounterMap[volume.GetName()] = &volumes[idx]

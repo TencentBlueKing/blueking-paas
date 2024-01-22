@@ -74,8 +74,8 @@ const (
 	// LogCollectorTypeAnnoKey 注解中存储日志采集类型相关的键名
 	LogCollectorTypeAnnoKey = "bkapp.paas.bk.tencent.com/log-collector-type"
 
-	// BuiltinElkCollector 平台内置的 ELK 采集方案(需要挂载日志目录到宿主机指定位置)
-	BuiltinElkCollector = "ELK"
+	// BuiltinELKCollector 平台内置的 ELK 采集方案(需要挂载日志目录到宿主机指定位置)
+	BuiltinELKCollector = "ELK"
 	// BkLogCollector 日志平台采集器
 	BkLogCollector = "BK_LOG"
 )

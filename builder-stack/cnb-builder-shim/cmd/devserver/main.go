@@ -32,7 +32,7 @@ func main() {
 	logger := logging.Default()
 
 	r := setupRouter()
-	if err := r.Run(utils.EnvOrDefault("DEV_SERVER_ADDR", ":30000")); err != nil {
+	if err := r.Run(utils.EnvOrDefault("DEV_SERVER_ADDR", ":8000")); err != nil {
 		logger.Error(err, "Start DevContainer Server Failed")
 		os.Exit(1)
 	}

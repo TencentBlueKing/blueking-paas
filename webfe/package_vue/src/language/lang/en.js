@@ -2502,4 +2502,5 @@ export default {
   '令牌（access_token）可用于调用用户态的云 API，有效期 180 天。': 'The token (access_token) can be used to call the user state cloud API, with a validity period of 180 days.',
   若自定义日志格式: 'If custom log format',
   检查清洗规则: 'Check cleaning rules',
+  去授权: 'Authorize',
 };

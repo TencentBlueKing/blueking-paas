@@ -9,6 +9,12 @@
             class="f12"
             theme="primary"
             :outline="true"
+            v-bk-tooltips.top-end="{
+              content: $t('令牌（access_token）可用于调用用户态的云 API，有效期 180 天。'),
+              theme: 'light',
+              width: 220,
+              extCls: 'create-token-tips-cls',
+            }"
             style="margin-right: 10px"
             @click="handleShowDialogCreateToken"
           >
@@ -467,5 +473,20 @@ export default {
 
 .not-shadow {
   box-shadow: none !important;
+}
+
+.guide-wrapper {
+  .bk-button:hover {
+    background: #E1ECFF;
+    color: #1768EF;
+    border-color: #1768EF;
+  }
+}
+</style>
+<style>
+.create-token-tips-cls .tippy-content {
+  font-family: MicrosoftYaHei;
+  font-size: 12px;
+  color: #63656E;
 }
 </style>

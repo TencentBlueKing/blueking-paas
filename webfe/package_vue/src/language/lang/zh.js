@@ -2642,4 +2642,5 @@ export default {
   '创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。': '创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。',
   '应用 ID 确认': '应用 ID 确认',
   令牌查看: '令牌查看',
+  '令牌（access_token）可用于调用用户态的云 API，有效期 180 天。': '令牌（access_token）可用于调用用户态的云 API，有效期 180 天。',
 };

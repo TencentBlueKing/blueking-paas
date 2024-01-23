@@ -2499,4 +2499,5 @@ export default {
   '创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。': 'Creating a new token (access_token) will invalidate the original access_token. This action is irreversible. Please proceed with caution.',
   '应用 ID 确认': 'Application ID Confirmation',
   令牌查看: 'View Token',
+  '令牌（access_token）可用于调用用户态的云 API，有效期 180 天。': 'The token (access_token) can be used to call the user state cloud API, with a validity period of 180 days.',
 };

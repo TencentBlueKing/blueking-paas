@@ -85,6 +85,7 @@
       theme="primary"
       :mask-close="false"
       width="640"
+      @after-leave="handleCancel"
     >
       <div class="header-wrapper" slot="header">
         {{ $t('创建新令牌') }}

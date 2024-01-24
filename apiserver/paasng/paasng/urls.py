@@ -84,4 +84,5 @@ urlpatterns = [
     path("", include("paas_wl.bk_app.processes.urls")),
     path("", include("paas_wl.bk_app.cnative.specs.urls")),
     url(r"^", include("paasng.accessories.paas_analysis.urls")),
+    url(r"^notice/", include(("bk_notice_sdk.urls", "notice"), namespace="notice")),
 ]

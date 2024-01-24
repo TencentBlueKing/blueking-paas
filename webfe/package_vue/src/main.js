@@ -191,6 +191,7 @@ Vue.prototype.catchErrorHandler = function (error) {
 window.GLOBAL_CONFIG = {
   ...PLATFORM_CONFIG,
   ...window.GLOBAL_CONFIG,
+  NOTICE_HEIGHT: 40,
 };
 Vue.prototype.GLOBAL = window.GLOBAL_CONFIG;
 

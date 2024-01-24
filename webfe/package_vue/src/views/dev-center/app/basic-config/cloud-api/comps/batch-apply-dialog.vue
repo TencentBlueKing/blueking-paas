@@ -99,7 +99,7 @@
         </div>
       </div>
       <bk-form
-        :label-width="80"
+        :label-width="localLanguage === 'en' ? 110 : 80"
         :model="formData"
         style="margin-top: 25px;"
       >
@@ -154,123 +154,127 @@
     </template>
   </bk-dialog>
 </template>
-<script>
-    import PaasngAlert from './paasng-alert';
-    import i18n from '@/language/i18n';
-    export default {
-        name: '',
-        components: {
-            PaasngAlert
-        },
-        props: {
-            show: {
-                type: Boolean,
-                default: false
-            },
-            title: {
-                type: String,
-                default: i18n.t('批量申请权限')
-            },
-            rows: {
-                type: Array,
-                default: () => []
-            },
-            appCode: {
-                type: String,
-                default: ''
-            },
-            apiId: {
-                type: [String, Number],
-                default: ''
-            },
-            apiName: {
-                type: String,
-                default: ''
-            },
-            isComponent: {
-                type: Boolean,
-                default: false
-            }
-        },
-        data () {
-            return {
-                visible: false,
-                loading: false,
-                formData: {
-                    reason: '',
-                    expired: 6
-                },
-                isScrollBottom: false
-            };
-        },
-        computed: {
-            applyRows () {
-                return this.rows.filter(item => item.permission_action === 'apply');
-            },
-            renewalRows () {
-                return this.rows.filter(item => item.permission_action === 'renew');
-            }
-        },
-        watch: {
-            show: {
-                handler (value) {
-                    this.visible = !!value;
-                },
-                immediate: true
-            }
-        },
-        methods: {
-            async handleConfirm () {
-                this.loading = true;
-                try {
-                    const params = {
-                        data: {
-                            reason: this.formData.reason,
-                            expire_days: this.formData.expired * 30,
-                            gateway_name: this.apiName
-                        },
-                        appCode: this.appCode
-                    };
-                    if (this.isComponent) {
-                        params.data.component_ids = this.applyRows.map(item => item.id);
-                        params.systemId = this.apiId;
-                    } else {
-                        params.data.resource_ids = this.applyRows.map(item => item.id);
-                        params.data.grant_dimension = 'resource';
-                        params.apiId = this.apiId;
-                    }
-                    const methods = this.isComponent ? 'sysApply' : 'apply';
-                    await this.$store.dispatch(`cloudApi/${methods}`, params);
-                    this.$emit('on-apply');
-                } catch (e) {
-                    this.catchErrorHandler(e);
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            handleCancel () {
-                this.visible = false;
-            },
-
-            handleAfterLeave () {
-                this.formData = Object.assign({}, {
-                    reason: '',
-                    expired: 6
-                });
-                this.$emit('update:show', false);
-                this.$emit('after-leave');
-            },
-
-            handleScroll (event) {
-                if (event.target.scrollTop + event.target.offsetHeight >= event.target.scrollHeight) {
-                    this.isScrollBottom = true;
-                } else {
-                    this.isScrollBottom = false;
-                }
-            }
-        }
+<script>import PaasngAlert from './paasng-alert';
+import i18n from '@/language/i18n';
+export default {
+  name: '',
+  components: {
+    PaasngAlert,
+  },
+  props: {
+    show: {
+      type: Boolean,
+      default: false,
+    },
+    title: {
+      type: String,
+      default: i18n.t('批量申请权限'),
+    },
+    rows: {
+      type: Array,
+      default: () => [],
+    },
+    appCode: {
+      type: String,
+      default: '',
+    },
+    apiId: {
+      type: [String, Number],
+      default: '',
+    },
+    apiName: {
+      type: String,
+      default: '',
+    },
+    isComponent: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      visible: false,
+      loading: false,
+      formData: {
+        reason: '',
+        expired: 6,
+      },
+      isScrollBottom: false,
     };
+  },
+  computed: {
+    // 可申请
+    applyRows() {
+      return this.rows.filter(item => !item.applyDisabled);
+    },
+    // 可续期
+    renewalRows() {
+      return this.rows.filter(item => !item.renewDisabled);
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  watch: {
+    show: {
+      handler(value) {
+        this.visible = !!value;
+      },
+      immediate: true,
+    },
+  },
+  methods: {
+    async handleConfirm() {
+      this.loading = true;
+      try {
+        const params = {
+          data: {
+            reason: this.formData.reason,
+            expire_days: this.formData.expired * 30,
+            gateway_name: this.apiName,
+          },
+          appCode: this.appCode,
+        };
+        if (this.isComponent) {
+          params.data.component_ids = this.applyRows.map(item => item.id);
+          params.systemId = this.apiId;
+        } else {
+          params.data.resource_ids = this.applyRows.map(item => item.id);
+          params.data.grant_dimension = 'resource';
+          params.apiId = this.apiId;
+        }
+        const methods = this.isComponent ? 'sysApply' : 'apply';
+        await this.$store.dispatch(`cloudApi/${methods}`, params);
+        this.$emit('on-apply');
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    handleCancel() {
+      this.visible = false;
+    },
+
+    handleAfterLeave() {
+      this.formData = Object.assign({}, {
+        reason: '',
+        expired: 6,
+      });
+      this.$emit('update:show', false);
+      this.$emit('after-leave');
+    },
+
+    handleScroll(event) {
+      if (event.target.scrollTop + event.target.offsetHeight >= event.target.scrollHeight) {
+        this.isScrollBottom = true;
+      } else {
+        this.isScrollBottom = false;
+      }
+    },
+  },
+};
 </script>
 <style lang="scss">
     .paasng-api-batch-apply-dialog {

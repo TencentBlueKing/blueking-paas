@@ -6,11 +6,15 @@ setup() {
     setup_env
 }
 
+teardown() {
+    teardown_env
+}
+
 @test "vendor not exists" {
     [ ! -e "${BUILD_ROOT}/vendor" ]
 
     export WITH_CODE_FILES=0
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
     [ "${status}" = 0 ]
     [ ! -e "${BUILD_ROOT}/vendor" ]
 }
@@ -21,7 +25,7 @@ setup() {
     [ -d "${BUILD_ROOT}/vendor" ]
 
     export WITH_CODE_FILES=0
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
     [ "${status}" = 0 ]
     [ ! -e "${BUILD_ROOT}/vendor" ]
 }
@@ -32,7 +36,7 @@ setup() {
     [ -d "${BUILD_ROOT}/vendor" ]
 
     export WITH_CODE_FILES=1
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
 
     [ "${status}" = 0 ]
     [ -d "${BUILD_ROOT}/vendor" ]
@@ -43,7 +47,7 @@ setup() {
     echo 'echo "${PATH}"' > "${BUILD_ROOT}/bin/post-compile"
     
     export GOPATH="/go"
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
     [ "${status}" = 0 ]
     
     run cat ".hook-post-compile"
@@ -56,7 +60,7 @@ setup() {
     echo 'echo "${PATH}"' > "${BUILD_ROOT}/bin/post-compile"
     
     export HOME="/app"
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
     [ "${status}" = 0 ]
     
     run cat ".hook-post-compile"
@@ -65,7 +69,7 @@ setup() {
 }
 
 @test "test profile gopath.sh" {
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
     [ "${status}" = 0 ]
 
     run cat "${build}/.profile.d/gopath.sh"
@@ -78,7 +82,7 @@ setup() {
     export GOPATH="${BIN_ROOT}/gopath_no_exists"
     export HOME="${BUILD_ROOT}"
 
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
 
     [ -d "${BUILD_ROOT}/go/bin" ]
 }
@@ -90,7 +94,7 @@ setup() {
     mkdir -p "${GOPATH}/bin"
     touch "${GOPATH}/bin/command"
 
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
 
     [ -d "${BUILD_ROOT}/go/bin" ]
     [ -e "${BUILD_ROOT}/go/bin/command" ]
@@ -103,7 +107,7 @@ setup() {
     mkdir -p "${GOPATH}/bin"
     touch "${GOPATH}/bin/command"
 
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
 
     [ -d "${BUILD_ROOT}/go/bin" ]
     [ -e "${BUILD_ROOT}/go/bin/command" ]
@@ -115,7 +119,7 @@ setup() {
     mkdir -p "${BUILD_ROOT}/go/bin"
     touch "${BUILD_ROOT}/go/bin/command"
 
-    run "${BUILD_PACK}/hooks/post-compile"
+    run "${buildpack}/hooks/post-compile"
 
     [ -d "${BUILD_ROOT}/go/bin" ]
     [ -e "${BUILD_ROOT}/go/bin/command" ]

@@ -125,6 +125,10 @@ export default {
     routeName() {
       return this.$route.name;
     },
+    // 是否显示通知中心
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
+    },
   },
   watch: {
     $route: {
@@ -259,10 +263,12 @@ export default {
     this.initNavInfo();
   },
   mounted() {
+    // 通知中心高度
+    const NOTICE_HEIGHT = this.isShowNotice ? this.GLOBAL.NOTICE_HEIGHT : 0;
     const HEADER_HEIGHT = 50;
     const FOOTER_HEIGHT = 0;
     const winHeight = window.innerHeight;
-    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT - NOTICE_HEIGHT;
     if (contentHeight > this.minHeight) {
       this.minHeight = contentHeight;
     }

@@ -73,7 +73,8 @@ span.ellipsis {
 .paas-content {
     width: 100%;
     background: #fafafa;
-    padding: 50px 0 10px 0;
+    // 通知中心
+    padding: var(--app-content-pd) 0 10px 0;
 }
 
 .paas-content.white {

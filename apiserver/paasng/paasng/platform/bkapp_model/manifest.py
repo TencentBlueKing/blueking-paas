@@ -36,6 +36,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
     LEGACY_PROC_IMAGE_ANNO_KEY,
+    LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
     USE_CNB_ANNO_KEY,
@@ -68,6 +69,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConf
 from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
+from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -142,6 +144,7 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
                 MODULE_NAME_ANNO_KEY: module.name,
             }
         )
+
         # Set the annotation to inform operator what the image pull secret name is
         model_res.metadata.annotations[
             IMAGE_CREDENTIALS_REF_ANNO_KEY
@@ -468,6 +471,10 @@ def get_bkapp_resource_for_deploy(
     # 执行其他命令需要用 `launcher` 进入 buildpack 上下文，因此需要特殊标注
     # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
     model_res.metadata.annotations[USE_CNB_ANNO_KEY] = "true" if use_cnb else "false"
+
+    # Set log collector type to inform operator do some special logic.
+    # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
+    model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

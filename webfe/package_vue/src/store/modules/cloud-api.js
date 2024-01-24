@@ -213,5 +213,15 @@ export default {
       const url = `${BACKEND_URL}/api/tmpls/${tplTyp}/region/${region}/template/${tplName}`;
       return http.get(url, config);
     },
+
+    /**
+     * 获取新令牌
+     * @param {string} appCode 应用id
+     * @param {string} moduleId 环境id
+     */
+    getAccessToken({}, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/oauth/token/prod/`;
+      return http.get(url, config);
+    },
   },
 };

@@ -18,19 +18,30 @@ pack: ${ROOT}/output patch  ## 打包 buildpack
 	make unpatch
 
 
+##@ Test
+.PHONY: test
+test:  ## 单元测试 - 执行前需要先 patch
+	docker run --rm \
+			--network=host \
+			-v `pwd`:/data \
+			-w /data \
+			bats/bats:v1.4.1 \
+			/data/tests
+
+
 ##@ Misc
 .PHONY: patch
 patch:
 	patch buildpack/bin/compile patchs/buildpack/bin/compile.patch
 	patch buildpack/files.json patchs/buildpack/files.json.patch
-	ln -s ../hooks buildpack/hooks
+	rsync -a --delete ./hooks buildpack/
 
 
 .PHONY: unpatch
 unpatch:
 	patch -R buildpack/bin/compile patchs/buildpack/bin/compile.patch
 	patch -R buildpack/files.json patchs/buildpack/files.json.patch
-	rm buildpack/hooks
+	rm -r buildpack/hooks
 
 
 .PHONY: help

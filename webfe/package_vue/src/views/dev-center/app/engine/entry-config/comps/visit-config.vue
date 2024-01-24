@@ -300,8 +300,9 @@ export default {
         ],
         pathPrefix: [
           {
-            validator: () => {
-              const val = this.curPathPrefix[this.curInputIndex];
+            validator: (value) => {
+              const pathPrefix = this.curPathPrefix[this.curInputIndex];
+              const val = pathPrefix === undefined ? value : pathPrefix;
               const reg = /^\/[a-z-z0-9_-]*\/?$/;
               return reg.test(val);
             },

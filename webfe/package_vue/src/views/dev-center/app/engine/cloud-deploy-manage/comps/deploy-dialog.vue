@@ -1121,6 +1121,10 @@ export default {
           break;
       }
 
+      if (preparation.action_name === 'CHECK_ENV_PROTECTION') {
+        return;
+      }
+
       window.open(routeData.href, '_blank');
     },
   },

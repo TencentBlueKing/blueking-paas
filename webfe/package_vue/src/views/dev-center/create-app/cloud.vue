@@ -518,6 +518,7 @@
           <div class="mr20" v-if="curStep === 1">
             <bk-button
               theme="primary"
+              :disabled="!curExtendConfig.isAuth"
               @click="handleNext"
             >
               {{ $t('下一步') }}
@@ -674,7 +675,7 @@ export default {
           fetchMethod: this.generateFetchRepoListMethod('tc_git'),
           repoList: [],
           selectedRepoUrl: '',
-          authDocs: '',
+          authDocs: this.GLOBAL.DOC.TC_GIT_AUTH,
         },
         github: {
           isAuth: true,
@@ -870,6 +871,9 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    curExtendConfig() {
+      return this.gitExtendConfig[this.sourceControlTypeItem];
     },
   },
   watch: {

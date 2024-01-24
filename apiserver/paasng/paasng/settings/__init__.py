@@ -171,6 +171,8 @@ INSTALLED_APPS = [
     "paas_wl.bk_app.cnative.specs",
     "paas_wl.bk_app.deploy",
     "paas_wl.infras.resources.generation",
+    # 蓝鲸通知中心
+    "bk_notice_sdk",
 ]
 
 # Allow extending installed apps
@@ -968,10 +970,6 @@ SERVICE_PROTECTED_SPEC_NAMES = ["app_zone"]
 # 比如 APP_ZONE_CLUSTER_MAPPINGS = {"main-cluster": "another-zone"}
 APP_ZONE_CLUSTER_MAPPINGS = settings.get("APP_ZONE_CLUSTER_MAPPINGS", {})
 
-# 为不同应用类型所配置的预设增强服务，默认为任何类型都为空
-# 示例格式：{'default': {'mysql': {'specs': {'version': '5.7'}}, 'redis': {}}, 'bk_plugin': ...}
-PRESET_SERVICES_BY_APP_TYPE: Dict[str, Dict] = settings.get("PRESET_SERVICES_BY_APP_TYPE", {})
-
 # ---------------
 # 应用市场相关配置
 # ---------------
@@ -1229,6 +1227,23 @@ RABBITMQ_MONITOR_CONF = settings.get("RABBITMQ_MONITOR_CONF", {})
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get("BK_MONITOR_APIGW_SERVICE_STAGE", "stage")
 
 # ---------------------------------------------
+# 蓝鲸通知中心配置
+# ---------------------------------------------
+# 通知中心的功能可通过配置开启
+ENABLE_BK_NOTICE = settings.get("ENABLE_BK_NOTICE", False)
+# 对接通知中心的环境，默认为生产环境
+BK_NOTICE_ENV = settings.get("BK_NOTICE_ENV", "prod")
+BK_NOTICE = {
+    "STAGE": BK_NOTICE_ENV,
+    "LANGUAGE_COOKIE_NAME": LANGUAGE_COOKIE_NAME,
+    "DEFAULT_LANGUAGE": "en",
+    "PLATFORM": BK_APP_CODE,  # 平台注册的 code，用于获取系统通知消息时进行过滤
+    "BK_API_URL_TMPL": BK_API_URL_TMPL,
+    "BK_API_APP_CODE": BK_APP_CODE,  # 用于调用 apigw 认证
+    "BK_API_SECRET_KEY": BK_APP_SECRET,  # 用于调用 apigw 认证
+}
+
+# ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
 
@@ -1270,6 +1285,7 @@ THIRD_APP_INIT_CODES = settings.get("THIRD_APP_INIT_CODES", "")
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
+
 
 # 引入 workloads 相关配置
 # fmt: off

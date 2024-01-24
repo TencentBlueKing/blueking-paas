@@ -7,7 +7,10 @@
             class="overview-main"
             :style="{ 'min-height': routeNameMap.includes($route.name) ? '0px' : `${minHeight}px` }"
           >
-            <div class="overview-fleft overview-fleft-plugin">
+            <div
+              class="overview-fleft overview-fleft-plugin"
+              :style="{ 'top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px` }"
+            >
               <plugin-quick-nav ref="quickNav" />
               <div
                 style="height: 100%"
@@ -121,6 +124,10 @@ export default {
     isSummaryIframe() {
       return this.curPluginInfo.overview_page?.bottom_url && this.$route.name === 'pluginSummary';
     },
+    // 是否显示通知中心
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
+    },
   },
   watch: {
     $route: {
@@ -229,10 +236,12 @@ export default {
     await this.initNavInfo();
   },
   mounted() {
+    // 通知中心高度
+    const NOTICE_HEIGHT = this.isShowNotice ? window.GLOBAL_CONFIG.NOTICE_HEIGHT : 0;
     const HEADER_HEIGHT = 50;
     const FOOTER_HEIGHT = 0;
     const winHeight = window.innerHeight;
-    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT - NOTICE_HEIGHT;
     if (contentHeight > this.minHeight) {
       this.minHeight = contentHeight;
     }

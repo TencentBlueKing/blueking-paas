@@ -69,6 +69,17 @@ const (
 	LegacyProcResAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
 )
 
+// 日志采集相关信息
+const (
+	// LogCollectorTypeAnnoKey 注解中存储日志采集类型相关的键名
+	LogCollectorTypeAnnoKey = "bkapp.paas.bk.tencent.com/log-collector-type"
+
+	// BuiltinELKCollector 平台内置的 ELK 采集方案(需要挂载日志目录到宿主机指定位置)
+	BuiltinELKCollector = "ELK"
+	// BkLogCollector 日志平台采集器
+	BkLogCollector = "BK_LOG"
+)
+
 // 平台相关信息
 const (
 	// HookTypeKey 注解中存储钩子类型的键名
@@ -133,4 +144,6 @@ var AllowedResQuotaPlans = []ResQuotaPlan{
 var AllowedImagePullPolicies = []corev1.PullPolicy{corev1.PullIfNotPresent, corev1.PullAlways, corev1.PullNever}
 
 // FilePathPattern 文件路径正则
-const FilePathPattern = `^/([^/\x00]+(/)?)*$`
+// 该正则匹配以'/'开头，不包含空字符(\0)和连续'/'的文件路径，且根目录'/'不合法
+// 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
+const FilePathPattern = `^/([^/\x00]+(/)?)+$`

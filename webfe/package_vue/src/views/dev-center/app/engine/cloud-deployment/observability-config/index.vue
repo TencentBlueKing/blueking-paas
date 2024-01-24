@@ -16,92 +16,101 @@
         <i class="paasng-icon paasng-plus mr5" />
         {{ $t('新增采集规则') }}
       </bk-button>
-      <bk-table
-        v-bkloading="{ isLoading: isTableLoading }"
-        :data="logCollectionList"
-        :size="'small'"
-        ext-cls="collection-rules-cls"
-        :outer-border="false"
-        :header-border="false"
-        :pagination="pagination"
-        @page-change="handlePageChange"
-        @page-limit-change="handleLimitChange"
-      >
-        <div slot="empty">
-          <table-empty
-            :explanation="$t('当前模块任意环境部署成功后，将会给该模块配置默认的日志采集规则。')"
-            empty
-          />
-        </div>
-        <bk-table-column
-          :label="$t('采集规则名称')"
-          :show-overflow-tooltip="true"
+      <div v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }">
+        <bk-table
+          v-if="logCollectionList.length"
+          v-bkloading="{ isLoading: isTableLoading }"
+          :data="logCollectionList"
+          :size="'small'"
+          ext-cls="collection-rules-cls"
+          :outer-border="false"
+          :header-border="false"
+          :pagination="pagination"
+          @page-change="handlePageChange"
+          @page-limit-change="handleLimitChange"
         >
-          <div
-            slot-scope="{ row }"
+          <bk-table-column
+            :label="$t('采集规则名称')"
+            :show-overflow-tooltip="true"
           >
-            {{ row.name_en }}
-          </div>
-        </bk-table-column>
-        <bk-table-column
-          :label="$t('采集对象')"
-          :show-overflow-tooltip="true"
-        >
-          <template slot-scope="{ row }">
-            {{ row.log_type === 'stdout' ? $t('标准输出') : $t('容器内文件') }}
-          </template>
-        </bk-table-column>
-        <bk-table-column
-          :label="$t('日志采集路径')"
-          :show-overflow-tooltip="true"
-        >
-          <template slot-scope="{ row }">
-            <div v-if="row.log_paths && row.log_paths.length">{{ row.log_paths.join('; ') }}</div>
-            <span v-else>--</span>
-          </template>
-        </bk-table-column>
-        <bk-table-column :label="$t('类型')">
-          <template slot-scope="{ row }">
-            {{ row.is_builtin ? $t('平台内置') : $t('自定义') }}
-          </template>
-        </bk-table-column>
-        <bk-table-column
-          :label="$t('操作')"
-          width="180"
-        >
-          <template slot-scope="{ row }">
-            <bk-button
-              class="mr10"
-              theme="primary"
-              text
-              @click="handleToLink(row)"
+            <div
+              slot-scope="{ row }"
             >
-              {{ $t('检索') }}
-            </bk-button>
-            <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+              {{ row.name_en }}
+            </div>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('采集对象')"
+            :show-overflow-tooltip="true"
+          >
+            <template slot-scope="{ row }">
+              {{ row.log_type === 'stdout' ? $t('标准输出') : $t('容器内文件') }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('日志采集路径')"
+            :show-overflow-tooltip="true"
+          >
+            <template slot-scope="{ row }">
+              <div v-if="row.log_paths && row.log_paths.length">{{ row.log_paths.join('; ') }}</div>
+              <span v-else>--</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('类型')">
+            <template slot-scope="{ row }">
+              {{ row.is_builtin ? $t('平台内置') : $t('自定义') }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('操作')"
+            width="180"
+          >
+            <template slot-scope="{ row }">
               <bk-button
                 class="mr10"
                 theme="primary"
                 text
-                :disabled="row.is_builtin"
-                @click="handleCollectionRuleEdit(row)"
+                @click="handleToLink(row)"
               >
-                {{ $t('编辑') }}
+                {{ $t('检索') }}
               </bk-button>
-            </span>
-            <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
-              <bk-button
-                theme="primary"
-                text
-                :disabled="row.is_builtin"
-                @click="handleCollectionRuleDelete(row)"
-              >
-                {{ $t('删除') }}
-              </bk-button>
-            </span>
-          </template>
-        </bk-table-column>
-      </bk-table>
+              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+                <bk-button
+                  class="mr10"
+                  theme="primary"
+                  text
+                  :disabled="row.is_builtin"
+                  @click="handleCollectionRuleEdit(row)"
+                >
+                  {{ $t('编辑') }}
+                </bk-button>
+              </span>
+              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+                <bk-button
+                  theme="primary"
+                  text
+                  :disabled="row.is_builtin"
+                  @click="handleCollectionRuleDelete(row)"
+                >
+                  {{ $t('删除') }}
+                </bk-button>
+              </span>
+            </template>
+          </bk-table-column>
+        </bk-table>
+        <div
+          v-else
+          class="empty"
+        >
+          <div class="empty-content">
+            <div class="title">{{ $t('暂未配置日志采集规则') }}</div>
+            <div class="sub-title">{{ $t('当前模块任意环境部署成功后，将会给改模块配置默认的日志采集规则') }}</div>
+            <bk-button :text="true" title="primary" size="small" @click="handleToDeploy">
+              {{ $t('去部署') }}
+            </bk-button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 告警策略 -->
@@ -493,6 +502,16 @@ export default {
     handleToLink(row) {
       window.open(row.url, '_blank');
     },
+
+    // 跳转部署页
+    handleToDeploy() {
+      this.$router.push({
+        name: 'cloudAppDeployManageStag',
+        params: {
+          id: this.appCode,
+        },
+      });
+    },
   },
 };
 </script>
@@ -580,6 +599,26 @@ export default {
       font-size: 14px;
       cursor: pointer;
       transform: translateY(0);
+    }
+  }
+}
+.empty {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  .empty-content {
+    text-align: center;
+    .title {
+      font-size: 14px;
+      color: #63656E;
+      line-height: 24px;
+    }
+
+    .sub-title {
+      margin: 8px 0;
+      font-size: 12px;
+      color: #979BA5;
+      line-height: 20px;
     }
   }
 }

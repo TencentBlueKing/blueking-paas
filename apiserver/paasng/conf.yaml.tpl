@@ -487,10 +487,6 @@
 #   ce-dev: dev-default
 #   ce-prod: prod-default
 
-## 为不同应用类型所配置的预设增强服务，默认为任何类型都为空
-## 示例格式：{'default': {'mysql': {'specs': {'version': '5.7'}}, 'redis': {}}, 'bk_plugin': ...}
-# PRESET_SERVICES_BY_APP_TYPE: {}
-
 
 ## ------------------------------------ 应用市场相关配置 ------------------------------------
 

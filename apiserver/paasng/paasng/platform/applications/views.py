@@ -72,6 +72,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.applications import serializers as slzs
+from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
 from paasng.platform.applications.constants import (
     AppFeatureFlag,
     ApplicationRole,
@@ -94,14 +95,12 @@ from paasng.platform.applications.signals import (
     post_create_application,
     pre_delete_application,
 )
-from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import (
     create_application,
     create_default_module,
     create_market_config,
     create_third_app,
-    delete_all_modules,
     get_app_overview,
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
@@ -310,7 +309,7 @@ class ApplicationViewSet(viewsets.ViewSet):
 
     def _delete_application(self, application: Application):
         try:
-            application.delete()
+            ApplicationCleaner(application).clean()
         except Exception as e:
             logger.exception(f"unable to delete application {application.code}")
             raise error_codes.CANNOT_DELETE_APP.f(str(e))
@@ -510,9 +509,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config["source_init_template"]:
-            tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+            tmpl = Template.objects.get(name=tmpl_name)
             module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
-
         # lesscode app needs to create an application on the bk_lesscode platform first
         if source_origin == SourceOrigin.BK_LESS_CODE:
             # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
@@ -629,17 +627,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             operator=operator,
         )
 
-        app_specs = AppSpecs(application)
-        language = app_specs.language_by_default
-
         # Create engine related data
         # `source_init_template` is optional
         source_init_template = engine_params.get("source_init_template", "")
+        language = ""
         if source_init_template:
             language = Template.objects.get(
                 name=source_init_template, type__in=TemplateType.normal_app_types()
             ).language
-
         module = create_default_module(
             application,
             source_init_template=source_init_template,

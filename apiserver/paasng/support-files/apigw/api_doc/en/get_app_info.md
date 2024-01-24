@@ -62,6 +62,5 @@ Before calling the interface, please get your access_token first. For specific g
 |-------------------------------------|----------------|----------------------------------------|
 | engine_enabled                      | bool           | Is the application engine enabled      |
 | can_create_extra_modules            | bool           | Can additional modules be created      |
-| require_templated_source            | bool           | Is a template required when creating a module |
 | confirm_required_when_publish       | bool           | Is a second confirmation required when publishing to the market |
 | market_published                    | bool           | Has it been published to the application market |

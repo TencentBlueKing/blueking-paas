@@ -6,36 +6,36 @@ setup() {
     BUILD_DIR=$(mktemp -d -t bp-post-install-XXXXXXXX)
     CACHE_DIR=$(mktemp -d -t bp-post-install-XXXXXXXX)
     ENV_DIR=$(mktemp -d -t bp-post-install-XXXXXXXX)
-    BUILD_PACK=$(mktemp -d -t bp-post-install-XXXXXXXX)
+    ROOT_DIR=$(mktemp -d -t bp-post-install-XXXXXXXX)
     APP_DIR=$(mktemp -d -t bp-post-install-XXXXXXXX)
 
-    cp -r buildpack/* ${BUILD_PACK}
+    cp -r buildpack/* ${ROOT_DIR}
     mkdir -p "${BUILD_DIR}/.heroku"
 
-    export BUILD_DIR CACHE_DIR ENV_DIR BUILD_PACK APP_DIR
+    export BUILD_DIR CACHE_DIR ENV_DIR ROOT_DIR APP_DIR
 }
 
 teardown() {
-    rm -rf "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}" "${BUILD_PACK}" "${APP_DIR}"
+    rm -rf "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}" "${ROOT_DIR}" "${APP_DIR}"
 
-    unset BUILD_DIR CACHE_DIR ENV_DIR BUILD_PACK APP_DIR
+    unset BUILD_DIR CACHE_DIR ENV_DIR ROOT_DIR APP_DIR
 }
 
 @test "copy .heroku/src" {
     mkdir -p ${APP_DIR}/.heroku/src
     touch ${APP_DIR}/.heroku/src/test
 
-    run bash -c "source ${BUILD_PACK}/bin/utils; source ${BUILD_PACK}/hook/post-install"
+    run bash -c "source ${ROOT_DIR}/bin/utils; source ${ROOT_DIR}/hooks/post-install"
 
     [ "${status}" = 0 ]
     [ -f "${BUILD_DIR}/.heroku/src/test" ]
 }
 
 @test "export enviroments" {
-    run "${BUILD_PACK}/hook/post-install"
+    run "${ROOT_DIR}/hooks/post-install"
 
     [ "${status}" = 0 ]
-    [ -f "${BUILD_PACK}/export" ]
+    [ -f "${ROOT_DIR}/export" ]
 }
 
 @test "clean pycache" {
@@ -45,7 +45,7 @@ teardown() {
     touch "${test_path}"
     [ -f "${test_path}" ]
 
-    run "${BUILD_PACK}/hook/post-install"
+    run "${ROOT_DIR}/hooks/post-install"
 
     [ "${status}" = 0 ]
     [ ! -f "${test_path}" ]
@@ -58,7 +58,7 @@ teardown() {
     touch "${test_path}"
     [ -f "${test_path}" ]
 
-    run "${BUILD_PACK}/hook/post-install"
+    run "${ROOT_DIR}/hooks/post-install"
 
     [ "${status}" = 0 ]
     [ ! -f "${test_path}" ]

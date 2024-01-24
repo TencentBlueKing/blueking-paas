@@ -43,7 +43,6 @@ from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.engine.constants import ImagePullPolicy, RuntimeType
 from paasng.platform.engine.models import EngineApp
@@ -451,6 +450,18 @@ class ModuleCleaner:
     def __init__(self, module: Module):
         self.module = module
 
+    def clean(self):
+        """main entrance to clean module"""
+        logger.info("going to delete services related to Module<%s>", self.module)
+        self.delete_services()
+
+        logger.info("going to delete EngineApp related to Module<%s>", self.module)
+        self.delete_engine_apps()
+
+        # 数据记录删除(module 是真删除)
+        logger.info("going to delete Module<%s>", self.module)
+        self.delete_module()
+
     def delete_services(self, service_id: Optional[str] = None):
         """删除所有关联增强服务，以及所有被其他模块共享引用的服务关系
 
@@ -501,16 +512,8 @@ class DefaultServicesBinder:
         - Module's source template config
         - Application's specs(for default modules only)
         """
-        services = self.find_services_from_app_specs()
-        services.update(self.find_services_from_template())
+        services = self.find_services_from_template()
         self._bind(services)
-
-    def find_services_from_app_specs(self) -> PresetServiceSpecs:
-        """find default services for current application"""
-        # Only affects default module
-        if not self.module.is_default:
-            return {}
-        return AppSpecs(self.application).preset_services
 
     def find_services_from_template(self) -> PresetServiceSpecs:
         """find default services defined in module template"""

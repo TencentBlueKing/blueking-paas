@@ -89,7 +89,15 @@ class ApplicationListView(GenericTemplateView):
             page = queryset.filter(code__in=page_app_code_list)
 
         data = self.get_serializer(page, many=True, context={"app_resource_quotas": app_resource_quotas}).data
-        data = sorted(data, key=lambda item: item["resource_quotas"]["memory"], reverse=True)
+
+        def get_memory_for_desc_order(item):
+            try:
+                return int(item["resource_quotas"]["memory"])
+            except (KeyError, ValueError):
+                # 可能是 '--' 无效值
+                return 0
+
+        data = sorted(data, key=lambda item: get_memory_for_desc_order(item), reverse=True)
         kwargs["application_list"] = data
 
         # 没有调用默认的 paginate_queryset 方法，需要手动给 paginator 的参数赋值

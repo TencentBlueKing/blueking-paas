@@ -44,7 +44,6 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, pre_delete_module
 from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.applications.utils import delete_module
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
@@ -60,7 +59,7 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import init_module_in_view
+from paasng.platform.modules.manager import ModuleCleaner, init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -195,13 +194,15 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # 审计记录在事务外创建, 避免由于数据库回滚而丢失
         pre_delete_module.send(sender=Module, module=module, operator=request.user.pk)
-        try:
-            delete_module(application, module_name, request.user.pk)
-        except Exception as e:
-            logger.exception(
-                "unable to clean module<%s> of application<%s> related resources", module_name, application.code
-            )
-            raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
+        with transaction.atomic():
+            try:
+                module = application.get_module_with_lock(module_name=module_name)
+                ModuleCleaner(module).clean()
+            except Exception as e:
+                logger.exception(
+                    "unable to clean module<%s> of application<%s> related resources", module_name, application.code
+                )
+                raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # [deprecated] use `api.applications.entrances.set_default_entrance` instead
@@ -267,7 +268,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config["source_init_template"]:
-            tmpl = Template.objects.get(name=tmpl_name, type=TemplateType.NORMAL)
+            tmpl = Template.objects.get(name=tmpl_name)
             module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
 
         module = Module.objects.create(

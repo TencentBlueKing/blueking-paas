@@ -1,7 +1,10 @@
 <template lang="html">
   <div
     class="bk-apps-wrapper mt30"
-    :style="{ 'min-height': `${minHeight}px` }"
+    :style="{
+      'min-height': `${minHeight}px`,
+      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 28 : 28}px`
+    }"
     @click="resetAction()"
   >
     <div
@@ -794,6 +797,9 @@ export default {
     enFormItemWidth() {
       return this.localLanguage === 'en' ? '120px' : '110px';
     },
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
+    },
   },
   watch: {
     filterKey(newVal, oldVal) {
@@ -955,8 +961,10 @@ export default {
     },
 
     toAppSummary(appItem) {
+      const routeName = appItem.application?.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary';
+
       this.$router.push({
-        name: 'appSummary',
+        name: routeName,
         params: {
           id: appItem.application.code,
           moduleId: appItem.application.modules.find(item => item.is_default).name,

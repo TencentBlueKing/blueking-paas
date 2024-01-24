@@ -31,42 +31,49 @@
 </template>
 
 <script>
-    import paasNav from '@/components/paasNav';
-    import { processNavData } from '@/common/utils';
-    import { psServiceNavInfo } from '@/mixins/ps-static-mixin';
+import paasNav from '@/components/paasNav';
+import { processNavData } from '@/common/utils';
+import { psServiceNavInfo } from '@/mixins/ps-static-mixin';
 
-    export default {
-        components: {
-            'paasNav': paasNav
-        },
-        mixins: [psServiceNavInfo],
-        data () {
-            return {
-                minHeight: 700,
-                navCategories: [],
-                navItems: []
-            };
-        },
-        mounted () {
-            const resData = this.serviceNavStaticInfo.list;
-            const result = processNavData(resData);
-            this.navCategories = result.navCategories;
-            this.navItems = result.navItems;
-
-            const HEADER_HEIGHT = 50;
-            const FOOTER_HEIGHT = 0;
-            const winHeight = window.innerHeight;
-            const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
-            if (contentHeight > this.minHeight) {
-                this.minHeight = contentHeight;
-            }
-            document.body.className = 'ps-service-detail';
-        },
-
-        beforeDestroy () {
-            document.body.className = '';
-        }
+export default {
+  components: {
+    paasNav,
+  },
+  mixins: [psServiceNavInfo],
+  data() {
+    return {
+      minHeight: 700,
+      navCategories: [],
+      navItems: [],
     };
+  },
+  computed: {
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
+    },
+  },
+  mounted() {
+    const resData = this.serviceNavStaticInfo.list;
+    const result = processNavData(resData);
+    this.navCategories = result.navCategories;
+    this.navItems = result.navItems;
+
+    const HEADER_HEIGHT = 50;
+    const FOOTER_HEIGHT = 0;
+    // 通知中心高度
+    const NOTICE_HEIGHT = this.isShowNotice ? this.GLOBAL.NOTICE_HEIGHT : 0;
+    const winHeight = window.innerHeight;
+    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT - NOTICE_HEIGHT;
+    if (contentHeight > this.minHeight) {
+      this.minHeight = contentHeight;
+    }
+    document.body.className = 'ps-service-detail';
+  },
+
+  beforeDestroy() {
+    document.body.className = '';
+  },
+};
 
 </script>
 

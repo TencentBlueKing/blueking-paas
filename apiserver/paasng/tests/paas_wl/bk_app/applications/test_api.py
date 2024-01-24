@@ -36,9 +36,14 @@ def test_create_app_ignore_duplicated():
     info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT)
     assert info.name == "foo-app"
 
-    # Create again with the same name
+    # re-create using the same name
     recreated_info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT)
     assert recreated_info.uuid == info.uuid
+
+    # re-create using a different type
+    _cnative_info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.CLOUD_NATIVE)
+    assert _cnative_info.uuid == info.uuid
+    assert _cnative_info.type == WlAppType.CLOUD_NATIVE
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

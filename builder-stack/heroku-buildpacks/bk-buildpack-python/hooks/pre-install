@@ -20,9 +20,6 @@ echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/cryptography"
 echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/geo-libs"
 echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/gdal"
 
-# 移除 heroku 提示
-sed -i 's/\$ heroku config:set DISABLE_COLLECTSTATIC=1/set environment variable: DISABLE_COLLECTSTATIC=1/g' "${BIN_DIR}/steps/collectstatic"
-
 # 对目录 /var/cache/apt/archives/partial/ 无权限会安装失败
 echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/sqlite3"
 buildpack_sqlite3_install(){

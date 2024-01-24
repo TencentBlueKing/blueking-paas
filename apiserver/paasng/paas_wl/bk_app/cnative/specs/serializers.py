@@ -164,7 +164,9 @@ class UpsertMountSLZ(serializers.Serializer):
     name = serializers.RegexField(
         help_text=_("挂载卷名称"), regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63, required=True
     )
-    mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)*$", required=True)
+    # 该正则匹配以'/'开头，不包含空字符(\0)和连续'/'的文件路径，且根目录'/'不合法
+    # 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
+    mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 
     source_config_data = serializers.DictField(

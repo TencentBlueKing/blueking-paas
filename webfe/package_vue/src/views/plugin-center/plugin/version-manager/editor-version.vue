@@ -529,6 +529,10 @@ export default {
 <style lang="scss" scoped>
 .new-version {
   margin-top: 24px;
+  padding: 24px;
+  background: #fff;
+  box-shadow: 0 2px 4px 0 #1919290d;
+  border-radius: 2px;
 }
 .app-container {
   padding: 0;
@@ -662,7 +666,7 @@ export default {
 }
 
 .summary-box {
-  padding: 10px 0 20px;
+  padding-bottom: 20px;
   background: #fff;
   font-size: 12px;
 

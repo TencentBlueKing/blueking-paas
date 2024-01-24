@@ -7,7 +7,7 @@
       placeholder="pluin-version-list-Loading"
       :is-transform="false"
     >
-      <div class="version-management card-style">
+      <div class="version-management">
         <div class="ag-top-header">
           <!-- 有发布任务，禁用 -->
           <div
@@ -39,7 +39,7 @@
             v-model="keyword"
             class="fr"
             :clearable="true"
-            :placeholder="$t('版本号、代码分支')"
+            :placeholder="$t('版本号/代码分支/代码 Commit/创建人/发布进度')"
             :right-icon="'bk-icon icon-search'"
             style="width: 480px"
             @enter="handleSearch"
@@ -51,7 +51,6 @@
           v-bkloading="{ isLoading: isTableLoading }"
           class="ps-version-list"
           :data="versionList"
-          :outer-border="false"
           :size="'small'"
           :pagination="pagination"
           @page-limit-change="limitChange"
@@ -584,9 +583,6 @@ export default {
   margin-top: 15px;
 }
 
-.version-management {
-  padding: 24px;
-}
 .header-title {
   margin: 16px 0;
   max-width: 980px;
@@ -608,6 +604,7 @@ export default {
 
 .ps-version-list {
   margin-top: 22px;
+  background: #fff;
 
   .version-num {
     color: #3a84ff;

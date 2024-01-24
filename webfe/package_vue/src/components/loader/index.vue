@@ -1,7 +1,7 @@
 <template lang="html">
   <div
     :class="[{ 'paas-loading-content': isLoaderShow, 'loading': localLoading, 'fadeout': !localLoading }]"
-    :style="{ 'min-height': localLoading && height ? height + 'px' : 'calc(100% - 50px)' }"
+    :style="styleObject"
   >
     <div
       :class="[
@@ -192,6 +192,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    isMinHeight: {
+      type: Boolean,
+      default: true,
+    },
+    customStyle: {
+      type: Object,
+      default: () => {},
+    },
   },
   data() {
     return {
@@ -202,6 +210,17 @@ export default {
       curPlaceholder: '',
       isPlugin: false,
     };
+  },
+  computed: {
+    styleObject() {
+      if (this.isMinHeight) {
+        return {
+          'min-height': this.localLoading && this.height ? `${this.height}px` : 'calc(100% - 50px)',
+          ...this.customStyle,
+        };
+      }
+      return { ...this.customStyle };
+    },
   },
   watch: {
     isLoading(newVal, oldVal) {

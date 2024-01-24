@@ -679,7 +679,6 @@ export default {
           min-height: 827px;
           padding-left: 20px;
           margin-left: 24px;
-          background: #FAFBFD;
           font-size: 12px;
           border-radius: 2px;
           color: #63656E;

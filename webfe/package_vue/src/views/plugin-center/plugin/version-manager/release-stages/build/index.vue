@@ -134,9 +134,10 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// 高度问题
 .build-stage {
-  height: calc(100vh - 218px);
-  margin-top: 60px;
+  height: calc(100vh - 216px);
+  // margin-top: 60px;
   display: flex;
   .right-log-wrapper {
     padding-top: 40px;
@@ -149,7 +150,7 @@ export default {
     position: relative;
     overflow: hidden;
     padding: 0;
-    height: calc(100vh - 258px);
+    height: calc(100vh - 255px);
   }
 }
 .log-header {

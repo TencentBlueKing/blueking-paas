@@ -6,62 +6,58 @@
       placeholder="deploy-inner-loading"
       :offset-top="20"
       :offset-left="20"
-      :class="curStageComponmentType === 'test' ? 'test-phase-container' : 'deploy-action-box'"
+      :is-min-height="false"
+      :custom-style="customStyle"
+      :class="curStageComponmentType === 'test' ? 'test-phase-container' : ''"
     >
       <!-- 部署信息概览 -->
       <div
         class="plugin-release-top"
-        :style="`height: ${ releaseTopHeight }px;`"
       >
-        <div class="father-wrapper">
-          <div class="bg-top">
-            <div class="bg-content">
-              <div class="title-warp flex-row align-items-center justify-content-between">
-                <paas-plugin-title :no-shadow="true" :version="curVersion" />
-                <!-- 结束发布流程禁用终止发布 -->
-                <bk-button
-                  v-if="pluginFeatureFlags.CANCEL_RELEASE"
-                  class="discontinued"
-                  :disabled="isPostedSuccessfully"
-                  @click="showInfoCancelRelease"
-                >
-                  <i class="paasng-icon paasng-stop-2" />
-                  {{ $t('终止发布') }}
-                </bk-button>
-              </div>
-              <div
-                v-if="!isSingleStage"
-                class="steps-warp mt20"
-              >
-                <!-- 只有一个阶段的发布, 不展示发布步骤 -->
-                <bk-steps
-                  ext-cls="custom-step-cls"
-                  :status="stepsStatus"
-                  :steps="stepAllStages"
-                  :cur-step.sync="curStep"
-                />
-              </div>
-            </div>
-          </div>
+        <div class="bg-top">
+          <paas-plugin-title :no-shadow="true" :version="curVersion" />
+          <!-- 结束发布流程禁用终止发布 -->
+          <bk-button
+            v-if="pluginFeatureFlags.CANCEL_RELEASE"
+            class="discontinued"
+            :disabled="isPostedSuccessfully"
+            @click="showInfoCancelRelease"
+          >
+            <i class="paasng-icon paasng-stop-2" />
+            <!-- 冗余代码 ****************** -->
+            {{ $t('终止发布') }} - {{ curStageComponmentType }}
+          </bk-button>
         </div>
       </div>
-      <!-- 内容 -->
-      <component
-        :is="curStageComponmentType"
-        v-if="stageData"
-        ref="curStageComponment"
-        :stage-data="stageData"
-        :plugin-data="pluginDetailedData"
-        :is-next="isAllowNext"
-        :manual-preview="isManualPreview"
-        @rerunStage="rerunStage"
-      />
-      <template v-else-if="!finalStageIsOnline">
-        <online
+      <section class="content-container">
+        <!-- 只有一个阶段的发布, 不展示发布步骤 -->
+        <version-steps
+          v-if="!isSingleStage"
+          class="steps-warp-cls"
+          :steps="stepAllStages"
+          :cur-step.sync="curStep"
+          :controllable="true"
+          @change="changeStep"
+        />
+        <!-- 内容 -->
+        <!-- 默认步骤根据 curStageComponmentType， 手动切换需要对应值 -->
+        <component
+          :is="curStageComponmentType"
+          v-if="stageData"
+          ref="curStageComponment"
           :stage-data="stageData"
+          :plugin-data="pluginDetailedData"
+          :is-next="isAllowNext"
+          :manual-preview="isManualPreview"
           @rerunStage="rerunStage"
         />
-      </template>
+        <template v-else-if="!finalStageIsOnline">
+          <online
+            :stage-data="stageData"
+            @rerunStage="rerunStage"
+          />
+        </template>
+      </section>
 
       <!-- 手动预览与发布完成不展示 -->
       <div class="footer-btn-warp" v-if="isShowButtonGroup && !isPostedSuccessfully">
@@ -119,6 +115,7 @@ import approvalStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
 import testStage from './release-stages/test';
 import { PLUGIN_VERSION_MAP } from '@/common/constants';
+import versionSteps from './version-steps/index.vue';
 
 export default {
   components: {
@@ -131,6 +128,7 @@ export default {
     approval1: approvalStage,
     build: buildStage,
     test: testStage,
+    versionSteps,
   },
   mixins: [pluginBaseMixin],
   data() {
@@ -155,6 +153,9 @@ export default {
       stepAllStages: [],
       // 当前获取详情id
       currentStepId: null,
+      customStyle: {
+        height: '100%',
+      },
     };
   },
   computed: {
@@ -162,7 +163,8 @@ export default {
       return this.$route.query.release_id;
     },
     stageId() {
-      return this.$store.state.plugin.curRelease.current_stage && this.$store.state.plugin.curRelease.current_stage.stage_id;
+      return this.$store.state.plugin.curRelease.current_stage
+      && this.$store.state.plugin.curRelease.current_stage.stage_id;
     },
     curVersion() {
       return this.$route.query.version || this.titleVersion;
@@ -183,9 +185,12 @@ export default {
       return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
     },
     curStageComponmentType() {
+      // 是否为手动预览插件步骤
+      // 根据 invoke_method 字段判断当前步骤
       const invokeMethod = this.pluginDetailedData?.current_stage?.invoke_method;
+      console.log('invokeMethod', invokeMethod);
       if (invokeMethod === 'builtin') {
-        return this.pluginDetailedData?.current_stage?.stage_id || this.stageData.stage_id;
+        return this.pluginDetailedData?.current_stage?.stage_id;
       }
       return PLUGIN_VERSION_MAP[invokeMethod];
     },
@@ -254,10 +259,10 @@ export default {
     stageData: {
       handler() {
         // 获取 stage 对应的序号
-        const curStep = this.calStageOrder(this.stageData);
-        this.isFirstStage = curStep === 1;
-        this.isFinalStage = this.curAllStages.length === curStep;
-        this.curStep = curStep;
+        const curStepIndex = this.calStageOrder(this.stageData);
+        // 是否展示下一步、保存
+        this.isFinalStage = this.curAllStages.length === curStepIndex;
+        this.curStep = curStepIndex;
       },
       deep: true,
       immediate: true,
@@ -275,8 +280,8 @@ export default {
     },
   },
   async created() {
-    await this.getReleaseDetail();
     this.stepAllStages = this.curAllStages;
+    await this.getReleaseDetail();
     this.getReleaseStageDetail();
     bus.$emit('release-stage-changes', this.stageId);
 
@@ -303,14 +308,36 @@ export default {
       // 轮询获取发布步骤详情
       this.getReleaseStageDetail();
     },
+
+    // 获取版本详情（获取当前步骤详情数据）
+    async getReleaseDetail() {
+      const data = {
+        pdId: this.pdId,
+        pluginId: this.pluginId,
+        releaseId: this.releaseId,
+      };
+      try {
+        const releaseData = await this.$store.dispatch('plugin/getReleaseDetail', data);
+        this.pluginDetailedData = releaseData;
+        this.$store.commit('plugin/updateCurRelease', releaseData);
+        // 设置执行步骤状态
+        this.setStepsDataStatus();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
     // 获取发布步骤详情
-    async getReleaseStageDetail() {
+    async getReleaseStageDetail(curStepStageId) {
       try {
         const params = {
           pdId: this.pdId,
           pluginId: this.pluginId,
           releaseId: this.releaseId,
-          stageId: this.clickStageId || this.stageId,
+          stageId: curStepStageId || this.stageId,
         };
         this.currentStepId = params.stageId;
         if (Object.values(params).some(value => value === undefined)) {
@@ -319,7 +346,7 @@ export default {
         const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
         this.stageData = stageData;
         // 所有阶段都需要进行轮询 && 手动切换不用轮询
-        if (this.stageData.status === 'pending' && !this.clickStageId) {
+        if (this.stageData.status === 'pending' && !curStepStageId) {
           this.pollingReleaseStageDetail();
         }
         switch (this.stageData.stage_id) {
@@ -335,115 +362,30 @@ export default {
             }
             break;
         }
-        if (this.clickStageId) {
-          this.clickStageId = null;
-          this.isLoading = false;
-        }
+
+        // this.setStepDataFunction(curStepStageId, stageData);
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-        if (this.clickStageId) {
-          this.clickStageId = null;
-          this.isLoading = false;
-        }
       } finally {
         setTimeout(() => {
-          if (!this.clickStageId) this.isLoading = false;
-          this.stepsBindingClick();
+          // 关闭loading
+          this.isLoading = false;
         }, 500);
       }
     },
 
-    // 给step绑定点击事件
-    stepsBindingClick() {
-      const stepsEl = document.querySelector('.custom-step-cls');
-      const stepList = Array.from(stepsEl?.childNodes || []);
-      // 根据对应当前id获取DOM
-      const i = this.curAllStages.findIndex(v => v.stage_id === this.stageId);
-      let bingElementList = [];
-      bingElementList = stepList.slice(0, i + 1);
-      this.curStepIndex = i + 1;
-      // 设置步骤状态
-      this.setStepsData();
-
-      // 重置点击事件，防止点击上一步状态变更事件带来的接口错误
-      this.clearEventSideEffects(stepList);
-
-      // 已成功步骤绑定点击事件
-      bingElementList.forEach((el, index) => {
-        const childList = Array.from(el.childNodes);
-        childList.forEach((child) => {
-          child.onclick = () => {
-            // 如果点击当前显示的当前步骤，不做操作
-            if (clickStageId !== this.stageId && this.curStep === (index + 1)) {
-              return;
-            }
-            // 给已发布完成的步骤添加状态
-
-            // 点击更新步骤
-            this.curStep = index + 1;
-            // 当前点击的stage_id
-            const clickStageId = this.curAllStages[index].stage_id;
-            this.isLoading = true;
-            // 手动点击切换步骤不显示底部操作
-            this.isShowButtonGroup = false;
-            this.clickStageId = clickStageId;
-
-            // 获取当前基本信息
-            this.getReleaseDetail();
-            // 获取当前步骤信息
-            this.getReleaseStageDetail();
-
-            // 点击返回了这在执行的发布步骤
-            if (this.curStepIndex === this.curStep) {
-              this.isShowButtonGroup = true;
-              // 重置点击的 stageId, 重新轮询接口
-              this.clickStageId = null;
-            }
-          };
-        });
-      });
-    },
-
-    clearEventSideEffects(steps) {
-      steps.forEach((stepEl) => {
-        const childList = Array.from(stepEl.childNodes);
-        childList.forEach((child) => {
-          child.onclick = () => {};
-        });
-      });
-    },
-
-    setStepsData() {
-      const curIndex = this.curStepIndex;
+    // 设置步骤状态
+    setStepsDataStatus() {
+      const id = this.pluginDetailedData?.current_stage?.stage_id || this.stageId;
+      const curIndex = this.curAllStages.findIndex(v => v.stage_id === id) + 1;
       this.stepAllStages = this.curAllStages.map((v, index) => ({
         ...v,
         // 已完成步骤设置状态
         status: index < curIndex ? 'done' : '',
       }));
-    },
-
-    // 获取版本详情（获取当前步骤详情数据）
-    async getReleaseDetail() {
-      const data = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-        releaseId: this.releaseId,
-      };
-      try {
-        const releaseData = await this.$store.dispatch('plugin/getReleaseDetail', data);
-        this.pluginDetailedData = releaseData;
-        this.$store.commit('plugin/updateCurRelease', releaseData);
-        // 获取 stage 对应的序号
-        this.curStep = this.calStageOrder(releaseData.current_stage);
-      } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
     },
 
     // 重新执行发布步骤
@@ -594,14 +536,36 @@ export default {
       });
     },
 
+    // 计算当前正在执行的步骤
     calStageOrder(stage) {
       const defaultOrder = 1;
       if (!this.curAllStages) return defaultOrder;
       for (let index = 0; index < this.curAllStages.length; index++) {
-        const element = this.curAllStages[index];
-        if (element.stage_id === stage.stage_id) return index + 1;
+        const step = this.curAllStages[index];
+        if (step.stage_id === stage.stage_id) return index + 1;
       }
       return defaultOrder;
+    },
+
+    // 切换stpe回调
+    async changeStep(data) {
+      // 开启loading
+      this.isLoading = true;
+      // 手动切换步骤不展示按钮组，切换回当前执行步骤展示按钮组
+      this.isShowButtonGroup = false;
+      // 点击返回了这在执行的发布步骤
+      const id = this.pluginDetailedData?.current_stage?.stage_id || this.stageId;
+      const curIndex = this.curAllStages.findIndex(v => v.stage_id === id) + 1;
+      let isPolling = true;
+      if (curIndex === this.curStep) {
+        this.isShowButtonGroup = true;
+        // 切换回执行步骤，重新轮询接口
+        isPolling = false;
+      }
+      // 获取当前基本信息
+      await this.getReleaseDetail();
+      // 获取当前步骤信息
+      this.getReleaseStageDetail(isPolling ? data.id : '');
     },
   },
 };
@@ -613,13 +577,17 @@ export default {
 }
 .test-phase-container {
     max-width: 100%;
-    .plugin-release-top .father-wrapper {
-      padding-bottom: 0px;
-    }
 }
 .plugin-release-top {
-    height: 117px;
-    margin: 0 auto;
+    .bg-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 52px;
+        padding: 0 24px;
+        background: #fff;
+        box-shadow: 0 3px 4px 0 #0000000a;
+    }
     .father-wrapper {
         position: fixed;
         margin-left: 241px;
@@ -629,25 +597,15 @@ export default {
         padding-bottom: 16px;
         background: #fff;
         z-index: 99;
-        .bg-top {
-            padding: 16px 0;
-            background: #FAFBFD;
-            border-bottom: 1px solid #EAEBF0;
-            .bg-content {
-                max-width: calc(100% - 100px);
-                margin: 0 50px;
-                .title-warp {
-                    // min-width: 1243px;
-                }
-            }
-        }
-        // .release-info-box {
-        //     max-width: calc(100% - 100px);
-        //     // min-width: 1243px;
-        //     margin: 0 50px;
-        //     margin-top: 16px;
-        // }
     }
+}
+.content-container {
+  height: 100%;
+  margin-bottom: 48px;
+  padding: 0 24px;
+  .steps-warp-cls {
+    margin: 16px 0;
+  }
 }
 #release-timeline-box {
     width: 230px;
@@ -729,8 +687,10 @@ export default {
     padding-left: 48px;
     height: 48px;
     line-height: 48px;
-    background: #FFFFFF;
-    box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
+    background: #FAFBFD;
+    box-shadow: 0 -1px 0 0 #DCDEE5;
+    // background: #FFFFFF;
+    // box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
 }
 .edit-form-item{
     margin-bottom: 20px;
@@ -805,10 +765,14 @@ export default {
         color: #3A84FF;
     }
 }
-.visible-range-release .app-container {
+.visible-range-release {
+  height: 100%;
+  .app-container {
     margin-top: 0;
     padding-top: 0;
+  }
 }
+
 .release-warp .info-mt {
     margin-top: 72px;
 }

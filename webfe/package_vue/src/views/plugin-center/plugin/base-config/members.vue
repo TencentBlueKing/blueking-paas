@@ -7,7 +7,7 @@
       placeholder="roles-loading"
       :is-transform="false"
     >
-      <section class="member-management-container card-style">
+      <section>
         <div class="header header-flex">
           <span v-bk-tooltips.top="{ content: $t('仅管理员可添加成员'), disabled: canManageMembers }">
             <bk-button
@@ -22,7 +22,7 @@
           <bk-input
             v-model="keyword"
             class="search-input"
-            :placeholder="$t('请输入')"
+            :placeholder="$t('成员姓名/名称')"
             :clearable="true"
             :right-icon="'bk-icon icon-search'"
             @enter="handleSearch"
@@ -34,8 +34,7 @@
             :data="memberListShow"
             size="small"
             :pagination="pagination"
-            :outer-border="false"
-            :header-border="false"
+            class="member-table-cls"
             @page-change="pageChange"
             @page-limit-change="limitChange"
           >
@@ -620,8 +619,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.member-management-container {
-  padding: 24px;
+.member-table-cls {
+  background-color: #fff;
 }
 .content-wrapper {
   margin-top: 16px;

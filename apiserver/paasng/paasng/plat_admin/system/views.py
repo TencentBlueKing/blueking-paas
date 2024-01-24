@@ -179,7 +179,8 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             raise error_codes.CANNOT_READ_INSTANCE_INFO.f(_("无法获取到有效的配置信息."))
         return Response(data=AddonCredentialsSLZ({"credentials": credentials}).data)
 
-    @swagger_auto_schema(tags=["SYSTEMAPI"], request_body=AddonSpecsSLZ)
+    # 下一个大版本移除该接口
+    @swagger_auto_schema(tags=["SYSTEMAPI"], request_body=AddonSpecsSLZ, deprecated=True)
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def provision_service(self, request, code, module_name, environment, service_name):
         """分配增强服务实例"""
@@ -221,9 +222,10 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         service_info = ServicesInfo.get_detail(engine_app)["services_info"]
         return Response(data=service_info)
 
-    @swagger_auto_schema(tags=["SYSTEMAPI"])
+    # 下一个大版本移除该接口
+    @swagger_auto_schema(tags=["SYSTEMAPI"], deprecated=True)
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
-    def retrieve_specs(self, request, code, module_name, service_id):
+    def retrieve_specs_by_uuid(self, request, code, module_name, service_id):
         """获取应用已绑定的服务规格.
         接口实现逻辑参考 paasng.accessories.servicehub.views.ModuleServicesViewSet.retrieve_specs
         """

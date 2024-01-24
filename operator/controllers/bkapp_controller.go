@@ -46,7 +46,6 @@ import (
 	"bk.tencent.com/paas-app-operator/controllers/base"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	bkappctrl "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/addons"
 	autoscalingctrl "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/autoscaling"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes"
@@ -146,7 +145,6 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		hooks.NewHookReconciler(r.client),
 
 		// Other reconcilers related with workloads
-		addons.NewAddonReconciler(r.client),
 		processes.NewDeploymentReconciler(r.client),
 		processes.NewServiceReconciler(r.client),
 		autoscalingctrl.NewAutoscalingReconciler(r.client),

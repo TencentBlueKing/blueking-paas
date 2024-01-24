@@ -45,12 +45,12 @@ class PersistentVolumeClaimManager(AppEntityManager[PersistentVolumeClaim]):
 
     def delete(self, res: PersistentVolumeClaim, non_grace_period: bool = False):
         namespace = res.app.namespace
-        config_name = res.name
+        pvc_name = res.name
 
         try:
-            existed_one = self.get(app=res.app, name=config_name)
+            existed_one = self.get(app=res.app, name=pvc_name)
         except AppEntityNotFound:
-            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, config_name)
+            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, pvc_name)
             return None
         return super().delete(existed_one, non_grace_period)
 

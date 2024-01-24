@@ -25,7 +25,7 @@ from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceTyp
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 
 from .constants import DeployStatus
-from .models import AppModelDeploy, AppModelRevision, Mount
+from .models import AppModelDeploy, AppModelRevision, ConfigMapSource, Mount, PersistentVolumeClaimSource
 
 logger = logging.getLogger(__name__)
 
@@ -168,13 +168,15 @@ class UpsertMountSLZ(serializers.Serializer):
     # 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
     mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
-    source_name = serializers.CharField(allow_blank=True)
+    source_name = serializers.CharField(allow_blank=True, required=False)
     source_config_data = serializers.DictField(
         help_text=_(
             "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。"
             "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
         ),
         child=serializers.CharField(),
+        required=False,
+        allow_null=True,
     )
 
     def validate(self, attrs):
@@ -198,12 +200,14 @@ class UpsertMountSLZ(serializers.Serializer):
 
         # 根据 source_type 验证 source_config_data
         source_type = attrs["source_type"]
-        source_config_data = attrs["source_config_data"]
+        source_config_data = attrs.get("source_config_data")
         if source_type == VolumeSourceType.ConfigMap.value and not source_config_data:
             raise serializers.ValidationError(_("挂载卷内容不可为空"))
         return attrs
 
     def validate_source_config_data(self, value):
+        if not value:
+            return None
         for key in value:
             if not key:
                 raise serializers.ValidationError("key cannot be empty")
@@ -230,12 +234,33 @@ class MountSLZ(serializers.ModelSerializer):
         )
 
     def get_source_config_data(self, obj):
-        try:
-            return obj.source.data
-        except ValueError as e:
-            raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
+        if obj.source_type == VolumeSourceType.ConfigMap:
+            try:
+                return obj.source.data
+            except ValueError as e:
+                raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
+        return None
 
 
 class QueryMountsSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=False)
+
+
+class QueryMountSourcesSLZ(QueryMountsSLZ):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+
+
+class MountSourceSLZ(serializers.Serializer):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
+    name = serializers.CharField(max_length=63, required=True)
+    source_type = serializers.SerializerMethodField(label=_("挂载卷资源类型"))
+    data = serializers.JSONField(required=False)
+
+    def get_source_type(self, obj):
+        if isinstance(obj, ConfigMapSource):
+            return VolumeSourceType.ConfigMap.value
+        elif isinstance(obj, PersistentVolumeClaimSource):
+            return VolumeSourceType.PersistentVolumeClaim.value
+        return None

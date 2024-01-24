@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.conf.urls import url
+
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views_enduser
@@ -69,5 +71,9 @@ urlpatterns = [
         make_app_pattern(r"/mres/volume_mounts/(?P<mount_id>\w+)/$", include_envs=False),
         views_enduser.VolumeMountViewSet.as_view({"put": "update", "delete": "destroy"}),
         name="api.mres.volume_mount.detail",
+    ),
+    url(
+        r"api/bkapps/applications/(?P<code>[^/]+)/mres/mount_sources/$",
+        views_enduser.MountSourceViewSet.as_view({"get": "list"}),
     ),
 ]

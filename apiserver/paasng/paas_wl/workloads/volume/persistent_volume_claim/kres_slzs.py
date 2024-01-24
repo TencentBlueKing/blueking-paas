@@ -54,6 +54,6 @@ class PersistentVolumeClaimDeserializer(AppEntityDeserializer["PersistentVolumeC
         return self.entity_type(
             app=app,
             name=kube_data.metadata.name,
-            storage=kube_data.data.spec.resources.requests.storage,
-            storage_class_name=kube_data.data.spec.storageClassName,
+            storage=kube_data.spec.resources.requests.storage,
+            storage_class_name=kube_data.spec.storageClassName,
         )

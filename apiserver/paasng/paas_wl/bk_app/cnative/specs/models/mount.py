@@ -17,14 +17,19 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import uuid
-from typing import Union
+from typing import Dict, Optional, Union
 
 from django.db import models
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID
-from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.constants import (
+    DEFAULT_STORAGE,
+    DEFAULT_STORAGE_CLASS_NAME,
+    MountEnvName,
+    VolumeSourceType,
+)
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentVolumeClaimSource as PersistentVolumeClaimSourceSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
@@ -36,13 +41,13 @@ SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 class BaseSourceModel(TimestampedModel):
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
-    module = ModuleAttrFromID()
-
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
+
+    class Meta:
+        abstract = True
 
 
 class SourceQuerySet(models.QuerySet):
@@ -113,7 +118,7 @@ class MountManager(models.Manager):
         else:
             raise ValueError(f"unsupported source type {source_type}")
 
-        return self.objects.create(
+        return Mount.objects.create(
             module_id=module_id,
             name=name,
             environment_name=environment_name,
@@ -151,7 +156,7 @@ class Mount(TimestampedModel):
             return PersistentVolumeClaimSource.objects.get_by_mount(self)
         raise ValueError(f"unsupported source type {self.source_type}")
 
-    def upsert_source(self, data: dict) -> Union["ConfigMapSource", "PersistentVolumeClaimSource"]:
+    def upsert_source(self, data: Optional[Dict] = None) -> Union["ConfigMapSource", "PersistentVolumeClaimSource"]:
         if self.source_type == VolumeSourceType.ConfigMap:
             if self.source_config.configMap is None:
                 raise ValueError(f"configmap source_config {self.source_config} is null")
@@ -172,8 +177,8 @@ class Mount(TimestampedModel):
                 application_id=self.module.application_id,
                 defaults={
                     "environment_name": self.environment_name,
-                    "storage": data["storage"],
-                    "storage_class_name": data["storageClassName"],
+                    "storage": DEFAULT_STORAGE,
+                    "storage_class_name": DEFAULT_STORAGE_CLASS_NAME,
                 },
             )
             return pvc_source

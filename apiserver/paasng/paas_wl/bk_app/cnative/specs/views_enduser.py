@@ -37,7 +37,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, MountEnvName, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.constants import (
+    BKPAAS_DEPLOY_ID_ANNO_KEY,
+    MountEnvName,
+    ResQuotaPlan,
+    VolumeSourceType,
+)
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
 from paas_wl.bk_app.cnative.specs.events import list_events
@@ -47,7 +52,9 @@ from paas_wl.bk_app.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
     AppModelRevision,
+    ConfigMapSource,
     Mount,
+    PersistentVolumeClaimSource,
     to_error_string,
     update_app_resource,
 )
@@ -63,8 +70,10 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     DeployPrepResultSLZ,
     DeploySerializer,
     MountSLZ,
+    MountSourceSLZ,
     MresStatusSLZ,
     QueryDeploysSerializer,
+    QueryMountSourcesSLZ,
     QueryMountsSLZ,
     ResQuotaPlanSLZ,
     UpsertMountSLZ,
@@ -426,7 +435,6 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
-
         # 创建 Mount
         try:
             mount_instance = Mount.objects.new(
@@ -437,14 +445,12 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 mount_path=validated_data["mount_path"],
                 source_type=validated_data["source_type"],
                 region=application.region,
-                source_name=validated_data["source_name"],
+                source_name=validated_data.get("source_name"),
             )
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
-
         # 创建或更新 Mount source
-        mount_instance.upsert_source(mount_instance, validated_data["source_config_data"])
-
+        mount_instance.upsert_source(validated_data.get("source_config_data"))
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -471,8 +477,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 创建或更新 Mount source
-        mount_instance.upsert_source(validated_data["source_config_data"])
-
+        mount_instance.upsert_source(validated_data.get("source_config_data"))
         # 需要删除对应的 k8s volume 资源
         if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
             opposite_env_map = {
@@ -501,3 +506,30 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(query_serializer=QueryMountSourcesSLZ, responses={200: MountSourceSLZ(many=True)})
+    def list(self, request, code):
+        app = self.get_application()
+
+        slz = QueryMountSourcesSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        environment_name = params.get("environment_name")
+        source_type = params.get("source_type")
+
+        if source_type == VolumeSourceType.ConfigMap.value:
+            queryset = ConfigMapSource.objects.filter(application_id=app.id)
+        elif source_type == VolumeSourceType.PersistentVolumeClaim.value:
+            queryset = PersistentVolumeClaimSource.objects.filter(application_id=app.id)
+        else:
+            raise error_codes.LIST_VOLUME_MOUNT_SOURCES_FAILED.f(_("不支持的资源类型"))
+        if environment_name:
+            queryset = queryset.filter(environment_name=environment_name)
+
+        slz = MountSourceSLZ(queryset, many=True)
+        return Response(data=slz.data, status=status.HTTP_200_OK)

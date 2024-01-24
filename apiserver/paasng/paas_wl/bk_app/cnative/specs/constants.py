@@ -66,6 +66,10 @@ USE_CNB_ANNO_KEY = "bkapp.paas.bk.tencent.com/use-cnb"
 # 轮询云原生应用的部署状态时，如果获取到失败状态的次数超过最大容忍次数，就认为部署失败
 CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
 
+# 默认的 pvc 配置
+DEFAULT_STORAGE_CLASS_NAME = "cfs"
+DEFAULT_STORAGE = "1Gi"
+
 
 class ApiVersion(str, StructuredEnum):
     """Kubernetes CRD API versions"""

@@ -21,15 +21,15 @@ from unittest.mock import patch
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
-from paas_wl.bk_app.cnative.specs.models import Mount
+from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentVolumeClaimSource
 from paas_wl.bk_app.cnative.specs.serializers import MountSLZ
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
-def mount(bk_app, bk_module):
-    """创建一个 mount 对象"""
+def mount_configmap(bk_app, bk_module):
+    """创建一个 configmap mount 对象"""
     mount = Mount.objects.new(
         app_code=bk_app.code,
         module_id=bk_module.id,
@@ -41,7 +41,24 @@ def mount(bk_app, bk_module):
         source_name="",
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
-    Mount.objects.upsert_source(mount, source_data)
+    mount.upsert_source(source_data)
+    return mount
+
+
+@pytest.fixture()
+def mount_pvc(bk_app, bk_module):
+    """创建一个 pvc mount 对象"""
+    mount = Mount.objects.new(
+        app_code=bk_app.code,
+        module_id=bk_module.id,
+        mount_path="/path/",
+        environment_name=MountEnvName.GLOBAL,
+        name="mount-pvc",
+        source_type=VolumeSourceType.PersistentVolumeClaim.value,
+        region=bk_app.region,
+        source_name="",
+    )
+    mount.upsert_source()
     return mount
 
 
@@ -62,7 +79,7 @@ def mounts(bk_app, bk_module):
             source_name="",
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
-        Mount.objects.upsert_source(mount, source_data)
+        mount.upsert_source(source_data)
         mount_list.append(mount)
     return mount_list
 
@@ -97,7 +114,7 @@ class TestVolumeMountViewSet:
         assert response.data["count"] == 0
         assert len(response.data["results"]) == 0
 
-    def test_create(self, api_client, bk_app, bk_module):
+    def test_create_configmap(self, api_client, bk_app, bk_module):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "_global_",
@@ -111,6 +128,36 @@ class TestVolumeMountViewSet:
         assert response.status_code == 201
         assert mount
         assert mount.source.data == {"configmap_z": "configmap_z_data"}
+
+    def test_create_pvc(self, api_client, bk_app, bk_module):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        request_body = {
+            "environment_name": "_global_",
+            "mount_path": "/path/",
+            "name": "mount-pvc-test",
+            "source_type": "PersistentVolumeClaim",
+        }
+        response = api_client.post(url, request_body)
+        mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
+        assert response.status_code == 201
+        assert mount
+        assert mount.source.storage == "1Gi"
+
+    def test_create_with_source_name(self, api_client, bk_app, bk_module):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        request_body = {
+            "environment_name": "_global_",
+            "mount_path": "/path/",
+            "name": "mount-pvc-test",
+            "source_type": "PersistentVolumeClaim",
+            "source_name": "test-source-name",
+        }
+        response = api_client.post(url, request_body)
+        mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
+        assert response.status_code == 201
+        assert mount
+        assert mount.source.name == "test-source-name"
+        assert mount.source.storage == "1Gi"
 
     @pytest.mark.parametrize(
         "request_body_error",
@@ -173,46 +220,105 @@ class TestVolumeMountViewSet:
             },
         ],
     )
-    def test_create_error(self, api_client, bk_app, bk_module, mount, request_body_error):
+    def test_create_error(self, api_client, bk_app, bk_module, mount_configmap, request_body_error):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         response = api_client.post(url, request_body_error)
         assert response.status_code == 400
 
-    def test_updata(self, api_client, bk_app, bk_module, mount):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount.id}/"
-        body = MountSLZ(mount).data
+    def test_updata_configmap(self, api_client, bk_app, bk_module, mount_configmap):
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
+        )
+        body = MountSLZ(mount_configmap).data
         body["source_config_data"] = {"configmap_z": "configmap_z_data_updated"}
         body["environment_name"] = "stag"
 
         response = api_client.put(url, body)
-        mount_updated = Mount.objects.get(pk=mount.pk)
+        mount_updated = Mount.objects.get(pk=mount_configmap.pk)
 
         assert response.status_code == 200
-        assert mount_updated.name == mount.name
+        assert mount_updated.name == mount_configmap.name
         assert mount_updated.source.data == {"configmap_z": "configmap_z_data_updated"}
         assert mount_updated.source.environment_name == "stag"
 
         body["name"] = "mount-configmap-test"
         response = api_client.put(url, body)
-        mount_updated = Mount.objects.get(pk=mount.pk)
+        mount_updated = Mount.objects.get(pk=mount_configmap.pk)
 
         assert response.status_code == 200
         assert mount_updated.name == "mount-configmap-test"
 
-    def test_destroy(self, api_client, bk_app, bk_module, mount):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount.id}/"
+    def test_destroy_configmap(self, api_client, bk_app, bk_module, mount_configmap):
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
+        )
         response = api_client.delete(url)
-        mount_query = Mount.objects.filter(id=mount.id)
+        mount_query = Mount.objects.filter(id=mount_configmap.id)
         assert response.status_code == 204
         assert not mount_query.exists()
 
-    def test_destroy_error(self, api_client, bk_app, bk_module, mount):
+    def test_updata_pvc(self, api_client, bk_app, bk_module, mount_pvc):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
+        body = MountSLZ(mount_pvc).data
+        body["name"] = "mount-pvc-test"
+        response = api_client.put(url, body)
+        mount_updated = Mount.objects.get(pk=mount_pvc.pk)
+
+        assert response.status_code == 200
+        assert mount_updated.name == "mount-pvc-test"
+
+    def test_destroy_pvc(self, api_client, bk_app, bk_module, mount_pvc):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
+        response = api_client.delete(url)
+        mount_query = Mount.objects.filter(id=mount_pvc.id)
+        assert response.status_code == 204
+        assert not mount_query.exists()
+
+    def test_destroy_error(self, api_client, bk_app, bk_module, mount_configmap):
         # 删除不存在的 mount
         non_existent_id = 999999999
         url = (
             "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{non_existent_id}/"
         )
         response = api_client.delete(url)
-        mount_query = Mount.objects.filter(id=mount.id)
+        mount_query = Mount.objects.filter(id=mount_configmap.id)
         assert response.status_code == 404
         assert mount_query.exists()
+
+
+class TestMountSourceViewSet:
+    @pytest.fixture(autouse=True)
+    def _mount_sources(self, bk_app):
+        ConfigMapSource.objects.create(
+            application_id=bk_app.id,
+            name="configmap-etcd",
+            environment_name=MountEnvName.GLOBAL.value,
+            data={"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"},
+        )
+        ConfigMapSource.objects.create(
+            application_id=bk_app.id,
+            name="configmap-redis",
+            environment_name=MountEnvName.GLOBAL.value,
+            data={"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"},
+        )
+        PersistentVolumeClaimSource.objects.create(
+            application_id=bk_app.id,
+            name="pvc",
+            environment_name=MountEnvName.GLOBAL.value,
+            storage_class_name="cfs",
+            storage="1Gi",
+        )
+
+    @pytest.mark.usefixtures("_mount_sources")
+    def test_list(self, api_client, bk_app):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/?source_type=ConfigMap"
+        response = api_client.get(url)
+        assert response.status_code == 200
+        assert len(response.data) == 2
+
+        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/?source_type=PersistentVolumeClaim"
+        response = api_client.get(url)
+        assert response.status_code == 200
+        assert len(response.data) == 1

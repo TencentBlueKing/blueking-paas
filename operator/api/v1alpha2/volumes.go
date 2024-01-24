@@ -44,7 +44,8 @@ type VolumeSourceValidator interface {
 	Validate() []string
 }
 
-// ConfigMapSource represents a configMap that should populate this volume
+// ConfigMapSource represents a configMap that should
+//populate this volume
 type ConfigMapSource struct {
 	Name string `json:"name"`
 }

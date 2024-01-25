@@ -440,10 +440,8 @@ type AddonState string
 const (
 	// AddonProvisioned means add-on is provisioned successfully
 	AddonProvisioned AddonState = "provisioned"
-	// AddonUnProvisioned means add-on is not provisioned
-	AddonUnProvisioned AddonState = "unprovisioned"
-	// AddonUnknown means add-on status is known, due to API error or other unknown reasons
-	AddonUnknown AddonState = "unknown"
+	// AddonFailed means add-on failed to provision, maybe no available resources can be provided
+	AddonFailed AddonState = "failed"
 )
 
 // Addressable includes URL and other related properties

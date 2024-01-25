@@ -1230,31 +1230,6 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn: retrieve addon specifications
-  /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/addons/{service_name}/status/:
-    get:
-      operationId: retrieve_addon_status
-      description: 查询增强服务实例状态
-      tags:
-      - 增强服务
-      responses:
-        default:
-          description: ''
-      x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
-        matchSubpath: false
-        backend:
-          type: HTTP
-          method: get
-          path: /backend/sys/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/addons/{service_name}/status/
-          matchSubpath: false
-          timeout: 30
-          upstreams: {}
-          transformHeaders: {}
-        authConfig:
-          userVerifiedRequired: false
-        disabledStages: []
-        descriptionEn: retrieve addon status
   /system/bkapps/applications/{code}/cluster_namespaces/:
     get:
       operationId: list_cluster_namespaces_by_code

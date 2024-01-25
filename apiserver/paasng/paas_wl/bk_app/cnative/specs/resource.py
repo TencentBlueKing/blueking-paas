@@ -16,10 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 from typing import Dict, Optional
 
 from attrs import define
+from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -42,6 +44,9 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 logger = logging.getLogger(__name__)
+
+# 重试次数
+RETRY_TIME = 3
 
 
 def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
@@ -78,13 +83,20 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         ImageCredentialsManager(client).upsert(image_credentials, update_method="patch")
 
         # 创建或更新 BkApp
-        bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
-            generate_bkapp_name(env),
-            namespace=wl_app.namespace,
-            body=manifest,
-            update_method="replace",
-            auto_add_version=True,
-        )
+        for __ in range(RETRY_TIME):
+            try:
+                bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
+                    generate_bkapp_name(env),
+                    namespace=wl_app.namespace,
+                    body=manifest,
+                    update_method="replace",
+                    auto_add_version=True,
+                )
+            except ApiException as e:
+                if e.status == 409 and json.loads(e.body)["reason"] == "Conflict":
+                    # 发成冲突异常时,重试
+                    continue
+                raise
 
     # Deploy other dependencies
     deploy_networking(env)

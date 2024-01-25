@@ -99,7 +99,10 @@ class AlertSLZ(serializers.Serializer):
         return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"
 
     def get_module_name(self, instance) -> Optional[str]:
-        match = MODULE_NAME_PATTERN.search(instance.get("alert_name"))
+        alert_name = instance.get("alert_name")
+        if not isinstance(alert_name, str):
+            return None
+        match = MODULE_NAME_PATTERN.search(alert_name)
         if match:
             return match.group(1)
         return None

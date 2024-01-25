@@ -2503,4 +2503,5 @@ export default {
   若自定义日志格式: 'If custom log format',
   检查清洗规则: 'Check cleaning rules',
   去授权: 'Authorize',
+  '请选择镜像凭证以拉取私有镜像，也可在创建模块后在 "模块配置 - 构建配置“ 页面中添加': 'Please select an image credential to pull private images. You can also add it later on the “Module Settings - Build Config”after creating the module.',
 };

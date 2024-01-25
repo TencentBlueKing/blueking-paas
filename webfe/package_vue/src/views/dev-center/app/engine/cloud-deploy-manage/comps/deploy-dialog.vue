@@ -1242,14 +1242,14 @@ export default {
   .line {
     width: 1px;
     margin: 0 10px;
-    height: 16px;
+    height: 14px;
     background: #DCDEE5;
   }
 
   .right-link {
     flex-shrink: 0;
     display: flex;
-    align-content: center;
+    align-items: center;
     .link-text {
       font-size: 12px;
       color: #3a84ff;

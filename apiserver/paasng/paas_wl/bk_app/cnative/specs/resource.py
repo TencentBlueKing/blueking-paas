@@ -184,9 +184,14 @@ class MresConditionParser:
                 return ModelResState(DeployStatus.READY, available.reason, available.message)
 
         if self.mres.status.phase == MResPhaseType.AppFailed:
+            reason = str()
+            message = str()
             for cond in self.mres.status.conditions:
                 if cond.status == ConditionStatus.FALSE and cond.message:
-                    return ModelResState(DeployStatus.ERROR, cond.reason, cond.message)
+                    reason += f"{cond.reason}\n"
+                    message += f"{cond.message}\n"
+            if message:
+                return ModelResState(DeployStatus.ERROR, reason, message)
             return ModelResState(DeployStatus.ERROR, "Unknown", "")
 
         return ModelResState(DeployStatus.PROGRESSING, "Progressing", "progressing")

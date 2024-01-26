@@ -95,6 +95,8 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
             except ApiException as e:
                 if e.status == 409 and json.loads(e.body)["reason"] == "Conflict":
                     # 发成冲突异常时,重试
+                    # 删除 resourceVersion，在 create_or_update 过程中自动添加
+                    manifest["metadata"].pop("resourceVersion", "")
                     continue
                 raise
             else:

@@ -236,7 +236,6 @@
 <script>import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import ResourceEditor from './comps/deploy-resource-editor';
-// import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
 import { isJsonString } from '@/common/utils';
 
@@ -245,7 +244,6 @@ export default {
     ResourceEditor,
   },
   mixins: [appBaseMixin],
-  props: {},
   data() {
     return {
       sliderEditordetail: '',
@@ -421,6 +419,12 @@ export default {
         .get(url)
         .then((res) => {
           this.volumeList = res.results;
+        })
+        .catch((e) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('接口异常'),
+          });
         })
         .finally(() => {
           this.isLoading = false;

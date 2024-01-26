@@ -35,6 +35,7 @@ REGISTRY_ALIASES = {
     # Rewrite "docker.io" to the real endpoint "index.docker.io"
     "docker.io": "index.docker.io"
 }
+TAG_LIST_TIMEOUT = 30
 
 
 class DockerRegistryController:
@@ -98,7 +99,7 @@ class DockerRegistryController:
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         versions = []
-        for tag in Tags(repo=self.repo, client=self.get_client()).list():
+        for tag in Tags(repo=self.repo, client=self.get_client(), timeout=TAG_LIST_TIMEOUT).list():
             versions.append(
                 AlternativeVersion(
                     name=tag,

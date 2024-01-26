@@ -2416,14 +2416,14 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "moby-distribution"
-version = "0.5.5"
+version = "0.5.11"
 description = "Yet another moby(docker) distribution implement by python."
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<4"
 files = [
-    {file = "moby_distribution-0.5.5-py3-none-any.whl", hash = "sha256:87610a875a9dc591771eba3a0e7eb2c54483e0751c289e36290d23d911fa2c15"},
-    {file = "moby_distribution-0.5.5.tar.gz", hash = "sha256:1c82866e8887ebe24f13ac34d7f736387e5df9c85a748d3c23a67d4e912faee3"},
+    {file = "moby_distribution-0.5.11-py3-none-any.whl", hash = "sha256:842ea827a6ad4480340e4bddc54e56c0064a3b2c96e23b20d1fc191bc6b65317"},
+    {file = "moby_distribution-0.5.11.tar.gz", hash = "sha256:f19520f5a5212c70320085450a8ebff4168c2af9fb91d3941ae3353169d9919c"},
 ]
 
 [package.dependencies]
@@ -5008,4 +5008,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "5ca6aaba06dc53545f09e21289f5d483efd9ca54934c3f09b8d10e39b4b66796"
+content-hash = "b67e1c926e3e8daa487114dc190ee5179f958ab19a112bf8c86d8aa945e12d31"

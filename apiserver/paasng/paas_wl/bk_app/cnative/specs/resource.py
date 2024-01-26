@@ -97,6 +97,8 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
                     # 发成冲突异常时,重试
                     continue
                 raise
+            else:
+                break
 
     # Deploy other dependencies
     deploy_networking(env)

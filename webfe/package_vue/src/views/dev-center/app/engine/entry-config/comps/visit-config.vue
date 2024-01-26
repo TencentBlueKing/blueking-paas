@@ -142,6 +142,30 @@
             </div>
           </template>
         </bk-table-column>
+        <bk-table-column :label="$t('进程')" :width="100">
+          <template slot-scope="{ row }">
+            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
+              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
+                <div v-if="e.isEdit">
+                  <bk-select
+                    :disabled="true"
+                    v-model="defaultProcess">
+                    <bk-option
+                      v-for="option in processList"
+                      :key="option.name"
+                      :id="option.name"
+                      :name="option.name">
+                    </bk-option>
+                  </bk-select>
+                </div>
+                <section v-else>
+                  <div class="flex-row align-items-center">web</div>
+                </section>
+                <div class="line"></div>
+              </div>
+            </div>
+          </template>
+        </bk-table-column>
         <bk-table-column :label="$t('操作')" :width="120" fixed="right">
           <template slot-scope="{ row, $index }">
             <div v-for="item in row.envsData" :key="item" class="cell-container">
@@ -321,6 +345,10 @@ export default {
       isIpConsistent: true,
       isSaveLoading: false,
       curPathPrefix: {},
+      defaultProcess: 'web',
+      processList: [
+        { name: 'web' },
+      ],
     };
   },
   computed: {

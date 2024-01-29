@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import List
 
 from celery import shared_task
@@ -58,15 +58,21 @@ def _update_or_create_usage_report(app: Application):
 
     # 统计近一周总访问量 & 用户数
     total_pv, total_uv = 0, 0
-    end = datetime.now().date()
+    end = date.today()
     start = end - timedelta(days=7)
     for module in app.modules.all():
         for env in module.envs.all():
-            site = get_or_create_site_by_env(env)
-            client = SiteMetricsClient(site, MetricSourceType.INGRESS)
-            resp = client.get_total_page_view_metric_about_site(start, end)
-            total_pv += resp["result"]["results"]["pv"]
-            total_uv += resp["result"]["results"]["uv"]
+            try:
+                site = get_or_create_site_by_env(env)
+                client = SiteMetricsClient(site, MetricSourceType.INGRESS)
+                resp = client.get_total_page_view_metric_about_site(start, end)
+            except Exception:
+                logger.exception(
+                    "failed to get app %s module %s env %s pv & uv", app.code, module.name, env.environment
+                )
+            else:
+                total_pv += resp["result"]["results"]["pv"]
+                total_uv += resp["result"]["results"]["uv"]
 
     AppResourceUsageReport.objects.update_or_create(
         app_code=app.code,

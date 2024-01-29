@@ -49,6 +49,18 @@
         LOGIN_SERVICE_URL: '<%= process.env.BK_LOGIN_URL %>',
         USERS_URL: `<%= process.env.BK_COMPONENT_API_URL %>/api/c/compapi/v2/usermanage/fs_list_users/` || '',
       }
+      var BKPAAS_BUILD_VERSION = decodeURIComponent('<%= process.env.BKPAAS_BUILD_VERSION %>')
+
+      // 控制台输出版本信息
+      if (BKPAAS_BUILD_VERSION !== '') {
+        console.log(
+          `%c版本信息%c${BKPAAS_BUILD_VERSION}%c>> ${new Date().toString()
+            .slice(0, 16)}<<`,
+          'padding: 2px 5px; background: #ea3636; color: #fff; border-radius: 3px 0 0 3px;',
+          'padding: 2px 5px; background: #42c02e; color: #fff; border-radius: 0 3px 3px 0; font-weight: bold;',
+          'background-color: #3A84FF; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold;margin-left: 16px;',
+        );
+      }
     </script>
     <% if (process.env.BK_APP_VERSION === 'te'){ %>
     <!-- BK Analytics start -->

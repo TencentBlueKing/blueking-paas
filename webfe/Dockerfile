@@ -3,6 +3,7 @@ FROM node:14.17.6 AS StaticBuilding
 
 ARG APP_VERSION=ce
 ARG NODE_ENV=production
+ARG BKPAAS_BUILD_VERSION="tag: null, commitID: ^HEAD, buildID: null, buildTime: null"
 ENV NPM_VERSION 6.14.15
 
 # install requirements & build

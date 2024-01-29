@@ -203,5 +203,5 @@ class AppResourceUsageReport(models.Model):
     pv = models.BigIntegerField(verbose_name="近一周页面访问量", default=0)
     uv = models.BigIntegerField(verbose_name="近一周访问用户数", default=0)
     summary = models.JSONField(verbose_name="资源使用详情汇总", default=dict)
-    operator = models.CharField(verbose_name="最后操作人", max_length=128)
+    operator = models.CharField(verbose_name="最后操作人", max_length=128, null=True)
     collected_at = models.DateTimeField(verbose_name="数据统计时间")

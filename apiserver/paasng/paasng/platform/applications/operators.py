@@ -71,13 +71,12 @@ def query_recent_deployment_operators(operations: QuerySet, days_range: int) -> 
 def get_last_operator(application: Application):
     """Query latest deployment operator"""
     # 获取最近操作人员
-    try:
-        last_operator = (
-            Deployment.objects.filter(app_environment__module__application__code=application.code)
-            .order_by("-created")
-            .first()
-            .operator
-        )
-    except Deployment.DoesNotExist:
+    last_deployment = (
+        Deployment.objects.filter(app_environment__module__application__code=application.code)
+        .order_by("-created")
+        .first()
+    )
+    if not last_deployment:
         return None
-    return get_username_by_bkpaas_user_id(last_operator)
+
+    return get_username_by_bkpaas_user_id(last_deployment.operator)

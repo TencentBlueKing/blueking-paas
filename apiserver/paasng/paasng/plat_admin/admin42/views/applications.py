@@ -21,7 +21,6 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.bk_app.monitoring.metrics.models import AppResourceUsageReport
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
@@ -33,6 +32,7 @@ from paasng.infras.iam.helpers import (
     fetch_role_members,
     remove_user_all_roles,
 )
+from paasng.misc.monitoring.metrics.models import AppResourceUsageReport
 from paasng.plat_admin.admin42.serializers.application import (
     ApplicationDetailSLZ,
     ApplicationSLZ,

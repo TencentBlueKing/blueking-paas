@@ -29,7 +29,7 @@ Examples:
 """
 from django.core.management.base import BaseCommand
 
-from paas_wl.bk_app.monitoring.metrics.tasks import collect_and_update_app_res_usage_reports
+from paasng.misc.monitoring.metrics.tasks import collect_and_update_app_res_usage_reports
 
 
 class Command(BaseCommand):

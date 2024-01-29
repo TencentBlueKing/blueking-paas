@@ -25,19 +25,19 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.monitoring.metrics.clients import (
+from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paasng.misc.monitoring.metrics.clients import (
     BkMonitorMetricClient,
     MetricClient,
     MetricQuery,
     MetricSeriesResult,
     PrometheusMetricClient,
 )
-from paas_wl.bk_app.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
-from paas_wl.bk_app.monitoring.metrics.exceptions import AppInstancesNotFoundError, AppMetricNotSupportedError
-from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
-from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paasng.misc.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
+from paasng.misc.monitoring.metrics.exceptions import AppInstancesNotFoundError, AppMetricNotSupportedError
+from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.processes.kres_entities import Process
@@ -203,5 +203,5 @@ class AppResourceUsageReport(models.Model):
     pv = models.BigIntegerField(verbose_name="近一周页面访问量", default=0)
     uv = models.BigIntegerField(verbose_name="近一周访问用户数", default=0)
     summary = models.JSONField(verbose_name="资源使用详情汇总", default=dict)
-    operator = models.CharField(verbose_name="最后操作人", max_length=128)
+    operator = models.CharField(verbose_name="最后操作人", max_length=128, null=True)
     collected_at = models.DateTimeField(verbose_name="数据统计时间")

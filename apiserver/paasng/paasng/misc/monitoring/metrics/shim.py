@@ -16,10 +16,10 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List
 
-from paas_wl.bk_app.monitoring.metrics.exceptions import RequestMetricBackendError
-from paas_wl.bk_app.monitoring.metrics.models import get_resource_metric_manager
-from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.bk_app.applications.models import WlApp
+from paasng.misc.monitoring.metrics.exceptions import RequestMetricBackendError
+from paasng.misc.monitoring.metrics.models import get_resource_metric_manager
+from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
 
 logger = logging.getLogger(__name__)
 

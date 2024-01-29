@@ -28,17 +28,16 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.apis.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
-from paas_wl.bk_app.monitoring.metrics.exceptions import (
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.helpers import fetch_user_roles
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.monitoring.metrics.exceptions import (
     AppInstancesNotFoundError,
     AppMetricNotSupportedError,
     RequestMetricBackendError,
 )
-from paas_wl.bk_app.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
-from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.iam.helpers import fetch_user_roles
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
+from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
@@ -47,9 +46,11 @@ from paasng.platform.engine.models.offline import OfflineOperation
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.serializers import (
     CreateOfflineOperationSLZ,
+    InstanceMetricsResultSerializer,
     OfflineOperationSLZ,
     OperationSLZ,
     QueryOperationsSLZ,
+    ResourceMetricsResultSerializer,
     ResourceMetricsSLZ,
 )
 from paasng.platform.engine.utils.query import OfflineOperationGetter

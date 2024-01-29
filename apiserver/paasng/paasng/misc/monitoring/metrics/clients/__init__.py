@@ -16,12 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
+from .base import MetricClient, MetricQuery, MetricSeriesResult
+from .bkmonitor import BkMonitorMetricClient, BkPromResult
+from .prometheus import PrometheusMetricClient
 
-from django.apps import AppConfig
-
-logger = logging.getLogger(__name__)
-
-
-class MetricConfig(AppConfig):
-    name = "paas_wl.bk_app.monitoring.metrics"
+__all__ = [
+    "BkMonitorMetricClient",
+    "BkPromResult",
+    "PrometheusMetricClient",
+    "MetricClient",
+    "MetricQuery",
+    "MetricSeriesResult",
+]

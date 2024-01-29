@@ -23,11 +23,11 @@ from typing import List
 
 from celery import shared_task
 
-from paas_wl.bk_app.monitoring.metrics.evaluator import AppResQuotaEvaluator
-from paas_wl.bk_app.monitoring.metrics.models import AppResourceUsageReport
 from paasng.accessories.paas_analysis.clients import SiteMetricsClient
 from paasng.accessories.paas_analysis.constants import MetricSourceType
 from paasng.accessories.paas_analysis.services import get_or_create_site_by_env
+from paasng.misc.monitoring.metrics.evaluator import AppResQuotaEvaluator
+from paasng.misc.monitoring.metrics.models import AppResourceUsageReport
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.operators import get_last_operator
 
@@ -82,8 +82,8 @@ def _update_or_create_usage_report(app: Application):
             "mem_requests": mem_requests,
             "cpu_limits": cpu_limits,
             "mem_limits": mem_limits,
-            "cpu_usage_avg": round(cpu_usage_avg_val / cpu_limits, 4),
-            "mem_usage_avg": round(mem_usage_avg_val / mem_limits, 4),
+            "cpu_usage_avg": round(cpu_usage_avg_val / cpu_limits, 4) if cpu_limits else 0,
+            "mem_usage_avg": round(mem_usage_avg_val / mem_limits, 4) if mem_limits else 0,
             "pv": total_pv,
             "uv": total_uv,
             "summary": asdict(summary),

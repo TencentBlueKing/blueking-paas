@@ -37,7 +37,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
-from paas_wl.bk_app.monitoring.metrics.evaluator import AppResQuotaEvaluator
+from paasng.misc.monitoring.metrics.evaluator import AppResQuotaEvaluator
 from paasng.platform.applications.models import Application
 
 

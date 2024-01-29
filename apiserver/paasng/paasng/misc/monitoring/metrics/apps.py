@@ -16,5 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""System(internal) APIs. Besides this module, There are also system APIs distributed
-in other modules"""
+import logging
+
+from django.apps import AppConfig
+
+logger = logging.getLogger(__name__)
+
+
+class MetricConfig(AppConfig):
+    name = "paasng.misc.monitoring.metrics"

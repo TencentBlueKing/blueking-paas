@@ -21,9 +21,9 @@ import logging
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.bk_app.monitoring.metrics.models import AppResourceUsageReport
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
+from paasng.misc.monitoring.metrics.models import AppResourceUsageReport
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application

@@ -14,7 +14,7 @@ arrow = "==0.12.1"
 bk-iam = "==1.1.20"
 bkpaas-auth = "==2.0.8"
 apigw-manager = { version = "==1.2.0" }
-bkstorages = { version = "==1.0.8" }
+bkstorages = { version = "==1.1.0" }
 bleach = "==2.0.0"
 blue-krill = { version = "==2.0.2" }
 bkapi-component-open = { version = "==1.1.0" }

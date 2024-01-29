@@ -35,6 +35,7 @@ REGISTRY_ALIASES = {
     # Rewrite "docker.io" to the real endpoint "index.docker.io"
     "docker.io": "index.docker.io"
 }
+# 30 seconds timeout for list tags operation
 TAG_LIST_TIMEOUT = 30
 
 

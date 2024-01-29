@@ -172,7 +172,8 @@ class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
     )
     log_type = serializers.ChoiceField(help_text="日志类型", choices=BkLogType.get_choices())
     is_builtin = serializers.BooleanField(help_text="是否平台内置采集项", read_only=True)
-    url = serializers.SerializerMethodField(help_text="日志平台链接")
+    url = serializers.SerializerMethodField(help_text="日志采集规则的检索链接")
+    clean_url = serializers.SerializerMethodField(help_text="日志采集规则的清洗链接")
 
     def validate_log_paths(self, paths: List[str]):
         for path in paths:
@@ -182,6 +183,13 @@ class ModuleCustomCollectorConfigSLZ(serializers.Serializer):
 
     def get_url(self, obj):
         return "{bk_log_url}/#/retrieve/{collector_config_id}?spaceUid={space_uid}".format(
+            bk_log_url=settings.BK_LOG_URL,
+            collector_config_id=obj.collector_config_id,
+            space_uid=self.context["space_uid"],
+        )
+
+    def get_clean_url(self, obj):
+        return "{bk_log_url}/#/manage/clean-list/edit/{collector_config_id}?spaceUid={space_uid}".format(
             bk_log_url=settings.BK_LOG_URL,
             collector_config_id=obj.collector_config_id,
             space_uid=self.context["space_uid"],

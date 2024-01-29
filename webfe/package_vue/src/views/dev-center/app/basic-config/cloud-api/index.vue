@@ -1,105 +1,173 @@
 <template lang="html">
-  <div
-    :class="[{ 'plugin-cloud-box': isPlugin }, 'cloud-wrapper']"
-  >
+  <div :class="[{ 'plugin-cloud-box': isPlugin }, 'cloud-wrapper']">
     <!-- 云原生应用没有头部导航 -->
-    <div :class="['ps-top-bar', { 'cloud-api-permission': !isCloudNativeApp }]">
+    <div :class="['ps-top-bar','cloud-api-permission', { 'not-shadow': isPlugin }]">
       <div class="header-title">
-        {{ $t('云API权限管理') }}
+        {{ $t('云 API 权限') }}
         <div class="guide-wrapper">
           <bk-button
             class="f12"
-            text
             theme="primary"
-            style="margin-right: 10px;"
-            @click="toLink('gateway')"
+            :outline="true"
+            v-bk-tooltips.top-end="{
+              content: $t('令牌（access_token）可用于调用用户态的云 API，有效期 180 天。'),
+              theme: 'light',
+              width: 220,
+              extCls: 'create-token-tips-cls',
+            }"
+            style="margin-right: 10px"
+            @click="handleShowDialogCreateToken"
           >
-            {{ $t('API 网关接入指引') }}
-          </bk-button>
-          <bk-button
-            class="f12"
-            text
-            theme="primary"
-            style="margin-right: 10px;"
-            @click="toLink('API')"
-          >
-            {{ $t('API 调用指引') }}
-          </bk-button>
-          <bk-button
-            class="f12"
-            text
-            theme="primary"
-            @click="toLink('FAQ')"
-          >
-            FAQ
+            {{ $t('创建新令牌') }}
           </bk-button>
         </div>
       </div>
     </div>
-    <!-- 云原生-云API权限管理tab -->
-    <section
-      v-if="isCloudNativeApp"
-      class="cloud-tab-wrapper"
-    >
-      <bk-tab
-        :active.sync="active"
-        ext-cls="app-tab-cls"
-        type="unborder-card"
-        @tab-change="handleTabChange"
+    <div class="tab-container-cls">
+      <bk-button
+        class="f12 gateway-guide"
+        :style="{ right: isPlugin ? '100px' : '48px' }"
+        text
+        theme="primary"
+        @click="toLink('gateway')"
       >
-        <bk-tab-panel
-          v-for="(panel, index) in panels"
-          :key="index"
-          :label="panel.label"
-          v-bind="panel"
-        />
-      </bk-tab>
-    </section>
-    <section class="app-container middle cloud-container">
-      <paas-content-loader
-        :key="pageKey"
-        :is-loading="isLoading"
-        placeholder="cloud-api-index-loading"
-        :offset-top="12"
-        :delay="1000"
-      >
-        <bk-tab
-          v-if="!isCloudNativeApp"
-          :active.sync="active"
-          type="unborder-card"
-          @tab-change="handleTabChange"
+        {{ $t('API 网关接入指引') }}
+      </bk-button>
+      <section class="app-container middle cloud-container">
+        <paas-content-loader
+          :key="pageKey"
+          :is-loading="isLoading"
+          placeholder="cloud-api-index-loading"
+          :offset-top="12"
+          :delay="1000"
         >
-          <bk-tab-panel
-            v-for="(panel, index) in panels"
-            :key="index"
-            v-bind="panel"
-          />
-        </bk-tab>
-        <div :class="['cloud-type-item', { 'cloud-class':isCloudNativeApp }]">
-          <render-api
-            v-if="active === 'gatewayApi'"
-            :key="comKey"
-            :app-code="appCode"
-            @data-ready="handlerDataReady"
-          />
-          <render-api
-            v-if="active === 'componentApi'"
-            :key="comKey"
-            api-type="component"
-            :app-code="appCode"
-            @data-ready="handlerDataReady"
-          />
-          <app-perm
-            v-if="active === 'appPerm'"
-            @data-ready="handlerDataReady"
-          />
-          <apply-record
-            v-if="active === 'applyRecord'"
-            @data-ready="handlerDataReady"
-          />
+          <bk-tab
+            :active.sync="active"
+            type="unborder-card"
+            @tab-change="handleTabChange"
+          >
+            <bk-tab-panel
+              v-for="(panel, index) in panels"
+              :key="index"
+              v-bind="panel"
+            />
+          </bk-tab>
+          <div class="cloud-type-item">
+            <render-api
+              v-if="active === 'gatewayApi'"
+              :key="comKey"
+              :app-code="appCode"
+              @data-ready="handlerDataReady"
+            />
+            <render-api
+              v-if="active === 'componentApi'"
+              :key="comKey"
+              api-type="component"
+              :app-code="appCode"
+              @data-ready="handlerDataReady"
+            />
+            <app-perm
+              v-if="active === 'appPerm'"
+              @data-ready="handlerDataReady"
+            />
+            <apply-record
+              v-if="active === 'applyRecord'"
+              @data-ready="handlerDataReady"
+            />
+          </div>
+        </paas-content-loader>
+      </section>
+    </div>
+
+    <!-- 创建新令牌 -->
+    <bk-dialog
+      v-model="createTokenCofig.visible"
+      theme="primary"
+      :mask-close="false"
+      width="640"
+      @after-leave="handleCancel"
+    >
+      <div class="header-wrapper" slot="header">
+        {{ $t('创建新令牌') }}
+      </div>
+      <div class="steps-wrapper">
+        <bk-steps
+          ext-cls="custom-icon"
+          :steps="steps"
+          :cur-step.sync="curStep"
+        ></bk-steps>
+      </div>
+      <section
+        class="create-dialog-wrapper"
+        v-if="curStep === 1"
+      >
+        <bk-alert
+          ext-cls="custom-alert-cls"
+          type="error"
+          :title="$t('创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。')"
+        ></bk-alert>
+        <div class="content">
+          <p class="title">{{ createTokenTip }}</p>
+          <bk-input v-model="curAppId"></bk-input>
         </div>
-      </paas-content-loader>
-    </section>
+      </section>
+      <section
+        class="create-dialog-wrapper"
+        v-bkloading="{ isLoading: nextBtnLoading, zIndex: 10 }"
+        v-else
+      >
+        <bk-alert
+          v-if="tokenUrl"
+          ext-cls="custom-alert-cls"
+          type="success"
+          :title="$t('令牌（access_token）创建成功！请复制该令牌，关闭弹窗后将无法再次看到它。')"
+        ></bk-alert>
+        <div class="content">
+          <p class="title" v-if="tokenUrl">{{ $t('令牌（access_token）') }}</p>
+          <div
+            :class="['access-token-url', { error: !tokenUrl }]"
+            v-copy="tokenUrl"
+          >
+            <span v-if="tokenUrl">{{ tokenUrl }}</span>
+            <span v-else>{{ errorObject?.message }}</span>
+            <div class="copy" v-if="tokenUrl">
+              <i class="paasng-icon paasng-general-copy" />
+              {{ $t('复制') }}
+            </div>
+          </div>
+        </div>
+      </section>
+      <div
+        class="footer-wrapper"
+        slot="footer"
+      >
+        <bk-button
+          v-if="curStep === 1"
+          :theme="'primary'"
+          class="mr10"
+          :disabled="nextBtnDisabled"
+          :loading="nextBtnLoading"
+          @click="handleNext"
+        >
+          {{ $t('下一步') }}
+        </bk-button>
+        <bk-button
+          v-else
+          :theme="'primary'"
+          class="mr10"
+          @click="handleCancel"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          :theme="'default'"
+          @click="handleCancel"
+          class="mr10"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
   </div>
 </template>
 
@@ -109,7 +177,7 @@ import AppPerm from './comps/app-perm';
 import ApplyRecord from './comps/apply-record';
 
 export default {
-  components:  {
+  components: {
     AppPerm,
     ApplyRecord,
     RenderApi,
@@ -133,15 +201,38 @@ export default {
       comKey: -1,
       pageKey: -1,
       isPlugin: false,
+      curAppId: '',
+      createTokenCofig: {
+        visible: false,
+      },
+      curStep: 1,
+      nextBtnDisabled: true,
+      nextBtnLoading: false,
+      steps: [
+        { title: this.$t('应用 ID 确认'), icon: 1 },
+        { title: this.$t('令牌查看'), icon: 2 },
+      ],
+      tokenUrl: '',
+      errorObject: null,
     };
   },
   computed: {
+    createTokenTip() {
+      return this.$t('请完整输入应用 ID（{code}）确认', { code: this.appCode });
+    },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.active = 'gatewayApi';
       this.pageKey = +new Date();
       this.isLoading = true;
+    },
+    curAppId(newVlaue) {
+      if (newVlaue === this.appCode) {
+        this.nextBtnDisabled = false;
+      } else {
+        this.nextBtnDisabled = true;
+      }
     },
   },
   created() {
@@ -163,93 +254,240 @@ export default {
     handleTabChange() {
       this.comKey = +new Date();
     },
+
+    // 获取新令牌
+    async getAccessToken() {
+      try {
+        const res = await this.$store.dispatch('cloudApi/getAccessToken', {
+          appCode: this.appCode,
+        });
+        // message: 字段处理
+        if (res?.access_token) {
+          // 正常响应处理
+          this.tokenUrl = res.access_token;
+        } else {
+          // 错误响应处理
+          this.errorObject = this.formatErrorString(res.message);
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.nextBtnLoading = false;
+        }, 200);
+      }
+    },
+
+    // 错误信息转换处理
+    formatErrorString(message) {
+      // 将错误字符串转换为一个格式正确的JSON字符串
+      const jsonString = message.replace(/detail: /, '').replace(/'/g, '"')
+        .replace(/None/g, 'null')
+        .replace(/False/g, 'false')
+        .replace(/True/g, 'true');
+
+      // 使用正则表达式来匹配JSON串
+      const regex = /\{.*\}/;
+      const matched = jsonString.match(regex);
+
+      // 若匹配成功，则提取并解析JSON
+      if (matched) {
+        const detailStr = matched[0];
+
+        try {
+          const detailObj = JSON.parse(detailStr);
+          return detailObj;
+        } catch (error) {
+          console.error('JSON parsing error:', error);
+        }
+      } else {
+        console.error('No detail object found');
+      }
+      return null;
+    },
+
+    handleShowDialogCreateToken() {
+      this.createTokenCofig.visible = true;
+    },
+
+    // 下一步
+    handleNext() {
+      if (this.curAppId !== this.appCode) {
+        return;
+      }
+      this.nextBtnLoading = true;
+      this.curStep = 2;
+      this.getAccessToken();
+    },
+
+    // 取消状态重置
+    handleCancel() {
+      this.createTokenCofig.visible = false;
+      // 消除消失闪烁
+      setTimeout(() => {
+        this.nextBtnDisabled = true;
+        this.nextBtnLoading = false;
+        this.curAppId = '';
+        this.tokenUrl = '';
+        this.curStep = 1;
+        this.errorObject = null;
+      }, 300);
+    },
   },
 };
-
 </script>
 
 <style lang="scss" scoped>
-    .cloud-wrapper{
-      .ps-top-bar {
-        padding: 0px 24px;
-      }
+.cloud-wrapper {
+  .ps-top-bar {
+    padding: 0px 24px;
+  }
+}
+
+.cloud-container {
+  background: #fff;
+  margin-top: 16px;
+  padding-top: 0px;
+  .cloud-type-item {
+    padding: 0 24px 16px 24px;
+  }
+  .cloud-class {
+    padding-top: 16px;
+  }
+}
+.overview-tit {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 30px;
+}
+
+.api-type-list {
+  padding-top: 16px;
+  overflow: hidden;
+  border-bottom: solid 1px #e6e9ea;
+}
+
+.api-type-list a {
+  width: 50%;
+  height: 34px;
+  line-height: 34px;
+  text-align: center;
+  font-size: 16px;
+  color: #5d6075;
+  float: left;
+  border-bottom: solid 3px #fff;
+  cursor: pointer;
+}
+
+.api-type-list a.active {
+  border-bottom: solid 3px #3a84ff;
+  color: #3a84ff;
+}
+
+.plugin-cloud-box {
+  .ps-top-bar {
+    padding: 16px 0 0 0 !important;
+    font-size: 16px;
+    color: #313238;
+    line-height: 24px;
+    letter-spacing: 0;
+    .header-title {
+      border: none;
+      margin: 0 50px;
+    }
+  }
+}
+
+.ps-top-bar.cloud-api-permission {
+  box-shadow: 0 3px 4px 0 #0000000a;
+}
+
+.cloud-wrapper /deep/ .bk-tab-section {
+  padding: 16px 0 0 0;
+}
+
+.steps-wrapper {
+  width: 370px;
+  margin: 0 auto;
+}
+
+.header-wrapper {
+  text-align: left;
+  height: 28px;
+  font-family: MicrosoftYaHei;
+  font-size: 20px;
+  color: #313238;
+  line-height: 28px;
+}
+
+.create-dialog-wrapper {
+  .bk-alert {
+    margin-top: 26px;
+    margin-bottom: 24px;
+  }
+  .title {
+    font-size: 14px;
+    color: #63656e;
+    line-height: 22px;
+    margin-bottom: 6px;
+  }
+  .access-token-url {
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 40px;
+    background: #e1ecff;
+    border-radius: 2px;
+    font-family: MicrosoftYaHei;
+    font-size: 14px;
+    color: #313238;
+    line-height: 22px;
+
+    &.error {
+      background: #FFEDED;
+      color: #63656E;
+      margin-top: 24px;
     }
 
-    .cloud-container{
-      background: #fff;
-      margin-top: 16px;
-      padding-top: 0px;
-      .cloud-type-item{
-        padding: 0 24px 16px 24px;
-      }
-      .cloud-class {
-        padding-top: 16px;
-      }
+    .copy {
+      color: #3a84ff;
+      cursor: pointer;
     }
-    .overview-tit {
-        display: flex;
-        justify-content: space-between;
-        padding: 0 30px;
-    }
+  }
+}
+.footer-wrapper {
+  text-align: right;
+}
+.tab-container-cls {
+  position: relative;
+  .gateway-guide {
+    position: absolute;
+    right: 48px;
+    top: 13px;
+    z-index: 99;
+  }
+}
 
-    .api-type-list {
-        padding-top: 16px;
-        overflow: hidden;
-        border-bottom: solid 1px #e6e9ea;
-    }
+.not-shadow {
+  box-shadow: none !important;
+}
 
-    .api-type-list a {
-        width: 50%;
-        height: 34px;
-        line-height: 34px;
-        text-align: center;
-        font-size: 16px;
-        color: #5d6075;
-        float: left;
-        border-bottom: solid 3px #fff;
-        cursor: pointer;
-    }
-
-    .api-type-list a.active {
-        border-bottom: solid 3px #3a84ff;
-        color: #3a84ff;
-    }
-
-    .plugin-cloud-box {
-        .ps-top-bar {
-            padding: 16px 0 0 0 !important;
-            font-size: 16px;
-            color: #313238;
-            line-height: 24px;
-            letter-spacing: 0;
-            .header-title {
-                border: none;
-                margin: 0 50px;
-            }
-        }
-    }
-
-    .ps-top-bar.cloud-api-permission {
-      box-shadow: 0 3px 4px 0 #0000000a;
-    }
-
-    .cloud-wrapper /deep/ .bk-tab-section {
-        padding: 16px 0 0 0;
-    }
-
-    .cloud-tab-wrapper {
-      margin-top: -18px;
-      position: relative;
-      background: #FFFFFF;
-      box-shadow: 0 3px 4px 0 #0000000a;
-      .app-tab-cls{
-        /deep/ .bk-tab-section{
-          padding: 0 !important;
-        }
-        /deep/ .bk-tab-header {
-          background-image: none !important;
-        }
-      }
-
-    }
+.guide-wrapper {
+  .bk-button:hover {
+    background: #E1ECFF;
+    color: #1768EF;
+    border-color: #1768EF;
+  }
+}
+</style>
+<style>
+.create-token-tips-cls .tippy-content {
+  font-family: MicrosoftYaHei;
+  font-size: 12px;
+  color: #63656E;
+}
 </style>

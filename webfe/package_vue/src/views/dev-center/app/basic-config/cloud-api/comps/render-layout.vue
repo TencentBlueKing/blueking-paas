@@ -12,8 +12,6 @@
     .paasng-api-layout {
         position: relative;
         width: 100%;
-        // display: flex;
-        // justify-content: flex-start;
         .left {
             position: relative;
             padding: 10px 0;
@@ -25,9 +23,9 @@
             display: inline-block;
         }
         .right {
-            padding: 0 10px;
+            padding-left: 10px;
             display: inline-block;
-            width: calc(100% - 260px);
+            width: calc(100% - 256px);
             vertical-align: top;
         }
     }

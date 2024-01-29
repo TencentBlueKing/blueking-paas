@@ -8,9 +8,6 @@
       :mask-close="false"
       :loading="deployAppDialog.isLoading"
       :auto-close="false"
-      :ok-text="`${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
-      @confirm="handleConfirmValidate"
-      @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
       <template #header>
@@ -19,6 +16,50 @@
           <div class="module-name-tag">{{ curAppModule.name || '--' }}</div>
         </div>
       </template>
+
+      <template #footer>
+        <div class="dialog-footer-wrapper">
+          <bk-button
+            :theme="'primary'"
+            :disabled="deployAppDialog.disabled || deploybuttonDisabled"
+            @click="handleConfirmValidate"
+            class="mr10"
+          >
+            {{ `${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}` }}
+          </bk-button>
+          <bk-button :theme="'default'" @click="handleCancel">
+            {{ $t('取消') }}
+          </bk-button>
+        </div>
+      </template>
+
+      <!-- 部署限制 -->
+      <section v-if="isShowErrorAlert.deploy" class="customize-alert-wrapper mb12">
+        <p class="text">
+          <i class="paasng-icon paasng-remind exclamation-cls"></i>
+          <span>{{ deployErrorData?.message }}</span>
+        </p>
+        <div class="right-link">
+          <bk-button
+            class="link-text"
+            :text="true"
+            @click="handleFixPreparation(deployErrorData)"
+          >
+            {{ $t('立即处理') }}
+            <i class="paasng-icon paasng-jump-link" />
+          </bk-button>
+          <div class="line"></div>
+          <bk-button
+            class="link-text"
+            :text="true"
+            @click="getDeployPreparations('deploy')"
+          >
+            {{ $t('刷新') }}
+            <i class="paasng-icon paasng-refresh-line" v-if="!deployRefreshLoading" />
+            <round-loading class="round-loading-cls" v-else />
+          </bk-button>
+        </div>
+      </section>
 
       <!-- 镜像逻辑，排除smart应用 -->
       <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' && !isSmartApp">
@@ -142,6 +183,7 @@
               {{ $t('查看代码版本差异') }}
             </div>
           </div>
+          <!-- 代码分支禁用 -->
           <bk-select
             v-model="branchValue"
             :placeholder="$t('请选择')"
@@ -149,6 +191,7 @@
             :popover-min-width="420"
             :clearable="false"
             :searchable="true"
+            :disabled="isShowCodeAlert"
             @change="handleChangeBranch"
             :loading="isBranchesLoading"
             :empty-text="branchEmptyText"
@@ -184,12 +227,13 @@
               {{ $t('新建部署分支') }}
             </div>
           </bk-select>
-          <p
+          <!-- 删除 -->
+          <!-- <p
             class="error-text mt5"
             v-if="branchErrorTips"
           >
             {{ branchErrorTips }}
-          </p>
+          </p> -->
         </div>
 
         <div
@@ -257,6 +301,44 @@
           </bk-radio-group>
         </div>
       </div>
+
+      <section v-if="isShowCodeAlert" class="customize-alert-wrapper mt10">
+        <p class="text">
+          <i class="paasng-icon paasng-remind exclamation-cls"></i>
+          <span>{{ codeRepositoryErrorData?.message }}</span>
+        </p>
+        <div class="right-link">
+          <bk-button
+            v-if="codeRepositoryErrorData.action_name === 'NEED_TO_BIND_OAUTH_INFO'"
+            class="link-text"
+            :text="true"
+            @click="hanndleToAuthorize()"
+          >
+            {{ $t('去授权') }}
+            <i class="paasng-icon paasng-jump-link" />
+          </bk-button>
+          <bk-button
+            v-else
+            class="link-text"
+            :text="true"
+            @click="handleFixPreparation(codeRepositoryErrorData)"
+          >
+            {{ $t('立即处理') }}
+            <i class="paasng-icon paasng-jump-link" />
+          </bk-button>
+          <div class="line"></div>
+          <!-- 刷新代码分支 -->
+          <bk-button
+            class="link-text"
+            :text="true"
+            @click="handleRefresh"
+          >
+            {{ $t('刷新') }}
+            <i class="paasng-icon paasng-refresh-line" v-if="!codeRefreshLoading" />
+            <round-loading class="round-loading-cls" v-else />
+          </bk-button>
+        </div>
+      </section>
     </bk-dialog>
     <bk-sideslider
       :is-show.sync="isShowSideslider"
@@ -280,8 +362,20 @@
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
-import _ from 'lodash';
-// :ok-text="$t('部署至')`${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
+import { cloneDeep } from 'lodash';
+
+// 当前状态，禁用部署按钮
+const deployErrorStatus = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO'];
+
+// 从源码构建，且为当前错误状态，禁用部署按钮
+const codeRepositoryErrorStatus = [
+  'NEED_TO_BIND_OAUTH_INFO',
+  'DONT_HAVE_ENOUGH_PERMISSIONS',
+  'NEED_TO_CORRECT_REPO_INFO',
+  'NEED_TO_COMPLETE_PROCFILE',
+  'CHECK_CI_GIT_TOKEN',
+];
+
 export default {
   components: {
     deployStatusDetail,
@@ -311,6 +405,7 @@ export default {
       deployAppDialog: {
         visiable: false,
         isLoading: false,
+        disabled: true,
       },
       imageSourceData: [
         { value: 'branch', label: this.$t('从源码构建') },
@@ -355,6 +450,13 @@ export default {
       processesData: [],
       allowMultipleImage: false,
       curModulemirrorTag: '',
+      deployPreparations: {},
+      isShowErrorAlert: {
+        deploy: false,
+        code: false,
+      },
+      deployRefreshLoading: false,
+      codeRefreshLoading: false,
     };
   },
   computed: {
@@ -419,6 +521,49 @@ export default {
       }
       return false;
     },
+
+    // 是否展示代码仓库相关错误信息
+    isShowCodeAlert() {
+      if (this.isShowErrorAlert.code && this.isSourceCodeBuild) {
+        if (this.buttonActive === 'branch' || this.isSmartApp) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    // 部署相关错误信息
+    deployErrorData() {
+      const faileds = this.deployPreparations.failed_conditions;
+      if (faileds?.length) {
+        const deployErrorList = faileds.filter(v => deployErrorStatus.includes(v.action_name));
+        return deployErrorList[0] || {};
+      }
+      return {};
+    },
+
+    // 代码仓库相关错误信息
+    codeRepositoryErrorData() {
+      const faileds = this.deployPreparations.failed_conditions;
+      if (faileds?.length) {
+        // 查找第一项进行展示，解决当前项，点击刷新重新获取，再处理下一天错误
+        const codeRepositoryErrorList = faileds.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+        return codeRepositoryErrorList[0] || {};
+      }
+      return {};
+    },
+
+    // 部署按钮禁用状态
+    deploybuttonDisabled() {
+      if (this.deployPreparations.all_conditions_matched) {
+        return false;
+      }
+      // 部署限制相关的/代码仓库相关
+      if (this.isShowErrorAlert.deploy || this.isShowCodeAlert) {
+        return true;
+      }
+      return false;
+    },
   },
   watch: {
     show: {
@@ -430,6 +575,7 @@ export default {
         // 初始化镜像taglist
         this.pagination.limit = 10;
         this.imageTagListCount = 0;
+        this.getDeployPreparations();
         // 仅镜像部署不需要获取分支数据
         if (this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches(); // 获取分支数据
@@ -447,7 +593,7 @@ export default {
       immediate: true,
     },
     deploymentInfo(v) {
-      this.deploymentInfoBackUp = _.cloneDeep(v);
+      this.deploymentInfoBackUp = cloneDeep(v);
       const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
       if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
       this.curModulemirrorTag = versionInfo?.version_name;
@@ -468,7 +614,6 @@ export default {
       if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
       this.curModulemirrorTag = versionInfo?.version_name;
       // smartApp下, 代码差异
-      console.log('this.isSmartApp', this.isSmartApp);
       if (this.isSmartApp) {
         this.branchValue = `${versionInfo?.version_type}:${versionInfo?.version_name}`;
         this.curSelectData = {
@@ -605,6 +750,9 @@ export default {
 
     handleAfterLeave() {
       this.branchValue = '';
+      this.isShowErrorAlert.deploy = false;
+      this.isShowErrorAlert.code = false;
+      this.deployAppDialog.disabled = true;
       this.$emit('update:show', false);
     },
 
@@ -790,20 +938,18 @@ export default {
           e.revision = e.digest;
           e.type = 'image',
           e.name = e.tag;
-          console.log('eeeeee', e);
           return e;
         }
       });
     },
     handleCancel() {
       this.$refs.imageFormRef?.clearError();
+      this.deployAppDialog.visiable = false;
     },
     // 点击镜像来源
     handleSelected(item) {
       this.buttonActive = item.value;
-      if (this.buttonActive === 'branch') {
-        console.log('代码分支');
-      } else {
+      if (this.buttonActive !== 'branch') {
         this.getImageTagList();
       }
       this.pagination.limit = 10;
@@ -829,6 +975,157 @@ export default {
 
     handleOpenUrl(url) {
       window.open(url, '_blank');
+    },
+
+    // 获取部署准备信息
+    async getDeployPreparations(type) {
+      // 刷新
+      if (type) {
+        type === 'deploy' ? this.deployRefreshLoading = true : this.codeRefreshLoading = true;
+      }
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployPreparations', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+        });
+        this.deployPreparations = res;
+
+        // 将错误数据进行分类
+        if (!res.all_conditions_matched && res.failed_conditions.length) {
+          // 部署限制相关的，错误信息
+          const deployErrorList = res.failed_conditions.filter(v => deployErrorStatus.includes(v.action_name));
+          // 代码仓库相关，错误信息
+          // eslint-disable-next-line max-len
+          const codeRepositoryErrorList = res.failed_conditions.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+          if (deployErrorList.length) {
+            this.isShowErrorAlert.deploy = true;
+          } else {
+            this.isShowErrorAlert.deploy = false;
+          }
+          if (codeRepositoryErrorList.length) {
+            this.isShowErrorAlert.code = true;
+          } else {
+            this.isShowErrorAlert.code = false;
+          }
+        } else {
+          // 没有错误，隐藏错误提示alert
+          this.isShowErrorAlert.deploy = false;
+          this.isShowErrorAlert.code = false;
+        }
+        this.deployAppDialog.disabled = false;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+        this.deployAppDialog.disabled = false;
+      } finally {
+        type === 'deploy' ? this.deployRefreshLoading = false : this.codeRefreshLoading = false;
+      }
+    },
+
+    // 刷新
+    handleRefresh() {
+      this.getDeployPreparations('code');
+      // 代码分支
+      this.getModuleBranches();
+    },
+
+    // 去授权
+    hanndleToAuthorize() {
+      const route = this.$router.resolve({ name: 'serviceCode' });
+      window.open(route.href, '_blank');
+    },
+
+    /**
+     * 处理部署前准备工作项
+     */
+    handleFixPreparation(preparation) {
+      let routeData = {};
+      switch (preparation.action_name) {
+        // 代码仓库没有授权
+        case 'NEED_TO_BIND_OAUTH_INFO':
+          routeData = this.$router.resolve({
+            name: 'serviceCode',
+          });
+          break;
+
+        // 没有访问源码仓库的权限
+        case 'DONT_HAVE_ENOUGH_PERMISSIONS':
+          routeData = this.$router.resolve({
+            name: 'serviceCode',
+          });
+          break;
+
+        // 蓝盾没有授权
+        case 'CHECK_CI_GIT_TOKEN':
+          routeData = this.$router.resolve({
+            name: 'serviceCi',
+          });
+          break;
+
+        // 完善市场信息
+        case 'FILL_PRODUCT_INFO':
+          routeData = this.$router.resolve({
+            name: 'appMarket',
+            params: {
+              id: this.appCode,
+            },
+            query: {
+              focus: 'baseInfo',
+            },
+          });
+          break;
+
+        // 自定义仓库源配置不正确
+        case 'NEED_TO_CORRECT_REPO_INFO':
+          // 模块配置
+          routeData = this.$router.resolve({
+            name: 'cloudAppDeployForBuild',
+            // 高亮第二项
+            params: {
+              id: this.appCode,
+              moduleId: this.curModuleId,
+            },
+          });
+          break;
+
+        // 没有部署权限
+        case 'CHECK_ENV_PROTECTION':
+          this.$paasMessage({
+            message: this.$t('请联系应用管理员'),
+          });
+          break;
+
+        // 未完善进程启动命令
+        case 'NEED_TO_COMPLETE_PROCFILE':
+          routeData = this.$router.resolve({
+            name: 'cloudAppDeployForProcess',
+            params: {
+              id: this.appCode,
+              moduleId: this.curModuleId,
+            },
+          });
+          break;
+
+        // 未设置插件分类
+        case 'FILL_PLUGIN_TAG_INFO':
+          routeData = this.$router.resolve({
+            name: 'appBaseInfo',
+            params: {
+              id: this.appCode,
+              pluginTypeActive: true,
+            },
+          });
+          break;
+      }
+
+      if (preparation.action_name === 'CHECK_ENV_PROTECTION') {
+        return;
+      }
+
+      window.open(routeData.href, '_blank');
     },
   },
 };
@@ -906,5 +1203,67 @@ export default {
     padding: 3px 7px;
     border-radius: 2px;
   }
+}
+
+.dialog-footer-wrapper {
+  text-align: right;
+}
+
+.mb12 {
+  margin-bottom: 12px;
+}
+
+.customize-alert-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #63656E;
+  min-height: 32px;
+  background: #FFEDED;
+  border: 1px solid #FFD2D2;
+  border-radius: 2px;
+
+  .text {
+    word-break: break-all;
+    display: flex;
+    margin-right: 10px;
+
+    .exclamation-cls {
+      color: #EA3636;
+      font-size: 14px;
+      transform: translateY(2px);
+      margin-right: 6px;
+    }
+  }
+
+
+  .line {
+    width: 1px;
+    margin: 0 10px;
+    height: 14px;
+    background: #DCDEE5;
+  }
+
+  .right-link {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    .link-text {
+      font-size: 12px;
+      color: #3a84ff;
+      cursor: pointer;
+    }
+    i {
+      font-size: 14px;
+      transform: translateY(0px);
+    }
+  }
+}
+.round-loading-cls {
+  width: 14px;
+    height: 14px;
+    transform: translateY(-1px);
 }
 </style>

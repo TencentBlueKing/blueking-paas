@@ -13,7 +13,7 @@ teardown() {
 
 @test "GO_INSTALL_PACKAGE_SPEC specified" {
     export GO_INSTALL_PACKAGE_SPEC=specified
-    run bash_with_trap ${BUILD_PACK}/hooks/pre-compile 'echo ${GO_INSTALL_PACKAGE_SPEC}'
+    run bash_with_trap ${buildpack}/hooks/pre-compile 'echo ${GO_INSTALL_PACKAGE_SPEC}'
 
     [ "${status}" == 0 ]
     [ "${output}" == "specified" ]
@@ -21,7 +21,7 @@ teardown() {
 
 @test "GO_INSTALL_PACKAGE_SPEC not specified" {
     export BKPAAS_APP_ID=app GO_BKAPP_FRAMEWORK=1
-    run bash_with_trap ${BUILD_PACK}/hooks/pre-compile 'echo ${GO_INSTALL_PACKAGE_SPEC}'
+    run bash_with_trap ${buildpack}/hooks/pre-compile 'echo ${GO_INSTALL_PACKAGE_SPEC}'
 
     [ "${status}" == 0 ]
     [ "${output}" == "app" ]
@@ -29,19 +29,19 @@ teardown() {
 
 @test "GO_BKAPP_FRAMEWORK not specified" {
     export BKPAAS_APP_ID=app GO_BKAPP_FRAMEWORK=0
-    run bash_with_trap ${BUILD_PACK}/hooks/pre-compile 'echo ${GO_INSTALL_PACKAGE_SPEC}'
+    run bash_with_trap ${buildpack}/hooks/pre-compile 'echo ${GO_INSTALL_PACKAGE_SPEC}'
 
     [ "${status}" == 0 ]
     [ "${output}" == "" ]
 }
 
 @test "go version determine rules" {
-    echo 'info "Detected go modules via go.mod"' > ${BUILD_PACK}/lib/common.sh
+    echo 'info "Detected go modules via go.mod"' > ${buildpack}/lib/common.sh
 
-    run bash_with_trap ${BUILD_PACK}/hooks/pre-compile
+    run bash_with_trap ${buildpack}/hooks/pre-compile
     [ "${status}" == 0 ]
 
-    run cat ${BUILD_PACK}/lib/common.sh
+    run cat ${buildpack}/lib/common.sh
     [ "${status}" == 0 ]
     [[ "${output}" =~ "GOVERSION=\${GOVERSION:-\$(awk '{ if (\$1 == \"go\" ) { print \$2; exit } }' \${goMOD})}" ]]
 }
@@ -51,9 +51,9 @@ teardown() {
 setGitCredHelper() {
     dosomething
 }
-' > ${BUILD_PACK}/lib/common.sh
+' > ${buildpack}/lib/common.sh
 
-    run bash_with_trap ${BUILD_PACK}/hooks/pre-compile
+    run bash_with_trap ${buildpack}/hooks/pre-compile
     [ "${status}" == 0 ]
 
     excepted='
@@ -62,7 +62,7 @@ setGitCredHelper() {
     dosomething
 }
 '
-    run cat ${BUILD_PACK}/lib/common.sh
+    run cat ${buildpack}/lib/common.sh
     [ "${status}" == 0 ]
     [[ "${output//[[:space:]]/}" =~ "${excepted//[[:space:]]/}" ]]
 }
@@ -72,9 +72,9 @@ setGitCredHelper() {
 clearGitCredHelper() {
     dosomething
 }
-' > ${BUILD_PACK}/lib/common.sh
+' > ${buildpack}/lib/common.sh
 
-    run bash_with_trap ${BUILD_PACK}/hooks/pre-compile
+    run bash_with_trap ${buildpack}/hooks/pre-compile
     [ "${status}" == 0 ]
 
     excepted='
@@ -83,7 +83,7 @@ clearGitCredHelper() {
     dosomething
 }
 '
-    run cat ${BUILD_PACK}/lib/common.sh
+    run cat ${buildpack}/lib/common.sh
     [ "${status}" == 0 ]
     [[ "${output//[[:space:]]/}" =~ "${excepted//[[:space:]]/}" ]]
 }
@@ -91,7 +91,7 @@ clearGitCredHelper() {
 @test "test /tmp/build links" {
     [ ! -e "/tmp/build" ]
 
-    run ${BUILD_PACK}/hooks/pre-compile
+    run ${buildpack}/hooks/pre-compile
 
     run touch "/tmp/build/test"
     [ -e "test" ]
@@ -100,7 +100,7 @@ clearGitCredHelper() {
 @test "test /tmp/build links exists" {
     mkdir -p /tmp/build
 
-    run ${BUILD_PACK}/hooks/pre-compile
+    run ${buildpack}/hooks/pre-compile
 
     run touch "/tmp/build/test"
     [ ! -e "test" ]

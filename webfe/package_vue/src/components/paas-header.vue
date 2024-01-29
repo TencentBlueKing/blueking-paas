@@ -773,7 +773,7 @@ export default {
     .ps-header {
         position: fixed;
         left: 0px;
-        top: 0px;
+        top: var(--app-notice-height);
         width: 100%;
         z-index: 1001;
         min-width: 1440px;
@@ -788,7 +788,7 @@ export default {
         &::before {
             content: '';
             position: fixed;
-            top: 0;
+            top: var(--app-notice-height);
             left: 0;
             width: 100%;
             height: 0;
@@ -800,7 +800,7 @@ export default {
         &:hover::before {
             content: '';
             position: fixed;
-            top: 0;
+            top: var(--app-notice-height);
             left: 0;
             width: 100%;
             height: 50px;

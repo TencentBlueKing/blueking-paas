@@ -301,6 +301,8 @@ ensure-init-data() {
     python manage.py create_authed_app_user --bk_app_code=bk_bkdata  --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_paas3 --role=60
     python manage.py create_3rd_party_apps --source extra_fixtures/3rd_apps.yaml --app_codes "${PAAS_THIRD_APP_INIT_CODES}" --override=true
+    # 将开发者中心注册到通知中心
+    python manage.py register_to_bk_notice
 }
 
 ensure-runtime-steps() {

@@ -521,9 +521,10 @@ export default {
      */
     init() {
       this.isLoading = true;
+      this.getCleaningRules();
       this.loadData();
 
-      const winHeight = document.body.scrollHeight || window.innerHeight;
+      const winHeight = document.body?.scrollHeight || window.innerHeight;
       const height = winHeight - 400;
       if (height > 400) {
         this.contentHeight = height;
@@ -939,6 +940,23 @@ export default {
 
     formatTime(time) {
       return time ? formatDate(time * 1000) : '--';
+    },
+
+    // 获取清洗规则, 添加对应link
+    async getCleaningRules() {
+      try {
+        const res = await this.$store.dispatch('log/getCleaningRules', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.searchLogTips.push({
+          text: this.$t('若自定义日志格式'),
+          link: this.$t('检查清洗规则'),
+          url: res.clean_url,
+        });
+      } catch (e) {
+        console.error(e);
+      }
     },
   },
 };

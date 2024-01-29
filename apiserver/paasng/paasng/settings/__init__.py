@@ -137,6 +137,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.admin_cli",
     "paasng.misc.monitoring.monitor",
     "paasng.misc.monitoring.healthz",
+    "paasng.misc.monitoring.metrics",
     "paasng.misc.search",
     "paasng.accessories.smart_advisor",
     "paasng.platform.bk_lesscode",
@@ -159,7 +160,6 @@ INSTALLED_APPS = [
     # workloads apps
     "paas_wl.bk_app.applications",
     "paas_wl.infras.cluster",
-    "paas_wl.bk_app.monitoring.metrics",
     "paas_wl.workloads.networking.egress",
     "paas_wl.workloads.networking.ingress",
     "paas_wl.workloads.networking.entrance",

@@ -24,9 +24,9 @@ import requests
 from requests.auth import HTTPBasicAuth
 from requests.status_codes import codes
 
-from paas_wl.bk_app.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
-from paas_wl.bk_app.monitoring.metrics.constants import RAW_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
-from paas_wl.bk_app.monitoring.metrics.exceptions import RequestMetricBackendError
+from paasng.misc.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
+from paasng.misc.monitoring.metrics.constants import RAW_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
+from paasng.misc.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
 

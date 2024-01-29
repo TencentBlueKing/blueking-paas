@@ -23,11 +23,11 @@ from typing import List
 
 from celery import shared_task
 
-from paas_wl.bk_app.monitoring.metrics.evaluator import AppResQuotaEvaluator
-from paas_wl.bk_app.monitoring.metrics.models import AppResourceUsageReport
 from paasng.accessories.paas_analysis.clients import SiteMetricsClient
 from paasng.accessories.paas_analysis.constants import MetricSourceType
 from paasng.accessories.paas_analysis.services import get_or_create_site_by_env
+from paasng.misc.monitoring.metrics.evaluator import AppResQuotaEvaluator
+from paasng.misc.monitoring.metrics.models import AppResourceUsageReport
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.operators import get_last_operator
 

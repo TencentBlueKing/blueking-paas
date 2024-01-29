@@ -25,9 +25,10 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.bk_app.applications.models import Build, BuildProcess
-from paas_wl.bk_app.monitoring.metrics.constants import MetricsResourceType
+from paas_wl.bk_app.processes.kres_entities import Instance
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
+from paasng.misc.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import (
     ConfigVarEnvName,
@@ -487,6 +488,33 @@ class ResourceMetricsSLZ(serializers.Serializer):
             return [MetricsResourceType(attrs["metric_type"]).value]
 
         return [MetricsResourceType.MEM.value, MetricsResourceType.CPU.value]
+
+
+class SeriesMetricsResultSerializer(serializers.Serializer):
+    type_name = serializers.CharField()
+    results = serializers.ListField()
+    display_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def to_representation(self, instance):
+        result = super().to_representation(instance)
+        result["display_name"] = MetricsSeriesType.get_choice_label(instance.type_name)
+        return result
+
+
+class ResourceMetricsResultSerializer(serializers.Serializer):
+    type_name = serializers.CharField()
+    results = SeriesMetricsResultSerializer(allow_null=True, many=True)
+
+
+class InstanceMetricsResultSerializer(serializers.Serializer):
+    instance_name = serializers.CharField()
+    results = ResourceMetricsResultSerializer(allow_null=True, many=True)
+    display_name = serializers.CharField(required=False)
+
+    def to_representation(self, instance):
+        result = super().to_representation(instance)
+        result["display_name"] = Instance.get_shorter_instance_name(instance.instance_name)
+        return result
 
 
 class CustomDomainsConfigSLZ(serializers.Serializer):

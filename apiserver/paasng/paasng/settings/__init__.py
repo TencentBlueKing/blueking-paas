@@ -1143,7 +1143,7 @@ COLORFUL_TERMINAL_OUTPUT = True
 # ------------------
 
 # S-Mart 镜像仓库的 Registry 的域名
-SMART_DOCKER_REGISTRY_HOST = settings.get("SMART_DOCKER_REGISTRY_ADDR", "registry.hub.docker.com")
+SMART_DOCKER_REGISTRY_HOST = settings.get("SMART_DOCKER_REGISTRY_ADDR", "index.docker.io")
 # S-Mart 镜像仓库的命名空间, 即在 Registry 中的项目名
 SMART_DOCKER_REGISTRY_NAMESPACE = settings.get("SMART_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号
@@ -1161,7 +1161,7 @@ BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 # App 应用镜像仓库配置
 # ------------------
 # App 镜像仓库的 Registry 的域名
-APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "registry.hub.docker.com")
+APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "index.docker.io")
 # App 镜像仓库的命名空间, 即在 Registry 中的项目名
 APP_DOCKER_REGISTRY_NAMESPACE = settings.get("APP_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号

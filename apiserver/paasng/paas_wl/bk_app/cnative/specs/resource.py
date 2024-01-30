@@ -46,7 +46,7 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec
 logger = logging.getLogger(__name__)
 
 # 重试次数
-RETRY_TIME = 3
+RETRY_TIMES = 3
 
 
 def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
@@ -83,7 +83,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         ImageCredentialsManager(client).upsert(image_credentials, update_method="patch")
 
         # 创建或更新 BkApp
-        for __ in range(RETRY_TIME):
+        for attempt in range(RETRY_TIMES):
             try:
                 bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
                     generate_bkapp_name(env),
@@ -92,15 +92,14 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
                     update_method="replace",
                     auto_add_version=True,
                 )
+                break
             except ApiException as e:
-                if e.status == 409 and json.loads(e.body)["reason"] == "Conflict":
-                    # 发成冲突异常时,重试
+                if e.status == 409 and json.loads(e.body)["reason"] == "Conflict" and attempt < RETRY_TIMES - 1:
+                    # 发生冲突异常时, 重试
                     # 删除 resourceVersion，在 create_or_update 过程中自动添加
                     manifest["metadata"].pop("resourceVersion", "")
-                    continue
-                raise
-            else:
-                break
+                else:
+                    raise
 
     # Deploy other dependencies
     deploy_networking(env)

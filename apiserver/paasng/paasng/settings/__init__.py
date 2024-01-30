@@ -1124,8 +1124,10 @@ BKDOC_URL = settings.get("BKDOC_URL", "http://localhost:8080")
 # 文档应用的应用ID
 BK_DOC_APP_ID = settings.get("BK_DOC_APP_ID", "bk_docs_center")
 
-# 蓝鲸官网文档中心地址，若镜像中没有设置该环境变量的值则设置为应用（BK_DOC_APP_ID）的访问地址
-BK_DOCS_URL_PREFIX = settings.get("BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs")
+# 蓝鲸官网文档中心地址
+BK_DOCS_URL_PREFIX = settings.get(
+    "BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs/markdown/PaaS/DevelopTools/BaseGuide"
+)
 
 # 平台FAQ 地址
 PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS3.0/faq")

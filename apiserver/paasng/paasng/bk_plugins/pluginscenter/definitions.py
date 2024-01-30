@@ -17,11 +17,15 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
 from paasng.utils.structure import register
+
+if TYPE_CHECKING:
+    from paasng.bk_plugins.pluginscenter.models import PluginDefinition as PluginDefinitionModel
+    from paasng.bk_plugins.pluginscenter.models import PluginRelease
 
 
 @register
@@ -154,10 +158,9 @@ class PluginVisibleRangeLevel(BaseModel):
 class PluginVisibleRangeDefinition(BaseModel):
     """插件可见范围"""
 
-    enabled: bool = Field(False, description="应用可见范围开关")
-    tips: str = Field(description="可见范围提示语")
-    scope: Literal["organization", "project", "business"]
-    topLevel: PluginVisibleRangeLevel
+    description: str = Field(default="", description="可见范围描述")
+    scope: List[str] = Field(default_factory=list, description="可见范围授权范围类型")
+    topLevel: Optional[PluginVisibleRangeLevel]
 
 
 @register
@@ -179,31 +182,31 @@ class PluginMarketInfoDefinition(BaseModel):
     extraFieldsOrder: List[str] = Field(
         default_factory=list, description="extraFields 的定义为字典是无序的，需要额外添加字段定义展示顺序"
     )
-    # TODO: visibleRange
 
 
 @register
 class ReleaseRevisionDefinition(BaseModel):
     """发布版本定义"""
 
-    revisionType: Literal["all", "master", "tag"] = Field(
+    revisionType: Literal["all", "master", "tag", "tested_version"] = Field(
         description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)"
     )
     revisionPattern: Optional[str] = Field(description="代码版本正则表达式模板, 留空则不校验")
-    allowDuplicateSourVersion: bool = Field(
-        default=True, description="是否允许选择已经发布过的代码分支, 不填则默认为 True"
+    revisionPolicy: Optional[Literal["disallow_released_source_version", "disallow_releasing_source_version"]] = Field(
+        description="代码版本选择策略, 留空则不校验"
+        "disallow_released_source_version(不允许选择已经发布过的代码分支)，"
+        "disallow_releasing_source_version(不允许选择正在发布的代码分支)"
     )
     docs: Optional[str] = Field(description="代码版本校验失败的指引文档")
-    versionNo: Literal["automatic", "revision", "commit-hash", "self-fill"] = Field(
-        description="版本号生成规则, 自动生成(automatic),"
-        "与代码版本一致(revision),"
-        "与提交哈希一致(commit-hash),"
-        "用户自助填写(self-fill)"
+    versionNo: Literal["automatic", "revision", "commit-hash", "self-fill", "branch-timestamp"] = Field(
+        description="版本号生成规则"
     )
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     api: Optional[PluginBackendAPI] = Field(
         description="发布版本-操作接口集, 如需要回调至第三方系统, 则需要提供 create 接口"
     )
+    gradualReleaseEnabled: bool = Field(default=False, description="是否灰度发布")
+    gradualReleaseStrategy: List[str] = Field(default_factory=list, description="灰度发布发布策略")
 
 
 @register
@@ -212,7 +215,9 @@ class ReleaseStageDefinition(BaseModel):
 
     id: str
     name: str
-    invokeMethod: Literal["deployAPI", "pipeline", "subpage", "itsm", "builtin"] = Field(description="触发方式")
+    invokeMethod: Literal["deployAPI", "pipeline", "subpage", "itsm", "builtin", "grayWithItsm"] = Field(
+        description="触发方式"
+    )
     api: Optional[PluginReleaseAPI] = Field(description="类型为 api/subpage 时必填")
     pipelineId: Optional[str] = Field(description="类型为 pipeline 时必填")
     pageUrl: Optional[str] = Field(description="类型为 subpage 时必填")
@@ -256,6 +261,7 @@ class PluginInstanceSpec(BaseModel):
 
     basicInfo: PluginBasicInfoDefinition
     marketInfo: PluginMarketInfoDefinition
+    visibleRange: PluginVisibleRangeDefinition
     configInfo: Optional[PluginConfigDefinition] = Field(description="「配置管理」功能相关配置")
 
 
@@ -346,13 +352,17 @@ class PluginDefinition(BaseModel):
     approvalConfig: Optional[PluginCreateApproval] = Field(description="插件创建审批配置")
     releaseRevision: ReleaseRevisionDefinition = Field(description="插件发布版本规则")
     releaseStages: List[ReleaseStageDefinition] = Field(description="插件发布步骤")
+    testReleaseRevision: Optional[ReleaseRevisionDefinition] = Field(description="插件测试版本发布版本规则")
+    testReleaseStages: Optional[List[ReleaseStageDefinition]] = Field(description="插件测试版本发布步骤")
+
     logConfig: Optional[PluginLogConfig] = Field(description="插件运行过程的日志配置")
     features: List[PluginFeature] = Field(default_factory=list)
 
 
 def find_stage_by_id(
-    release_stages: List[ReleaseStageDefinition], identifier: str
+    pd: "PluginDefinitionModel", release: "PluginRelease", identifier: str
 ) -> Optional[ReleaseStageDefinition]:
+    release_stages = pd.get_release_stage_by_type(release.type)
     for stage in release_stages:
         if stage.id == identifier:
             return stage

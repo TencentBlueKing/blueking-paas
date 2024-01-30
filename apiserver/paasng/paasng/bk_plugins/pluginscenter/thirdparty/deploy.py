@@ -37,7 +37,7 @@ def deploy_version(pd: PluginDefinition, plugin: PluginInstance, version: Plugin
     if current_stage.status != PluginReleaseStatus.INITIAL:
         raise ValueError("unable to re-deploy a deployed version")
 
-    deploy_stage_definition = find_stage_by_id(pd.release_stages, current_stage.stage_id)
+    deploy_stage_definition = find_stage_by_id(pd, version, current_stage.stage_id)
     if not deploy_stage_definition or not deploy_stage_definition.api or not deploy_stage_definition.api.release:
         raise ValueError("this plugin does not support deploy via API")
 
@@ -60,7 +60,7 @@ def check_deploy_result(pd: PluginDefinition, plugin: PluginInstance, version: P
     if current_stage.status == PluginReleaseStatus.INITIAL:
         raise ValueError("unable to retrieve results of unstarted deploy")
 
-    deploy_stage_definition = find_stage_by_id(pd.release_stages, current_stage.stage_id)
+    deploy_stage_definition = find_stage_by_id(pd, version, current_stage.stage_id)
     if not deploy_stage_definition or not deploy_stage_definition.api or not deploy_stage_definition.api.result:
         raise ValueError("this plugin does not support deploy via API")
 
@@ -89,7 +89,7 @@ def get_deploy_logs(pd: PluginDefinition, plugin: PluginInstance, version: Plugi
     if current_stage.status == PluginReleaseStatus.INITIAL:
         raise ValueError("unable to retrieve logs of unstarted deploy")
 
-    deploy_stage_definition = find_stage_by_id(pd.release_stages, current_stage.stage_id)
+    deploy_stage_definition = find_stage_by_id(pd, version, current_stage.stage_id)
     if not deploy_stage_definition or not deploy_stage_definition.api or not deploy_stage_definition.api.log:
         raise ValueError("this plugin does not support deploy via API")
 

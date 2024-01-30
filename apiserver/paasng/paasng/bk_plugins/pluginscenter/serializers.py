@@ -29,6 +29,8 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.bk_plugins.pluginscenter.constants import (
     LogTimeChoices,
+    PluginReleaseStrategy,
+    PluginReleaseType,
     PluginReleaseVersionRule,
     PluginRole,
     SemverAutomaticType,
@@ -136,7 +138,17 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = PluginDefinition
-        exclude = ("uuid", "identifier", "created", "updated", "release_revision", "release_stages", "log_config")
+        exclude = (
+            "uuid",
+            "identifier",
+            "created",
+            "updated",
+            "release_revision",
+            "release_stages",
+            "test_release_revision",
+            "test_release_stages",
+            "log_config",
+        )
 
 
 class PluginDefinitionBasicSLZ(serializers.ModelSerializer):
@@ -366,6 +378,12 @@ class StubUpdatePluginSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(help_text="额外字段")
 
 
+class ReleaseStrategySLZ(serializers.Serializer):
+    strategy = serializers.ChoiceField(choices=PluginReleaseStrategy.get_choices(), help_text="发布策略")
+    bkci_project = serializers.ListField(required=False, allow_null=True, help_text="蓝盾项目ID")
+    organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
+
+
 def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C901
     """make a validator to validate ReleaseVersion object"""
 
@@ -406,22 +424,26 @@ def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C90
     return validator
 
 
-def make_create_release_version_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
-    """Generate a Serializer for verifying the creation of "Release" according to the PluginDefinition definition"""
-    if pd.release_revision.revisionPattern:
-        source_version_field = serializers.RegexField(pd.release_revision.revisionPattern, help_text="分支名/tag名")
+def make_create_release_version_slz_class(pd: PluginDefinition, release_type: str) -> Type[serializers.Serializer]:
+    """Generate a Serializer for verifying the creation of "Prod Release" according to the PluginDefinition definition"""
+    release_definition = pd.get_release_revision_by_type(release_type)
+    if release_definition.revisionPattern:
+        source_version_field = serializers.RegexField(release_definition.revisionPattern, help_text="分支名/tag名")
     else:
         source_version_field = serializers.CharField(help_text="分支名/tag名")
 
     fields = {
-        "type": serializers.CharField(help_text="发布类型(正式/测试)", default="prod"),
+        "type": serializers.ChoiceField(
+            help_text="版本类型", choices=PluginReleaseType.get_choices(), default=release_type
+        ),
         "source_version_type": serializers.CharField(help_text="代码版本类型(branch/tag)"),
         "source_version_name": source_version_field,
         "version": serializers.CharField(help_text="版本号"),
         "comment": serializers.CharField(help_text="版本日志"),
-        "extra_fields": make_extra_fields_slz(pd.release_revision.extraFields)(default=dict),
+        "extra_fields": make_extra_fields_slz(release_definition.extraFields)(default=dict),
+        "release_strategy": ReleaseStrategySLZ(required=False, allow_null=True, help_text="发布策略"),
     }
-    if pd.release_revision.versionNo == PluginReleaseVersionRule.AUTOMATIC:
+    if release_definition.versionNo == PluginReleaseVersionRule.AUTOMATIC:
         fields["semver_type"] = serializers.ChoiceField(
             choices=SemverAutomaticType.get_choices(), help_text="版本类型"
         )
@@ -432,7 +454,7 @@ def make_create_release_version_slz_class(pd: PluginDefinition) -> Type[serializ
         {
             **fields,
             # implement `validate` method of serializers.Serializer
-            "validate": make_release_validator(PluginReleaseVersionRule(pd.release_revision.versionNo)),
+            "validate": make_release_validator(PluginReleaseVersionRule(release_definition.versionNo)),
         },
     )
 
@@ -711,3 +733,9 @@ class MetricsSummarySLZ(serializers.Serializer):
 
     codeCheckInfo = CodeCheckInfoSLZ(required=False)
     qualityInfo = QualityInfoSLZ(required=False)
+
+
+class PluginReleaseTypeSLZ(serializers.Serializer):
+    """插件发布类型"""
+
+    type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)

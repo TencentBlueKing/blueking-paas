@@ -162,7 +162,7 @@ COMMON_DATA = {"source_version_name": "...", "source_version_type": "...", "comm
 )
 def test_validate_automatic_semver(pd, previous_version, data, is_valid):
     pd.release_revision.versionNo = "automatic"
-    slz = serializers.make_create_release_version_slz_class(pd)(
+    slz = serializers.make_create_release_version_slz_class(pd, "prod")(
         data=data, context={"previous_version": previous_version}
     )
     if is_valid:
@@ -180,7 +180,7 @@ def test_validate_automatic_semver(pd, previous_version, data, is_valid):
 )
 def test_validate_revision_eq_source_revision(pd, data, is_valid):
     pd.release_revision.versionNo = "revision"
-    slz = serializers.make_create_release_version_slz_class(pd)(data=data)
+    slz = serializers.make_create_release_version_slz_class(pd, "prod")(data=data)
     if is_valid:
         slz.is_valid(raise_exception=True)
     else:
@@ -204,7 +204,9 @@ def test_validate_revision_eq_source_revision(pd, data, is_valid):
 )
 def test_validate_revision_eq_commit_hash(pd, source_hash, data, is_valid):
     pd.release_revision.versionNo = "commit-hash"
-    slz = serializers.make_create_release_version_slz_class(pd)(data=data, context={"source_hash": source_hash})
+    slz = serializers.make_create_release_version_slz_class(pd, "prod")(
+        data=data, context={"source_hash": source_hash}
+    )
     if is_valid:
         slz.is_valid(raise_exception=True)
     else:

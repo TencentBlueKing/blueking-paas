@@ -30,9 +30,8 @@ module.exports = {
     return {
       // dev配置项
       devServer: {
-        https: !process.env.BK_HTTPS,
+        https: process.env.BK_HTTPS !== undefined,
       },
-      devtool: context.mode === 'development' ? 'source-map' : null,
     };
   },
 
@@ -50,6 +49,11 @@ module.exports = {
       }]);
     config.plugin('preTaskPlugin')
       .use(new PreTaskPlugin());
+
+    if (process.env.NODE_ENV === 'staging') {
+      config.devtool('inline-source-map')
+    }
+
     return config;
   },
 };

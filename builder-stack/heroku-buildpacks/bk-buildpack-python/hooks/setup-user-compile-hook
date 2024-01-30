@@ -12,6 +12,13 @@ make_hook() {
     cat > "${hook}" << EOF
 #!/bin/bash
 status=0
+
+# Define a simple wrapper function for executing commands, it can be overriden with
+# the "alias" command for testing purposes.
+function trace_call() {
+    exec "\$@" 
+}
+
 if [ -f "${BUILD_DIR}/bin/${target}" ]; then
     chmod +x "${BUILD_DIR}/bin/${target}"
     trace_call "${BUILD_DIR}/bin/${target}"

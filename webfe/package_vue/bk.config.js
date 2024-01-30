@@ -32,6 +32,7 @@ module.exports = {
       devServer: {
         https: !process.env.BK_HTTPS,
       },
+      devtool: context.mode === 'development' ? 'source-map' : null,
     };
   },
 

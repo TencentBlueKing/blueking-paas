@@ -49,9 +49,6 @@ module.exports = {
       }]);
     config.plugin('preTaskPlugin')
       .use(new PreTaskPlugin());
-    config.when(process.env.NODE_ENV !== 'production', () => {
-        config.devtool('source-map');
-    });
     return config;
   },
 };

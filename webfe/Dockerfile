@@ -7,10 +7,12 @@ ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 ENV NPM_VERSION 6.14.15
 
-# install requirements & build
-COPY ./package_vue /package_vue
+# install requirements at first to make cache-system work better
+COPY ./package_vue/package.json /package_vue/package.json
 WORKDIR /package_vue
 RUN npm install --unsafe-perm --registry=https://mirrors.tencent.com/npm/
+# then add source code and build
+COPY ./package_vue/ /package_vue/
 RUN npm run build
 
 ######### Nginx part #########

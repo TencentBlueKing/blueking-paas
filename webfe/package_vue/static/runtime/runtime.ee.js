@@ -29,5 +29,5 @@ var BK_ANALYSIS_JS = process.env.BK_ANALYSIS_JS || '' //上报js 内部版需要
 var BK_PAAS_VERSION = process.env.BK_PAAS_VERSION || ''
 
 var BACKEND_URL = `${SITE_URL}/backend` // 后端接口前缀
-var DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/PaaS3.0`
+var DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/PaaS/DevelopTools/`
 var USERS_URL = `${BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fs_list_users/` // 人员选择器接口地址，可选填

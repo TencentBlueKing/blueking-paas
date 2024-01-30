@@ -48,6 +48,11 @@
     <!-- start及end之间的内部代码会在企业版本出包时删除 -->
     <script>
       document.write('<scr'+'ipt src="'+BK_ANALYSIS_JS+'"></scr'+'ipt>');
+      document.addEventListener('DOMContentLoaded', () => {
+        const analysisScript = document.createElement('script');
+        analysisScript.src = BK_ANALYSIS_JS;
+        document.body.appendChild(analysisScript);
+      });
       GLOBAL_CONFIG.USERS_URL = ''
     </script>
     <% if (process.env.NODE_ENV !== 'development') { %>

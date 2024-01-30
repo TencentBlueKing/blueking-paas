@@ -110,3 +110,8 @@ func ObserveBkappReconcileDuration(namespace string, started time.Time) {
 	BkappReconcileDuration.WithLabelValues(namespace).
 		Observe(float64(time.Since(started).Milliseconds()))
 }
+
+// IncDeleteOldestHookFailures ...
+func IncDeleteOldestHookFailures(bkapp *paasv1alpha2.BkApp, hookPodName string) {
+	DeleteOldestHookFailures.WithLabelValues(bkapp.Name, bkapp.Namespace, hookPodName).Inc()
+}

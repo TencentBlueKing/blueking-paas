@@ -87,7 +87,9 @@
                                 <bk-checkbox
                                   v-for="option of fieldOptions[field]"
                                   v-show="option.text.toLowerCase().indexOf(filterKeyword.toLowerCase()) !== -1"
-                                  :key="option.value" :value="`${field}:${option.value}`">
+                                  :key="option.value"
+                                  :value="`${field}:${option.value}`"
+                                >
                                   <span :title="option.text">{{ option.text }}</span>
                                 </bk-checkbox>
                               </bk-checkbox-group>
@@ -340,6 +342,7 @@ export default {
           delete this.fieldPopoverShow[item];
         }
       });
+      // eslint-disable-next-line no-plusplus
       this.renderIndex++;
       this.hideAllFilterPopover();
       // this.loadData(false)
@@ -764,6 +767,13 @@ export default {
     },
 
     handleShowFilter(field) {
+      // 勾选状态还原
+      if (this.tableFormatFilters.length) {
+        const checkedStr = this.tableFormatFilters[0].value;
+        const results = checkedStr.split('|').map(v => `${field}:${v.trim()}`);
+        this.fieldChecked[field] = results;
+      }
+
       if (!this.fieldPopoverShow[field]) {
         for (const key in this.fieldPopoverShow) {
           this.fieldPopoverShow[key] = false;
@@ -1195,7 +1205,7 @@ export default {
 
 .table-wrapper {
   width: auto;
-  overflow: auto;
+  overflow-x: auto;
 }
 
 .tooltip-icon {

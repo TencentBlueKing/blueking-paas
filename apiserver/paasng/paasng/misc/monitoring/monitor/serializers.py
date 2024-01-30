@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 import re
 from typing import Optional
 
@@ -27,6 +28,8 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
 from .models import AppAlertRule
+
+logger = logging.getLogger(__name__)
 
 MODULE_NAME_PATTERN = re.compile(r"\s\[([^\s:]+):(prod|stag)\]")
 
@@ -101,6 +104,7 @@ class AlertSLZ(serializers.Serializer):
     def get_module_name(self, instance) -> Optional[str]:
         alert_name = instance.get("alert_name")
         if not isinstance(alert_name, str):
+            logger.error(" Invalid type for 'alert_name': expected type 'str' ")
             return None
         match = MODULE_NAME_PATTERN.search(alert_name)
         if match:

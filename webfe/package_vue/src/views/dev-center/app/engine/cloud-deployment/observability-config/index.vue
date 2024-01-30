@@ -104,7 +104,7 @@
         >
           <div class="empty-content">
             <div class="title">{{ $t('暂未配置日志采集规则') }}</div>
-            <div class="sub-title">{{ $t('当前模块任意环境部署成功后，将会给改模块配置默认的日志采集规则') }}</div>
+            <div class="sub-title">{{ $t('当前模块任意环境部署成功后，将会给模块配置默认的日志采集规则') }}</div>
             <bk-button :text="true" title="primary" size="small" @click="handleToDeploy">
               {{ $t('去部署') }}
             </bk-button>
@@ -448,7 +448,7 @@ export default {
             style: {
               color: '#313238',
             },
-          }, i18n.t('采集规则：') + data.name_en),
+          }, `${i18n.t('采集规则')}：${data.name_en}`),
           h('div', {
             style: {
               marginTop: '8px',

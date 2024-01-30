@@ -38,6 +38,11 @@ export default {
       ],
     };
   },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
   methods: {
     showSideslider() {
       this.isShow = true;
@@ -50,16 +55,23 @@ export default {
     loadMarkdownFile() {
       const md = new MarkdownIt();
       let markdownContent = '';
-      // 引入md文件
+      // 引入md文件/区分语言环境
       if (this.active === 'hook') {
-        markdownContent = require('!!raw-loader!@/assets/md/guide-hook.md').default;
+        markdownContent = this.localLanguage === 'en' ? require('!!raw-loader!@/assets/md/en/guide-hook.md').default : require('!!raw-loader!@/assets/md/guide-hook.md').default;
       } else {
-        markdownContent = require('!!raw-loader!@/assets/md/guide-process.md').default;
+        markdownContent = this.localLanguage === 'en' ? require('!!raw-loader!@/assets/md/en/guide-process.md').default : require('!!raw-loader!@/assets/md/guide-process.md').default;
       }
       const htmlStr = md.render(markdownContent);
       // 替换a标签属性，使用新标签页打开
       this.markdownContent = htmlStr.replace(/<a/g, '<a target="_blank"');
-      this.markdownContent = htmlStr.replace(/<a href="enbVariables">/g, `<a href="${this.GLOBAL.DOC.APP_DESC_DOC}" target="_blank">`);
+      const docLinkList = ['APP_PROCESS_INTRODUCTION', 'BUILD_PHASE_HOOK', 'DEPLOYMENT_PHASE_HOOK', 'APP_DESCRIPTION_FILE'];
+      // 替换环境变量
+      this.markdownContent = htmlStr.replace(/<a href="([^"]*)"/g, (match, href) => {
+        if (docLinkList.includes(href)) {
+          return `<a href="${this.GLOBAL.DOC[href]}" target="_blank"`;
+        }
+        return match;
+      });
     },
   },
 };

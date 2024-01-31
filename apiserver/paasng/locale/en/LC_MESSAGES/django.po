@@ -1902,6 +1902,11 @@ msgstr ""
 msgid "应用 ID"
 msgstr "APP ID"
 
+#: paasng/platform/applications/serializers/fields.py:39
+#: paasng/platform/applications/serializers/fields.py:40
+msgid "应用名称"
+msgstr "APP Name"
+
 #: paasng/platform/applications/serializers/fields.py:43
 #: paasng/platform/modules/serializers.py:65
 msgid "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)"

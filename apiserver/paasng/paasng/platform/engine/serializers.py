@@ -592,7 +592,7 @@ class ImageArtifactMinimalSLZ(serializers.Serializer):
     tag = serializers.CharField(help_text="镜像 Tag", source="image_tag")
     size = serializers.IntegerField(help_text="镜像大小", source="get_artifact_detail.size")
     digest = serializers.CharField(help_text="摘要", source="get_artifact_detail.digest")
-    invoke_message = serializers.CharField(help_text="触发信息", source="get_artifact_detail.invoke_message")
+    invoke_message = serializers.CharField(help_text="触发信息", source="artifact_invoke_message")
     updated = serializers.DateTimeField(help_text="更新时间")
 
     operator = serializers.SerializerMethodField(help_text="操作人")

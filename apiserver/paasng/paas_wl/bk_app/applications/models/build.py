@@ -176,6 +176,7 @@ class Build(UuidAuditedModel):
         """获取构件详情, 如果构件详情未初始化, 则进行初始化"""
         if self.artifact_detail:
             return self.artifact_detail
+
         if self.artifact_type == ArtifactType.IMAGE:
             image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
             registry_client = get_app_docker_registry_client()
@@ -185,14 +186,18 @@ class Build(UuidAuditedModel):
             self.artifact_detail = {
                 "size": sum(layer.size for layer in manifest.layers),
                 "digest": metadata.digest,
-                "invoke_message": _(self.build_process.invoke_message),
+                "invoke_message": self.build_process.invoke_message,
             }
         else:
             self.artifact_detail = {
-                "invoke_message": _(self.build_process.invoke_message),
+                "invoke_message": self.build_process.invoke_message,
             }
         self.save(update_fields=["artifact_detail"])
         return self.artifact_detail
+
+    def artifact_invoke_message(self):
+        """获取构建详情，需要单独做国际化处理"""
+        return _(self.build_process.invoke_message)
 
     @property
     def version(self):

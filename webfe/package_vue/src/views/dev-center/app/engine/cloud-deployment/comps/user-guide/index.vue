@@ -64,7 +64,7 @@ export default {
       const htmlStr = md.render(markdownContent);
       // 替换a标签属性，使用新标签页打开
       this.markdownContent = htmlStr.replace(/<a/g, '<a target="_blank"');
-      const docLinkList = ['APP_PROCESS_INTRODUCTION', 'BUILD_PHASE_HOOK', 'DEPLOYMENT_PHASE_HOOK', 'APP_DESCRIPTION_FILE'];
+      const docLinkList = ['PROCFILE_DOC', 'BUILD_PHASE_HOOK', 'DEPLOY_ORDER', 'APP_DESC_DOC'];
       // 替换环境变量
       this.markdownContent = htmlStr.replace(/<a href="([^"]*)"/g, (match, href) => {
         if (docLinkList.includes(href)) {

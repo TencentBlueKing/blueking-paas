@@ -1,5 +1,11 @@
 <template>
-  <div class="port-config" v-bkloading="{ isLoading: setModuleLoading, title: $t('正在设置主模块') }">
+  <div
+    class="port-config app-entry-config-cls"
+    v-bkloading="{ isLoading: setModuleLoading, title: $t('正在设置主模块') }"
+    :style="{
+      '--table-view-height': `${scrollbarHeight == 8 ? viewHeight - 3 : viewHeight}px`,
+    }"
+  >
     <div
       class="content"
       style="position: relative;"
@@ -25,6 +31,7 @@
         </div>
       </div>
       <bk-table
+        ref="portConfigRef"
         v-bkloading="{ isLoading: isTableLoading }"
         :data="entryList"
         class="table-cls"
@@ -349,6 +356,8 @@ export default {
       processList: [
         { name: 'web' },
       ],
+      viewHeight: 0,
+      scrollbarHeight: 0,
     };
   },
   computed: {
@@ -419,6 +428,9 @@ export default {
   },
   mounted() {
     this.init();
+    setTimeout(() => {
+      this.getbkTableFixedHeight();
+    }, 100);
   },
   methods: {
     /**
@@ -464,6 +476,7 @@ export default {
           }
           return e;
         }, []);
+        this.getbkTableFixedHeight();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -471,6 +484,9 @@ export default {
         });
       } finally {
         this.isTableLoading = false;
+        setTimeout(() => {
+          this.getbkTableFixedHeight();
+        }, 100);
       }
     },
 
@@ -795,6 +811,19 @@ export default {
       this.curPathPrefix[i] = val;
       this.curInputIndex = i;
     },
+
+    getbkTableFixedHeight() {
+      if (this.$refs.portConfigRef && this.$refs.portConfigRef?.layout) {
+        this.viewHeight = this.$refs.portConfigRef.layout?.viewportHeight || 0;
+        this.scrollbarHeight = this.getScrollbarHeight();
+      }
+    },
+
+    // 获取表格横向滚动条高度
+    getScrollbarHeight() {
+      const container = document.querySelector('.app-entry-config-cls .bk-table-body-wrapper');
+      return container?.offsetHeight - container?.clientHeight;
+    },
   },
 };
 </script>
@@ -1043,5 +1072,13 @@ export default {
 .ip-icon-customize-cls {
   color: #3a84ff;
   cursor: pointer;
+}
+/* 固定列兼容 */
+.app-entry-config-cls .bk-table.bk-table-scrollable-x .bk-table-fixed-right {
+  height: var(--table-view-height) !important;
+}
+/* 组件库table滚动条样式设置为8px */
+.app-entry-config-cls .bk-table.table-cls .bk-table-body-wrapper::-webkit-scrollbar {
+  height: 8px;
 }
 </style>

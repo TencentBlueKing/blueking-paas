@@ -219,9 +219,4 @@ export default {
         top: -1px;
         margin: 0 5px;
     }
-
-    /* 组件库table滚动条样式设置为8px */
-    .bk-table .bk-table-body-wrapper::-webkit-scrollbar {
-      height: 8px;
-    }
 </style>

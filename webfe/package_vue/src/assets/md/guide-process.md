@@ -26,4 +26,4 @@ module:
 1. 进程名称要求：以小写字母或数字开头，可包含小写字母、数字和中划线（`-`），不超过 12 个字符。
 2. 如果模块设置了特殊的“构建目录”，那么 `app_desc.yaml` 文件就需要存放于该目录中，而非仓库根目录。
 
-> 拓展阅读：[应用进程介绍](APP_PROCESS_INTRODUCTION) | [应用描述文件](APP_DESCRIPTION_FILE)
+> 拓展阅读：[应用进程介绍](PROCFILE_DOC) | [应用描述文件](APP_DESC_DOC)

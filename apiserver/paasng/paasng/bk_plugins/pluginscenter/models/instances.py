@@ -45,7 +45,7 @@ class PlainStageInfo:
     id: str
     name: str
     # 需要根据 invoke_method 来渲染阶段
-    invoke_method: str
+    invoke_method: Optional[str] = None
 
 
 @define

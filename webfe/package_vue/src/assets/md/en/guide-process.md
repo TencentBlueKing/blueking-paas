@@ -26,4 +26,4 @@ After modifying the `app_desc.yaml`, push the changes to the repository and **re
 1. Process name requirements: Start with a lowercase letter or number, include lowercase letters, numbers, and hyphens (`-`), and be no more than 12 characters long.
 2. If the module has a special "build directory," the `app_desc.yaml` file should be placed there, not in the repository's root directory.
 
-> Further reading: [Introduction to Application Processes](APP_PROCESS_INTRODUCTION) | [Application Description File](APP_DESCRIPTION_FILE)
+> Further reading: [Introduction to Application Processes](PROCFILE_DOC) | [Application Description File](APP_DESC_DOC)

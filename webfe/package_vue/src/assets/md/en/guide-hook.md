@@ -20,4 +20,4 @@ module:
 
 1. A fresh container is used when executing the "pre_release" hook and not the one from the build phase. Therefore, changes to local files during the build **won't affect** the hook's execution environment.
 
-> Further reading: [Deployment Stage Hooks](DEPLOYMENT_PHASE_HOOK) | [Build Stage Hooks](BUILD_PHASE_HOOK)
+> Further reading: [Deployment Stage Hooks](DEPLOY_ORDER) | [Build Stage Hooks](BUILD_PHASE_HOOK)

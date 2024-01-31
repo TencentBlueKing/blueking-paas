@@ -328,7 +328,7 @@ class ApplicationBuilder(BaseBuilder):
             builder_image=builder_image,
             source_tar_path=source_tar_path,
             version_info=self.version_info,
-            invoke_message=_(self.deployment.advanced_options.invoke_message) or _("发布时自动构建"),
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
             buildpacks_info=build_info.buildpacks_info,
         )
 
@@ -432,7 +432,7 @@ class DockerBuilder(BaseBuilder):
             builder_image=builder_image,
             source_tar_path=source_tar_path,
             version_info=self.version_info,
-            invoke_message=_(self.deployment.advanced_options.invoke_message) or _("发布时自动构建"),
+            invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
         )
 
         # Start the background build process

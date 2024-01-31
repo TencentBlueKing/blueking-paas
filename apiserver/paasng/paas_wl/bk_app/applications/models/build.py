@@ -185,11 +185,11 @@ class Build(UuidAuditedModel):
             self.artifact_detail = {
                 "size": sum(layer.size for layer in manifest.layers),
                 "digest": metadata.digest,
-                "invoke_message": self.build_process.invoke_message,
+                "invoke_message": _(self.build_process.invoke_message),
             }
         else:
             self.artifact_detail = {
-                "invoke_message": self.build_process.invoke_message,
+                "invoke_message": _(self.build_process.invoke_message),
             }
         self.save(update_fields=["artifact_detail"])
         return self.artifact_detail

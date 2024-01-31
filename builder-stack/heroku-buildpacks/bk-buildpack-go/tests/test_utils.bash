@@ -30,9 +30,9 @@ bash_with_trap() {
 }
 
 create_fake_run_hook() {
-    cat > "${BIN_ROOT}/run_hook" << EOF
+    cat > "${buildpack}/hooks/run_hook" << EOF
 #!/usr/bin/env bash
 cd "\$2" && bash "./\$3" > ".hook-\$1" 2>".hook-error-\$1" || true
 EOF
-    chmod +x "${BIN_ROOT}/run_hook"
+    chmod +x "${buildpack}/hooks/run_hook"
 }

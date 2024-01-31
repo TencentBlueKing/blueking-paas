@@ -67,10 +67,26 @@
                           <span class="filter-label-text" :title="field">
                             {{ field }}
                           </span>
-                          <div
-                            class="paasng-icon paasng-funnel filter-icon"
-                            @click.stop.prevent="handleShowFilter(field)">
-                            <div v-if="fieldPopoverShow[field]" :key="renderFilter" class="filter-popover">
+                          <!-- 使用 popover 解决内嵌容器，导致表格出现滚动条问题 -->
+                          <bk-popover
+                            class="filter-popover-icon"
+                            placement="bottom-start"
+                            :disabled="isLogListLoading"
+                            :tippy-options="{
+                              trigger: 'click',
+                              theme: 'light',
+                              onTrigger: handleTrigger,
+                              popperOptions: {
+                                field
+                              }
+                            }"
+                            ext-cls="log-customize-filter-popover"
+                          >
+                            <div
+                              class="paasng-icon paasng-funnel filter-icon"
+                              :class="{ 'disabled': isLogListLoading }">
+                            </div>
+                            <div slot="content" :key="renderFilter" class="filter-popover log-customize-filter-popover">
                               <bk-input
                                 v-model="filterKeyword" :placeholder="$t('搜索')"
                                 :left-icon="'paasng-icon paasng-search'" :clearable="true" />
@@ -102,7 +118,7 @@
                                 </button>
                               </div>
                             </div>
-                          </div>
+                          </bk-popover>
                         </div>
                       </div>
                     </th>
@@ -377,7 +393,7 @@ export default {
       this.isLoading = true;
       this.loadData();
 
-      const winHeight = document.body.scrollHeight || window.innerHeight;
+      const winHeight = document.body?.scrollHeight || window.innerHeight;
       const height = winHeight - 400;
       if (height > 400) {
         this.contentHeight = height;
@@ -737,7 +753,7 @@ export default {
         });
       }
       this.tableFilters = list;
-      this.fieldPopoverShow[field] = false;
+      this.handleCancelFilterChange();
       this.loadData(false);
     },
 
@@ -772,17 +788,10 @@ export default {
         const checkedStr = this.tableFormatFilters[0].value;
         const results = checkedStr.split('|').map(v => `${field}:${v.trim()}`);
         this.fieldChecked[field] = results;
+      } else {
+        this.fieldChecked[field] = [];
       }
-
-      if (!this.fieldPopoverShow[field]) {
-        for (const key in this.fieldPopoverShow) {
-          this.fieldPopoverShow[key] = false;
-        }
-        this.fieldPopoverShow[field] = true;
-        this.filterKeyword = '';
-        // eslint-disable-next-line no-plusplus
-        this.renderIndex++;
-      }
+      this.filterKeyword = '';
     },
 
     hideAllFilterPopover(el) {
@@ -821,6 +830,11 @@ export default {
 
     formatTime(time) {
       return time ? formatDate(time * 1000) : '--';
+    },
+
+    handleTrigger(propObj) {
+      const field = propObj.props.popperOptions?.field || '';
+      this.handleShowFilter(field);
     },
   },
 };
@@ -1205,6 +1219,7 @@ export default {
 
 .table-wrapper {
   width: auto;
+  overflow-x: auto;
 }
 
 .tooltip-icon {
@@ -1254,6 +1269,58 @@ export default {
     &.descending {
       border-top-color: #c0c4cc;
       bottom: -1px;
+    }
+  }
+}
+
+.filter-popover-icon {
+  position: absolute;
+  top: -13px;
+  z-index: 99999;
+  .filter-icon {
+    color: #C4C6CC;
+    cursor: pointer;
+
+    &:hover {
+      color: #3a84ff;
+    }
+
+    &.disabled:hover {
+      color: #C4C6CC;
+    }
+  }
+}
+</style>
+
+<style lang="scss">
+.log-customize-filter-popover {
+  z-index: 99999;
+  .tippy-arrow {
+    display: none;
+  }
+  .tippy-tooltip {
+    padding: 0;
+  }
+
+  .field-actions {
+    display: flex;
+    border-top: 1px solid #eee;
+
+    button {
+      flex: 1;
+      text-align: center;
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      line-height: 32px;
+
+      &.confirm {
+        color: #3a84ff;
+        border-right: 1px solid #eee;
+      }
+      &.cancel {
+        color: #63656e !important;
+      }
     }
   }
 }

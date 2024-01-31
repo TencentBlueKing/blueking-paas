@@ -239,7 +239,11 @@ class PluginRelease(AuditedModel):
         stages_shortcut = []
         next_stage = None
         for stage in pd.release_stages[::-1]:
-            stages_shortcut.append(cattr.structure({"id": stage.id, "name": stage.name}, PlainStageInfo))
+            stages_shortcut.append(
+                cattr.structure(
+                    {"id": stage.id, "name": stage.name, "invoke_method": stage.invokeMethod}, PlainStageInfo
+                )
+            )
             next_stage, _ = PluginReleaseStage.objects.update_or_create(
                 release=self,
                 stage_id=stage.id,

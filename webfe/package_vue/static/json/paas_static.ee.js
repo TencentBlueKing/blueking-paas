@@ -282,7 +282,7 @@ export const PLATFORM_CONFIG = {
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 
         // 构建阶段钩子
-        BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks.md',
+        BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks',
     },
 
     CONFIG: {

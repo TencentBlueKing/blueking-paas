@@ -24,7 +24,7 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 from jsonfield import JSONCharField, JSONField
 from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
 from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
@@ -61,8 +61,8 @@ def mark_as_latest_artifact(build: "Build"):
 
 
 class Build(UuidAuditedModel):
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = models.UUIDField(verbose_name="所属应用", null=True)
+    module_id = models.UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
@@ -258,8 +258,8 @@ class BuildProcessManager(models.Manager):
 class BuildProcess(UuidAuditedModel):
     """This Build Process was invoked via a source tarball or anything similar"""
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = models.UUIDField(verbose_name="所属应用", null=True)
+    module_id = models.UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")

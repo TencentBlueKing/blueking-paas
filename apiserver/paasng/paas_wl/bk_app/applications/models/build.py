@@ -197,6 +197,8 @@ class Build(UuidAuditedModel):
 
     def artifact_invoke_message(self):
         """获取构建详情，需要单独做国际化处理"""
+        if self.artifact_detail:
+            return _(self.artifact_detail["invoke_message"])
         return _(self.build_process.invoke_message)
 
     @property

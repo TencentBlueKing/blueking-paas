@@ -26,9 +26,11 @@ import redis
 from django.utils.encoding import force_text
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.exceptions import ProvisionInstanceError
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import (
     DeployShouldAbortError,
@@ -45,7 +47,6 @@ from paasng.utils.error_message import find_coded_error_message
 if TYPE_CHECKING:
     from paasng.platform.engine.models.phases import DeployPhase
     from paasng.platform.engine.models.steps import DeployStep as DeployStepModel
-
 
 logger = logging.getLogger(__name__)
 
@@ -335,3 +336,16 @@ class DeployStep:
                 self.state_mgr.finish(JobStatus.FAILED, str(e), write_to_stream=False)
 
         return decorated
+
+    def create_bkapp_revision(self) -> int:
+        """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
+        module = self.module_environment.module
+        application = module.application
+        # TODO: replace `get_bkapp_resource` with `get_bkapp_resource_for_deploy`
+        bkapp = get_bkapp_resource(module=module)
+
+        # Get current module resource object
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
+        model_resource.use_resource(bkapp)
+
+        return model_resource.revision.id

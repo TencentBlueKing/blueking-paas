@@ -151,7 +151,6 @@ class PluginDefinitionBasicSLZ(serializers.ModelSerializer):
 class PlainReleaseStageSLZ(serializers.Serializer):
     id = serializers.CharField(help_text="阶段id")
     name = serializers.CharField(help_text="阶段名称")
-    invoke_method = serializers.CharField(help_text="阶段触发方式")
 
 
 class PluginReleaseStageSLZ(serializers.ModelSerializer):

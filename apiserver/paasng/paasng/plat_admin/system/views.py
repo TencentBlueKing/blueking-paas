@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, cast
 
 from django.http.response import Http404
 from django.utils.translation import gettext as _
@@ -34,6 +34,7 @@ from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
+    UniSimpleApp,
     query_uni_apps_by_ids,
     query_uni_apps_by_keyword,
     query_uni_apps_by_username,
@@ -42,7 +43,7 @@ from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
     AddonSpecsSLZ,
     ClusterNamespaceSLZ,
-    ContactInfo,
+    ContactInfoSLZ,
     MinimalAppSLZ,
     QueryUniApplicationsByID,
     QueryUniApplicationsByUserName,
@@ -63,44 +64,62 @@ logger = logging.getLogger(__name__)
 class SysUniApplicationViewSet(viewsets.ViewSet):
     """System universal application view sets"""
 
+    def get_contact_info_data(self, application: Application, app_source: SimpleAppSource):
+        # PaaS2.0 应用的联系人信息固定为 None
+        if app_source == SimpleAppSource.DEFAULT:
+            contact_info = get_contact_info(application)
+            return ContactInfoSLZ(contact_info).data if contact_info else None
+        return None
+
+    def get_deploy_info_data(self, application: Application, app_source: SimpleAppSource):
+        # PaaS2.0 应用的部署信息固定为 None
+        if app_source == SimpleAppSource.DEFAULT:
+            deploy_info = get_exposed_links(application)
+            return deploy_info if deploy_info else None
+        return None
+
+    def serialize_app_details(self, app: UniSimpleApp, include_contact_info: bool, include_deploy_info: bool):
+        app_data = UniversalAppSLZ(app).data
+        app_instance = cast(Application, app._db_object)
+
+        # 返回数据中是否包含联系人信息
+        # 说明：查询联系人信息调用 SQL 的次数为：4 * 应用个数
+        if include_contact_info:
+            app_data["contact_info"] = self.get_contact_info_data(app_instance, app._source)
+
+        # 返回数据总是否包含部署信息
+        if include_deploy_info:
+            app_data["deploy_info"] = self.get_deploy_info_data(app_instance, app._source)
+        return app_data
+
     @swagger_auto_schema(
         tags=["SYSTEMAPI"], responses={200: UniversalAppSLZ(many=True)}, query_serializer=QueryUniApplicationsByID
     )
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_by_id(self, request):
-        """根据应用 ID（Code）查询多平台应用信息"""
-        serializer = QueryUniApplicationsByID(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-        include_deploy_info = data["include_deploy_info"]
+        request_serializer = QueryUniApplicationsByID(data=request.query_params)
+        request_serializer.is_valid(raise_exception=True)
+        request_data = request_serializer.validated_data
 
-        results = query_uni_apps_by_ids(ids=data["id"], include_inactive_apps=data["include_inactive_apps"])
-        json_apps: List[Union[None, Dict]] = []
-        for app_id in data["id"]:
-            app = results.get(app_id)
-            if not app:
-                json_apps.append(None)
-                continue
+        # 获取请求参数
+        app_ids = request_data["id"]
+        include_inactive_apps = request_data["include_inactive_apps"]
+        include_deploy_info = request_data["include_deploy_info"]
+        include_developer_info = request_data["include_developer_info"]
+        include_contact_info = request_data["include_contact_info"]
 
-            contact_info = None
-            deploy_info = None
-            basic_info = UniversalAppSLZ(app).data
-            if app._source == SimpleAppSource.DEFAULT:
-                app._db_object = cast(Application, app._db_object)
+        # 查询应用信息
+        queried_apps = query_uni_apps_by_ids(
+            ids=app_ids, include_inactive_apps=include_inactive_apps, include_developer_info=include_developer_info
+        )
 
-                contact_info = get_contact_info(app._db_object)
-                contact_info = ContactInfo(contact_info).data
+        app_details: List[Optional[Dict[str, Any]]] = [
+            self.serialize_app_details(app, include_contact_info, include_deploy_info) if app is not None else None
+            for app_id in app_ids
+            for app in [queried_apps.get(app_id)]
+        ]
 
-                # 部署信息中的访问地址信息很耗时，所以指定参数时才返回
-                if include_deploy_info:
-                    deploy_info = get_exposed_links(app._db_object)
-
-            basic_info["contact_info"] = contact_info
-            if include_deploy_info:
-                basic_info["deploy_info"] = deploy_info
-
-            json_apps.append(basic_info)
-        return Response(json_apps)
+        return Response(app_details, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=["SYSTEMAPI"],

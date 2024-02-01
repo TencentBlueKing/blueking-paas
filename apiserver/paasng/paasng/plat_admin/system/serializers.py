@@ -35,8 +35,17 @@ class QueryUniApplicationsByID(serializers.Serializer):
         child=serializers.CharField(allow_blank=False),
         help_text="应用 ID，最多不超过 20 个",
     )
-    include_deploy_info = serializers.BooleanField(help_text="是否在结果中返回部署相关信息", default=False)
+    include_deploy_info = serializers.BooleanField(
+        help_text="是否在结果中返回最近部署者信息，默认不返回", default=False
+    )
     include_inactive_apps = serializers.BooleanField(help_text="是否查询已下架的应用", default=False)
+    # 下面这些信息需要调用外部 API 或 连表查询耗时比较久，但为了不影响存量调用
+    include_developer_info = serializers.BooleanField(
+        help_text="是否在结果中返回开发者信息，需要多次查询 IAM API 耗时久，默认返回", default=True
+    )
+    include_contact_info = serializers.BooleanField(
+        help_text="是否在结果中返回应用联系人（即最近操作人），默认返回", default=True
+    )
 
 
 class QueryUniApplicationsByUserName(serializers.Serializer):
@@ -53,15 +62,15 @@ class UniversalAppSLZ(serializers.Serializer):
     name_en = serializers.CharField(help_text="应用英文名称")
     code = serializers.CharField(help_text="应用 ID（Code）")
     region = serializers.CharField(help_text="应用版本信息")
-    logo_url = serializers.CharField(help_text="应用 logo 图片地址")
-    developers = serializers.ListField(child=serializers.CharField(), help_text="开发者人员列表")
     creator = serializers.CharField(help_text="应用创建者")
     created = serializers.DateTimeField(help_text="创建时间")
     # 普通应用的导航地址和云原生应用的导航地址不一致，其他平台如 lesscode 要展示开发者中心的地址链接时，需要根据应用类型来区分
     type = serializers.CharField(help_text="应用类型", default="default")
+    logo_url = serializers.CharField(help_text="应用 logo 图片地址", allow_null=True)
+    developers = serializers.ListField(child=serializers.CharField(), help_text="开发者人员列表", allow_null=True)
 
 
-class ContactInfo(serializers.Serializer):
+class ContactInfoSLZ(serializers.Serializer):
     """Serializer for app's contact info"""
 
     latest_operator = UserNameField(help_text="最近操作者")

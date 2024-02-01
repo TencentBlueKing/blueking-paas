@@ -70,8 +70,11 @@ class UniSimpleApp:
         return self._source.value
 
     @classmethod
-    def from_default_app(cls, app: Application, include_developer_info: bool) -> "UniSimpleApp":
-        """将 PaaS3.0 应用转换为UniSimpleApp实例."""
+    def from_default_app(cls, app: Application, include_developers_info: bool) -> "UniSimpleApp":
+        """Convert application to UniSimpleApp instance
+
+        :param include_developers_info: Whether to include application developer information
+        """
         return cls(
             _source=SimpleAppSource.DEFAULT,
             region=app.region or "unknown",
@@ -82,13 +85,17 @@ class UniSimpleApp:
             creator=str_username(app.creator),
             type=app.type,
             logo_url=app.get_logo_url(),
-            developers=app.get_developers() if include_developer_info else None,
+            developers=app.get_developers() if include_developers_info else None,
             _db_object=app,
         )
 
     @classmethod
-    def from_legacy_app(cls, app: LApplication, include_developer_info: bool) -> Optional["UniSimpleApp"]:
-        """将 PaaS2.0 应用转换为UniSimpleApp实例，如果存在有效 region。"""
+    def from_legacy_app(cls, app: LApplication, include_developers_info: bool) -> Optional["UniSimpleApp"]:
+        """Convert PaaS2.0 app to UniSimpleApp instance
+
+        :param include_developers_info: Whether to include application developer information
+        :return: UniSimpleApp instance(return None if the app lacks region info.)
+        """
         normalizer = LegacyAppNormalizer(app)
         region = normalizer.get_region()
         if not region:
@@ -105,26 +112,26 @@ class UniSimpleApp:
             logo_url=normalizer.get_logo_url(),
             created=app.created_date,
             creator=normalizer.get_creator(),
-            developers=normalizer.get_developers() if include_developer_info else None,
+            developers=normalizer.get_developers() if include_developers_info else None,
             # PaaS2.0 的应用都为普通应用
             type=ApplicationType.DEFAULT.value,
             _db_object=app,
         )
 
 
-def query_uni_apps_by_ids(ids: List[str], include_inactive_apps, include_developer_info) -> Dict[str, UniSimpleApp]:
+def query_uni_apps_by_ids(ids: List[str], include_inactive_apps, include_developers_info) -> Dict[str, UniSimpleApp]:
     """Query universal applications by app ids, it will combine the results of both default and legacy platforms"""
-    results = query_default_apps_by_ids(ids, include_inactive_apps, include_developer_info)
+    results = query_default_apps_by_ids(ids, include_inactive_apps, include_developers_info)
 
     # Only query missing app ids on legacy platform
     missing_ids = set(ids) - set(results)
     if missing_ids:
-        results.update(query_legacy_apps_by_ids(missing_ids, include_inactive_apps, include_developer_info))
+        results.update(query_legacy_apps_by_ids(missing_ids, include_inactive_apps, include_developers_info))
     return results
 
 
 def query_default_apps_by_ids(
-    ids: Collection[str], include_inactive_apps, include_developer_info
+    ids: Collection[str], include_inactive_apps, include_developers_info
 ) -> Dict[str, UniSimpleApp]:
     """Query applications by application ids, returns universal model"""
     apps = Application.objects.filter(code__in=ids).select_related("product")
@@ -133,12 +140,12 @@ def query_default_apps_by_ids(
 
     results = {}
     for app in apps:
-        results[app.code] = UniSimpleApp.from_default_app(app, include_developer_info)
+        results[app.code] = UniSimpleApp.from_default_app(app, include_developers_info)
     return results
 
 
 def query_legacy_apps_by_ids(
-    ids: Collection[str], include_inactive_apps: bool, include_developer_info: bool
+    ids: Collection[str], include_inactive_apps: bool, include_developers_info: bool
 ) -> Dict[str, UniSimpleApp]:
     """Query legacy applications by application ids, return universal model"""
     results = {}
@@ -147,7 +154,7 @@ def query_legacy_apps_by_ids(
         if not include_inactive_apps:
             apps.filter(LApplication.state > 1)
         for app in apps:
-            simple_app = UniSimpleApp.from_legacy_app(app, include_developer_info)
+            simple_app = UniSimpleApp.from_legacy_app(app, include_developers_info)
             if simple_app is not None:
                 results[app.code] = simple_app
     return results
@@ -166,7 +173,7 @@ def query_default_apps_by_username(username: str) -> List[UniSimpleApp]:
 
     results = []
     for app in applications:
-        results.append(UniSimpleApp.from_default_app(app, include_developer_info=False))
+        results.append(UniSimpleApp.from_default_app(app, include_developers_info=False))
     return results
 
 
@@ -176,7 +183,7 @@ def query_legacy_apps_by_username(username: str) -> List[UniSimpleApp]:
         apps = AppDeveloperManger(session).get_apps_by_developer(username)
 
         for app in apps:
-            uni_simle_app = UniSimpleApp.from_legacy_app(app, include_developer_info=False)
+            uni_simle_app = UniSimpleApp.from_legacy_app(app, include_developers_info=False)
             if uni_simle_app is not None:
                 results.append(uni_simle_app)
     return results

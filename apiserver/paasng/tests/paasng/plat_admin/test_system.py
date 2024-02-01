@@ -53,7 +53,7 @@ class TestQueryDefaultApps:
 
     def test_normal(self, bk_app):
         results = query_default_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=False, include_developer_info=True
+            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True
         )
         item = results[bk_app.code]
         assert item.name == bk_app.name
@@ -64,10 +64,10 @@ class TestQueryDefaultApps:
         bk_app.save()
 
         active_apps = query_default_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=False, include_developer_info=True
+            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True
         )
         all_apps = query_default_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=True, include_developer_info=True
+            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True
         )
         item = all_apps[bk_app.code]
         assert not active_apps
@@ -81,7 +81,7 @@ class TestQueryLegacyApps:
     def test_normal(self):
         app = create_legacy_application()
 
-        results = query_legacy_apps_by_ids(ids=[app.code], include_inactive_apps=False, include_developer_info=True)
+        results = query_legacy_apps_by_ids(ids=[app.code], include_inactive_apps=False, include_developers_info=True)
         item = results[app.code]
         assert item.name == app.name
 
@@ -93,7 +93,7 @@ class TestQueryUniApps:
         legacy_app = create_legacy_application()
 
         results = query_uni_apps_by_ids(
-            ids=[bk_app.code, legacy_app.code], include_inactive_apps=False, include_developer_info=True
+            ids=[bk_app.code, legacy_app.code], include_inactive_apps=False, include_developers_info=True
         )
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name

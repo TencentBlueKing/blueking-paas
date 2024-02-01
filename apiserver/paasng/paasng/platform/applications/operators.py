@@ -40,7 +40,7 @@ class AppContactInfo:
     recent_deployment_operators: List[User]
 
 
-def get_contact_infos_by_appids(ids: List[str], days_range: int = 31) -> Dict[str, AppContactInfo]:
+def get_contact_info_by_appids(ids: List[str], days_range: int = 31) -> Dict[str, AppContactInfo]:
     """Gets the contact infos for multiple applications."""
     applications = Application.objects.prefetch_related("latest_op__operation").filter(code__in=ids)
 
@@ -65,7 +65,7 @@ def get_contact_infos_by_appids(ids: List[str], days_range: int = 31) -> Dict[st
     for app_id, operator_id in module_operations:
         recent_deployments[app_id].append(operator_id)
 
-    contact_infos = {
+    contact_info_dict = {
         app.code: AppContactInfo(
             latest_operator=latest_operators[app.code],
             recent_deployment_operators=recent_deployments[app.code],
@@ -73,7 +73,7 @@ def get_contact_infos_by_appids(ids: List[str], days_range: int = 31) -> Dict[st
         for app in applications
     }
 
-    return contact_infos
+    return contact_info_dict
 
 
 def get_contact_info(application: Application) -> AppContactInfo:

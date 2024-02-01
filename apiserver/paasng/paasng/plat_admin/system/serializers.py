@@ -40,8 +40,9 @@ class QueryUniApplicationsByID(serializers.Serializer):
     )
     include_inactive_apps = serializers.BooleanField(help_text="是否查询已下架的应用", default=False)
     # 下面这些信息需要调用外部 API 或 连表查询耗时比较久，但为了不影响存量调用默认值设置为 True
-    include_developer_info = serializers.BooleanField(
-        help_text="是否在结果中返回开发者信息，需要多次查询 IAM API 耗时久，默认返回", default=True
+    include_developers_info = serializers.BooleanField(
+        help_text="是否在结果中返回开发者信息。请注意，此选项会延长接口响应时间。若非必需，建议关闭以提升效率。默认返回。",
+        default=True,
     )
     include_contact_info = serializers.BooleanField(
         help_text="是否在结果中返回应用联系人（即最近操作人），默认返回", default=True

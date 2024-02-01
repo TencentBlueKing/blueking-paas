@@ -640,6 +640,7 @@ export default {
   独立访客数: 'Unique visitors',
   类别: 'Category',
   暂未部署: 'Not yet deployed',
+  暂未成功部署: 'Not yet successfully deployed',
   正在运行: 'Running',
   申请云API权限: 'Apply Cloud API',
   '应用未部署，不能访问': 'The APP is not deployed and cannot be accessed',

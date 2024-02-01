@@ -80,6 +80,14 @@
                   </div>
                 </div>
               </template>
+              <template v-else-if="deploymentInfo.state.deployment.latest">
+                <div class="not-deployed">
+                  <span v-bk-tooltips="{content: 'Error: ' + deploymentInfo.state.deployment.latest.err_detail}">
+                    <i class="paasng-icon paasng-info-line info-icon mr5" />
+                    {{ $t('暂未成功部署') }}
+                  </span>
+                </div>
+              </template>
               <template v-else>
                 <div class="not-deployed">{{$t('暂未部署')}}</div>
               </template>

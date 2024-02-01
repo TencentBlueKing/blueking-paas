@@ -2516,4 +2516,5 @@ export default {
   '默认已采集和清洗：标准输出、开发框架定义日志路径中的日志。': 'By default, standard output and logs from paths defined by the development framework have been collected and cleansed.',
   暂不支持自定义日志采集规则: 'Custom log collection rules are not supported at the moment',
   '自定义日志采集/清洗规则、日志导出等功能需要部署“蓝鲸日志平台”，由蓝鲸日志平台提供。': 'Customizing log collection/cleansing rules, log export, and other features require the deployment of "Blue Whale Log Platform," provided by the Blue Whale Log Platform.',
+  '由小写字母组成，长度小于 16 个字符': 'Consists of lowercase letters and is less than 16 characters long',
 };

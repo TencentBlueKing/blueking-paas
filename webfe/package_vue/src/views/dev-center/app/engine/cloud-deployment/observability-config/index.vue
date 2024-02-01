@@ -12,6 +12,7 @@
     <!-- 采集规则 -->
     <section class="collection-rules">
       <bk-button
+        v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR"
         theme="primary"
         class="mb16"
         @click="handleAddCollectionRule"

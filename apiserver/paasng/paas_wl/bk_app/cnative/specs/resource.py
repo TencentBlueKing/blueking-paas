@@ -36,7 +36,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
-from paas_wl.infras.resources.base import crd
+from paas_wl.infras.resources.base import base, crd
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
@@ -68,6 +68,29 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
     return BkAppResource(**data)
 
 
+def create_or_update_bkapp_with_retries(client: base.EnhancedApiClient, env: ModuleEnvironment, manifest: Dict):
+    for attempt in range(RETRY_TIMES):
+        try:
+            bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
+                generate_bkapp_name(env),
+                namespace=env.wl_app.namespace,
+                body=manifest,
+                update_method="replace",
+                auto_add_version=True,
+            )
+        except ApiException as e:
+            if e.status == 409 and json.loads(e.body)["reason"] == "Conflict" and attempt < RETRY_TIMES - 1:
+                # 发生冲突异常时, 重试
+                # 删除 resourceVersion，在 create_or_update 过程中自动添加
+                manifest["metadata"].pop("resourceVersion", "")
+            else:
+                raise
+        else:
+            return bkapp
+
+    return None
+
+
 def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
     """
     Create or update(replace) bkapp manifest in cluster
@@ -83,23 +106,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         ImageCredentialsManager(client).upsert(image_credentials, update_method="patch")
 
         # 创建或更新 BkApp
-        for attempt in range(RETRY_TIMES):
-            try:
-                bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
-                    generate_bkapp_name(env),
-                    namespace=wl_app.namespace,
-                    body=manifest,
-                    update_method="replace",
-                    auto_add_version=True,
-                )
-                break
-            except ApiException as e:
-                if e.status == 409 and json.loads(e.body)["reason"] == "Conflict" and attempt < RETRY_TIMES - 1:
-                    # 发生冲突异常时, 重试
-                    # 删除 resourceVersion，在 create_or_update 过程中自动添加
-                    manifest["metadata"].pop("resourceVersion", "")
-                else:
-                    raise
+        bkapp = create_or_update_bkapp_with_retries(client, env, manifest)
 
     # Deploy other dependencies
     deploy_networking(env)

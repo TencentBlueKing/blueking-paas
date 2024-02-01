@@ -50,22 +50,21 @@ def get_contact_infos_by_appids(ids: List[str], days_range: int = 31) -> Dict[st
         for app in applications
     }
 
-    # 创建当前日期减去days_range的值，以过滤出在该日期后的所有操作
+    # 获取在这个时间之后应用所有的操作者
     earliest_date = timezone.now() - datetime.timedelta(days=days_range)
 
-    # 为了减少查询次数，我们将获取所有应用的最近部署操作者一起查询
+    # 获取所有应用的最近部署操作者
     module_operations = (
         ModuleEnvironmentOperations.objects.filter(application__in=applications, created__gte=earliest_date)
         .values_list("application", "operator")
         .distinct()
     )
 
-    # 建立应用ID和其部署操作者列表的映射
+    # 应用ID和其部署操作者列表的映射
     recent_deployments = defaultdict(list)
     for app_id, operator_id in module_operations:
         recent_deployments[app_id].append(operator_id)
 
-    # 构建每个应用的联系信息字典
     contact_infos = {
         app.code: AppContactInfo(
             latest_operator=latest_operators[app.code],

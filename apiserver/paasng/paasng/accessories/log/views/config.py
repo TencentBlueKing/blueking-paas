@@ -35,7 +35,7 @@ from paasng.accessories.log.serializers import (
     ModuleCustomCollectorConfigSLZ,
 )
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.bk_log.client import make_bk_log_client
+from paasng.infras.bk_log.client import make_bk_log_management_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -87,7 +87,9 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         slz = BkLogCustomCollectMetadataQuerySLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-        cfgs = make_bk_log_client().list_custom_collector_config(biz_or_space_id=monitor_space.iam_resource_id)
+        cfgs = make_bk_log_management_client().list_custom_collector_config(
+            biz_or_space_id=monitor_space.iam_resource_id
+        )
         if not slz.validated_data.get("all", False):
             # 过滤当前模块已创建的自定义采集配置 以及 应用所有内置自定义采集配置
             existed_ids = set(
@@ -125,7 +127,7 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         validated_data = slz.validated_data
 
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-        cfg = make_bk_log_client().get_custom_collector_config_by_name_en(
+        cfg = make_bk_log_management_client().get_custom_collector_config_by_name_en(
             biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=validated_data["name_en"]
         )
         if not cfg or cfg.id != validated_data["collector_config_id"]:

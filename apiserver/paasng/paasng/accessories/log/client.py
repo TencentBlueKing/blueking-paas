@@ -37,10 +37,7 @@ from paasng.accessories.log.filters import (
     parse_properties_filters,
 )
 from paasng.accessories.log.models import BKLogConfig, ElasticSearchConfig, ElasticSearchHost
-
-# TODO: 避免引用插件开发中心的代码, 提取通用组件
-from paasng.bk_plugins.pluginscenter.definitions import PluginBackendAPIResource
-from paasng.bk_plugins.pluginscenter.thirdparty.utils import make_client
+from paasng.infras.bk_log.client import make_bk_log_esquery_client
 from paasng.utils.es_log.misc import filter_indexes_by_time_range
 from paasng.utils.es_log.search import SmartSearch, SmartTimeRange
 
@@ -76,10 +73,7 @@ class BKLogClient:
 
     def __init__(self, config: BKLogConfig, bk_username: str):
         self.config = config
-        # TODO: 实现 BKLogClient
-        self.client = make_client(
-            PluginBackendAPIResource(apiName="log-search", path="esquery_dsl/", method="POST"), bk_username=bk_username
-        )
+        self._esclient = make_bk_log_esquery_client()
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with body and params, implement with bk-log"""
@@ -88,14 +82,30 @@ class BKLogClient:
             "scenario_id": self.config.scenarioID,
             "body": search.to_dict(),
         }
-        resp = self._call_api(data, timeout)
+
+        resp = self._call_api(self._esclient.esquery_dsl, data, timeout)
         return Response(search.search, resp["data"]), resp["data"]["hits"]["total"]
 
     def execute_scroll_search(
         self, index: str, search: SmartSearch, timeout: int, scroll_id: Optional[str] = None, scroll="5m"
     ) -> Tuple[Response, int]:
         """search log(scrolling) from index with search"""
-        raise NotImplementedError("日志平台接口 /esquery_scroll/ 暂不对外开放")
+        data = {
+            "indices": index,
+            "scenario_id": self.config.scenarioID,
+            "body": search.to_dict(),
+            "scroll": scroll,
+        }
+        if scroll_id:
+            data["scroll_id"] = scroll_id
+            resp = self._call_api(self._esclient.esquery_scroll, data=data, timeout=timeout)
+        else:
+            raise NotImplementedError(_("esquery_dsl 目前不支持 scroll 参数"))
+            resp = self._call_api(self._esclient.esquery_dsl, data=data, timeout=timeout)
+        # TODO: 处理 scroll_id 不存在的报错
+        response = Response(search.search, resp["data"])
+        total = resp["data"]["hits"]["total"]
+        return response, total
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
         """Aggregate time-based histogram"""
@@ -112,31 +122,56 @@ class BKLogClient:
             "scenario_id": self.config.scenarioID,
             "body": search.to_dict(),
         }
-        resp = self._call_api(data, timeout)
+        resp = self._call_api(self._esclient.esquery_dsl, data, timeout)
         return AggResponse(search.search.aggs, search.search, resp["data"]["aggregations"]).histogram
 
     def aggregate_fields_filters(
         self, index: str, search: SmartSearch, mappings: dict, timeout: int
     ) -> List[FieldFilter]:
         """aggregate fields filter"""
-        raise NotImplementedError(
-            "由于日志平台接口 /esquery_mapping/ 暂不对外开放, 暂时无法实现 aggregate_fields_filters"
-        )
+        # 添加内置过滤条件查询语句, 内置过滤条件有 environment, process_id, stream
+        search = agg_builtin_filters(search, mappings)
+        search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
+        data = {
+            "indices": index,
+            "scenario_id": self.config.scenarioID,
+            "body": search.to_dict(),
+        }
+        resp = self._call_api(self._esclient.esquery_dsl, data, timeout)
+        response = Response(search.search, resp["data"])
+        all_properties_filters = parse_properties_filters(mappings)
+        filters = count_filters_options_from_agg(response.aggregations.to_dict(), all_properties_filters)
+        filters = count_filters_options_from_logs(list(response), filters)
+        # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
+        return sorted(filters.values(), key=attrgetter("total", "key"), reverse=True)
 
     def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
         """query the mappings in es"""
-        raise NotImplementedError("日志平台接口 /esquery_mapping/ 暂不对外开放")
+        data = {
+            "indices": index,
+            "scenario_id": self.config.scenarioID,
+        }
+        resp: list = self._call_api(self._esclient.esquery_mapping, data, timeout)["data"]
+        if not resp:
+            raise ValueError("mappings is empty!")
+        # indices 保证只会匹配到 1 个 index, 因此只需要取第一个即可
+        all_mappings = resp[0]
+        # 由于手动创建会没有 properties, 需要将无 properties 的 mappings 过滤掉
+        all_not_empty_mappings = {
+            key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
+        }
+        if not all_not_empty_mappings:
+            raise LogQueryError(_("No mappings available, maybe index does not exist or no logs at all"))
+        first_mapping = all_not_empty_mappings[sorted(all_not_empty_mappings, reverse=True)[0]]
+        docs_mappings: Dict = first_mapping["mappings"]["properties"]
+        return docs_mappings
 
-    def _get_indexes(self, index: str, time_range: SmartSearch) -> List[str]:
-        """Get indexes within the time_range range from ES"""
-        raise NotImplementedError
-
-    def _call_api(self, data, timeout: int):
+    def _call_api(self, method, data, timeout: int):
         if self.config.bkdataAuthenticationMethod:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
         if self.config.bkdataDataToken:
             data["bkdata_data_token"] = self.config.bkdataDataToken
-        return self.client.call(data=data, timeout=timeout)
+        return method(data=data, timeout=timeout)
 
 
 class ESLogClient:

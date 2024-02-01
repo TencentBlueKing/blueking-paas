@@ -133,7 +133,7 @@ class IngressConfig:
 
 
 class ClusterManager(models.Manager):
-    @transaction.atomic()
+    @transaction.atomic(using="workloads")
     def register_cluster(
         self,
         region: str,
@@ -207,15 +207,15 @@ class ClusterManager(models.Manager):
             cluster, _ = self.update_or_create(name=name, region=region, defaults=defaults)
         return cluster
 
-    @transaction.atomic
+    @transaction.atomic(using="workloads")
     def switch_default_cluster(self, region: str, cluster_name: str) -> "Cluster":
         """Switch the default cluster to the cluster called `cluster_name`.
 
         :raise SwitchDefaultClusterException: if the cluster called `cluster_name` is already the default cluster.
         """
         try:
-            prep_default_cluster = self.get(region=region, name=cluster_name)
-            curr_default_cluster = self.get(region=region, is_default=True)
+            prep_default_cluster = self.select_for_update().get(region=region, name=cluster_name)
+            curr_default_cluster = self.select_for_update().get(region=region, is_default=True)
         except self.model.DoesNotExist:
             raise SwitchDefaultClusterError("Can't switch default cluster to a not-existed cluster.")
 

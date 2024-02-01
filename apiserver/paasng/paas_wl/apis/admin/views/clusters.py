@@ -42,6 +42,7 @@ from paas_wl.apis.admin.serializers.clusters import (
     GetClusterComponentStatusSLZ,
     ReadonlyClusterSLZ,
 )
+from paas_wl.infras.cluster.exceptions import SwitchDefaultClusterError
 from paas_wl.infras.cluster.models import APIServer, Cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
@@ -70,6 +71,14 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         data = slz.validated_data
         cluster = Cluster.objects.register_cluster(**data)
         return Response(data=ReadonlyClusterSLZ(cluster).data)
+
+    def set_as_default(self, request, pk):
+        cluster = self.get_object()
+        try:
+            Cluster.objects.switch_default_cluster(region=cluster.region, cluster_name=cluster.name)
+        except SwitchDefaultClusterError as e:
+            raise error_codes.SWITCH_DEFAULT_CLUSTER_FAILED.f(str(e))
+        return Response()
 
     @swagger_auto_schema(request_body=APIServerSLZ)
     def bind_api_server(self, request, pk):

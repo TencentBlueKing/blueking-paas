@@ -105,6 +105,10 @@ urlpatterns = [
         clusters.ClusterViewSet.as_view({"post": "bind_api_server"}),
     ),
     path(
+        "admin42/platform/clusters/<str:pk>/set_default/",
+        clusters.ClusterViewSet.as_view({"post": "set_as_default"}),
+    ),
+    path(
         "admin42/platform/clusters/<str:pk>/api_servers/<str:api_server_id>",
         clusters.ClusterViewSet.as_view({"delete": "unbind_api_server"}),
     ),

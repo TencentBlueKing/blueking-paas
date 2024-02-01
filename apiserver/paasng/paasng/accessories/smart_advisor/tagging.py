@@ -45,7 +45,9 @@ def dig_tags_local_repo(local_path: str):
     # Python detection
     if p.child("requirements.txt").exists():
         tags.append(force_tag("app-pl:python"))
-        with open(p.child("requirements.txt")) as fp:
+        # Set `errors="ignore"` to ignore non-ascii characters when the file is using a
+        # different encoding other than utf-8.
+        with open(p.child("requirements.txt"), encoding="utf-8", errors="ignore") as fp:
             requirements_txt = fp.read()
             for pkg_name in ("celery", "django", "gunicorn", "blueapps"):
                 if py_module_in_requirements(pkg_name, requirements_txt):

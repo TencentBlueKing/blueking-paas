@@ -129,6 +129,7 @@ class BaseStageController:
             "stage_name": self.stage.stage_name,
             "status": self.stage.status,
             "fail_message": self.stage.fail_message,
+            "invoke_method": self.stage.invoke_method,
         }
         return basic_info
 

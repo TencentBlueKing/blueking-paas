@@ -153,7 +153,7 @@
                     <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
                   </div> -->
                 </bk-select>
-                <span slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</span>
+                <span slot="tip" class="input-tips">{{ $t('请选择镜像凭证以拉取私有镜像，也可在创建模块后在 "模块配置 - 构建配置“ 页面中添加') }}</span>
               </bk-form-item>
             </bk-form>
           </div>

@@ -33,7 +33,7 @@ def import_build(module: Module, build: BkAppBuildConfig):
     cfg = BuildConfig.objects.get_or_create_by_module(module)
     update_fields = ["image_credential_name", "updated"]
     if build.image:
-        parsed = parse_image(build.image, default_registry="registry.hub.docker.com")
+        parsed = parse_image(build.image, default_registry="index.docker.io")
         cfg.image_repository = f"{parsed.domain}/{parsed.name}"
         update_fields.append("image_repository")
 

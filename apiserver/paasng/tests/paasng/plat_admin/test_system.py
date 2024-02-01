@@ -52,7 +52,9 @@ class TestQueryDefaultApps:
     """TestCases for querying apps in default platform"""
 
     def test_normal(self, bk_app):
-        results = query_default_apps_by_ids(ids=[bk_app.code], include_inactive_apps=False)
+        results = query_default_apps_by_ids(
+            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True
+        )
         item = results[bk_app.code]
         assert item.name == bk_app.name
         assert item.logo_url == settings.APPLICATION_DEFAULT_LOGO, "should use default logo by default"
@@ -61,8 +63,12 @@ class TestQueryDefaultApps:
         bk_app.is_active = False
         bk_app.save()
 
-        active_apps = query_default_apps_by_ids(ids=[bk_app.code], include_inactive_apps=False)
-        all_apps = query_default_apps_by_ids(ids=[bk_app.code], include_inactive_apps=True)
+        active_apps = query_default_apps_by_ids(
+            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True
+        )
+        all_apps = query_default_apps_by_ids(
+            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True
+        )
         item = all_apps[bk_app.code]
         assert not active_apps
         assert item.name == bk_app.name
@@ -75,7 +81,7 @@ class TestQueryLegacyApps:
     def test_normal(self):
         app = create_legacy_application()
 
-        results = query_legacy_apps_by_ids(ids=[app.code], include_inactive_apps=False)
+        results = query_legacy_apps_by_ids(ids=[app.code], include_inactive_apps=False, include_developers_info=True)
         item = results[app.code]
         assert item.name == app.name
 
@@ -86,7 +92,9 @@ class TestQueryUniApps:
     def test_mixed_platforms(self, bk_app):
         legacy_app = create_legacy_application()
 
-        results = query_uni_apps_by_ids(ids=[bk_app.code, legacy_app.code], include_inactive_apps=False)
+        results = query_uni_apps_by_ids(
+            ids=[bk_app.code, legacy_app.code], include_inactive_apps=False, include_developers_info=True
+        )
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name
         assert results[bk_app.code].name_en == bk_app.name_en

@@ -41,6 +41,9 @@ var _ = Describe("Test DeployManager", func() {
 		m = NewDeployManager()
 
 		tmpAppDir, _ = os.MkdirTemp("", "app")
+		// 创建隐藏目录
+		Expect(os.MkdirAll(path.Join(tmpAppDir, ".heroku"), 0o755)).To(BeNil())
+
 		dc.DefaultAppDir = tmpAppDir
 	})
 
@@ -50,17 +53,23 @@ var _ = Describe("Test DeployManager", func() {
 		dc.DefaultAppDir = oldAppDir
 	})
 
-	It("Test deploy", func() {
-		result, _ := m.Deploy(testSrcFilePath)
+	Describe("Test deploy", func() {
+		It("test deploy", func() {
+			result, _ := m.Deploy(testSrcFilePath)
 
-		Expect(len(result.DeployID)).To(Equal(32))
-		Expect(result.Status).To(Equal(dc.ReloadProcessing))
+			Expect(len(result.DeployID)).To(Equal(32))
+			Expect(result.Status).To(Equal(dc.ReloadProcessing))
 
-		_, err := os.Stat(path.Join(dc.DefaultAppDir, "Procfile"))
-		Expect(err).To(BeNil())
+			_, err := os.Stat(path.Join(dc.DefaultAppDir, "Procfile"))
+			Expect(err).To(BeNil())
+
+			// 验证隐藏目录不会被覆盖(删除)
+			_, err = os.Stat(path.Join(dc.DefaultAppDir, ".heroku"))
+			Expect(err).To(BeNil())
+		})
 	})
 
-	Context("Test get result", func() {
+	Describe("Test get result", func() {
 		oldReloadDir := dc.ReloadDir
 		oldReloadLogDir := dc.ReloadLogDir
 

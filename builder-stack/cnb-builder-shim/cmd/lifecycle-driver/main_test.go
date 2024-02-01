@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("Test lifecycle driver", func() {
 	Describe("Test get Steps", func() {
-		Context("Test get getBuilderSteps", func() {
+		Describe("Test get getBuilderSteps", func() {
 			var oldCacheImage string
 
 			BeforeEach(func() {
@@ -64,7 +64,7 @@ var _ = Describe("Test lifecycle driver", func() {
 				Expect(stepOrder).To(Equal(expectedStepOrder))
 			})
 		})
-		Context("Test get getDevSteps", func() {
+		Describe("Test get getDevSteps", func() {
 			It("Test get getDevSteps", func() {
 				expectedStepOrder := []string{"Detect", "Build"}
 

@@ -54,7 +54,7 @@ var _ = Describe("Test webserver api", func() {
 		env.Parse(&cfg)
 
 		r := gin.Default()
-
+		r.Use(tokenAuthMiddleware(cfg.Token))
 		s = &WebServer{
 			server: r,
 			lg:     &lg,
@@ -73,7 +73,7 @@ var _ = Describe("Test webserver api", func() {
 		os.Setenv("UPLOAD_DIR", oldUploadDir)
 	})
 
-	Context("deploy", func() {
+	Describe("deploy", func() {
 		It("deploy app", func() {
 			srcPath := filepath.Join("service", "testdata", "django-helloworld.zip")
 
@@ -89,6 +89,7 @@ var _ = Describe("Test webserver api", func() {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/deploys", body)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
+			req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
 
 			s.server.ServeHTTP(w, req)
 
@@ -99,11 +100,23 @@ var _ = Describe("Test webserver api", func() {
 			deployID := uuid.NewString()
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/deploys/"+deployID+"/results?log=true", nil)
+			req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+
 			s.server.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(200))
 			Expect(w.Body.String()).To(ContainSubstring(`"status":"Success"`))
 			Expect(w.Body.String()).To(ContainSubstring(`"log":"build done..."`))
+		})
+
+		It("get deploy result without token", func() {
+			deployID := uuid.NewString()
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/deploys/"+deployID+"/results?log=true", nil)
+
+			s.server.ServeHTTP(w, req)
+
+			Expect(w.Code).To(Equal(401))
 		})
 	})
 })

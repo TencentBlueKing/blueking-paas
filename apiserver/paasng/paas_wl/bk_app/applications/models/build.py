@@ -24,7 +24,7 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 from jsonfield import JSONCharField, JSONField
 from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
 from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
@@ -61,8 +61,8 @@ def mark_as_latest_artifact(build: "Build"):
 
 
 class Build(UuidAuditedModel):
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = models.UUIDField(verbose_name="所属应用", null=True)
+    module_id = models.UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
@@ -176,6 +176,7 @@ class Build(UuidAuditedModel):
         """获取构件详情, 如果构件详情未初始化, 则进行初始化"""
         if self.artifact_detail:
             return self.artifact_detail
+
         if self.artifact_type == ArtifactType.IMAGE:
             image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
             registry_client = get_app_docker_registry_client()
@@ -193,6 +194,12 @@ class Build(UuidAuditedModel):
             }
         self.save(update_fields=["artifact_detail"])
         return self.artifact_detail
+
+    def artifact_invoke_message(self):
+        """获取构建详情，需要单独做国际化处理"""
+        if self.artifact_detail:
+            return _(self.artifact_detail["invoke_message"])
+        return _(self.build_process.invoke_message)
 
     @property
     def version(self):
@@ -258,8 +265,8 @@ class BuildProcessManager(models.Manager):
 class BuildProcess(UuidAuditedModel):
     """This Build Process was invoked via a source tarball or anything similar"""
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = models.UUIDField(verbose_name="所属应用", null=True)
+    module_id = models.UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")

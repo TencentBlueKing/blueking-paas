@@ -2,13 +2,17 @@
   <div class="observability-config">
     <div class="top-title mb20">
       <h4>{{ $t('日志采集') }}</h4>
-      <p class="tips">
+      <p class="tips" v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR">
         {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志，也可以添加自定义日志采集规则。') }}
+      </p>
+      <p class="tips" v-else>
+        {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志。') }}
       </p>
     </div>
     <!-- 采集规则 -->
     <section class="collection-rules">
       <bk-button
+        v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR"
         theme="primary"
         class="mb16"
         @click="handleAddCollectionRule"
@@ -16,7 +20,10 @@
         <i class="paasng-icon paasng-plus mr5" />
         {{ $t('新增采集规则') }}
       </bk-button>
-      <div v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }">
+      <div
+        v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR"
+        v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+      >
         <bk-table
           v-if="logCollectionList.length"
           v-bkloading="{ isLoading: isTableLoading }"
@@ -111,6 +118,15 @@
           </div>
         </div>
       </div>
+      <section
+        v-else
+        class="empty"
+      >
+        <div class="empty-content">
+          <div class="title">{{ $t('暂不支持自定义日志采集规则') }}</div>
+          <div class="sub-title">{{ $t('自定义日志采集/清洗规则、日志导出等功能需要部署“蓝鲸日志平台”，由蓝鲸日志平台提供。') }}</div>
+        </div>
+      </section>
     </section>
 
     <!-- 告警策略 -->
@@ -296,9 +312,14 @@ export default {
     curModuleId() {
       return this.curAppModule?.name;
     },
+    curAppInfo() {
+      return this.$store.state.curAppInfo || {};
+    },
   },
   created() {
-    this.getLogCollectionRuleList();
+    if (this.curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR) {
+      this.getLogCollectionRuleList();
+    }
     this.getCustomLogCollectionRule();
   },
   methods: {

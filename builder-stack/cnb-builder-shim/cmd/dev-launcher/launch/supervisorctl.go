@@ -19,22 +19,22 @@
 package launch
 
 import (
-	"text/template"
-	"os"
-	"fmt"
 	"bytes"
+	"fmt"
+	"os"
 	"os/exec"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
+	"path/filepath"
+	"text/template"
 )
 
-var supervisorDir = utils.EnvOrDefault("SUPERVISOR_ROOT", "/cnb/devcontainer/supervisor")
+var supervisorDir = "/cnb/devcontainer/supervisor"
 
-var confTemplate = `[unix_http_server]
+var confFilePath = filepath.Join(supervisorDir, "dev.conf")
+
+var confTmpl = `[unix_http_server]
 file = {{ .RootDir }}/supervisor.sock
 
 [supervisorctl]
-configuration = {{ .RootDir }}/dev.conf
 serverurl = unix://{{ .RootDir }}/supervisor.sock
 
 [supervisord]
@@ -45,7 +45,7 @@ logfile = {{ .RootDir }}/log/supervisord.log
 supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 {{ range .Processes }}
 [program:{{ .ProcType }}]
-command = {{ .Command }}
+command = {{ .CommandPath }}
 stdout_logfile = {{ .ProcLogFile }}
 redirect_stderr = true
 {{ end -}}
@@ -54,7 +54,6 @@ redirect_stderr = true
 var reloadScript = fmt.Sprintf(`#!/bin/bash
 
 socket_file="%[1]s/supervisor.sock"
-
 # 检查supervisor的socket文件是否存在
 if [ -S "$socket_file" ]; then
   echo "supervisord is already running. update and restart processes..."
@@ -63,13 +62,7 @@ else
   echo "supervisord is not running. start supervisord..."
   supervisord -c %[2]s
 fi
-`, supervisorDir, supervisorDir+"/dev.conf")
-
-// Process is a process to launch
-type Process struct {
-	ProcType string
-	Command  string
-}
+`, supervisorDir, confFilePath)
 
 // ProcessConf is a process config
 type ProcessConf struct {
@@ -92,7 +85,7 @@ func MakeSupervisorConf(processes []Process) *SupervisorConf {
 	for _, p := range processes {
 		conf.Processes = append(conf.Processes, ProcessConf{
 			Process:     p,
-			ProcLogFile: conf.RootDir + "/log/" + p.ProcType + ".log",
+			ProcLogFile: filepath.Join(conf.RootDir, "log", p.ProcType+".log"),
 		})
 	}
 	return conf
@@ -105,14 +98,14 @@ func NewSupervisorCtl() *SupervisorCtl {
 	}
 }
 
-// SupervisorCtl is a supervisorctl
+// SupervisorCtl is a supervisorctl wrapper with supervisor binary
 type SupervisorCtl struct {
 	RootDir string
 }
 
 // Reload start or update/restart the processes
 func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
-	if err := utils.CreateDir(ctl.RootDir + "/log"); err != nil {
+	if err := os.MkdirAll(filepath.Join(ctl.RootDir, "log"), 0o755); err != nil {
 		return err
 	}
 
@@ -125,12 +118,12 @@ func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
 func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
 	tmplFile := "supervisord.conf.tmpl"
 
-	tmpl, err := template.New(tmplFile).Parse(confTemplate)
+	tmpl, err := template.New(tmplFile).Parse(confTmpl)
 	if err != nil {
 		return err
 	}
 
-	file, err := os.Create(ctl.RootDir + "/dev.conf")
+	file, err := os.Create(confFilePath)
 	if err != nil {
 		return err
 	}
@@ -140,7 +133,6 @@ func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
 }
 
 func (ctl *SupervisorCtl) reload() error {
-
 	cmd := exec.Command("bash")
 
 	cmd.Env = os.Environ()

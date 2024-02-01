@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main_test
+package webserver_test
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestDevserver(t *testing.T) {
+func TestWebserver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Devserver Suite")
+	RunSpecs(t, "Webserver Suite")
 }

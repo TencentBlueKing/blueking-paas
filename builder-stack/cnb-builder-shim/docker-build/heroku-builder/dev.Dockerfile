@@ -10,6 +10,7 @@ RUN go mod download
 
 COPY ./cmd ./cmd
 COPY ./pkg ./pkg
+COPY ./internal ./internal
 COPY ./Makefile ./Makefile
 RUN make build-dev
 
@@ -21,9 +22,8 @@ ENV CNB_APP_DIR /app
 ENV CNB_PLATFORM_API=0.11
 ENV DEV_MODE=true
 
-RUN apt-get clean && apt-get update && apt-get -y install inotify-tools supervisor
+RUN apt-get clean && apt-get update && apt-get -y install supervisor
 
-COPY ./cmd/dev-entrypoint/dev-entrypoint.sh /cnb/devcontainer/dev-entrypoint.sh
 COPY --from=binary-builder /src/bin/* /cnb/devcontainer/bin/
 
-ENTRYPOINT /cnb/devcontainer/dev-entrypoint.sh
+ENTRYPOINT /cnb/devcontainer/bin/dev-entrypoint

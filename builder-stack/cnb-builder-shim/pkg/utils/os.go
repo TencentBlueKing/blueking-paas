@@ -18,15 +18,14 @@
 
 package utils
 
-import "os"
+import (
+	"os"
+	"path"
+	"path/filepath"
 
-// CreateDir create directory if the file not exist
-func CreateDir(dir string) error {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return os.MkdirAll(dir, 0755)
-	}
-	return nil
-}
+	"github.com/mholt/archiver/v3"
+	"github.com/pkg/errors"
+)
 
 // CreateSymlink create symlink if the symlink not exist
 func CreateSymlink(oldname, newname string) error {
@@ -34,4 +33,83 @@ func CreateSymlink(oldname, newname string) error {
 		return os.Symlink(oldname, newname)
 	}
 	return nil
+}
+
+// CopyDir copies a directory from the source path to the destination path.
+//
+// The function takes two string parameters:
+// - srcDir: the source directory path.
+// - destDir: the destination directory path.
+//
+// The function returns an error if any error occurs during the copy process.
+func CopyDir(srcDir, destDir string) error {
+	files, err := os.ReadDir(srcDir)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		fileName := f.Name()
+		srcPath := path.Join(srcDir, fileName)
+		destPath := path.Join(destDir, fileName)
+
+		fileInfo, _ := f.Info()
+
+		if f.IsDir() {
+			// 创建目标目录
+			if iErr := os.MkdirAll(destPath, fileInfo.Mode()); iErr != nil {
+				return iErr
+			}
+			// 递归复制目录
+			if iErr := CopyDir(srcPath, destPath); iErr != nil {
+				return iErr
+			}
+		} else {
+			// 读取源文件内容
+			content, iErr := os.ReadFile(srcPath)
+			if iErr != nil {
+				return iErr
+			}
+			// 写入目标文件
+			if iErr = os.WriteFile(destPath, content, fileInfo.Mode()); iErr != nil {
+				return iErr
+			}
+		}
+	}
+	return nil
+}
+
+// Unzip extracts the contents of a zip file to a specified directory.
+//
+// srcFilePath is the path to the zip file.
+// distDir is the directory where the extracted files will be placed.
+// Returns an error if there was a problem extracting the zip file.
+func Unzip(srcFilePath, distDir string) error {
+	z := archiver.NewZip()
+	if err := z.Unarchive(srcFilePath, distDir); err != nil {
+		return errors.Wrap(err, "unzip error")
+	}
+	return nil
+}
+
+// Chownr changes the ownership of a file or directory and all its contents recursively.
+//
+// The function takes three parameters:
+// - filePath: a string representing the path to the file or directory.
+// - uid: an integer representing the user ID to set as the owner.
+// - gid: an integer representing the group ID to set as the owner.
+//
+// The function returns an error if the ownership change fails, or nil if it succeeds.
+func Chownr(filePath string, uid, gid int) error {
+	return filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if err = os.Chown(path, uid, gid); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

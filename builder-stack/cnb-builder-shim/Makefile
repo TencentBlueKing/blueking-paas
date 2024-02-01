@@ -12,7 +12,7 @@ build: build-init lifecycle-driver entrypoint  ## Build all binary
 
 
 .PHONY: build-dev
-build-dev: devserver dev-init lifecycle-driver hot-launcher
+build-dev: dev-entrypoint lifecycle-driver dev-launcher
 
 
 .PHONY: build-init
@@ -30,19 +30,14 @@ entrypoint: $(LOCALBIN) ## Build `entrypoint` binary
 	go build -o $(LOCALBIN)/entrypoint ./cmd/entrypoint
 
 
-.PHONY: devserver
-devserver:
-	go build -o $(LOCALBIN)/devserver ./cmd/devserver
+.PHONY: dev-entrypoint
+dev-entrypoint:
+	go build -o $(LOCALBIN)/dev-entrypoint ./cmd/dev-entrypoint
 
 
-.PHONY: dev-init
-dev-init:
-	go build -o $(LOCALBIN)/dev-init$(BINARY_SUFFIX) ./cmd/dev-entrypoint/dev-init
-
-
-.PHONY: hot-launcher
-hot-launcher:
-	go build -o $(LOCALBIN)/hot-launcher$(BINARY_SUFFIX) ./cmd/hot-launcher
+.PHONY: dev-launcher
+dev-launcher:
+	go build -o $(LOCALBIN)/dev-launcher ./cmd/dev-launcher
 
 
 ##@ Build Image
@@ -55,10 +50,12 @@ heroku-builder:  ## Build builder image which is based on `cloudnative-buildpack
 heroku-dev:  ## Build devcontainer image which is based on `cloudnative-buildpacks/builders/heroku-builder`
 	docker buildx bake heroku-dev -f docker-build/heroku-builder/docker-bake.hcl
 
+
 ##@ Test
 .PHONY: test
 test: ## Run unittest
 	go test ./...
+
 
 .PHONY: integration
 integration:  ## Run Intergration Test

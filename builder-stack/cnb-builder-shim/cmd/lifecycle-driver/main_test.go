@@ -49,10 +49,8 @@ var _ = Describe("Test lifecycle driver", func() {
 				}
 
 				Expect(stepOrder).To(Equal(expectedStepOrder))
-
 			})
 			It("Test get getBuilderSteps with cache image", func() {
-
 				*cacheImage = "testcache:latest"
 				expectedStepOrder := []string{"Analyze", "Detect", "Restore", "Build", "Export"}
 
@@ -67,16 +65,18 @@ var _ = Describe("Test lifecycle driver", func() {
 			})
 		})
 		Context("Test get getDevSteps", func() {
-			expectedStepOrder := []string{"Detect", "Build", "Hot-launch"}
+			It("Test get getDevSteps", func() {
+				expectedStepOrder := []string{"Detect", "Build"}
 
-			ctx := context.Background()
-			steps := getDevSteps(ctx)
-			stepOrder := []string{}
-			for _, step := range steps {
-				stepOrder = append(stepOrder, step.Name)
-			}
+				ctx := context.Background()
+				steps := getDevSteps(ctx)
+				stepOrder := []string{}
+				for _, step := range steps {
+					stepOrder = append(stepOrder, step.Name)
+				}
 
-			Expect(stepOrder).To(Equal(expectedStepOrder))
+				Expect(stepOrder).To(Equal(expectedStepOrder))
+			})
 		})
 	})
 })

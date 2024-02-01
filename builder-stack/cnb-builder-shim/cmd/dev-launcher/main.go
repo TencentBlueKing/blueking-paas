@@ -24,9 +24,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/buildpacks/lifecycle/launch"
 
+	devlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
-	hotlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/hot-launcher/launch"
 )
 
 func main() {
@@ -34,14 +33,13 @@ func main() {
 
 	var md launch.Metadata
 
-	if _, err := toml.DecodeFile(launch.GetMetadataFilePath(utils.EnvOrDefault("CNB_LAYERS_DIR", "/layers")), &md); err != nil {
+	if _, err := toml.DecodeFile(launch.GetMetadataFilePath("/layers"), &md); err != nil {
 		logger.Error(err, "read metadata")
 		os.Exit(1)
 	}
 
-	if err := hotlaunch.Run(&md); err != nil {
+	if err := devlaunch.Run(md.Processes); err != nil {
 		logger.Error(err, "hot launch")
 		os.Exit(1)
 	}
-
 }

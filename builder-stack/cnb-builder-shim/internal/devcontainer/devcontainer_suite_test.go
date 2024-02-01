@@ -16,14 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package phase
+package devcontainer_test
 
 import (
-	"context"
-	"os/exec"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// MakeHotLauncherCmd build the hot launcher cmd
-func MakeHotLauncherCmd(ctx context.Context) *exec.Cmd {
-	return exec.CommandContext(ctx, "/cnb/devcontainer/bin/hot-launcher")
+func TestDevcontainer(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Devcontainer Suite")
 }

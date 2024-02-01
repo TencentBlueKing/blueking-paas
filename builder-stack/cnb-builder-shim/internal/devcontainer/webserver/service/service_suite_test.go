@@ -16,26 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package service_test
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Test api", func() {
-	Describe("deploy", func() {
-		It("deploy failed without token", func() {
-			r := setupRouter()
-
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/deploy", nil)
-			r.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(401))
-		})
-	})
-})
+func TestService(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Service Suite")
+}

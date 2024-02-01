@@ -15,6 +15,7 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+
 package main
 
 import (
@@ -57,8 +58,6 @@ const (
 	DefaultUid uint32 = 2000
 	// DefaultGid is the default gid to run lifecycle
 	DefaultGid uint32 = 2000
-
-	RootUid uint32 = 0
 )
 
 var (
@@ -110,8 +109,6 @@ type Step struct {
 	Name         string
 	EnterMessage string
 	Cmd          *exec.Cmd
-	uid          uint32
-	gid          uint32
 }
 
 func main() {
@@ -129,12 +126,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-
-	if *dev {
-		runDevLifecycle(ctx, logger)
-	} else {
-		runBuilderLifecycle(ctx, logger)
-	}
+	runLifecycle(ctx, logger, *dev)
 }
 
 // make envs for lifecycle command
@@ -164,28 +156,23 @@ func makeSysProcAttr(uid, gid uint32) *syscall.SysProcAttr {
 	return &sysProcAttr
 }
 
-func runBuilderLifecycle(ctx context.Context, logger logr.Logger) {
+func runLifecycle(ctx context.Context, logger logr.Logger, dev bool) {
 	logger.Info("==================================================")
 	logger.Info("Starting builder...")
 
 	beginAt := time.Now()
 
-	executeSteps(logger, getBuilderSteps(ctx))
+	var steps []Step
+	if dev {
+		steps = getDevSteps(ctx)
+	} else {
+		steps = getBuilderSteps(ctx)
+	}
+
+	executeSteps(logger, steps)
 
 	logger.Info("==================================================")
 	logger.Info(fmt.Sprintf("Build success, duration: %v", time.Since(beginAt)))
-}
-
-func runDevLifecycle(ctx context.Context, logger logr.Logger) {
-	logger.Info("==================================================")
-	logger.Info("Hot starting devcontainer...")
-
-	beginAt := time.Now()
-
-	executeSteps(logger, getDevSteps(ctx))
-
-	logger.Info("==================================================")
-	logger.Info(fmt.Sprintf("Hot starting(reloading) success, duration: %v", time.Since(beginAt)))
 }
 
 func executeSteps(logger logr.Logger, steps []Step) {
@@ -199,15 +186,10 @@ func executeSteps(logger logr.Logger, steps []Step) {
 		step.Cmd.Stderr = os.Stderr
 		step.Cmd.Stdout = os.Stdout
 
-		// setup env var
-		if step.uid == RootUid {
-			step.Cmd.Env = os.Environ()
-		} else {
-			step.Cmd.Env = lifecycleEnv
-		}
+		step.Cmd.Env = lifecycleEnv
 
 		// set user and group
-		step.Cmd.SysProcAttr = makeSysProcAttr(step.uid, step.gid)
+		step.Cmd.SysProcAttr = makeSysProcAttr(*uid, *gid)
 		if err := step.Cmd.Run(); err != nil {
 			logger.Error(err, fmt.Sprintf("!! Step %s failed", step.Name))
 			os.Exit(1)
@@ -233,7 +215,6 @@ func getBuilderSteps(ctx context.Context) []Step {
 				*uid,
 				*gid,
 			),
-			*uid, *gid,
 		},
 		{
 			"Detect",
@@ -248,7 +229,6 @@ func getBuilderSteps(ctx context.Context) []Step {
 				*layersDir,
 				*logLevel,
 			),
-			*uid, *gid,
 		},
 	}
 	if *cacheImage != "" {
@@ -256,14 +236,12 @@ func getBuilderSteps(ctx context.Context) []Step {
 			"Restore",
 			"Restoring layers from the cache...",
 			phase.MakeRestorerCmd(ctx, *lifecycleDir, *cacheImage, *groupPath, *layersDir, *logLevel, *uid, *gid),
-			*uid, *gid,
 		})
 	}
 	steps = append(steps, Step{
 		"Build",
 		"Building application...",
 		phase.MakeBuilderCmd(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel),
-		*uid, *gid,
 	}, Step{
 		"Export",
 		"Exporting image...",
@@ -280,56 +258,30 @@ func getBuilderSteps(ctx context.Context) []Step {
 			*uid,
 			*gid,
 		),
-		*uid, *gid,
 	})
 	return steps
 }
 
 func getDevSteps(ctx context.Context) []Step {
-	var steps []Step
-
-	if noBuildChange() {
-		steps = []Step{}
-	} else {
-		steps = []Step{
-			{
-				"Detect",
-				"Detecting Buildpacks...",
-				phase.MakeDetectorCmd(
-					ctx,
-					*lifecycleDir,
-					*appDir,
-					*orderPath,
-					*groupPath,
-					*planPath,
-					*layersDir,
-					*logLevel,
-				),
-				*uid, *gid,
-			},
-			{
-				"Build",
-				"Building application...",
-				phase.MakeBuilderCmd(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel),
-				*uid, *gid,
-			},
-		}
-	}
-
-	steps = append(
-		steps,
-		Step{
-			"Hot-launch",
-			"Hot-launch processes...",
-			phase.MakeHotLauncherCmd(ctx),
-			RootUid,
-			RootUid,
+	return []Step{
+		{
+			"Detect",
+			"Detecting Buildpacks...",
+			phase.MakeDetectorCmd(
+				ctx,
+				*lifecycleDir,
+				*appDir,
+				*orderPath,
+				*groupPath,
+				*planPath,
+				*layersDir,
+				*logLevel,
+			),
 		},
-	)
-	return steps
-}
-
-func noBuildChange() bool {
-	// TODO 可能的提速实现
-	return false
+		{
+			"Build",
+			"Building application...",
+			phase.MakeBuilderCmd(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel),
+		},
+	}
 }

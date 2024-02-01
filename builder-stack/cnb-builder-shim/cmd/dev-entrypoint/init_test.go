@@ -30,45 +30,49 @@ import (
 
 var _ = Describe("Test setupPlatformEnv", func() {
 	var (
-		platformDir string
-		err         error
+		tPlatformDir string
+		err          error
 	)
 
 	BeforeEach(func() {
-		platformDir, err = os.MkdirTemp("", "platform-env")
+		tPlatformDir, err = os.MkdirTemp("", "platform-env")
 		Expect(err).To(BeNil())
 	})
 	AfterEach(func() {
-		Expect(os.RemoveAll(platformDir)).To(BeNil())
+		Expect(os.RemoveAll(tPlatformDir)).To(BeNil())
 	})
 
 	It("test write env to file successfully", func() {
-		err := setupPlatformEnv(logging.Default(), platformDir, []string{"FOO=flag"})
+		err := setupPlatformEnv(logging.Default(), tPlatformDir, []string{"FOO=flag"})
 		Expect(err).To(BeNil())
-		content, _ := os.ReadFile(filepath.Join(platformDir, "env", "FOO"))
+		content, _ := os.ReadFile(filepath.Join(tPlatformDir, "env", "FOO"))
 		Expect(string(content)).To(Equal("flag"))
 	})
 })
 
 var _ = Describe("Test setupBuildpacksOrder", func() {
 	var (
-		cnbDir string
-		err    error
+		tCnbDir string
+		err     error
 	)
 
 	BeforeEach(func() {
-		cnbDir, err = os.MkdirTemp("", "cnb-dir")
+		tCnbDir, err = os.MkdirTemp("", "cnb-dir")
 		Expect(err).To(BeNil())
 	})
 	AfterEach(func() {
-		Expect(os.RemoveAll(cnbDir)).To(BeNil())
+		Expect(os.RemoveAll(tCnbDir)).To(BeNil())
 	})
 
 	It("test write order.toml successfully", func() {
-		err := setupBuildpacksOrder(logging.Default(), "tgz apt https://example.com v;tgz bk-buildpack-python https://example.com v213", cnbDir)
+		err := setupBuildpacksOrder(
+			logging.Default(),
+			"tgz apt https://example.com v;tgz bk-buildpack-python https://example.com v213",
+			tCnbDir,
+		)
 		Expect(err).To(BeNil())
 
-		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))
+		content, _ := os.ReadFile(filepath.Join(tCnbDir, "order.toml"))
 		Expect(string(content)).To(Equal(`[[order]]
 [[order.group]]
 id = 'apt'
@@ -81,10 +85,14 @@ version = 'v213'
 	})
 
 	It("test skip wrong value", func() {
-		err := setupBuildpacksOrder(logging.Default(), "tgz apt;tgz bk-buildpack-python https://example.com v213", cnbDir)
+		err := setupBuildpacksOrder(
+			logging.Default(),
+			"tgz apt;tgz bk-buildpack-python https://example.com v213",
+			tCnbDir,
+		)
 		Expect(err).To(BeNil())
 
-		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))
+		content, _ := os.ReadFile(filepath.Join(tCnbDir, "order.toml"))
 		Expect(string(content)).To(Equal(`[[order]]
 [[order.group]]
 id = 'bk-buildpack-python'

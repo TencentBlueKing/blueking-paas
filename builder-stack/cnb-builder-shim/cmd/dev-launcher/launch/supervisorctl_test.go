@@ -19,8 +19,9 @@
 package launch
 
 import (
-	"os"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,25 +29,35 @@ import (
 
 var _ = Describe("Test supervisorctl", func() {
 	var ctl *SupervisorCtl
+
 	oldDir := supervisorDir
+	oldConfFilePath := confFilePath
 
 	BeforeEach(func() {
-		supervisorDir, _ = os.MkdirTemp("", "supervisorctl")
+		supervisorDir, _ = os.MkdirTemp("", "supervisor")
+		confFilePath = filepath.Join(supervisorDir, "dev.conf")
+
 		ctl = NewSupervisorCtl()
 	})
 	AfterEach(func() {
 		Expect(os.RemoveAll(supervisorDir)).To(BeNil())
+
 		supervisorDir = oldDir
+		confFilePath = oldConfFilePath
 	})
 
-	It("Test supervisorctl refreshConf", func() {
-		conf := MakeSupervisorConf([]Process{{ProcType: "web", Command: "/cnb/processes/web"}, {ProcType: "celery", Command: "/cnb/processes/celery"}})
+	It("Test refreshConf", func() {
+		conf := MakeSupervisorConf(
+			[]Process{
+				{ProcType: "web", CommandPath: "/cnb/processes/web"},
+				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
+			},
+		)
 
 		expectedConfContent := fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 
 [supervisorctl]
-configuration = %[1]s/dev.conf
 serverurl = unix://%[1]s/supervisor.sock
 
 [supervisord]
@@ -61,15 +72,15 @@ command = /cnb/processes/web
 stdout_logfile = %[1]s/log/web.log
 redirect_stderr = true
 
-[program:celery]
-command = /cnb/processes/celery
-stdout_logfile = %[1]s/log/celery.log
+[program:worker]
+command = /cnb/processes/worker
+stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
 `, ctl.RootDir)
 
 		Expect(ctl.refreshConf(conf)).To(BeNil())
 
-		content, _ := os.ReadFile(ctl.RootDir + "/dev.conf")
+		content, _ := os.ReadFile(confFilePath)
 		Expect(string(content)).To(Equal(expectedConfContent))
 	})
 })

@@ -16,54 +16,38 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package launch
+package appdesc
 
 import (
+	"fmt"
 	"os"
-	"os/exec"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-// DefaultAppDir ...
-const DefaultLifecycleDir = "/lifecycle"
+// Process ...
+type Process struct {
+	Command string `yaml:"command"`
+}
 
 // AppDesc ...
 type AppDesc struct {
 	SpecVersion string `yaml:"spec_version"`
 	Module      struct {
-		Scripts struct {
+		Processes map[string]Process `yaml:"processes"`
+		Scripts   struct {
 			PreReleaseHook string `yaml:"pre_release_hook"`
 		} `yaml:"scripts"`
 	} `yaml:"module"`
 }
 
-func runPreReleaseHook() error {
-	releaseHook, err := parsePreReleaseHook()
-	if err != nil {
-		return err
-	}
-
-	if releaseHook == "" {
-		return nil
-	}
-
-	cmd := exec.Command(DefaultLifecycleDir+"/launcher", releaseHook)
-
-	cmd.Dir = DefaultAppDir
-	cmd.Env = os.Environ()
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-
-	if err = cmd.Run(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func parsePreReleaseHook() (string, error) {
-	yamlFile, err := os.ReadFile(DefaultAppDir + "/app_desc.yaml")
+// ParsePreReleaseHook parses the pre-release hook from the given app_desc.yaml.
+//
+// It takes a `descFilePath` parameter which is the path to the app_desc.yaml.
+// It returns a string which represents the pre-release hook and an error if any occurred.
+func ParsePreReleaseHook(descFilePath string) (string, error) {
+	yamlFile, err := os.ReadFile(descFilePath)
 	if err != nil {
 		return "", err
 	}
@@ -74,4 +58,27 @@ func parsePreReleaseHook() (string, error) {
 	}
 
 	return desc.Module.Scripts.PreReleaseHook, nil
+}
+
+// TransformToProcfile transforms an app_desc.yaml file into a Procfile string.
+//
+// It takes a path to an app_desc.yaml file as input and returns a string
+// representation of a Procfile.
+func TransformToProcfile(descFilePath string) (string, error) {
+	yamlFile, err := os.ReadFile(descFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	desc := AppDesc{}
+	if err = yaml.Unmarshal(yamlFile, &desc); err != nil {
+		return "", err
+	}
+
+	lines := []string{}
+	for pType, p := range desc.Module.Processes {
+		lines = append(lines, fmt.Sprintf("%s: %s", pType, p.Command))
+	}
+
+	return strings.Join(lines, "\n"), nil
 }

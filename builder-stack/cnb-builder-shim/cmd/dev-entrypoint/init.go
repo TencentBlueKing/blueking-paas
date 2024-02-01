@@ -24,60 +24,31 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 	"github.com/go-logr/logr"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pkg/errors"
-	flag "github.com/spf13/pflag"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 
 const (
-	platformDir = "/platform"
-	cnbDir      = "/cnb"
-
+	platformDir                 = "/platform"
+	cnbDir                      = "/cnb"
 	RequiredBuildpacksEnvVarKey = "REQUIRED_BUILDPACKS"
 )
 
-var buildpacks = flag.String("buildpacks", os.Getenv(RequiredBuildpacksEnvVarKey), "Those buildpacks that will used by the lifecycle.")
-
-func main() {
+func buildInit() error {
 	var err error
-	logger := logging.Default()
 
 	logger.Info("Initializing platform env...")
 	if err = setupPlatformEnv(logger, platformDir, os.Environ()); err != nil {
-		logger.Error(err, "Failed to setup platform env")
-		os.Exit(1)
+		return errors.Wrap(err, "Failed to setup platform env")
 	}
 
 	logger.Info("Setting buildpacks execute order...")
-	if err = setupBuildpacksOrder(logger, *buildpacks, cnbDir); err != nil {
-		logger.Error(err, "Failed to set buildpacks execute order")
-		os.Exit(1)
+	if err = setupBuildpacksOrder(logger, utils.EnvOrDefault(RequiredBuildpacksEnvVarKey, ""), cnbDir); err != nil {
+		return errors.Wrap(err, "Failed to set buildpacks execute order")
 	}
-}
 
-// setupPlatformEnv: 初始化 build 阶段可使用的环境变量
-// 基于 lifecycle 协议, build 阶段的环境变量需要将环境变量按文件写入到 /platform/env 目录
-func setupPlatformEnv(logger logr.Logger, platformDir string, env []string) error {
-	err := os.MkdirAll(filepath.Join(platformDir, "env"), 0o744)
-	if err != nil {
-		return errors.Wrap(err, "failed to create env dir")
-	}
-	ignoredEnvs := map[string]interface{}{}
-	for _, e := range env {
-		pair := strings.SplitN(e, "=", 2)
-		key, val := pair[0], pair[1]
-		if _, ok := ignoredEnvs[key]; ok {
-			logger.V(2).Info(fmt.Sprintf("skip env var %s", key))
-		} else {
-			err = os.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0o755)
-			if err != nil {
-				return errors.Wrapf(err, "failed to write env var %s", key)
-			}
-		}
-	}
 	return nil
 }
 
@@ -101,6 +72,29 @@ type GroupElement struct {
 
 	// Optional specifies that the buildpack or extension is optional. Extensions are always optional.
 	Optional bool `toml:"optional,omitempty" json:"optional,omitempty"`
+}
+
+// setupPlatformEnv: 初始化 build 阶段可使用的环境变量
+// 基于 lifecycle 协议, build 阶段的环境变量需要将环境变量按文件写入到 /platform/env 目录
+func setupPlatformEnv(logger logr.Logger, platformDir string, env []string) error {
+	err := os.MkdirAll(filepath.Join(platformDir, "env"), 0o744)
+	if err != nil {
+		return errors.Wrap(err, "failed to create env dir")
+	}
+	ignoredEnvs := map[string]interface{}{}
+	for _, e := range env {
+		pair := strings.SplitN(e, "=", 2)
+		key, val := pair[0], pair[1]
+		if _, ok := ignoredEnvs[key]; ok {
+			logger.V(2).Info(fmt.Sprintf("skip env var %s", key))
+		} else {
+			err = os.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0o755)
+			if err != nil {
+				return errors.Wrapf(err, "failed to write env var %s", key)
+			}
+		}
+	}
+	return nil
 }
 
 // setupBuildpacksOrder: 根据环境变量设置 buildpacks 的执行顺序

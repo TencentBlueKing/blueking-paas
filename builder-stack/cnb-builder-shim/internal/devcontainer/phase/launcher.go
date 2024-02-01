@@ -16,16 +16,20 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main_test
+package phase
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"os"
+	"os/exec"
 )
 
-func TestLifecycleDriver(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "LifecycleDriver Suite")
+const DefaultDevLauncherPath = "/cnb/devcontainer/bin/dev-launcher"
+
+func MakeLauncherCmd() *exec.Cmd {
+	cmd := exec.Command(DefaultDevLauncherPath)
+
+	cmd.Env = os.Environ()
+	cmd.Stdin = os.Stdin
+
+	return cmd
 }

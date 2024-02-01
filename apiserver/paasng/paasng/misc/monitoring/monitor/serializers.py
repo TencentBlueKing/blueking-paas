@@ -104,7 +104,7 @@ class AlertSLZ(serializers.Serializer):
     def get_module_name(self, instance) -> Optional[str]:
         alert_name = instance.get("alert_name")
         if not isinstance(alert_name, str):
-            logger.error(" Invalid type for 'alert_name': expected type 'str' ")
+            logger.error("Invalid type for 'alert_name': expected type 'str'")
             return None
         match = MODULE_NAME_PATTERN.search(alert_name)
         if match:

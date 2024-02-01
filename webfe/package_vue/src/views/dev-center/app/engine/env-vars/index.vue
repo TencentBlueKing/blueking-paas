@@ -581,6 +581,7 @@
               slot-scope="data"
               class="transfer-source-item"
               :data-id="data.id"
+              v-bk-overflow-tips
             >
               {{ data.name }}
             </div>
@@ -589,6 +590,7 @@
               slot-scope="data"
               class="transfer-source-item"
               :data-id="data.id"
+              v-bk-overflow-tips
             >
               {{ data.name }}
             </div>

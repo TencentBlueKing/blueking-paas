@@ -50,6 +50,5 @@ RUN echo "debconf debconf/frontend select noninteractive" | debconf-set-selectio
     /usr/lib/x86_64-linux-gnu/gconv/EBC* && \
     bash -c "mkdir -p /usr/share/man/man{1..8}"
 
-COPY rootfs/ /
 USER cnb
 WORKDIR /app

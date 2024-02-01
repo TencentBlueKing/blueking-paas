@@ -22,6 +22,7 @@
           style="width: 320px"
           v-model="searchValue"
           right-icon="paasng-icon paasng-search"
+          :placeholder="$t('请输入镜像 Tag')"
           @enter="handleSearch"
         ></bk-input>
       </div>

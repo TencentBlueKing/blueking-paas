@@ -284,7 +284,7 @@ class TestModuleDeployConfigViewSet:
         [
             ([], {}, True),
             ([{"name": "web", "command": "python -m http.server"}], {"web": "python -m http.server"}, True),
-            ([{"name": "WEB", "command": "python -m http.server"}], {"web": "python -m http.server"}, True),
+            ([{"name": "WEB", "command": "python -m http.server"}], {}, False),
             ([{"name": "w-e-b", "command": "python -m http.server"}], {"w-e-b": "python -m http.server"}, True),
             ([{"name": "-w-e-b", "command": "python -m http.server"}], {}, False),
             ([{"name": "w" * 13, "command": "python -m http.server"}], {}, False),

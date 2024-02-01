@@ -5,7 +5,7 @@
         <div class="label">
           {{ $t('类型') }}
         </div>
-        <div class="select-wrapper">
+        <div :class="['select-wrapper', { 'en': localLanguage === 'en' }]">
           <bk-select
             v-model="typeValue"
             :clearable="false"
@@ -39,7 +39,7 @@
         <div class="label">
           {{ $t('状态') }}
         </div>
-        <div class="select-wrapper">
+        <div :class="['select-wrapper', { 'en': localLanguage === 'en' }]">
           <bk-select
             v-model="statusValue"
             clearable
@@ -295,7 +295,7 @@
               {{ $t('审批状态：') }}
             </div>
             <div class="value">
-              {{ curRecord.apply_status_display || '--' }}
+              {{ $t(curRecord.apply_status_display) || '--' }}
             </div>
           </div>
           <div class="item">
@@ -416,333 +416,332 @@
   </div>
 </template>
 
-<script>
-    import moment from 'moment';
-    import User from '@/components/user';
+<script>import moment from 'moment';
+import User from '@/components/user';
 
-    export default {
-        name: '',
-        components: {
-            User
+export default {
+  name: '',
+  components: {
+    User,
+  },
+  data() {
+    return {
+      loading: false,
+      tableList: [],
+      pagination: {
+        current: 1,
+        limit: 10,
+        count: 0,
+      },
+      currentBackup: 1,
+      typeList: [
+        {
+          id: 'gateway',
+          name: this.$t('网关API'),
         },
-        data () {
-            return {
-                loading: false,
-                tableList: [],
-                pagination: {
-                    current: 1,
-                    limit: 10,
-                    count: 0
-                },
-                currentBackup: 1,
-                typeList: [
-                    {
-                        id: 'gateway',
-                        name: this.$t('网关API')
-                    },
-                    {
-                        id: 'component',
-                        name: this.$t('组件API')
-                    }
-                ],
-                typeMap: {
-                    component: this.$t('组件API'),
-                    gateway: this.$t('网关API')
-                },
-                typeValue: 'gateway',
-                levelMap: {
-                    normal: this.$t('普通'),
-                    special: this.$t('特殊'),
-                    sensitive: this.$t('敏感'),
-                    unlimited: this.$t('无限制')
-                },
-                detailLoading: false,
-                detailSliderConf: {
-                    title: '',
-                    show: false
-                },
-                curRecord: {
-                    applied_by: '',
-                    applied_time: '',
-                    handled_by: [],
-                    handled_time: '',
-                    system_name: '',
-                    comment: '',
-                    components: [],
-                    resources: [],
-                    expire_days: 0,
-                    reason: '',
-                    grant_dimension: ''
-                },
-                statusList: [
-                    { id: 'approved', name: this.$t('全部通过') },
-                    { id: 'partial_approved', name: this.$t('部分通过') },
-                    { id: 'rejected', name: this.$t('已驳回') },
-                    { id: 'pending', name: this.$t('待审批') }
-                ],
-                statusValue: '',
-                initDateTimeRange: [],
-                daterange: [new Date(), new Date()],
-                shortcuts: [
-                    {
-                        text: this.$t('今天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            return [start, end];
-                        }
-                    },
-                    {
-                        text: this.$t('最近7天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-                            return [start, end];
-                        }
-                    },
-                    {
-                        text: this.$t('最近30天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
-                            return [start, end];
-                        }
-                    }
-                ],
-                dateOptions: {
-                    // 大于今天的都不能选
-                    disabledDate (date) {
-                        return date && date.valueOf() > Date.now() - 86400;
-                    }
-                },
-                applicants: [],
-                dateRange: {
-                    startTime: '',
-                    endTime: ''
-                },
-                searchValue: '',
-                tableEmptyConf: {
-                    keyword: '',
-                    isAbnormal: false
-                }
-            };
+        {
+          id: 'component',
+          name: this.$t('组件API'),
         },
-        computed: {
-            isComponentApi () {
-                return this.typeValue === 'component';
-            },
-            appCode () {
-                return this.$route.params.id;
-            },
-            curDispatchMethod () {
-                return this.typeValue === 'component' ? 'getSysApplyRecords' : 'getApplyRecords';
-            },
-            curDetailDispatchMethod () {
-                return this.typeValue === 'component' ? 'getSysApplyRecordDetail' : 'getApplyRecordDetail';
-            },
-            sliderTitle () {
-                return this.isComponentApi ? this.$t('申请组件API单据详情') : this.$t('申请网关API单据详情');
-            },
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            }
+      ],
+      typeMap: {
+        component: this.$t('组件API'),
+        gateway: this.$t('网关API'),
+      },
+      typeValue: 'gateway',
+      levelMap: {
+        normal: this.$t('普通'),
+        special: this.$t('特殊'),
+        sensitive: this.$t('敏感'),
+        unlimited: this.$t('无限制'),
+      },
+      detailLoading: false,
+      detailSliderConf: {
+        title: '',
+        show: false,
+      },
+      curRecord: {
+        applied_by: '',
+        applied_time: '',
+        handled_by: [],
+        handled_time: '',
+        system_name: '',
+        comment: '',
+        components: [],
+        resources: [],
+        expire_days: 0,
+        reason: '',
+        grant_dimension: '',
+      },
+      statusList: [
+        { id: 'approved', name: this.$t('全部通过') },
+        { id: 'partial_approved', name: this.$t('部分通过') },
+        { id: 'rejected', name: this.$t('已驳回') },
+        { id: 'pending', name: this.$t('待审批') },
+      ],
+      statusValue: '',
+      initDateTimeRange: [],
+      daterange: [new Date(), new Date()],
+      shortcuts: [
+        {
+          text: this.$t('今天'),
+          value() {
+            const end = new Date();
+            const start = new Date();
+            return [start, end];
+          },
         },
-        watch: {
-            '$route' () {
-                const end = new Date();
-                const start = new Date();
-                start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-                this.initDateTimeRange = [start, end];
-                this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-                this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
-                this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
-                this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
-                this.init();
-            },
-            searchValue (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '' && this.isFilter) {
-                    this.isFilter = false;
-                    this.fetchList();
-                }
-            },
-            'pagination.current' (value) {
-                this.currentBackup = value;
-            }
-        },
-        created () {
-            moment.locale(this.localLanguage);
-            window.moment = moment;
-            this.isFilter = false;
-        },
-        mounted () {
+        {
+          text: this.$t('最近7天'),
+          value() {
             const end = new Date();
             const start = new Date();
             start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-            this.initDateTimeRange = [start, end];
-            this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-            this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
-            this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
-            this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
-            this.init();
+            return [start, end];
+          },
         },
-        methods: {
-            resetPagination () {
-                this.pagination = Object.assign({}, {
-                    current: 1,
-                    limit: 10,
-                    count: 0
-                });
-            },
-
-            getStatusDisplay (payload) {
-                const data = this.statusList.find(item => item.id === payload);
-                if (data) {
-                    return data.name;
-                }
-                return '--';
-            },
-
-            handleDateChange (date, type) {
-                this.dateRange = {
-                    startTime: `${date[0]} 00:00:00`,
-                    endTime: `${date[1]} 23:59:59`
-                };
-                this.resetPagination();
-                this.fetchList();
-            },
-
-            handleMemberSelect (payload) {
-                this.applicants = [...payload];
-                this.resetPagination();
-                this.fetchList();
-            },
-
-            handleClear () {
-                this.statusValue = '';
-                this.resetPagination();
-                this.fetchList();
-            },
-
-            handleStatusSelect () {
-                this.resetPagination();
-                this.fetchList();
-            },
-
-            handleSearch () {
-                if (this.searchValue === '') {
-                    return;
-                }
-                this.isFilter = true;
-                this.resetPagination();
-                this.fetchList();
-            },
-
-            handlePageSearch () {
-                this.resetPagination();
-                this.fetchList();
-            },
-
-            handleSelect (value, option) {
-                this.resetPagination();
-                this.fetchList();
-            },
-
-            getHandleBy (payload) {
-                const list = payload.filter(item => !!item);
-                if (list.length < 1) {
-                    return '--';
-                }
-                return list.join('，');
-            },
-
-            pageChange (page) {
-                if (this.currentBackup === page) {
-                    return;
-                }
-                this.pagination.current = page;
-                this.fetchList();
-            },
-
-            limitChange (currentLimit, prevLimit) {
-                this.pagination.limit = currentLimit;
-                this.pagination.current = 1;
-                this.fetchList();
-            },
-
-            computedExpires (currentExpires) {
-                if (!currentExpires) {
-                    return '--';
-                }
-                return `${Math.ceil(currentExpires / (24 * 3600))}天`;
-            },
-
-            init () {
-                this.fetchList();
-            },
-
-            async fetchList () {
-                this.loading = true;
-                const params = {
-                    limit: this.pagination.limit,
-                    offset: this.pagination.limit * (this.pagination.current - 1),
-                    appCode: this.appCode,
-                    applied_by: this.applicants.length > 0 ? this.applicants[0] : '',
-                    apply_status: this.statusValue,
-                    applied_time_start: (new Date(this.dateRange.startTime).getTime()) / 1000,
-                    applied_time_end: (new Date(this.dateRange.endTime).getTime()) / 1000,
-                    query: this.searchValue
-                };
-                try {
-                    const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
-                    (res.data.results || []).forEach(item => {
-                        item.type = this.typeValue;
-                    });
-                    this.pagination.count = res.data.count;
-                    this.tableList = res.data.results;
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (e) {
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.catchErrorHandler(e);
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            async handleOpenDetail ({ id }) {
-                this.detailSliderConf.show = true;
-                this.detailLoading = true;
-                try {
-                    const res = await this.$store.dispatch(`cloudApi/${this.curDetailDispatchMethod}`, {
-                        appCode: this.appCode,
-                        recordId: id
-                    });
-                    this.curRecord = Object.assign(this.curRecord, res.data);
-                } catch (e) {
-                    this.catchErrorHandler(e);
-                } finally {
-                    this.detailLoading = false;
-                }
-            },
-
-            clearFilterKey () {
-                this.searchValue = '';
-                this.applicants = [];
-                this.handleClear();
-            },
-
-            updateTableEmptyConfig () {
-                if (this.searchValue || this.statusValue || this.applicants.length) {
-                    this.tableEmptyConf.keyword = 'placeholder';
-                    return;
-                }
-                // 恒定条件不展示清空交互
-                this.tableEmptyConf.keyword = '$CONSTANT';
-            }
-        }
+        {
+          text: this.$t('最近30天'),
+          value() {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+            return [start, end];
+          },
+        },
+      ],
+      dateOptions: {
+        // 大于今天的都不能选
+        disabledDate(date) {
+          return date && date.valueOf() > Date.now() - 86400;
+        },
+      },
+      applicants: [],
+      dateRange: {
+        startTime: '',
+        endTime: '',
+      },
+      searchValue: '',
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
     };
+  },
+  computed: {
+    isComponentApi() {
+      return this.typeValue === 'component';
+    },
+    appCode() {
+      return this.$route.params.id;
+    },
+    curDispatchMethod() {
+      return this.typeValue === 'component' ? 'getSysApplyRecords' : 'getApplyRecords';
+    },
+    curDetailDispatchMethod() {
+      return this.typeValue === 'component' ? 'getSysApplyRecordDetail' : 'getApplyRecordDetail';
+    },
+    sliderTitle() {
+      return this.isComponentApi ? this.$t('申请组件API单据详情') : this.$t('申请网关API单据详情');
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+  },
+  watch: {
+    '$route'() {
+      const end = new Date();
+      const start = new Date();
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+      this.initDateTimeRange = [start, end];
+      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+      this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
+      this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
+      this.init();
+    },
+    searchValue(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '' && this.isFilter) {
+        this.isFilter = false;
+        this.fetchList();
+      }
+    },
+    'pagination.current'(value) {
+      this.currentBackup = value;
+    },
+  },
+  created() {
+    moment.locale(this.localLanguage);
+    window.moment = moment;
+    this.isFilter = false;
+  },
+  mounted() {
+    const end = new Date();
+    const start = new Date();
+    start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+    this.initDateTimeRange = [start, end];
+    this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
+    this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    this.dateRange.startTime = `${this.dateRange.startTime} 00:00:00`;
+    this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
+    this.init();
+  },
+  methods: {
+    resetPagination() {
+      this.pagination = Object.assign({}, {
+        current: 1,
+        limit: 10,
+        count: 0,
+      });
+    },
+
+    getStatusDisplay(payload) {
+      const data = this.statusList.find(item => item.id === payload);
+      if (data) {
+        return data.name;
+      }
+      return '--';
+    },
+
+    handleDateChange(date, type) {
+      this.dateRange = {
+        startTime: `${date[0]} 00:00:00`,
+        endTime: `${date[1]} 23:59:59`,
+      };
+      this.resetPagination();
+      this.fetchList();
+    },
+
+    handleMemberSelect(payload) {
+      this.applicants = [...payload];
+      this.resetPagination();
+      this.fetchList();
+    },
+
+    handleClear() {
+      this.statusValue = '';
+      this.resetPagination();
+      this.fetchList();
+    },
+
+    handleStatusSelect() {
+      this.resetPagination();
+      this.fetchList();
+    },
+
+    handleSearch() {
+      if (this.searchValue === '') {
+        return;
+      }
+      this.isFilter = true;
+      this.resetPagination();
+      this.fetchList();
+    },
+
+    handlePageSearch() {
+      this.resetPagination();
+      this.fetchList();
+    },
+
+    handleSelect(value, option) {
+      this.resetPagination();
+      this.fetchList();
+    },
+
+    getHandleBy(payload) {
+      const list = payload.filter(item => !!item);
+      if (list.length < 1) {
+        return '--';
+      }
+      return list.join('，');
+    },
+
+    pageChange(page) {
+      if (this.currentBackup === page) {
+        return;
+      }
+      this.pagination.current = page;
+      this.fetchList();
+    },
+
+    limitChange(currentLimit, prevLimit) {
+      this.pagination.limit = currentLimit;
+      this.pagination.current = 1;
+      this.fetchList();
+    },
+
+    computedExpires(currentExpires) {
+      if (!currentExpires) {
+        return '--';
+      }
+      return `${Math.ceil(currentExpires / (24 * 3600))}天`;
+    },
+
+    init() {
+      this.fetchList();
+    },
+
+    async fetchList() {
+      this.loading = true;
+      const params = {
+        limit: this.pagination.limit,
+        offset: this.pagination.limit * (this.pagination.current - 1),
+        appCode: this.appCode,
+        applied_by: this.applicants.length > 0 ? this.applicants[0] : '',
+        apply_status: this.statusValue,
+        applied_time_start: (new Date(this.dateRange.startTime).getTime()) / 1000,
+        applied_time_end: (new Date(this.dateRange.endTime).getTime()) / 1000,
+        query: this.searchValue,
+      };
+      try {
+        const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
+        (res.data.results || []).forEach((item) => {
+          item.type = this.typeValue;
+        });
+        this.pagination.count = res.data.count;
+        this.tableList = res.data.results;
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.catchErrorHandler(e);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async handleOpenDetail({ id }) {
+      this.detailSliderConf.show = true;
+      this.detailLoading = true;
+      try {
+        const res = await this.$store.dispatch(`cloudApi/${this.curDetailDispatchMethod}`, {
+          appCode: this.appCode,
+          recordId: id,
+        });
+        this.curRecord = Object.assign(this.curRecord, res.data);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.detailLoading = false;
+      }
+    },
+
+    clearFilterKey() {
+      this.searchValue = '';
+      this.applicants = [];
+      this.handleClear();
+    },
+
+    updateTableEmptyConfig() {
+      if (this.searchValue || this.statusValue || this.applicants.length) {
+        this.tableEmptyConf.keyword = 'placeholder';
+        return;
+      }
+      // 恒定条件不展示清空交互
+      this.tableEmptyConf.keyword = '$CONSTANT';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -781,6 +780,9 @@
         }
         .select-wrapper {
             width: 98px;
+            &.en {
+              width: 118px;
+            }
         }
         .set-ml {
             margin-left: 18px;

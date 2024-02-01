@@ -24,12 +24,12 @@ from unittest.mock import Mock, patch
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.monitoring.metrics.clients import BkMonitorMetricClient
-from paas_wl.bk_app.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
-from paas_wl.bk_app.monitoring.metrics.exceptions import RequestMetricBackendError
-from paas_wl.bk_app.monitoring.metrics.models import ResourceMetricManager
-from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.bk_app.processes.managers import AppProcessManager
+from paasng.misc.monitoring.metrics.clients import BkMonitorMetricClient
+from paasng.misc.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
+from paasng.misc.monitoring.metrics.exceptions import RequestMetricBackendError
+from paasng.misc.monitoring.metrics.models import ResourceMetricManager
+from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
 from tests.paas_wl.utils.wl_app import create_wl_app, create_wl_instance, create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -53,7 +53,7 @@ class TestResourceMetricManager:
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id="")
         fake_metrics_value = [[1234, 1234], [1234, 1234], [1234, 1234]]
         query_range_mock = Mock(return_value=fake_metrics_value)
-        with patch("paas_wl.bk_app.monitoring.metrics.clients.BkMonitorMetricClient._query_range", query_range_mock):
+        with patch("paasng.misc.monitoring.metrics.clients.BkMonitorMetricClient._query_range", query_range_mock):
             result = list(
                 manager.get_all_instances_metrics(
                     time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
@@ -70,7 +70,7 @@ class TestResourceMetricManager:
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id="")
         fake_metrics_value: List = []
         query_range_mock = Mock(return_value=fake_metrics_value)
-        with patch("paas_wl.bk_app.monitoring.metrics.clients.BkMonitorMetricClient._query_range", query_range_mock):
+        with patch("paasng.misc.monitoring.metrics.clients.BkMonitorMetricClient._query_range", query_range_mock):
             result = list(
                 manager.get_all_instances_metrics(
                     time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
@@ -87,7 +87,7 @@ class TestResourceMetricManager:
         FakeResponse = namedtuple("FakeResponse", "status_code")
 
         query_range_mock = Mock(side_effect=RequestMetricBackendError(FakeResponse(status_code=400)))
-        with patch("paas_wl.bk_app.monitoring.metrics.clients.BkMonitorMetricClient._query_range", query_range_mock):
+        with patch("paasng.misc.monitoring.metrics.clients.BkMonitorMetricClient._query_range", query_range_mock):
             result = list(
                 manager.get_all_instances_metrics(
                     time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),

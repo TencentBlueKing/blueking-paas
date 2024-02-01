@@ -1713,7 +1713,7 @@ paths:
           method: get
           path: /backend/sys/api/services/mysql/{db_name}/related_applications_info/
           matchSubpath: false
-          timeout: 300
+          timeout: 30
           upstreams: {}
           transformHeaders: {}
         authConfig:

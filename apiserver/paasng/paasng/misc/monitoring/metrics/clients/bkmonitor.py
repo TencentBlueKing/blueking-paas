@@ -21,11 +21,11 @@ from typing import Dict, Generator, List, Optional
 
 from attrs import Factory, define
 
-from paas_wl.bk_app.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
-from paas_wl.bk_app.monitoring.metrics.constants import BKMONITOR_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
-from paas_wl.bk_app.monitoring.metrics.exceptions import RequestMetricBackendError
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError
+from paasng.misc.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
+from paasng.misc.monitoring.metrics.constants import BKMONITOR_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
+from paasng.misc.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
 

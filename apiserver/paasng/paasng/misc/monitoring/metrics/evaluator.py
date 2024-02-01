@@ -20,11 +20,11 @@ from typing import Callable, Dict, List, Optional, Tuple
 from kubernetes.utils import parse_quantity
 
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_REQUEST_QUOTA_MAP
-from paas_wl.bk_app.monitoring.metrics.constants import MetricsSeriesType
-from paas_wl.bk_app.monitoring.metrics.models import MetricsInstanceResult, get_resource_metric_manager
-from paas_wl.bk_app.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.bk_app.processes.shim import ProcessManager
+from paasng.misc.monitoring.metrics.constants import MetricsSeriesType
+from paasng.misc.monitoring.metrics.models import MetricsInstanceResult, get_resource_metric_manager
+from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName, MetricsType
@@ -88,6 +88,7 @@ class ProcSummary:
     memory: Optional[ResSummary] = None
     suitable: bool = False
     reasons: List[str] = field(default_factory=list)
+    current_plan: Optional[str] = None
     optimal_plan: Optional[str] = None
 
 
@@ -174,7 +175,7 @@ class AppResQuotaEvaluator:
         mem_summary = self._calc_res_summary(mem_metrics, trans_unit_func=lambda x: x / 1024 / 1024)
         res_quota = self._get_proc_res_quota(proc_spec)
         suitable, reasons = self._evaluate_quota_suitable(res_quota, cpu_summary, mem_summary)
-        plan = self._recommend_resource_plan(cpu_summary, mem_summary)
+        optimal_plan = self._recommend_resource_plan(cpu_summary, mem_summary)
         return ProcSummary(
             name=proc_spec["name"],
             replicas=replicas,
@@ -183,7 +184,8 @@ class AppResQuotaEvaluator:
             memory=mem_summary,
             suitable=suitable,
             reasons=reasons,
-            optimal_plan=plan,
+            current_plan=proc_spec["plan_name"],
+            optimal_plan=optimal_plan,
         )
 
     def _calc_res_summary(self, metrics: List, trans_unit_func: Callable) -> ResSummary:
@@ -221,27 +223,16 @@ class AppResQuotaEvaluator:
 
     def _get_proc_res_quota(self, proc_spec: Dict) -> ResQuota:
         """获取应用的资源套餐方案"""
-        if self.app.type == ApplicationType.CLOUD_NATIVE:
-            cpu_limit = self._format_cpu(proc_spec["cpu_limit"])
-            mem_limit = self._format_memory(proc_spec["memory_limit"])
-
-            # 目前云原生应用 requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
-            cpu_request = int(cpu_limit / 4)
-            mem_request = int(mem_limit / 2)
-
-            return ResQuota(
-                limits=ResRequirement(cpu=cpu_limit, memory=mem_limit),
-                requests=ResRequirement(cpu=cpu_request, memory=mem_request),
-            )
-
         res_limits = proc_spec.get("resource_limit", {})
         res_requests = proc_spec.get("resource_requests", {})
         return ResQuota(
             limits=ResRequirement(
-                cpu=self._format_cpu(res_limits["cpu"]), memory=self._format_memory(res_limits["memory"])
+                cpu=self._format_cpu(res_limits["cpu"]),
+                memory=self._format_memory(res_limits["memory"]),
             ),
             requests=ResRequirement(
-                cpu=self._format_cpu(res_requests["cpu"]), memory=self._format_memory(res_requests["memory"])
+                cpu=self._format_cpu(res_requests["cpu"]),
+                memory=self._format_memory(res_requests["memory"]),
             ),
         )
 
@@ -318,7 +309,7 @@ class AppResQuotaEvaluator:
     @staticmethod
     def _format_cpu(cpu: str) -> int:
         """将 CPU 资源配额转换为以 m 为单位的值"""
-        return int(parse_quantity(cpu) * 1000 / 4)
+        return int(parse_quantity(cpu) * 1000)
 
     @staticmethod
     def _format_memory(memory: str) -> int:

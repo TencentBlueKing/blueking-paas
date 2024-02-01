@@ -22,6 +22,7 @@
 - post-compile: 调用 bin/post-compile, 将 GOPATH 的二进制复制到构建目录 go/bin 中, 清理代码文件以减少 slug 包体积
 - pre-compile: 支持使用 GO_INSTALL_PACKAGE_SPEC 设置 go package name, 从 go.mod 解析 go version
 - pre-gobuild: 调用 bin/pre-compile, 尝试读取 /tmp/environment/GO_INSTLL_ARGS, 剔除 -tags heroku
+- run_hook: 用于调用其他钩子的工具脚本，可顺序尝试执行多个脚本，目前主要用于驱动 bin/pre-compile 与 bin/post-compile
 
 ## 已有 patch
 - bin/compile.patch: hooks 埋点

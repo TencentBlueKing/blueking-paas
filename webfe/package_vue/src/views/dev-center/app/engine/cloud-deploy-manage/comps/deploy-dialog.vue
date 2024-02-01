@@ -1112,10 +1112,10 @@ export default {
         // 未设置插件分类
         case 'FILL_PLUGIN_TAG_INFO':
           routeData = this.$router.resolve({
-            name: 'appBaseInfo',
+            name: 'appBasicInfo',
             params: {
               id: this.appCode,
-              pluginTypeActive: true,
+              moduleId: this.curModuleId,
             },
           });
           break;
@@ -1242,14 +1242,14 @@ export default {
   .line {
     width: 1px;
     margin: 0 10px;
-    height: 16px;
+    height: 14px;
     background: #DCDEE5;
   }
 
   .right-link {
     flex-shrink: 0;
     display: flex;
-    align-content: center;
+    align-items: center;
     .link-text {
       font-size: 12px;
       color: #3a84ff;

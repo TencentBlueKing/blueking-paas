@@ -228,6 +228,12 @@ urlpatterns = [
     ),
     # 平台管理-应用列表页
     url(r"^applications/$", applications.ApplicationListView.as_view(), name="admin.applications.list"),
+    # 平台管理-应用资源使用概览
+    url(
+        r"^applications/resource_usage/$",
+        applications.ApplicationResourceUsageListView.as_view(),
+        name="admin.applications.resource_usage.list",
+    ),
     # 应用详情-概览页
     url(
         r"^applications/(?P<code>[^/]+)/overview/$",

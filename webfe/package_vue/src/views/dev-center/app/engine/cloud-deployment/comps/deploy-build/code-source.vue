@@ -47,6 +47,7 @@
             <bk-form-item :label="`${$t('初始化模板')}：`" v-if="isInitTemplate">
               <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
               <a
+                v-if="!isPluginApp"
                 class="download"
                 href="javascript: void(0);"
                 @click="handleDownloadTemplate"
@@ -158,7 +159,6 @@ import codeInspection from './code-inspection.vue';
 import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import dayjs from 'dayjs';
-import _ from 'lodash';
 
 export default {
   components: {
@@ -300,6 +300,9 @@ export default {
     },
     isCodeQuality() {
       return this.curAppInfo.feature?.CI;
+    },
+    isPluginApp() {
+      return this.curAppInfo.application?.is_plugin_app;
     },
   },
 

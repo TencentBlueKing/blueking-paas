@@ -53,7 +53,7 @@ from paasng.plat_admin.system.serializers import (
 from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.operators import get_contact_info
+from paasng.platform.applications.operators import get_contact_infos_by_appids
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.utils.error_codes import error_codes
 
@@ -64,10 +64,10 @@ logger = logging.getLogger(__name__)
 class SysUniApplicationViewSet(viewsets.ViewSet):
     """System universal application view sets"""
 
-    def get_contact_info_data(self, application: Application, app_source: SimpleAppSource):
+    def get_contact_info_data(self, application: Application, app_source: SimpleAppSource, contact_infos: dict):
         # PaaS2.0 应用的联系人信息固定为 None
         if app_source == SimpleAppSource.DEFAULT:
-            contact_info = get_contact_info(application)
+            contact_info = contact_infos.get(application.code)
             return ContactInfoSLZ(contact_info).data if contact_info else None
         return None
 
@@ -78,14 +78,15 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
             return deploy_info if deploy_info else None
         return None
 
-    def serialize_app_details(self, app: UniSimpleApp, include_contact_info: bool, include_deploy_info: bool):
+    def serialize_app_details(
+        self, app: UniSimpleApp, contact_infos: dict, include_contact_info: bool, include_deploy_info: bool
+    ):
         app_data = UniversalAppSLZ(app).data
         app_instance = cast(Application, app._db_object)
 
         # 返回数据中是否包含联系人信息
-        # 说明：查询联系人信息调用 SQL 的次数为：4 * 应用个数
         if include_contact_info:
-            app_data["contact_info"] = self.get_contact_info_data(app_instance, app._source)
+            app_data["contact_info"] = self.get_contact_info_data(app_instance, app._source, contact_infos)
 
         # 返回数据总是否包含部署信息
         if include_deploy_info:
@@ -109,12 +110,13 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         include_contact_info = request_data["include_contact_info"]
 
         # 查询应用信息
-        queried_apps = query_uni_apps_by_ids(
-            ids=app_ids, include_inactive_apps=include_inactive_apps, include_developer_info=include_developer_info
-        )
-
+        queried_apps = query_uni_apps_by_ids(app_ids, include_inactive_apps, include_developer_info)
+        # 所有 PaaS3.0 应用联系人信息
+        contact_infos = get_contact_infos_by_appids(app_ids) if include_contact_info else {}
         app_details: List[Optional[Dict[str, Any]]] = [
-            self.serialize_app_details(app, include_contact_info, include_deploy_info) if app is not None else None
+            self.serialize_app_details(app, contact_infos, include_contact_info, include_deploy_info)
+            if app is not None
+            else None
             for app_id in app_ids
             for app in [queried_apps.get(app_id)]
         ]

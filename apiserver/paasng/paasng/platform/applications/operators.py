@@ -17,12 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import datetime
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from bkpaas_auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.models.deployment import Deployment
@@ -38,8 +40,45 @@ class AppContactInfo:
     recent_deployment_operators: List[User]
 
 
+def get_contact_infos_by_appids(ids: List[str], days_range: int = 31) -> Dict[str, AppContactInfo]:
+    """Gets the contact infos for multiple applications."""
+    applications = Application.objects.prefetch_related("latest_op__operation").filter(code__in=ids)
+
+    # 获取所有应用的最新操作用户
+    latest_operators = {
+        app.code: app.latest_op.operation.user if hasattr(app, "latest_op") and app.latest_op else None
+        for app in applications
+    }
+
+    # 创建当前日期减去days_range的值，以过滤出在该日期后的所有操作
+    earliest_date = timezone.now() - datetime.timedelta(days=days_range)
+
+    # 为了减少查询次数，我们将获取所有应用的最近部署操作者一起查询
+    module_operations = (
+        ModuleEnvironmentOperations.objects.filter(application__in=applications, created__gte=earliest_date)
+        .values_list("application", "operator")
+        .distinct()
+    )
+
+    # 建立应用ID和其部署操作者列表的映射
+    recent_deployments = defaultdict(list)
+    for app_id, operator_id in module_operations:
+        recent_deployments[app_id].append(operator_id)
+
+    # 构建每个应用的联系信息字典
+    contact_infos = {
+        app.code: AppContactInfo(
+            latest_operator=latest_operators[app.code],
+            recent_deployment_operators=recent_deployments[app.code],
+        )
+        for app in applications
+    }
+
+    return contact_infos
+
+
 def get_contact_info(application: Application) -> AppContactInfo:
-    """Get application's contact info"""
+    """Retrieve app's contact info; each app performs 4 SQL operations."""
     try:
         latest_operator = application.latest_op.operation.user
     except ObjectDoesNotExist:

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from attrs import define
 from kubernetes.client.exceptions import ApiException
@@ -184,14 +184,14 @@ class MresConditionParser:
                 return ModelResState(DeployStatus.READY, available.reason, available.message)
 
         if self.mres.status.phase == MResPhaseType.AppFailed:
-            reason = str()
-            message = str()
+            reason: List[str] = []
+            message: List[str] = []
             for cond in self.mres.status.conditions:
                 if cond.status == ConditionStatus.FALSE and cond.message:
-                    reason += f"{cond.reason}\n"
-                    message += f"{cond.message}\n"
+                    reason.append(cond.reason)
+                    message.append(cond.message)
             if message:
-                return ModelResState(DeployStatus.ERROR, reason, message)
+                return ModelResState(DeployStatus.ERROR, "\n".join(reason), "\n".join(message))
             return ModelResState(DeployStatus.ERROR, "Unknown", "")
 
         return ModelResState(DeployStatus.PROGRESSING, "Progressing", "progressing")

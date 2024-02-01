@@ -110,6 +110,7 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 	}
 }
 
+// DeployHandler handles the deployment of a file to the web server.
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		file, err := c.FormFile("file")
@@ -140,6 +141,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 	}
 }
 
+// ResultHandler is a function that get the result of a deployment.
 func ResultHandler(svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		deployID := c.Param("deployID")

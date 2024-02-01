@@ -48,7 +48,9 @@ type DeployResult struct {
 
 // DeployServiceHandler 接口
 type DeployServiceHandler interface {
+	// Deploy deploys the source file to the application directory.
 	Deploy(srcFilePath string) (*DeployResult, error)
+	// Result returns the deploy result for a given deploy ID.
 	Result(deployID string, withLog bool) (*DeployResult, error)
 }
 

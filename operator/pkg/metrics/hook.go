@@ -18,17 +18,15 @@
 
 package metrics
 
-// metric labels
-const (
-	MetricLabelBkAppName     = "bkappName"
-	MetricLabelNamespace     = "namespace"
-	MetricLabelAppCode       = "appCode"
-	MetricLabelModuleName    = "moduleName"
-	MetricLabelSvcID         = "svcID"
-	MetricLabelSvcName       = "svcName"
-	MetricLabelGpaName       = "gpaName"
-	MetricLabelNamespaceName = "namespaceName"
-	MetricLabelDeployID      = "deployID"
-	MetricLabelDeployName    = "deployName"
-	MetricLabelHookPodName   = "hookPodName"
+import "github.com/prometheus/client_golang/prometheus"
+
+// hooks reconcile metrics
+var (
+	DeleteOldestHookFailures = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "bkapp_metrics_delete_oldest_hook_failures",
+			Help: "Failures when deleting oldest hook",
+		},
+		[]string{MetricLabelBkAppName, MetricLabelNamespace},
+	)
 )

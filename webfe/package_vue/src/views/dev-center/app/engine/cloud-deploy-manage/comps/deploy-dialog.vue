@@ -1112,10 +1112,10 @@ export default {
         // 未设置插件分类
         case 'FILL_PLUGIN_TAG_INFO':
           routeData = this.$router.resolve({
-            name: 'appBaseInfo',
+            name: 'appBasicInfo',
             params: {
               id: this.appCode,
-              pluginTypeActive: true,
+              moduleId: this.curModuleId,
             },
           });
           break;

@@ -3,7 +3,7 @@
 # shellcheck disable=SC2154,SC2206
 
 # pre-compile 钩子调用
-run_hook "pre-compile" "${build}" "bin/pre-compile"
+${buildpack}/hooks/run_hook "pre-compile" "${build}" "bin/pre-compile"
 
 # 读取 /tmp/environment/GO_INSTLL_ARGS
 if [ -f "${env_dir}/GO_INSTLL_ARGS" ]; then

@@ -56,6 +56,9 @@ ADD ./poetry.lock .
 # Disable "new installer" to fix https://github.com/python-poetry/poetry/issues/6301
 RUN poetry config virtualenvs.create false && poetry config experimental.new-installer false && poetry install --no-dev
 
+ARG BKPAAS_BUILD_VERSION="tag: null, commitID: ^HEAD, buildID: null, buildTime: null"
+ENV BKPAAS_BUILD_VERSION=${BKPAAS_BUILD_VERSION}
+
 RUN mkdir -p ./public
 
 COPY --from=admin42 /build/paasng/public ./public

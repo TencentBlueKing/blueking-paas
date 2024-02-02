@@ -112,6 +112,6 @@ func ObserveBkappReconcileDuration(namespace string, started time.Time) {
 }
 
 // IncDeleteOldestHookFailures ...
-func IncDeleteOldestHookFailures(bkapp *paasv1alpha2.BkApp, hookPodName string) {
-	DeleteOldestHookFailures.WithLabelValues(bkapp.Name, bkapp.Namespace, hookPodName).Inc()
+func IncDeleteOldestHookFailures(bkapp *paasv1alpha2.BkApp) {
+	DeleteOldestHookFailures.WithLabelValues(bkapp.Name, bkapp.Namespace).Inc()
 }

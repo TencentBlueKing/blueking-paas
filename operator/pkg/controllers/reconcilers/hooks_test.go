@@ -355,7 +355,7 @@ var _ = Describe("Test HookReconciler", func() {
 					ctx,
 					podList,
 					client.InNamespace(bkapp.Namespace),
-					client.MatchingLabels(labels.Hook(bkapp, hookType)),
+					client.MatchingLabels(labels.HookPodSelector(bkapp, hookType)),
 				)
 				if err != nil {
 					return []string{}

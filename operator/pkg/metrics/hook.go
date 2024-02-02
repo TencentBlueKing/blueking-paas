@@ -27,6 +27,6 @@ var (
 			Name: "bkapp_metrics_delete_oldest_hook_failures",
 			Help: "Failures when deleting oldest hook",
 		},
-		[]string{MetricLabelBkAppName, MetricLabelNamespace, MetricLabelHookPodName},
+		[]string{MetricLabelBkAppName, MetricLabelNamespace},
 	)
 )

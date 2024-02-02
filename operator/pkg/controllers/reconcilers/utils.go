@@ -23,7 +23,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -94,22 +93,4 @@ func UpsertObject[T any, PT interface {
 		return updateHandler(ctx, cli, exists, obj)
 	}
 	return nil
-}
-
-// byPodCreationTimestamp sorts a list of Pod by creation timestamp, using their names as a tie breaker.
-type byPodCreationTimestamp []corev1.Pod
-
-func (pods byPodCreationTimestamp) Len() int {
-	return len(pods)
-}
-
-func (pods byPodCreationTimestamp) Swap(i, j int) {
-	pods[i], pods[j] = pods[j], pods[i]
-}
-
-func (pods byPodCreationTimestamp) Less(i, j int) bool {
-	if pods[i].CreationTimestamp.Equal(&pods[j].CreationTimestamp) {
-		return pods[i].Name < pods[j].Name
-	}
-	return pods[i].CreationTimestamp.Before(&pods[j].CreationTimestamp)
 }

@@ -53,6 +53,7 @@ func PodSelector(bkapp *paasv1alpha2.BkApp, process string) map[string]string {
 	return selector
 }
 
+// Hook generate the labels for hook pods
 func Hook(bkapp *paasv1alpha2.BkApp, hookType paasv1alpha2.HookType) map[string]string {
 	return map[string]string{
 		// 由于 Process 一开始没添加 ResourceTypeKey label, 通过命名空间过滤 Pod 会查询到 HookInstance 的 Pod
@@ -61,6 +62,11 @@ func Hook(bkapp *paasv1alpha2.BkApp, hookType paasv1alpha2.HookType) map[string]
 		paasv1alpha2.ResourceTypeKey: "hook",
 		paasv1alpha2.HookTypeKey:     string(hookType),
 	}
+}
+
+// HookPodSelector generate the label selector for hook pods
+func HookPodSelector(bkapp *paasv1alpha2.BkApp, hookType paasv1alpha2.HookType) map[string]string {
+	return Hook(bkapp, hookType)
 }
 
 // AppDefault generates the labels for various resources, only includes minimal values

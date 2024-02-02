@@ -21,11 +21,11 @@ package reconcilers
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
+	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -273,7 +273,10 @@ func (r *HookReconciler) cleanupFinishedHooks(
 ) error {
 	podList := &corev1.PodList{}
 	err := r.Client.List(
-		ctx, podList, client.InNamespace(bkapp.Namespace), client.MatchingLabels(labels.Hook(bkapp, hookType)),
+		ctx,
+		podList,
+		client.InNamespace(bkapp.Namespace),
+		client.MatchingLabels(labels.HookPodSelector(bkapp, hookType)),
 	)
 	if err != nil {
 		return err
@@ -287,10 +290,16 @@ func (r *HookReconciler) cleanupFinishedHooks(
 	}
 
 	// 按照创建时间排序，清理掉最早的几个
-	sort.Sort(byPodCreationTimestamp(pods))
+	slices.SortFunc(pods, func(x, y corev1.Pod) bool {
+		if x.CreationTimestamp.Equal(&y.CreationTimestamp) {
+			return x.Name < y.Name
+		}
+		return x.CreationTimestamp.Before(&y.CreationTimestamp)
+	})
+
 	for i := 0; i < numToDelete; i++ {
 		if err = r.Client.Delete(ctx, &pods[i]); err != nil {
-			metrics.IncDeleteOldestHookFailures(bkapp, pods[i].Name)
+			metrics.IncDeleteOldestHookFailures(bkapp)
 			return err
 		}
 	}

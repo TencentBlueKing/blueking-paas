@@ -129,7 +129,7 @@ func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *paas
 	// Update status first
 	if err := r.syncRefErrStatus(ctx, dgmapping, errRef); err != nil {
 		log.Error(err, "Error updating status", "DGroupMappingName", dgmapping.Name)
-		return err
+		return fmt.Errorf("%s: %w", err, errRef)
 	}
 	if errRef != nil {
 		if apierrors.IsNotFound(errRef) || errors.Is(errRef, ErrReferenceUndefined) {
@@ -137,7 +137,7 @@ func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *paas
 			log.Info("Deleting related Ingresses")
 			if errDel := dgroupmapping.DeleteIngresses(ctx, r.client, dgmapping); errDel != nil {
 				log.Error(errDel, "Delete ingresses failed", "DGroupMappingName", dgmapping.Name)
-				return errDel
+				return fmt.Errorf("%s: %w", errDel, errRef)
 			}
 			return nil
 		}
@@ -177,13 +177,17 @@ func (r *DomainGroupMappingReconciler) SyncDeletion(
 		if apierrors.IsNotFound(err) || errors.Is(err, ErrReferenceUndefined) {
 			return nil
 		}
-		return err
+		return errors.WithStack(err)
 	}
 	// Update bkapp's "status.Addresses" field
 	// TODO: When multiple DomainGroupMapping objs reference to one same BkApp object,
 	// Only remove addresses which are bound with current mapping object.
+
+	// deep copy bkapp to generate merge-patch
+	originalBkApp := bkapp.DeepCopy()
+	// Update BkApp's status
 	bkapp.Status.Addresses = nil
-	return r.client.Status().Update(ctx, &bkapp)
+	return errors.WithStack(r.client.Status().Patch(ctx, &bkapp, client.MergeFrom(originalBkApp)))
 }
 
 // GetRef gets the BkApp object which is referenced by given mapping object
@@ -250,12 +254,14 @@ func (r *DomainGroupMappingReconciler) syncProcessedStatus(
 		Reason: "Processed",
 	})
 	if err := r.client.Status().Update(ctx, dgmapping); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
+	// deep copy bkapp to generate merge-patch
+	originalBkApp := bkapp.DeepCopy()
 	// Update BkApp's status
 	bkapp.Status.Addresses = ToAddressableStatus(domainGroups)
-	return r.client.Status().Update(ctx, bkapp)
+	return errors.WithStack(r.client.Status().Patch(ctx, bkapp, client.MergeFrom(originalBkApp)))
 }
 
 // BkAppIndexField is the name for indexing DomainGroupMapping

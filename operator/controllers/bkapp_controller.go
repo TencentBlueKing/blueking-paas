@@ -101,30 +101,32 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	log := logf.FromContext(ctx)
 
-	app := &paasv1alpha2.BkApp{}
-	err := r.client.Get(ctx, req.NamespacedName, app)
+	bkapp := &paasv1alpha2.BkApp{}
+	err := r.client.Get(ctx, req.NamespacedName, bkapp)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
 		metrics.IncGetBkappFailures(req.NamespacedName.String())
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
+	// deep copy bkapp to generate merge-patch
+	originalBkApp := bkapp.DeepCopy()
 
-	if app.DeletionTimestamp.IsZero() {
+	if bkapp.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
-		if !controllerutil.ContainsFinalizer(app, paasv1alpha2.BkAppFinalizerName) {
-			controllerutil.AddFinalizer(app, paasv1alpha2.BkAppFinalizerName)
-			if err = r.client.Update(ctx, app); err != nil {
-				metrics.IncAddFinalizerFailures(app)
+		if !controllerutil.ContainsFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName) {
+			controllerutil.AddFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)
+			if err = r.client.Update(ctx, bkapp); err != nil {
+				metrics.IncAddFinalizerFailures(bkapp)
 				return reconcile.Result{}, err
 			}
 		}
 	}
 
-	if app.Generation > app.Status.ObservedGeneration {
-		app.Status.Phase = paasv1alpha2.AppPending
-		if err = r.client.Status().Update(ctx, app); err != nil {
+	if bkapp.Generation > bkapp.Status.ObservedGeneration {
+		bkapp.Status.Phase = paasv1alpha2.AppPending
+		if err = r.updateStatus(ctx, bkapp, originalBkApp, nil); err != nil {
 			log.Error(err, "Unable to update bkapp status when generation changed")
 			return reconcile.Result{}, err
 		}
@@ -148,34 +150,39 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		if reflect2.IsNil(reconciler) {
 			continue
 		}
-		ret = reconciler.Reconcile(ctx, app)
+		ret = reconciler.Reconcile(ctx, bkapp)
 		if ret.ShouldAbort() {
-			if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+			if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.GetError()); err != nil {
 				ret = ret.WithError(err)
 			}
 			return ret.ToRepresentation()
 		}
 	}
 
-	if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+	if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.GetError()); err != nil {
 		ret = ret.WithError(err)
 	}
 	return ret.End().ToRepresentation()
 }
 
-func (r *BkAppReconciler) updateStatus(ctx context.Context, bkapp *paasv1alpha2.BkApp, reconcileErr error) error {
+func (r *BkAppReconciler) updateStatus(
+	ctx context.Context,
+	after *paasv1alpha2.BkApp,
+	before *paasv1alpha2.BkApp,
+	reconcileErr error,
+) error {
 	if reconcileErr == nil {
 		// 更新 ObservedGeneration, 表示成功完成了一次新版本的调和流程
-		bkapp.Status.ObservedGeneration = bkapp.Generation
+		after.Status.ObservedGeneration = after.Generation
 	}
 
-	if err := r.client.Status().Update(ctx, bkapp); err != nil {
+	if err := r.client.Status().Patch(ctx, after, client.MergeFrom(before)); err != nil {
 		syncErr := errors.Wrap(err, "failed to update bkapp status")
 		if reconcileErr == nil {
 			return syncErr
 		} else {
 			// 与调和错误拼接
-			return fmt.Errorf("%s; %s", syncErr, reconcileErr)
+			return fmt.Errorf("%s: %w", syncErr, reconcileErr)
 		}
 	}
 

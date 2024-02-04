@@ -90,7 +90,7 @@
                                 <bk-row>
                                     <bk-col><label class="m10">进程名称:</label> $[proc.name]</bk-col>
                                     <bk-col><label class="m10">副本数量:</label> $[proc.replicas]</bk-col>
-                                    <bk-col><label class="m10">资源套餐:</label> $[proc.plan]
+                                    <bk-col><label class="m10">资源套餐:</label> $[proc.current_plan]
                                         <span v-if="!proc.suitable" v-bk-tooltips="genTooltipsConfig(proc)">❗</span>
                                     </bk-col>
                                 </bk-row>

@@ -129,7 +129,7 @@ func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *paas
 	// Update status first
 	if err := r.syncRefErrStatus(ctx, dgmapping, errRef); err != nil {
 		log.Error(err, "Error updating status", "DGroupMappingName", dgmapping.Name)
-		return fmt.Errorf("%s: %w", err, errRef)
+		return errors.Wrap(errRef, err.Error())
 	}
 	if errRef != nil {
 		if apierrors.IsNotFound(errRef) || errors.Is(errRef, ErrReferenceUndefined) {
@@ -137,7 +137,7 @@ func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *paas
 			log.Info("Deleting related Ingresses")
 			if errDel := dgroupmapping.DeleteIngresses(ctx, r.client, dgmapping); errDel != nil {
 				log.Error(errDel, "Delete ingresses failed", "DGroupMappingName", dgmapping.Name)
-				return fmt.Errorf("%s: %w", errDel, errRef)
+				return errors.Wrap(errRef, errDel.Error())
 			}
 			return nil
 		}

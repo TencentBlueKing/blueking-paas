@@ -20,7 +20,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -182,7 +181,7 @@ func (r *BkAppReconciler) updateStatus(
 			return syncErr
 		} else {
 			// 与调和错误拼接
-			return fmt.Errorf("%s: %w", syncErr, reconcileErr)
+			return errors.Wrap(reconcileErr, syncErr.Error())
 		}
 	}
 

@@ -280,4 +280,7 @@ class BkAppResource(BaseModel):
         # entries such as `"hooks": null` is not processable in Kubernetes 1.18.
         result = self.dict(exclude_none=True, exclude={"status"})
         result["metadata"].pop("generation", None)
+        # MUST set status.phase to pending, otherwise the deployment detection process
+        # MAYBE misjudge that the deployment is successful immediately when operator is too slow to reconcile the event.
+        result["status"] = {"phase": MResPhaseType.AppPending}
         return result

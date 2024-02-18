@@ -565,7 +565,12 @@
             </bk-option>
           </bk-select>
         </bk-form-item>
-        <bk-form-item :label="$t('构建工具')">
+        <bk-form-item ext-cls="customize-form-item-dashed">
+          <div class="build-label">
+            <span class="text" v-bk-tooltips="$t('构建工具会逐个进行构建，请注意构建工具的选择顺序')">
+              {{ $t('构建工具') }}
+            </span>
+          </div>
           <bk-transfer
             ext-cls="tool-transfer-wrapper-cls"
             :key="runtimeDialogConf.image"
@@ -595,12 +600,6 @@
               {{ data.name }}
             </div>
           </bk-transfer>
-          <p
-            class="mt10"
-            style="color: #ea3636; font-size: 12px; line-height: 1;"
-          >
-            {{ $t('构建工具会逐个进行构建，请注意构建工具的选择顺序') }}
-          </p>
         </bk-form-item>
       </bk-form>
     </bk-dialog>
@@ -2086,6 +2085,23 @@ export default {
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
+    }
+    .customize-form-item-dashed {
+      :deep(.bk-form-content) {
+        position: relative;
+      }
+      .build-label {
+        text-align: right;
+        width: 150px;
+        padding-right: 24px;
+        position: absolute;
+        left: -150px;
+        top: 0;
+        .text {
+          padding-bottom: 2px;
+          border-bottom: 1px dashed #666;
+        }
+      }
     }
 </style>
 

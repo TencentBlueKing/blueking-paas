@@ -21,8 +21,6 @@ package main
 import (
 	"os"
 
-	"github.com/pkg/errors"
-
 	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer/webserver"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
@@ -31,56 +29,60 @@ import (
 var logger = logging.Default()
 
 func main() {
-	var err error
-
-	if err = buildInit(); err != nil {
+	if err := buildInit(); err != nil {
 		logger.Error(err, "Init Build Runtime Environment Failed")
 		os.Exit(1)
 	}
 
+	runDevContainerServer()
+}
+
+func runDevContainerServer() {
 	var srv dc.DevWatchServer
 
-	srv, err = webserver.New(&logger)
+	srv, err := webserver.New(&logger)
 	if err != nil {
 		logger.Error(err, "Start DevContainer Server Failed")
 		os.Exit(1)
 	}
 
-	exitClean := func() int {
-		srv.Clean()
-		return 1
+	Cleanup := func(code int) int {
+		srv.Cleanup()
+		return code
 	}
+
+	defer Cleanup(0)
 
 	go func() {
 		mgr, rErr := dc.NewHotReloadManager()
 		if rErr != nil {
 			logger.Error(rErr, "New HotReloadManager failed")
-			os.Exit(exitClean())
+			os.Exit(Cleanup(1))
 		}
 
 		for {
-			event, ok := <-srv.AppReloadEvents()
-			if !ok {
-				logger.Error(errors.New("event channel closed"), "wait for reload event failed")
-				os.Exit(exitClean())
+			event, iErr := srv.ReadReloadEvents()
+			if iErr != nil {
+				logger.Error(iErr, "wait for reload event failed")
+				os.Exit(Cleanup(1))
 			}
 
-			if rErr = mgr.WriteStatus(event.ID, dc.ReloadProcessing); rErr != nil {
-				logger.Error(rErr, "HotReload WriteStatus failed")
-				os.Exit(exitClean())
+			if iErr = mgr.WriteStatus(event.ID, dc.ReloadProcessing); rErr != nil {
+				logger.Error(iErr, "HotReload WriteStatus failed")
+				os.Exit(Cleanup(1))
 			}
 
 			if event.Rebuild {
-				if rErr = mgr.Rebuild(event.ID); rErr != nil {
+				if iErr = mgr.Rebuild(event.ID); rErr != nil {
 					mgr.WriteStatus(event.ID, dc.ReloadFailed)
-					logger.Error(rErr, "HotReload Rebuild failed")
+					logger.Error(iErr, "HotReload Rebuild failed")
 					continue
 				}
 			}
 			if event.Relaunch {
-				if rErr = mgr.Relaunch(event.ID); rErr != nil {
+				if iErr = mgr.Relaunch(event.ID); rErr != nil {
 					mgr.WriteStatus(event.ID, dc.ReloadFailed)
-					logger.Error(rErr, "HotReload Relaunch failed")
+					logger.Error(iErr, "HotReload Relaunch failed")
 					continue
 				}
 			}
@@ -90,7 +92,7 @@ func main() {
 	}()
 
 	if err = srv.Start(); err != nil {
-		logger.Error(err, "Start DevContainer Server Failed")
-		os.Exit(exitClean())
+		logger.Error(err, "Start Server Failed")
+		os.Exit(Cleanup(1))
 	}
 }

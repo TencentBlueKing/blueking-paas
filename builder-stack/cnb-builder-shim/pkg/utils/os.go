@@ -19,8 +19,8 @@
 package utils
 
 import (
+	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/mholt/archiver/v3"
@@ -43,40 +43,32 @@ func CreateSymlink(oldname, newname string) error {
 //
 // The function returns an error if any error occurs during the copy process.
 func CopyDir(srcDir, destDir string) error {
-	files, err := os.ReadDir(srcDir)
-	if err != nil {
-		return err
-	}
+	return filepath.Walk(srcDir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-	for _, f := range files {
-		fileName := f.Name()
-		srcPath := path.Join(srcDir, fileName)
-		destPath := path.Join(destDir, fileName)
+		relPath, _ := filepath.Rel(srcDir, path)
+		destPath := filepath.Join(destDir, relPath)
 
-		fileInfo, _ := f.Info()
-
-		if f.IsDir() {
-			// 创建目标目录
-			if iErr := os.MkdirAll(destPath, fileInfo.Mode()); iErr != nil {
-				return iErr
-			}
-			// 递归复制目录
-			if iErr := CopyDir(srcPath, destPath); iErr != nil {
+		if info.IsDir() {
+			if iErr := os.MkdirAll(destPath, info.Mode()); iErr != nil {
 				return iErr
 			}
 		} else {
 			// 读取源文件内容
-			content, iErr := os.ReadFile(srcPath)
+			content, iErr := os.ReadFile(path)
 			if iErr != nil {
 				return iErr
 			}
 			// 写入目标文件
-			if iErr = os.WriteFile(destPath, content, fileInfo.Mode()); iErr != nil {
+			if iErr = os.WriteFile(destPath, content, info.Mode()); iErr != nil {
 				return iErr
 			}
 		}
-	}
-	return nil
+
+		return nil
+	})
 }
 
 // Unzip extracts the contents of a zip file to a specified directory.
@@ -101,7 +93,7 @@ func Unzip(srcFilePath, distDir string) error {
 //
 // The function returns an error if the ownership change fails, or nil if it succeeds.
 func Chownr(filePath string, uid, gid int) error {
-	return filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(filePath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

@@ -29,13 +29,13 @@ import (
 
 	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
-	"github.com/google/uuid"
 )
 
 var _ = Describe("Test webserver api", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Test webserver api", func() {
 	})
 
 	AfterEach(func() {
-		s.Clean()
+		s.Cleanup()
 		os.RemoveAll(tmpUploadDir)
 		os.Setenv("UPLOAD_DIR", oldUploadDir)
 	})

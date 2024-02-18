@@ -107,10 +107,10 @@ func (m *DeployManager) Deploy(srcFilePath string) (*DeployResult, error) {
 func (m DeployManager) Result(deployID string, withLog bool) (*DeployResult, error) {
 	var err error
 
-	rw := dc.ResultFileRW{}
+	storage := dc.ReloadResultFile{}
 	result := &DeployResult{DeployID: deployID}
 
-	if result.Status, err = rw.ReadStatus(deployID); err != nil {
+	if result.Status, err = storage.ReadStatus(deployID); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +118,7 @@ func (m DeployManager) Result(deployID string, withLog bool) (*DeployResult, err
 		return result, nil
 	}
 
-	if result.Log, err = rw.ReadLog(deployID); err != nil {
+	if result.Log, err = storage.ReadLog(deployID); err != nil {
 		return nil, err
 	}
 

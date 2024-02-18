@@ -58,17 +58,17 @@ var _ = Describe("Test HotReloadManager", func() {
 	})
 })
 
-var _ = Describe("Test ResultFileRW", func() {
+var _ = Describe("Test ReloadResultFile", func() {
 	oldReloadDir := ReloadDir
 	oldReloadLogDir := ReloadLogDir
 
-	var rw ResultFileRW
+	var rw ReloadResultFile
 
 	BeforeEach(func() {
 		ReloadDir, _ = os.MkdirTemp("", "reload")
 		ReloadLogDir = filepath.Join(ReloadDir, "log")
 
-		rw = ResultFileRW{}
+		rw = ReloadResultFile{}
 		Expect(rw.Init()).To(BeNil())
 	})
 	AfterEach(func() {

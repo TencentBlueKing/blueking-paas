@@ -27,9 +27,6 @@ const DefaultDevLauncherPath = "/cnb/devcontainer/bin/dev-launcher"
 
 func MakeLauncherCmd() *exec.Cmd {
 	cmd := exec.Command(DefaultDevLauncherPath)
-
 	cmd.Env = os.Environ()
-	cmd.Stdin = os.Stdin
-
 	return cmd
 }

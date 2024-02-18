@@ -27,9 +27,6 @@ const DefaultLifecycleDriverPath = "/cnb/devcontainer/bin/lifecycle-driver"
 
 func MakeBuilderCmd() *exec.Cmd {
 	cmd := exec.Command(DefaultLifecycleDriverPath)
-
 	cmd.Env = os.Environ()
-	cmd.Stdin = os.Stdin
-
 	return cmd
 }

@@ -39,9 +39,12 @@ type AppReloadEvent struct {
 
 // DevWatchServer 是 devcontainer 中常驻 WatchServer 的接口协议
 type DevWatchServer interface {
-	AppReloadEvents() <-chan AppReloadEvent
+	// ReadReloadEvents blocking read on AppReloadEvent
+	ReadReloadEvents() (AppReloadEvent, error)
+	// Start starts the server
 	Start() error
-	Clean()
+	// Cleanup cleaning up resources of the watch server if necessary.
+	Cleanup()
 }
 
 // GetCNBUID 获取 cnb 用户 uid. 如果用户不存在，返回当前用户 uid

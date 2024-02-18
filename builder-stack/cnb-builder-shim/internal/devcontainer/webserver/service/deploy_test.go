@@ -73,13 +73,13 @@ var _ = Describe("Test DeployManager", func() {
 		oldReloadDir := dc.ReloadDir
 		oldReloadLogDir := dc.ReloadLogDir
 
-		var rw dc.ResultFileRW
+		var rw dc.ReloadResultFile
 
 		BeforeEach(func() {
 			dc.ReloadDir, _ = os.MkdirTemp("", "reload")
 			dc.ReloadLogDir = filepath.Join(dc.ReloadDir, "log")
 
-			rw = dc.ResultFileRW{}
+			rw = dc.ReloadResultFile{}
 			Expect(rw.Init()).To(BeNil())
 		})
 		AfterEach(func() {

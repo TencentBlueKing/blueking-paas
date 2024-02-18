@@ -19,6 +19,7 @@
 package webserver
 
 import (
+	"fmt"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -62,8 +63,8 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	s := &WebServer{
 		server: r,
 		lg:     lg,
-		// 1 chan buffer, flow control
-		ch:  make(chan dc.AppReloadEvent, 1),
+		// unbuffered channel
+		ch:  make(chan dc.AppReloadEvent),
 		env: cfg,
 	}
 
@@ -81,12 +82,13 @@ func (s *WebServer) Start() error {
 	return s.server.Run(s.env.DevServerAddr)
 }
 
-// AppReloadEvents 返回 reload 事件通道
-func (s *WebServer) AppReloadEvents() <-chan dc.AppReloadEvent {
-	return s.ch
+// ReadReloadEvents blocking read on reload event
+func (s *WebServer) ReadReloadEvents() (dc.AppReloadEvent, error) {
+	return <-s.ch, nil
 }
 
-func (s *WebServer) Clean() {
+// Cleanup cleans up the WebServer by closing the channel.
+func (s *WebServer) Cleanup() {
 	close(s.ch)
 }
 
@@ -96,12 +98,12 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 
 		reqToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
 		if reqToken == "" {
-			c.String(http.StatusUnauthorized, "missing authorization token")
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "missing authorization token"})
 			c.Abort()
 			return
 		}
 		if reqToken != token {
-			c.String(http.StatusUnauthorized, "invalid authorization token")
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid authorization token"})
 			c.Abort()
 			return
 		}
@@ -115,28 +117,28 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 	return func(c *gin.Context) {
 		file, err := c.FormFile("file")
 		if err != nil {
-			c.String(http.StatusBadRequest, "get form err: %s", err.Error())
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
 			return
 		}
 
 		fileName := filepath.Base(file.Filename)
 		srcFilePath := path.Join(s.env.UploadDir, fileName)
 		if err = c.SaveUploadedFile(file, srcFilePath); err != nil {
-			c.String(http.StatusBadRequest, "upload file err: %s", err.Error())
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
 			return
 		}
 
 		status, err := svc.Deploy(srcFilePath)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "deploy error: %s", err.Error())
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
 			return
 		}
 
-		if len(s.ch) == cap(s.ch) {
-			c.String(http.StatusTooManyRequests, "app is deploying, please wait")
-		} else {
-			s.ch <- dc.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}
-			c.JSON(http.StatusOK, map[string]interface{}{"deployID": status.DeployID})
+		select {
+		case s.ch <- dc.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
+			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
+		default:
+			c.JSON(http.StatusTooManyRequests, gin.H{"message": "app is deploying, please wait"})
 		}
 	}
 }
@@ -149,14 +151,14 @@ func ResultHandler(svc service.DeployServiceHandler) gin.HandlerFunc {
 
 		result, err := svc.Result(deployID, withLog)
 		if err != nil {
-			c.String(http.StatusBadRequest, "get result error: %s", err.Error())
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("get result error: %s", err.Error())})
 			return
 		}
 
 		if withLog {
-			c.JSON(http.StatusOK, map[string]interface{}{"status": result.Status, "log": result.Log})
+			c.JSON(http.StatusOK, gin.H{"status": result.Status, "log": result.Log})
 		} else {
-			c.JSON(http.StatusOK, map[string]interface{}{"status": result.Status})
+			c.JSON(http.StatusOK, gin.H{"status": result.Status})
 		}
 	}
 }

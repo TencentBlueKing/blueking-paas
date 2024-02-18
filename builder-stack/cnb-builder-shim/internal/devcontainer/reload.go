@@ -48,16 +48,16 @@ const (
 //
 // It initializes a ResultFileRW and returns a pointer to a HotReloadManager and an error.
 func NewHotReloadManager() (*HotReloadManager, error) {
-	resultRW := ResultFileRW{}
-	if err := resultRW.Init(); err != nil {
+	storage := ReloadResultFile{}
+	if err := storage.Init(); err != nil {
 		return nil, err
 	}
-	return &HotReloadManager{resultRW}, nil
+	return &HotReloadManager{storage}, nil
 }
 
 // HotReloadManager ...
 type HotReloadManager struct {
-	ReloadResultRW
+	ReloadResultStorage
 }
 
 // Rebuild ...
@@ -73,12 +73,13 @@ func (m HotReloadManager) Relaunch(reloadID string) error {
 }
 
 func (m HotReloadManager) runCmd(reloadID string, cmd *exec.Cmd) error {
-	w, err := m.LogWriter(reloadID)
+	w, err := m.ResultLogWriter(reloadID)
 	if err != nil {
 		return err
 	}
 	defer w.Close()
 
+	cmd.Stdin = os.Stdin
 	multiWriter := io.MultiWriter(os.Stdout, w)
 	cmd.Stdout = multiWriter
 	cmd.Stderr = multiWriter
@@ -89,14 +90,9 @@ func (m HotReloadManager) runCmd(reloadID string, cmd *exec.Cmd) error {
 	return nil
 }
 
-// LogWriter defines the interface for writing logs
-type LogWriter interface {
-	io.Writer
-	Close() error
-}
-
-// ReloadResultRW defines the interface for reading and writing the reload result
-type ReloadResultRW interface {
+// ReloadResultStorage is the interface that stores the result of app reload.
+type ReloadResultStorage interface {
+	// Init initializes some resources before use the storage if necessary.
 	Init() error
 	// ReadStatus returns the reload status for the given reload ID.
 	ReadStatus(reloadID string) (ReloadStatus, error)
@@ -104,23 +100,23 @@ type ReloadResultRW interface {
 	WriteStatus(reloadID string, status ReloadStatus) error
 	// ReadLog is a function that reads a log file based on the given reloadID.
 	ReadLog(reloadID string) (string, error)
-	// LogWriter is a function that takes a reloadID as a parameter and returns a LogWriter and an error.
-	LogWriter(reloadID string) (LogWriter, error)
+	// ResultLogWriter is a function that takes a reloadID as a parameter and returns a writer and an error.
+	ResultLogWriter(reloadID string) (io.WriteCloser, error)
 }
 
-// ResultFileRW implements ReloadResultRW with local file system
-type ResultFileRW struct{}
+// ReloadResultFile implements ReloadResultStorage with local file system
+type ReloadResultFile struct{}
 
-// Init initializes the ResultFileRW structure.
+// Init initializes the ReloadResultFile structure.
 //
 // It creates the necessary directory structure for the ReloadLogDir.
 // Returns an error if there was a problem creating the directory.
-func (rw ResultFileRW) Init() error {
+func (f ReloadResultFile) Init() error {
 	return os.MkdirAll(ReloadLogDir, 0o755)
 }
 
 // ReadStatus returns the reload status for the given reload ID.
-func (rw ResultFileRW) ReadStatus(reloadID string) (ReloadStatus, error) {
+func (f ReloadResultFile) ReadStatus(reloadID string) (ReloadStatus, error) {
 	status, err := os.ReadFile(path.Join(ReloadDir, reloadID))
 	if err != nil {
 		return ReloadUnknown, errors.Wrap(err, "failed to read status")
@@ -129,7 +125,7 @@ func (rw ResultFileRW) ReadStatus(reloadID string) (ReloadStatus, error) {
 }
 
 // WriteStatus writes the status of a reload operation.
-func (rw ResultFileRW) WriteStatus(reloadID string, status ReloadStatus) error {
+func (f ReloadResultFile) WriteStatus(reloadID string, status ReloadStatus) error {
 	file, err := os.Create(path.Join(ReloadDir, reloadID))
 	if err != nil {
 		return errors.Wrap(err, "failed to write status")
@@ -141,7 +137,7 @@ func (rw ResultFileRW) WriteStatus(reloadID string, status ReloadStatus) error {
 }
 
 // ReadLog is a function that reads a log file based on the given reloadID.
-func (rw ResultFileRW) ReadLog(reloadID string) (string, error) {
+func (f ReloadResultFile) ReadLog(reloadID string) (string, error) {
 	content, err := os.ReadFile(path.Join(ReloadLogDir, reloadID))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to read log")
@@ -149,9 +145,9 @@ func (rw ResultFileRW) ReadLog(reloadID string) (string, error) {
 	return string(content), nil
 }
 
-// LogWriter is a function that takes a reloadID as a parameter and returns a LogWriter and an error.
+// ResultLogWriter is a function that takes a reloadID as a parameter and returns a io.WriteCloser and an error.
 // shell command will use this writer to write log
-func (rw ResultFileRW) LogWriter(reloadID string) (LogWriter, error) {
+func (f ReloadResultFile) ResultLogWriter(reloadID string) (io.WriteCloser, error) {
 	file, err := os.OpenFile(path.Join(ReloadLogDir, reloadID), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open log file")
@@ -159,4 +155,4 @@ func (rw ResultFileRW) LogWriter(reloadID string) (LogWriter, error) {
 	return file, nil
 }
 
-var _ ReloadResultRW = (*ResultFileRW)(nil)
+var _ ReloadResultStorage = (*ReloadResultFile)(nil)

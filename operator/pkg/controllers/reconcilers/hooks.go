@@ -68,22 +68,26 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		}
 
 		switch {
-		case current.Timeout(resources.HookExecuteTimeoutThreshold):
+		case current.ProgressingWithTimeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
 				return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
 			}
 			return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
-		case current.Progressing():
-			return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
-		case current.Succeeded():
-			return r.Result
-		case current.FailedUntilTimeout(resources.HookExecuteFailedTimeoutThreshold):
+		case current.FailedWithTimeout(resources.HookExecuteFailedTimeoutThreshold):
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
 				return r.Result.WithError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
 			}
 			// Pod 在超时时间内一直失败, 终止调和循环
-			return r.Result.WithError(errors.WithStack(resources.ErrPodEndsUnsuccessfully)).End()
+			log.Error(errors.WithStack(resources.ErrPodEndsUnsuccessfully), "execute timeout")
+			// 不能调用 WithError 否则不会停止调和循环(Result 协议保持与 controller-runtime 的协议一致)
+			// ref: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile#Reconciler
+			return r.Result.End()
+		case current.Progressing():
+			// 当 Hook 执行成功时会有另外的事件触发新的调和循环, 因此 Hook 执行中的轮询间隔无需太频繁
+			return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter * 10)
+		case current.Succeeded():
+			return r.Result
 		default:
 			return r.Result.WithError(
 				errors.Wrapf(resources.ErrPodEndsUnsuccessfully, "hook failed with: %s", current.Status.Message),
@@ -217,7 +221,7 @@ func (r *HookReconciler) UpdateStatus(
 	}
 
 	switch {
-	case instance.Timeout(timeoutThreshold):
+	case instance.ProgressingWithTimeout(timeoutThreshold):
 		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:   paasv1alpha2.HooksFinished,
@@ -323,7 +327,7 @@ func CheckAndUpdatePreReleaseHookStatus(
 
 	switch {
 	// 删除超时的 pod
-	case instance.Timeout(timeout):
+	case instance.ProgressingWithTimeout(timeout):
 		if err = cli.Delete(ctx, instance.Pod); err != nil {
 			return false, err
 		}

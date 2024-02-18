@@ -299,7 +299,7 @@ var _ = Describe("Test HookReconciler", func() {
 			Expect(state.Progressing()).To(Equal(executing))
 			Expect(state.Succeeded()).To(Equal(succeeded))
 			Expect(state.Failed()).To(Equal(failed))
-			Expect(state.Timeout(timeoutThreshold)).To(Equal(timeout))
+			Expect(state.ProgressingWithTimeout(timeoutThreshold)).To(Equal(timeout))
 		},
 			Entry("pending", corev1.PodPending, resources.HookExecuteTimeoutThreshold, true, false, false, false),
 			Entry("running", corev1.PodRunning, resources.HookExecuteTimeoutThreshold, true, false, false, false),

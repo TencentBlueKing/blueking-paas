@@ -1,7 +1,7 @@
 ARG BUILDER_IMAGE_NAME=mirrors.tencent.com/bkpaas/builder-heroku-bionic
 ARG BUILDER_IMAGE_TAG=latest
 
-FROM golang:1.20.10-bullseye as binary-builder
+FROM golang:1.20.14-bullseye as binary-builder
 
 WORKDIR /src
 COPY ./go.mod ./go.mod

@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -204,7 +205,7 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		For(&paasv1alpha2.BkApp{}).
 		WithOptions(opts).
 		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Pod{}, builder.WithPredicates(predicates.NewHookFinishedPredicate()))
+		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(predicates.NewHookSuccessPredicate(), predicates.NewHookFailedPredicate())))
 
 	if config.Global.IsAutoscalingEnabled() {
 		if err = mgr.GetFieldIndexer().IndexField(

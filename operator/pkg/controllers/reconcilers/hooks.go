@@ -68,13 +68,13 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		}
 
 		switch {
-		case current.ProgressingWithTimeout(resources.HookExecuteTimeoutThreshold):
+		case current.TimeoutExceededProgressing(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
 				return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
 			}
 			return r.Result.WithError(errors.WithStack(resources.ErrExecuteTimeout))
-		case current.FailedWithTimeout(resources.HookExecuteFailedTimeoutThreshold):
+		case current.TimeoutExceededFailed(resources.HookExecuteFailedTimeoutThreshold):
 			if err := r.Client.Delete(ctx, current.Pod); err != nil {
 				return r.Result.WithError(errors.WithStack(resources.ErrPodEndsUnsuccessfully))
 			}
@@ -84,8 +84,8 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 			// ref: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile#Reconciler
 			return r.Result.End()
 		case current.Progressing():
-			// 当 Hook 执行成功时会有另外的事件触发新的调和循环, 因此 Hook 执行中的轮询间隔无需太频繁
-			return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter * 10)
+			// 当 Hook 执行成功或失败时会由 owned pod 触发新的调和循环, 因此只需要通过 requeue 处理超时事件即可
+			return r.Result.requeue(resources.HookExecuteTimeoutThreshold)
 		case current.Succeeded():
 			return r.Result
 		default:
@@ -221,7 +221,7 @@ func (r *HookReconciler) UpdateStatus(
 	}
 
 	switch {
-	case instance.ProgressingWithTimeout(timeoutThreshold):
+	case instance.TimeoutExceededProgressing(timeoutThreshold):
 		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:   paasv1alpha2.HooksFinished,
@@ -327,7 +327,7 @@ func CheckAndUpdatePreReleaseHookStatus(
 
 	switch {
 	// 删除超时的 pod
-	case instance.ProgressingWithTimeout(timeout):
+	case instance.TimeoutExceededProgressing(timeout):
 		if err = cli.Delete(ctx, instance.Pod); err != nil {
 			return false, err
 		}

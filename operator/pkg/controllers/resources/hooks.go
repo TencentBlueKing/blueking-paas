@@ -76,14 +76,14 @@ func (i *HookInstance) Failed() bool {
 	return !(i.Progressing() || i.Succeeded())
 }
 
-// ProgressingWithTimeout 根据参数 timeout 判断 Pod 是否执行超时
-func (i *HookInstance) ProgressingWithTimeout(timeout time.Duration) bool {
+// TimeoutExceededProgressing 根据参数 timeout 判断 Pod 是否执行超时
+func (i *HookInstance) TimeoutExceededProgressing(timeout time.Duration) bool {
 	return i.Progressing() && i.Status != nil && !i.Status.StartTime.IsZero() &&
 		i.Status.StartTime.Add(timeout).Before(time.Now())
 }
 
-// FailedWithTimeout 判断 Pod 在 timeout 时是否执行失败
-func (i *HookInstance) FailedWithTimeout(timeout time.Duration) bool {
+// TimeoutExceededFailed 判断 Pod 在 timeout 时是否执行失败
+func (i *HookInstance) TimeoutExceededFailed(timeout time.Duration) bool {
 	return i.Failed() && i.Status != nil && !i.Status.StartTime.IsZero() &&
 		i.Status.StartTime.Add(timeout).Before(time.Now())
 }

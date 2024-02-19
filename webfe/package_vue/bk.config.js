@@ -27,10 +27,15 @@ module.exports = {
       context.mode = 'development';
     }
     
+    // 读取并校验 BK_HTTPS 环境变量的值
+    let enableHTTPS = (process.env.BK_HTTPS || 'false').toLowerCase();
+    if (!['true', 'false'].includes(enableHTTPS)) {
+      throw new Error('BK_HTTPS must be "true" or "false"');
+    }
     return {
       // dev配置项
       devServer: {
-        https: process.env.BK_HTTPS !== undefined,
+        https: enableHTTPS === 'true',
       },
     };
   },

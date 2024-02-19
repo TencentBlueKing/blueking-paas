@@ -24,8 +24,7 @@
             @click="showInfoCancelRelease"
           >
             <i class="paasng-icon paasng-stop-2" />
-            <!-- 冗余代码 ****************** -->
-            {{ $t('终止发布') }} - {{ curStageComponmentType }}
+            {{ $t('终止发布') }}
           </bk-button>
         </div>
       </div>
@@ -39,8 +38,7 @@
           :controllable="true"
           @change="changeStep"
         />
-        <!-- 内容 -->
-        <!-- 默认步骤根据 curStageComponmentType， 手动切换需要对应值 -->
+        <!-- 内容 - 默认步骤根据 curStageComponmentType -->
         <component
           :is="curStageComponmentType"
           v-if="stageData"
@@ -59,7 +57,7 @@
         </template>
       </section>
 
-      <!-- 手动预览与发布完成不展示 -->
+      <!-- 手动预览与发布完成不展示底部操作按钮组 -->
       <div class="footer-btn-warp" v-if="isShowButtonGroup && !isPostedSuccessfully">
         <bk-popover placement="top" :disabled="isAllowPrev && !isItsmStage">
           <bk-button
@@ -185,12 +183,10 @@ export default {
       return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
     },
     curStageComponmentType() {
-      // 是否为手动预览插件步骤
       // 根据 invoke_method 字段判断当前步骤
-      const invokeMethod = this.pluginDetailedData?.current_stage?.invoke_method;
-      console.log('invokeMethod', invokeMethod);
+      const invokeMethod = this.stageData?.invoke_method;
       if (invokeMethod === 'builtin') {
-        return this.pluginDetailedData?.current_stage?.stage_id;
+        return this.stageData?.stage_id;
       }
       return PLUGIN_VERSION_MAP[invokeMethod];
     },
@@ -556,16 +552,17 @@ export default {
       // 点击返回了这在执行的发布步骤
       const id = this.pluginDetailedData?.current_stage?.stage_id || this.stageId;
       const curIndex = this.curAllStages.findIndex(v => v.stage_id === id) + 1;
-      let isPolling = true;
+      let isPolling = false;
+      // 点击步骤为当前执行步骤
       if (curIndex === this.curStep) {
         this.isShowButtonGroup = true;
         // 切换回执行步骤，重新轮询接口
-        isPolling = false;
+        isPolling = true;
       }
       // 获取当前基本信息
       await this.getReleaseDetail();
       // 获取当前步骤信息
-      this.getReleaseStageDetail(isPolling ? data.id : '');
+      this.getReleaseStageDetail(!isPolling ? data.id : '');
     },
   },
 };

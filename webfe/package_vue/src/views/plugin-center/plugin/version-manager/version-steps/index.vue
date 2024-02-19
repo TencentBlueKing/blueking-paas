@@ -1,7 +1,6 @@
 <template>
   <!-- 设置css变量 -->
-  <ul class="version-steps" :style="{ '--content-color': bgColor }">
-
+  <ul class="version-steps">
     <li
       v-for="(item, index) in steps"
       :key="item.id"
@@ -34,24 +33,6 @@ export default {
       type: Boolean,
       default: false,
     },
-  },
-  data() {
-    return {
-    };
-  },
-  computed: {
-    // 步骤条颜色
-    bgColor() {
-      return '#fff';
-    },
-  },
-  watch: {
-    curStep(newVal) {
-      console.log('newVal', newVal);
-    },
-  },
-  created() {
-    console.log('****步骤条', this.steps);
   },
   methods: {
     handleItemClick(item, index) {

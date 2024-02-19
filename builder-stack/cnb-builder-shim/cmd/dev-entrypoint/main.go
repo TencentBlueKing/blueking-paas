@@ -46,30 +46,23 @@ func runDevContainerServer() {
 		os.Exit(1)
 	}
 
-	Cleanup := func(code int) int {
-		srv.Cleanup()
-		return code
-	}
-
-	defer Cleanup(0)
-
 	go func() {
 		mgr, rErr := dc.NewHotReloadManager()
 		if rErr != nil {
 			logger.Error(rErr, "New HotReloadManager failed")
-			os.Exit(Cleanup(1))
+			os.Exit(1)
 		}
 
 		for {
 			event, iErr := srv.ReadReloadEvents()
 			if iErr != nil {
 				logger.Error(iErr, "wait for reload event failed")
-				os.Exit(Cleanup(1))
+				os.Exit(1)
 			}
 
 			if iErr = mgr.WriteStatus(event.ID, dc.ReloadProcessing); rErr != nil {
 				logger.Error(iErr, "HotReload WriteStatus failed")
-				os.Exit(Cleanup(1))
+				os.Exit(1)
 			}
 
 			if event.Rebuild {
@@ -93,6 +86,6 @@ func runDevContainerServer() {
 
 	if err = srv.Start(); err != nil {
 		logger.Error(err, "Start Server Failed")
-		os.Exit(Cleanup(1))
+		os.Exit(1)
 	}
 }

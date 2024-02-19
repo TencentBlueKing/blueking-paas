@@ -68,7 +68,6 @@ var _ = Describe("Test webserver api", func() {
 	})
 
 	AfterEach(func() {
-		s.Cleanup()
 		os.RemoveAll(tmpUploadDir)
 		os.Setenv("UPLOAD_DIR", oldUploadDir)
 	})

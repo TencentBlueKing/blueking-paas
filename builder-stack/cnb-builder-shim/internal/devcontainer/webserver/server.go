@@ -87,11 +87,6 @@ func (s *WebServer) ReadReloadEvents() (dc.AppReloadEvent, error) {
 	return <-s.ch, nil
 }
 
-// Cleanup cleans up the WebServer by closing the channel.
-func (s *WebServer) Cleanup() {
-	close(s.ch)
-}
-
 func tokenAuthMiddleware(token string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authorizationHeader := c.GetHeader("Authorization")
@@ -138,7 +133,10 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 		case s.ch <- dc.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
 			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
 		default:
-			c.JSON(http.StatusTooManyRequests, gin.H{"message": "app is deploying, please wait"})
+			c.JSON(
+				http.StatusTooManyRequests,
+				gin.H{"message": "app is deploying, please wait for a while and try again."},
+			)
 		}
 	}
 }

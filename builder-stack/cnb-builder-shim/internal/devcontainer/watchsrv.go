@@ -43,8 +43,6 @@ type DevWatchServer interface {
 	ReadReloadEvents() (AppReloadEvent, error)
 	// Start starts the server
 	Start() error
-	// Cleanup cleaning up resources of the watch server if necessary.
-	Cleanup()
 }
 
 // GetCNBUID 获取 cnb 用户 uid. 如果用户不存在，返回当前用户 uid

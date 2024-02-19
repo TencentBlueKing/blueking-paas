@@ -62,14 +62,13 @@ var _ = Describe("Test ReloadResultFile", func() {
 	oldReloadDir := ReloadDir
 	oldReloadLogDir := ReloadLogDir
 
-	var rw ReloadResultFile
+	var storage ReloadResultStorage
 
 	BeforeEach(func() {
 		ReloadDir, _ = os.MkdirTemp("", "reload")
 		ReloadLogDir = filepath.Join(ReloadDir, "log")
 
-		rw = ReloadResultFile{}
-		Expect(rw.Init()).To(BeNil())
+		storage, _ = NewReloadResultStorage()
 	})
 	AfterEach(func() {
 		Expect(os.RemoveAll(ReloadDir)).To(BeNil())
@@ -81,8 +80,8 @@ var _ = Describe("Test ReloadResultFile", func() {
 	It("Test Read and Write Status", func() {
 		reloadID := uuid.NewString()
 		expectedStatus := ReloadSuccess
-		Expect(rw.WriteStatus(reloadID, ReloadSuccess)).To(BeNil())
-		status, _ := rw.ReadStatus(reloadID)
+		Expect(storage.WriteStatus(reloadID, ReloadSuccess)).To(BeNil())
+		status, _ := storage.ReadStatus(reloadID)
 		Expect(status).To(Equal(expectedStatus))
 	})
 
@@ -92,7 +91,7 @@ var _ = Describe("Test ReloadResultFile", func() {
 
 		os.WriteFile(filepath.Join(ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
 
-		log, _ := rw.ReadLog(reloadID)
+		log, _ := storage.ReadLog(reloadID)
 		Expect(log).To(Equal(expectedLog))
 	})
 })

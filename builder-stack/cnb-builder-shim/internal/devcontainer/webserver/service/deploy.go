@@ -107,7 +107,11 @@ func (m *DeployManager) Deploy(srcFilePath string) (*DeployResult, error) {
 func (m DeployManager) Result(deployID string, withLog bool) (*DeployResult, error) {
 	var err error
 
-	storage := dc.ReloadResultFile{}
+	storage, err := dc.NewReloadResultStorage()
+	if err != nil {
+		return nil, err
+	}
+
 	result := &DeployResult{DeployID: deployID}
 
 	if result.Status, err = storage.ReadStatus(deployID); err != nil {

@@ -73,14 +73,13 @@ var _ = Describe("Test DeployManager", func() {
 		oldReloadDir := dc.ReloadDir
 		oldReloadLogDir := dc.ReloadLogDir
 
-		var rw dc.ReloadResultFile
+		var storage dc.ReloadResultStorage
 
 		BeforeEach(func() {
 			dc.ReloadDir, _ = os.MkdirTemp("", "reload")
 			dc.ReloadLogDir = filepath.Join(dc.ReloadDir, "log")
 
-			rw = dc.ReloadResultFile{}
-			Expect(rw.Init()).To(BeNil())
+			storage, _ = dc.NewReloadResultStorage()
 		})
 		AfterEach(func() {
 			Expect(os.RemoveAll(dc.ReloadDir)).To(BeNil())
@@ -90,7 +89,7 @@ var _ = Describe("Test DeployManager", func() {
 		})
 		It("Test get result", func() {
 			reloadID := uuid.NewString()
-			rw.WriteStatus(reloadID, dc.ReloadSuccess)
+			storage.WriteStatus(reloadID, dc.ReloadSuccess)
 			expectedLog := "build done..."
 			os.WriteFile(filepath.Join(dc.ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
 

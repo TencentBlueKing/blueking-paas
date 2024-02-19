@@ -29,6 +29,7 @@
               :loading="cateLoading"
               :clearable="false"
               :placeholder="$t('应用分类')"
+              :disabled="isManualSwitchSteps"
             >
               <bk-option
                 v-for="(option, index) in categoryList"
@@ -43,14 +44,14 @@
             :required="true"
             :property="'introduction'"
           >
-            <bk-input v-model="form.introduction" />
+            <bk-input v-model="form.introduction" :disabled="isManualSwitchSteps" />
           </bk-form-item>
           <bk-form-item
             :label="$t('应用联系人')"
             :required="true"
             property="contact"
           >
-            <user v-model="form.contact" />
+            <user v-model="form.contact" :disabled="isManualSwitchSteps" />
           </bk-form-item>
           <bk-form-item
             class="edit-form-item"
@@ -62,6 +63,7 @@
               v-model="form.description"
               class="editor"
               :options="editorOption"
+              :disabled="isManualSwitchSteps"
             />
           </bk-form-item>
         </bk-form>
@@ -69,158 +71,165 @@
     </div>
   </div>
 </template>
-<script>
-    import _ from 'lodash';
-    import user from '@/components/user';
-    import { quillEditor } from 'vue-quill-editor';
-    import 'quill/dist/quill.core.css';
-    import 'quill/dist/quill.snow.css';
-    import 'quill/dist/quill.bubble.css';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-    import stageBaseMixin from './stage-base-mixin';
+<script>import _ from 'lodash';
+import user from '@/components/user';
+import { quillEditor } from 'vue-quill-editor';
+import 'quill/dist/quill.core.css';
+import 'quill/dist/quill.snow.css';
+import 'quill/dist/quill.bubble.css';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import stageBaseMixin from './stage-base-mixin';
 
-    export default {
-        components: {
-            user,
-            quillEditor
-        },
-        mixins: [stageBaseMixin, pluginBaseMixin],
-        props: {
-            stageData: Object
-        },
-        data: function () {
-            return {
-                winHeight: 300,
-                cateLoading: true,
-                categoryList: [],
-                form: {
-                    category: '',
-                    introduction: '',
-                    description: '',
-                    contact: []
-                },
-                curPluginData: {},
-                editorOption: {
-                    placeholder: this.$t('开始编辑...')
-                },
-                rules: {
-                    category: [
-                        {
-                            required: true,
-                            message: this.$t('该字段为必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    introduction: [
-                        {
-                            required: true,
-                            message: this.$t('该字段为必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    contact: [
-                        {
-                            required: true,
-                            message: this.$t('该字段为必填项'),
-                            trigger: 'blur'
-                        }
-                    ]
-                }
-            };
-        },
-        computed: {
-            adminStr () {
-                const pluginAdministrator = this.curPluginInfo.pd_administrator || [];
-                return pluginAdministrator.join(';');
-            }
-        },
-        watch: {
-            'form.description' (newDescription) {
-                if (newDescription) {
-                    this.$refs.editor.options.placeholder = '';
-                }
-            }
-        },
-        created () {
-            this.fetchCategoryList();
-            this.fetchMarketInfo();
-        },
-        methods: {
-            // 获取市场信息
-            async fetchMarketInfo () {
-                try {
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId
-                    };
-                    const res = await this.$store.dispatch('plugin/getMarketInfo', params);
-                    this.form = res;
-                    if (res.contact) {
-                        this.form.contact = res.contact.split(',') || [];
-                    } else {
-                        const founder = this.curPluginInfo.latest_release.creator || '';
-                        this.form.contact = founder.split(',');
-                    }
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-            // 应用分类
-            async fetchCategoryList () {
-                try {
-                    const params = {
-                        pdId: this.pdId
-                    };
-                    const res = await this.$store.dispatch('plugin/getCategoryList', params);
-                    this.categoryList = res.category;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.cateLoading = false;
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-            // 保存
-            async nextStage (resolve) {
-              await this.$refs.visitForm.validate().then(async () => {
-                try {
-                    const data = _.cloneDeep(this.form);
-                    data.contact = data.contact.join(',');
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId,
-                        data
-                    };
-                    await this.$store.dispatch('plugin/saveMarketInfo', params);
-                    this.$bkMessage({
-                        theme: 'success',
-                        message: this.$t('保存成功!')
-                    });
-                    await resolve();
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.cateLoading = false;
-                }
-              });
-            }
-        }
+export default {
+  components: {
+    user,
+    quillEditor,
+  },
+  mixins: [stageBaseMixin, pluginBaseMixin],
+  props: {
+    stageData: Object,
+    isManualSwitch: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      winHeight: 300,
+      cateLoading: true,
+      categoryList: [],
+      form: {
+        category: '',
+        introduction: '',
+        description: '',
+        contact: [],
+      },
+      curPluginData: {},
+      editorOption: {
+        placeholder: this.$t('开始编辑...'),
+      },
+      rules: {
+        category: [
+          {
+            required: true,
+            message: this.$t('该字段为必填项'),
+            trigger: 'blur',
+          },
+        ],
+        introduction: [
+          {
+            required: true,
+            message: this.$t('该字段为必填项'),
+            trigger: 'blur',
+          },
+        ],
+        contact: [
+          {
+            required: true,
+            message: this.$t('该字段为必填项'),
+            trigger: 'blur',
+          },
+        ],
+      },
     };
+  },
+  computed: {
+    adminStr() {
+      const pluginAdministrator = this.curPluginInfo.pd_administrator || [];
+      return pluginAdministrator.join(';');
+    },
+    // 是否为手动切换步骤, 手动切换禁用表单项
+    isManualSwitchSteps() {
+      return !this.isManualSwitch;
+    },
+  },
+  watch: {
+    'form.description'(newDescription) {
+      if (newDescription) {
+        this.$refs.editor.options.placeholder = '';
+      }
+    },
+  },
+  created() {
+    this.fetchCategoryList();
+    this.fetchMarketInfo();
+  },
+  methods: {
+    // 获取市场信息
+    async fetchMarketInfo() {
+      try {
+        const params = {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+        };
+        const res = await this.$store.dispatch('plugin/getMarketInfo', params);
+        this.form = res;
+        if (res.contact) {
+          this.form.contact = res.contact.split(',') || [];
+        } else {
+          const founder = this.curPluginInfo.latest_release.creator || '';
+          this.form.contact = founder.split(',');
+        }
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+    // 应用分类
+    async fetchCategoryList() {
+      try {
+        const params = {
+          pdId: this.pdId,
+        };
+        const res = await this.$store.dispatch('plugin/getCategoryList', params);
+        this.categoryList = res.category;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.cateLoading = false;
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+    // 保存
+    async nextStage(resolve) {
+      await this.$refs.visitForm.validate().then(async () => {
+        try {
+          const data = _.cloneDeep(this.form);
+          data.contact = data.contact.join(',');
+          const params = {
+            pdId: this.pdId,
+            pluginId: this.pluginId,
+            data,
+          };
+          await this.$store.dispatch('plugin/saveMarketInfo', params);
+          this.$bkMessage({
+            theme: 'success',
+            message: this.$t('保存成功!'),
+          });
+          await resolve();
+        } catch (e) {
+          this.$bkMessage({
+            theme: 'error',
+            message: e.detail || e.message || this.$t('接口异常'),
+          });
+        } finally {
+          this.cateLoading = false;
+        }
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

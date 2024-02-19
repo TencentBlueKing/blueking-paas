@@ -47,6 +47,7 @@
           :plugin-data="pluginDetailedData"
           :is-next="isAllowNext"
           :manual-preview="isManualPreview"
+          :is-manual-switch="isShowButtonGroup"
           @rerunStage="rerunStage"
         />
         <template v-else-if="!finalStageIsOnline">

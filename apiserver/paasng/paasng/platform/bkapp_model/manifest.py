@@ -79,7 +79,7 @@ from paasng.platform.bkapp_model.models import (
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
-from paasng.platform.bkapp_model.utils import merge_env_vars
+from paasng.platform.bkapp_model.utils import merge_env_vars, override_env_vars_overlay
 from paasng.platform.engine.configurations.config_var import get_cnative_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
@@ -511,8 +511,18 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, dep
     :param env: The environment object.
     """
     env_vars = [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
+
+    environment = env.environment
+    builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
+
     for name, value in get_cnative_builtin_env_variables(env, deployment).items():
         env_vars.append(EnvVar(name=name, value=value))
+        builtin_env_vars_overlay.append(EnvVarOverlay(envName=environment, name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones
     model_res.spec.configuration.env = merge_env_vars(model_res.spec.configuration.env, env_vars)
+
+    if model_res.spec.envOverlay and model_res.spec.envOverlay.envVariables:
+        model_res.spec.envOverlay.envVariables = override_env_vars_overlay(
+            model_res.spec.envOverlay.envVariables, builtin_env_vars_overlay
+        )

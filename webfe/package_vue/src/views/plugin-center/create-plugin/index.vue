@@ -560,10 +560,19 @@ export default {
           theme: 'success',
           message: this.$t('插件创建成功！'),
         });
-        // 版本管理
+        const pluginDataKey = `pluginInfo${Math.random().toString(36)}`;
+        const data = {
+          name: this.curPluginItem.name,
+          docs: this.curPluginItem.plugin_type.docs,
+        };
+        localStorage.setItem(pluginDataKey, JSON.stringify(data));
+        // 插件引导页
         this.$router.push({
-          name: 'pluginVersionManager',
+          name: 'createPluginSuccess',
           params: { pluginTypeId: res.pd_id, id: res.id },
+          query: {
+            key: pluginDataKey,
+          },
         });
       } catch (e) {
         this.$paasMessage({

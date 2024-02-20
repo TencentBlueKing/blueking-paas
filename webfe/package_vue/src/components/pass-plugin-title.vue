@@ -64,6 +64,9 @@ export default {
 </script>
 <style lang="scss" scoped>
 .plugin-top-title {
+  i {
+    transform: translateY(0px);
+  }
   &.no-shadow {
     height: 52px;
     background: #fff;

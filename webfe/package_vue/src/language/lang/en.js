@@ -2522,4 +2522,10 @@ export default {
   '源码仓库仅用于 Homepage 运维开发分数统计，请瑞雪填写': 'The source code repository is solely for Homepage operation and development score statistics',
   立即绑定: 'Bind Now',
   暂未绑定源码信息: 'Source code information not bound yet',
+  '恭喜，插件': 'Congratulations, plugin',
+  测试插件: 'Test plugin',
+  拉取代码到本地: 'Pull code to local',
+  提交代码到代码库: 'Commit code to repository',
+  '创建测试版本进行测试，创建正式版本进行发布': 'Create a test version for testing, create a release version for deployment',
+  查看更多开发和发布指引: 'View more development and release guidelines',
 };

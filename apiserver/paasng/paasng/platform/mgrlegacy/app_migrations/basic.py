@@ -36,8 +36,7 @@ from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.mgrlegacy.constants import AppMember
 from paasng.platform.mgrlegacy.models import MigrationProcess
-from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
-from paasng.platform.modules.helpers import get_image_labels_by_module
+from paasng.platform.modules.constants import ExposedURLType, SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from paasng.utils.error_codes import error_codes
@@ -151,15 +150,9 @@ class MainInfoMigration(BaseMigration):
         config_obj = BuildConfig.objects.get_or_create_by_module(module)
         config_obj.build_method = RuntimeType.BUILDPACK
         config_obj.save(update_fields=["build_method"])
-        if self.context.legacy_app_proxy.is_smart():
-            # smart 应用按 PaaS3.0 一样的规则根据label筛选应用
-            runtime_labels = get_image_labels_by_module(module)
-        else:
-            # 非 Smart，统一用 legacy 镜像
-            # TODO 需要验证确认云原生应用是否可以用 legacy 镜像部署
-            runtime_labels = {"category": APP_CATEGORY.LEGACY_APP.value}
-        # 绑定初始运行环境，老版本的镜像可能已经被隐藏，需要显示指定查询所有的镜像
-        initializer.bind_runtime_by_labels(runtime_labels, contain_hidden=True)
+        # PaaS2.0 应用迁移为云原生应用，运行时默认不做特殊处理
+        # 已验证 Django1.8 开发框架代码能在云原生应用运行时下正常部署
+        initializer.bind_default_runtime()
 
         # 初始化应用模型
         initializer.initialize_app_model_resource()

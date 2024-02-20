@@ -23,7 +23,6 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.bk_app.applications.models import WlApp
 from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import add_role_members
@@ -201,7 +200,6 @@ class MainInfoMigration(BaseMigration):
 
         if engine_app_ids:
             EngineApp.objects.filter(id__in=engine_app_ids).delete()
-            WlApp.objects.filter(uuid__in=engine_app_ids).delete()
 
         # rollback app user permissions and delete user groups and grade manager info from the DB.
         ApplicationCleaner(self.context.app).delete_iam_resources()

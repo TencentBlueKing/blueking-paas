@@ -28,6 +28,7 @@ const JS_DIR_PATH = path.resolve(__dirname, './static/js');
 class PreTaskPlugin {
   constructor() {
     console.log('APP_VERSION', APP_VERSION);
+    console.log('NODE_ENV', process.env.NODE_ENV);
     console.time('Pre task');
     const paasStaticPath = path.resolve(JSON_DIR_PATH, './paas_static.js');
     const bklogoutPath = path.resolve(JS_DIR_PATH, './bklogout.js');

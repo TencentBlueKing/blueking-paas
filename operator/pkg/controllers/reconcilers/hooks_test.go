@@ -20,6 +20,7 @@ package reconcilers
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,10 +33,12 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 )
 
 var _ = Describe("Test HookReconciler", func() {
@@ -328,6 +331,52 @@ var _ = Describe("Test HookReconciler", func() {
 
 			err := r.ExecuteHook(ctx, bkapp, hook)
 			Expect(errors.Is(err, resources.ErrHookPodExists)).To(BeTrue())
+		})
+	})
+
+	Describe("test cleanupFinishedHooks", func() {
+		It("test clean pre-release hooks", func() {
+			r := NewHookReconciler(builder.Build())
+			Expect(r.Client.Create(ctx, bkapp)).To(BeNil())
+
+			createdHookPodNames := []string{}
+			for i := 0; i < 5; i++ {
+				bkapp.Status.DeployId = strconv.FormatInt(int64(i), 10)
+				hook := resources.BuildPreReleaseHook(bkapp, nil)
+				err := r.ExecuteHook(ctx, bkapp, hook)
+				Expect(err).NotTo(HaveOccurred())
+
+				createdHookPodNames = append(createdHookPodNames, hook.Pod.Name)
+			}
+
+			getHookPodNames := func(bkapp *paasv1alpha2.BkApp, hookType paasv1alpha2.HookType) []string {
+				podList := &corev1.PodList{}
+				err := r.Client.List(
+					ctx,
+					podList,
+					client.InNamespace(bkapp.Namespace),
+					client.MatchingLabels(labels.HookPodSelector(bkapp, hookType)),
+				)
+				if err != nil {
+					return []string{}
+				}
+				podNames := []string{}
+				for _, pod := range podList.Items {
+					podNames = append(podNames, pod.Name)
+				}
+				return podNames
+			}
+
+			podNames := getHookPodNames(bkapp, paasv1alpha2.HookPreRelease)
+			Expect(len(podNames)).To(Equal(5))
+			Expect(podNames).To(Equal(createdHookPodNames))
+
+			// 注：CreationTimestamp 只读 + fakeClient 不会设置 CreationTimestamp，因此其实算是按名字清理
+			Expect(r.cleanupFinishedHooks(ctx, bkapp, paasv1alpha2.HookPreRelease)).To(BeNil())
+
+			podNames = getHookPodNames(bkapp, paasv1alpha2.HookPreRelease)
+			Expect(len(podNames)).To(Equal(3))
+			Expect(podNames).To(Equal(createdHookPodNames[2:]))
 		})
 	})
 })

@@ -104,8 +104,13 @@
         <bk-alert
           ext-cls="custom-alert-cls"
           type="error"
-          :title="$t('创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。')"
-        ></bk-alert>
+          :show-icon="false"
+        >
+          <div slot="title" class="alert-wrapper">
+            <i class="paasng-icon paasng-remind error" />
+            {{ $t('创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。') }}
+          </div>
+        </bk-alert>
         <div class="content">
           <p class="title">{{ createTokenTip }}</p>
           <bk-input v-model="curAppId"></bk-input>
@@ -120,10 +125,17 @@
           v-if="tokenUrl"
           ext-cls="custom-alert-cls"
           type="success"
-          :title="$t('令牌（access_token）创建成功！请复制该令牌，关闭弹窗后将无法再次看到它。')"
-        ></bk-alert>
+          :show-icon="false"
+        >
+          <div slot="title" class="alert-wrapper">
+            <i class="paasng-icon paasng-pass success" />
+            {{ $t('令牌（access_token）创建成功！请复制该令牌，关闭弹窗后将无法再次看到它。') }}
+          </div>
+        </bk-alert>
         <div class="content">
-          <p class="title" v-if="tokenUrl">{{ $t('令牌（access_token）') }}</p>
+          <p class="title" v-if="tokenUrl">
+            {{ localLanguage === 'en' ? 'Access_token': '令牌（access_token）' }}
+          </p>
           <div
             :class="['access-token-url', { error: !tokenUrl }]"
             v-copy="tokenUrl"
@@ -219,6 +231,9 @@ export default {
   computed: {
     createTokenTip() {
       return this.$t('请完整输入应用 ID（{code}）确认', { code: this.appCode });
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -481,6 +496,21 @@ export default {
     background: #E1ECFF;
     color: #1768EF;
     border-color: #1768EF;
+  }
+}
+
+.alert-wrapper {
+  font-size: 12px;
+  color: #63656E;
+  i {
+    transform: translateY(0px);
+    font-size: 14px;
+    &.error {
+      color: #EA3636;
+    }
+    &.success {
+      color: #2DCB56;
+    }
   }
 }
 </style>

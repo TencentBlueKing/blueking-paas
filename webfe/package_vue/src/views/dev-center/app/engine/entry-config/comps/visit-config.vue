@@ -1,17 +1,25 @@
 <template>
-  <div class="port-config" v-bkloading="{ isLoading: setModuleLoading, title: $t('正在设置主模块') }">
+  <div
+    class="port-config app-entry-config-cls"
+    v-bkloading="{ isLoading: setModuleLoading, title: $t('正在设置主模块') }"
+    :style="{
+      '--table-view-height': `${scrollbarHeight == 8 ? viewHeight - 3 : viewHeight}px`,
+    }"
+  >
     <div
       class="content"
-      style="position: relative;"
+      style="position: relative"
     >
       <div :class="['table-title', { 'cloud-cls': isCloudNativeApp }]">
         <div class="tips">
           <i class="paasng-icon paasng-info-line info-icon" />
-          {{$t('平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。')}}
+          {{ $t('平台为应用提供了内置的访问地址，也可以添加自定义地址来配置额外的访问入口。') }}
           <a
             :href="GLOBAL.DOC.APP_ENTRY_INTRO"
             target="blank"
-          > {{ $t('详细使用说明-simple') }} </a>
+          >
+            {{ $t('详细使用说明-simple') }}
+          </a>
         </div>
         <div
           v-if="isIpConsistent"
@@ -25,6 +33,7 @@
         </div>
       </div>
       <bk-table
+        ref="portConfigRef"
         v-bkloading="{ isLoading: isTableLoading }"
         :data="entryList"
         class="table-cls"
@@ -33,108 +42,178 @@
         @row-mouse-enter="handleRowMouseEnter"
         @row-mouse-leave="handleRowMouseLeave"
       >
-        <bk-table-column :label="$t('模块')" :width="190" class-name="table-colum-module-cls">
+        <bk-table-column
+          :label="$t('模块')"
+          :width="190"
+          class-name="table-colum-module-cls"
+        >
           <template slot-scope="{ row, $index }">
             <section
               class="module-container"
-              :class="rowIndex === $index && !row.is_default ? 'module-cursor' : ''">
-              <div class="flex-row align-items-center"
-              >{{ row.name || '--' }}
+              :class="rowIndex === $index && !row.is_default ? 'module-cursor' : ''"
+            >
+              <div class="flex-row align-items-center">
+                {{ row.name || '--' }}
                 <img
                   :class="['module-default', 'ml10', { en: localLanguage === 'en' }]"
                   v-if="row.is_default"
-                  :src="`/static/images/${localLanguage === 'en' ? 'main_en.png' : 'main.png' }`"
-                >
+                  :src="`/static/images/${localLanguage === 'en' ? 'main_en.png' : 'main.png'}`"
+                />
               </div>
               <bk-button
-                v-if="rowIndex === $index && !row.is_default" text theme="primary"
+                v-if="rowIndex === $index && !row.is_default"
+                text
+                theme="primary"
                 class="set-module-btn"
-                @click="handleSetDefault(row)">
+                @click="handleSetDefault(row)"
+              >
                 {{ $t('设为主模块') }}
               </bk-button>
             </section>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('环境')" :width="160" class-name="table-colum-cls table-colum-stag-cls">
+        <bk-table-column
+          :label="$t('环境')"
+          :width="160"
+          class-name="table-colum-cls table-colum-stag-cls"
+        >
           <template slot-scope="{ row, $index }">
-            <div class="cell-container-width" v-for="(item, i) in row.envsData" :key="item">
+            <div
+              class="cell-container-width"
+              v-for="(item, i) in row.envsData"
+              :key="item"
+            >
               <div
                 v-if="row.envs[item].length"
-                :style="{height: `${46 * row.envs[item].length}px`}"
+                :style="{ height: `${46 * row.envs[item].length}px` }"
                 class="cell-container flex-column justify-content-center"
                 @mouseenter="handleEnvMouseEnter($index, i, row, item)"
-                @mouseleave="handleEnvMouseLeave">
-                <div
-                  class="env-container"
-                >
+                @mouseleave="handleEnvMouseLeave"
+              >
+                <div class="env-container">
                   <div class="text-container">
                     <!--  tooltips有bug，需要隐藏一下，html内容才会更新-->
                     <div
-                      :class="['ml15', 'mr15', { 'text': configIpTip }]"
+                      :class="['ml15', 'mr15', { text: configIpTip }]"
                       v-if="tableIndex === $index && envIndex === i && row.envs[item]"
-                      v-bk-tooltips="isIpConsistent ? { disabled: true } : configIpTip">{{ $t(entryEnv[item]) }}</div>
-                    <div class="ml15 mr15" v-else>{{ $t(entryEnv[item]) }}</div>
+                      v-bk-tooltips="isIpConsistent ? { disabled: true } : configIpTip"
+                    >
+                      {{ $t(entryEnv[item]) }}
+                    </div>
+                    <div
+                      class="ml15 mr15"
+                      v-else
+                    >
+                      {{ $t(entryEnv[item]) }}
+                    </div>
                     <span
-                      :class="['btn-container', { 'en': localLanguage === 'en' }]"
-                      v-bk-tooltips="{content: $t(row.envs[item][0].is_running ?
-                        '添加自定义访问地址' : '需要先部署该环境后，才能添加自定义访问地址')}"
-                      v-if="rowIndex === $index && row.envs[item]">
+                      :class="['btn-container', { en: localLanguage === 'en' }]"
+                      v-bk-tooltips="{
+                        content: $t(
+                          row.envs[item][0].is_running
+                            ? '添加自定义访问地址'
+                            : '需要先部署该环境后，才能添加自定义访问地址'
+                        ),
+                      }"
+                      v-if="rowIndex === $index && row.envs[item]"
+                    >
                       <i
                         class="paasng-icon paasng-plus-thick"
-                        :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''" />
+                        :class="!row.envs[item][0].is_running ? 'disable-add-icon' : ''"
+                      />
                       <bk-button
                         :disabled="!row.envs[item][0].is_running"
-                        text theme="primary"
-                        @click="handleAdd($index, i, row, item)">
+                        text
+                        theme="primary"
+                        @click="handleAdd($index, i, row, item)"
+                      >
                         {{ $t('添加') }}
                       </bk-button>
                     </span>
                   </div>
-                  <div v-if="i !== row.envsData.length - 1" class="stag-line"></div>
+                  <div
+                    v-if="i !== row.envsData.length - 1"
+                    class="stag-line"
+                  ></div>
                 </div>
               </div>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('访问地址')" :min-width="600">
+        <bk-table-column
+          :label="$t('访问地址')"
+          :min-width="600"
+        >
           <template slot-scope="{ row, $index }">
-            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
-              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
+            <div
+              v-for="item in row.envsData"
+              :key="item"
+              class="cell-container"
+            >
+              <div
+                v-for="(e, i) in row.envs[item]"
+                :key="i"
+                class="url-container flex-column justify-content-center"
+              >
                 <div v-if="e.isEdit">
                   <bk-form
-                    :label-width="0" form-type="inline" :model="e.address" ref="urlInfoForm"
-                    class="url-from-cls">
-                    <bk-form-item :required="true" :property="'url'" :rules="rules.url">
-                      <bk-input v-model="e.address.url" :placeholder="domainInputPlaceholderText" class="url-input-cls">
+                    :label-width="0"
+                    form-type="inline"
+                    :model="e.address"
+                    ref="urlInfoForm"
+                    class="url-from-cls"
+                  >
+                    <bk-form-item
+                      :required="true"
+                      :property="'url'"
+                      :rules="rules.url"
+                    >
+                      <bk-input
+                        v-model="e.address.url"
+                        :placeholder="domainInputPlaceholderText"
+                        class="url-input-cls"
+                      >
                         <template slot="prepend">
                           <div class="group-text">http://</div>
                         </template>
                       </bk-input>
                     </bk-form-item>
-                    <bk-form-item :required="true" :property="'pathPrefix'" :rules="rules.pathPrefix">
+                    <bk-form-item
+                      :required="true"
+                      :property="'pathPrefix'"
+                      :rules="rules.pathPrefix"
+                    >
                       <bk-input
                         class="path-input-cls"
                         v-model="e.address.pathPrefix"
                         :placeholder="$t('请输入路径')"
-                        @change="handlePathChange($event, i)"></bk-input>
+                        @change="handlePathChange($event, i)"
+                      ></bk-input>
                     </bk-form-item>
                   </bk-form>
                 </div>
                 <section v-else>
                   <div
-                    v-bk-tooltips="{content: $t(rowIndex === $index ?'该环境未部署，无法访问' : ''), disabled: e.is_running}"
-                    class="flex-row align-items-center">
+                    v-bk-tooltips="{
+                      content: $t(rowIndex === $index ? '该环境未部署，无法访问' : ''),
+                      disabled: e.is_running,
+                    }"
+                    class="flex-row align-items-center"
+                  >
                     <bk-button
-                      text theme="primary"
+                      text
+                      theme="primary"
                       class="address-btn-cls"
                       :disabled="!e.is_running"
                       @click="handleUrlOpen(e.address.url)"
-                    > {{ e.address.url }}</bk-button>
+                    >
+                      {{ e.address.url }}
+                    </bk-button>
                     <img
                       class="custom-image ml10"
                       v-if="e.address.type === 'custom'"
-                      :src="`/static/images/${localLanguage === 'en' ? 'custom_en.png' : 'custom.png' }`"
-                    >
+                      :src="`/static/images/${localLanguage === 'en' ? 'custom_en.png' : 'custom.png'}`"
+                    />
                   </div>
                 </section>
                 <div class="line"></div>
@@ -142,20 +221,32 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('进程')" :width="100">
+        <bk-table-column
+          :label="$t('进程')"
+          :width="110"
+        >
           <template slot-scope="{ row }">
-            <div v-for="(item) in row.envsData" :key="item" class="cell-container">
-              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container flex-column justify-content-center">
+            <div
+              v-for="item in row.envsData"
+              :key="item"
+              class="cell-container"
+            >
+              <div
+                v-for="(e, i) in row.envs[item]"
+                :key="i"
+                class="url-container flex-column justify-content-center"
+              >
                 <div v-if="e.isEdit">
                   <bk-select
                     :disabled="true"
-                    v-model="defaultProcess">
+                    v-model="defaultProcess"
+                  >
                     <bk-option
                       v-for="option in processList"
                       :key="option.name"
                       :id="option.name"
-                      :name="option.name">
-                    </bk-option>
+                      :name="option.name"
+                    ></bk-option>
                   </bk-select>
                 </div>
                 <section v-else>
@@ -166,32 +257,63 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('操作')" :width="120" fixed="right">
+        <bk-table-column
+          :label="$t('操作')"
+          :width="120"
+          fixed="right"
+        >
           <template slot-scope="{ row, $index }">
-            <div v-for="item in row.envsData" :key="item" class="cell-container">
-              <div v-for="(e, i) in row.envs[item]" :key="i" class="url-container">
+            <div
+              v-for="item in row.envsData"
+              :key="item"
+              class="cell-container"
+            >
+              <div
+                v-for="(e, i) in row.envs[item]"
+                :key="i"
+                class="url-container"
+              >
                 <div v-if="e.address.type === 'custom'">
                   <section v-if="e.isEdit">
-                    <bk-button text theme="primary" @click="handleSubmit($index, i, row, item)">
+                    <bk-button
+                      text
+                      theme="primary"
+                      @click="handleSubmit($index, i, row, item)"
+                    >
                       {{ $t('保存') }}
                     </bk-button>
-                    <bk-button text theme="primary" class="pl20" @click="handleCancel($index, i, row, item)">
+                    <bk-button
+                      text
+                      theme="primary"
+                      class="pl20"
+                      @click="handleCancel($index, i, row, item)"
+                    >
                       {{ $t('取消') }}
                     </bk-button>
                   </section>
                   <section v-else>
-                    <bk-button text theme="primary" @click="handleEdit($index, i, row, item)">
+                    <bk-button
+                      text
+                      theme="primary"
+                      @click="handleEdit($index, i, row, item)"
+                    >
                       {{ $t('编辑') }}
                     </bk-button>
                     <bk-button
-                      text theme="primary" class="pl20"
-                      @click="showRemoveModal(i, row, item)">
+                      text
+                      theme="primary"
+                      class="pl20"
+                      @click="showRemoveModal(i, row, item)"
+                    >
                       {{ $t('删除') }}
                     </bk-button>
                   </section>
                 </div>
-                <div v-else> -- </div>
-                <div class="line" :style="{top: $index < 4 ? '100%' : 'calc(100% - 0.5px)'}"></div>
+                <div v-else>--</div>
+                <div
+                  class="line"
+                  :style="{ top: $index < 4 ? '100%' : 'calc(100% - 0.5px)' }"
+                ></div>
               </div>
             </div>
           </template>
@@ -210,10 +332,10 @@
         @cancel="visitDialog.visiable = false"
       >
         <div class="tl">
-          <p> {{ $t('注意事项：') }} </p>
-          <p> {{ $t('1、应用的主访问路径将会变为子域名方式') }} </p>
-          <p> {{ $t('2、如果应用框架代码没有适配过独立域名访问方式，一些静态文件路径可能会出现问题') }} </p>
-          <p> {{ $t('3、旧的子路径地址依然有效，可以正常访问') }} </p>
+          <p>{{ $t('注意事项：') }}</p>
+          <p>{{ $t('1、应用的主访问路径将会变为子域名方式') }}</p>
+          <p>{{ $t('2、如果应用框架代码没有适配过独立域名访问方式，一些静态文件路径可能会出现问题') }}</p>
+          <p>{{ $t('3、旧的子路径地址依然有效，可以正常访问') }}</p>
         </div>
       </bk-dialog>
 
@@ -226,7 +348,7 @@
         :mask-close="false"
       >
         <div class="tl">
-          <p> {{ $t('设定后：') }} </p>
+          <p>{{ $t('设定后：') }}</p>
           <div class="flex-row mt5">
             <p>1. </p>
             <p class="pl10">
@@ -266,7 +388,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 import { copy } from '@/common/tools';
 export default {
@@ -346,9 +469,9 @@ export default {
       isSaveLoading: false,
       curPathPrefix: {},
       defaultProcess: 'web',
-      processList: [
-        { name: 'web' },
-      ],
+      processList: [{ name: 'web' }],
+      viewHeight: 0,
+      scrollbarHeight: 0,
     };
   },
   computed: {
@@ -413,22 +536,25 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
   },
   mounted() {
     this.init();
+    setTimeout(() => {
+      this.getbkTableFixedHeight();
+    }, 100);
   },
   methods: {
     /**
      * 数据初始化入口
      */
     init() {
-      this.getAppRegion();    // 环境信息
-      this.getEntryList();    // 列表信息
+      this.getAppRegion(); // 环境信息
+      this.getEntryList(); // 列表信息
       // this.getDefaultDomainInfo();
-      this.loadDomainConfig();    // 域名信息
+      this.loadDomainConfig(); // 域名信息
     },
 
     // 获取域名信息
@@ -464,6 +590,7 @@ export default {
           }
           return e;
         }, []);
+        this.getbkTableFixedHeight();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -471,6 +598,9 @@ export default {
         });
       } finally {
         this.isTableLoading = false;
+        setTimeout(() => {
+          this.getbkTableFixedHeight();
+        }, 100);
       }
     },
 
@@ -554,7 +684,7 @@ export default {
           message: this.$t('主模块设置成功'),
         });
         this.$store.commit('updateCurAppModuleIsDefault', this.curClickAppModule.id);
-        this.getEntryList();    // 重新请求数据
+        this.getEntryList(); // 重新请求数据
       } catch (res) {
         this.$paasMessage({
           limit: 1,
@@ -603,7 +733,7 @@ export default {
 
     // 设置为主模块
     handleSetDefault(payload) {
-      this.curClickAppModule = this.curAppModuleList.find(e => e.name === payload.name) || {}; // 当前点击的模块的所有信息
+      this.curClickAppModule = this.curAppModuleList.find((e) => e.name === payload.name) || {}; // 当前点击的模块的所有信息
       this.domainDialog.visiable = true;
       this.domainDialog.moduleName = payload.name;
       this.domainDialog.title = this.$t(`是否设定${payload.name}模块为主模块`);
@@ -626,7 +756,7 @@ export default {
             theme: 'error',
             message: `${this.$t('无法获取域名解析目标IP，错误：')}${res.detail}`,
           });
-        },
+        }
       );
     },
 
@@ -685,10 +815,10 @@ export default {
         });
         this.entryList = this.entryList.map((e, i) => {
           if (index === i) {
-            e.envs[envType][envIndex].isEdit = false;       // 改变本条数据的状态
-            e.envs[envType][envIndex].is_running = true;    // 能保存和编辑这代表已经部署过了
+            e.envs[envType][envIndex].isEdit = false; // 改变本条数据的状态
+            e.envs[envType][envIndex].is_running = true; // 能保存和编辑这代表已经部署过了
             e.envs[envType][envIndex].address.url = `http://${curUrlParams.domain_name}${curUrlParams.path_prefix}`; // 拼接地址和路径
-            e.envs[envType][envIndex].address.id = this.curDataId;  // 成功添加，将响应id保存
+            e.envs[envType][envIndex].address.id = this.curDataId; // 成功添加，将响应id保存
           }
           return e;
         });
@@ -717,11 +847,11 @@ export default {
     // 处理删除域名
     async handleDelete(envIndex, payload, envType) {
       try {
-        await this.$store.dispatch(
-          'entryConfig/deleteDomainInfo',
-          { appCode: this.appCode, id: payload.envs[envType][envIndex].address.id || this.curDataId },
-        );
-        this.getEntryList();    // 重新请求数据
+        await this.$store.dispatch('entryConfig/deleteDomainInfo', {
+          appCode: this.appCode,
+          id: payload.envs[envType][envIndex].address.id || this.curDataId,
+        });
+        this.getEntryList(); // 重新请求数据
         this.$paasMessage({
           theme: 'success',
           message: `${this.$t('删除成功')}`,
@@ -795,243 +925,256 @@ export default {
       this.curPathPrefix[i] = val;
       this.curInputIndex = i;
     },
+
+    getbkTableFixedHeight() {
+      if (this.$refs.portConfigRef && this.$refs.portConfigRef?.layout) {
+        this.viewHeight = this.$refs.portConfigRef.layout?.viewportHeight || 0;
+        this.scrollbarHeight = this.getScrollbarHeight();
+      }
+    },
+
+    // 获取表格横向滚动条高度
+    getScrollbarHeight() {
+      const container = document.querySelector('.app-entry-config-cls .bk-table-body-wrapper');
+      return container?.offsetHeight - container?.clientHeight;
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    .toggle-type {
-        position: absolute;
-        right: 20px;
-        top: 11px;
+.toggle-type {
+  position: absolute;
+  right: 20px;
+  top: 11px;
+}
+
+.root-domains-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.root-domains-wrapper {
+  display: flex;
+  .root-domain:nth-child(n + 2) {
+    margin-left: 20px;
+  }
+}
+
+.action-box {
+  line-height: 40px;
+  margin-right: 20px;
+}
+
+.root-url {
+  font-size: 13px;
+}
+
+.td-focus {
+  border: 1px solid #3a84ff;
+  transition: all 0.1s;
+  transform: translateY(-1px);
+}
+.td-title {
+  width: 180px;
+  text-align: center;
+  padding: 0;
+}
+
+.table-title {
+  font-size: 12px;
+  color: #63656e;
+  padding-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  &.cloud-cls {
+    background: #f5f7fa;
+  }
+
+  .ip-tips {
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 12px;
+    color: #63656e;
+    i {
+      transform: translateY(0px);
+      font-size: 14px;
+      color: #979ba5;
     }
-
-    .root-domains-row {
-        display: flex;
-        justify-content: space-between;
-    }
-
-    .root-domains-wrapper {
-        display: flex;
-        .root-domain:nth-child(n + 2) {
-            margin-left: 20px;
-        }
-    }
-
-    .action-box {
-        line-height: 40px;
-        margin-right: 20px;
-    }
-
-    .root-url {
-        font-size: 13px;
-    }
-
-    .td-focus {
-        border: 1px solid #3a84ff;
-        transition: all .1s;
-        transform: translateY(-1px);
-    }
-    .td-title {
-        width: 180px;
-        text-align: center;
-        padding: 0;
-    }
-
-    .table-title{
-      font-size: 12px;
-      color: #63656E;
-      padding-bottom: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      &.cloud-cls {
-        background: #F5F7FA;
-      }
-
-      .ip-tips {
-        white-space: nowrap;
-        cursor: pointer;
-        font-size: 12px;
-        color: #63656E;
-        i {
-          transform: translateY(0px);
-          font-size: 14px;
-          color: #979BA5;
-        }
-        &.ip-app-tips {
-          i {
-            color: #3a84ff;
-          }
-        }
-        &.ip-cloud-tips {
-          background: #FFFFFF;
-          box-shadow: 0 2px 4px 0 #1919290d;
-          border-radius: 2px;
-          padding: 4px 8px;
-        }
-      }
-    }
-
-    .table-cls {
-      /deep/ td.is-last {
-        border-right: none;
-      }
-
-      /deep/ th.is-last {
-        border-right: none;
-      }
-
-      /deep/ .cell{
-        overflow:visible;
-        display: flex;
-        flex-flow: column;
-        align-items: flex-start;
-      }
-
-      .module-container{
-        position: relative;
-        height: 46px;
-        display: flex;
-        flex-flow: column;
-        justify-content: center;
-        .module-default{
-          height: 22px;
-          width: 38px;
-          &.en {
-            width: 81px;
-          }
-        }
-        .module-cursor{
-          cursor: pointer;
-        }
-        .set-module-btn {
-          position: absolute;
-          bottom: -7px;
-          white-space: nowrap;
-        }
-      }
-
-      .cell-container-width{
-        width: 159px;
-      }
-
-      .cell-container{
-        width: 100%;
-        position: relative;
-      }
-      .env-container{
-        font-size: 12px;
-      }
-
-      .text-container{
-        position: relative;
-        display: flex;
-        align-items: center;
-      }
-      .btn-container{
-        position: absolute;
-        left: 80px;
+    &.ip-app-tips {
+      i {
         color: #3a84ff;
-        cursor: pointer;
-        width: 50px;
-        .disable-add-icon{
-          color: #dcdee5;
-        }
-        &.en {
-          left: 100px;
-        }
-      }
-
-      .line{
-        height: 1px;
-        background: #dfe0e5;
-        width: calc(100% + 30px);
-        position: absolute;
-        top: 100%;
-        left: -15px;
-        z-index: 1;
-      }
-
-      .url-container{
-        position: relative;
-        height: 46px;
-        line-height: 46px;
-        width: 100%;
-        .module-market{
-          width: 88px;
-          height: 22px;
-          font-size: 12px;
-          color: #14A568;
-          text-align: center;
-          line-height: 20px;
-          background: #E4FAF0;
-          border: 1px solid #14a5684d;
-          border-radius: 11px;
-        }
-        .address-btn-cls{
-          height: 46px !important;
-        }
-        .custom-image{
-          height: 22px;
-        }
       }
     }
+    &.ip-cloud-tips {
+      background: #ffffff;
+      box-shadow: 0 2px 4px 0 #1919290d;
+      border-radius: 2px;
+      padding: 4px 8px;
+    }
+  }
+}
 
-    .url-input-cls{
-      /deep/ .bk-form-input{
-        width: 380px;
+.table-cls {
+  /deep/ td.is-last {
+    border-right: none;
+  }
+
+  /deep/ th.is-last {
+    border-right: none;
+  }
+
+  /deep/ .cell {
+    overflow: visible;
+    display: flex;
+    flex-flow: column;
+    align-items: flex-start;
+  }
+
+  .module-container {
+    position: relative;
+    height: 46px;
+    display: flex;
+    flex-flow: column;
+    justify-content: center;
+    .module-default {
+      height: 22px;
+      width: 38px;
+      &.en {
+        width: 81px;
       }
     }
-    .path-input-cls{
-      /deep/ .bk-form-input{
-        width: 100px;
-      }
+    .module-cursor {
+      cursor: pointer;
     }
-
-    .port-config{
-      overflow-x: auto;
+    .set-module-btn {
+      position: absolute;
+      bottom: -7px;
+      white-space: nowrap;
     }
+  }
 
-    /deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even){
-        padding: 0;
-        z-index: 1;
-      }
+  .cell-container-width {
+    width: 159px;
+  }
 
-      /deep/ .bk-table-body-wrapper .hover-row .table-colum-cls :nth-child(even){
-        padding: 0;
-        background: #f5f7fa;
-        z-index: 1;
-      }
+  .cell-container {
+    width: 100%;
+    position: relative;
+  }
+  .env-container {
+    font-size: 12px;
+  }
 
-      /deep/ .bk-table-body-wrapper .table-colum-cls .cell-container:nth-child(2){
-        border-top: 1px solid #dfe0e5;
-      }
-    /deep/ .bk-table-body-wrapper .table-colum-cls .cell {
-      padding: 0 !important;
+  .text-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .btn-container {
+    position: absolute;
+    left: 80px;
+    color: #3a84ff;
+    cursor: pointer;
+    width: 50px;
+    .disable-add-icon {
+      color: #dcdee5;
     }
-
-    /deep/ .bk-table-body-wrapper .table-colum-cls.table-colum-stag-cls .cell {
-      div {
-        width: 100%;
-        .stag-line {
-          height: 1px;
-          background: #dfe0e5;
-          position: absolute;
-          top: 100%;
-          left: 0;
-          z-index: 3;
-        }
-      }
+    &.en {
+      left: 100px;
     }
+  }
 
-    /deep/ .bk-table-body-wrapper .table-colum-module-cls {
-      background: #FAFBFD;
-    }
+  .line {
+    height: 1px;
+    background: #dfe0e5;
+    width: calc(100% + 30px);
+    position: absolute;
+    top: 100%;
+    left: -15px;
+    z-index: 1;
+  }
 
-    .btn-container{
+  .url-container {
+    position: relative;
+    height: 46px;
+    line-height: 46px;
+    width: 100%;
+    .module-market {
+      width: 88px;
+      height: 22px;
+      font-size: 12px;
+      color: #14a568;
       text-align: center;
+      line-height: 20px;
+      background: #e4faf0;
+      border: 1px solid #14a5684d;
+      border-radius: 11px;
     }
+    .address-btn-cls {
+      height: 46px !important;
+    }
+    .custom-image {
+      height: 22px;
+    }
+  }
+}
+
+.url-input-cls {
+  /deep/ .bk-form-input {
+    width: 380px;
+  }
+}
+.path-input-cls {
+  /deep/ .bk-form-input {
+    width: 100px;
+  }
+}
+
+.port-config {
+  overflow-x: auto;
+}
+
+/deep/ .bk-table-body-wrapper .table-colum-cls :nth-child(even) {
+  padding: 0;
+  z-index: 1;
+}
+
+/deep/ .bk-table-body-wrapper .hover-row .table-colum-cls :nth-child(even) {
+  padding: 0;
+  background: #f5f7fa;
+  z-index: 1;
+}
+
+/deep/ .bk-table-body-wrapper .table-colum-cls .cell-container:nth-child(2) {
+  border-top: 1px solid #dfe0e5;
+}
+/deep/ .bk-table-body-wrapper .table-colum-cls .cell {
+  padding: 0 !important;
+}
+
+/deep/ .bk-table-body-wrapper .table-colum-cls.table-colum-stag-cls .cell {
+  div {
+    width: 100%;
+    .stag-line {
+      height: 1px;
+      background: #dfe0e5;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      z-index: 3;
+    }
+  }
+}
+
+/deep/ .bk-table-body-wrapper .table-colum-module-cls {
+  background: #fafbfd;
+}
+
+.btn-container {
+  text-align: center;
+}
 </style>
 <style>
 .ip-view-wrapper {
@@ -1043,5 +1186,13 @@ export default {
 .ip-icon-customize-cls {
   color: #3a84ff;
   cursor: pointer;
+}
+/* 固定列兼容 */
+.app-entry-config-cls .bk-table.bk-table-scrollable-x .bk-table-fixed-right {
+  height: var(--table-view-height) !important;
+}
+/* 组件库table滚动条样式设置为8px */
+.app-entry-config-cls .bk-table.table-cls .bk-table-body-wrapper::-webkit-scrollbar {
+  height: 8px;
 }
 </style>

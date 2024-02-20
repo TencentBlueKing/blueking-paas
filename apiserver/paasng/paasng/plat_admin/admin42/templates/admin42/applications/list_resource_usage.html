@@ -1,0 +1,222 @@
+{% extends "../platformmgr/base.html" %}
+
+{% load admin_utils %}
+
+{% block main_content %}
+<div id="app-res-usage-list" class="p20">
+    <div class="mb15" style="width: 40%">
+        <bk-input
+            placeholder="输入应用 ID 或名称，按 Enter 进行模糊搜索"
+            :clearable="true"
+            :right-icon="'bk-icon icon-search'"
+            v-model="filterKey"
+            @enter="handleSearch">
+        </bk-input>
+    </div>
+    <bk-table :data="data" @sort-change="handleSortChange">
+        <bk-table-column label="应用 ID">
+            <template slot-scope="props">
+                <a class="cell" @click="handleView(props.row)">$[props.row.app_code]</a>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="应用名称" prop="app_name"></bk-table-column>
+        <bk-table-column label="内存 Requests" prop="mem_requests" sortable="custom"></bk-table-column>
+        <bk-table-column label="内存 Limits" prop="mem_limits" sortable="custom"></bk-table-column>
+        <bk-table-column label="内存使用率（7d)" prop="mem_usage_avg" sortable="custom"></bk-table-column>
+        <bk-table-column label="CPU Requests" prop="cpu_requests" sortable="custom"></bk-table-column>
+        <bk-table-column label="CPU Limits" prop="cpu_limits" sortable="custom"></bk-table-column>
+        <bk-table-column label="CPU 使用率（7d)" prop="cpu_usage_avg" sortable="custom"></bk-table-column>
+        <bk-table-column label="PV (7d)" prop="pv" sortable="custom"></bk-table-column>
+        <bk-table-column label="UV (7d)" prop="uv" sortable="custom"></bk-table-column>
+        <bk-table-column label="最后操作人" prop="operator"></bk-table-column>
+        <bk-table-column label="采集时间" prop="collected_at"></bk-table-column>
+    </bk-table>
+    <pagination
+        class="mt15"
+        :current.sync="pagination.curPage"
+        :limit="pagination.limit"
+        :count="pagination.count"
+        :align="'right'"
+    ></pagination>
+
+    <bk-dialog
+        v-model="dialog.visible"
+        header-position="left"
+        width="1100"
+        :mask-close="true"
+        :show-footer="false"
+    >
+        <div slot="header">应用资源使用详情</div>
+        <bk-container :col="4">
+            <bk-row>
+                <bk-col><label class="m10">应用 Code:</label> $[dialog.form.app_code]</bk-col>
+                <bk-col><label class="m10">应用名称:</label> $[dialog.form.app_name]</bk-col>
+            </bk-row>
+            <bk-row>
+                <bk-col><label class="m10">内存请求:</label> $[dialog.form.mem_requests]</bk-col>
+                <bk-col><label class="m10">内存限制:</label> $[dialog.form.mem_limits]</bk-col>
+                <bk-col><label class="m10">平均使用率（7d）:</label> $[dialog.form.mem_usage_avg]</bk-col>
+            </bk-row>
+            <bk-row>
+                <bk-col><label class="m10">CPU 请求:</label> $[dialog.form.cpu_requests]</bk-col>
+                <bk-col><label class="m10">CPU 限制:</label> $[dialog.form.cpu_limits]</bk-col>
+                <bk-col><label class="m10">平均使用率（7d）:</label> $[dialog.form.cpu_usage_avg]</bk-col>
+            </bk-row>
+            <bk-row>
+                <bk-col><label class="m10">PV（7d）:</label> $[dialog.form.pv]</bk-col>
+                <bk-col><label class="m10">UV（7d）:</label> $[dialog.form.uv]</bk-col>
+                <bk-col><label class="m10">最后操作人:</label> $[dialog.form.operator]</bk-col>
+            </bk-row>
+            <bk-row>
+                <bk-col><label class="m10">采集时间:</label> $[dialog.form.collected_at]</bk-col>
+                <bk-col>
+                    <label class="m10">
+                        <a :href="appOverviewPageUrl(dialog.form.app_code)">跳转到应用概览</a>
+                    </label>
+                </bk-col>
+            </bk-row>
+        </bk-container>
+        <h4 class="mt20">模块进程</h4>
+        <bk-collapse accordion>
+            <bk-collapse-item v-for="module in dialog.form.summary.modules" :name="module.module_name">
+                $[ module.module_name ]
+                <div slot="content">
+                    <bk-tab type="unborder-card">
+                        <bk-tab-panel
+                            v-for="(panel, index) in dialog.env_panels"
+                            v-bind="panel"
+                            :key="index">
+                            <bk-container :col="5" v-for="proc in getEnvProcs(module, panel.name)">
+                                <bk-row>
+                                    <bk-col><label class="m10">进程名称:</label> $[proc.name]</bk-col>
+                                    <bk-col><label class="m10">副本数量:</label> $[proc.replicas]</bk-col>
+                                    <bk-col><label class="m10">资源套餐:</label> $[proc.current_plan]
+                                        <span v-if="!proc.suitable" v-bk-tooltips="genTooltipsConfig(proc)">❗</span>
+                                    </bk-col>
+                                </bk-row>
+                                <bk-row>
+                                    <bk-col><label class="m10">内存请求:</label> $[proc.quota.requests.memory] Mi</bk-col>
+                                    <bk-col><label class="m10">内存限制:</label> $[proc.quota.limits.memory] Mi</bk-col>
+                                    <bk-col><label class="m10">采样数量:</label> $[proc.memory.cnt]</bk-col>
+                                </bk-row>
+                                <bk-row>
+                                    <bk-col><label class="m10">平均值:</label> $[proc.memory.avg] Mi</bk-col>
+                                    <bk-col><label class="m10">中位值:</label> $[proc.memory.med] Mi</bk-col>
+                                    <bk-col><label class="m10">最大值:</label> $[proc.memory.max] Mi</bk-col>
+                                    <bk-col><label class="m10">p75:</label> $[proc.memory.p75] Mi</bk-col>
+                                    <bk-col><label class="m10">p95:</label> $[proc.memory.p90] Mi</bk-col>
+                                </bk-row>
+                                <bk-row>
+                                    <bk-col><label class="m10">CPU 请求:</label> $[proc.quota.requests.cpu] m</bk-col>
+                                    <bk-col><label class="m10">CPU 限制:</label> $[proc.quota.limits.cpu] m</bk-col>
+                                    <bk-col><label class="m10">采样数量:</label> $[proc.cpu.cnt]</bk-col>
+                                </bk-row>
+                                <bk-row>
+                                    <bk-col><label class="m10">平均值:</label> $[proc.cpu.avg] m</bk-col>
+                                    <bk-col><label class="m10">中位值:</label> $[proc.cpu.med] m</bk-col>
+                                    <bk-col><label class="m10">最大值:</label> $[proc.cpu.max] m</bk-col>
+                                    <bk-col><label class="m10">p75:</label> $[proc.cpu.p75] m</bk-col>
+                                    <bk-col><label class="m10">p95:</label> $[proc.cpu.p90] m</bk-col>
+                                </bk-row>
+                                <hr>
+                            </bk-container>
+                        </bk-tab-panel>
+                    </bk-tab>
+                </div>
+            </bk-collapse-item>
+        </bk-collapse>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+{% block main_script %}
+<script>
+const pagination = {{ pagination | to_json }}
+const data = {{ usage_report_list | to_json }}
+const SEARCH_PARAM = "search_term"
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#app-res-usage-list",
+        delimiters: ['$[', ']'],
+        data: function () {
+            let prefix = window.location.href
+            let filterKey = undefined
+
+            if (prefix.indexOf("?") > 0) {
+                let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
+                filterKey = query[SEARCH_PARAM]
+            }
+            return {
+                data,
+                pagination,
+                baseUrl: '{% url "admin.applications.detail.overview" "app_code" %}',
+                SEARCH_PARAM,
+                filterKey,
+                dialog: {
+                    visible: false,
+                    form: {
+                        summary: {
+                            modules: []
+                        }
+                    },
+                    env_panels: [
+                        {"name": "prod", "label": "生产环境"},
+                        {"name": "stag", "label": "预发布环境"}
+                    ]
+                }
+            }
+        },
+        methods: {
+            appOverviewPageUrl(app_code) {
+                return this.baseUrl.replace("app_code", app_code)
+            },
+            handleView(row) {
+                this.dialog.form = row
+                this.dialog.visible = true
+            },
+            getEnvProcs(module, tab_name) {
+                if (tab_name === "prod") {
+                    return module.prod_procs
+                }
+                return module.stag_procs
+            },
+            handleSortChange({column, prop, order}) {
+                if (!prop) {
+                    return
+                }
+                let query = {
+                    order_by: (order === 'ascending' ? prop : '-' + prop), offset:0
+                }
+                this.handleQueryChange(query)
+            },
+            handleSearch() {
+                let query = {
+                    [this.SEARCH_PARAM]: this.filterKey, offset:0
+                }
+                this.handleQueryChange(query)
+            },
+            handleQueryChange(query) {
+                let prefix = window.location.href
+
+                if (prefix.indexOf("?") > 0) {
+                    query = {...querystring.parse(prefix.substr(prefix.indexOf("?") + 1)), ...query}
+                    prefix = prefix.substr(0, prefix.indexOf("?"))
+                }
+                query = querystring.stringify(query)
+                window.location.href = `${prefix}?${query}`
+            },
+            genTooltipsConfig: function (proc) {
+                return {
+                    content: 'Reasons:<br>' + proc.reasons.join('<br>'),
+                    allowHTML: true
+                }
+            }
+        },
+    })
+})
+
+</script>
+
+{% endblock %}

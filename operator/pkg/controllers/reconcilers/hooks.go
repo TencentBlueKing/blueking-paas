@@ -25,6 +25,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
+	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -35,9 +36,14 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
+	"bk.tencent.com/paas-app-operator/pkg/metrics"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
+
+// HookPodsHistoryLimit 最大保留的 Hook Pod 数量（单种类型）
+const HookPodsHistoryLimit = 3
 
 // NewHookReconciler will return a HookReconciler with given k8s client
 func NewHookReconciler(client client.Client) *HookReconciler {
@@ -85,7 +91,13 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		}
 	}
 
-	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)); hook != nil {
+	// 对于过旧的 Pre-Release Hook Pod 进行清理
+	if err := r.cleanupFinishedHooks(ctx, bkapp, paasv1alpha2.HookPreRelease); err != nil {
+		return r.Result.WithError(err)
+	}
+
+	hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+	if hook != nil {
 		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
 			return r.Result.WithError(err)
 		}
@@ -254,6 +266,44 @@ func (r *HookReconciler) updateAppProgressingStatus(bkapp *paasv1alpha2.BkApp, s
 			ObservedGeneration: bkapp.Generation,
 		})
 	}
+}
+
+func (r *HookReconciler) cleanupFinishedHooks(
+	ctx context.Context, bkapp *paasv1alpha2.BkApp, hookType paasv1alpha2.HookType,
+) error {
+	podList := &corev1.PodList{}
+	err := r.Client.List(
+		ctx,
+		podList,
+		client.InNamespace(bkapp.Namespace),
+		client.MatchingLabels(labels.HookPodSelector(bkapp, hookType)),
+	)
+	if err != nil {
+		return err
+	}
+
+	pods := podList.Items
+	numToDelete := len(pods) - HookPodsHistoryLimit
+	// 数量没有超过保留上限，不需要清理
+	if numToDelete <= 0 {
+		return nil
+	}
+
+	// 按照创建时间排序，清理掉最早的几个
+	slices.SortFunc(pods, func(x, y corev1.Pod) bool {
+		if x.CreationTimestamp.Equal(&y.CreationTimestamp) {
+			return x.Name < y.Name
+		}
+		return x.CreationTimestamp.Before(&y.CreationTimestamp)
+	})
+
+	for i := 0; i < numToDelete; i++ {
+		if err = r.Client.Delete(ctx, &pods[i]); err != nil {
+			metrics.IncDeleteOldestHookFailures(bkapp)
+			return err
+		}
+	}
+	return nil
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态

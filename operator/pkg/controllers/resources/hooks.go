@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
@@ -130,13 +131,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      names.PreReleaseHook(bkapp),
 				Namespace: bkapp.Namespace,
-				Labels: map[string]string{
-					// 由于 Process 一开始没添加 ResourceTypeKey label, 通过命名空间过滤 Pod 会查询到 HookInstance 的 Pod
-					// 所以 HookInstance 暂时不添加 ModuleNameKey, 以区分 Process 创建的 pod 和 HookInstance 创建的 pod
-					paasv1alpha2.BkAppNameKey:    bkapp.GetName(),
-					paasv1alpha2.ResourceTypeKey: "hook",
-					paasv1alpha2.HookTypeKey:     string(paasv1alpha2.HookPreRelease),
-				},
+				Labels:    labels.Hook(bkapp, paasv1alpha2.HookPreRelease),
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
 						Group:   paasv1alpha2.GroupVersion.Group,

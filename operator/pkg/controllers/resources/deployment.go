@@ -19,7 +19,6 @@
 package resources
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -72,7 +71,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 	// Find the process spec object
 	proc, found := lo.Find(app.Spec.Processes, func(p paasv1alpha2.Process) bool { return p.Name == procName })
 	if !found {
-		return nil, fmt.Errorf("process %s not found", procName)
+		return nil, errors.Errorf("process %s not found", procName)
 	}
 
 	// Start to build the deployment resource and return

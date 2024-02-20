@@ -27,10 +27,10 @@ import cattr
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.models import Product
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.application.resources import ServiceSpec
 from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader, get_desc_env_variables
 from paasng.platform.declarative.deployment.svc_disc import get_services_as_env_variables
@@ -275,13 +275,13 @@ class TestSMartDescriptionHandler:
     @pytest.mark.parametrize(
         ("is_use_celery", "expected_services"),
         [
-            (True, [ServiceSpec(name="mysql"), ServiceSpec(name="rabbitmq")]),
-            (False, [ServiceSpec(name="mysql")]),
+            (True, [bk_app.BkAppAddon(name="mysql"), bk_app.BkAppAddon(name="rabbitmq")]),
+            (False, [bk_app.BkAppAddon(name="mysql")]),
         ],
     )
     def test_app_data_to_desc(self, random_name, app_desc, is_use_celery, expected_services):
         app_desc.update({"app_code": random_name, "app_name": random_name, "is_use_celery": is_use_celery})
-        assert SMartDescriptionHandler(app_desc).app_desc.default_module.services == expected_services
+        assert SMartDescriptionHandler(app_desc).app_desc.default_module.spec.addons == expected_services
 
     @pytest.mark.parametrize(
         ("libraries", "expected"), [([], []), ([dict(name="foo", version="bar")], [dict(name="foo", version="bar")])]

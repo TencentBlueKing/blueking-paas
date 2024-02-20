@@ -89,7 +89,7 @@ class SceneAPPInitializer:
                 repo_auth_info = self.engine_params.get("source_repo_auth_info")
                 for module_name, module_desc in desc_handler.app_desc.modules.items():
                     connector = get_repo_connector(repo_type, application.get_module(module_name))
-                    connector.bind(repo_url, source_dir=module_desc.source_dir, repo_auth_info=repo_auth_info)
+                    connector.bind(repo_url, source_dir=module_desc.sourceDir, repo_auth_info=repo_auth_info)
 
             # Step 5. 上传渲染完成的源码包到对象存储，生成下载链接给到用户
             source_init_result = self._gen_downloadable_app_template(application, source_dir)

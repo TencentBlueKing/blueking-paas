@@ -17,17 +17,17 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import dataclass
 from itertools import chain, product
-from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union, cast
 
 from django.core.files.base import ContentFile
 from django.utils.functional import Promise
 from django.utils.translation import gettext as _
 from pydantic import BaseModel, Field
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.constant import OpenMode
-from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.basic import AllowOmittedModel
@@ -88,24 +88,21 @@ class ServiceSpec(BaseModel):
             __pydantic_self__.display_name = __pydantic_self__.name
 
 
-# TODO: When update to python3.7, replace `dataclass` with `pydantic.BaseModel`
-@dataclass
-class DiffItem(Generic[M]):
+class DiffItem(BaseModel, Generic[M]):
     resource: M
     diff_type: DiffType
 
 
-@dataclass
-class ModuleDiffResult:
-    # TODO: When update to python3.7, replace `Dict` with `ServiceSpec`
-    services: List[DiffItem[Dict]]
+class ModuleDiffResult(BaseModel):
+    services: List[DiffItem[ServiceSpec]]
 
 
 class ModuleDesc(BaseModel):
+    name: str = Field(..., description="模块名")
     language: AppLanguage = Field(AppLanguage.PYTHON, description="模块开发语言")
-    is_default: bool = Field(False, description="是否为主模块?")
-    source_dir: str = Field("", description="源码目录")
-    services: List[ServiceSpec] = Field(default_factory=list)
+    isDefault: bool = Field(False, description="是否为主模块?")
+    sourceDir: str = Field("", description="源码目录")
+    spec: bk_app.BkAppSpec
 
 
 class ApplicationDesc(BaseModel):
@@ -123,14 +120,9 @@ class ApplicationDesc(BaseModel):
     instance_existed: bool = False
 
     @property
-    def services(self):
-        # [Deprecated] Replace with default_module.services or others
-        return self.default_module.services
-
-    @property
     def default_module(self):
         try:
-            return next(filter(lambda m: m.is_default, self.modules.values()))
+            return next(filter(lambda m: m.isDefault, self.modules.values()))
         except StopIteration:
             raise RuntimeError(_("当前应用未定义主模块"))
 
@@ -156,11 +148,11 @@ class ApplicationDescDiffDog:
                 logger.warning("Module<%s> of the application<%s> is removed.", module.name, self.application.code)
 
         # 生成未创建的模块的差异
-        for module_name, module_spec in self.desc.modules.items():
+        for module_name, module_desc in self.desc.modules.items():
             if module_name not in diffs:
                 diffs[module_name] = ModuleDiffResult(
                     services=self._diff_services(
-                        current_services=set(), expected_services={item.name for item in module_spec.services}
+                        current_services=set(), expected_services={item.name for item in module_desc.spec.addons}
                     )
                 )
         return diffs
@@ -176,7 +168,7 @@ class ApplicationDescDiffDog:
             raise ValueError(f"Module<{module.name}> not found!")
 
         current_services = {service.name for service in mixed_service_mgr.list_binded(module)}  # type: ignore
-        expected_services = {item.name for item in self.desc.modules[module.name].services}
+        expected_services = {item.name for item in self.desc.modules[module.name].spec.addons}
 
         return ModuleDiffResult(services=self._diff_services(current_services, expected_services))
 
@@ -187,7 +179,8 @@ class ApplicationDescDiffDog:
         :param expected_services: 期望绑定的增强服务名称集合
         :return:
         """
-        supported_services = list(mixed_service_mgr.list_by_region(self.application.region))  # type: ignore
+        supported_services = list(mixed_service_mgr.list_by_region(self.application.region))
+        supported_services = cast(List[ServiceObj], supported_services)
         not_modified_services = sorted(current_services & expected_services)
         added_services = sorted(expected_services - current_services)
         deleted_services = sorted(current_services - expected_services)
@@ -202,8 +195,7 @@ class ApplicationDescDiffDog:
 
         return [
             DiffItem(
-                # TODO: When update to python3.7, upgrade DiffItem to pydantic model and remove `.dict()`
-                resource=make_service_spec(service=service).dict(),
+                resource=make_service_spec(service=service),
                 diff_type=diff_type,
             )
             for service, diff_type in chain(

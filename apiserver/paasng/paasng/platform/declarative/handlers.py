@@ -29,7 +29,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
-from paasng.platform.declarative.application.validations import AppDescriptionSLZ
+from paasng.platform.declarative.application.validations.v2 import AppDescriptionSLZ
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.resources import DeploymentDesc

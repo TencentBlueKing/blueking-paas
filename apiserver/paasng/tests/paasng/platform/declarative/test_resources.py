@@ -22,12 +22,12 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
     ApplicationDescDiffDog,
     DiffItem,
     ModuleDiffResult,
-    ServiceSpec,
     mixed_service_mgr,
 )
 from paasng.platform.declarative.constants import DiffType
@@ -51,8 +51,8 @@ def diff_result(param) -> ModuleDiffResult:
     )
 
 
-def make_modules(services: List[ServiceSpec], module_name: str = "default"):
-    return {"modules": {module_name: {"is_default": True, "services": services}}}
+def make_modules(addons: List[bk_app.BkAppAddon], module_name: str = "default"):
+    return {"modules": {module_name: {"name": module_name, "isDefault": True, "spec": {"addons": addons}}}}
 
 
 class TestApplicationDescDiffDog:
@@ -61,22 +61,22 @@ class TestApplicationDescDiffDog:
         [
             (
                 (["a"], ["a"]),
-                [ServiceSpec(name="a")],
+                [bk_app.BkAppAddon(name="a")],
                 [[], ["a"], []],
             ),
             (
                 (["a"], ["c", "a"]),
-                [ServiceSpec(name="b"), ServiceSpec(name="c")],
+                [bk_app.BkAppAddon(name="b"), bk_app.BkAppAddon(name="c")],
                 [["a"], ["c"], ["b"]],
             ),
             (
                 (["b"], ["a"]),
-                [ServiceSpec(name="a"), ServiceSpec(name="b"), ServiceSpec(name="c")],
+                [bk_app.BkAppAddon(name="a"), bk_app.BkAppAddon(name="b"), bk_app.BkAppAddon(name="c")],
                 [[], ["a"], ["b", "c"]],
             ),
             (
                 (["a", "c"], ["b", "c"]),
-                [ServiceSpec(name="a"), ServiceSpec(name="d")],
+                [bk_app.BkAppAddon(name="a"), bk_app.BkAppAddon(name="d")],
                 [["b", "c"], [], ["a", "d"]],
             ),
         ],

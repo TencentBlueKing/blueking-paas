@@ -506,6 +506,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         source_origin = SourceOrigin(source_config["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
 
+        # Guide: check if a bk_plugin can be created
+        if params["is_plugin_app"] and not get_bk_plugin_config(params["region"]).allow_creation:
+            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
+
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config["source_init_template"]:

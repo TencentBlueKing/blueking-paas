@@ -27,6 +27,7 @@ from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
@@ -45,7 +46,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, post_create_application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.fields import AppNameField, AppRegionField
-from paasng.platform.declarative.application.resources import ApplicationDesc, MarketDesc, ModuleDesc, ServiceSpec
+from paasng.platform.declarative.application.resources import ApplicationDesc, MarketDesc, ModuleDesc
 from paasng.platform.declarative.application.serializers import AppDescriptionSLZ
 from paasng.platform.declarative.basic import remove_omitted
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -193,7 +194,7 @@ class AppDeclarativeController:
     def _sync_default_module(self, application: Application, modules_desc: Dict[str, ModuleDesc]):
         """Switch Default Module if changed."""
         for module_name, module_desc in modules_desc.items():
-            if module_desc.is_default:
+            if module_desc.isDefault:
                 new_default_module_name = module_name
                 break
         else:
@@ -279,16 +280,18 @@ class AppDeclarativeController:
         dependency_tree: Dict[str, List[str]] = {}
         for module_name, module_desc in desc.items():
             dependency_tree[module_name] = []
-            for service in module_desc.services:
-                if service.shared_from:
-                    dependency_tree[module_name].append(service.shared_from)
+            for service in module_desc.spec.addons:
+                if service.moduleRef:
+                    dependency_tree[module_name].append(service.moduleRef.moduleName)
 
         # NOTE: 由 AppDescriptionSLZ 校验 shared_from 的模块是否存在, 这里不再重复校验
         for module_name in flatten_dependency_tree(dependency_tree):
             module = application.get_module(module_name)
-            self._sync_module_services_fields(application, module, desc[module_name].services)
+            self._sync_module_services_fields(application, module, desc[module_name].spec.addons)
 
-    def _sync_module_services_fields(self, application: Application, module: Module, services: List[ServiceSpec]):
+    def _sync_module_services_fields(
+        self, application: Application, module: Module, services: List[bk_app.BkAppAddon]
+    ):
         """Sync services related field for single module."""
         for service in services:
             try:
@@ -297,13 +300,13 @@ class AppDeclarativeController:
                 logger.warning('Skip binding, service called "%s" not found', service.name)
                 continue
 
-            if service.shared_from:
+            if service.moduleRef:
                 manager = ServiceSharingManager(module)
                 if manager.get_shared_info(service=obj):
                     logger.info('Skip, service "%s" already created shared attachment', obj.name)
                     continue
 
-                ref_module = application.get_module(service.shared_from)
+                ref_module = application.get_module(service.moduleRef.moduleName)
                 manager.create(service=obj, ref_module=ref_module)
             else:
                 if mixed_service_mgr.module_is_bound_with(obj, module):
@@ -311,7 +314,8 @@ class AppDeclarativeController:
                     continue
 
                 logger.info('Bind service "%s" to Module "%s".', service.name, module)
-                mixed_service_mgr.bind_service(obj, module, specs=service.specs)
+                specs_dict = {spec.name: spec.value for spec in service.specs}
+                mixed_service_mgr.bind_service(obj, module, specs=specs_dict)
 
     def save_description(self, desc: ApplicationDesc, application: Application, is_creation: bool):
         """Save description to database
@@ -321,6 +325,7 @@ class AppDeclarativeController:
         ApplicationDescription.objects.create(
             application=application,
             owner=application.owner,
+            # TODO: 支持 cnative module desc 格式
             **AppDescriptionSLZ(desc).data,
             # TODO: basic info
             basic_info={},

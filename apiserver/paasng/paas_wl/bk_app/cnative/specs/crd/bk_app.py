@@ -196,11 +196,18 @@ class BkAppAddonSpec(BaseModel):
     value: str
 
 
+class BkAppAddonReference(BaseModel):
+    """A reference to an addon"""
+
+    moduleName: str
+
+
 class BkAppAddon(BaseModel):
     """Addon for BkApp"""
 
     name: str
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
+    moduleRef: Optional[BkAppAddonReference]
 
 
 @register

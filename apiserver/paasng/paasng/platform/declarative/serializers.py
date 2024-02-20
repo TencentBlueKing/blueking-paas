@@ -24,6 +24,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
@@ -32,7 +33,6 @@ from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
     DisplayOptions,
     MarketDesc,
-    ServiceSpec,
 )
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
@@ -188,13 +188,13 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
             market_desc.tag_id = attrs["tag"].id
 
         package_plan = attrs.get("package_plan")
-        services = [ServiceSpec(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
+        addons = [bk_app.BkAppAddon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
         processes = {"web": {"command": constants.WEB_PROCESS, "plan": package_plan}}
         if attrs["is_use_celery"]:
-            services.append(ServiceSpec(name="rabbitmq"))
+            addons.append(bk_app.BkAppAddon(name="rabbitmq"))
             processes["celery"] = {"command": constants.CELERY_PROCESS, "plan": package_plan}
         elif attrs["is_use_celery_with_gevent"]:
-            services.append(ServiceSpec(name="rabbitmq"))
+            addons.append(bk_app.BkAppAddon(name="rabbitmq"))
             processes["celery"] = {"command": constants.CELERY_PROCESS_WITH_GEVENT, "plan": package_plan}
 
         if attrs["is_use_celery_beat"]:
@@ -215,8 +215,11 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
             market=market_desc,
             modules={
                 "default": {
-                    "is_default": True,
-                    "services": services,
+                    "name": "default",
+                    "isDefault": True,
+                    "spec": {
+                        "addons": addons,
+                    },
                 }
             },
             plugins=plugins,

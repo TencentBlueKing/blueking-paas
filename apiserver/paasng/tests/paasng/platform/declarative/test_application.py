@@ -33,7 +33,7 @@ from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.controller import APP_CODE_FIELD, AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
-from paasng.platform.declarative.application.validations import AppDescriptionSLZ
+from paasng.platform.declarative.application.validations.v2 import AppDescriptionSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
 from tests.utils.auth import create_user

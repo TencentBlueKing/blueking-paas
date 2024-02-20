@@ -15,7 +15,7 @@ import (
 //
 // This predicate will skip all other events unless the pod is changing to healthy. (healthy is meaning that the Pod is successfully complete or is Ready)
 //   - With this predicate, any successful hook will wake up the bkapp reconciler.
-//   - Only the pod state is change to ready will be handled, other update events will be ignored by this predicate
+//   - Only the pod state is changing to healthy will be handled, other update events will be ignored by this predicate
 //     even the pod have already healthy.
 func NewHookSuccessPredicate() predicate.Predicate {
 	return &GenericHookPredicate{
@@ -35,7 +35,7 @@ func NewHookSuccessPredicate() predicate.Predicate {
 //
 // This predicate will skip all other events unless the pod is changing to unhealthy. (unhealthy is meaning that the Pod is restarting or is Failed)
 //   - With this predicate, any failed hook will wake up the bkapp reconciler.
-//   - Only the pod state is change to not-ready will be handled, other update events will be ignored by this predicate
+//   - Only the pod state is changing to unhealthy will be handled, other update events will be ignored by this predicate
 //     even the pod have already unhealthy.
 func NewHookFailedPredicate() predicate.Predicate {
 	return &GenericHookPredicate{

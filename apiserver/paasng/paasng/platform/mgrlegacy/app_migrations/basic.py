@@ -23,20 +23,24 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.bk_app.applications.models import WlApp
 from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
-from paasng.infras.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
+from paasng.infras.iam.helpers import add_role_members
 from paasng.infras.oauth2.models import OAuth2Client
+from paasng.platform.applications.cleaner import ApplicationCleaner
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_default_module
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.mgrlegacy.constants import AppMember
 from paasng.platform.mgrlegacy.models import MigrationProcess
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.helpers import get_image_labels_by_module
 from paasng.platform.modules.manager import ModuleInitializer
+from paasng.platform.modules.models import BuildConfig
 from paasng.utils.error_codes import error_codes
 
 from .base import BaseMigration
@@ -93,7 +97,7 @@ class BaseObjectMigration(BaseMigration):
         """Get application type"""
         if is_third_app:
             return ApplicationType.ENGINELESS_APP
-        return ApplicationType.DEFAULT
+        return ApplicationType.CLOUD_NATIVE
 
 
 class MainInfoMigration(BaseMigration):
@@ -144,14 +148,22 @@ class MainInfoMigration(BaseMigration):
         initializer = ModuleInitializer(module)
         initializer.create_engine_apps()
 
+        # 绑定运行时
+        config_obj = BuildConfig.objects.get_or_create_by_module(module)
+        config_obj.build_method = RuntimeType.BUILDPACK
+        config_obj.save(update_fields=["build_method"])
         if self.context.legacy_app_proxy.is_smart():
             # smart 应用按 PaaS3.0 一样的规则根据label筛选应用
             runtime_labels = get_image_labels_by_module(module)
         else:
-            # 普通应用，统一用 legacy 镜像
+            # 非 Smart，统一用 legacy 镜像
+            # TODO 需要验证确认云原生应用是否可以用 legacy 镜像部署
             runtime_labels = {"category": APP_CATEGORY.LEGACY_APP.value}
         # 绑定初始运行环境，老版本的镜像可能已经被隐藏，需要显示指定查询所有的镜像
         initializer.bind_runtime_by_labels(runtime_labels, contain_hidden=True)
+
+        # 初始化应用模型
+        initializer.initialize_app_model_resource()
 
     def migrate(self):
         # 第三方应用（非引擎应用）仅创建默认模块，不创建 engine 相关信息
@@ -186,9 +198,10 @@ class MainInfoMigration(BaseMigration):
         engine_app_ids = [item.hex for item in engine_app_ids]
         self.context.app.envs.all().delete()
         self.context.app.modules.all().delete()
+
         if engine_app_ids:
             EngineApp.objects.filter(id__in=engine_app_ids).delete()
+            WlApp.objects.filter(uuid__in=engine_app_ids).delete()
 
-        # rollback developers and administrators
-        usernames = [m["username"] for m in fetch_application_members(self.context.app.code)]
-        remove_user_all_roles(self.context.app.code, usernames)
+        # rollback app user permissions and delete user groups and grade manager info from the DB.
+        ApplicationCleaner(self.context.app).delete_iam_resources()

@@ -24,6 +24,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMap
 from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentVolumeClaimSource as PersistentVolumeClaimSourceSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentVolumeClaimSource
+from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -124,16 +125,19 @@ class TestVolumeSourceManager:
             source_name="",
         )
         source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
-        mount.upsert_source(source_data)
+        controller = init_source_controller(mount.source_type)
+        controller.upsert_model_by_mount(mount, data=source_data)
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_configmap(self, bk_stag_env, mount_configmap):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
-        assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=mount_configmap.source.name)
+        controller = init_source_controller(mount_configmap.source_type)
+        source = controller.get_model_by_mount(mount_configmap)
+        assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount_configmap)
         with pytest.raises(AppEntityNotFound):
-            configmap_kmodel.get(app=bk_stag_env.wl_app, name=mount_configmap.source.name)
+            configmap_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
 
     @pytest.fixture()
     def mount_pvc(self, bk_app, bk_module):
@@ -147,13 +151,16 @@ class TestVolumeSourceManager:
             region=bk_app.region,
             source_name="",
         )
-        mount.upsert_source()
+        controller = init_source_controller(mount.source_type)
+        controller.upsert_model_by_mount(mount)
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_pvc(self, bk_stag_env, mount_pvc):
         mounts.VolumeSourceManager(bk_stag_env).deploy()
-        assert pvc_kmodel.get(app=bk_stag_env.wl_app, name=mount_pvc.source.name)
+        controller = init_source_controller(mount_pvc.source_type)
+        source = controller.get_model_by_mount(mount_pvc)
+        assert pvc_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount_pvc)
         with pytest.raises(AppEntityNotFound):
-            pvc_kmodel.get(app=bk_stag_env.wl_app, name=mount_pvc.source.name)
+            pvc_kmodel.get(app=bk_stag_env.wl_app, name=source.name)

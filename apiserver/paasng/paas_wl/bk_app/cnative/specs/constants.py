@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 # Default resource limitations for each process
@@ -69,7 +70,7 @@ LOG_COLLECTOR_TYPE_ANNO_KEY = "bkapp.paas.bk.tencent.com/log-collector-type"
 CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
 
 # 默认的 pvc 配置
-DEFAULT_STORAGE_CLASS_NAME = "cfs"
+DEFAULT_STORAGE_CLASS_NAME = settings.DEFAULT_STORAGE_CLASS_NAME
 DEFAULT_STORAGE = "1Gi"
 
 
@@ -167,3 +168,9 @@ class MountEnvName(str, StructuredEnum):
 class VolumeSourceType(str, StructuredEnum):
     ConfigMap = EnumField("ConfigMap")
     PersistentVolumeClaim = EnumField("PersistentVolumeClaim")
+
+
+class STORAGE(str, StructuredEnum):
+    P_1G = EnumField("1Gi")
+    P_2G = EnumField("2Gi")
+    P_4G = EnumField("4Gi")

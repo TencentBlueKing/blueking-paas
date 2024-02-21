@@ -1298,3 +1298,11 @@ for key in dir(workloads_settings):
         raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
     locals()[key] = getattr(workloads_settings, key)
 # fmt: on
+
+
+# ---------------------------------------------
+#  挂载卷相关配置
+# ---------------------------------------------
+
+# pv 默认存储类
+DEFAULT_STORAGE_CLASS_NAME = settings.get("DEFAULT_STORAGE_CLASS_NAME", "cfs")

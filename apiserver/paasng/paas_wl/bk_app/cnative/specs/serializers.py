@@ -21,8 +21,9 @@ import logging
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.constants import STORAGE, MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
+from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
 
 from .constants import DeployStatus
 from .models import AppModelDeploy, AppModelRevision, ConfigMapSource, Mount, PersistentVolumeClaimSource
@@ -168,7 +169,7 @@ class UpsertMountSLZ(serializers.Serializer):
     # 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
     mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
-    source_name = serializers.CharField(allow_blank=True, required=False)
+    source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
     source_config_data = serializers.DictField(
         help_text=_(
             "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。"
@@ -178,6 +179,7 @@ class UpsertMountSLZ(serializers.Serializer):
         required=False,
         allow_null=True,
     )
+    storage = serializers.ChoiceField(choices=STORAGE.get_choices(), allow_blank=True, required=False)
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -236,9 +238,12 @@ class MountSLZ(serializers.ModelSerializer):
     def get_source_config_data(self, obj):
         if obj.source_type == VolumeSourceType.ConfigMap:
             try:
-                return obj.source.data
+                controller = init_source_controller(obj.source_type)
+                source = controller.get_model_by_mount(obj)
             except ValueError as e:
                 raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
+            else:
+                return source.data
         return None
 
 

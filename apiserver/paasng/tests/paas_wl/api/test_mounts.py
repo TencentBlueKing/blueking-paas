@@ -22,6 +22,7 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentVolumeClaimSource
+from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
 from paas_wl.bk_app.cnative.specs.serializers import MountSLZ
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -38,10 +39,10 @@ def mount_configmap(bk_app, bk_module):
         name="mount-configmap",
         source_type=VolumeSourceType.ConfigMap.value,
         region=bk_app.region,
-        source_name="",
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
-    mount.upsert_source(source_data)
+    controller = init_source_controller(mount.source_type)
+    controller.upsert_model_by_mount(mount, data=source_data)
     return mount
 
 
@@ -56,9 +57,9 @@ def mount_pvc(bk_app, bk_module):
         name="mount-pvc",
         source_type=VolumeSourceType.PersistentVolumeClaim.value,
         region=bk_app.region,
-        source_name="",
     )
-    mount.upsert_source()
+    controller = init_source_controller(mount.source_type)
+    controller.upsert_model_by_mount(mount)
     return mount
 
 
@@ -76,10 +77,10 @@ def mounts(bk_app, bk_module):
             name=f"mount-configmap-{i}",
             source_type=VolumeSourceType.ConfigMap.value,
             region=bk_app.region,
-            source_name="",
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
-        mount.upsert_source(source_data)
+        controller = init_source_controller(mount.source_type)
+        controller.upsert_model_by_mount(mount, data=source_data)
         mount_list.append(mount)
     return mount_list
 
@@ -125,9 +126,11 @@ class TestVolumeMountViewSet:
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-configmap-test").first()
+        controller = init_source_controller(mount.source_type)
+        source = controller.get_model_by_mount(mount)
         assert response.status_code == 201
         assert mount
-        assert mount.source.data == {"configmap_z": "configmap_z_data"}
+        assert source.data == {"configmap_z": "configmap_z_data"}
 
     def test_create_pvc(self, api_client, bk_app, bk_module):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
@@ -139,9 +142,11 @@ class TestVolumeMountViewSet:
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
+        controller = init_source_controller(mount.source_type)
+        source = controller.get_model_by_mount(mount)
         assert response.status_code == 201
         assert mount
-        assert mount.source.storage == "1Gi"
+        assert source.storage == "1Gi"
 
     def test_create_with_source_name(self, api_client, bk_app, bk_module):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
@@ -155,9 +160,7 @@ class TestVolumeMountViewSet:
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
         assert response.status_code == 201
-        assert mount
-        assert mount.source.name == "test-source-name"
-        assert mount.source.storage == "1Gi"
+        assert mount.source_config.persistentVolumeClaim.name == "test-source-name"
 
     @pytest.mark.parametrize(
         "request_body_error",
@@ -236,11 +239,12 @@ class TestVolumeMountViewSet:
 
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount_configmap.pk)
-
+        controller = init_source_controller(mount_updated.source_type)
+        source = controller.get_model_by_mount(mount_updated)
         assert response.status_code == 200
         assert mount_updated.name == mount_configmap.name
-        assert mount_updated.source.data == {"configmap_z": "configmap_z_data_updated"}
-        assert mount_updated.source.environment_name == "stag"
+        assert source.data == {"configmap_z": "configmap_z_data_updated"}
+        assert source.environment_name == "stag"
 
         body["name"] = "mount-configmap-test"
         response = api_client.put(url, body)
@@ -290,21 +294,24 @@ class TestVolumeMountViewSet:
 
 class TestMountSourceViewSet:
     @pytest.fixture(autouse=True)
-    def _mount_sources(self, bk_app):
+    def _mount_sources(self, bk_app, bk_module):
         ConfigMapSource.objects.create(
             application_id=bk_app.id,
+            module_id=bk_module.id,
             name="configmap-etcd",
             environment_name=MountEnvName.GLOBAL.value,
             data={"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"},
         )
         ConfigMapSource.objects.create(
             application_id=bk_app.id,
+            module_id=bk_module.id,
             name="configmap-redis",
             environment_name=MountEnvName.GLOBAL.value,
             data={"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"},
         )
         PersistentVolumeClaimSource.objects.create(
             application_id=bk_app.id,
+            module_id=bk_module.id,
             name="pvc",
             environment_name=MountEnvName.GLOBAL.value,
             storage_class_name="cfs",

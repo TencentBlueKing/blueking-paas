@@ -40,9 +40,9 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.cnative.specs.constants import (
     BKPAAS_DEPLOY_ID_ANNO_KEY,
+    DEFAULT_STORAGE,
     MountEnvName,
     ResQuotaPlan,
-    VolumeSourceType,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
@@ -53,13 +53,11 @@ from paas_wl.bk_app.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
     AppModelRevision,
-    ConfigMapSource,
     Mount,
-    PersistentVolumeClaimSource,
     to_error_string,
     update_app_resource,
 )
-from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
+from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager, init_source_controller
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
@@ -453,8 +451,12 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
-        # 创建或更新 Mount source
-        mount_instance.upsert_source(validated_data.get("source_config_data"))
+        if not validated_data.get("source_name"):
+            # 创建或更新 Mount source
+            data = validated_data.get("source_config_data", {})
+            storage = validated_data.get("storage", DEFAULT_STORAGE)
+            controller = init_source_controller(mount_instance.source_type)
+            controller.upsert_model_by_mount(mount_instance, data=data, storage=storage)
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -481,7 +483,9 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 创建或更新 Mount source
-        mount_instance.upsert_source(validated_data.get("source_config_data"))
+        data = validated_data.get("source_config_data", {})
+        controller = init_source_controller(mount_instance.source_type)
+        controller.upsert_model_by_mount(mount_instance, data=data)
 
         # 需要删除对应的 k8s volume 资源
         if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
@@ -507,7 +511,9 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         for env in module.get_envs():
             VolumeSourceManager(env).delete_source_config(mount_instance)
 
-        mount_instance.source.delete()
+        controller = init_source_controller(mount_instance.source_type)
+        source = controller.get_model_by_mount(mount_instance)
+        source.delete()
         mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -527,12 +533,9 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         environment_name = params.get("environment_name")
         source_type = params.get("source_type")
 
-        if source_type == VolumeSourceType.ConfigMap.value:
-            queryset = ConfigMapSource.objects.filter(application_id=app.id)
-        elif source_type == VolumeSourceType.PersistentVolumeClaim.value:
-            queryset = PersistentVolumeClaimSource.objects.filter(application_id=app.id)
-        else:
-            raise error_codes.LIST_VOLUME_MOUNT_SOURCES_FAILED.f(_("不支持的资源类型"))
+        controller = init_source_controller(source_type)
+        queryset = controller.list_model_by_app(application_id=app.id)
+
         if environment_name:
             queryset = queryset.filter(environment_name=environment_name)
 

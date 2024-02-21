@@ -39,8 +39,8 @@ type AppReloadEvent struct {
 
 // DevWatchServer 是 devcontainer 中常驻 WatchServer 的接口协议
 type DevWatchServer interface {
-	// ReadReloadEvents blocking read on AppReloadEvent
-	ReadReloadEvents() (AppReloadEvent, error)
+	// ReadReloadEvent blocking read on AppReloadEvent
+	ReadReloadEvent() (AppReloadEvent, error)
 	// Start starts the server
 	Start() error
 }

@@ -180,8 +180,8 @@ func (m DeployManager) generateProcfile(appDir string) error {
 	if procfile, err := appdesc.TransformToProcfile(path.Join(appDir, "app_desc.yaml")); err != nil {
 		return err
 	} else {
-		if wErr := os.WriteFile(path.Join(appDir, "Procfile"), []byte(procfile), 0o644); wErr != nil {
-			return wErr
+		if writeErr := os.WriteFile(path.Join(appDir, "Procfile"), []byte(procfile), 0o644); writeErr != nil {
+			return writeErr
 		}
 	}
 

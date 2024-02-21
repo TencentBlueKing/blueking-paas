@@ -40,8 +40,11 @@ type Process struct {
 	CommandPath string
 }
 
-// Run launches the given metaProcesses.
-func Run(mdProcesses []launch.Process) error {
+// metaProcesses is a list of launch.Process. meta prefix is inspired from lifecycle Metadata
+type metaProcesses []launch.Process
+
+// Run launches the given launch.Process list
+func Run(mdProcesses metaProcesses) error {
 	processes, err := symlinkProcessLauncher(mdProcesses)
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
@@ -58,7 +61,7 @@ func Run(mdProcesses []launch.Process) error {
 	return nil
 }
 
-// symlinkProcessLauncher creates symbolic links for the given metaProcesses.
+// symlinkProcessLauncher creates symbolic links for the given launch.Process list.
 //
 // It takes in a slice of launch.Process and returns a slice of Process and an error.
 //
@@ -66,7 +69,7 @@ func Run(mdProcesses []launch.Process) error {
 //
 //	web process will create symlink like "/cnb/process/web -> /cnb/lifecycle/launcher"
 //	worker process will create symlink like "/cnb/process/worker -> /cnb/lifecycle/launcher"
-func symlinkProcessLauncher(mdProcesses []launch.Process) ([]Process, error) {
+func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 	processes := []Process{}
 
 	if len(mdProcesses) == 0 {

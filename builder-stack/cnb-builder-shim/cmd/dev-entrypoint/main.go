@@ -47,35 +47,35 @@ func runDevContainerServer() {
 	}
 
 	go func() {
-		mgr, rErr := dc.NewHotReloadManager()
-		if rErr != nil {
-			logger.Error(rErr, "New HotReloadManager failed")
+		mgr, mgrErr := dc.NewHotReloadManager()
+		if mgrErr != nil {
+			logger.Error(err, "New HotReloadManager failed")
 			os.Exit(1)
 		}
 
 		for {
-			event, iErr := srv.ReadReloadEvents()
-			if iErr != nil {
-				logger.Error(iErr, "wait for reload event failed")
+			event, readErr := srv.ReadReloadEvent()
+			if readErr != nil {
+				logger.Error(err, "wait for reload event failed")
 				os.Exit(1)
 			}
 
-			if iErr = mgr.WriteStatus(event.ID, dc.ReloadProcessing); rErr != nil {
-				logger.Error(iErr, "HotReload WriteStatus failed")
+			if writeErr := mgr.WriteStatus(event.ID, dc.ReloadProcessing); err != nil {
+				logger.Error(writeErr, "HotReload WriteStatus failed")
 				os.Exit(1)
 			}
 
 			if event.Rebuild {
-				if iErr = mgr.Rebuild(event.ID); rErr != nil {
+				if innerErr := mgr.Rebuild(event.ID); err != nil {
 					mgr.WriteStatus(event.ID, dc.ReloadFailed)
-					logger.Error(iErr, "HotReload Rebuild failed")
+					logger.Error(innerErr, "HotReload Rebuild failed")
 					continue
 				}
 			}
 			if event.Relaunch {
-				if iErr = mgr.Relaunch(event.ID); rErr != nil {
+				if innerErr := mgr.Relaunch(event.ID); err != nil {
 					mgr.WriteStatus(event.ID, dc.ReloadFailed)
-					logger.Error(iErr, "HotReload Relaunch failed")
+					logger.Error(innerErr, "HotReload Relaunch failed")
 					continue
 				}
 			}

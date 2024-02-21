@@ -12,6 +12,8 @@ None.
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |
 | id             | List[string]   | Yes      | Comma-separated list of application IDs (bk_app_code) |
+| include_inactive_apps        | boolean   | No       | Whether to query inactive applications, the default value is False |
+| include_developers_info        | boolean   | No      | Whether to query developer info, the default is True. This option may extend API response time; disable to improve efficiency if not required. |
 
 ### Request Example
 

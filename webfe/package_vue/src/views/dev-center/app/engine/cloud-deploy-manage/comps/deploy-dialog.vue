@@ -800,6 +800,8 @@ export default {
 
     // 弹窗确认
     async handleConfirm() {
+      // 防止多次点击
+      this.deployAppDialog.disabled = true;
       try {
         if (!this.deploymentInfoBackUp.version_info) {
           this.deploymentInfoBackUp.version_info = {};

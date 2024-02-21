@@ -217,15 +217,6 @@
                 :name="option.text"
               />
             </bk-option-group>
-            <div
-              v-if="curAppModule.repo && curAppModule.repo.type === 'bk_svn'"
-              slot="extension"
-              style="cursor: pointer"
-              @click="handleCreateBranch"
-            >
-              <i class="bk-icon icon-plus-circle mr5" />
-              {{ $t('新建部署分支') }}
-            </div>
           </bk-select>
           <!-- 删除 -->
           <!-- <p

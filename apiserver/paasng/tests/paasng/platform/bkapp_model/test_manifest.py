@@ -33,6 +33,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     BkAppHooks,
     BkAppResource,
     BkAppSpec,
+    EnvOverlay,
     EnvVar,
     EnvVarOverlay,
     HostAlias,
@@ -466,3 +467,20 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
         assert "BAR" in var_names
         # 应用描述文件中申明了服务发现的话，也需要写入相关的环境变量
         assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" in var_names
+
+
+def test_builtin_env_has_high_priority(blank_resource, bk_stag_env, bk_deployment):
+    custom_login_url = generate_random_string()
+
+    blank_resource.spec.envOverlay = EnvOverlay()
+    blank_resource.spec.envOverlay.envVariables = [
+        EnvVarOverlay(name="BK_LOGIN_URL", value=custom_login_url, envName="stag")
+    ]
+
+    with mock_cluster_service():
+        apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment)
+        vars = {item.name: item.value for item in blank_resource.spec.configuration.env}
+        vars_overlay = {(v.name, v.envName): v.value for v in blank_resource.spec.envOverlay.envVariables}
+
+        assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
+        assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]

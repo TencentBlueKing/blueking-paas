@@ -23,6 +23,7 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.bk_app.applications.models import WlApp
 from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import add_role_members
@@ -193,6 +194,11 @@ class MainInfoMigration(BaseMigration):
 
         if engine_app_ids:
             EngineApp.objects.filter(id__in=engine_app_ids).delete()
+
+        # Rollback of app migration may cause WlApp to contain both regular and cloud-native app data;
+        # all should be deleted to avoid affecting the next migration.
+        engine_app_names = list(self.context.app.envs.values_list("engine_app__name", flat=True))
+        WlApp.objects.filter(name__in=engine_app_names).delete()
 
         # rollback app user permissions and delete user groups and grade manager info from the DB.
         ApplicationCleaner(self.context.app).delete_iam_resources()

@@ -27,7 +27,7 @@ from paasng.platform.declarative.deployment.svc_disc import (
     BkSaaSEnvVariableFactory,
     get_services_as_env_variables,
 )
-from paasng.platform.declarative.deployment.validations import DeploymentDescSLZ
+from paasng.platform.declarative.deployment.validations.v2 import DeploymentDescSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.declarative.serializers import validate_desc
@@ -179,7 +179,7 @@ class TestHookField:
         ],
     )
     def test_disable_hooks(self, bk_deployment, json_data, expected):
-        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, "echo 1;")
+        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1;")
         bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
         bk_deployment.save()
 

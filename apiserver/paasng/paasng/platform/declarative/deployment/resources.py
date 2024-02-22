@@ -21,6 +21,7 @@ from typing import Dict, List, Optional
 import cattr
 from attrs import define, field, validators
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
@@ -178,7 +179,7 @@ class DeploymentDesc:
     :param processes: 启动进程
     :param scripts: 部署钩子
     :param svc_discovery: 服务发现
-    :param monitor: SaaS 监控采集配置
+    :param bk_monitor: SaaS 监控采集配置
     """
 
     language: AppLanguage
@@ -188,6 +189,8 @@ class DeploymentDesc:
     scripts: Scripts = field(factory=Scripts)
     svc_discovery: SvcDiscovery = field(factory=SvcDiscovery)
     bk_monitor: Optional[BluekingMonitor] = None
+
+    spec: Optional[bk_app.BkAppSpec] = None
 
     def get_procfile(self) -> Dict[str, str]:
         return {key: process.command for key, process in self.processes.items()}

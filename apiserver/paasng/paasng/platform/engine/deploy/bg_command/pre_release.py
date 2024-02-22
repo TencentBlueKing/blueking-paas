@@ -63,7 +63,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
                 self.engine_app.env,
                 command_template=CommandTemplate(
                     build_id=str(self.deployment.build_id),
-                    command=hook.command,
+                    command=hook.get_proc_command(),
                     type=CommandType(hook.type),
                 ),
                 operator=str(self.deployment.operator),

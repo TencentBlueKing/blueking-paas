@@ -33,7 +33,7 @@ from paasng.platform.declarative.application.validations.v2 import AppDescriptio
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
-from paasng.platform.declarative.deployment.validations import DeploymentDescSLZ
+from paasng.platform.declarative.deployment.validations.v2 import DeploymentDescSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import SMartV1DescriptionSLZ, UniConfigSLZ, validate_desc
 from paasng.platform.engine.models.deployment import Deployment

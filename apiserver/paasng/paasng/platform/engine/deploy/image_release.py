@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-import cattr
 from celery import shared_task
 from django.utils.translation import gettext as _
 
@@ -29,13 +28,10 @@ from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.declarative.deployment.resources import Scripts
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
@@ -210,14 +206,6 @@ class ImageReleaseMgr(DeployStep):
         except Exception:
             self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
             logger.exception("Exception while processing app description file, skip.")
-
-        # complete scripts command because s-mart app utilizes the image which use entrypoint /runner/init to set run envs
-        description = DeploymentDescription.objects.get(deployment=self.deployment)
-        scripts = cattr.structure(description.scripts, Scripts)
-        if scripts.pre_release_hook:
-            scripts.pre_release_hook = f"{(' ').join(DEFAULT_SLUG_RUNNER_ENTRYPOINT)} {scripts.pre_release_hook}"
-            description.scripts = cattr.unstructure(scripts)
-            description.save(update_fields=["scripts"])
 
         # refresh_from_db 的目的是 self.deployment.get_deploy_hooks() 能够拿到更新后的 scripts
         self.deployment.refresh_from_db()

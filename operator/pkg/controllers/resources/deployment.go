@@ -19,7 +19,6 @@
 package resources
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -62,14 +61,17 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 
 	// Prepare data
 	envs := GetAppEnvs(app)
-	volMountMap := GetVolumeMountMap(app)
+	mounterMap, err := GetAllVolumeMounterMap(app)
+	if err != nil {
+		return nil, err
+	}
 	replicasGetter := NewReplicasGetter(app)
 	useCNB, _ := strconv.ParseBool(app.Annotations[paasv1alpha2.UseCNBAnnoKey])
 
 	// Find the process spec object
 	proc, found := lo.Find(app.Spec.Processes, func(p paasv1alpha2.Process) bool { return p.Name == procName })
 	if !found {
-		return nil, fmt.Errorf("process %s not found", procName)
+		return nil, errors.Errorf("process %s not found", procName)
 	}
 
 	// Start to build the deployment resource and return
@@ -94,7 +96,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 
 	// Build annotations
 	bkAppJson, err := getSerializedBkApp(app)
-	if err != err {
+	if err != nil {
 		return nil, errors.Wrapf(err, "serialize bkapp %s error", app.Name)
 	}
 	annotations := map[string]string{
@@ -141,12 +143,13 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 		},
 	}
 
-	for _, mount := range volMountMap {
-		err = mount.ApplyToDeployment(deployment, mount.Name, mount.MountPath)
+	for _, mounter := range mounterMap {
+		err = mounter.ApplyToDeployment(app, deployment)
 		if err != nil {
 			log.Error(err, "Failed to inject mounts info to process", proc.Name)
 		}
 	}
+
 	return deployment, nil
 }
 

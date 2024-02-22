@@ -68,6 +68,10 @@ class ImageReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        # 更新 deployment 的 bkapp_revision_id
+        bkapp_revision_id = self.create_bkapp_revision()
+        self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
+
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
 

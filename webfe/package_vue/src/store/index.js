@@ -83,11 +83,11 @@ const state = {
   applyUrl: '',
   envEventData: ['stag', 'prod'],
   errorDetail: {},
+  // 是否显示通知中心
+  isShowNotice: false,
 };
 
-const getters = {
-
-};
+const getters = {};
 
 const mutations = {
   updateUserFeature(state, data) {
@@ -126,9 +126,6 @@ const mutations = {
         ...appFeature,
       };
     }
-  },
-  updateCanCreateModule(state, flag) {
-    // state.canCreateModule = flag
   },
   updateAppLoading(state, data) {
     state.isAppLoading = data;
@@ -235,6 +232,9 @@ const mutations = {
       state.envEventData = [];
     }
   },
+  updataNoticeStatus(state, data) {
+    state.isShowNotice = data;
+  },
 };
 
 // 公共 actions
@@ -242,10 +242,9 @@ const actions = {
   /**
      * 获取用户功能开关详情
      */
-  getUserFeature({ commit, state }, config = {}) {
+  getUserFeature({ commit }, config = {}) {
     const url = `${BACKEND_URL}/api/accounts/feature_flags/`;
     return http.get(url, config).then((data) => {
-      console.log('updateUserFeature', data);
       commit('updateUserFeature', data);
     });
   },
@@ -253,10 +252,9 @@ const actions = {
   /**
      * 获取平台功能开关详情
      */
-  getPlatformFeature({ commit, state }, config = {}) {
+  getPlatformFeature({ commit }, config = {}) {
     const url = `${BACKEND_URL}/api/platform/feature_flags/`;
     return http.get(url, config).then((data) => {
-      console.log('updatePlatformFeature', data);
       commit('updatePlatformFeature', data);
     });
   },
@@ -264,7 +262,7 @@ const actions = {
   /**
      * 获取应用功能开关详情
      */
-  getAppFeature({ commit, state }, { appCode }, config = {}) {
+  getAppFeature({ commit }, { appCode }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/feature_flags/${appCode}/`;
     return http.get(url, config).then((data) => {
       commit('updateAppFeature', { appCode, data });
@@ -274,7 +272,7 @@ const actions = {
   /**
      * 取消应用收藏
      */
-  deleteAppMarked({ commit, state }, { appCode }, config = {}) {
+  deleteAppMarked({}, { appCode }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/accounts/marked_applications/${appCode}`;
     return http.delete(url, config);
   },
@@ -282,7 +280,7 @@ const actions = {
   /**
      * 应用收藏
      */
-  addAppMarked({ commit, state }, { appCode }, config = {}) {
+  addAppMarked({}, { appCode }) {
     const url = `${BACKEND_URL}/api/bkapps/accounts/marked_applications/`;
     return http.post(url, {
       application: appCode,
@@ -294,7 +292,7 @@ const actions = {
      *
      * @param {Number} appCode 应用code
      */
-  getAppInfo({ commit, state }, { appCode, moduleId }) {
+  getAppInfo({ commit }, { appCode, moduleId }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/`;
     commit('updateAppLoading', true);
     return http.get(url).then((response) => {
@@ -320,7 +318,7 @@ const actions = {
      *
      * @param {Object} params 参数配置
      */
-  getAppList({ commit, state }, { url }, config = {}) {
+  getAppList({}, { url }, config = {}) {
     return http.get(url, config);
   },
 
@@ -329,7 +327,7 @@ const actions = {
      *
      * @param {Object} params 参数，包括appCode, isMarked
      */
-  toggleAppMarked({ commit, dispatch, state }, { appCode, isMarked }, config = {}) {
+  toggleAppMarked({ dispatch }, { appCode, isMarked }) {
     if (isMarked) {
       return dispatch('deleteAppMarked', { appCode });
     }
@@ -339,7 +337,7 @@ const actions = {
   /**
      * 获取应用语言类型数量
      */
-  getAppsByLang({ commit, state }, config = {}) {
+  getAppsByLang({}, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=language&include_inactive=false`;
     return http.get(url, config);
   },
@@ -347,7 +345,7 @@ const actions = {
   /**
      * 获取应用版本类型数量
      */
-  getAppsByRegion({ commit, state }, config = {}) {
+  getAppsByRegion({}, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=region&include_inactive=false`;
     return http.get(url, config);
   },
@@ -356,7 +354,7 @@ const actions = {
      * 获取应用类型信息
      * @param {String} region 应用类型
      */
-  getAppRegion({ commit, state }, region) {
+  getAppRegion({}, region) {
     const url = `${BACKEND_URL}/api/regions/${region}/`;
     return http.get(url, {}, { fromCache: true });
   },
@@ -365,7 +363,7 @@ const actions = {
      * 根据不同的代码库获取git repos列表
      * @param {String} sourceControlType 源码仓库类型
      */
-  getRepoList({ commit, state }, { sourceControlType }, config = {}) {
+  getRepoList({}, { sourceControlType }, config = {}) {
     const url = `${BACKEND_URL}/api/sourcectl/${sourceControlType}/repos/`;
     return http.get(url, config);
   },
@@ -373,7 +371,7 @@ const actions = {
   /**
      * 获取版本日志
      */
-  getVersionLog({ commit, state }, config = {}) {
+  getVersionLog({}, config = {}) {
     const url = `${BACKEND_URL}/api/changelogs/`;
     return http.get(url, config);
   },
@@ -381,11 +379,10 @@ const actions = {
   /**
      * 切换语言
      */
-  switchLanguage({ commit, state }, { data }, config = {}) {
+  switchLanguage({}, { data }, config = {}) {
     const url = `${BACKEND_URL}/i18n/setlang/`;
     return http.post(url, data, config);
   },
-
 };
 
 export default new Vuex.Store({

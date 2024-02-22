@@ -39,7 +39,12 @@ from paasng.accessories.servicehub.exceptions import (
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceSetGroupByName
-from paasng.accessories.servicehub.remote.exceptions import RClientResponseError
+from paasng.accessories.servicehub.remote.manager import (
+    RemoteServiceInstanceMgr,
+    RemoteServiceMgr,
+    get_app_by_instance_name,
+)
+from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import ServiceObj, ServicePlansHelper, ServiceSpecificationHelper
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
@@ -50,7 +55,7 @@ from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application, ApplicationEnvironment, UserApplicationFilter
+from paasng.platform.applications.models import Application, UserApplicationFilter
 from paasng.platform.applications.protections import ProtectedRes, raise_if_protected, res_must_not_be_protected_perm
 from paasng.platform.applications.serializers import ApplicationMembersInfoSLZ
 from paasng.platform.engine.constants import AppEnvName
@@ -661,27 +666,14 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
         """查看 mysql 增强服务的数据库关联的应用信息
 
         APIGW 调用此接口,根据给定的 mysql 增强服务数据库名称(db_name)检索相关的应用信息。
-        遍历所有已关联的增强服务，并尝试匹配数据库名称。
-        注意:
-        此方法的性能可能较低，因为它需要对 remote mysql 增强服务的实例进行多次请求。
         """
-        services = mixed_service_mgr.get_mysql_services()
-        all_provisioned_rels = mixed_service_mgr.list_all_provisioned_rels(services)
-        db_name_key_map = {"mysql": "MYSQL_NAME", "gcs_mysql": "GCS_MYSQL_NAME"}
-        # WARNING: 该循环会不断的请求 remote mysql 服务的实例，性能较慢
-        for rel in all_provisioned_rels:
-            # remote service 可能无法获取实例
-            try:
-                service_instance = rel.get_instance()
-            except RClientResponseError:
+        store = get_remote_store()
+        service_mgr = RemoteServiceMgr(store)
+        services = service_mgr.get_mysql_services()
+        for service in services:
+            service_instance_mgr = RemoteServiceInstanceMgr(store, service)
+            app = get_app_by_instance_name(service_instance_mgr, db_name)
+            if app is None:
                 continue
-
-            service_name = rel.get_service().name
-            service_db_name = service_instance.credentials.get(db_name_key_map[service_name])
-            if service_db_name == db_name:
-                return Response(ApplicationMembersInfoSLZ(self._get_application(rel)).data)
+            return Response(ApplicationMembersInfoSLZ(app).data)
         return Response(status=status.HTTP_200_OK)
-
-    def _get_application(self, rel) -> Application:
-        env = ApplicationEnvironment.objects.get(engine_app=rel.db_obj.engine_app)
-        return env.application

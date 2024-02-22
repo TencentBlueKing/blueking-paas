@@ -227,6 +227,7 @@ class TestReleaseStages:
             "stage_name": "部署",
             "status": "pending",
             "fail_message": "",
+            "invoke_method": "deployAPI",
             "detail": {
                 "steps": [{"id": "step-1", "name": "步骤1", "status": "successful"}],
                 "finished": True,

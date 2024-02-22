@@ -1,7 +1,10 @@
 <template lang="html">
   <div
     class="bk-apps-wrapper mt30"
-    :style="{ 'min-height': `${minHeight}px` }"
+    :style="{
+      'min-height': `${minHeight}px`,
+      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 28 : 28}px`
+    }"
     @click="resetAction()"
   >
     <div
@@ -794,6 +797,9 @@ export default {
     enFormItemWidth() {
       return this.localLanguage === 'en' ? '120px' : '110px';
     },
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
+    },
   },
   watch: {
     filterKey(newVal, oldVal) {
@@ -1144,13 +1150,18 @@ export default {
     getParams(url) {
       if (!this.IncludeAllLanguages) {
         this.appFilter.languageList.forEach((item) => {
-          url += `&language=${item}`;
+          // 过滤无应用类型的应用
+          if (this.appNumInfo[item]) {
+            url += `&language=${item}`;
+          }
         });
       }
       // 应用版本
       if (!this.IncludeAllRegions) {
         this.appFilter.regionList.forEach((item) => {
-          url += `&region=${item}`;
+          if (this.appNumInfo[item]) {
+            url += `&region=${item}`;
+          }
         });
       }
       return url;

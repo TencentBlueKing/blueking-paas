@@ -38,6 +38,10 @@ class SvcInstanceDeleteError(BaseServicesException):
     """Error during deleting instance"""
 
 
+class SvcInstanceNotFound(BaseServicesException):
+    """service instance not found"""
+
+
 class SvcAttachmentDoesNotExist(BaseServicesException):
     """remote or local service attachment does not exist"""
 

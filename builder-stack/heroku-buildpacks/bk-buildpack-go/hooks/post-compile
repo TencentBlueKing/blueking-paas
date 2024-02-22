@@ -5,7 +5,7 @@ declare build
 export GOPATH="${GOPATH:-${HOME}/go}"
 
 # post-compile 钩子调用保证能够找到编译后文件
-env PATH="${GOPATH}/bin:${PATH}:${build}/bin" run_hook "post-compile" "${build}" "bin/post-compile"
+env PATH="${GOPATH}/bin:${PATH}:${build}/bin" ${buildpack}/hooks/run_hook "post-compile" "${build}" "bin/post-compile"
 
 # 将 GOPATH 的二进制复制到构建目录 go/bin 中
 mkdir -p "${GOPATH}/bin"

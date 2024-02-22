@@ -284,7 +284,7 @@ class TestModuleDeployConfigViewSet:
         [
             ([], {}, True),
             ([{"name": "web", "command": "python -m http.server"}], {"web": "python -m http.server"}, True),
-            ([{"name": "WEB", "command": "python -m http.server"}], {"web": "python -m http.server"}, True),
+            ([{"name": "WEB", "command": "python -m http.server"}], {}, False),
             ([{"name": "w-e-b", "command": "python -m http.server"}], {"w-e-b": "python -m http.server"}, True),
             ([{"name": "-w-e-b", "command": "python -m http.server"}], {}, False),
             ([{"name": "w" * 13, "command": "python -m http.server"}], {}, False),
@@ -345,7 +345,7 @@ class TestModuleDeletion:
         initialize_module(module)
 
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
-        with mock.patch("paasng.platform.modules.views.delete_module", side_effect=Exception):
+        with mock.patch("paasng.platform.modules.views.ModuleCleaner.clean", side_effect=Exception):
             response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 400
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()

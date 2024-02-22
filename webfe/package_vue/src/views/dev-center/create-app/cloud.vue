@@ -33,7 +33,7 @@
             <bk-input
               v-model="formData.code"
               :placeholder="isBkLesscode ? $t('由小写字母组成，长度小于 16 个字符') :
-                $t('由小写字母、数字、连字符（-）组成，首字母必须是字母，长度小于16个字符')"
+                $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               class="form-input-width"
             >
             </bk-input>
@@ -518,6 +518,7 @@
           <div class="mr20" v-if="curStep === 1">
             <bk-button
               theme="primary"
+              :disabled="!curExtendConfig.isAuth"
               @click="handleNext"
             >
               {{ $t('下一步') }}
@@ -674,7 +675,7 @@ export default {
           fetchMethod: this.generateFetchRepoListMethod('tc_git'),
           repoList: [],
           selectedRepoUrl: '',
-          authDocs: '',
+          authDocs: this.GLOBAL.DOC.TC_GIT_AUTH,
         },
         github: {
           isAuth: true,
@@ -728,15 +729,7 @@ export default {
           },
           {
             validator: (val) => {
-              const reg = this.isBkLesscode ? /^[a-z]+/ : /^[a-z][a-z0-9-]*$/;
-              return reg.test(val);
-            },
-            message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母')),
-            trigger: 'blur',
-          },
-          {
-            validator: (val) => {
-              const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{3,16}$/;
+              const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{2,16}$/;
               return reg.test(val);
             },
             message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')),
@@ -870,6 +863,9 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    curExtendConfig() {
+      return this.gitExtendConfig[this.sourceControlTypeItem];
     },
   },
   watch: {

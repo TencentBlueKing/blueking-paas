@@ -36,6 +36,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
     LEGACY_PROC_IMAGE_ANNO_KEY,
+    LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
     USE_CNB_ANNO_KEY,
@@ -68,6 +69,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConf
 from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
+from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -77,7 +79,7 @@ from paasng.platform.bkapp_model.models import (
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
-from paasng.platform.bkapp_model.utils import merge_env_vars
+from paasng.platform.bkapp_model.utils import merge_env_vars, override_env_vars_overlay
 from paasng.platform.engine.configurations.config_var import get_cnative_builtin_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
@@ -142,6 +144,7 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
                 MODULE_NAME_ANNO_KEY: module.name,
             }
         )
+
         # Set the annotation to inform operator what the image pull secret name is
         model_res.metadata.annotations[
             IMAGE_CREDENTIALS_REF_ANNO_KEY
@@ -469,6 +472,10 @@ def get_bkapp_resource_for_deploy(
     # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
     model_res.metadata.annotations[USE_CNB_ANNO_KEY] = "true" if use_cnb else "false"
 
+    # Set log collector type to inform operator do some special logic.
+    # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
+    model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
+
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
     apply_builtin_env_vars(model_res, env, deployment)
@@ -504,8 +511,18 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, dep
     :param env: The environment object.
     """
     env_vars = [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
+
+    environment = env.environment
+    builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
+
     for name, value in get_cnative_builtin_env_variables(env, deployment).items():
         env_vars.append(EnvVar(name=name, value=value))
+        builtin_env_vars_overlay.append(EnvVarOverlay(envName=environment, name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones
     model_res.spec.configuration.env = merge_env_vars(model_res.spec.configuration.env, env_vars)
+
+    if model_res.spec.envOverlay and model_res.spec.envOverlay.envVariables:
+        model_res.spec.envOverlay.envVariables = override_env_vars_overlay(
+            model_res.spec.envOverlay.envVariables, builtin_env_vars_overlay
+        )

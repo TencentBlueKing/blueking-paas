@@ -20,11 +20,11 @@ package resources
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"text/template"
 
 	"github.com/lithammer/dedent"
+	"github.com/pkg/errors"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -143,7 +143,7 @@ func init() {
         # content of access-control plugin ends`))
 
 	if err != nil {
-		panic(fmt.Errorf("failed to new access control template: %w", err))
+		panic(errors.Wrap(err, "failed to new access control template"))
 	}
 
 	paasAnalysisTempalte, err = template.New("pa").
@@ -156,7 +156,7 @@ func init() {
         # content of paas-analysis plugin ends`))
 
 	if err != nil {
-		panic(fmt.Errorf("failed to new paas-analysis template: %w", err))
+		panic(errors.Wrap(err, "failed to new paas-analysis template"))
 	}
 }
 

@@ -185,7 +185,7 @@ class CNativeCustomDomainManager:
     @transaction.atomic
     def update(self, instance: Domain, *, host: str, path_prefix: str, https_enabled: bool) -> Domain:
         """Update a custom domain"""
-        if check_domain_used_by_market(self.application, instance.name):
+        if check_domain_used_by_market(self.application, instance):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f("该域名已被绑定为主访问入口, 请解绑后再进行更新操作")
 
         # Update Domain instance
@@ -205,7 +205,7 @@ class CNativeCustomDomainManager:
     @transaction.atomic
     def delete(self, instance: Domain) -> None:
         """Delete a custom domain"""
-        if check_domain_used_by_market(self.application, instance.name):
+        if check_domain_used_by_market(self.application, instance):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("该域名已被绑定为主访问入口, 请解绑后再进行删除操作")
 
         # Delete the instance first so `deploy_networking` won't include it.

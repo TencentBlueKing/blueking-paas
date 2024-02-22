@@ -33,23 +33,23 @@ const state = {
   envList: [],
   processList: [],
   streamList: [],
-  fieldList: []
+  fieldList: [],
 };
 
 // getters
 const getters = {
-  chartData: state => state.chartData
+  chartData: state => state.chartData,
 };
 
 // mutations
 const mutations = {
-  updateChartData (state, data) {
+  updateChartData(state, data) {
     const chartOptions = JSON.parse(JSON.stringify(bartOptions));
     chartOptions.series = [{
       type: 'bar',
-      data: data.series
+      data: data.series,
     }];
-    const timestamps = data.timestamps.map(item => {
+    const timestamps = data.timestamps.map((item) => {
       // 时间处理
       item = moment.unix(item).format('YYYY/MM/DD hh:mm:ss');
       return item.substring(5);
@@ -63,34 +63,35 @@ const mutations = {
       borderRadius: 2,
       borderWidth: 1,
       padding: 5,
-      formatter: function (params, ticket, callback) {
+      // eslint-disable-next-line no-unused-vars
+      formatter(params, ticket, callback) {
         return `${params.value}次<br/>${params.name}`;
-      }
+      },
     };
     state.chartData = chartOptions;
   },
 
-  clearData (state, data) {
+  clearData(state) {
     state.envList = [];
     state.streamList = [];
     state.processList = [];
   },
 
   // TODO: 删除 updateFilterData/updateLogList/updateAccessLogList 等函数
-  updateFilterData (state, data) {
+  updateFilterData(state, data) {
     const filters = [];
     const fieldList = [];
-    data.forEach(item => {
+    data.forEach((item) => {
       const condition = {
         id: item.key,
         name: item.name,
         text: item.chinese_name || item.name,
-        list: []
+        list: [],
       };
-      item.options.forEach(option => {
+      item.options.forEach((option) => {
         condition.list.push({
           id: option[0],
-          text: option[0]
+          text: option[0],
         });
       });
       if (condition.name === 'environment') {
@@ -108,23 +109,25 @@ const mutations = {
     state.fieldList = fieldList;
   },
 
-  updateLogList (state, data) {
+  updateLogList(state, data) {
+    // eslint-disable-next-line no-prototype-builtins
     if (!data.hasOwnProperty('isToggled')) {
       data.isToggled = false;
     }
     state.logList = data;
   },
 
-  updateAccessLogList (state, data) {
+  updateAccessLogList(state, data) {
+    // eslint-disable-next-line no-prototype-builtins
     if (!data.hasOwnProperty('isToggled')) {
       data.isToggled = false;
     }
     state.accessLogList = data;
-  }
+  },
 };
 
 // actions
-function queryStringify (params) {
+function queryStringify(params) {
   const queryParams = [];
   for (const key in params) {
     if (params[key]) {
@@ -135,49 +138,57 @@ function queryStringify (params) {
   return queryString;
 }
 const actions = {
-  getChartData ({ commit, state }, { appCode, moduleId, params, filter }) {
+  getChartData({ commit }, { appCode, moduleId, params, filter }) {
     const queryString = queryStringify(params);
-    const logTypeChoices = {STRUCTURED: 'structured', STANDARD_OUTPUT: 'stdout', INGRESS: 'ingress'};
-    const logType = logTypeChoices[params['log_type']];
+    const logTypeChoices = { STRUCTURED: 'structured', STANDARD_OUTPUT: 'stdout', INGRESS: 'ingress' };
+    const logType = logTypeChoices[params.log_type];
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/${logType}/date_histogram/?${queryString}`;
 
-    return http.post(url, filter).then(res => {
+    return http.post(url, filter).then((res) => {
       commit('updateChartData', res);
       return res;
     });
   },
 
-  getFilterData ({ commit, state }, { appCode, moduleId, params }) {
+  getFilterData({}, { appCode, moduleId, params }) {
     const queryString = queryStringify(params);
-    const logTypeChoices = {STRUCTURED: 'structured', STANDARD_OUTPUT: 'stdout', INGRESS: 'ingress'};
-    const logType = logTypeChoices[params['log_type']];
+    const logTypeChoices = { STRUCTURED: 'structured', STANDARD_OUTPUT: 'stdout', INGRESS: 'ingress' };
+    const logType = logTypeChoices[params.log_type];
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/${logType}/fields_filters/?${queryString}`;
     return http.post(url);
   },
 
-  getLogList ({ commit, state }, { appCode, moduleId, params, page, pageSize, filter }) {
+  getLogList({ commit }, { appCode, moduleId, params, page, pageSize, filter }) {
     const queryString = queryStringify(params);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/structured/list/?page=${page}&page_size=${pageSize}&${queryString}`;
-    return http.post(url, filter).then(res => {
+    return http.post(url, filter).then((res) => {
       commit('updateLogList', res.logs);
       return res;
     });
   },
 
-  getAccessLogList ({ commit, state }, { appCode, moduleId, params, page, pageSize, filter }) {
+  getAccessLogList({ commit }, { appCode, moduleId, params, page, pageSize, filter }) {
     const queryString = queryStringify(params);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/ingress/list/?page=${page}&page_size=${pageSize}&${queryString}`;
-    return http.post(url, filter).then(res => {
+    return http.post(url, filter).then((res) => {
       commit('updateAccessLogList', res.logs);
       return res;
     });
   },
 
-  getStreamLogList ({ commit, state }, { appCode, moduleId, params, scrollId, filter }) {
+  getStreamLogList({}, { appCode, moduleId, params, filter }) {
     const queryString = queryStringify(params);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/stdout/list/?${queryString}`;
     return http.post(url, filter);
-  }
+  },
+
+  /**
+   * 获取清洗规则
+   */
+  getCleaningRules({}, { appCode, moduleId }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/config/builtin/json/`;
+    return http.get(url);
+  },
 };
 
 export default {
@@ -185,5 +196,5 @@ export default {
   state,
   getters,
   mutations,
-  actions
+  actions,
 };

@@ -565,7 +565,12 @@
             </bk-option>
           </bk-select>
         </bk-form-item>
-        <bk-form-item :label="$t('构建工具')">
+        <bk-form-item ext-cls="customize-form-item-dashed">
+          <div class="build-label">
+            <span class="text" v-bk-tooltips="$t('构建工具会逐个进行构建，请注意构建工具的选择顺序')">
+              {{ $t('构建工具') }}
+            </span>
+          </div>
           <bk-transfer
             ext-cls="tool-transfer-wrapper-cls"
             :key="runtimeDialogConf.image"
@@ -581,6 +586,7 @@
               slot-scope="data"
               class="transfer-source-item"
               :data-id="data.id"
+              v-bk-overflow-tips
             >
               {{ data.name }}
             </div>
@@ -589,16 +595,11 @@
               slot-scope="data"
               class="transfer-source-item"
               :data-id="data.id"
+              v-bk-overflow-tips
             >
               {{ data.name }}
             </div>
           </bk-transfer>
-          <p
-            class="mt10"
-            style="color: #ea3636; font-size: 12px; line-height: 1;"
-          >
-            {{ $t('构建工具会逐个进行构建，请注意构建工具的选择顺序') }}
-          </p>
         </bk-form-item>
       </bk-form>
     </bk-dialog>
@@ -1338,17 +1339,6 @@ export default {
           this.$paasMessage({
             theme: 'error',
             message: this.$t('请选择基础镜像！'),
-          });
-          this.$nextTick(() => {
-            this.isRuntimeUpdaing = false;
-          });
-          return false;
-        }
-        // 如果左边有列表，必须要选择一个
-        if (this.runtimeBuildpacks.length && !this.targetListData.length) {
-          this.$paasMessage({
-            theme: 'error',
-            message: this.$t('请选择构建工具！'),
           });
           this.$nextTick(() => {
             this.isRuntimeUpdaing = false;
@@ -2095,6 +2085,23 @@ export default {
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
+    }
+    .customize-form-item-dashed {
+      :deep(.bk-form-content) {
+        position: relative;
+      }
+      .build-label {
+        text-align: right;
+        width: 150px;
+        padding-right: 24px;
+        position: absolute;
+        left: -150px;
+        top: 0;
+        .text {
+          padding-bottom: 2px;
+          border-bottom: 1px dashed #666;
+        }
+      }
     }
 </style>
 

@@ -34,7 +34,6 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
-from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
@@ -57,13 +56,6 @@ class ItsmDetail:
 PluginCodeTemplateField = make_json_field("PluginCodeTemplateField", PluginCodeTemplate)
 StagesShortcutField = make_json_field("StagesShortcutField", List[PlainStageInfo])
 ItsmDetailField = make_json_field("ItsmDetailField", ItsmDetail)
-REVISION_POLICIES = {
-    "disallow_released_source_version": {"error": error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION, "filter": {}},
-    "disallow_releasing_source_version": {
-        "error": error_codes.CANNOT_RELEASE_RELEASING_SOURCE_VERSION,
-        "filter": {"status__in": constants.PluginReleaseStatus.running_status()},
-    },
-}
 
 
 def generate_plugin_logo_filename(instance: "PluginInstance", filename: str) -> str:
@@ -285,19 +277,6 @@ class PluginRelease(AuditedModel):
         self.status = constants.PluginReleaseStatus.PENDING
         self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
 
-    @classmethod
-    def enforce_release_policy(
-        cls, plugin: "PluginInstance", type: str, source_version_name: str, policy_name: str
-    ) -> None:
-        policy = REVISION_POLICIES.get(policy_name)
-        if policy:
-            source_version_exists = cls.objects.filter(
-                plugin=plugin, source_version_name=source_version_name, type=type, **policy["filter"]
-            ).exists()
-
-            if source_version_exists:
-                raise policy["error"]  # type: ignore[misc]
-
 
 class PluginReleaseStage(AuditedModel):
     """插件发布阶段"""
@@ -347,7 +326,7 @@ class PluginReleaseStage(AuditedModel):
 
 
 class PluginReleaseStrategy(AuditedModel):
-    """插件发布策略"""
+    """插件版本的发布策略"""
 
     release = models.ForeignKey(
         PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategy"
@@ -355,7 +334,24 @@ class PluginReleaseStrategy(AuditedModel):
     strategy = models.CharField(
         verbose_name="发布策略", max_length=32, choices=constants.PluginReleaseStrategy.get_choices()
     )
-    bkci_project = models.JSONField(verbose_name="蓝盾项目ID", blank=True, null=True)
+    bkci_project = models.JSONField(
+        verbose_name="蓝盾项目ID", blank=True, null=True, help_text="格式：['1111', '222222']"
+    )
+    # 项目内目前不消化 organization 的格式，先不单独建模
+    # [
+    #     {
+    #         "id": 1,
+    #         "type": "user",
+    #         "name": "admin",
+    #         "display_name": "admin"
+    #     },
+    #     {
+    #         "id": 3,
+    #         "type": "department",
+    #         "name": "xxxx部门",
+    #         "display_name": null
+    #     }
+    # ]
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
 
 

@@ -363,6 +363,12 @@ def find_stage_by_id(
     pd: "PluginDefinitionModel", release: "PluginRelease", identifier: str
 ) -> Optional[ReleaseStageDefinition]:
     release_stages = pd.get_release_stage_by_type(release.type)
+    return _find_release_stage_by_id(release_stages, identifier)
+
+
+def _find_release_stage_by_id(
+    release_stages: List[ReleaseStageDefinition], identifier: str
+) -> Optional[ReleaseStageDefinition]:
     for stage in release_stages:
         if stage.id == identifier:
             return stage

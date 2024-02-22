@@ -547,16 +547,6 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        release_definition = plugin.pd.get_release_revision_by_type(type)
-        # 插件是否有定义额外的版本发布规则
-        if release_definition.revisionPolicy:
-            PluginRelease.enforce_release_policy(
-                plugin=plugin,
-                type=type,
-                source_version_name=data["source_version_name"],
-                policy_name=release_definition.revisionPolicy,
-            )
-
         release_strategy = data.pop("release_strategy", None)
         release = PluginRelease.objects.create(
             plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data

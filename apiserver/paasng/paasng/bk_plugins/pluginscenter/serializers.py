@@ -29,6 +29,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.bk_plugins.pluginscenter.constants import (
     LogTimeChoices,
+    PluginReleaseStatus,
     PluginReleaseStrategy,
     PluginReleaseType,
     PluginReleaseVersionRule,
@@ -36,6 +37,7 @@ from paasng.bk_plugins.pluginscenter.constants import (
     SemverAutomaticType,
 )
 from paasng.bk_plugins.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
+from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
@@ -49,6 +51,14 @@ from paasng.bk_plugins.pluginscenter.models import (
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
+
+REVISION_POLICIES = {
+    "disallow_released_source_version": {"error": error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION, "filter": {}},
+    "disallow_releasing_source_version": {
+        "error": error_codes.CANNOT_RELEASE_RELEASING_SOURCE_VERSION,
+        "filter": {"status__in": PluginReleaseStatus.running_status()},
+    },
+}
 
 
 class PluginUniqueValidator:
@@ -384,7 +394,9 @@ class ReleaseStrategySLZ(serializers.Serializer):
     organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
 
 
-def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C901
+def make_release_validator(  # noqa: C901
+    plugin: PluginInstance, version_rule: PluginReleaseVersionRule, revision_policy: Optional[str]
+):
     """make a validator to validate ReleaseVersion object"""
 
     def validate_semver(version: str, previous_version_str: Optional[str], semver_type: SemverAutomaticType):
@@ -409,6 +421,17 @@ def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C90
             )
         return True
 
+    def validate_release_policy(plugin: PluginInstance, revision_policy: str, source_version_name: str):
+        """Plugin version release rules, e.g., cannot release already published versions."""
+        policy = REVISION_POLICIES.get(revision_policy)
+        if policy:
+            source_version_exists = PluginRelease.objects.filter(
+                plugin=plugin, source_version_name=source_version_name, type=type, **policy["filter"]
+            ).exists()
+
+            if source_version_exists:
+                raise policy["error"]  # type: ignore[misc]
+
     def validator(self, attrs: Dict):
         version = attrs["version"]
         if version_rule == PluginReleaseVersionRule.AUTOMATIC:
@@ -419,14 +442,20 @@ def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C90
         elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:  # noqa: SIM102
             if version != self.context["source_hash"]:
                 raise ValidationError(_("版本号必须与提交哈希一致"))
+        elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP:  # noqa: SIM102
+            if version.startswith(attrs["source_version_name"]):
+                raise ValidationError(_("版本号必须以代码分支开头"))
+
+        if revision_policy:
+            validate_release_policy(plugin, revision_policy, attrs["source_version_name"])
         return attrs
 
     return validator
 
 
-def make_create_release_version_slz_class(pd: PluginDefinition, release_type: str) -> Type[serializers.Serializer]:
+def make_create_release_version_slz_class(plugin: PluginInstance, release_type: str) -> Type[serializers.Serializer]:
     """Generate a Serializer for verifying the creation of "Prod Release" according to the PluginDefinition definition"""
-    release_definition = pd.get_release_revision_by_type(release_type)
+    release_definition = plugin.pd.get_release_revision_by_type(release_type)
     if release_definition.revisionPattern:
         source_version_field = serializers.RegexField(release_definition.revisionPattern, help_text="分支名/tag名")
     else:
@@ -454,7 +483,9 @@ def make_create_release_version_slz_class(pd: PluginDefinition, release_type: st
         {
             **fields,
             # implement `validate` method of serializers.Serializer
-            "validate": make_release_validator(PluginReleaseVersionRule(release_definition.versionNo)),
+            "validate": make_release_validator(
+                plugin, PluginReleaseVersionRule(release_definition.versionNo), release_definition.revisionPolicy
+            ),
         },
     )
 

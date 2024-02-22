@@ -20,6 +20,7 @@ from typing import Dict
 
 import cattr
 import pytest
+from blue_krill.web.std_error import APIError
 from django.conf import settings
 from django.utils.translation import gettext as _
 from rest_framework.exceptions import ErrorDetail
@@ -236,7 +237,8 @@ def test_validate_release_policy(plugin, release, data, revision_policy, is_vali
     if is_valid:
         slz.is_valid(raise_exception=True)
     else:
-        assert not slz.is_valid()
+        with pytest.raises(APIError):
+            slz.is_valid(raise_exception=True)
 
 
 @pytest.mark.parametrize(

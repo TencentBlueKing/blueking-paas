@@ -37,6 +37,7 @@ from paasng.bk_plugins.pluginscenter.constants import (
     SemverAutomaticType,
 )
 from paasng.bk_plugins.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
+from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
@@ -52,9 +53,9 @@ from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
 
 REVISION_POLICIES = {
-    "disallow_released_source_version": {"error_msg": "该代码分支/Tag 已经发布过，不能重复发布", "filter": {}},
+    "disallow_released_source_version": {"error": error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION, "filter": {}},
     "disallow_releasing_source_version": {
-        "error_msg": "该代码分支/Tag 正在发布，不能重复发布",
+        "error": error_codes.CANNOT_RELEASE_RELEASING_SOURCE_VERSION,
         "filter": {"status__in": PluginReleaseStatus.running_status()},
     },
 }
@@ -430,7 +431,7 @@ def make_release_validator(  # noqa: C901
                 plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
             ).exists()
             if source_version_exists:
-                raise ValidationError({"source_version_name": policy["error_msg"]})
+                raise policy["error"]  # type: ignore[misc]
         return True
 
     def validator(self, attrs: Dict):

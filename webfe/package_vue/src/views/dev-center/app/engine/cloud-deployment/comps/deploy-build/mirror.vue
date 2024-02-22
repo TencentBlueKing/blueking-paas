@@ -131,11 +131,17 @@
                   </bk-option>
                 </bk-select>
               </bk-form-item>
-              <bk-form-item :label="$t('构建工具')">
+              <bk-form-item ext-cls="customize-form-item-dashed">
+                <div class="build-label">
+                  <span class="text" v-bk-tooltips="$t('构建工具会逐个进行构建，请注意构建工具的选择顺序')">
+                    {{ $t('构建工具') }}
+                  </span>
+                </div>
                 <!-- 展示字段需调整 -->
                 <bk-transfer
                   :source-list="sourceToolList"
                   :target-list="targetToolList"
+                  :title="[$t('可选的构建工具'), $t('选中的构建工具 (按选择顺序排序)')]"
                   :display-key="'name'"
                   :setting-key="'id'"
                   :searchable="true"
@@ -147,6 +153,7 @@
                     slot-scope="data"
                     class="transfer-source-item"
                     :data-id="data.id"
+                    v-bk-overflow-tips
                   >
                     {{ data.name }}
                   </div>
@@ -155,6 +162,7 @@
                     slot-scope="data"
                     class="transfer-source-item"
                     :data-id="data.id"
+                    v-bk-overflow-tips
                   >
                     {{ data.name }}
                   </div>
@@ -807,5 +815,22 @@ export default {
   position: relative;
   top: 120px;
   text-align: center;
+}
+.customize-form-item-dashed {
+  :deep(.bk-form-content) {
+    position: relative;
+  }
+  .build-label {
+    text-align: right;
+    width: 150px;
+    padding-right: 24px;
+    position: absolute;
+    left: -150px;
+    top: 0;
+    .text {
+      padding-bottom: 2px;
+      border-bottom: 1px dashed #666;
+    }
+  }
 }
 </style>

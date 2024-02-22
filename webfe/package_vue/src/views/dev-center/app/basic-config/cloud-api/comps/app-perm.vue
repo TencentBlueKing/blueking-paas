@@ -655,7 +655,7 @@ export default {
         }
         return '--';
       }
-      return `${Math.ceil(payload.expires_in / (24 * 3600))}天`;
+      return `${Math.ceil(payload.expires_in / (24 * 3600))}${this.$t('天')}`;
     },
 
     async handlePageSearch() {

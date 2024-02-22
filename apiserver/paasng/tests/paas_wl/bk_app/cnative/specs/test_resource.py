@@ -18,8 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from typing import Dict
+from unittest import mock
 
 import pytest
+from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.cnative.specs.constants import (
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -28,7 +30,12 @@ from paas_wl.bk_app.cnative.specs.constants import (
     MResPhaseType,
 )
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
-from paas_wl.bk_app.cnative.specs.resource import MresConditionParser, deploy, get_mres_from_cluster
+from paas_wl.bk_app.cnative.specs.resource import (
+    MresConditionParser,
+    create_or_update_bkapp_with_retries,
+    deploy,
+    get_mres_from_cluster,
+)
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from tests.paas_wl.bk_app.cnative.specs.utils import create_condition, create_res_with_conds
@@ -139,3 +146,36 @@ class TestBkAppClusterOperator:
         with replace_cluster_service():
             ret = deploy(bk_stag_env, manifest)
         assert ret["spec"]["processes"][1]["name"] == "worker"
+
+    @pytest.mark.usefixtures("_with_stag_ns")
+    def test_create_or_update_bkapp_with_retries(self, bk_app, bk_stag_env, bk_stag_wl_app):
+        """测试下发 bkapp 资源时的重试逻辑"""
+        counter = 0
+
+        def create_or_update_side_effect(*args, **kwargs):
+            # 使用 nonlocal 关键字来访问外部的计数器变量
+            nonlocal counter
+            if counter == 0:
+                # 第一次调用，抛出 ApiException
+                counter += 1
+                e = ApiException(status=409)
+                e.body = '{"reason": "Conflict"}'
+                raise e
+            else:
+                return "success", False
+
+        manifest = mock.MagicMock()
+        metadata = mock.MagicMock()
+        manifest.__getitem__.side_effect = {
+            "apiVersion": "paas.bk.tencent.com/v1alpha2",
+            "kind": "BkApp",
+            "metadata": metadata,
+        }.get
+        with mock.patch(
+            "paas_wl.infras.resources.base.crd.BkApp.create_or_update", side_effect=create_or_update_side_effect
+        ) as mocked_create_or_update, replace_cluster_service():
+            client = get_client_by_app(bk_stag_wl_app)
+            create_or_update_bkapp_with_retries(client, bk_stag_env, manifest)
+
+        assert mocked_create_or_update.call_count == 2
+        assert metadata.pop.call_count == 1

@@ -62,6 +62,7 @@ class ErrorCodes:
     DELETE_CREDENTIALS_FAILED = ErrorCode(_("Failed to delete credentials"))
 
     # 集群组件相关
+    SWITCH_DEFAULT_CLUSTER_FAILED = ErrorCode(_("Failed to switch default cluster"))
     CLUSTER_COMPONENT_NOT_EXIST = ErrorCode(_("Cluster component not exist"))
 
 

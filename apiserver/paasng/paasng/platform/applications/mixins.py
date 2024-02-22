@@ -43,7 +43,7 @@ class ApplicationCodeInPathMixin:
         return application
 
     def get_application(self) -> Application:
-        """Return Application object accroding to current path kwargs.
+        """Return Application object according to current path kwargs.
 
         - required path vars: code or app_code
         """
@@ -54,16 +54,19 @@ class ApplicationCodeInPathMixin:
         return application
 
     def get_module_via_path(self) -> Module:
-        """Return Module object accroding to current path kwargs.
+        """Return Module object according to current path kwargs.
 
         - required path vars: module_name
         """
         application = self.get_application()
         module_name = self._get_param_from_kwargs(["module_name"])
-        return application.get_module(module_name)
+        try:
+            return application.get_module(module_name)
+        except Module.DoesNotExist:
+            raise Http404
 
     def get_env_via_path(self) -> ModuleEnvironment:
-        """Return ModuleEnvironment object accroding to current path kwargs.
+        """Return ModuleEnvironment object according to current path kwargs.
 
         - required path vars: module_name, environment
         """
@@ -71,7 +74,10 @@ class ApplicationCodeInPathMixin:
         module_name = self._get_param_from_kwargs(["module_name"])
         environment = self._get_param_from_kwargs(["environment"])
 
-        module = application.get_module(module_name)
+        try:
+            module = application.get_module(module_name)
+        except Module.DoesNotExist:
+            raise Http404
         try:
             return module.get_envs(environment=environment)
         except ModuleEnvironment.DoesNotExist:

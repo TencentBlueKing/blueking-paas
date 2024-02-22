@@ -22,7 +22,6 @@ from textwrap import dedent
 from unittest import mock
 
 import pytest
-from django.test import TestCase
 from django_dynamic_fixture import G
 from unipath import Path
 
@@ -37,16 +36,15 @@ logger = logging.getLogger(__name__)
 pytestmark = pytest.mark.django_db
 
 
-class TestTaggingLocalPath(TestCase):
-    def setUp(self):
-        pass
-
-    def test_tagging_python(self):
+class TestTaggingLocalPath:
+    @pytest.mark.parametrize("encoding", ["utf-8", "gbk"])
+    def test_tagging_python_using_different_encodings(self, encoding):
         repo_path = Path(tempfile.mkdtemp())
-        with open(repo_path.child("requirements.txt"), "w") as fp:
+        with open(repo_path.child("requirements.txt"), "w", encoding=encoding) as fp:
             fp.write(
                 dedent(
                     """\
+            # 中文非 ascii 字符
             Django==1.11.2
             blueapps==1.0.15
             gunicorn==19.6.0

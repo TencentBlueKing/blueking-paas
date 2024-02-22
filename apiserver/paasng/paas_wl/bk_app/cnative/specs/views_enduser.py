@@ -28,6 +28,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from kubernetes.dynamic.exceptions import ResourceNotFoundError, UnprocessibleEntityError
+from moby_distribution.registry.utils import parse_image
 from pydantic import ValidationError as PDValidationError
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -344,7 +345,9 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
 
         cfg = BuildConfig.objects.get_or_create_by_module(module)
         if cfg.image_repository:
-            repository = cfg.image_repository
+            # 如果用户填的是 dockerhub 的镜像仓库，则补齐 registry 的域名信息
+            parsed = parse_image(cfg.image_repository, default_registry="index.docker.io")
+            repository = f"{parsed.domain}/{parsed.name}"
             credential_name = cfg.image_credential_name
         else:
             # TODO: 数据迁移后删除以下代码

@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# 
+# A helper script that run a list of hook scripts in the given directory. It executes
+# the script files in sequence and ignores the non-existing files.
+# 
+# Example: 
+#
+#   # ... <name> <dicretory> <file1> <file2> ...
+#   ./hooks/run_hook "pre_compile" /app bin/pre-compile bin/pre_compile
 
 name=$1
 dir=$2

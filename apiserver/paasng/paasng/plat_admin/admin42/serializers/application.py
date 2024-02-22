@@ -23,6 +23,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
+from paasng.misc.monitoring.metrics.models import AppResourceUsageReport
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
@@ -109,3 +110,46 @@ class LegacyApplicationFilterSLZ(serializers.Serializer):
     include_downed_app = serializers.BooleanField(default=False, help_text="包括已下架应用")
 
     search_term = serializers.CharField(required=False, help_text="搜索关键字, 只搜索应用id")
+
+
+class AppResourceUsageReportListInputSLZ(serializers.Serializer):
+    """应用资源使用报告列表查询参数"""
+
+    search_term = serializers.CharField(required=False, help_text="搜索关键字")
+    order_by = serializers.CharField(help_text="排序字段", default="-mem_limits")
+
+
+class AppResourceUsageReportOutputSLZ(serializers.Serializer):
+    """应用资源使用报告"""
+
+    app_code = serializers.CharField(help_text="应用 Code")
+    app_name = serializers.CharField(help_text="应用名称")
+    mem_requests = serializers.SerializerMethodField(help_text="内存请求量")
+    mem_limits = serializers.SerializerMethodField(help_text="内存限制")
+    mem_usage_avg = serializers.SerializerMethodField(help_text="内存平均使用率")
+    cpu_requests = serializers.SerializerMethodField(help_text="CPU 请求量")
+    cpu_limits = serializers.SerializerMethodField(help_text="CPU 限制")
+    cpu_usage_avg = serializers.SerializerMethodField(help_text="CPU 平均使用率")
+    pv = serializers.IntegerField(help_text="PV")
+    uv = serializers.IntegerField(help_text="UV")
+    summary = serializers.JSONField(help_text="汇总")
+    operator = serializers.CharField(help_text="最近操作人")
+    collected_at = serializers.DateTimeField(help_text="报告采集时间")
+
+    def get_mem_requests(self, report: AppResourceUsageReport) -> str:
+        return f"{round(report.mem_requests / 1024, 2)} G"
+
+    def get_mem_limits(self, report: AppResourceUsageReport) -> str:
+        return f"{round(report.mem_limits / 1024, 2)} G"
+
+    def get_mem_usage_avg(self, report: AppResourceUsageReport) -> str:
+        return f"{round(report.mem_usage_avg * 100, 2)}%"
+
+    def get_cpu_requests(self, report: AppResourceUsageReport) -> str:
+        return f"{round(report.cpu_requests / 1000, 2)} 核"
+
+    def get_cpu_limits(self, report: AppResourceUsageReport) -> str:
+        return f"{round(report.cpu_limits / 1000, 2)} 核"
+
+    def get_cpu_usage_avg(self, report: AppResourceUsageReport) -> str:
+        return f"{round(report.cpu_usage_avg * 100, 2)}%"

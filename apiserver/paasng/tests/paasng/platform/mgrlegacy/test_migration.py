@@ -46,6 +46,7 @@ pytestmark = skip_if_legacy_not_configured()
 
 @pytest.mark.usefixtures("legacy_app_code")
 class BaseTestCaseForMigration(TestCase):
+    databases = ["default", "workloads"]
     MIGRATION_CLS = BaseMigration
     PRECONDITION_MIGRATION_CLS: List[Type] = []
 

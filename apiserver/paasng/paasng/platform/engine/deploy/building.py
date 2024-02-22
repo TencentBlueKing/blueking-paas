@@ -190,7 +190,6 @@ class BaseBuilder(DeployStep):
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
         module = self.module_environment.module
         application = module.application
-        # TODO: replace `get_bkapp_resource` with `get_bkapp_resource_for_deploy`
         bkapp = get_bkapp_resource(module=module)
 
         # Get current module resource object

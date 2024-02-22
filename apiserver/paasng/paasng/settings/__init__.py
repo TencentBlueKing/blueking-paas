@@ -137,6 +137,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.admin_cli",
     "paasng.misc.monitoring.monitor",
     "paasng.misc.monitoring.healthz",
+    "paasng.misc.monitoring.metrics",
     "paasng.misc.search",
     "paasng.accessories.smart_advisor",
     "paasng.platform.bk_lesscode",
@@ -159,7 +160,6 @@ INSTALLED_APPS = [
     # workloads apps
     "paas_wl.bk_app.applications",
     "paas_wl.infras.cluster",
-    "paas_wl.bk_app.monitoring.metrics",
     "paas_wl.workloads.networking.egress",
     "paas_wl.workloads.networking.ingress",
     "paas_wl.workloads.networking.entrance",
@@ -1128,7 +1128,7 @@ BK_DOC_APP_ID = settings.get("BK_DOC_APP_ID", "bk_docs_center")
 BK_DOCS_URL_PREFIX = settings.get("BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs")
 
 # 平台FAQ 地址
-PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS3.0/faq")
+PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide/faq")
 
 # 是否有人工客服
 SUPPORT_LIVE_AGENT = settings.get("SUPPORT_LIVE_AGENT", False)
@@ -1143,7 +1143,7 @@ COLORFUL_TERMINAL_OUTPUT = True
 # ------------------
 
 # S-Mart 镜像仓库的 Registry 的域名
-SMART_DOCKER_REGISTRY_HOST = settings.get("SMART_DOCKER_REGISTRY_ADDR", "registry.hub.docker.com")
+SMART_DOCKER_REGISTRY_HOST = settings.get("SMART_DOCKER_REGISTRY_ADDR", "index.docker.io")
 # S-Mart 镜像仓库的命名空间, 即在 Registry 中的项目名
 SMART_DOCKER_REGISTRY_NAMESPACE = settings.get("SMART_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号
@@ -1161,7 +1161,7 @@ BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 # App 应用镜像仓库配置
 # ------------------
 # App 镜像仓库的 Registry 的域名
-APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "registry.hub.docker.com")
+APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "index.docker.io")
 # App 镜像仓库的命名空间, 即在 Registry 中的项目名
 APP_DOCKER_REGISTRY_NAMESPACE = settings.get("APP_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号

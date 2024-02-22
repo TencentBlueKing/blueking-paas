@@ -219,7 +219,8 @@
               <bk-popover
                 theme="light"
                 ext-cls="more-operations"
-                placement="bottom">
+                placement="bottom"
+                :tippy-options="{ 'hideOnClick': false }">
                 <i class="paasng-icon paasng-ellipsis more"></i>
                 <div slot="content" style="white-space: normal;">
                   <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>

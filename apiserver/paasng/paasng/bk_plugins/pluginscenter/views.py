@@ -687,11 +687,18 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 constants.SemverAutomaticType.MINOR: str(current_version_no.bump_minor()),
                 constants.SemverAutomaticType.PATCH: str(current_version_no.bump_patch()),
             }
-
-        # 插件可定义：新建版本时是否能选择已经发布过的分支
-        released_source_versions = set(
-            PluginRelease.objects.filter(plugin=plugin).values_list("source_version_name", flat=True)
-        )
+        released_source_versions = releasing_source_versions = set()
+        # 插件可定义：新建版本时是否能选择已经发布过的分支、正在发布的分支
+        if release_definition.revisionPolicy == "disallow_released_source_version":
+            released_source_versions = set(
+                PluginRelease.objects.filter(plugin=plugin, type=type).values_list("source_version_name", flat=True)
+            )
+        elif release_definition.revisionPolicy == "disallow_releasing_source_version":
+            releasing_source_versions = set(
+                PluginRelease.objects.filter(
+                    plugin=plugin, status__in=constants.PluginReleaseStatus.running_status(), type=type
+                ).values_list("source_version_name", flat=True)
+            )
 
         return Response(
             {
@@ -702,9 +709,8 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 "extra_fields": cattr.unstructure(release_definition.extraFields),
                 "source_versions": cattr.unstructure(versions),
                 "revision_policy": release_definition.revisionPolicy,
-                # TODO 兼容字段，前端修改完后去掉该字段
-                "allow_duplicate_source_version": release_definition.allowDuplicateSourVersion,
                 "released_source_versions": released_source_versions,
+                "releasing_source_versions": releasing_source_versions,
                 "semver_choices": semver_choices,
                 "current_release": serializers.PlainPluginReleaseVersionSLZ(current_release).data
                 if current_release

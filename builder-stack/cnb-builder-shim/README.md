@@ -87,3 +87,74 @@ docker run --rm \
 
 - 修改 `REQUIRED_BUILDPACKS` 来指定需要用到的 buildpacks
 - 命令利用了 mount 将源码包 `/tmp/source.tgz` 挂载到了容器中并读取
+
+
+## DevContainer 的开发说明
+基于 cnb-builder 框架，项目内提供了一种支持源码 hot-reload 的 devcontainer 方案。
+
+### 1. 构建镜像
+
+执行以下命令构建新镜像：
+
+    make heroku-dev
+
+其将使用默认的“云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest`，你也可以传递环境变量修改该默认名：
+
+
+    BUILDER_IMAGE_NAME="my-builder-heroku-bionic" BUILDER_IMAGE_TAG="my-tag" DEV_IMAGE_NAME="bk-dev-heroku-bionic" DEV_IMAGE_TAG="latest" make heroku-dev
+
+- `DEV_IMAGE_NAME`: 目标开发镜像名
+- `DEV_IMAGE_TAG`: 目标开发镜像 tag
+
+### 2. 启动镜像
+首先，通过环境变量设置一些关键参数。参数设置可选，仅当容器中默认的地址无效时，进行设置：
+```
+export PIP_INDEX_HOST="有效配置"
+export PIP_INDEX_URL="有效配置"
+export PIP_EXTRA_INDEX_URL="有效配置"
+export BUILDPACK_S3_BASE_URL="有效配置"
+```
+
+执行命令, 启动开发容器
+```
+docker run -d --net=host \
+    -e REQUIRED_BUILDPACKS="tgz bk-buildpack-apt ... v2;tgz bk-buildpack-python ... v213" \
+    -e PIP_INDEX_HOST=$PIP_INDEX_HOST \
+    -e PIP_INDEX_URL=$PIP_INDEX_URL \
+    -e PIP_EXTRA_INDEX_URL=$PIP_EXTRA_INDEX_URL \
+    -e BUILDPACK_S3_BASE_URL=$BUILDPACK_S3_BASE_URL \
+    bk-dev-heroku-bionic:latest
+```
+
+### 3. 通过 http 请求完成源码的 hot-reload 
+#### 3.1 请求源码部署
+
+请求命令
+```
+# devcontainer_ip 替换成容器实际可访问的主机 IP
+curl --location 'http://{devcontainer_ip}:8000/deploys' \
+--header 'Authorization: Bearer xxx' \
+--form 'file=@"django-helloworld.zip"'
+```
+结果示例
+```
+{
+    "deployID": "aaf79f28271e47bebf8448b63bddd04f"
+}
+```
+
+#### 3.2 获取部署结果
+
+请求命令
+```
+# devcontainer_ip 替换成容器实际可访问的主机 IP
+# deployID 是上一步请求部署时返回的 deployID
+curl --location 'http://{devcontainer_ip}:8000/deploys/{deployID}/results?log=true' \
+--header 'Authorization: Bearer xxx'
+```
+结果示例
+```
+{
+    "log":"0 info  | 15:26:08.952363 | Starting builder...           \n0 info  | 15:26:08.952393 | --> Detecting Buildpacks...   \n..."
+    "status": "Success"
+```

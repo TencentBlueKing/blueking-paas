@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
@@ -230,22 +230,17 @@ class BaseBuilder(DeployStep):
             ).format(unbound_service_names=unbound_service_names)
             self.stream.write_message(Style.Warning(message))
 
-    def async_start_build_process(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def async_start_build_process(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         """Start a new build process and check the status periodically"""
         build_process_id = self.launch_build_processes(
             source_tar_path,
-            procfile,
             bkapp_revision_id,
         )
         self.state_mgr.update(build_process_id=build_process_id)
         params = {"build_process_id": build_process_id, "deployment_id": self.deployment.id}
         BuildProcessPoller.start(params, BuildProcessResultHandler)
 
-    def launch_build_processes(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def launch_build_processes(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         raise NotImplementedError
 
 
@@ -294,13 +289,10 @@ class ApplicationBuilder(BaseBuilder):
         with self.procedure("启动应用构建任务"):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
-                procfile={p.name: p.command for p in processes.values()},
                 bkapp_revision_id=bkapp_revision_id,
             )
 
-    def launch_build_processes(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def launch_build_processes(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         """Start a new build process[using Buildpack], this will start a celery task in the background without
         blocking current process.
         """
@@ -337,7 +329,6 @@ class ApplicationBuilder(BaseBuilder):
             build_process.uuid,
             stream_channel_id=str(self.deployment.id),
             metadata={
-                "procfile": procfile,
                 "extra_envs": extra_envs,
                 # TODO: 不传递 image_repository
                 "image_repository": app_image_repository,
@@ -401,13 +392,10 @@ class DockerBuilder(BaseBuilder):
         with self.procedure("启动应用构建任务"):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
-                procfile={p.name: p.command for p in processes.values()},
                 bkapp_revision_id=bkapp_revision_id,
             )
 
-    def launch_build_processes(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def launch_build_processes(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         """Start a new build process[using Dockerfile], this will start a celery task in the background without
         blocking current process.
         """
@@ -440,7 +428,6 @@ class DockerBuilder(BaseBuilder):
             build_process.uuid,
             stream_channel_id=str(self.deployment.id),
             metadata={
-                "procfile": procfile,
                 "extra_envs": extra_envs or {},
                 # TODO: 不传递 image_repository
                 "image_repository": app_image_repository,

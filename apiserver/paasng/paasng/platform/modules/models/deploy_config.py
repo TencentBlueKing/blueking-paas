@@ -32,7 +32,7 @@ from paasng.utils.models import UuidAuditedModel, make_legacy_json_field
 @define
 class Hook:
     type: DeployHookType
-    command: Union[str, List]
+    command: Union[str, List[str]]
     enabled: bool = True
     args: Optional[List[str]] = None
 
@@ -92,6 +92,8 @@ class HookList(List[Hook]):
 HookListField = make_legacy_json_field("HookListField", HookList)
 cattr.register_structure_hook(HookList, HookList.__cattrs_structure__)
 cattr.register_unstructure_hook(HookList, HookList.__cattrs_unstructure__)
+cattr.register_structure_hook(Union[str, List[str]], lambda items, cl: items)  # type: ignore
+cattr.register_unstructure_hook(Union[str, List[str]], lambda value: value)  # type: ignore
 
 
 # TODO: Replace this models with ModuleProcessSpec && ModuleDeployHook

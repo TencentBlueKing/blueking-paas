@@ -80,6 +80,7 @@ class Build(UuidAuditedModel):
     revision = models.CharField(max_length=128, null=True, help_text="unique version, such as sha256")
 
     # Metadata
+    # deprecated: `procfile` will be remove in next version, just use Release.procfile
     procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
     env_variables = JSONField(default=dict, blank=True)
     bkapp_revision_id = models.IntegerField(help_text="与本次构建关联的 BkApp Revision id", null=True)

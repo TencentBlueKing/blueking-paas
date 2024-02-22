@@ -6,7 +6,6 @@
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
-      :loading="deployAppDialog.isLoading"
       :auto-close="false"
       @after-leave="handleAfterLeave"
     >
@@ -19,14 +18,17 @@
 
       <template #footer>
         <div class="dialog-footer-wrapper">
-          <bk-button
-            :theme="'primary'"
-            :disabled="deployAppDialog.disabled || deploybuttonDisabled"
-            @click="handleConfirmValidate"
-            class="mr10"
-          >
-            {{ `${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}` }}
-          </bk-button>
+          <span v-bk-tooltips="{ content: $t('部署前置条件检查中'), disabled: deployButtonTipsDisable }">
+            <bk-button
+              :theme="'primary'"
+              :loading="deployAppDialog.isLoading"
+              :disabled="deployAppDialog.disabled || deploybuttonDisabled"
+              @click="handleConfirmValidate"
+              class="mr10"
+            >
+              {{ `${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}` }}
+            </bk-button>
+          </span>
           <bk-button :theme="'default'" @click="handleCancel">
             {{ $t('取消') }}
           </bk-button>
@@ -555,6 +557,14 @@ export default {
       }
       return false;
     },
+
+    // 部署按钮提示禁用
+    deployButtonTipsDisable() {
+      if (this.deployAppDialog.disabled || this.deploybuttonDisabled) {
+        return false;
+      }
+      return true;
+    },
   },
   watch: {
     show: {
@@ -850,7 +860,6 @@ export default {
           data: params,
         });
         this.deployAppDialog.visiable = false;
-        this.deployAppDialog.isLoading = false; // 成功之后关闭弹窗打开侧栏
         this.deploymentId = res.deployment_id;
         this.handleAfterLeave(); // 关闭弹窗
         this.isShowSideslider = true; // 打开侧边栏

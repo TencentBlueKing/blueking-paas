@@ -150,7 +150,7 @@ class AppModelDeployQuerySet(models.QuerySet):
 
 
 class AppModelDeploy(TimestampedModel):
-    """Cloud-native App's deployments
+    """This model stores the cloud-native app's deployment histories.
 
     TODO: Add wl_app field so we can operate this model using wl_app directly
     instead of the combination of (application_id, module_id, environment_name).

@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class AppModelRevisionSerializer(serializers.ModelSerializer):
-    """Serializer for representing detailed AppModelDeploy object"""
+    """Serializer for representing detailed AppModelRevision object"""
 
     class Meta:
         model = AppModelRevision

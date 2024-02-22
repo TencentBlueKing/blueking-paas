@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import re
 from typing import Dict, Optional, Type
 
+from django.utils.translation import gettext as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import UniqueTogetherValidator
@@ -50,7 +51,7 @@ class DomainEditableMixin(serializers.Serializer):
         re.compile(r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?$"),
         max_length=253,
         required=True,
-        error_messages={"invalid": "域名格式错误"},
+        error_messages={"invalid": _("域名格式错误")},
         source="name",
         help_text="域名",
     )
@@ -61,7 +62,7 @@ class DomainEditableMixin(serializers.Serializer):
             UniqueTogetherValidator(
                 queryset=Domain.objects.all(),
                 fields=("domain_name", "path_prefix"),
-                message="该域名与路径组合已被其他应用或模块使用",
+                message=_("该域名与路径组合已被其他应用或模块使用"),
             ),
         ]
 

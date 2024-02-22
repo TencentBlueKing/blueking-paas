@@ -12,6 +12,8 @@
 | 参数名称 | 参数类型 | 是否必填 | 参数说明 |
 | -------- | -------- | -------- | -------- |
 | id       | List[string] | 是   | 使用逗号分隔的应用 ID(bk_app_code) 列表 |
+| include_inactive_apps        | boolean   | 否      | 是否查询已下架应用，默认值为 False |
+| include_developers_info        | boolean   | 否      | 是否查询开发者信息，默认值为 True。此选项会延长接口响应时间，若非必需建议关闭以提升效率 |
 
 ### 请求示例
 

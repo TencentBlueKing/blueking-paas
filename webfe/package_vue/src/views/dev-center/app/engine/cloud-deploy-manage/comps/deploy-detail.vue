@@ -138,32 +138,27 @@
         <bk-table-column label="" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
             <div
-              class="instance-item-cls cell-container"
+              class="instance-item-cls cell-container operation-column"
               :class="row.isExpand ? 'expand' : 'close'"
               v-for="instance in row.instances"
               :key="instance.process_name"
               @mouseenter="handleMouseEnter(instance.display_name)"
               @mouseleave="rowDisplayName = ''"
             >
-              <div
-              >
-                <div v-show="rowDisplayName === instance.display_name">
-                  <bk-button
-                    class="mr10"
-                    :text="true"
-                    title="primary"
-                    @click="showInstanceLog(instance)">
-                    {{$t('查看日志')}}
-                  </bk-button>
-                  <bk-button
-                    :text="true"
-                    title="primary"
-                    v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
-                    @click="showInstanceConsole(instance, row)">
-                    {{$t('访问控制台')}}
-                  </bk-button>
-                </div>
-              </div>
+              <bk-button
+                class="mr10"
+                :text="true"
+                title="primary"
+                @click="showInstanceLog(instance)">
+                {{$t('查看日志')}}
+              </bk-button>
+              <bk-button
+                :text="true"
+                title="primary"
+                v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
+                @click="showInstanceConsole(instance, row)">
+                {{$t('访问控制台')}}
+              </bk-button>
             </div>
           </template>
         </bk-table-column>
@@ -224,7 +219,8 @@
               <bk-popover
                 theme="light"
                 ext-cls="more-operations"
-                placement="bottom">
+                placement="bottom"
+                :tippy-options="{ 'hideOnClick': false }">
                 <i class="paasng-icon paasng-ellipsis more"></i>
                 <div slot="content" style="white-space: normal;">
                   <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
@@ -1634,17 +1630,21 @@ export default {
           transform: translate(-50%, -50%);
         }
 
+        .operation-column {
+          justify-content: end;
+          padding-right: 12px;
+        }
+
         .instance-item-cls  {
           border-bottom: 1px solid #dfe0e5;
           transition: .25s ease;
 
           .content {
             position: absolute;
-            width: 50%;
+            width: calc(50% + 5px);
             left: 65%;
             top: 50%;
-            padding-left: 5px;
-            transform: translate(-50%, -50%);
+            transform: translate(calc(-50% + 7px), -50%);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1780,6 +1780,7 @@ export default {
     height: 13px;
     border-radius: 50%;
     margin-right: 8px;
+    flex-shrink: 0;
 
     &.Failed {
       background: #EA3636;

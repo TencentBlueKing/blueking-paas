@@ -22,7 +22,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, Iterator, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, cast
 
 import arrow
 from django.db.models import QuerySet
@@ -57,9 +57,10 @@ from paasng.accessories.servicehub.services import (
     ServiceSpecificationHelper,
 )
 from paasng.accessories.services.models import ServiceCategory
+from paasng.core.region.models import get_all_regions
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
@@ -610,18 +611,6 @@ class RemoteServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
-    def list_all_provisioned_rels(
-        self, services: Optional[List[ServiceObj]] = None
-    ) -> Iterable[RemoteEngineAppInstanceRel]:
-        """Return all provisioned remote service instances"""
-        qs = RemoteServiceEngineAppAttachment.objects.exclude(service_instance_id__isnull=True)
-        if services:
-            qs = qs.filter(service_id__in=[service.uuid for service in services])
-        for attachment in qs:
-            if not ModuleEnvironment.objects.filter(engine_app=attachment.engine_app).exists():
-                continue
-            yield self.transform_rel_db_obj(attachment)
-
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         try:
             return RemoteServiceEngineAppAttachment.objects.get(
@@ -665,6 +654,22 @@ class RemoteServiceMgr(BaseServiceMgr):
             ).exists():
                 env_list.append(env.environment)
         return env_list
+
+    def get_mysql_services(self) -> List[RemoteServiceObj]:
+        """Get all remote mysql services"""
+        service_objects = []
+        seen_uuids = set()
+        for region in get_all_regions():
+            for service_name in ["gcs_mysql", "mysql"]:
+                try:
+                    svc = self.find_by_name(name=service_name, region=region)
+                except exceptions.ServiceObjNotFound:
+                    continue
+                if svc.uuid in seen_uuids:
+                    continue
+                seen_uuids.add(svc.uuid)
+                service_objects.append(svc)
+        return service_objects
 
 
 class RemotePlanMgr(BasePlanMgr):
@@ -773,3 +778,36 @@ class RemoteServiceBinder:
         else:
             # 已创建的实例不允许修改
             raise exceptions.CanNotModifyPlan(f"service {self.service.name} already provided")
+
+
+class RemoteServiceInstanceMgr:
+    """Remote REST service instance manager"""
+
+    def __init__(self, store: RemoteServiceStore, service: RemoteServiceObj):
+        self.store = store
+        self.service_mgr = RemoteServiceMgr(self.store)
+        self.service = service
+
+    def get_instance_by_name(self, instance_name: str) -> str:
+        service_id = str(self.service.uuid)
+        client = self._get_remote_client(service_id=service_id)
+        try:
+            instance_data = client.retrieve_instance_by_name(service_id, instance_name)
+        except Exception as e:
+            raise exceptions.SvcInstanceNotFound(f"service instance {instance_name} not found") from e
+        return instance_data.get("uuid")
+
+    def _get_remote_client(self, service_id: str):
+        remote_config = self.store.get_source_config(service_id)
+        remote_client = RemoteServiceClient(remote_config)
+        return remote_client
+
+
+def get_app_by_instance_name(mgr: RemoteServiceInstanceMgr, instance_name: str) -> Optional[Application]:
+    try:
+        service_instance_id = mgr.get_instance_by_name(instance_name=instance_name)
+    except exceptions.SvcInstanceNotFound:
+        return None
+    attachment = RemoteServiceEngineAppAttachment.objects.get(service_instance_id=service_instance_id)
+    env = ApplicationEnvironment.objects.get(engine_app=attachment.engine_app)
+    return env.application

@@ -63,6 +63,7 @@ class TestGetProcesses:
             (ValueError("trivial value error"), "Can not read Procfile file from repository"),
             ("invalid#$type: gunicorn\n", "pattern"),
             ("{}: gunicorn\n".format("p" * 13), "longer than"),
+            ("WEB: gunicorn wsgi -w 4\nworker: celery", "pattern"),
         ],
     )
     def test_invalid_procfile_cases(self, file_content, error_pattern, bk_module_full, bk_deployment_full):
@@ -83,7 +84,7 @@ class TestGetProcesses:
     def test_valid_procfile_cases(self, bk_module_full, bk_deployment_full):
         def fake_read_file(key, version):
             if "Procfile" in key:
-                return "WEB: gunicorn wsgi -w 4\nworker: celery"
+                return "web: gunicorn wsgi -w 4\nworker: celery"
             raise DoesNotExistsOnServer
 
         with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
@@ -257,7 +258,7 @@ class TestGetProcesses:
 
         def fake_read_file(key, version):
             if "Procfile" in key:
-                return "WEB: gunicorn wsgi -w 4\nworker: celery"
+                return "web: gunicorn wsgi -w 4\nworker: celery"
             raise DoesNotExistsOnServer
 
         with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:

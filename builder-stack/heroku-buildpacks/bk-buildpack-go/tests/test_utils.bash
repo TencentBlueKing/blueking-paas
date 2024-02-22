@@ -5,14 +5,13 @@ setup_env() {
     CACHE_ROOT=$(mktemp -d -t cache-XXXXXXXX)
     ENV_ROOT=$(mktemp -d -t env-XXXXXXXX)
     BIN_ROOT=$(mktemp -d -t bin-XXXXXXXX)
-    BUILD_PACK=$(realpath buildpack)
+    buildpack=$(realpath buildpack)
     PATH="${PATH}:${BIN_ROOT}"
     
-    buildpack=${BUILD_PACK}
     build=${BUILD_ROOT}
     env_dir=${ENV_ROOT}
     
-    export BUILD_ROOT CACHE_ROOT ENV_ROOT BIN_ROOT BUILD_PACK buildpack build env_dir
+    export BUILD_ROOT CACHE_ROOT ENV_ROOT BIN_ROOT buildpack build env_dir
     
     create_fake_run_hook
     cd "${BUILD_ROOT}" || exit 1
@@ -21,7 +20,7 @@ setup_env() {
 teardown_env() {
     rm -rf "${BUILD_ROOT}" "${CACHE_ROOT}" "${ENV_ROOT}"
     
-    unset BUILD_ROOT CACHE_ROOT ENV_ROOT BUILD_PACK buildpack build env_dir
+    unset BUILD_ROOT CACHE_ROOT ENV_ROOT buildpack build env_dir
 }
 
 bash_with_trap() {
@@ -31,9 +30,9 @@ bash_with_trap() {
 }
 
 create_fake_run_hook() {
-    cat > "${BIN_ROOT}/run_hook" << EOF
+    cat > "${buildpack}/hooks/run_hook" << EOF
 #!/usr/bin/env bash
 cd "\$2" && bash "./\$3" > ".hook-\$1" 2>".hook-error-\$1" || true
 EOF
-    chmod +x "${BIN_ROOT}/run_hook"
+    chmod +x "${buildpack}/hooks/run_hook"
 }

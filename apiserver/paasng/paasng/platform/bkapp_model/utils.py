@@ -20,7 +20,7 @@ from typing import List, Optional, Tuple
 
 from blue_krill.data_types.enum import StructuredEnum
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.configurations.image import generate_image_repository
 from paasng.platform.engine.constants import RuntimeType
@@ -34,6 +34,18 @@ class MergeStrategy(str, StructuredEnum):
 
     OVERRIDE = "Override"
     IGNORE = "Ignore"
+
+
+def override_env_vars_overlay(x: List[EnvVarOverlay], y: List[EnvVarOverlay]):
+    """Use env variable in y to override x, if y have the same (name, envName)"""
+    merged = copy.deepcopy(x)
+    y_vars = {(var.name, var.envName): var.value for var in y}
+    for var in merged:
+        if (var.name, var.envName) in y_vars:
+            value = y_vars.pop((var.name, var.envName))
+            var.value = value
+
+    return merged
 
 
 def merge_env_vars(x: List[EnvVar], y: List[EnvVar], strategy: MergeStrategy = MergeStrategy.OVERRIDE):

@@ -16,9 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import os
+
 from django.conf import settings
 
 from paasng.core.region.states import RegionType
+
+BKPAAS_BUILD_VERSION = os.getenv("BKPAAS_BUILD_VERSION", "unset")
 
 
 def admin_config(request):
@@ -26,4 +30,5 @@ def admin_config(request):
         "USER_SELECTOR_LIST_API": getattr(settings, "USER_SELECTOR_LIST_API", "").replace("http://", "//"),
         "BKPAAS_URL": settings.BKPAAS_URL,
         "REGION_CHOICES": dict(RegionType.get_choices()),
+        "BKPAAS_BUILD_VERSION": BKPAAS_BUILD_VERSION,
     }

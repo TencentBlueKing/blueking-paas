@@ -41,6 +41,7 @@ var collectorGroup = []prometheus.Collector{
 	AddFinalizerFailures,
 	GetBkappFailures,
 	BkappReconcileDuration,
+	DeleteOldestHookFailures,
 }
 
 func init() {

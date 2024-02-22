@@ -69,7 +69,7 @@ class AppUniqueValidator(UniqueValidator):
 
     def get_message(self, value) -> str:
         """Get user-friendly error message"""
-        return _("{} 为 {} 的应用已存在").format(self.field_label, value)
+        return _("{} 为 {} 的应用已存在").format(_(self.field_label), value)
 
 
 class AppNameUniqueValidator(AppUniqueValidator):

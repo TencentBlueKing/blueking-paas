@@ -30,4 +30,5 @@ const (
 	MetricLabelNamespaceName = "namespaceName"
 	MetricLabelDeployID      = "deployID"
 	MetricLabelDeployName    = "deployName"
+	MetricLabelHookPodName   = "hookPodName"
 )

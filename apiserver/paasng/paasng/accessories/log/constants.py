@@ -51,5 +51,5 @@ class LogType(str, StructuredEnum):
 class LogCollectorType(str, StructuredEnum):
     """日志采集器类型"""
 
-    BK_LOG = EnumField("BK_LOG", label="蓝鲸日志平台")
-    ELK = EnumField("ELK", label="ELK")
+    BK_LOG = EnumField("BK_LOG", label="蓝鲸日志平台采集器")
+    ELK = EnumField("ELK", label="平台内置的 ELK 采集器")

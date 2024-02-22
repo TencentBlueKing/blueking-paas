@@ -19,8 +19,7 @@
 package resources
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -238,7 +237,7 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	// Standard: read the "ResQuotaPlan" field from process
 	procObj := r.bkapp.Spec.FindProcess(name)
 	if procObj == nil {
-		return result, fmt.Errorf("process %s not found", name)
+		return result, errors.Errorf("process %s not found", name)
 	}
 	return r.fromQuotaPlan(procObj.ResQuotaPlan), nil
 }

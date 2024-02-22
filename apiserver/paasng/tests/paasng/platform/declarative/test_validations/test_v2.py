@@ -15,7 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Callable, Dict, Optional
+from typing import Dict
 
 import pytest
 
@@ -25,6 +25,7 @@ from paasng.platform.declarative.application.resources import ApplicationDesc, g
 from paasng.platform.declarative.application.validations.v2 import AppDescriptionSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
+from tests.paasng.platform.declarative.utils import AppDescV2Builder as builder  # noqa: N813
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -44,35 +45,20 @@ def get_app_description(app_json: Dict) -> ApplicationDesc:
     return desc
 
 
-def make_app_desc(
-    random_name: str,
-    region: Optional[str] = None,
-    *applys: Callable,
-) -> Dict[str, Any]:
-    """Make description data for testing"""
-    result: Dict[str, Any] = {
-        "region": region,
-        "bk_app_code": random_name,
-        "bk_app_name": random_name,
-        "modules": {random_name: {"is_default": True, "language": "python"}},
-    }
-    for apply in applys:
-        apply(result)
-    return result
-
-
 class TestValidations:
     """A test suite about v2 validations"""
 
     def test_normal(self):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=10)}"
-        app_json = make_app_desc(bk_app_code)
+        module_name = f"ut{generate_random_string(length=10)}"
+        app_json = builder.make_app_desc(bk_app_code, builder.with_module(module_name, is_default=True))
         get_app_description(app_json)
 
     def test_invalid_name_length(self):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=20)}"
-        app_json = make_app_desc(bk_app_code)
+        module_name = f"ut{generate_random_string(length=10)}"
+        app_json = builder.make_app_desc(bk_app_code, builder.with_module(module_name, is_default=True))
         with pytest.raises(DescriptionValidationError, match=r"bk_app_code: .*?20"):
             get_app_description(app_json)

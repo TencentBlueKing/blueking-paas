@@ -21,6 +21,7 @@ from typing import Dict, List
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
 from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
@@ -79,10 +80,21 @@ class MarketSLZ(serializers.Serializer):
         return MarketDesc(**attrs)
 
 
+class ModuleSpecField(serializers.DictField):
+    def to_internal_value(self, data):
+        attrs = super().to_internal_value(data)
+        return bk_app.BkAppSpec(**attrs)
+
+    def to_representation(self, value):
+        if isinstance(value, bk_app.BkAppSpec):
+            return value.dict(exclude_none=True, exclude_unset=True)
+        return super().to_representation(value)
+
+
 class ModuleDescriptionSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="模块名称", required=True)
     isDefault = serializers.BooleanField(default=False, help_text="是否为主模块")
-    spec = serializers.DictField(required=True)
+    spec = ModuleSpecField(required=True)
 
     def to_internal_value(self, data) -> ModuleDesc:
         attrs = super().to_internal_value(data)

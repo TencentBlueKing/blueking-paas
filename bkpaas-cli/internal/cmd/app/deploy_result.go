@@ -43,6 +43,8 @@ func NewCmdDeployResult() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			return errors.New("the feature is currently unavailable")
+
 			result, err := getDeployResult(appCode, appModule, appEnv)
 			if err != nil {
 				return errors.Wrapf(err, "failed to get application %s deploy result", appCode)

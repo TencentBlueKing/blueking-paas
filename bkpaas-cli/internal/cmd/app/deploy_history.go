@@ -43,6 +43,8 @@ func NewCmdDeployHistory() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			return errors.New("the feature is currently unavailable")
+
 			history, err := listDeployHistory(appCode, appModule, appEnv)
 			if err != nil {
 				return errors.Wrapf(err, "Failed to list application %s deploy history", appCode)

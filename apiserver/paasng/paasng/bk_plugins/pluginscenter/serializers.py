@@ -37,7 +37,6 @@ from paasng.bk_plugins.pluginscenter.constants import (
     SemverAutomaticType,
 )
 from paasng.bk_plugins.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
-from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
@@ -53,9 +52,9 @@ from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
 
 REVISION_POLICIES = {
-    "disallow_released_source_version": {"error": error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION, "filter": {}},
+    "disallow_released_source_version": {"error_msg": "该代码分支/Tag 已经发布过，不能重复发布", "filter": {}},
     "disallow_releasing_source_version": {
-        "error": error_codes.CANNOT_RELEASE_RELEASING_SOURCE_VERSION,
+        "error_msg": "该代码分支/Tag 正在发布，不能重复发布",
         "filter": {"status__in": PluginReleaseStatus.running_status()},
     },
 }
@@ -395,7 +394,7 @@ class ReleaseStrategySLZ(serializers.Serializer):
 
 
 def make_release_validator(  # noqa: C901
-    plugin: PluginInstance, version_rule: PluginReleaseVersionRule, revision_policy: Optional[str]
+    plugin: PluginInstance, version_rule: PluginReleaseVersionRule, release_type: str, revision_policy: Optional[str]
 ):
     """make a validator to validate ReleaseVersion object"""
 
@@ -421,16 +420,18 @@ def make_release_validator(  # noqa: C901
             )
         return True
 
-    def validate_release_policy(plugin: PluginInstance, revision_policy: str, source_version_name: str):
+    def validate_release_policy(
+        plugin: PluginInstance, release_type: str, revision_policy: str, source_version_name: str
+    ):
         """Plugin version release rules, e.g., cannot release already published versions."""
         policy = REVISION_POLICIES.get(revision_policy)
         if policy:
             source_version_exists = PluginRelease.objects.filter(
-                plugin=plugin, source_version_name=source_version_name, type=type, **policy["filter"]
+                plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
             ).exists()
-
             if source_version_exists:
-                raise policy["error"]  # type: ignore[misc]
+                raise ValidationError({"source_version_name": policy["error_msg"]})
+        return True
 
     def validator(self, attrs: Dict):
         version = attrs["version"]
@@ -447,7 +448,7 @@ def make_release_validator(  # noqa: C901
                 raise ValidationError(_("版本号必须以代码分支开头"))
 
         if revision_policy:
-            validate_release_policy(plugin, revision_policy, attrs["source_version_name"])
+            validate_release_policy(plugin, release_type, revision_policy, attrs["source_version_name"])
         return attrs
 
     return validator
@@ -484,7 +485,10 @@ def make_create_release_version_slz_class(plugin: PluginInstance, release_type: 
             **fields,
             # implement `validate` method of serializers.Serializer
             "validate": make_release_validator(
-                plugin, PluginReleaseVersionRule(release_definition.versionNo), release_definition.revisionPolicy
+                plugin,
+                PluginReleaseVersionRule(release_definition.versionNo),
+                release_type,
+                release_definition.revisionPolicy,
             ),
         },
     )

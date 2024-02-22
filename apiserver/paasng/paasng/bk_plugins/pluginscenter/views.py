@@ -537,7 +537,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         version_name = request.data["source_version_name"]
         source_hash = get_plugin_repo_accessor(plugin).extract_smart_revision(f"{version_type}:{version_name}")
 
-        slz = serializers.make_create_release_version_slz_class(plugin.pd, type)(
+        slz = serializers.make_create_release_version_slz_class(plugin, type)(
             data=request.data,
             context={
                 "source_hash": source_hash,

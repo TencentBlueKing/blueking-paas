@@ -75,18 +75,21 @@ class TestVolumeSourceManager:
     def _create_configmap_resource(self, bk_module):
         ConfigMapSource.objects.create(
             application_id=bk_module.application_id,
+            module_id=bk_module.id,
             name="nginx-configmap",
             environment_name=MountEnvName.STAG,
             data={"nginx.conf": "location / { }"},
         )
         ConfigMapSource.objects.create(
             application_id=bk_module.application_id,
+            module_id=bk_module.id,
             name="redis-configmap",
             environment_name=MountEnvName.GLOBAL,
             data={"redis.conf": "port 6379"},
         )
         PersistentVolumeClaimSource.objects.create(
             application_id=bk_module.application_id,
+            module_id=bk_module.id,
             name="etcd-pvc",
             environment_name=MountEnvName.STAG,
             storage="1Gi",
@@ -122,7 +125,6 @@ class TestVolumeSourceManager:
             name="mount-configmap",
             source_type=VolumeSourceType.ConfigMap.value,
             region=bk_app.region,
-            source_name="",
         )
         source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
         controller = init_source_controller(mount.source_type)
@@ -149,10 +151,9 @@ class TestVolumeSourceManager:
             name="mount-pvc",
             source_type=VolumeSourceType.PersistentVolumeClaim.value,
             region=bk_app.region,
-            source_name="",
         )
         controller = init_source_controller(mount.source_type)
-        controller.upsert_model_by_mount(mount)
+        controller.upsert_model_by_mount(mount, storage="1Gi")
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")

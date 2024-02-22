@@ -23,7 +23,7 @@ from django.db.models import ObjectDoesNotExist
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY, ApiVersion
-from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
+from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
@@ -51,35 +51,6 @@ def build_manifest_v1alpha2(image: Optional[str] = None, credential_name: Option
             }
         },
     }
-
-
-@pytest.mark.parametrize(
-    ("manifest", "expected"),
-    [
-        # case for v1alpha1
-        (build_manifest_v1alpha1({}, {}), []),
-        (build_manifest_v1alpha1({"foo": "example"}, {}), []),
-        (build_manifest_v1alpha1({}, {"foo": "nginx:latest"}), []),
-        (
-            build_manifest_v1alpha1({"foo": "example"}, {"foo": "nginx:latest"}),
-            [ImageCredentialRef(image="nginx", credential_name="example")],
-        ),
-        (
-            build_manifest_v1alpha1({"foo": "one", "bar": "another"}, {"foo": "nginx:latest", "bar": "python:latest"}),
-            [
-                ImageCredentialRef(image="nginx", credential_name="one"),
-                ImageCredentialRef(image="python", credential_name="another"),
-            ],
-        ),
-        # case for v1alpha2
-        (build_manifest_v1alpha2(), []),
-        (build_manifest_v1alpha2("nginx"), []),
-        (build_manifest_v1alpha2(None, "foo"), []),
-        (build_manifest_v1alpha2("nginx", "foo"), [ImageCredentialRef(image="nginx", credential_name="foo")]),
-    ],
-)
-def test_get_references(manifest, expected):
-    assert get_references(manifest) == expected
 
 
 def test_validate_references(bk_app):

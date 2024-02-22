@@ -22,34 +22,9 @@ from . import views_enduser
 
 urlpatterns = [
     re_path(
-        make_app_pattern(r"/mres/$", include_envs=False),
-        views_enduser.MresViewSet.as_view({"get": "retrieve", "put": "update"}),
-        name="api.mres",
-    ),
-    re_path(
-        make_app_pattern(r"/mres/deployments/$", include_envs=True),
-        views_enduser.MresDeploymentsViewSet.as_view({"get": "list", "post": "create"}),
-        name="api.mres.deployments",
-    ),
-    re_path(
-        make_app_pattern(r"/mres/deploy_preps/$", include_envs=True),
-        views_enduser.MresDeploymentsViewSet.as_view({"post": "prepare"}),
-        name="api.mres.deploy_preps",
-    ),
-    re_path(
-        make_app_pattern(r"/mres/deployments/(?P<deploy_id>[\d]+)/$"),
-        views_enduser.MresDeploymentsViewSet.as_view({"get": "retrieve"}),
-        name="api.mres.deployments.singular",
-    ),
-    re_path(
         make_app_pattern(r"/mres/revisions/(?P<revision_id>[\d]+)/$"),
         views_enduser.MresVersionViewSet.as_view({"get": "retrieve"}),
         name="api.mres.revision.singular",
-    ),
-    re_path(
-        make_app_pattern(r"/mres/status/$"),
-        views_enduser.MresStatusViewSet.as_view({"get": "retrieve"}),
-        name="api.mres.status",
     ),
     re_path(
         make_app_pattern(r"/mres/image_tags/$", include_envs=False),

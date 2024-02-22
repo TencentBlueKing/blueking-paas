@@ -27,7 +27,6 @@ urlpatterns = [
     re_path("^api/services/", include("paas_wl.workloads.networking.ingress.urls_enduser")),
     re_path("^api/services/", include("paas_wl.workloads.networking.entrance.urls_enduser")),
     re_path(r"^api/processes/", include("paas_wl.bk_app.processes.urls_enduser")),
-    re_path("^api/cnative/specs/", include("paas_wl.bk_app.cnative.specs.urls_enduser")),
     re_path(r"^api/credentials/", include("paas_wl.workloads.images.urls_enduser")),
     re_path(r"", include("paas_wl.apis.admin.urls")),
 ]

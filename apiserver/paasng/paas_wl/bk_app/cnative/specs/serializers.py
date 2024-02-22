@@ -21,7 +21,7 @@ import logging
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import STORAGE, MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.constants import PVCSTORAGE, MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
 
@@ -160,6 +160,29 @@ class ResQuotaPlanSLZ(serializers.Serializer):
     limit = ResourceQuotaSLZ(help_text="资源限制")
 
 
+class ConfigMapSLZ(serializers.Serializer):
+    source_config_data = serializers.DictField(
+        help_text=_(
+            "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。"
+            "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
+        ),
+        child=serializers.CharField(),
+        allow_null=True,
+    )
+
+    def validate_source_config_data(self, value):
+        if not value:
+            return None
+        for key in value:
+            if not key:
+                raise serializers.ValidationError("key cannot be empty")
+        return value
+
+
+class PVCSLZ(serializers.Serializer):
+    storage = serializers.ChoiceField(choices=PVCSTORAGE.get_choices(), allow_null=True)
+
+
 class UpsertMountSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
     name = serializers.RegexField(
@@ -170,16 +193,8 @@ class UpsertMountSLZ(serializers.Serializer):
     mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
-    source_config_data = serializers.DictField(
-        help_text=_(
-            "挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。"
-            "例如：{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
-        ),
-        child=serializers.CharField(),
-        required=False,
-        allow_null=True,
-    )
-    storage = serializers.ChoiceField(choices=STORAGE.get_choices(), allow_blank=True, required=False)
+    configmap_source = ConfigMapSLZ(required=False, allow_null=True)
+    pvc_source = PVCSLZ(required=False, allow_null=True)
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -202,22 +217,15 @@ class UpsertMountSLZ(serializers.Serializer):
 
         # 根据 source_type 验证 source_config_data
         source_type = attrs["source_type"]
-        source_config_data = attrs.get("source_config_data")
-        if source_type == VolumeSourceType.ConfigMap.value and not source_config_data:
+        configmap_source = attrs.get("configmap_source") or {}
+        if source_type == VolumeSourceType.ConfigMap.value and not configmap_source.get("source_config_data"):
             raise serializers.ValidationError(_("挂载卷内容不可为空"))
         return attrs
 
-    def validate_source_config_data(self, value):
-        if not value:
-            return None
-        for key in value:
-            if not key:
-                raise serializers.ValidationError("key cannot be empty")
-        return value
-
 
 class MountSLZ(serializers.ModelSerializer):
-    source_config_data = serializers.SerializerMethodField(label=_("挂载卷内容"))
+    configmap_source = serializers.SerializerMethodField(label=_("configmap 挂载"))
+    pvc_source = serializers.SerializerMethodField(label=_("pvc 资源"))
 
     class Meta:
         model = Mount
@@ -232,19 +240,31 @@ class MountSLZ(serializers.ModelSerializer):
             "mount_path",
             "source_type",
             "source_config",
-            "source_config_data",
+            "configmap_source",
+            "pvc_source",
         )
 
-    def get_source_config_data(self, obj):
-        if obj.source_type == VolumeSourceType.ConfigMap:
-            try:
-                controller = init_source_controller(obj.source_type)
-                source = controller.get_model_by_mount(obj)
-            except ValueError as e:
-                raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
-            else:
-                return source.data
-        return None
+    def get_configmap_source(self, obj):
+        if obj.source_type != VolumeSourceType.ConfigMap.value:
+            return None
+        try:
+            controller = init_source_controller(obj.source_type)
+            source = controller.get_by_mount(obj)
+        except ValueError as e:
+            raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
+        else:
+            return {"source_config_data": source.data}
+
+    def get_pvc_source(self, obj):
+        if obj.source_type != VolumeSourceType.PersistentVolumeClaim.value:
+            return None
+        try:
+            controller = init_source_controller(obj.source_type)
+            source = controller.get_by_mount(obj)
+        except ValueError as e:
+            raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
+        else:
+            return {"storage": source.storage}
 
 
 class QueryMountsSLZ(serializers.Serializer):
@@ -252,7 +272,7 @@ class QueryMountsSLZ(serializers.Serializer):
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=False)
 
 
-class QueryMountSourcesSLZ(QueryMountsSLZ):
+class QueryMountSourcesSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 

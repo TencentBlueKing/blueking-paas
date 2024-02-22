@@ -170,7 +170,7 @@ class VolumeSourceType(str, StructuredEnum):
     PersistentVolumeClaim = EnumField("PersistentVolumeClaim")
 
 
-class STORAGE(str, StructuredEnum):
+class PVCSTORAGE(str, StructuredEnum):
     P_1G = EnumField("1Gi")
     P_2G = EnumField("2Gi")
     P_4G = EnumField("4Gi")

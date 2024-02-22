@@ -34,17 +34,6 @@ from paasng.utils.models import make_json_field
 SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 
-class BaseSourceModel(TimestampedModel):
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    environment_name = models.CharField(
-        verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
-    )
-    name = models.CharField(max_length=63, help_text=_("挂载资源名"))
-
-    class Meta:
-        abstract = True
-
-
 class ConfigMapSourceManager(models.Manager):
     def get_by_mount(self, m: "Mount"):
         if not m.source_config.configMap:
@@ -125,7 +114,7 @@ class MountManager(models.Manager):
         from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
 
         controller = init_source_controller(source_type)
-        source_config = controller.create_volume_source(name=source_config_name)
+        source_config = controller.new_volume_source(name=source_config_name)
 
         return Mount.objects.create(
             module_id=module_id,

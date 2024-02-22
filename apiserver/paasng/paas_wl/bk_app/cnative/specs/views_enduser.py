@@ -199,18 +199,18 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             update_app_resource(application, module, manifest)
             import_manifest(module, manifest)
 
-        build = Build(image=manifest["spec"].get("build", {}).get("image"), artifact_metadata={"use_cnb": False})
+            build = Build(image=manifest["spec"].get("build", {}).get("image"), artifact_metadata={"use_cnb": False})
 
-        try:
-            credential_refs = get_references(manifest)
-            validate_references(application, credential_refs)
-        except InvalidImageCredentials:
-            raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
-            # flush credentials if needed
-        if credential_refs:
-            AppImageCredential.objects.flush_from_refs(
-                application=application, wl_app=env.wl_app, references=credential_refs
-            )
+            try:
+                credential_refs = get_references(manifest)
+                validate_references(application, credential_refs)
+            except InvalidImageCredentials:
+                raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
+                # flush credentials if needed
+            if credential_refs:
+                AppImageCredential.objects.flush_from_refs(
+                    application=application, wl_app=env.wl_app, references=credential_refs
+                )
 
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
@@ -456,10 +456,12 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         if not validated_data.get("source_name"):
             # 创建或更新 Mount source
-            data = validated_data.get("source_config_data", {})
+            configmap_source = validated_data.get("configmap_source") or {}
             storage = validated_data.get("storage", DEFAULT_STORAGE)
             controller = init_source_controller(mount_instance.source_type)
-            controller.upsert_model_by_mount(mount_instance, data=data, storage=storage)
+            controller.upsert_by_mount(
+                mount_instance, data=configmap_source.get("source_config_data"), storage=storage
+            )
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -486,9 +488,9 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 创建或更新 Mount source
-        data = validated_data.get("source_config_data", {})
+        configmap_source = validated_data.get("configmap_source") or {}
         controller = init_source_controller(mount_instance.source_type)
-        controller.upsert_model_by_mount(mount_instance, data=data)
+        controller.upsert_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
 
         # 需要删除对应的 k8s volume 资源
         if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
@@ -515,7 +517,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             VolumeSourceManager(env).delete_source_config(mount_instance)
 
         controller = init_source_controller(mount_instance.source_type)
-        source = controller.get_model_by_mount(mount_instance)
+        source = controller.get_by_mount(mount_instance)
         source.delete()
         mount_instance.delete()
 
@@ -537,7 +539,7 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         source_type = params.get("source_type")
 
         controller = init_source_controller(source_type)
-        queryset = controller.list_model_by_app(application_id=app.id)
+        queryset = controller.list_by_app(application_id=app.id)
 
         if environment_name:
             queryset = queryset.filter(environment_name=environment_name)

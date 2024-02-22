@@ -42,7 +42,7 @@ def mount_configmap(bk_app, bk_module):
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
     controller = init_source_controller(mount.source_type)
-    controller.upsert_model_by_mount(mount, data=source_data)
+    controller.upsert_by_mount(mount, data=source_data)
     return mount
 
 
@@ -59,7 +59,7 @@ def mount_pvc(bk_app, bk_module):
         region=bk_app.region,
     )
     controller = init_source_controller(mount.source_type)
-    controller.upsert_model_by_mount(mount)
+    controller.upsert_by_mount(mount, storage="1Gi")
     return mount
 
 
@@ -80,9 +80,22 @@ def mounts(bk_app, bk_module):
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
         controller = init_source_controller(mount.source_type)
-        controller.upsert_model_by_mount(mount, data=source_data)
+        controller.upsert_by_mount(mount, data=source_data)
         mount_list.append(mount)
     return mount_list
+
+
+@pytest.fixture()
+def pvc_source(bk_app, bk_module):
+    pvc = PersistentVolumeClaimSource.objects.create(
+        application_id=bk_app.id,
+        module_id=bk_module.id,
+        environment_name=MountEnvName.STAG,
+        name="pvc-source-test",
+        storage="1Gi",
+        storage_class_name="storage-class-test",
+    )
+    return pvc
 
 
 @pytest.fixture(autouse=True, scope="class")
@@ -119,7 +132,7 @@ class TestVolumeMountViewSet:
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "_global_",
-            "source_config_data": {"configmap_z": "configmap_z_data"},
+            "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}},
             "mount_path": "/path/",
             "name": "mount-configmap-test",
             "source_type": "ConfigMap",
@@ -127,7 +140,7 @@ class TestVolumeMountViewSet:
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-configmap-test").first()
         controller = init_source_controller(mount.source_type)
-        source = controller.get_model_by_mount(mount)
+        source = controller.get_by_mount(mount)
         assert response.status_code == 201
         assert mount
         assert source.data == {"configmap_z": "configmap_z_data"}
@@ -143,24 +156,24 @@ class TestVolumeMountViewSet:
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
         controller = init_source_controller(mount.source_type)
-        source = controller.get_model_by_mount(mount)
+        source = controller.get_by_mount(mount)
         assert response.status_code == 201
         assert mount
         assert source.storage == "1Gi"
 
-    def test_create_with_source_name(self, api_client, bk_app, bk_module):
+    def test_create_with_source_name(self, api_client, bk_app, bk_module, pvc_source):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
-            "environment_name": "_global_",
+            "environment_name": pvc_source.environment_name,
             "mount_path": "/path/",
             "name": "mount-pvc-test",
             "source_type": "PersistentVolumeClaim",
-            "source_name": "test-source-name",
+            "source_name": pvc_source.name,
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
         assert response.status_code == 201
-        assert mount.source_config.persistentVolumeClaim.name == "test-source-name"
+        assert mount.source_config.persistentVolumeClaim.name == pvc_source.name
 
     @pytest.mark.parametrize(
         "request_body_error",
@@ -168,7 +181,7 @@ class TestVolumeMountViewSet:
             {
                 # 创建相同 unique_together = ('module_id', 'mount_path', 'environment_name') 的 Mount
                 "environment_name": "_global_",
-                "source_config_data": {"configmap_z": "configmap_z_data"},
+                "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}},
                 "mount_path": "/path/",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
@@ -176,7 +189,7 @@ class TestVolumeMountViewSet:
             {
                 # 创建错误挂载路径的 Mount
                 "environment_name": "_global_",
-                "source_config_data": {"configmap_z": "configmap_z_data"},
+                "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}},
                 "mount_path": "path/",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
@@ -184,7 +197,7 @@ class TestVolumeMountViewSet:
             {
                 # 创建错误挂载路径的 Mount
                 "environment_name": "_global_",
-                "source_config_data": {"configmap_z": "configmap_z_data"},
+                "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}},
                 "mount_path": "/",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
@@ -192,7 +205,7 @@ class TestVolumeMountViewSet:
             {
                 # 创建空挂载内容的 Mount
                 "environment_name": "_global_",
-                "source_config_data": {},
+                "configmap_source": {"source_config_data": {}},
                 "mount_path": "/path",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
@@ -200,7 +213,7 @@ class TestVolumeMountViewSet:
             {
                 # 创建挂载内容为数组的 Mount
                 "environment_name": "_global_",
-                "source_config_data": ["configmap_x", "configmap_y"],
+                "configmap_source": {"source_config_data": ["configmap_x", "configmap_y"]},
                 "mount_path": "/path",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
@@ -208,7 +221,9 @@ class TestVolumeMountViewSet:
             {
                 # 创建挂载内容 key 为空的 Mount
                 "environment_name": "_global_",
-                "source_config_data": {"": "configmap_z_data", "configmap_z": "configmap_z_data"},
+                "configmap_source": {
+                    "source_config_data": {"": "configmap_z_data", "configmap_z": "configmap_z_data"}
+                },
                 "mount_path": "/path",
                 "name": "mount-configmap-test",
                 "source_type": "ConfigMap",
@@ -216,7 +231,9 @@ class TestVolumeMountViewSet:
             {
                 # 创建相同环境下重名的 Mount
                 "environment_name": "stag",
-                "source_config_data": {"configmap_x": "configmap_z_data", "configmap_z": "configmap_z_data"},
+                "configmap_source": {
+                    "source_config_data": {"configmap_x": "configmap_z_data", "configmap_z": "configmap_z_data"}
+                },
                 "mount_path": "/path",
                 "name": "mount-configmap",
                 "source_type": "ConfigMap",
@@ -234,13 +251,13 @@ class TestVolumeMountViewSet:
             f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
         )
         body = MountSLZ(mount_configmap).data
-        body["source_config_data"] = {"configmap_z": "configmap_z_data_updated"}
+        body["configmap_source"] = {"source_config_data": {"configmap_z": "configmap_z_data_updated"}}
         body["environment_name"] = "stag"
 
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount_configmap.pk)
         controller = init_source_controller(mount_updated.source_type)
-        source = controller.get_model_by_mount(mount_updated)
+        source = controller.get_by_mount(mount_updated)
         assert response.status_code == 200
         assert mount_updated.name == mount_configmap.name
         assert source.data == {"configmap_z": "configmap_z_data_updated"}

@@ -142,8 +142,8 @@ class TestGetProcesses:
             "env": [],
             **extra_info,
         }
-        get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
-        processes = get_processes(deployment=bk_deployment_full)
+        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
+        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
         assert processes == expected
 
     @pytest.mark.parametrize(
@@ -176,8 +176,8 @@ class TestGetProcesses:
             "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
             "module": {"is_default": True, "processes": processes_desc, "language": "python"},
         }
-        get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
-        processes = get_processes(deployment=bk_deployment_full)
+        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
+        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
         assert processes == expected
 
     def test_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
@@ -207,9 +207,9 @@ class TestGetProcesses:
             module=bk_module_full, operator=bk_module_full.owner, version_info=bk_deployment_full.version_info
         )
         assert handler is not None
-        handler.handle_deployment(bk_deployment_full)
+        perform_result = handler.handle_deployment(bk_deployment_full)
 
-        processes = get_processes(deployment=bk_deployment_full)
+        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
         assert processes == cast_to_processes(
             {"web": {"name": "web", "command": "start web", "plan": "default", "replicas": 5}}
         )
@@ -254,7 +254,7 @@ class TestGetProcesses:
                 "language": "python",
             },
         }
-        get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
+        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
 
         def fake_read_file(key, version):
             if "Procfile" in key:
@@ -264,7 +264,9 @@ class TestGetProcesses:
         with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
             mocked_read_file.side_effect = fake_read_file
 
-            processes = get_processes(deployment=bk_deployment_full)
+            processes = get_processes(
+                deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes
+            )
 
         assert processes == cast_to_processes(
             {

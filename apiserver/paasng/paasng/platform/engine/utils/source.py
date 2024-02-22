@@ -28,13 +28,12 @@ from django.utils.translation import gettext as _
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
-from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
 from paasng.platform.engine.exceptions import DeployShouldAbortError, SkipPatchCode
 from paasng.platform.engine.models import Deployment, EngineApp
 from paasng.platform.engine.models.deployment import ProcessTmpl
-from paasng.platform.engine.utils.output import DeployStream, Style
+from paasng.platform.engine.utils.output import DeployStream, NullStream, Style
 from paasng.platform.engine.utils.patcher import SourceCodePatcherWithDBDriver
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -105,33 +104,29 @@ def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
     return DockerIgnore(content, whitelist=[dockerfile_path])
 
 
-def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901, PLR0912
-    """Get the ProcessTmpl from SourceCode
-    Declarative Processes is a dict containing a process type and its corresponding DeclarativeProcess
+def get_processes(
+    deployment: Deployment,
+    stream: Optional[DeployStream] = None,
+    proc_data_from_desc: Optional[Dict[str, Dict[str, str]]] = None,
+) -> TypeProcesses:  # noqa: C901, PLR0912
+    """Get the ProcessTmpl from SourceCode via metadata reader
+    return result is a dict containing a process type and its corresponding DeclarativeProcess
 
-    1. Try to get processes data from DeploymentDescription at first.
-    2. Try to get the process data from DeployConfig, which only work from Image Application
-    3. Try to get the process data from Procfile
-
-    if step (1) and step (3) get processes data both, will use the one got from step (3)
+    If processes data from DeploymentDescription is not None, and the process data from Procfile is not None either,
+    will use the one from procfile.
 
     :param Deployment deployment: 当前的部署对象
     :param DeployStream stream: 日志流对象, 用于记录日志
+    :param proc_data_from_desc: 从应用描述文件读取的进程信息
     :raises: DeployShouldAbortError
     """
     module: Module = deployment.app_environment.module
     operator = deployment.operator
     version_info = deployment.version_info
     relative_source_dir = deployment.get_source_dir()
+    stream = stream or NullStream()
 
-    proc_data: Optional[Dict[str, Dict[str, str]]] = None
-    if deployment:
-        try:
-            deploy_desc: DeploymentDescription = DeploymentDescription.objects.get(deployment=deployment)
-            proc_data = deploy_desc.get_processes()
-        except DeploymentDescription.DoesNotExist:
-            logger.info("Can't get related DeploymentDescription, read Procfile directly.")
-
+    proc_data: Optional[Dict[str, Dict[str, str]]] = proc_data_from_desc
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
         proc_data_from_procfile = {
@@ -158,12 +153,9 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
 
             if next(filter(find_conflict_process, proc_data_from_procfile), None):
                 logger.warning("Process definition conflict, will use the one defined in `Procfile`")
-                if stream:
-                    stream.write_message(
-                        Style.Warning(
-                            _("Warning: Process definition conflict, will use the one defined in `Procfile`")
-                        )
-                    )
+                stream.write_message(
+                    Style.Warning(_("Warning: Process definition conflict, will use the one defined in `Procfile`"))
+                )
                 proc_data = proc_data_from_procfile
     if proc_data is None:
         raise DeployShouldAbortError(_("Missing process definition"))

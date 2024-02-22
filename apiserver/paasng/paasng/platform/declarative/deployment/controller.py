@@ -17,13 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Optional
+from typing import Dict, Optional
 
 import cattr
-from attrs import fields
+from attrs import define, fields
 from django.db.transaction import atomic
 
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
+from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
 from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet
 from paasng.platform.declarative.models import DeploymentDescription
@@ -33,6 +34,11 @@ from paasng.platform.engine.models.deployment import Deployment
 logger = logging.getLogger(__name__)
 
 
+@define
+class PerformResult:
+    loaded_processes: Optional[Dict[str, Dict[str, str]]] = None
+
+
 class DeploymentDeclarativeController:
     """A controller which process deployment descriptions"""
 
@@ -40,15 +46,16 @@ class DeploymentDeclarativeController:
         self.deployment = deployment
 
     @atomic
-    def perform_action(self, desc: DeploymentDesc):
+    def perform_action(self, desc: DeploymentDesc) -> PerformResult:
         """Perform action by given description
 
         :param desc: deployment specification
         """
+        result = PerformResult()
         logger.debug("Update related deployment description object.")
 
         # Save given description config into database
-        DeploymentDescription.objects.update_or_create(
+        deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
                 "env_variables": desc.get_env_variables(ConfigVarEnvName(self.deployment.app_environment.environment)),
@@ -63,6 +70,17 @@ class DeploymentDeclarativeController:
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
+
+        # apply desc to bkapp_model
+        if desc.processes:
+            result.loaded_processes = deploy_desc.get_processes()
+            # TODO: save processes and hooks to models
+        elif desc.spec:
+            # TODO: 优化 import 方式
+            import_manifest(self.deployment.module, input_data={"metadata": {}, "spec": desc.spec.dict()})
+            # TODO: 转换成 processes 格式
+            result.loaded_processes = {}
+
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
 
@@ -73,6 +91,8 @@ class DeploymentDeclarativeController:
         # 根据配置，对 probe 进行全量更新
         for process_type, process in desc.processes.items():
             self.update_probes(process_type=process_type, probes=process.probes)
+
+        return result
 
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""

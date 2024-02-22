@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Optional
 
 from celery import shared_task
 from django.utils.translation import gettext as _
@@ -31,7 +32,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler
+from paasng.platform.declarative.handlers import AppDescriptionHandler, PerformResult
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
@@ -93,8 +94,11 @@ class ImageReleaseMgr(DeployStep):
                 # 2. 仅托管镜像的应用(包含云原生应用和旧镜像应用)
                 if is_smart_app:
                     # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
-                    self.handle_smart_app_description()
-                    processes = list(get_processes(deployment=self.deployment).values())
+                    perform_result = self.handle_smart_app_description()
+                    proc_data_from_desc = getattr(perform_result, "loaded_processes", None)
+                    processes = list(
+                        get_processes(deployment=self.deployment, proc_data_from_desc=proc_data_from_desc).values()
+                    )
                     # 保存应用描述文件记录的信息到 DB - Processes/Hooks
                     sync_to_bkapp_model(module=module, processes=processes, hooks=self.deployment.get_deploy_hooks())
                 else:
@@ -171,30 +175,31 @@ class ImageReleaseMgr(DeployStep):
 
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
-    def _handle_app_description(self):
+    def _handle_app_description(self) -> Optional[PerformResult]:
         """Handle application description for deployment"""
         module = self.deployment.app_environment.module
         handler = get_app_description_handler(module, self.deployment.operator, self.deployment.version_info)
         if not handler:
             logger.debug("No valid app description file found.")
-            return
+            return None
 
         if not isinstance(handler, AppDescriptionHandler):
             logger.debug(
                 "Currently only runtime configs such as environment variables declared in app_desc.yaml are applied."
             )
-            return
+            return None
 
-        handler.handle_deployment(self.deployment)
+        return handler.handle_deployment(self.deployment)
 
-    def handle_smart_app_description(self):
+    def handle_smart_app_description(self) -> Optional[PerformResult]:
         """A tiny wrapper for _handle_app_description, will ignore all exception raise from _handle_app_description.
         And will do something for s-mart app
 
         - complete scripts command
         """
+        result = None
         try:
-            self._handle_app_description()
+            result = self._handle_app_description()
         except FileNotFoundError:
             logger.debug("App description file not defined, do not process.")
         except DescriptionValidationError as e:
@@ -209,3 +214,4 @@ class ImageReleaseMgr(DeployStep):
 
         # refresh_from_db 的目的是 self.deployment.get_deploy_hooks() 能够拿到更新后的 scripts
         self.deployment.refresh_from_db()
+        return result

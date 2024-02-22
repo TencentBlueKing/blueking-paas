@@ -32,6 +32,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
+from paasng.platform.declarative.deployment.controller import PerformResult
 from paasng.platform.declarative.exceptions import (
     AppDescriptionNotFoundError,
     ControllerError,
@@ -141,14 +142,14 @@ class BaseBuilder(DeployStep):
                     package_path, source_destination_path
                 )
 
-    def handle_app_description(self, raise_exception: bool = False):
+    def handle_app_description(self, raise_exception: bool = False) -> Optional[PerformResult]:
         """Handle application description for deployment
 
         :param raise_exception: bool, will ignore all exception raise from _handle_app_description
                                       if raise_exception is False
         """
         try:
-            self._handle_app_description()
+            return self._handle_app_description()
         except AppDescriptionNotFoundError as e:
             if raise_exception:
                 raise HandleAppDescriptionError("App description file(app_desc.yaml) is not defined") from e
@@ -165,8 +166,9 @@ class BaseBuilder(DeployStep):
             if raise_exception:
                 raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
             logger.exception("Exception while processing app description file, skip.")
+        return None
 
-    def _handle_app_description(self):
+    def _handle_app_description(self) -> Optional[PerformResult]:
         """Handle application description for deployment"""
         module = self.deployment.app_environment.module
         application = module.application
@@ -178,13 +180,13 @@ class BaseBuilder(DeployStep):
         # 仅非云原生应用可以禁用应用描述文件
         if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION) and not is_cnative_app:
             logger.debug("App description disabled.")
-            return
+            return None
 
         handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
         if handler is None or not isinstance(handler, AppDescriptionHandler):
             raise AppDescriptionNotFoundError("No valid app description file found.")
 
-        handler.handle_deployment(self.deployment)
+        return handler.handle_deployment(self.deployment)
 
     def create_bkapp_revision(self) -> int:
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
@@ -261,13 +263,22 @@ class ApplicationBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            self.handle_app_description()
+            perform_result = self.handle_app_description()
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            processes = get_processes(deployment=self.deployment, stream=self.stream)
+            proc_data_from_desc = getattr(perform_result, "loaded_processes", None)
+            processes = get_processes(
+                deployment=self.deployment,
+                stream=self.stream,
+                proc_data_from_desc=proc_data_from_desc,
+            )
             self.deployment.update_fields(processes=processes)
-            # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-            sync_to_bkapp_model(module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks())
+            if not proc_data_from_desc:
+                # 保存从 Procfile 解析到的进程信息到 DB - Processes/Hooks
+                # TODO: remove hooks
+                sync_to_bkapp_model(
+                    module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks()
+                )
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -357,13 +368,22 @@ class DockerBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            self.handle_app_description()
+            perform_result = self.handle_app_description()
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            processes = get_processes(deployment=self.deployment, stream=self.stream)
+            proc_data_from_desc = getattr(perform_result, "loaded_processes", None)
+            processes = get_processes(
+                deployment=self.deployment,
+                stream=self.stream,
+                proc_data_from_desc=proc_data_from_desc,
+            )
             self.deployment.update_fields(processes=processes)
-            # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-            sync_to_bkapp_model(module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks())
+            if not proc_data_from_desc:
+                # 保存从 Procfile 解析到的进程信息到 DB - Processes/Hooks
+                # TODO: remove hooks
+                sync_to_bkapp_model(
+                    module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks()
+                )
 
         bkapp_revision_id = None
         if is_cnative_app:

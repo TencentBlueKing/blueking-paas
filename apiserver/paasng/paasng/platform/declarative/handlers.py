@@ -31,7 +31,7 @@ from paasng.platform.declarative.application.controller import AppDeclarativeCon
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
 from paasng.platform.declarative.application.validations.v2 import AppDescriptionSLZ
 from paasng.platform.declarative.constants import AppSpecVersion
-from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
+from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController, PerformResult
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.deployment.validations.v2 import DeploymentDescSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
@@ -69,7 +69,7 @@ class DescriptionHandler(Protocol):
         :param user: User to perform actions as
         """
 
-    def handle_deployment(self, deployment: Deployment):
+    def handle_deployment(self, deployment: Deployment) -> PerformResult:
         """Handle a YAML config file for a deployment
 
         :param deployment: The related deployment object
@@ -136,7 +136,7 @@ class AppDescriptionHandler:
         controller = AppDeclarativeController(user, source_origin)
         return controller.perform_action(self.app_desc)
 
-    def handle_deployment(self, deployment: Deployment):
+    def handle_deployment(self, deployment: Deployment) -> PerformResult:
         """Handle a YAML config file for a deployment
 
         :param deployment: The related deployment object
@@ -144,7 +144,7 @@ class AppDescriptionHandler:
         validate_desc(UniConfigSLZ, self.json_data)
 
         controller = DeploymentDeclarativeController(deployment)
-        controller.perform_action(self.get_deploy_desc(deployment.app_environment.module.name))
+        return controller.perform_action(self.get_deploy_desc(deployment.app_environment.module.name))
 
 
 class SMartDescriptionHandler:
@@ -182,10 +182,10 @@ class SMartDescriptionHandler:
         controller = AppDeclarativeController(user)
         return controller.perform_action(self.app_desc)
 
-    def handle_deployment(self, deployment: Deployment):
+    def handle_deployment(self, deployment: Deployment) -> PerformResult:
         """Handle a deployment config
 
         :param deployment: The related deployment object
         """
         controller = DeploymentDeclarativeController(deployment)
-        controller.perform_action(self.get_deploy_desc(None))
+        return controller.perform_action(self.get_deploy_desc(None))

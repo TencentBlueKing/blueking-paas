@@ -2,7 +2,7 @@
 
 ### 开发说明
 
-以下操作均在 `cloudnative-buildpacks/builders/` 目录下进行。
+以下操作均在 `cloudnative-buildpacks` 目录下进行。
 
 1. 构建 buildpacks
 
@@ -11,12 +11,12 @@
 ❯ make all
 ```
 
-该命令使用 `pack` 命令将每个 buildpack 构建成镜像（输出为 `.cnb` 文件）。需注意的是，`buildpacks` 中的各文件夹中仅包含配置，实际的 buildpack 存放在项目根目录中的 `heroku-buildpacks` 中。
+该命令使用 `pack` 命令将每个 buildpack 构建成镜像（输出为 `.cnb` 文件）。需要注意的是，`buildpacks` 中的各文件夹中仅包含配置，实际的 buildpack 存放在项目根目录中的 `heroku-buildpacks` 中。
 
 2. 构建 builder 基础镜像（heroku）
 
 ```bash
-❯ cd heroku-builder
+❯ cd builders/heroku-builder
 ❯ make builder
 ```
 

@@ -496,6 +496,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
+        queryset = queryset.filter(type=query_params["type"])
         if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
         return queryset

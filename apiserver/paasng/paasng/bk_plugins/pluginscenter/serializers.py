@@ -230,6 +230,7 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     role = PluginRoleSLZ(required=False)
     overview_page = overviewPageSLZ(source="get_overview_page")
     can_reactivate = serializers.ReadOnlyField()
+    has_test_version = serializers.ReadOnlyField()
 
     def to_representation(self, instance):
         # 注入当前用户的角色信息

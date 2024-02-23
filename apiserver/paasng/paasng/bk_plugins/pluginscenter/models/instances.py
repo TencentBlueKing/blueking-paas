@@ -130,6 +130,10 @@ class PluginInstance(UuidAuditedModel):
     def all_prod_versions(self):
         return self.all_versions.filter(type=constants.PluginReleaseType.PROD)
 
+    @property
+    def has_test_version(self):
+        return self.pd.basic_info_definition.test_release_revision is not None
+
     class Meta:
         unique_together = ("pd", "id")
 

@@ -261,7 +261,7 @@ class PluginInstanceSpec(BaseModel):
 
     basicInfo: PluginBasicInfoDefinition
     marketInfo: PluginMarketInfoDefinition
-    visibleRange: PluginVisibleRangeDefinition
+    visibleRange: Optional[PluginVisibleRangeDefinition]
     configInfo: Optional[PluginConfigDefinition] = Field(description="「配置管理」功能相关配置")
 
 

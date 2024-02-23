@@ -19,10 +19,13 @@
           >
             <div
               slot="tip"
-              v-bk-tooltips.top="{ content: `${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${adminStr}`, disabled: !adminStr }"
+              v-bk-tooltips.top="{
+                content: `${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${adminStr}`,
+                disabled: !adminStr,
+              }"
               class="lable-wrapper"
             >
-              <span class="label">{{ $t('应用分类') }}</span>
+              <span v-dashed class="label">{{ $t('应用分类') }}</span>
             </div>
             <bk-select
               v-model="form.category"
@@ -44,14 +47,20 @@
             :required="true"
             :property="'introduction'"
           >
-            <bk-input v-model="form.introduction" :disabled="isManualSwitchSteps" />
+            <bk-input
+              v-model="form.introduction"
+              :disabled="isManualSwitchSteps"
+            />
           </bk-form-item>
           <bk-form-item
             :label="$t('应用联系人')"
             :required="true"
             property="contact"
           >
-            <user v-model="form.contact" :disabled="isManualSwitchSteps" />
+            <user
+              v-model="form.contact"
+              :disabled="isManualSwitchSteps"
+            />
           </bk-form-item>
           <bk-form-item
             class="edit-form-item"
@@ -233,40 +242,38 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  .lable-wrapper {
-        position: absolute;
-        top: 0;
-        left: -100px;
-        width: 100px;
-        min-height: 32px;
-        text-align: right;
-        vertical-align: middle;
-        line-height: 32px;
-        float: left;
-        font-size: 14px;
-        font-weight: normal;
-        color: #63656E;
-        box-sizing: border-box;
-        padding: 0 24px 0 0;
-        &::after {
-            content: '*';
-            position: absolute;
-            top: 50%;
-            height: 8px;
-            line-height: 1;
-            color: #EA3636;
-            font-size: 12px;
-            display: inline-block;
-            vertical-align: middle;
-            transform: translate(3px, -50%);
-        }
-        .label {
-            display: inline-block;
-            line-height: 20px;
-            background: linear-gradient(to left, transparent 0%, transparent 50%,#979ba5 50%,#979ba5 100%);
-            background-size: 10px 1px;
-            background-repeat: repeat-x;
-            background-position-y: 100%;
-        }
-    }
+.release-warp .info-mt {
+  padding: 24px;
+}
+.lable-wrapper {
+  position: absolute;
+  top: 0;
+  left: -100px;
+  width: 100px;
+  min-height: 32px;
+  text-align: right;
+  vertical-align: middle;
+  line-height: 32px;
+  float: left;
+  font-size: 14px;
+  font-weight: normal;
+  color: #63656e;
+  box-sizing: border-box;
+  padding: 0 24px 0 0;
+  &::after {
+    content: '*';
+    position: absolute;
+    top: 50%;
+    height: 8px;
+    line-height: 1;
+    color: #ea3636;
+    font-size: 12px;
+    display: inline-block;
+    vertical-align: middle;
+    transform: translate(3px, -50%);
+  }
+  .label {
+    padding-bottom: 2px;
+  }
+}
 </style>

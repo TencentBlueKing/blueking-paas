@@ -1,5 +1,5 @@
 <template>
-  <div class="container visible-range-release right-main-release">
+  <div class="visible-range-release right-main-release">
     <!-- 测试阶段宽度占满 -->
     <paas-content-loader
       :is-loading="isLoading"
@@ -40,6 +40,7 @@
         />
         <!-- 内容 - 默认步骤根据 curStageComponmentType -->
         <component
+          :class="{ 'component-card-cls': !excludeCardStyleList.includes(curStageComponmentType) }"
           :is="curStageComponmentType"
           v-if="stageData"
           ref="curStageComponment"
@@ -155,6 +156,7 @@ export default {
       customStyle: {
         height: '100%',
       },
+      excludeCardStyleList: ['deploy', 'itsm', 'test'],
     };
   },
   computed: {
@@ -340,8 +342,8 @@ export default {
         if (Object.values(params).some(value => value === undefined)) {
           return;
         }
-        const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
-        this.stageData = stageData;
+        const res = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
+        this.stageData = res;
         // 所有阶段都需要进行轮询 && 手动切换不用轮询
         if (this.stageData.status === 'pending' && !curStepStageId) {
           this.pollingReleaseStageDetail();
@@ -353,7 +355,7 @@ export default {
             if (this.stageData.status === 'failed') {
               // 改变状态
               this.stepsStatus = 'error';
-              this.failedMessage = stageData.fail_message;
+              this.failedMessage = res.fail_message;
             } else {
               this.stepsStatus = '';
             }
@@ -598,16 +600,22 @@ export default {
     }
 }
 .content-container {
+  background: #F5F6FA;
   height: 100%;
   margin-bottom: 48px;
-  padding: 0 24px;
+  padding: 16px 24px 0;
   .steps-warp-cls {
-    margin: 16px 0;
+    margin-bottom: 16px;
+  }
+  .component-card-cls {
+    box-shadow: 0 2px 4px 0 #1919290d;
+    border-radius: 2px;
+    background: #fff;
   }
 }
 #release-timeline-box {
     width: 230px;
-    height: calc(100vh - 272px);
+    height: calc(100vh - 288px);
     overflow-y: auto;
     &::-webkit-scrollbar {
         width: 4px;
@@ -703,9 +711,6 @@ export default {
         font-size: 16px;
     }
 }
-.release-log-warp {
-    margin-left: 6px;
-}
 .success-check-wrapper,
 .interrupted-check-wrapper,
 .warning-check-wrapper {
@@ -742,37 +747,12 @@ export default {
 .info-left-warp .info-time {
     line-height: 24px;
 }
-.successful-container {
-    margin-top: 140px;
-    text-align: center;
-    .success-cls {
-        font-size: 50px;
-        line-height: 50px;
-        border-radius: 50%;
-        color: #fff;
-        background-color: #2dcb56;
-    }
-    .title {
-        margin: 15px 0 10px;
-        font-size: 16px;
-        font-weight: 700;
-    }
-    .tips-link {
-        cursor: pointer;
-        font-size: 12px;
-        color: #3A84FF;
-    }
-}
 .visible-range-release {
   height: 100%;
   .app-container {
     margin-top: 0;
     padding-top: 0;
   }
-}
-
-.release-warp .info-mt {
-    margin-top: 72px;
 }
 
 .custom-step-cls {

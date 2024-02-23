@@ -24,55 +24,53 @@
   </div>
 </template>
 <script>
-    export default {
-        props: {
-            log: {
-                type: Array,
-                default () {
-                    return [];
-                }
-            }
-        },
-        data () {
-            return {
-                ansiUp: null
-            };
-        },
-        computed: {
-            logs () {
-                if (this.ansiUp) {
-                    return this.log.map(item => {
-                        return this.ansiUp.ansi_to_html(item);
-                    });
-                }
-                return this.log;
-            }
-        },
-        watch: {
-            log: {
-                handler () {
-                    this.$nextTick(() => {
-                        this.$refs.logWarp.scrollTop = this.$refs.logWarp.scrollHeight;
-                    });
-                },
-                deep: true
-            }
-        },
-        mounted () {
-            // 初始化日志彩色组件
-            // eslint-disable-next-line
-            const AU = require('ansi_up')
-            // eslint-disable-next-line
-            this.ansiUp = new AU.default
-        }
+export default {
+  props: {
+    log: {
+      type: Array,
+      default() {
+        return [];
+      },
+    },
+  },
+  data() {
+    return {
+      ansiUp: null,
     };
+  },
+  computed: {
+    logs() {
+      if (this.ansiUp) {
+        return this.log.map(item => this.ansiUp.ansi_to_html(item));
+      }
+      return this.log;
+    },
+  },
+  watch: {
+    log: {
+      handler() {
+        this.$nextTick(() => {
+          this.$refs.logWarp.scrollTop = this.$refs.logWarp.scrollHeight;
+        });
+      },
+      deep: true,
+    },
+  },
+  mounted() {
+    // 初始化日志彩色组件
+    // eslint-disable-next-line
+    const AU = require('ansi_up')
+    // eslint-disable-next-line
+    this.ansiUp = new AU.default
+  },
+};
 </script>
 
 <style scoped lang="scss">
     .release-log-warp{
         padding: 17px 30px;
         flex: 1;
-        height: calc(100vh - 272px);
+        height: calc(100vh - 288px);
         // height: 720px;
         background: #313238;
         overflow-y: auto;

@@ -445,7 +445,7 @@ def make_release_validator(  # noqa: C901
             if version != self.context["source_hash"]:
                 raise ValidationError(_("版本号必须与提交哈希一致"))
         elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP:  # noqa: SIM102
-            if version.startswith(attrs["source_version_name"]):
+            if not version.startswith(attrs["source_version_name"]):
                 raise ValidationError(_("版本号必须以代码分支开头"))
 
         if revision_policy:

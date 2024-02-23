@@ -71,7 +71,7 @@ class TestReleaseStages:
         [  # 当前插件有未完成的测试版本,仍可创建新分支测试版本
             ("test", "testbranch1", "testbranch1-2501191602", 201, ""),
             # 测试版本设置了：不允许选择正在发布过的代码分支
-            ("test", "testbranch", "testbranch1-2501191602", 400, "CANNOT_RELEASE_RELEASING_SOURCE_VERSION"),
+            ("test", "testbranch", "testbranch-2501191602", 400, "CANNOT_RELEASE_RELEASING_SOURCE_VERSION"),
             # 当前插件有未完成的正式版本,不能创建正式版本
             ("prod", "foo", "0.0.2", 400, "CANNOT_RELEASE_ONGOING_EXISTS"),
         ],

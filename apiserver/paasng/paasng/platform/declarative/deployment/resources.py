@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import shlex
 from typing import Dict, List, Optional
 
 import cattr
@@ -201,3 +202,20 @@ class DeploymentDesc:
         return cattr.unstructure(
             [env_var for env_var in self.env_variables if env_var.is_within_scope(environment_name)]
         )
+
+    def get_processes(self) -> Dict[str, Process]:
+        # TODO: 兼容逻辑移到 validations 中处理?
+        if self.spec:
+            return cattr.structure(
+                {
+                    process.name: {
+                        "command": (shlex.join(process.command or []) + " " + shlex.join(process.args or [])).strip(),
+                        "replicas": process.replicas,
+                        "plan": process.resQuotaPlan,
+                        # TODO: 待 bkapp 支持声明 probes 后, 补充 probes 字段
+                    }
+                    for process in self.spec.processes
+                },
+                Dict[str, Process],
+            )
+        return self.processes

@@ -156,7 +156,7 @@ class AppDescriptionSLZ(serializers.Serializer):
 
         # 验证至少有一个主模块
         has_default = False
-        for module_desc in attrs["modules"].values():  # type: ModuleDesc
+        for module_desc in attrs["modules"].values():
             if module_desc.isDefault:
                 if has_default:
                     raise serializers.ValidationError({"modules": _("一个应用只能有一个主模块")})

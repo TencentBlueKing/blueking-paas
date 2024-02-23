@@ -325,7 +325,6 @@ class AppDeclarativeController:
         ApplicationDescription.objects.create(
             application=application,
             owner=application.owner,
-            # TODO: 支持 cnative module desc 格式
             **AppDescriptionSLZ(desc).data,
             # TODO: basic info
             basic_info={},

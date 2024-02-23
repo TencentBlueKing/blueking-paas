@@ -107,13 +107,15 @@ def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
 def get_processes(
     deployment: Deployment,
     stream: Optional[DeployStream] = None,
-    proc_data_from_desc: Optional[Dict[str, Dict[str, str]]] = None,
+    proc_data_from_desc: Optional[TypeProcesses] = None,
 ) -> TypeProcesses:  # noqa: C901, PLR0912
     """Get the ProcessTmpl from SourceCode via metadata reader
     return result is a dict containing a process type and its corresponding DeclarativeProcess
 
-    If processes data from DeploymentDescription is not None, and the process data from Procfile is not None either,
-    will use the one from procfile.
+    If processes data from DeploymentDescription is not None,
+    and the process data from Procfile is not None either,
+    and the process data from Procfile is not equal than the one from DeploymentDescription
+    then will use the one from procfile.
 
     :param Deployment deployment: 当前的部署对象
     :param DeployStream stream: 日志流对象, 用于记录日志
@@ -126,7 +128,7 @@ def get_processes(
     relative_source_dir = deployment.get_source_dir()
     stream = stream or NullStream()
 
-    proc_data: Optional[Dict[str, Dict[str, str]]] = proc_data_from_desc
+    proc_data: Optional[Dict[str, Dict[str, str]]] = cattr.unstructure(proc_data_from_desc)
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
         proc_data_from_procfile = {

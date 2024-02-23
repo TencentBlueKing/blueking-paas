@@ -171,6 +171,28 @@ class TestHookField:
     @pytest.mark.parametrize(
         ("json_data", "expected"),
         [
+            (
+                {"language": "python"},
+                HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 1;"}, Hook)]),
+            ),
+            (
+                {"language": "python", "scripts": {"pre_release_hook": "echo 2;"}},
+                HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 2;"}, Hook)]),
+            ),
+        ],
+    )
+    def test_hooks_override(self, bk_deployment, json_data, expected):
+        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1;")
+        bk_deployment.save()
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert bk_deployment.get_deploy_hooks() == expected
+
+    @pytest.mark.parametrize(
+        ("json_data", "expected"),
+        [
             ({"language": "python"}, HookList()),
             (
                 {"language": "python", "scripts": {"pre_release_hook": "echo 2;"}},
@@ -185,6 +207,7 @@ class TestHookField:
 
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+        bk_deployment.refresh_from_db()
         assert bk_deployment.get_deploy_hooks() == expected
 
 

@@ -273,12 +273,9 @@ class ApplicationBuilder(BaseBuilder):
                 proc_data_from_desc=proc_data_from_desc,
             )
             self.deployment.update_fields(processes=processes)
-            if not proc_data_from_desc:
-                # 保存从 Procfile 解析到的进程信息到 DB - Processes/Hooks
-                # TODO: remove hooks
-                sync_to_bkapp_model(
-                    module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks()
-                )
+            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到，同步到 bkapp models
+            if proc_data_from_desc != processes:
+                sync_to_bkapp_model(module, processes=list(processes.values()))
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -378,12 +375,9 @@ class DockerBuilder(BaseBuilder):
                 proc_data_from_desc=proc_data_from_desc,
             )
             self.deployment.update_fields(processes=processes)
-            if not proc_data_from_desc:
-                # 保存从 Procfile 解析到的进程信息到 DB - Processes/Hooks
-                # TODO: remove hooks
-                sync_to_bkapp_model(
-                    module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks()
-                )
+            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到，同步到 bkapp models
+            if proc_data_from_desc != processes:
+                sync_to_bkapp_model(module, processes=list(processes.values()))
 
         bkapp_revision_id = None
         if is_cnative_app:

@@ -21,7 +21,7 @@ from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import field_env_var_key
-from paasng.utils.validators import PROC_TYPE_PATTERN
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
 class BaseEnvVarFields(serializers.Serializer):
@@ -154,7 +154,7 @@ class BuildInputSLZ(serializers.Serializer):
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
-    name = serializers.RegexField(regex=PROC_TYPE_PATTERN)
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0)
     resQuotaPlan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
     targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)

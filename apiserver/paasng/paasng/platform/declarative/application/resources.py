@@ -135,6 +135,8 @@ class ApplicationDesc(BaseModel):
 
 
 class ApplicationDescDiffDog:
+    """deprecated: TODO: 前端重构后未再使用 `diffs` 字段展示差异, 是否可以移除相关实现？"""
+
     def __init__(self, application: Application, desc: ApplicationDesc):
         self.application = application
         self.desc = desc

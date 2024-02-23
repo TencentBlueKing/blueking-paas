@@ -99,8 +99,6 @@ class ImageReleaseMgr(DeployStep):
                     processes = list(
                         get_processes(deployment=self.deployment, proc_data_from_desc=proc_data_from_desc).values()
                     )
-                    # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-                    sync_to_bkapp_model(module=module, processes=processes, hooks=self.deployment.get_deploy_hooks())
                 else:
                     processes = [
                         ProcessTmpl(
@@ -118,7 +116,6 @@ class ImageReleaseMgr(DeployStep):
                 # 目前构建流程必须 build_id, 因此需要构造 Build 对象
                 build_id = self.engine_client.create_build(
                     image=runtime_info.generate_image(self.version_info),
-                    procfile={p.name: p.command for p in processes},
                     extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
                     # 需要兼容 s-mart 应用
                     artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,

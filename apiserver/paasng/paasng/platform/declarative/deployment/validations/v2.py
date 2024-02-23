@@ -19,11 +19,13 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.serializers import field_env_var_key
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
 class EnvVariableSLZ(serializers.Serializer):
@@ -138,3 +140,17 @@ class DeploymentDescSLZ(serializers.Serializer):
     def to_internal_value(self, data) -> DeploymentDesc:
         attrs = super().to_internal_value(data)
         return cattr.structure(attrs, DeploymentDesc)
+
+    def validate_processes(self, processes):
+        for proc_type in processes:
+            if not PROC_TYPE_PATTERN.match(proc_type):
+                raise ValidationError(
+                    f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"
+                )
+            if len(proc_type) > PROC_TYPE_MAX_LENGTH:
+                raise ValidationError(
+                    f"Invalid proc type: {proc_type}, must not " f"longer than {PROC_TYPE_MAX_LENGTH} characters"
+                )
+
+        # Formalize procfile data and return
+        return {k.lower(): v for k, v in processes.items()}

@@ -25,18 +25,33 @@ from django.db.transaction import atomic
 
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.bkapp_model.importer import import_manifest
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
-from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet
+from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet, Process
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
 logger = logging.getLogger(__name__)
 
 
 @define
 class PerformResult:
-    loaded_processes: Optional[Dict[str, Dict[str, str]]] = None
+    loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
+
+    def set_processes(self, processes: Dict[str, Process]):
+        self.loaded_processes = cattr.structure(
+            {
+                proc_name: {
+                    "name": proc_name,
+                    "command": process.command,
+                    "replicas": process.replicas,
+                    "plan": process.plan,
+                }
+                for proc_name, process in processes.items()
+            },
+            Dict[str, ProcessTmpl],
+        )
 
 
 class DeploymentDeclarativeController:
@@ -54,15 +69,15 @@ class DeploymentDeclarativeController:
         result = PerformResult()
         logger.debug("Update related deployment description object.")
 
-        # Save given description config into database
+        module = self.deployment.app_environment.module
+        processes = desc.get_processes()
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
                 "env_variables": desc.get_env_variables(ConfigVarEnvName(self.deployment.app_environment.environment)),
                 "runtime": {
-                    # TODO: Only save desc.processes into DeploymentDescription
                     # The synchronization of processes_spec should be delayed until the RELEASE stage
-                    "processes": cattr.unstructure(desc.processes),
+                    "processes": cattr.unstructure(processes),
                     "svc_discovery": cattr.unstructure(desc.svc_discovery),
                     "source_dir": desc.source_dir,
                 },
@@ -72,14 +87,21 @@ class DeploymentDeclarativeController:
         )
 
         # apply desc to bkapp_model
-        if desc.processes:
-            result.loaded_processes = deploy_desc.get_processes()
-            # TODO: save processes and hooks to models
-        elif desc.spec:
-            # TODO: 优化 import 方式
-            import_manifest(self.deployment.module, input_data={"metadata": {}, "spec": desc.spec.dict()})
-            # TODO: 转换成 processes 格式
-            result.loaded_processes = {}
+        result.set_processes(processes=processes)
+        if not desc.spec:
+            if result.loaded_processes:
+                ModuleProcessSpecManager(module).sync_from_desc(processes=list(result.loaded_processes.values()))
+            # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
+            # Warning: 但由于普通应用仍然可以在页面上填写部署前置命令, 因此当描述文件未配置 hooks 时, 不能删除产品上配置的 hooks
+            if hooks := deploy_desc.get_deploy_hooks():
+                sync_hooks(module, hooks)
+                self.deployment.update_fields(hooks=hooks)
+        else:
+            # TODO: 优化 import 方式, 例如直接接受 desc.spec
+            # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
+            import_manifest(module, input_data={"metadata": {}, "spec": deploy_desc.spec.dict()})
+            if hooks := deploy_desc.get_deploy_hooks():
+                self.deployment.update_fields(hooks=hooks)
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
@@ -89,7 +111,7 @@ class DeploymentDeclarativeController:
         self.delete_probes()
 
         # 根据配置，对 probe 进行全量更新
-        for process_type, process in desc.processes.items():
+        for process_type, process in processes.items():
             self.update_probes(process_type=process_type, probes=process.probes)
 
         return result

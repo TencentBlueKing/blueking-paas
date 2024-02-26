@@ -49,7 +49,7 @@ class ConfigMapSource(TimestampedModel):
     """ConfigMap 类型的挂载资源"""
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
@@ -78,10 +78,10 @@ class PersistentVolumeClaimSource(TimestampedModel):
     """PVC 类型的挂载资源"""
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
+    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     storage = models.CharField(max_length=63)
     storage_class_name = models.CharField(max_length=63)
@@ -90,11 +90,6 @@ class PersistentVolumeClaimSource(TimestampedModel):
 
     class Meta:
         unique_together = ("name", "application_id", "environment_name")
-
-
-def generate_source_config_name(app_code: str) -> str:
-    """Generate name of the Mount source_config"""
-    return f"{app_code}-{uuid.uuid4().hex}"
 
 
 class MountManager(models.Manager):
@@ -109,10 +104,10 @@ class MountManager(models.Manager):
         region: str,
         source_name: Optional[str] = None,
     ):
-        source_config_name = source_name or generate_source_config_name(app_code=app_code)
         # 根据 source_type 生成对应的 source_config
-        from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
+        from paas_wl.bk_app.cnative.specs.mounts import generate_source_config_name, init_source_controller
 
+        source_config_name = source_name or generate_source_config_name(app_code=app_code)
         controller = init_source_controller(source_type)
         source_config = controller.new_volume_source(name=source_config_name)
 

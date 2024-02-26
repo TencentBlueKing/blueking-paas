@@ -277,11 +277,27 @@ class QueryMountSourcesSLZ(serializers.Serializer):
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 
 
+class CreateMountSourceSLZ(serializers.Serializer):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+    configmap_source = ConfigMapSLZ(required=False, allow_null=True)
+    pvc_source = PVCSLZ(required=False, allow_null=True)
+
+
+class DeleteMountSourcesSLZ(serializers.Serializer):
+    source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+
+
 class MountSourceSLZ(serializers.Serializer):
+    application_id = serializers.UUIDField(required=True)
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     name = serializers.CharField(max_length=63, required=True)
     source_type = serializers.SerializerMethodField(label=_("挂载卷资源类型"))
+    binded_modules = serializers.SerializerMethodField(label=_("已绑定模块"))
     data = serializers.JSONField(required=False)
+    storage = serializers.CharField(required=False)
+    storage_class_name = serializers.CharField(required=False)
 
     def get_source_type(self, obj):
         if isinstance(obj, ConfigMapSource):
@@ -289,3 +305,12 @@ class MountSourceSLZ(serializers.Serializer):
         elif isinstance(obj, PersistentVolumeClaimSource):
             return VolumeSourceType.PersistentVolumeClaim.value
         return None
+
+    def get_binded_modules(self, obj):
+        """返回已绑定的模块"""
+        source_type = self.get_source_type(obj)
+        controller = init_source_controller(source_type)
+        mounts = Mount.objects.filter(
+            source_config=controller.new_volume_source(obj.name),
+        )
+        return [mount.name for mount in mounts]

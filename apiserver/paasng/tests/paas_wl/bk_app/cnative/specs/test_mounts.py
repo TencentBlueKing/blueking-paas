@@ -70,7 +70,7 @@ def _create_mounts(bk_module):
     )
 
 
-class TestVolumeSourceManager:
+class TestVolumeSourceController:
     @pytest.fixture(autouse=True)
     def _create_configmap_resource(self, bk_module):
         ConfigMapSource.objects.create(
@@ -113,7 +113,7 @@ class TestVolumeSourceManager:
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_deploy(self, bk_stag_env):
-        mounts.VolumeSourceManager(bk_stag_env).deploy()
+        mounts.BaseVolumeSourceController.deploy(bk_stag_env)
 
     @pytest.fixture()
     def mount_configmap(self, bk_app, bk_module):
@@ -128,16 +128,16 @@ class TestVolumeSourceManager:
         )
         source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
         controller = init_source_controller(mount.source_type)
-        controller.upsert_by_mount(mount, data=source_data)
+        controller.create_by_mount(mount, data=source_data)
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_configmap(self, bk_stag_env, mount_configmap):
-        mounts.VolumeSourceManager(bk_stag_env).deploy()
+        mounts.BaseVolumeSourceController.deploy(bk_stag_env)
         controller = init_source_controller(mount_configmap.source_type)
         source = controller.get_by_mount(mount_configmap)
         assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
-        mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount_configmap)
+        controller.delete_k8s_resource(source, bk_stag_env.wl_app)
         with pytest.raises(AppEntityNotFound):
             configmap_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
 
@@ -147,21 +147,20 @@ class TestVolumeSourceManager:
             app_code=bk_app.code,
             module_id=bk_module.id,
             mount_path="/path/",
-            environment_name=MountEnvName.GLOBAL,
+            environment_name=MountEnvName.STAG,
             name="mount-pvc",
             source_type=VolumeSourceType.PersistentVolumeClaim.value,
             region=bk_app.region,
+            source_name="etcd-pvc",
         )
-        controller = init_source_controller(mount.source_type)
-        controller.upsert_by_mount(mount, storage="1Gi")
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_pvc(self, bk_stag_env, mount_pvc):
-        mounts.VolumeSourceManager(bk_stag_env).deploy()
+        mounts.BaseVolumeSourceController.deploy(bk_stag_env)
         controller = init_source_controller(mount_pvc.source_type)
         source = controller.get_by_mount(mount_pvc)
         assert pvc_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
-        mounts.VolumeSourceManager(bk_stag_env).delete_source_config(mount_pvc)
+        controller.delete_k8s_resource(source, bk_stag_env.wl_app)
         with pytest.raises(AppEntityNotFound):
             pvc_kmodel.get(app=bk_stag_env.wl_app, name=source.name)

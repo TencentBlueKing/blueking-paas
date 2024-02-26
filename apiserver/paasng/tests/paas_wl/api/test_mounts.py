@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest.mock import patch
-
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
@@ -29,37 +27,49 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
-def mount_configmap(bk_app, bk_module):
+def mount_configmap(bk_app, bk_module, bk_stag_env, bk_stag_wl_app):
     """创建一个 configmap mount 对象"""
     mount = Mount.objects.new(
         app_code=bk_app.code,
         module_id=bk_module.id,
         mount_path="/path/",
-        environment_name=MountEnvName.GLOBAL,
+        environment_name=MountEnvName.STAG,
         name="mount-configmap",
         source_type=VolumeSourceType.ConfigMap.value,
         region=bk_app.region,
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
     controller = init_source_controller(mount.source_type)
-    controller.upsert_by_mount(mount, data=source_data)
+    controller.create_by_mount(mount, data=source_data)
     return mount
 
 
 @pytest.fixture()
-def mount_pvc(bk_app, bk_module):
+def pvc_source(bk_app, bk_module):
+    pvc = PersistentVolumeClaimSource.objects.create(
+        application_id=bk_app.id,
+        module_id=bk_module.id,
+        environment_name=MountEnvName.STAG,
+        name="pvc-source-test",
+        storage="1Gi",
+        storage_class_name="storage-class-test",
+    )
+    return pvc
+
+
+@pytest.fixture()
+def mount_pvc(bk_app, bk_module, pvc_source):
     """创建一个 pvc mount 对象"""
     mount = Mount.objects.new(
         app_code=bk_app.code,
         module_id=bk_module.id,
         mount_path="/path/",
-        environment_name=MountEnvName.GLOBAL,
+        environment_name=MountEnvName.STAG,
         name="mount-pvc",
         source_type=VolumeSourceType.PersistentVolumeClaim.value,
         region=bk_app.region,
+        source_name=pvc_source.name,
     )
-    controller = init_source_controller(mount.source_type)
-    controller.upsert_by_mount(mount, storage="1Gi")
     return mount
 
 
@@ -80,30 +90,9 @@ def mounts(bk_app, bk_module):
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
         controller = init_source_controller(mount.source_type)
-        controller.upsert_by_mount(mount, data=source_data)
+        controller.create_by_mount(mount, data=source_data)
         mount_list.append(mount)
     return mount_list
-
-
-@pytest.fixture()
-def pvc_source(bk_app, bk_module):
-    pvc = PersistentVolumeClaimSource.objects.create(
-        application_id=bk_app.id,
-        module_id=bk_module.id,
-        environment_name=MountEnvName.STAG,
-        name="pvc-source-test",
-        storage="1Gi",
-        storage_class_name="storage-class-test",
-    )
-    return pvc
-
-
-@pytest.fixture(autouse=True, scope="class")
-def _mock_volume_source_manager():
-    with patch(
-        "paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.delete_source_config", return_value=None
-    ), patch("paas_wl.bk_app.cnative.specs.mounts.VolumeSourceManager.__init__", return_value=None):
-        yield
 
 
 class TestVolumeMountViewSet:
@@ -145,13 +134,14 @@ class TestVolumeMountViewSet:
         assert mount
         assert source.data == {"configmap_z": "configmap_z_data"}
 
-    def test_create_pvc(self, api_client, bk_app, bk_module):
+    def test_create_pvc(self, api_client, bk_app, bk_module, pvc_source):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
-            "environment_name": "_global_",
+            "environment_name": "stag",
             "mount_path": "/path/",
             "name": "mount-pvc-test",
             "source_type": "PersistentVolumeClaim",
+            "source_name": pvc_source.name,
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
@@ -159,7 +149,7 @@ class TestVolumeMountViewSet:
         source = controller.get_by_mount(mount)
         assert response.status_code == 201
         assert mount
-        assert source.storage == "1Gi"
+        assert source.storage == pvc_source.storage
 
     def test_create_with_source_name(self, api_client, bk_app, bk_module, pvc_source):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
@@ -180,7 +170,7 @@ class TestVolumeMountViewSet:
         [
             {
                 # 创建相同 unique_together = ('module_id', 'mount_path', 'environment_name') 的 Mount
-                "environment_name": "_global_",
+                "environment_name": "stag",
                 "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}},
                 "mount_path": "/path/",
                 "name": "mount-configmap-test",
@@ -245,7 +235,7 @@ class TestVolumeMountViewSet:
         response = api_client.post(url, request_body_error)
         assert response.status_code == 400
 
-    def test_updata_configmap(self, api_client, bk_app, bk_module, mount_configmap):
+    def test_update_configmap(self, api_client, bk_app, bk_module, mount_configmap):
         url = (
             "/api/bkapps/applications/"
             f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
@@ -280,7 +270,7 @@ class TestVolumeMountViewSet:
         assert response.status_code == 204
         assert not mount_query.exists()
 
-    def test_updata_pvc(self, api_client, bk_app, bk_module, mount_pvc):
+    def test_update_pvc(self, api_client, bk_app, bk_module, mount_pvc):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
         body = MountSLZ(mount_pvc).data
         body["name"] = "mount-pvc-test"
@@ -346,3 +336,24 @@ class TestMountSourceViewSet:
         response = api_client.get(url)
         assert response.status_code == 200
         assert len(response.data) == 1
+
+    @pytest.mark.usefixtures("_mount_sources")
+    def test_create(self, api_client, bk_app):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/"
+        request_body = {
+            "environment_name": "stag",
+            "source_type": "PersistentVolumeClaim",
+            "pvc_source": {"storage": "1Gi"},
+        }
+        response = api_client.post(url, request_body)
+        assert response.status_code == 201
+        assert response.data["environment_name"] == "stag"
+
+    @pytest.mark.usefixtures("_mount_sources")
+    def test_destroy(self, api_client, bk_app):
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/mres/mount_sources/?source_type=PersistentVolumeClaim&source_name=pvc"
+        )
+        response = api_client.delete(url)
+        assert response.status_code == 204

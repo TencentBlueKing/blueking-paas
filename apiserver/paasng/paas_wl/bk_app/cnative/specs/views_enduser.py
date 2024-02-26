@@ -42,7 +42,6 @@ from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.cnative.specs.constants import (
     BKPAAS_DEPLOY_ID_ANNO_KEY,
     DEFAULT_STORAGE,
-    MountEnvName,
     ResQuotaPlan,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
@@ -58,7 +57,7 @@ from paas_wl.bk_app.cnative.specs.models import (
     to_error_string,
     update_app_resource,
 )
-from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager, init_source_controller
+from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
@@ -66,6 +65,8 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelResourceSerializer,
     AppModelRevisionSerializer,
     CreateDeploySerializer,
+    CreateMountSourceSLZ,
+    DeleteMountSourcesSLZ,
     DeployDetailSerializer,
     DeployPrepResultSLZ,
     DeploySerializer,
@@ -457,11 +458,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not validated_data.get("source_name"):
             # 创建或更新 Mount source
             configmap_source = validated_data.get("configmap_source") or {}
-            storage = validated_data.get("storage", DEFAULT_STORAGE)
             controller = init_source_controller(mount_instance.source_type)
-            controller.upsert_by_mount(
-                mount_instance, data=configmap_source.get("source_config_data"), storage=storage
-            )
+            controller.create_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -490,16 +488,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 创建或更新 Mount source
         configmap_source = validated_data.get("configmap_source") or {}
         controller = init_source_controller(mount_instance.source_type)
-        controller.upsert_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
-
-        # 需要删除对应的 k8s volume 资源
-        if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
-            opposite_env_map = {
-                MountEnvName.STAG.value: MountEnvName.PROD.value,
-                MountEnvName.PROD.value: MountEnvName.STAG.value,
-            }
-            env = module.get_envs(environment=opposite_env_map.get(mount_instance.environment_name))
-            VolumeSourceManager(env).delete_source_config(mount_instance)
+        controller.update_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
 
         try:
             slz = MountSLZ(mount_instance)
@@ -512,13 +501,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        # 需要删除对应的 k8s volume 资源
-        for env in module.get_envs():
-            VolumeSourceManager(env).delete_source_config(mount_instance)
-
         controller = init_source_controller(mount_instance.source_type)
-        source = controller.get_by_mount(mount_instance)
-        source.delete()
+        controller.delete_by_mount(mount_instance)
         mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -546,3 +530,35 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         slz = MountSourceSLZ(queryset, many=True)
         return Response(data=slz.data, status=status.HTTP_200_OK)
+
+    def create(self, request, code):
+        app = self.get_application()
+
+        slz = CreateMountSourceSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        environment_name = validated_data.get("environment_name")
+        source_type = validated_data.get("source_type")
+        storage = validated_data.get("pvc_source", {}).get("storage") or DEFAULT_STORAGE
+
+        controller = init_source_controller(source_type)
+        queryset = controller.create_by_app(application_id=app.id, environment_name=environment_name, storage=storage)
+
+        slz = MountSourceSLZ(queryset)
+        return Response(data=slz.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, code):
+        app = self.get_application()
+
+        slz = DeleteMountSourcesSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        source_type = params.get("source_type")
+        source_name = params.get("source_name")
+
+        controller = init_source_controller(source_type)
+        controller.delete_by_app(application_id=app.id, source_name=source_name)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -199,7 +198,7 @@ func setupPlatformEnv(logger logr.Logger, platformDir string, env []string) erro
 		if _, ok := ignoredEnvs[key]; ok {
 			logger.V(2).Info(fmt.Sprintf("skip env var %s", key))
 		} else {
-			err := ioutil.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0755)
+			err := os.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0755)
 			if err != nil {
 				return errors.Wrapf(err, "failed to write env var %s", key)
 			}
@@ -259,7 +258,7 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal order")
 	}
-	err = ioutil.WriteFile(filepath.Join(cnbDir, "order.toml"), data, 0755)
+	err = os.WriteFile(filepath.Join(cnbDir, "order.toml"), data, 0755)
 	if err != nil {
 		return errors.Wrap(err, "failed to write order.toml")
 	}

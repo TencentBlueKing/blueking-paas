@@ -86,7 +86,7 @@ class ImageReleaseMgr(DeployStep):
                 if not deployment:
                     raise DeployShouldAbortError("failed to get processes")
                 processes = deployment.get_processes()
-                # 保存应用描述文件记录的信息到 DB - Processes/Hooks
+                # 保存上一次部署的 Processes/Hooks 到 bkapp models
                 sync_to_bkapp_model(module=module, processes=processes, hooks=deployment.get_deploy_hooks())
             else:
                 # advanced_options.build_id 为空有 2 种可能情况
@@ -209,6 +209,4 @@ class ImageReleaseMgr(DeployStep):
             self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
             logger.exception("Exception while processing app description file, skip.")
 
-        # refresh_from_db 的目的是 self.deployment.get_deploy_hooks() 能够拿到更新后的 scripts
-        self.deployment.refresh_from_db()
         return result

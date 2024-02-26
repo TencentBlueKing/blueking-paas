@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List
 
+import cattr
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -69,15 +70,20 @@ class MarketSLZ(serializers.Serializer):
     category = ProductTagByNameField(required=False, source="tag")
     introduction = I18NExtend(serializers.CharField(required=True, help_text="简介"))
     description = I18NExtend(serializers.CharField(required=False, default="", help_text="描述"))
-    displayOptions = DisplayOptionsSLZ(required=False, default=DisplayOptionsSLZ.gen_default_value)
-    logoB64ata = Base64FileField(required=False, help_text="应用logo", source="logo")
+    displayOptions = DisplayOptionsSLZ(
+        required=False, default=DisplayOptionsSLZ.gen_default_value, source="display_options"
+    )
+    logoB64data = Base64FileField(required=False, help_text="应用logo", source="logo")
 
     def to_internal_value(self, data) -> MarketDesc:
         attrs = super().to_internal_value(data)
         tag = attrs.pop("tag", None)
         if tag:
             attrs["tag_id"] = tag.pk
-        return MarketDesc(**attrs)
+        return cattr.structure(
+            attrs,
+            MarketDesc,
+        )
 
 
 class ModuleSpecField(serializers.DictField):

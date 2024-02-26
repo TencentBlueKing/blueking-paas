@@ -183,6 +183,8 @@ class DeploymentDesc:
     :param bk_monitor: SaaS 监控采集配置
     """
 
+    # TODO: 移除 spec_version=2 的字段, 将兼容逻辑移到 validations 中处理？validations 充当 k8s 多版本的 hub
+
     language: AppLanguage
     source_dir: str = ""
     env_variables: List[EnvVariable] = field(factory=list)

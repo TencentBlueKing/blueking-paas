@@ -71,7 +71,13 @@ class TestCreateAppResource:
                 "svcDiscovery": None,
                 "configuration": {"env": []},
             },
-            "status": {"conditions": [], "lastUpdate": None, "phase": "Pending", "observedGeneration": 0},
+            "status": {
+                "conditions": [],
+                "lastUpdate": None,
+                "phase": "Pending",
+                "observedGeneration": 0,
+                "deployId": "",
+            },
         }
 
     def test_v1alpha2(self, bkapp_manifest):

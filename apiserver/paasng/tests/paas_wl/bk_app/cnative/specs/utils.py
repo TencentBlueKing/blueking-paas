@@ -16,11 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List, Literal, Optional
+import builtins
+from typing import Callable, List, Literal, Optional, Union
 
 from bkpaas_auth.models import User
 
-from paas_wl.bk_app.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
+from paas_wl.bk_app.cnative.specs.constants import (
+    BKPAAS_DEPLOY_ID_ANNO_KEY,
+    DeployStatus,
+    MResConditionType,
+    MResPhaseType,
+)
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, create_app_resource
 from paasng.platform.applications.models import ModuleEnvironment
@@ -85,4 +91,32 @@ def create_res_with_conds(
     mres = create_app_resource(name="foo", image="nginx:latest")
     mres.status.conditions = conditions
     mres.status.phase = phase
+    return mres
+
+
+def with_conds(conditions: List[MetaV1Condition], phase: MResPhaseType = MResPhaseType.AppPending):
+    def apply(mres: BkAppResource):
+        mres.status.conditions = conditions
+        mres.status.phase = phase
+
+    return apply
+
+
+# can not import ellipsis from builtins directly, so we must wrap it with quotes
+def with_deploy_id(deploy_id: str, status_deploy_id: Union[str, "builtins.ellipsis"] = Ellipsis):
+    def apply(mres: BkAppResource):
+        mres.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = deploy_id
+        if status_deploy_id is ...:
+            mres.status.deployId = deploy_id
+        else:
+            mres.status.deployId = status_deploy_id
+        return mres
+
+    return apply
+
+
+def create_res(*applys: Callable[[BkAppResource], None]):
+    mres = create_app_resource(name="foo", image="nginx:latest")
+    for apply in applys:
+        apply(mres)
     return mres

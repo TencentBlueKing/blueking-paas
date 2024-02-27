@@ -74,9 +74,7 @@
                   :id="option.name"
                   :key="option.name"
                   :name="option.name"
-                  :disabled="
-                    !curVersionData.allow_duplicate_source_version && releasedSourceVersions.includes(option.name)
-                  "
+                  :disabled="isOptionDisabled(option)"
                 />
                 <div
                   v-if="curVersionData.version_type === 'tag'"
@@ -315,9 +313,6 @@ export default {
     curPluginInfo() {
       return this.$store.state.plugin.curPluginInfo;
     },
-    releasedSourceVersions() {
-      return this.curVersionData.released_source_versions || [];
-    },
     localLanguage() {
       return this.$store.state.localLanguage;
     },
@@ -363,7 +358,7 @@ export default {
         // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
         this.curVersion.semver_choices = res.semver_choices;
         // source_versions 会存在 [] 情况
-        if (res.allow_duplicate_source_version) {
+        if (res.revision_policy === null) {
           this.curVersion.source_versions = res.source_versions[0]?.name || '';
         } else {
           this.curVersion.source_versions = '';
@@ -514,13 +509,34 @@ export default {
     },
 
     changeVersionType() {
-      this.$refs.versionForm.validate();
+      try {
+        this.$refs.versionForm.validate();
+      } catch (error) {
+        console.error(e);
+      }
     },
 
     // 新建Tag
     handleAddTag() {
       const url = this.curVersion.repository.replace('.git', '/-/tags/new');
       window.open(url, '_blank');
+    },
+
+    // 当前代码分支是否可以选择
+    isOptionDisabled(data) {
+      const revisionPolicy = this.curVersionData.revision_policy;
+      if (revisionPolicy === null) {
+        return false;
+      }
+      // 不允许选择已经发布过的代码分支
+      if (revisionPolicy === 'disallow_released_source_version') {
+        return this.curVersionData.released_source_versions.includes(data.name);
+      }
+      // 不允许选择正在发布的代码分支
+      if (revisionPolicy === 'disallow_releasing_source_version') {
+        return this.curVersionData.releasing_source_versions.includes(data.name);
+      }
+      return false;
     },
   },
 };

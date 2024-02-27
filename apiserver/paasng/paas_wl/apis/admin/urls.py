@@ -25,17 +25,14 @@ urlpatterns = [
     path(
         "wl_api/platform/process_spec_plan/manage/",
         processes.ProcessSpecPlanManageViewSet.as_view({"get": "get_context_data"}),
-        name="admin.process_spec_plan.manage",
     ),
     path(
         "wl_api/platform/process_spec_plan/",
         processes.ProcessSpecPlanManageViewSet.as_view(dict(post="create", get="list")),
-        name="admin.process_spec_plan",
     ),
     path(
         "wl_api/platform/process_spec_plan/id/<int:id>/",
         processes.ProcessSpecPlanManageViewSet.as_view(dict(put="edit", get="list_binding_app")),
-        name="admin.process_spec_plan.detail",
     ),
     path(
         "wl_api/regions/<str:region>/apps/<str:name>/processes/<str:process_type>/plan",
@@ -53,12 +50,10 @@ urlpatterns = [
     path(
         "wl_api/applications/<str:code>/domains/",
         domain.AppDomainsViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.app_domains",
     ),
     path(
         "wl_api/applications/<str:code>/domains/<int:id>/",
         domain.AppDomainsViewSet.as_view({"put": "update", "delete": "destroy"}),
-        name="admin.app_domains.singular",
     ),
     # Shared certificates
     path(
@@ -73,7 +68,6 @@ urlpatterns = [
     path(
         "wl_api/applications/<str:code>/log_config/",
         logs.AppLogConfigViewSet.as_view({"get": "list", "post": "toggle"}),
-        name="admin.app_log_configs",
     ),
     # 平台管理-集群管理API
     path(

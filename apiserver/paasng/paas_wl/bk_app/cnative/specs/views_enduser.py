@@ -485,7 +485,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
-        # 创建或更新 Mount source
+        # 更新 Mount source
         configmap_source = validated_data.get("configmap_source") or {}
         controller = init_source_controller(mount_instance.source_type)
         controller.update_by_mount(mount_instance, data=configmap_source.get("source_config_data"))

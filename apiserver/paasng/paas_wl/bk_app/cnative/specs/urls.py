@@ -18,31 +18,31 @@ to the current version of the project delivered to anyone in the future.
 """
 from paasng.utils.basic import make_app_pattern, re_path
 
-from . import views_enduser
+from . import views
 
 urlpatterns = [
     re_path(
         make_app_pattern(r"/mres/revisions/(?P<revision_id>[\d]+)/$"),
-        views_enduser.MresVersionViewSet.as_view({"get": "retrieve"}),
+        views.MresVersionViewSet.as_view({"get": "retrieve"}),
         name="api.mres.revision.singular",
     ),
     re_path(
         make_app_pattern(r"/mres/image_tags/$", include_envs=False),
-        views_enduser.ImageRepositoryView.as_view({"get": "list_tags"}),
+        views.ImageRepositoryView.as_view({"get": "list_tags"}),
         name="api.mres.image_tags.list",
     ),
     re_path(
         r"api/mres/quota_plans/$",
-        views_enduser.ResQuotaPlanOptionsView.as_view(),
+        views.ResQuotaPlanOptionsView.as_view(),
     ),
     re_path(
         make_app_pattern(r"/mres/volume_mounts/$", include_envs=False),
-        views_enduser.VolumeMountViewSet.as_view({"get": "list", "post": "create"}),
+        views.VolumeMountViewSet.as_view({"get": "list", "post": "create"}),
         name="api.mres.volume_mount",
     ),
     re_path(
         make_app_pattern(r"/mres/volume_mounts/(?P<mount_id>\w+)/$", include_envs=False),
-        views_enduser.VolumeMountViewSet.as_view({"put": "update", "delete": "destroy"}),
+        views.VolumeMountViewSet.as_view({"put": "update", "delete": "destroy"}),
         name="api.mres.volume_mount.detail",
     ),
 ]

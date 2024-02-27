@@ -126,8 +126,8 @@ const pagination = {{ pagination | to_json }}
 const data = {{ process_spec_plan_list | to_json }}
 
 const URLRouter = {
-    create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/process_spec_plan/' %}"),
-    detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/process_spec_plan/id/${id}/' %}"),
+    create: decodeURI("{{ '/admin42/wl_api/platform/process_spec_plan/' }}"),
+    detail: decodeURI("{{ '/admin42/wl_api/platform/process_spec_plan/id/${id}/' }}"),
 }
 
 const ResourceSchema = {

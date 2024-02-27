@@ -29,8 +29,8 @@
     const envChoices = {{ env_choices | to_json }}
 
     const URLRouter = {
-        list: decodeURI("{% url 'workloads.proxy' 'admin42/applications/${code}/log_config/' %}"),
-        detail: decodeURI("{% url 'workloads.proxy' 'admin42/applications/${code}/log_config/' %}"),
+        list: decodeURI("{{ '/admin42/wl_api/applications/${code}/log_config/' }}"),
+        detail: decodeURI("{{ '/admin42/wl_api/applications/${code}/log_config/' }}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {

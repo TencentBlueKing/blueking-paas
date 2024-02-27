@@ -224,9 +224,6 @@ class SvcDiscConfig(AuditedModel):
 
     bk_saas: List[SvcDiscEntryBkSaaS] = BkSaaSField(default=list, help_text="")
 
-    class Meta:
-        unique_together = ("application", "bk_saas")
-
 
 class DomainResolution(AuditedModel):
     """域名解析配置"""
@@ -235,6 +232,3 @@ class DomainResolution(AuditedModel):
 
     nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
     host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")
-
-    class Meta:
-        unique_together = ("application", "nameservers", "host_aliases")

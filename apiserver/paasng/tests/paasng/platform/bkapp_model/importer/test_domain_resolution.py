@@ -39,7 +39,6 @@ class Test__import_svc_discoverys:
         spec_slz.is_valid(raise_exception=True)
         validated_data = spec_slz.validated_data
 
-        print(validated_data["domainResolution"])
         ret = import_domain_resolution(
             bk_module,
             validated_data["domainResolution"],

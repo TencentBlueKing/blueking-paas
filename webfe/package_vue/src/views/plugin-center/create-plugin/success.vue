@@ -19,7 +19,7 @@
             <bk-button
               :theme="'default'"
               type="submit"
-              @click="handlePageJump('pluginVersionManager')"
+              @click="handlePageJump(pluginInfo.has_test_version ? 'pluginVersionManager' : 'pluginVersionEditor')"
             >
               {{ $t('测试插件') }}
             </bk-button>
@@ -102,13 +102,13 @@ export default {
   },
   data() {
     return {
-      repository: '',
       extraInfo: {},
+      pluginInfo: {},
     };
   },
   computed: {
     gitClone() {
-      return `git clone "${this.repository}"`;
+      return `git clone "${this.pluginInfo?.repository}"`;
     },
     // 提交到代码仓库
     pushTips() {
@@ -142,8 +142,7 @@ export default {
     async init() {
       try {
         const res = await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.pluginId, pluginTypeId: this.pluginTypeId });
-        // 代码仓库
-        this.repository = res.repository;
+        this.pluginInfo = res;
       } catch (e) {
         console.error(e);
       }

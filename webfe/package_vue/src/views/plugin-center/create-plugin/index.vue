@@ -1,5 +1,8 @@
 <template>
-  <div class="bk-create-plugin-warp">
+  <div
+    class="bk-create-plugin-warp"
+    :style="{ paddingTop: `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px` }"
+  >
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="create-plugin-loading"
@@ -191,7 +194,7 @@
           </bk-form-item>
         </bk-form>
       </section>
-      <section class="info-container card-style mt16" v-if="Object.keys(extraFields).length">
+      <section class="info-container card-style mt16 mb60" v-if="Object.keys(extraFields).length">
         <div class="base-info-tit">
           {{ $t('更多信息') }}
         </div>
@@ -351,6 +354,9 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
     },
   },
   watch: {
@@ -613,7 +619,7 @@ export default {
 <style lang="scss" scoped>
 .bk-create-plugin-warp {
   width: calc(100% - 366px);
-  margin: 74px auto 0;
+  margin: 0 auto;
   .info-container {
     padding: 12px 130px 24px 24px;
   }
@@ -624,6 +630,9 @@ export default {
   }
   .mt16 {
     margin-top: 16px;
+  }
+  .mb60 {
+    margin-bottom: 60px;
   }
   .w480 {
     width: 480px;

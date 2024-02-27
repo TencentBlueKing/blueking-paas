@@ -389,6 +389,7 @@ export default {
 
     // 重新执行发布步骤
     async rerunStage() {
+      this.isLoading = true;
       const params = {
         pdId: this.pdId,
         pluginId: this.pluginId,
@@ -397,18 +398,14 @@ export default {
       };
       this.stepsStatus = '';
       try {
-        const releaseData = await this.$store.dispatch('plugin/rerunStage', params);
-        this.$store.commit('plugin/updateCurRelease', releaseData);
+        await this.$store.dispatch('plugin/rerunStage', params);
         await this.getReleaseStageDetail();
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 200);
+        this.isLoading = false;
       }
     },
 
@@ -456,10 +453,7 @@ export default {
             theme: 'error',
             message: e.detail || e.message || this.$t('接口异常'),
           });
-        } finally {
-          setTimeout(() => {
-            this.isLoading = false;
-          }, 200);
+          this.isLoading = false;
         }
       });
     },

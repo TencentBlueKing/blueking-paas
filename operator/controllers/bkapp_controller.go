@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -201,10 +202,16 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	}
 
 	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
-		For(&paasv1alpha2.BkApp{}).
+		// trigger when bkapp .spec changed or annotation changed.
+		For(&paasv1alpha2.BkApp{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{},
+			predicate.AnnotationChangedPredicate{}))).
 		WithOptions(opts).
-		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Pod{}, builder.WithPredicates(predicates.NewHookFinishedPredicate()))
+		// trigger when deployment changed, i.e. when the deployment was deleted by others.
+		Owns(&appsv1.Deployment{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{},
+			predicate.AnnotationChangedPredicate{}))).
+		// trigger when pod run success or failed
+		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(predicates.NewHookSuccessPredicate(),
+			predicates.NewHookFailedPredicate())))
 
 	if config.Global.IsAutoscalingEnabled() {
 		if err = mgr.GetFieldIndexer().IndexField(

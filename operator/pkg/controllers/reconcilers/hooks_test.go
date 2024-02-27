@@ -134,8 +134,8 @@ var _ = Describe("Test HookReconciler", func() {
 				Expect(ret.duration).To(Equal(requeueAfter))
 				Expect(ret.err).To(errMatcher)
 			},
-			Entry("pending", corev1.PodPending, metav1.Now(), true, paasv1alpha2.DefaultRequeueAfter, BeNil()),
-			Entry("running", corev1.PodRunning, metav1.Now(), true, paasv1alpha2.DefaultRequeueAfter, BeNil()),
+			Entry("pending", corev1.PodPending, metav1.Now(), true, resources.HookExecuteTimeoutThreshold, BeNil()),
+			Entry("running", corev1.PodRunning, metav1.Now(), true, resources.HookExecuteTimeoutThreshold, BeNil()),
 			Entry(
 				"running timeout",
 				corev1.PodRunning,
@@ -146,6 +146,14 @@ var _ = Describe("Test HookReconciler", func() {
 			),
 			Entry("success", corev1.PodSucceeded, metav1.Now(), false, time.Duration(0), BeNil()),
 			Entry("failed", corev1.PodFailed, metav1.Now(), true, time.Duration(0), HaveOccurred()),
+			Entry(
+				"failed timeout",
+				corev1.PodFailed,
+				metav1.NewTime(time.Now().Add(-resources.HookExecuteTimeoutThreshold)),
+				true,
+				time.Duration(0),
+				BeNil(),
+			),
 		)
 	})
 
@@ -299,7 +307,7 @@ var _ = Describe("Test HookReconciler", func() {
 			Expect(state.Progressing()).To(Equal(executing))
 			Expect(state.Succeeded()).To(Equal(succeeded))
 			Expect(state.Failed()).To(Equal(failed))
-			Expect(state.Timeout(timeoutThreshold)).To(Equal(timeout))
+			Expect(state.TimeoutExceededProgressing(timeoutThreshold)).To(Equal(timeout))
 		},
 			Entry("pending", corev1.PodPending, resources.HookExecuteTimeoutThreshold, true, false, false, false),
 			Entry("running", corev1.PodRunning, resources.HookExecuteTimeoutThreshold, true, false, false, false),

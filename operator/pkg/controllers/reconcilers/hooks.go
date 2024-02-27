@@ -85,6 +85,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 			return r.Result.End()
 		case current.Progressing():
 			// 当 Hook 执行成功或失败时会由 owned pod 触发新的调和循环, 因此只需要通过 requeue 处理超时事件即可
+
 			return r.Result.requeue(resources.HookExecuteTimeoutThreshold)
 		case current.Succeeded():
 			return r.Result

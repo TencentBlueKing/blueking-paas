@@ -188,6 +188,37 @@ class HooksInputSLZ(serializers.Serializer):
         return bk_app.BkAppHooks(**d)
 
 
+class BkSaaSInputSLZ(serializers.Serializer):
+    """Validate the `bkSaaS` field."""
+
+    bkAppCode = serializers.CharField()
+    mouduleName = serializers.CharField(required=False, allow_null=True)
+
+
+class ServiceDiscoveryInputSLZ(serializers.Serializer):
+    """Validate the `serviceDiscovery` field."""
+
+    bkSaaS = serializers.ListField(child=BkSaaSInputSLZ(), required=False, allow_empty=True)
+
+    def to_internal_value(self, data) -> bk_app.SvcDiscConfig:
+        d = super().to_internal_value(data)
+        return bk_app.SvcDiscConfig(**d)
+
+
+class HostAliasSLZ(serializers.Serializer):
+    ip = serializers.IPAddressField()
+    hostnames = serializers.ListField(child=serializers.CharField())
+
+
+class DomainResolutionSLZ(serializers.Serializer):
+    nameservers = serializers.ListField(child=serializers.IPAddressField(), required=False)
+    hostAliases = serializers.ListField(child=HostAliasSLZ(), required=False)
+
+    def to_internal_value(self, data) -> bk_app.DomainResolution:
+        d = super().to_internal_value(data)
+        return bk_app.DomainResolution(**d)
+
+
 class BkAppSpecInputSLZ(serializers.Serializer):
     """Validate the `spec` field of BkApp resource."""
 
@@ -197,3 +228,5 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)
     hooks = HooksInputSLZ(allow_null=True, default=None)
     envOverlay = EnvOverlayInputSLZ(required=False)
+    svcDiscovery = ServiceDiscoveryInputSLZ(required=False)
+    domainResolution = DomainResolutionSLZ(required=False)

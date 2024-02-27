@@ -218,11 +218,14 @@ HostAliasesField = make_json_field("HostAliasesField", List[HostAlias])
 
 
 class SvcDiscConfig(AuditedModel):
-    """ " 服务发现配置"""
+    """服务发现配置"""
 
     application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
 
     bk_saas: List[SvcDiscEntryBkSaaS] = BkSaaSField(default=list, help_text="")
+
+    class Meta:
+        unique_together = ("application", "bk_saas")
 
 
 class DomainResolution(AuditedModel):
@@ -232,3 +235,6 @@ class DomainResolution(AuditedModel):
 
     nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
     host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")
+
+    class Meta:
+        unique_together = ("application", "nameservers", "host_aliases")

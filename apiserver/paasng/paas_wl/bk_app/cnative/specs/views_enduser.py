@@ -168,15 +168,40 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
         return self.paginator.get_paginated_response(data=DeploySerializer(page, many=True).data)
 
+    def apply_manifest(self, request, code, module_name, environment):
+        """通过 manifest 更新应用模型资源"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+        env = self.get_env_via_path()
+
+        serializer = CreateDeploySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Update the current manifest when "manifest" field was provided, the data
+        # will be validated in `update_app_resource` function.
+        # TODO: 当 manifest 提供时，检查 manifest 是否有变化
+        if manifest := serializer.validated_data.get("manifest"):
+            update_app_resource(application, module, manifest)
+            import_manifest(module, manifest)
+
+            try:
+                credential_refs = get_references(manifest)
+                validate_references(application, credential_refs)
+            except InvalidImageCredentials:
+                raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
+                # flush credentials if needed
+            if credential_refs:
+                AppImageCredential.objects.flush_from_refs(
+                    application=application, wl_app=env.wl_app, references=credential_refs
+                )
+
     # 该接口已注册到 APIGW
     # 网关名称 deploy_cnative_app
     # 请勿随意修改该接口协议
     @swagger_auto_schema(request_body=CreateDeploySerializer)
     def create(self, request, code, module_name, environment):
         """创建一次新的部署
-
-        TODO 这里目前先包含配置更新的逻辑（manifest + update_app_resource），预期应该是保存与部署分离
-        """
+        TODO:删除该接口"""
         application = self.get_application()
         module = self.get_module_via_path()
         env = self.get_env_via_path()

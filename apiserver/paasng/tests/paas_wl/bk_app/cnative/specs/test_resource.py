@@ -38,7 +38,7 @@ from paas_wl.bk_app.cnative.specs.resource import (
 )
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
-from tests.paas_wl.bk_app.cnative.specs.utils import create_condition, create_res_with_conds
+from tests.paas_wl.bk_app.cnative.specs.utils import create_condition, create_res, with_conds
 from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -49,30 +49,34 @@ class TestMresConditionDetector:
     @pytest.mark.parametrize(
         ("mres", "expected_status"),
         [
-            (create_res_with_conds([]), DeployStatus.PENDING),
+            (create_res(with_conds([])), DeployStatus.PENDING),
             (
-                create_res_with_conds([create_condition(MResConditionType.APP_AVAILABLE)]),
+                create_res(with_conds([create_condition(MResConditionType.APP_AVAILABLE)])),
                 DeployStatus.PROGRESSING,
             ),
             (
-                create_res_with_conds(
-                    [create_condition(MResConditionType.APP_AVAILABLE, "True")], MResPhaseType.AppRunning
+                create_res(
+                    with_conds([create_condition(MResConditionType.APP_AVAILABLE, "True")], MResPhaseType.AppRunning)
                 ),
                 DeployStatus.READY,
             ),
             (
-                create_res_with_conds(
-                    [create_condition(MResConditionType.ADDONS_PROVISIONED, "False")], MResPhaseType.AppFailed
+                create_res(
+                    with_conds(
+                        [create_condition(MResConditionType.ADDONS_PROVISIONED, "False")], MResPhaseType.AppFailed
+                    )
                 ),
                 DeployStatus.ERROR,
             ),
             (
-                create_res_with_conds(
-                    [
-                        create_condition(MResConditionType.ADDONS_PROVISIONED, "False"),
-                        create_condition(MResConditionType.APP_AVAILABLE, "True"),
-                    ],
-                    MResPhaseType.AppFailed,
+                create_res(
+                    with_conds(
+                        [
+                            create_condition(MResConditionType.ADDONS_PROVISIONED, "False"),
+                            create_condition(MResConditionType.APP_AVAILABLE, "True"),
+                        ],
+                        MResPhaseType.AppFailed,
+                    )
                 ),
                 DeployStatus.ERROR,
             ),

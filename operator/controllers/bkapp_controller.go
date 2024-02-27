@@ -203,12 +203,15 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 
 	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
 		// trigger when bkapp .spec changed or annotation changed.
-		For(&paasv1alpha2.BkApp{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
+		For(&paasv1alpha2.BkApp{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{},
+			predicate.AnnotationChangedPredicate{}))).
 		WithOptions(opts).
 		// trigger when deployment changed, i.e. when the deployment was deleted by others.
-		Owns(&appsv1.Deployment{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
+		Owns(&appsv1.Deployment{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{},
+			predicate.AnnotationChangedPredicate{}))).
 		// trigger when pod run success or failed
-		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(predicates.NewHookSuccessPredicate(), predicates.NewHookFailedPredicate())))
+		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(predicates.NewHookSuccessPredicate(),
+			predicates.NewHookFailedPredicate())))
 
 	if config.Global.IsAutoscalingEnabled() {
 		if err = mgr.GetFieldIndexer().IndexField(

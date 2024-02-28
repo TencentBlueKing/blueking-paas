@@ -188,6 +188,12 @@ func (m DeployManager) generateProcfile(appDir string) error {
 	return nil
 }
 
+// parseDeployStepOpts generates deployStepOpts based on comparing build dependent files.
+//
+// Parameters:
+//
+//	oldDir string - the directory where old build dependent files are located
+//	newDir string - the directory where new build dependent files are located
 func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt"}
 	rebuild := false

@@ -499,6 +499,8 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         queryset = queryset.filter(type=query_params["type"])
         if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
+        if creator := query_params.get("creator"):
+            queryset = queryset.filter(creator=creator)
         return queryset
 
     def retrieve(self, request, pd_id, plugin_id, release_id):

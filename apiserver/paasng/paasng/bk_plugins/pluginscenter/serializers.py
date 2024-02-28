@@ -22,6 +22,7 @@ import arrow
 import cattr
 import semver
 from bkpaas_auth import get_user_by_user_id
+from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -743,6 +744,12 @@ class CodeCommitSearchSLZ(serializers.Serializer):
 class PluginReleaseFilterSLZ(serializers.Serializer):
     status = serializers.ListField(required=False)
     type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)
+    creator = serializers.CharField(required=False)
+
+    def validate(self, attrs):
+        if "creator" in attrs:
+            attrs["creator"] = user_id_encoder.encode(settings.USER_TYPE, attrs["creator"])
+        return attrs
 
 
 class PluginListFilterSlZ(serializers.Serializer):

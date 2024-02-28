@@ -60,20 +60,20 @@ func runDevContainerServer() {
 				os.Exit(1)
 			}
 
-			if writeErr := mgr.WriteStatus(event.ID, dc.ReloadProcessing); err != nil {
+			if writeErr := mgr.WriteStatus(event.ID, dc.ReloadProcessing); writeErr != nil {
 				logger.Error(writeErr, "HotReload WriteStatus failed")
 				os.Exit(1)
 			}
 
 			if event.Rebuild {
-				if innerErr := mgr.Rebuild(event.ID); err != nil {
+				if innerErr := mgr.Rebuild(event.ID); innerErr != nil {
 					mgr.WriteStatus(event.ID, dc.ReloadFailed)
 					logger.Error(innerErr, "HotReload Rebuild failed")
 					continue
 				}
 			}
 			if event.Relaunch {
-				if innerErr := mgr.Relaunch(event.ID); err != nil {
+				if innerErr := mgr.Relaunch(event.ID); innerErr != nil {
 					mgr.WriteStatus(event.ID, dc.ReloadFailed)
 					logger.Error(innerErr, "HotReload Relaunch failed")
 					continue

@@ -20,13 +20,18 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 	"github.com/buildpacks/lifecycle/launch"
 
 	devlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
+
+var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")
 
 func main() {
 	logger := logging.Default()
@@ -38,7 +43,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := devlaunch.Run(md.Processes); err != nil {
+	appDesc, err := appdesc.UnmarshalToAppDesc(filepath.Join(DefaultAppDir, "app_desc.yaml"))
+	if err != nil {
+		logger.Error(err, "parse invalid app_desc.yaml")
+		os.Exit(1)
+	}
+
+	if err = devlaunch.Run(md.Processes, appDesc); err != nil {
 		logger.Error(err, "hot launch")
 		os.Exit(1)
 	}

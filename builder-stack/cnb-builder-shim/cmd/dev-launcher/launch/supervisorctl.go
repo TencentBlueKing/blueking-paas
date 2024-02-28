@@ -24,7 +24,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
 var supervisorDir = "/cnb/devcontainer/supervisor"
@@ -40,6 +43,9 @@ serverurl = unix://{{ .RootDir }}/supervisor.sock
 [supervisord]
 pidfile = {{ .RootDir }}/supervisord.pid
 logfile = {{ .RootDir }}/log/supervisord.log
+{{- if .Environment }}
+environment = {{ .Environment }}
+{{- end }}
 
 [rpcinterface:supervisor]
 supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
@@ -72,14 +78,23 @@ type ProcessConf struct {
 
 // SupervisorConf is a supervisor template conf data
 type SupervisorConf struct {
-	RootDir   string
-	Processes []ProcessConf
+	RootDir     string
+	Processes   []ProcessConf
+	Environment string
 }
 
 // MakeSupervisorConf returns a new SupervisorConf
-func MakeSupervisorConf(processes []Process) *SupervisorConf {
+func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) *SupervisorConf {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
+	}
+
+	if procEnvs != nil {
+		envs := make([]string, len(procEnvs))
+		for indx, env := range procEnvs {
+			envs[indx] = fmt.Sprintf("%s=\"%s\"", env.Key, env.Value)
+		}
+		conf.Environment = strings.Join(envs, ",")
 	}
 
 	for _, p := range processes {

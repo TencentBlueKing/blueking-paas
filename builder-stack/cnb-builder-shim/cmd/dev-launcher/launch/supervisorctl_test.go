@@ -25,6 +25,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
 var _ = Describe("Test supervisorctl", func() {
@@ -46,15 +48,17 @@ var _ = Describe("Test supervisorctl", func() {
 		confFilePath = oldConfFilePath
 	})
 
-	It("Test refreshConf", func() {
-		conf := MakeSupervisorConf(
-			[]Process{
-				{ProcType: "web", CommandPath: "/cnb/processes/web"},
-				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
-			},
-		)
+	DescribeTable("Test refreshConf", func(conf *SupervisorConf, expectedConfContent string) {
+		Expect(ctl.refreshConf(conf)).To(BeNil())
 
-		expectedConfContent := fmt.Sprintf(`[unix_http_server]
+		content, _ := os.ReadFile(confFilePath)
+		Expect(string(content)).To(Equal(expectedConfContent))
+	}, Entry("with env_variables", MakeSupervisorConf(
+		[]Process{
+			{ProcType: "web", CommandPath: "/cnb/processes/web"},
+			{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
+		},
+	), fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 
 [supervisorctl]
@@ -76,11 +80,35 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, ctl.RootDir)
+`, supervisorDir)),
+		Entry("without env_variables", MakeSupervisorConf(
+			[]Process{
+				{ProcType: "web", CommandPath: "/cnb/processes/web"},
+				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
+			},
+			[]appdesc.Env{{"DJANGO_SETTINGS_MODULE", "settings"}, {"WHITENOISE_STATIC_PREFIX", "/static/"}}...,
+		), fmt.Sprintf(`[unix_http_server]
+file = %[1]s/supervisor.sock
 
-		Expect(ctl.refreshConf(conf)).To(BeNil())
+[supervisorctl]
+serverurl = unix://%[1]s/supervisor.sock
 
-		content, _ := os.ReadFile(confFilePath)
-		Expect(string(content)).To(Equal(expectedConfContent))
-	})
+[supervisord]
+pidfile = %[1]s/supervisord.pid
+logfile = %[1]s/log/supervisord.log
+environment = DJANGO_SETTINGS_MODULE="settings",WHITENOISE_STATIC_PREFIX="/static/"
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[program:web]
+command = /cnb/processes/web
+stdout_logfile = %[1]s/log/web.log
+redirect_stderr = true
+
+[program:worker]
+command = /cnb/processes/worker
+stdout_logfile = %[1]s/log/worker.log
+redirect_stderr = true
+`, supervisorDir)))
 })

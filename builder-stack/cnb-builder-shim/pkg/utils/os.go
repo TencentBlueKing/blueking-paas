@@ -22,6 +22,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
+	"strings"
 
 	"github.com/mholt/archiver/v3"
 	"github.com/pkg/errors"
@@ -104,4 +107,42 @@ func Chownr(filePath string, uid, gid int) error {
 
 		return nil
 	})
+}
+
+// SortedCompareFile reads the contents of two files, removes empty lines, sorts the lines
+// in each file alphabetically, and compares the sorted lines
+// for equality.
+func SortedCompareFile(filePath1, filePath2 string) (bool, error) {
+	lines1, err := readAndSortLines(filePath1)
+	if err != nil {
+		return false, err
+	}
+
+	lines2, err := readAndSortLines(filePath2)
+	if err != nil {
+		return false, err
+	}
+
+	return reflect.DeepEqual(lines1, lines2), nil
+}
+
+func readAndSortLines(filePath string) ([]string, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := []string{}
+	rawLines := strings.Split(string(content), "\n")
+
+	for _, line := range rawLines {
+		trimmedLine := strings.TrimSpace(line)
+		if trimmedLine != "" {
+			lines = append(lines, trimmedLine)
+		}
+	}
+
+	sort.Strings(lines)
+
+	return lines, nil
 }

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/buildpacks/lifecycle/launch"
@@ -43,18 +42,18 @@ type Process struct {
 // metaProcesses is a list of launch.Process. meta prefix is inspired from lifecycle Metadata
 type metaProcesses []launch.Process
 
-// Run launches the given launch.Process list
-func Run(mdProcesses metaProcesses) error {
+// Run launches the given launch.Process list and app desc.
+func Run(mdProcesses metaProcesses, desc *appdesc.AppDesc) error {
 	processes, err := symlinkProcessLauncher(mdProcesses)
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
 	}
 
-	if err = runPreReleaseHook(); err != nil {
+	if err = runPreReleaseHook(desc); err != nil {
 		return errors.Wrap(err, "run pre release hook")
 	}
 
-	if err = reloadProcesses(processes); err != nil {
+	if err = reloadProcesses(processes, desc); err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
 
@@ -102,33 +101,42 @@ func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 	return processes, nil
 }
 
-func runPreReleaseHook() error {
-	releaseHook, err := appdesc.ParsePreReleaseHook(filepath.Join(DefaultAppDir, "app_desc.yaml"))
-	if err != nil {
-		return err
-	}
-
+func runPreReleaseHook(desc *appdesc.AppDesc) error {
+	releaseHook := desc.Module.Scripts.PreReleaseHook
 	if releaseHook == "" {
 		return nil
 	}
 
 	cmd := exec.Command(launch.LauncherPath, releaseHook)
-
 	cmd.Dir = DefaultAppDir
-	cmd.Env = os.Environ()
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
-	if err = cmd.Run(); err != nil {
+	cmd.Env = os.Environ()
+	if desc.Module.ProcEnvs != nil {
+		for _, env := range desc.Module.ProcEnvs {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Key, env.Value))
+		}
+	}
+
+	if err := cmd.Run(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func reloadProcesses(processes []Process) error {
+func reloadProcesses(processes []Process, appDesc *appdesc.AppDesc) error {
 	ctl := NewSupervisorCtl()
-	conf := MakeSupervisorConf(processes)
+
+	var conf *SupervisorConf
+
+	if appDesc.Module.ProcEnvs != nil {
+		conf = MakeSupervisorConf(processes, appDesc.Module.ProcEnvs...)
+	} else {
+		conf = MakeSupervisorConf(processes)
+	}
+
 	return ctl.Reload(conf)
 }
 

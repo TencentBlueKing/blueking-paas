@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
@@ -23,16 +24,12 @@ from paas_wl.bk_app.cnative.specs.constants import (
     RESOURCE_TYPE_KEY,
     WLAPP_NAME_ANNO_KEY,
 )
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
-from paas_wl.infras.resources.base.kres import KDeployment, KPod, KReplicaSet
 from paas_wl.utils.basic import digest_if_length_exceeded
 
-from .mapper import CallThroughKresMapper, MapperField, MapperPack
+from .mapper import MapperPack, ResourceIdentifiers
 
 
-class PodMapper(CallThroughKresMapper[KPod]):
-    kres_class = KPod
-
+class PodResIdentifiers(ResourceIdentifiers):
     @property
     def name(self) -> str:
         return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
@@ -69,9 +66,7 @@ class PodMapper(CallThroughKresMapper[KPod]):
         )
 
 
-class DeploymentMapper(CallThroughKresMapper[KDeployment]):
-    kres_class = KDeployment
-
+class DeploymentResIdentifiers(ResourceIdentifiers):
     @property
     def pod_selector(self) -> str:
         return digest_if_length_exceeded(f"{self.proc_config.app.name}-{self.proc_config.type}", 63)
@@ -108,9 +103,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
         return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
 
 
-class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
-    kres_class = KReplicaSet
-
+class ReplicaSetResIdentifiers(ResourceIdentifiers):
     @property
     def pod_selector(self) -> str:
         return digest_if_length_exceeded(f"{self.proc_config.app.name}-{self.proc_config.type}", 63)
@@ -128,7 +121,6 @@ class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
 
 class V2Mapper(MapperPack):
     version = "v2"
-    _ignore_command_name = True
-    pod: MapperField[KPod] = MapperField(PodMapper)
-    deployment: MapperField[KDeployment] = MapperField(DeploymentMapper)
-    replica_set: MapperField[KReplicaSet] = MapperField(ReplicaSetMapper)
+    pod = PodResIdentifiers
+    deployment = DeploymentResIdentifiers
+    replica_set = ReplicaSetResIdentifiers

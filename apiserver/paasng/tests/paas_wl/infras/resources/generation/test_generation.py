@@ -16,14 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest.mock import Mock, patch
-
 import pytest
 
 from paas_wl.bk_app.processes.managers import AppProcessManager
-from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.generation.version import get_mapper_version, get_proc_deployment_name
-from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.command import get_command_name
 from tests.paas_wl.utils.wl_app import create_wl_release
 
@@ -44,10 +40,6 @@ class TestGeneration:
         return AppProcessManager(app=wl_app).assemble_process(process_type="web", release=release)
 
     @pytest.fixture()
-    def client(self, wl_app):
-        return get_client_by_app(wl_app)
-
-    @pytest.fixture()
     def v1_mapper(self):
         return get_mapper_version("v1")
 
@@ -66,44 +58,11 @@ class TestGeneration:
             f"{process.type}-{get_command_name(process.runtime.proc_command)}-deployment"
         )
 
-    def test_preset_process_client(self, wl_app, process, client, v1_mapper):
+    def test_preset_process_client(self, wl_app, process, v1_mapper):
         assert (
-            v1_mapper.pod(process=process, client=client).name
-            == f"{process.app.region}-{process.app.scheduler_safe_name}-"
+            v1_mapper.pod(process=process).name == f"{process.app.region}-{process.app.scheduler_safe_name}-"
             f"{process.type}-{get_command_name(process.runtime.proc_command)}-deployment"
         )
-
-    def test_v1_get(self, wl_app, process, client, v1_mapper):
-        with pytest.raises(ValueError, match=r"client is required.*"):
-            v1_mapper.pod(process=process).get()
-
-        mapper = v1_mapper.pod(process=process, client=client)
-        with pytest.raises(ResourceMissing):
-            mapper.get()
-
-        kp = Mock(return_value={"items": [1, 2, 3]})
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kp):
-            assert mapper.get() == {"items": [1, 2, 3]}
-
-    def test_v1_delete(self, wl_app, process, client, v1_mapper):
-        kd = Mock(return_value=None)
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kd):
-            mapper = v1_mapper.pod(process=process, client=client)
-            assert mapper.delete() is None
-            args, kwargs = kd.call_args_list[0]
-            assert kd.called
-            assert kwargs["name"] == mapper.name
-            assert kwargs["namespace"] == mapper.namespace
-
-    def test_v1_create(self, wl_app, process, client, v1_mapper):
-        kd = Mock(return_value={"items": [1, 2, 3]})
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.create", kd):
-            mapper = v1_mapper.pod(process=process, client=client)
-            assert mapper.create(body={}) == {"items": [1, 2, 3]}
-            args, kwargs = kd.call_args_list[0]
-            assert kd.called
-            assert kwargs["name"] == mapper.name
-            assert kwargs["namespace"] == mapper.namespace
 
     def test_v2_name(self, process, v2_mapper):
         assert v2_mapper.pod(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.type}"

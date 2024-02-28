@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
@@ -23,11 +25,8 @@ from paas_wl.bk_app.cnative.specs.constants import (
     RESOURCE_TYPE_KEY,
     WLAPP_NAME_ANNO_KEY,
 )
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
-from paas_wl.infras.resources.base.kres import KDeployment, KPod, KReplicaSet
 
-from .mapper import CallThroughKresMapper, MapperField, MapperPack
+from .mapper import MapperPack, ResourceIdentifiers
 
 
 def v1_scheduler_safe_name(app: WlApp):
@@ -36,9 +35,7 @@ def v1_scheduler_safe_name(app: WlApp):
     return f"{app.region}-{app.scheduler_safe_name}"
 
 
-class PodMapper(CallThroughKresMapper[KPod]):
-    kres_class = KPod
-
+class PodResIdentifiers(ResourceIdentifiers):
     @property
     def pod_selector(self) -> str:
         return f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-deployment"
@@ -82,9 +79,7 @@ class PodMapper(CallThroughKresMapper[KPod]):
         )
 
 
-class DeploymentMapper(CallThroughKresMapper[KDeployment]):
-    kres_class = KDeployment
-
+class DeploymentResIdentifiers(ResourceIdentifiers):
     @property
     def pod_selector(self) -> str:
         return f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-deployment"
@@ -128,9 +123,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
         )
 
 
-class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
-    kres_class = KReplicaSet
-
+class ReplicaSetResIdentifiers(ResourceIdentifiers):
     @property
     def pod_selector(self) -> str:
         return f"{v1_scheduler_safe_name(self.proc_config.app)}-{self.proc_config.type}-deployment"
@@ -149,6 +142,7 @@ class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
 
 class V1Mapper(MapperPack):
     version = "v1"
-    pod: MapperField[KPod] = MapperField(PodMapper)
-    deployment: MapperField[KDeployment] = MapperField(DeploymentMapper)
-    replica_set: MapperField[KReplicaSet] = MapperField(ReplicaSetMapper)
+
+    pod = PodResIdentifiers
+    deployment = DeploymentResIdentifiers
+    replica_set = ReplicaSetResIdentifiers

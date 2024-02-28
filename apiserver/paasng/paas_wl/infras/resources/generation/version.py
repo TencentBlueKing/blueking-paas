@@ -25,7 +25,6 @@ from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.infras.resources.generation.mapper import MapperProcConfig
 from paas_wl.infras.resources.generation.v1 import V1Mapper
 from paas_wl.infras.resources.generation.v2 import V2Mapper
-from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.command import get_command_name
 
 if TYPE_CHECKING:
@@ -51,10 +50,8 @@ class AppResVerManager:
         latest_config = self.app.latest_config
 
         # 一般对于只读的操作，都只需要直接读取当前版本
-        client = get_client_by_app(self.app)
         return get_mapper_version(
             target=latest_config.metadata.get(self._mapper_version_term) or settings.LEGACY_MAPPER_VERSION,
-            init_kwargs=dict(client=client),
         )
 
     def update(self, version: str):
@@ -74,10 +71,10 @@ class AppResVerManager:
         latest_config.save(update_fields=["metadata", "updated"])
 
 
-def get_mapper_version(target: str, init_kwargs: Optional[dict] = None):
+def get_mapper_version(target: str):
     available_packs = dict()
     for generation, mapper_class in AVAILABLE_GENERATIONS.items():
-        available_packs[generation] = mapper_class(**init_kwargs or {})
+        available_packs[generation] = mapper_class()
     return available_packs[target]
 
 

@@ -25,7 +25,6 @@ from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler
 from paas_wl.infras.resource_templates.constants import AppAddOnType
 from paas_wl.infras.resource_templates.models import AppAddOnTemplate
 from paas_wl.infras.resources.base.exceptions import PodTimeoutError
-from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
@@ -64,14 +63,7 @@ class TestCommand:
 
     @pytest.fixture()
     def handler(self, k8s_client, settings):
-        return CommandHandler(
-            client=k8s_client,
-            default_connect_timeout=settings.K8S_DEFAULT_CONNECT_TIMEOUT,
-            default_request_timeout=settings.K8S_DEFAULT_CONNECT_TIMEOUT + settings.K8S_DEFAULT_READ_TIMEOUT,
-            mapper_version=get_mapper_version(
-                target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={"client": k8s_client}
-            ),
-        )
+        return CommandHandler(client=k8s_client)
 
     def test_run(self, handler, command):
         with pytest.raises(AppEntityNotFound):

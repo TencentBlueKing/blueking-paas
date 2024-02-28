@@ -17,10 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
-
-from django.conf import settings
+from typing import TYPE_CHECKING, List
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import (
@@ -33,8 +30,6 @@ from paas_wl.bk_app.deploy.app_res.controllers import (
 from paas_wl.bk_app.monitoring.app_monitor.utils import build_monitor_port
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.kres import set_default_options
-from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paas_wl.workloads.images.kres_entities import ImageCredentials, credentials_kmodel
 from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultServices
@@ -42,55 +37,31 @@ from paas_wl.workloads.release_controller.hooks.kres_entities import Command
 
 if TYPE_CHECKING:
     from paas_wl.infras.resources.base.base import EnhancedApiClient
-    from paas_wl.infras.resources.generation.mapper import MapperPack
     from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
 class K8sScheduler:
-    client: "EnhancedApiClient"
-    default_connect_timeout: int
-    default_read_timeout: int
-    mapper_version: Optional["MapperPack"] = None
-
-    def __post_init__(self):
-        # NOTE: dynamic client only support a single timeout parameter, use summed value as
-        # the total timeout seconds.
-        default_request_timeout = self.default_connect_timeout + self.default_read_timeout
-        set_default_options({"request_timeout": default_request_timeout})
-
-        # 主要通过上层判断传入 version
-        self.mapper_version = self.mapper_version or get_mapper_version(
-            target=settings.GLOBAL_DEFAULT_MAPPER_VERSION, init_kwargs={"client": self.client}
-        )
-
-        handler_init_params = dict(
-            client=self.client,
-            default_connect_timeout=self.default_connect_timeout,
-            default_request_timeout=default_request_timeout,
-            mapper_version=self.mapper_version,
-        )
-        self._initial_controllers(handler_init_params)
+    def __init__(self, client: "EnhancedApiClient"):
+        self.client = client
+        self._initial_controllers(self.client)
 
     @classmethod
     def from_cluster_name(cls, cluster_name: str) -> "K8sScheduler":
         """Create a scheduler client from context name"""
-        default_connect_timeout = settings.K8S_DEFAULT_CONNECT_TIMEOUT
-        default_read_timeout = settings.K8S_DEFAULT_READ_TIMEOUT
         client = get_client_by_cluster_name(cluster_name)
-        return cls(client, default_connect_timeout, default_read_timeout)
+        return cls(client)
 
-    def _initial_controllers(self, init_params: Dict):
+    def _initial_controllers(self, client: "EnhancedApiClient"):
         # scheduler will not operate k8s resource directly, but
         # assigning the task to several controllers
-        self.processes_handler = ProcessesHandler(**init_params)
-        self.build_handler = BuildHandler(**init_params)
-        self.namespace_handler = NamespacesHandler(**init_params)
-        self.command_handler = CommandHandler(**init_params)
+        self.processes_handler = ProcessesHandler(client)
+        self.build_handler = BuildHandler(client)
+        self.namespace_handler = NamespacesHandler(client)
+        self.command_handler = CommandHandler(client)
         self.credential_handler = credentials_kmodel
-        self.autoscaling_handler = ProcAutoscalingHandler(**init_params)
+        self.autoscaling_handler = ProcAutoscalingHandler(client)
 
     #################
     # processes API #
@@ -110,13 +81,6 @@ class K8sScheduler:
     def shutdown_process(self, app: WlApp, process_type: str):
         """Shutdown process will set the replicas to zero, but not delete the Deployment"""
         self.scale_process(app, process_type, 0)
-
-    def delete_processes(self, processes: List[Process], with_access=True):
-        """Delete process will delete the Deployment and the Service(if with_access=True)"""
-        for process in processes:
-            if with_access:
-                self.get_default_services(process.app, process.type).remove()
-            self.processes_handler.delete(process=process)
 
     @staticmethod
     def get_default_services(app: WlApp, process_type: str) -> ProcDefaultServices:

@@ -23,19 +23,19 @@ from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.bk_app.deploy.actions.exceptions import BuildMissingError
+from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
-from paas_wl.utils.command import get_command_name
+from paas_wl.infras.resources.generation.mapper import MapperProcConfig, get_mapper_proc_config_from_release
+from paas_wl.infras.resources.generation.version import AppResVerManager
 from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import Release
-    from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
-    from paas_wl.bk_app.processes.kres_entities import Process
 
 logger = logging.getLogger(__name__)
 
@@ -69,26 +69,17 @@ class DeployAction:
         finally:
             self.recycle_resource()
         self.ensure_bk_log_if_need()
-        self.ensure_bk_minitor_if_need()
+        self.ensure_bk_monitor_if_need()
 
     def recycle_resource(self):
         """回收上一次发布可能产生的僵尸进程"""
         try:
-            previous_release = self.release.get_previous()
+            prev_release = self.release.get_previous()
         except ObjectDoesNotExist:
-            # 上一次部署不存在，不需要清理
             return
+        ObsoleteProcessesCleaner(self.release, prev_release).clean_up()
 
-        logger.debug(
-            "latest release: %s<%s> \n previous release: %s<%s>",
-            self.release.pk,
-            self.release.created,
-            previous_release.pk,
-            previous_release.created,
-        )
-        ZombieProcessesKiller(release=self.release, last_release=previous_release).kill(self.scheduler_client)
-
-    def ensure_bk_minitor_if_need(self):
+    def ensure_bk_monitor_if_need(self):
         """如果集群支持且应用声明需要接入蓝鲸监控, 则尝试下发监控配置"""
         try:
             # 下发 ServiceMonitor 配置
@@ -105,66 +96,78 @@ class DeployAction:
             logger.exception("An error occur when creating BkLogConfig")
 
 
-class ZombieProcessesKiller:
-    """
-    僵尸进程清理者
-    两种情况会产生僵尸进程：
+class ObsoleteProcessesCleaner:
+    """清理已经过期的进程资源（主要指 Deployment 与 Service）。
+
+    目前，共有两种情况会产生过期的进程资源：
+
     - 用户修改了 process_type
     - 用户修改了 command_name( v1 mapper 的资源名依赖了 command_name)
-    :return: processes which should be undead
+
+    :param curr_release: Current release object.
+    :param prev_release: Previous release object.
     """
 
-    def __init__(self, release: "Release", last_release: "Release"):
-        self.release = release
-        self.last_release = last_release
+    def __init__(self, curr_release: "Release", prev_release: "Release"):
+        self.curr_release = curr_release
+        self.prev_release = prev_release
 
-    def search(self) -> Tuple[List["Process"], List["Process"]]:
+    def clean_up(self):
+        """Clean up all obsolete process resources."""
+        handler = ProcessesHandler.new_by_app(self.curr_release.app)
+        for mapper_proc_config, should_remove_svc in self.find_all():
+            try:
+                logger.info("Cleaning process %s, remove-svc: %s", mapper_proc_config, should_remove_svc)
+                handler.delete(mapper_proc_config, should_remove_svc)
+            except Exception as e:
+                summary = (
+                    f"clean up process {mapper_proc_config.type} of {str(self.curr_release.uuid)[:7]} "
+                    f"failed, error detail: {e}"
+                )
+                logger.exception(summary)
+                self.curr_release.summary = summary
+                self.curr_release.save(update_fields=["summary"])
+                return
+
+    def find_all(self) -> List[Tuple[MapperProcConfig, bool]]:
+        """Find all obsolete processes.
+
+        :return: A list of (MapperProcConfig, should_remove_svc) tuples, the first config
+            object can be used for for removing process resources, the second boolean value
+            indicates that whether the service should also be removed.
         """
-        :return: tuple, (List[Process] with inconsistent process types, List[Process] with inconsistent command name)
-        """
-        # 首次部署
-        if not self.last_release or not self.last_release.build:
-            return [], []
+        if not (self.prev_release and self.prev_release.build):
+            return []
 
-        procfile = self.release.get_procfile()
-        last_procfile = self.last_release.get_procfile()
-        zombie_type_processes = []
-        zombie_name_processes = []
+        logger.debug(
+            "Finding obsolete procs, versions: %s <-> %s", self.curr_release.version, self.prev_release.version
+        )
+        curr_procfile = self.curr_release.get_procfile()
+        prev_procfile = self.prev_release.get_procfile()
 
-        logger.debug("latest version: %s, last version: %s", self.release.version, self.last_release.version)
-        logger.debug("latest procfile: %s, last procfile: %s", procfile, last_procfile)
-        for last_type in last_procfile:
-            last_process = AppProcessManager(app=self.release.app).assemble_process(
-                process_type=last_type, release=self.last_release
-            )
-
-            if last_process.type not in procfile:
-                zombie_type_processes.append(last_process)
+        results = []
+        for prev_type in prev_procfile:
+            proc_config = get_mapper_proc_config_from_release(self.prev_release, prev_type)
+            # Check if the process type has been removed
+            if prev_type not in curr_procfile:
+                # In this case, the service should also be removed
+                results.append((proc_config, True))
                 continue
 
-            this_process = AppProcessManager(app=self.release.app).assemble_process(
-                process_type=last_type, release=self.release
+            # Compare the name of deployment resources, if changed, the old one should be removed.
+            # This happens when the app is using a legacy mapper version and the resource name
+            # depends on the command name.
+            prev_deploy_name = self.get_deployment_name(proc_config)
+            curr_deploy_name = self.get_deployment_name(
+                get_mapper_proc_config_from_release(self.curr_release, prev_type)
             )
-            if get_command_name(this_process.runtime.proc_command) != get_command_name(
-                last_process.runtime.proc_command
-            ):
-                zombie_name_processes.append(last_process)
+            if prev_deploy_name != curr_deploy_name:
+                # Don't remove the service resource
+                results.append((proc_config, False))
+        return results
 
-        return zombie_type_processes, zombie_name_processes
-
-    def kill(self, scheduler_client: "K8sScheduler"):
-        type_zombies, name_zombies = self.search()
-        try:
-            logger.info(f"going to clean process {type_zombies} for changing of process_type")
-            scheduler_client.delete_processes(type_zombies)
-
-            # 对于某些版本的资源映射（command_name free），command_name 的更改不再产生 zombie process
-            if scheduler_client.mapper_version and not scheduler_client.mapper_version.ignore_command_name:
-                logger.info(f"going to clean process {name_zombies} for changing of process_name")
-                scheduler_client.delete_processes(name_zombies, with_access=False)
-
-        except Exception as e:
-            summary = f"deploy over, but clear {str(self.release.uuid)[:7]} which failed: {e}"
-            logger.exception(summary)
-            self.release.summary = summary
-            self.release.save()
+    @staticmethod
+    def get_deployment_name(proc_config: MapperProcConfig) -> str:
+        """Get the name of deployment resource for the given process type."""
+        mapper_version = AppResVerManager(proc_config.app).curr_version
+        return mapper_version.deployment(proc_config).name

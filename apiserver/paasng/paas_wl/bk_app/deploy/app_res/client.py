@@ -115,7 +115,7 @@ class K8sScheduler:
         """Delete process will delete the Deployment and the Service(if with_access=True)"""
         for process in processes:
             if with_access:
-                self.get_default_services(process.app, process.type).create_or_patch()
+                self.get_default_services(process.app, process.type).remove()
             self.processes_handler.delete(process=process)
 
     @staticmethod

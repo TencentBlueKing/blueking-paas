@@ -37,7 +37,8 @@ func NewAppDeployer(appCode string) (Deployer, error) {
 	case model.AppTypeDefault:
 		return DefaultAppDeployer{}, nil
 	case model.AppTypeCNative:
-		return CNativeAppDeployer{}, nil
+		return nil, errors.New("the feature is currently unavailable")
+		//return CNativeAppDeployer{}, nil
 	default:
 		return nil, errors.Errorf("unsupported app type: '%s'", appType)
 	}

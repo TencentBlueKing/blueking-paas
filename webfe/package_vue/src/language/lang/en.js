@@ -2517,4 +2517,5 @@ export default {
   暂不支持自定义日志采集规则: 'Custom log collection rules are not supported at the moment',
   '自定义日志采集/清洗规则、日志导出等功能需要部署“蓝鲸日志平台”，由蓝鲸日志平台提供。': 'Customizing log collection/cleansing rules, log export, and other features require the deployment of "Blue Whale Log Platform," provided by the Blue Whale Log Platform.',
   '由小写字母组成，长度小于 16 个字符': 'Consists of lowercase letters and is less than 16 characters long',
+  部署前置条件检查中: 'Pre-deployment condition check in progress',
 };

@@ -10,14 +10,20 @@ RUN go mod download
 
 COPY ./cmd ./cmd
 COPY ./pkg ./pkg
+COPY ./internal ./internal
 COPY ./Makefile ./Makefile
-RUN make build
+RUN make build-dev
 
 FROM ${BUILDER_IMAGE_NAME}:${BUILDER_IMAGE_TAG}
 
 USER root
 ENV HOME /app
+ENV CNB_APP_DIR /app
 ENV CNB_PLATFORM_API=0.11
-RUN mkdir -p /blueking-shim/bin
-COPY --from=binary-builder /src/bin/* /blueking-shim/bin/
-ENTRYPOINT /blueking-shim/bin/entrypoint
+ENV DEV_MODE=true
+
+RUN apt-get clean && apt-get update && apt-get -y install supervisor
+
+COPY --from=binary-builder /src/bin/* /cnb/devcontainer/bin/
+
+ENTRYPOINT /cnb/devcontainer/bin/dev-entrypoint

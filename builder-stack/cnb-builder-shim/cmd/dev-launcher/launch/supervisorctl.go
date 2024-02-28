@@ -155,9 +155,5 @@ func (ctl *SupervisorCtl) reload() error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Run()
 }

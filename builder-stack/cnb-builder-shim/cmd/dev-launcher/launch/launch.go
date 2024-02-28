@@ -119,11 +119,7 @@ func runPreReleaseHook(desc *appdesc.AppDesc) error {
 		}
 	}
 
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Run()
 }
 
 func reloadProcesses(processes []Process, appDesc *appdesc.AppDesc) error {

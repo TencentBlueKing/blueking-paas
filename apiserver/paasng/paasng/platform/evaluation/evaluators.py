@@ -5,18 +5,22 @@ TencentBlueKing is pleased to support the open source community by making
 Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
+
     http://opensource.org/licenses/MIT
+
 Unless required by applicable law or agreed to in writing, software distributed under
 the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 either express or implied. See the License for the specific language governing permissions and
 limitations under the License.
+
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Tuple
 
 from django.conf import settings
+from django.utils import timezone
 
 from paasng.infras.iam.helpers import fetch_application_members
 from paasng.platform.applications.models import Application
@@ -71,13 +75,18 @@ class AppOperationEvaluator:
         """根据用户活跃度评估应用"""
         issues = []
 
-        if not metrics["last_deployed_at"]:
-            issues.append("应用未部署过")
-        elif metrics["last_deployed_at"] < datetime.now() - timedelta(days=90):
-            issues.append("应用最近三个月没有部署记录")
-
         if not (metrics["pv"] and metrics["uv"]):
             issues.append("应用最近 30 天没有访问记录")
+
+        if not metrics["last_deployed_at"]:
+            issues.append("应用未部署过")
+        elif metrics["last_deployed_at"] < timezone.now() - timedelta(days=180):
+            issues.append("应用最近半年没有部署记录")
+
+        if not metrics["last_operated_at"]:
+            issues.append("应用没有操作记录")
+        elif metrics["last_operated_at"] < timezone.now() - timedelta(days=90):
+            issues.append("应用最近 3 个月没有操作记录")
 
         return issues
 

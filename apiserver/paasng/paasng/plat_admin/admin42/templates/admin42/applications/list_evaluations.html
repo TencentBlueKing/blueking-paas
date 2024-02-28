@@ -3,15 +3,19 @@
 {% load admin_utils %}
 
 {% block main_content %}
-<div id="app-res-usage-list" class="p20">
-    <div class="mb15" style="width: 40%">
+<div id="evaluation-list" class="p20">
+    <div class="mb15" style="display: flex; justify-content: space-between">
         <bk-input
             placeholder="输入应用 Code 或名称，按 Enter 进行模糊搜索"
             :clearable="true"
             :right-icon="'bk-icon icon-search'"
             v-model="filterKey"
-            @enter="handleSearch">
-        </bk-input>
+            @enter="handleSearch"
+            style="width: 40%"
+        ></bk-input>
+        <bk-button class="ml15 mr15" @click="handleExport">
+            导出数据
+        </bk-button>
     </div>
     <div class="mb15">
         <p>按问题类型过滤：</p>
@@ -29,7 +33,7 @@
                 <i class="bk-icon">不活跃</i>
             </bk-radio>
             <bk-radio value="misconfigured" class="m5">
-                <i class="bk-icon">配置错误</i>
+                <i class="bk-icon">配置不当</i>
             </bk-radio>
         </bk-radio-group>
     </div>
@@ -61,8 +65,8 @@
         <bk-table-column label="CPU 使用率（7d)" prop="cpu_usage_avg" sortable="custom"></bk-table-column>
         <bk-table-column label="PV (30d)" prop="pv" sortable="custom"></bk-table-column>
         <bk-table-column label="UV (30d)" prop="uv" sortable="custom"></bk-table-column>
-        <bk-table-column label="最新部署人" prop="operator"></bk-table-column>
-        <bk-table-column label="最新部署时间" prop="last_deployed_at"></bk-table-column>
+        <bk-table-column label="最新操作人" prop="last_operator"></bk-table-column>
+        <bk-table-column label="最新操作时间" prop="last_operated_at"></bk-table-column>
         <bk-table-column label="采集时间" prop="collected_at"></bk-table-column>
     </bk-table>
     <pagination
@@ -102,8 +106,13 @@
                 <bk-col><label class="m10">采集时间:</label> $[dialog.form.collected_at]</bk-col>
             </bk-row>
             <bk-row>
-                <bk-col><label class="m10">最新部署人:</label> $[dialog.form.operator]</bk-col>
-                <bk-col><label class="m10">最新部署时间:</label> $[dialog.form.last_deployed_at]</bk-col>
+                <bk-col><label class="m10">最新操作人:</label> $[dialog.form.last_operator || '--' ]</bk-col>
+                <bk-col><label class="m10">操作时间:</label> $[dialog.form.last_operated_at || '--' ]</bk-col>
+                <bk-col><label class="m10">内容:</label> $[dialog.form.last_operation || '--' ]</bk-col>
+            </bk-row>
+            <bk-row>
+                <bk-col><label class="m10">最新部署人:</label> $[dialog.form.last_deployer || '--' ]</bk-col>
+                <bk-col><label class="m10">部署时间:</label> $[dialog.form.last_deployed_at || '--' ]</bk-col>
                 <bk-col>
                     <label class="m10">
                         <a :href="appOverviewPageUrl(dialog.form.app_code)" target="_blank">跳转到应用概览</a>
@@ -172,7 +181,7 @@ const ISSUE_TYPE_PARAM = "issue_type"
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#app-res-usage-list",
+        el: "#evaluation-list",
         delimiters: ['$[', ']'],
         data: function () {
             let prefix = window.location.href
@@ -246,6 +255,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 query = querystring.stringify(query)
                 window.location.href = `${prefix}?${query}`
+            },
+            handleExport() {
+                this.$bkMessage({theme: 'error', message: `暂不支持导出数据`})
             },
             genIssuesTooltipsConfig(row) {
                 return {

@@ -18,15 +18,17 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import asdict
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import List
 
 from celery import shared_task
 from django.conf import settings
+from django.utils import timezone
 
 from paasng.accessories.paas_analysis.clients import SiteMetricsClient
 from paasng.accessories.paas_analysis.constants import MetricSourceType
 from paasng.accessories.paas_analysis.services import get_or_create_site_by_env
+from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.models import Deployment
@@ -84,6 +86,8 @@ def _update_or_create_operation_report(app: Application):
     last_deployment = (
         Deployment.objects.filter(app_environment__application__code=app.code).order_by("-created").first()
     )
+    # 最新的操作记录
+    last_operation = Operation.objects.filter(application=app).order_by("-created").first()
 
     defaults = {
         "cpu_requests": cpu_requests,
@@ -96,8 +100,11 @@ def _update_or_create_operation_report(app: Application):
         "pv": total_pv,
         "uv": total_uv,
         "last_deployed_at": last_deployment.created if last_deployment else None,
-        "operator": get_username_by_bkpaas_user_id(last_deployment.operator) if last_deployment else None,
-        "collected_at": datetime.now(),
+        "last_deployer": get_username_by_bkpaas_user_id(last_deployment.operator) if last_deployment else None,
+        "last_operated_at": last_operation.created if last_operation else None,
+        "last_operator": last_operation.get_operator() if last_operation else None,
+        "last_operation": last_operation.get_operate_display() if last_operation else None,
+        "collected_at": timezone.now(),
     }
     issue_type, issues = AppOperationEvaluator(app).evaluate(defaults)
     defaults.update({"issue_type": issue_type, "issues": issues})

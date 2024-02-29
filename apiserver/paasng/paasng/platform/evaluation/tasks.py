@@ -33,7 +33,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.models import Deployment
 from paasng.platform.evaluation.collectors import AppResQuotaCollector
-from paasng.platform.evaluation.constants import EmailReceiverType, OperationIssueType
+from paasng.platform.evaluation.constants import EmailReceiverType
 from paasng.platform.evaluation.evaluators import AppOperationEvaluator
 from paasng.platform.evaluation.models import AppOperationReport
 from paasng.platform.evaluation.notifiers import AppOperationReportNotifier
@@ -111,18 +111,6 @@ def _update_or_create_operation_report(app: Application):
     AppOperationReport.objects.update_or_create(app=app, defaults=defaults)
 
 
-def _send_operation_report_to_plat_managers():
-    for issue_type in [
-        OperationIssueType.OWNERLESS,
-        OperationIssueType.INACTIVE,
-        OperationIssueType.MISCONFIGURED,
-    ]:
-        AppOperationReportNotifier(issue_type).send(
-            EmailReceiverType.PLAT_MANAGER,
-            settings.BKPAAS_PLATFORM_MANAGERS,
-        )
-
-
 @shared_task
 def collect_and_update_app_operation_reports(app_codes: List[str]):
     """采集并更新指定应用的资源使用情况报告"""
@@ -144,4 +132,4 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
 
     # 根据配置判断是否发送报告邮件给到平台管理员
     if settings.ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE:
-        _send_operation_report_to_plat_managers()
+        AppOperationReportNotifier().send(EmailReceiverType.PLAT_MANAGER, settings.BKPAAS_PLATFORM_MANAGERS)

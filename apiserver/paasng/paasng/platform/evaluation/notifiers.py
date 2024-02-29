@@ -19,16 +19,13 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List
 
-from paasng.platform.evaluation.constants import EmailReceiverType, OperationIssueType
+from paasng.platform.evaluation.constants import EmailReceiverType
 
 logger = logging.getLogger(__name__)
 
 
 class AppOperationReportNotifier:
     """将蓝鲸应用的运营报告发送到指定对象"""
-
-    def __init__(self, issue_type: OperationIssueType):
-        self.issue_type = issue_type
 
     def send(self, receiver_type: EmailReceiverType, receivers: List[str]):
         # 该版本暂时不支持发送邮件，有需要可以在 notifiers_ext 中实现同名类

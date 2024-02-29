@@ -194,7 +194,7 @@ class UpsertMountSLZ(serializers.Serializer):
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
-    pvc_source = PersistentStorageSLZ(required=False, allow_null=True)
+    persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -225,7 +225,7 @@ class UpsertMountSLZ(serializers.Serializer):
 
 class MountSLZ(serializers.ModelSerializer):
     configmap_source = serializers.SerializerMethodField(label=_("configmap 挂载"))
-    persistent_storage_source = serializers.SerializerMethodField(label=_("pvc 资源"))
+    persistent_storage_source = serializers.SerializerMethodField(label=_("持久存储资源"))
 
     class Meta:
         model = Mount
@@ -281,7 +281,7 @@ class CreateMountSourceSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
-    pvc_source = PersistentStorageSLZ(required=False, allow_null=True)
+    persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
 
 
 class DeleteMountSourcesSLZ(serializers.Serializer):

@@ -343,7 +343,7 @@ class TestMountSourceViewSet:
         request_body = {
             "environment_name": "stag",
             "source_type": "PersistentStorage",
-            "pvc_source": {"storage": "1Gi"},
+            "persistent_storage_source": {"storage": "1Gi"},
         }
         response = api_client.post(url, request_body)
         assert response.status_code == 201

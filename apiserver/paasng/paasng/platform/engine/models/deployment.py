@@ -296,7 +296,7 @@ class Deployment(OperationVersionBase):
 
         for hook in self.hooks:
             if hook.enabled:
-                hooks.upsert(hook.type, command=hook.command)
+                hooks.upsert(hook.type, command=hook.command, args=hook.args)
         return hooks
 
     def get_processes(self) -> List[ProcessTmpl]:

@@ -99,7 +99,7 @@ class ModuleSpecField(serializers.DictField):
 
 class ModuleDescriptionSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="模块名称", required=True)
-    isDefault = serializers.BooleanField(default=False, help_text="是否为主模块")
+    isDefault = serializers.BooleanField(default=False, help_text="是否为主模块", source="is_default")
     spec = ModuleSpecField(required=True)
 
     def to_internal_value(self, data) -> ModuleDesc:
@@ -139,7 +139,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         # 验证至少有一个主模块
         has_default = False
         for module_desc in modules_list:
-            if module_desc.isDefault:
+            if module_desc.is_default:
                 if has_default:
                     raise serializers.ValidationError({"modules": _("一个应用只能有一个主模块")})
                 has_default = True
@@ -149,7 +149,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         # 校验 shared_from 的模块是否存在
         for idx, module_desc in enumerate(modules_list):
             for addon in module_desc.spec.addons:
-                if addon.moduleRef and addon.moduleRef.moduleName not in attrs["modules"]:
+                if addon.sharedFrom and addon.sharedFrom not in attrs["modules"]:
                     raise serializers.ValidationError(
                         {f"modules[{idx}].spec.addons": _("提供共享增强服务的模块不存在")}
                     )

@@ -21,7 +21,7 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
@@ -49,6 +49,67 @@ class AutoscalingSpec(BaseModel):
     policy: str = Field(..., min_length=1)
 
 
+class ExecAction(BaseModel):
+    """ExecAction describes a "run in container" action."""
+
+    command: List[str]
+
+
+class HTTPHeader(BaseModel):
+    """HTTPHeader describes a custom header to be used in HTTP probes"""
+
+    name: str
+    value: str
+
+
+class HTTPGetAction(BaseModel):
+    """HTTPGetAction describes an action based on HTTP Get requests."""
+
+    port: Union[str, int]
+    host: Optional[str] = None
+    path: Optional[str] = None
+    httpHeaders: List[HTTPHeader] = Field(default_factory=list)
+    scheme: Optional[Literal["HTTP", "HTTPS"]] = None
+
+
+class TCPSocketAction(BaseModel):
+    """TCPSocketAction describes an action based on opening a socket"""
+
+    port: Union[str, int]
+    host: Optional[str] = None
+
+
+class Probe(BaseModel):
+    """Resource: Probe
+
+    :param exec:命令行探活检测机制
+    :param httpGet:http 请求探活检测机制
+    :param tcpSocket:tcp 请求探活检测机制
+
+    :param initialDelaySeconds: 容器启动后等待时间
+    :param timeoutSeconds: 探针执行超时时间
+    :param periodSeconds: 探针执行间隔时间
+    :param successThreshold: 连续几次检测成功后，判定容器是健康的
+    :param failureThreshold: 连续几次检测失败后，判定容器是不健康
+    """
+
+    exec: Optional[ExecAction] = None
+    httpGet: Optional[HTTPGetAction] = None
+    tcpSocket: Optional[TCPSocketAction] = None
+
+    initialDelaySeconds: Optional[int] = 0
+    timeoutSeconds: Optional[int] = 1
+    periodSeconds: Optional[int] = 10
+    successThreshold: Optional[int] = 1
+    failureThreshold: Optional[int] = 3
+
+
+class ProbeSet(BaseModel):
+    liveness: Optional[Probe] = None
+    readiness: Optional[Probe] = None
+    startup: Optional[Probe] = None
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -59,6 +120,9 @@ class BkAppProcess(BaseModel):
     targetPort: Optional[int] = None
     resQuotaPlan: Optional[ResQuotaPlan] = None
     autoscaling: Optional[AutoscalingSpec] = None
+
+    # TODO: `probes` is NOT supported by operator now.
+    probes: Optional[ProbeSet] = None
 
     # Deprecated: use resQuotaPlan instead in v1alpha2
     cpu: Optional[str] = None
@@ -196,18 +260,12 @@ class BkAppAddonSpec(BaseModel):
     value: str
 
 
-class BkAppAddonReference(BaseModel):
-    """A reference to an addon"""
-
-    moduleName: str
-
-
 class BkAppAddon(BaseModel):
     """Addon for BkApp"""
 
     name: str
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
-    moduleRef: Optional[BkAppAddonReference]
+    sharedFrom: Optional[str]
 
 
 @register

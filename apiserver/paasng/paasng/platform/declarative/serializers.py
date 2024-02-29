@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import shlex
 from typing import Any, Dict, Optional, Tuple, Type
 
 import cattr
@@ -36,6 +37,7 @@ from paasng.platform.declarative.application.resources import (
 )
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.utils import get_quota_plan
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField
 from paasng.utils.validators import ReservedWordValidator
@@ -187,26 +189,53 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
         if attrs.get("tag"):
             market_desc.tag_id = attrs["tag"].id
 
-        package_plan = attrs.get("package_plan")
+        # TODO: 类型
+        package_plan = get_quota_plan(attrs.get("package_plan")) if attrs.get("package_plan") else None
         addons = [bk_app.BkAppAddon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
-        processes = {"web": {"command": constants.WEB_PROCESS, "plan": package_plan}}
+        processes = [{"name": "web", "args": shlex.split(constants.WEB_PROCESS), "resQuotaPlan": package_plan}]
+        is_use_celery = False
         if attrs["is_use_celery"]:
+            is_use_celery = True
             addons.append(bk_app.BkAppAddon(name="rabbitmq"))
-            processes["celery"] = {"command": constants.CELERY_PROCESS, "plan": package_plan}
+            processes.append(
+                {
+                    "name": "celery",
+                    "args": shlex.split(constants.CELERY_PROCESS),
+                    "resQuotaPlan": package_plan,
+                }
+            )
         elif attrs["is_use_celery_with_gevent"]:
+            is_use_celery = True
             addons.append(bk_app.BkAppAddon(name="rabbitmq"))
-            processes["celery"] = {"command": constants.CELERY_PROCESS_WITH_GEVENT, "plan": package_plan}
+            processes.append(
+                {
+                    "name": "celery",
+                    "args": shlex.split(constants.CELERY_PROCESS_WITH_GEVENT),
+                    "resQuotaPlan": package_plan,
+                }
+            )
 
         if attrs["is_use_celery_beat"]:
-            if "celery" not in processes:
+            if not is_use_celery:
                 raise ValueError("Can't use celery beat but not use celery.")
-            processes["beat"] = {"command": constants.CELERY_BEAT_PROCESS, "plan": package_plan}
+            processes.append(
+                {
+                    "name": "beat",
+                    "args": shlex.split(constants.CELERY_BEAT_PROCESS),
+                    "resQuotaPlan": package_plan,
+                }
+            )
 
         plugins = [
             dict(type=constants.AppDescPluginType.APP_VERSION, data=attrs["version"]),
             dict(type=constants.AppDescPluginType.APP_LIBRARIES, data=attrs["libraries"]),
         ]
 
+        spec = bk_app.BkAppSpec(
+            processes=processes,
+            configuration={"env": [{"name": item["key"], "value": item["value"]} for item in attrs.get("env", [])]},
+            addons=addons,
+        )
         application_desc = ApplicationDesc(
             spec_version=constants.AppSpecVersion.VER_1,
             code=attrs["app_code"],
@@ -216,18 +245,15 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
             modules={
                 "default": {
                     "name": "default",
-                    "isDefault": True,
-                    "spec": {
-                        "addons": addons,
-                    },
+                    "is_default": True,
+                    "spec": spec,
                 }
             },
             plugins=plugins,
             instance_existed=bool(self.instance),
         )
         deployment_desc = cattr.structure(
-            {"env_variables": attrs.get("env", []), "processes": processes, "language": attrs.get("language")},
+            {"spec": spec, "language": attrs.get("language"), "spec_version": constants.AppSpecVersion.VER_1},
             DeploymentDesc,
         )
-        # TODO: is_use_celery / author / version / language /
         return application_desc, deployment_desc

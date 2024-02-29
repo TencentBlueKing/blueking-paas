@@ -24,12 +24,13 @@ from attrs import define, fields
 from django.db.transaction import atomic
 
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
 from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet, Process
 from paasng.platform.declarative.models import DeploymentDescription
-from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
 logger = logging.getLogger(__name__)
@@ -69,38 +70,50 @@ class DeploymentDeclarativeController:
         result = PerformResult()
         logger.debug("Update related deployment description object.")
 
+        application = self.deployment.app_environment.application
         module = self.deployment.app_environment.module
         processes = desc.get_processes()
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
-                "env_variables": desc.get_env_variables(ConfigVarEnvName(self.deployment.app_environment.environment)),
                 "runtime": {
-                    # The synchronization of processes_spec should be delayed until the RELEASE stage
-                    "processes": cattr.unstructure(processes),
-                    "svc_discovery": cattr.unstructure(desc.svc_discovery),
                     "source_dir": desc.source_dir,
                 },
-                "scripts": cattr.unstructure(desc.scripts),
+                "spec": desc.spec,
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
 
         # apply desc to bkapp_model
         result.set_processes(processes=processes)
-        if not desc.spec:
-            if result.loaded_processes:
-                ModuleProcessSpecManager(module).sync_from_desc(processes=list(result.loaded_processes.values()))
-            # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
-            # Warning: 但由于普通应用仍然可以在页面上填写部署前置命令, 因此当描述文件未配置 hooks 时, 不能删除产品上配置的 hooks
-            if hooks := deploy_desc.get_deploy_hooks():
-                sync_hooks(module, hooks)
-                self.deployment.update_fields(hooks=hooks)
-        else:
+        if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:
+            # 云原生应用
+            # 应用描述文件中的环境变量不展示到产品页面
+            exclude = {
+                "configuration": {},
+                "envOverlay": {"envVariables"},
+            }
             # TODO: 优化 import 方式, 例如直接接受 desc.spec
             # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
-            import_manifest(module, input_data={"metadata": {}, "spec": deploy_desc.spec.dict()})
+            import_manifest(
+                module,
+                input_data={
+                    "metadata": {},
+                    "spec": deploy_desc.spec.dict(exclude_none=True, exclude_unset=True, exclude=exclude),
+                },
+            )
             if hooks := deploy_desc.get_deploy_hooks():
+                self.deployment.update_fields(hooks=hooks)
+        else:
+            # 普通应用
+            # Note: 由于普通应用可能在 Procfile 定义进程, 因此在应用构建时仍然存在其他位点会更新 ModuleProcessSpecManager
+            # TODO: 优化如上所述的情况
+            if result.loaded_processes:
+                ModuleProcessSpecManager(module).sync_from_desc(processes=list(result.loaded_processes.values()))
+            # 仅声明 hooks 时才同步 hooks
+            # 由于普通应用仍然可以在页面上填写部署前置命令, 因此当描述文件未配置 hooks 时, 不代表禁用 hooks.
+            if hooks := deploy_desc.get_deploy_hooks():
+                sync_hooks(module, hooks)
                 self.deployment.update_fields(hooks=hooks)
 
         if desc.bk_monitor:

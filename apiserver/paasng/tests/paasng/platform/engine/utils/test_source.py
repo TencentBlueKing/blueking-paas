@@ -46,11 +46,14 @@ from paasng.platform.sourcectl.exceptions import DoesNotExistsOnServer
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
     return cattr.structure(obj, TypeProcesses)
+
+
+EXPECTED_WEB_PROCESS = WEB_PROCESS.replace(":$PORT", "':$PORT'")
 
 
 @pytest.mark.usefixtures("_init_tmpls")
@@ -102,14 +105,14 @@ class TestGetProcesses:
         [
             (
                 {},
-                cast_to_processes({"web": {"name": "web", "command": WEB_PROCESS}}),
+                cast_to_processes({"web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1}}),
             ),
             (
                 {"is_use_celery": True},
                 cast_to_processes(
                     {
-                        "web": {"name": "web", "command": WEB_PROCESS},
-                        "celery": {"name": "celery", "command": CELERY_PROCESS},
+                        "web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1},
+                        "celery": {"name": "celery", "command": CELERY_PROCESS, "replicas": 1},
                     }
                 ),
             ),
@@ -117,15 +120,9 @@ class TestGetProcesses:
                 {"is_use_celery": True, "is_use_celery_beat": True},
                 cast_to_processes(
                     {
-                        "web": {
-                            "name": "web",
-                            "command": WEB_PROCESS,
-                        },
-                        "celery": {
-                            "name": "celery",
-                            "command": CELERY_PROCESS,
-                        },
-                        "beat": {"name": "beat", "command": CELERY_BEAT_PROCESS},
+                        "web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1},
+                        "celery": {"name": "celery", "command": CELERY_PROCESS, "replicas": 1},
+                        "beat": {"name": "beat", "command": CELERY_BEAT_PROCESS, "replicas": 1},
                     }
                 ),
             ),
@@ -150,18 +147,18 @@ class TestGetProcesses:
         ("processes_desc", "expected"),
         [
             (
-                {"web": {"command": "start web;"}},
-                cast_to_processes({"web": {"name": "web", "command": "start web;"}}),
+                {"web": {"command": "start web"}},
+                cast_to_processes({"web": {"name": "web", "command": "start web", "replicas": 1}}),
             ),
             (
                 {
-                    "web": {"command": "start web;", "replicas": 5, "plan": "1C2G5R"},
-                    "celery": {"command": "start celery;", "replicas": 5},
+                    "web": {"command": "start web", "replicas": 5, "plan": "4C2G5R"},
+                    "celery": {"command": "start celery", "replicas": 5},
                 },
                 cast_to_processes(
                     {
-                        "web": {"name": "web", "command": "start web;", "replicas": 5, "plan": "1C2G5R"},
-                        "celery": {"name": "celery", "command": "start celery;", "replicas": 5},
+                        "web": {"name": "web", "command": "start web", "replicas": 5, "plan": "4C2G"},
+                        "celery": {"name": "celery", "command": "start celery", "replicas": 5},
                     }
                 ),
             ),

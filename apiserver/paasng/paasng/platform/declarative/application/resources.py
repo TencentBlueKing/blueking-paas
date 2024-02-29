@@ -100,13 +100,13 @@ class ModuleDiffResult(BaseModel):
 class ModuleDesc(BaseModel):
     name: str = Field(..., description="模块名")
     language: AppLanguage = Field(AppLanguage.PYTHON, description="模块开发语言")
-    isDefault: bool = Field(False, description="是否为主模块?")
-    sourceDir: str = Field("", description="源码目录")
+    is_default: bool = Field(False, description="是否为主模块?")
+    source_dir: str = Field("", description="源码目录")
     spec: bk_app.BkAppSpec
 
 
 class ApplicationDesc(BaseModel):
-    spec_version: AppSpecVersion = AppSpecVersion.VER_1
+    spec_version: AppSpecVersion = AppSpecVersion.VER_2
     code: str
     name_zh_cn: str
     name_en: str
@@ -122,7 +122,7 @@ class ApplicationDesc(BaseModel):
     @property
     def default_module(self):
         try:
-            return next(filter(lambda m: m.isDefault, self.modules.values()))
+            return next(filter(lambda m: m.is_default, self.modules.values()))
         except StopIteration:
             raise RuntimeError(_("当前应用未定义主模块"))
 

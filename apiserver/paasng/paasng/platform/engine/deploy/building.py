@@ -273,7 +273,7 @@ class ApplicationBuilder(BaseBuilder):
                 proc_data_from_desc=proc_data_from_desc,
             )
             self.deployment.update_fields(processes=processes)
-            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到，同步到 bkapp models
+            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
             if proc_data_from_desc != processes:
                 sync_to_bkapp_model(module, processes=list(processes.values()))
 
@@ -375,7 +375,7 @@ class DockerBuilder(BaseBuilder):
                 proc_data_from_desc=proc_data_from_desc,
             )
             self.deployment.update_fields(processes=processes)
-            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到，同步到 bkapp models
+            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
             if proc_data_from_desc != processes:
                 sync_to_bkapp_model(module, processes=list(processes.values()))
 

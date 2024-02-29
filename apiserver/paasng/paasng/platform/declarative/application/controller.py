@@ -194,7 +194,7 @@ class AppDeclarativeController:
     def _sync_default_module(self, application: Application, modules_desc: Dict[str, ModuleDesc]):
         """Switch Default Module if changed."""
         for module_name, module_desc in modules_desc.items():
-            if module_desc.isDefault:
+            if module_desc.is_default:
                 new_default_module_name = module_name
                 break
         else:
@@ -281,8 +281,8 @@ class AppDeclarativeController:
         for module_name, module_desc in desc.items():
             dependency_tree[module_name] = []
             for service in module_desc.spec.addons:
-                if service.moduleRef:
-                    dependency_tree[module_name].append(service.moduleRef.moduleName)
+                if service.sharedFrom:
+                    dependency_tree[module_name].append(service.sharedFrom)
 
         # NOTE: 由 AppDescriptionSLZ 校验 shared_from 的模块是否存在, 这里不再重复校验
         for module_name in flatten_dependency_tree(dependency_tree):
@@ -300,13 +300,13 @@ class AppDeclarativeController:
                 logger.warning('Skip binding, service called "%s" not found', service.name)
                 continue
 
-            if service.moduleRef:
+            if service.sharedFrom:
                 manager = ServiceSharingManager(module)
                 if manager.get_shared_info(service=obj):
                     logger.info('Skip, service "%s" already created shared attachment', obj.name)
                     continue
 
-                ref_module = application.get_module(service.moduleRef.moduleName)
+                ref_module = application.get_module(service.sharedFrom)
                 manager.create(service=obj, ref_module=ref_module)
             else:
                 if mixed_service_mgr.module_is_bound_with(obj, module):

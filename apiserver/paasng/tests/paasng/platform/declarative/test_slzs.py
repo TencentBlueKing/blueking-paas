@@ -78,7 +78,7 @@ class TestAppDescriptionSLZ:
                     "name": "nodejs",
                     "isDefault": True,
                     "spec": {
-                        "addons": [{"name": "mysql", "specs": [], "moduleRef": {"moduleName": "python"}}],
+                        "addons": [{"name": "mysql", "specs": [], "sharedFrom": "python"}],
                     },
                 },
                 "python": {

@@ -90,7 +90,7 @@ class TestValidateBadCase:
             builder.with_module(
                 module_name="foo",
                 is_default=True,
-                module_spec={"addons": [{"name": "openai", "moduleRef": {"moduleName": "bar"}}]},
+                module_spec={"addons": [{"name": "openai", "sharedFrom": "bar"}]},
             ),
         )
         with pytest.raises(

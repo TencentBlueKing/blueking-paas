@@ -23,6 +23,7 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.declarative.application.resources import (
     ModuleDesc,
 )
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.modules.serializers import ModuleNameField
@@ -44,8 +45,8 @@ class ModuleSpecField(serializers.DictField):
 class ModuleDescriptionSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="模块名称", required=True)
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
-    sourceDir = serializers.CharField(help_text="源码目录", default="")
-    isDefault = serializers.BooleanField(default=False, help_text="是否为主模块")
+    sourceDir = serializers.CharField(help_text="源码目录", default="", source="source_dir")
+    isDefault = serializers.BooleanField(default=False, help_text="是否为主模块", source="is_default")
     spec = ModuleSpecField(required=True)
 
     def to_internal_value(self, data) -> ModuleDesc:
@@ -61,7 +62,8 @@ class DeploymentDescSLZ(serializers.Serializer):
         return cattr.structure(
             {
                 "language": module_desc.language,
-                "source_dir": module_desc.sourceDir,
+                "source_dir": module_desc.source_dir,
+                "spec_version": AppSpecVersion.VER_3,
                 "spec": module_desc.spec,
             },
             DeploymentDesc,

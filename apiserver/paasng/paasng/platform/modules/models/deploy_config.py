@@ -37,20 +37,30 @@ class Hook:
     args: Optional[List[str]] = None
 
     def get_command(self) -> List[str]:
+        """get_args: 获取 hook 的命令部分
+        使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
+        """
         if isinstance(self.command, str):
+            # TODO: runner 的 Dockerfile 默认的入口程序为 ["/runner/init"], 理论上返回空列表即可
             return DEFAULT_SLUG_RUNNER_ENTRYPOINT
         return self.command
 
     def get_args(self) -> List[str]:
+        """get_args: 获取 hook 的参数部分
+        使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
+        """
         if isinstance(self.command, str):
             command = shlex.split(self.command)
-            # 有脏数据, 移出前 len(DEFAULT_SLUG_RUNNER_ENTRYPOINT) 个元素
+            # 有脏数据, 移除前 len(DEFAULT_SLUG_RUNNER_ENTRYPOINT) 个元素
             if self.command.startswith(shlex.join(DEFAULT_SLUG_RUNNER_ENTRYPOINT)):
                 return command[len(DEFAULT_SLUG_RUNNER_ENTRYPOINT) :]
             return command
         return self.args or []
 
     def get_proc_command(self) -> str:
+        """get_proc_command: Procfile 风格的命令
+        使用场景: 普通应用启动 hook 使用该方法获取启动命令 -> ApplicationPreReleaseExecutor
+        """
         if isinstance(self.command, str):
             return self.command
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])

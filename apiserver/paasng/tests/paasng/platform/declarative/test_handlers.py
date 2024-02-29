@@ -249,13 +249,13 @@ class TestSMartDescriptionHandler:
     @pytest.mark.parametrize(
         ("memory", "expected_plan_name"),
         [
-            (512, "Starter"),
-            (1024, "Starter"),
-            (1536, "4C2G5R"),
-            (2048, "4C2G5R"),
-            (3072, "4C4G5R"),
-            (4096, "4C4G5R"),
-            (8192, "4C4G5R"),
+            (512, "default"),
+            (1024, "default"),
+            (1536, "4C2G"),
+            (2048, "4C2G"),
+            (3072, "4C4G"),
+            (4096, "4C4G"),
+            (8192, "4C4G"),
         ],
     )
     def test_bind_process_spec_plans(self, random_name, bk_deployment, app_desc, memory, expected_plan_name):
@@ -270,7 +270,7 @@ class TestSMartDescriptionHandler:
         SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert desc_obj.runtime["processes"]["web"]["plan"] == expected_plan_name
+        assert desc_obj.spec.processes[0].resQuotaPlan == expected_plan_name
 
     @pytest.mark.parametrize(
         ("is_use_celery", "expected_services"),

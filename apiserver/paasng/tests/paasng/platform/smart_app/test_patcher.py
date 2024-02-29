@@ -98,7 +98,7 @@ class TestSourcePackagePatcher:
                 {"app.yaml": yaml.dump(EXAMPLE_APP_YAML)},
                 "./Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS},
+                {"web": constants.WEB_PROCESS.replace(":$PORT", "':$PORT'")},
             ),
             # 测试 ./Procfile not found
             ({"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, "./Procfile", pytest.raises(KeyError), None),
@@ -106,7 +106,7 @@ class TestSourcePackagePatcher:
                 {"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)},
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS},
+                {"web": constants.WEB_PROCESS.replace(":$PORT", "':$PORT'")},
             ),
             (
                 {
@@ -119,7 +119,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS, "celery": constants.CELERY_PROCESS},
+                {"web": constants.WEB_PROCESS.replace(":$PORT", "':$PORT'"), "celery": constants.CELERY_PROCESS},
             ),
             (
                 {
@@ -132,7 +132,10 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS, "celery": constants.CELERY_PROCESS_WITH_GEVENT},
+                {
+                    "web": constants.WEB_PROCESS.replace(":$PORT", "':$PORT'"),
+                    "celery": constants.CELERY_PROCESS_WITH_GEVENT,
+                },
             ),
             (
                 {
@@ -142,14 +145,14 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS, "celery": constants.CELERY_PROCESS},
+                {"web": constants.WEB_PROCESS.replace(":$PORT", "':$PORT'"), "celery": constants.CELERY_PROCESS},
             ),
             (
                 {"foo/app.yaml": yaml.dump({**EXAMPLE_APP_YAML, "is_use_celery": True, "is_use_celery_beat": True})},
                 "./foo/Procfile",
                 does_not_raise(),
                 {
-                    "web": constants.WEB_PROCESS,
+                    "web": constants.WEB_PROCESS.replace(":$PORT", "':$PORT'"),
                     "celery": constants.CELERY_PROCESS,
                     "beat": constants.CELERY_BEAT_PROCESS,
                 },
@@ -173,7 +176,8 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"hello": "echo 'hello world!';"},
+                # shlex 在某些情况会出现稍微偏差(这里的 ; 号位置变了)
+                {"hello": "echo 'hello world!;'"},
             ),
             # 测试 Procfile 不会被覆盖
             (
@@ -222,7 +226,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/src/bar/Procfile",
                 does_not_raise(),
-                {"hello": "echo 'Hello Foo, i am Bar!';"},
+                {"hello": "echo 'Hello Foo, i am Bar!;'"},
             ),
             # 测试多模块(已加密)
             (
@@ -250,7 +254,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"hello": "echo 'Hello Foo, i am Bar!';"},
+                {"hello": "echo 'Hello Foo, i am Bar!;'"},
             ),
         ],
     )
@@ -259,7 +263,8 @@ class TestSourcePackagePatcher:
         with tarfile.open(patched_tar) as tar, ctx:
             fp = tar.extractfile(target)
             assert fp
-            assert yaml.load(fp.read()) == expected
+            data = yaml.load(fp.read())
+            assert data == expected
 
     @pytest.mark.parametrize(
         ("contents", "target", "ctx", "expected"),

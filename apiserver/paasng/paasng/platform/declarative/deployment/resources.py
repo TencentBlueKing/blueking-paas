@@ -17,13 +17,15 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import shlex
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import cattr
 from attrs import define, field, validators
+from blue_krill.cubing_case import shortcuts
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
@@ -170,54 +172,48 @@ class BluekingMonitor:
             self.target_port = self.port
 
 
+def camel_to_snake_case(data: Dict[str, Any]) -> Dict[str, Any]:
+    """convert all camel case field name to snake case, and return the converted dict"""
+    result = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            result[shortcuts.to_lower_snake_case(key)] = camel_to_snake_case(value)
+        else:
+            result[shortcuts.to_lower_snake_case(key)] = value
+    return result
+
+
 @define
 class DeploymentDesc:
     """Resource: Deployment description
 
     :param language: 应用开发语言
     :param source_dir: 源码目录
-    :param env_variables: 部署时使用的环境变量
-    :param processes: 启动进程
-    :param scripts: 部署钩子
-    :param svc_discovery: 服务发现
     :param bk_monitor: SaaS 监控采集配置
+    :param spec_version: 描述文件版本
+    :param spec: BkAppSpec
     """
 
-    # TODO: 移除 spec_version=2 的字段, 将兼容逻辑移到 validations 中处理？validations 充当 k8s 多版本的 hub
-
     language: AppLanguage
+    spec: bk_app.BkAppSpec
     source_dir: str = ""
-    env_variables: List[EnvVariable] = field(factory=list)
-    processes: Dict[str, Process] = field(factory=dict)
-    scripts: Scripts = field(factory=Scripts)
-    svc_discovery: SvcDiscovery = field(factory=SvcDiscovery)
+    # TODO: BkAppSpec 支持该配置
     bk_monitor: Optional[BluekingMonitor] = None
-
-    spec: Optional[bk_app.BkAppSpec] = None
+    spec_version: AppSpecVersion = AppSpecVersion.VER_2
 
     def get_procfile(self) -> Dict[str, str]:
-        return {key: process.command for key, process in self.processes.items()}
-
-    def get_env_variables(self, environment_name: Optional[ConfigVarEnvName] = None):
-        if environment_name is None or environment_name == ConfigVarEnvName.GLOBAL:
-            return cattr.unstructure(self.env_variables)
-        return cattr.unstructure(
-            [env_var for env_var in self.env_variables if env_var.is_within_scope(environment_name)]
-        )
+        return {proc_type: process.command for proc_type, process in self.get_processes().items()}
 
     def get_processes(self) -> Dict[str, Process]:
-        # TODO: 兼容逻辑移到 validations 中处理?
-        if self.spec:
-            return cattr.structure(
-                {
-                    process.name: {
-                        "command": (shlex.join(process.command or []) + " " + shlex.join(process.args or [])).strip(),
-                        "replicas": process.replicas,
-                        "plan": process.resQuotaPlan,
-                        # TODO: 待 bkapp 支持声明 probes 后, 补充 probes 字段
-                    }
-                    for process in self.spec.processes
-                },
-                Dict[str, Process],
-            )
-        return self.processes
+        return cattr.structure(
+            {
+                process.name: {
+                    "command": (shlex.join(process.command or []) + " " + shlex.join(process.args or [])).strip(),
+                    "replicas": process.replicas,
+                    "plan": process.resQuotaPlan,
+                    "probes": camel_to_snake_case(process.probes.dict()) if process.probes else None,
+                }
+                for process in self.spec.processes
+            },
+            Dict[str, Process],
+        )

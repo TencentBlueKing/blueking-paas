@@ -104,22 +104,20 @@ class ModuleDescriptionSLZ(serializers.Serializer):
         attrs = super().to_internal_value(data)
         addons = []
         for service in attrs.get("services", []):
-            module_ref = None
-            if shared_from := service.shared_from:
-                module_ref = {"moduleName": shared_from}
+            shared_from = service.shared_from
             addons.append(
                 {
                     "name": service.name,
                     "specs": [{"name": key, "value": value} for key, value in service.specs.items()],
-                    "moduleRef": module_ref,
+                    "sharedFrom": shared_from,
                 }
             )
 
         return ModuleDesc(
             name="should-set-by-parent-slz",
             language=attrs["language"],
-            isDefault=attrs["is_default"],
-            sourceDir=attrs.get("source_dir") or "",
+            is_default=attrs["is_default"],
+            source_dir=attrs.get("source_dir") or "",
             spec={
                 "addons": addons,
             },
@@ -157,7 +155,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         # 验证至少有一个主模块
         has_default = False
         for module_desc in attrs["modules"].values():
-            if module_desc.isDefault:
+            if module_desc.is_default:
                 if has_default:
                     raise serializers.ValidationError({"modules": _("一个应用只能有一个主模块")})
                 has_default = True
@@ -167,7 +165,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         # 校验 shared_from 的模块是否存在
         for module_name, module_desc in attrs["modules"].items():
             for addon in module_desc.spec.addons:
-                if addon.moduleRef and addon.moduleRef.moduleName not in attrs["modules"]:
+                if addon.sharedFrom and addon.sharedFrom not in attrs["modules"]:
                     raise serializers.ValidationError(
                         {f"modules[{module_name}].services": _("提供共享增强服务的模块不存在")}
                     )

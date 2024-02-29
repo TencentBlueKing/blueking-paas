@@ -21,7 +21,7 @@ import pytest
 
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
-from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.declarative.deployment.resources import BkSaaSItem, SvcDiscovery
 from paasng.platform.declarative.deployment.svc_disc import (
     BkSaaSAddrDiscoverer,
     BkSaaSEnvVariableFactory,
@@ -46,7 +46,7 @@ class TestEnvVariablesField:
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
         assert "env_variables" in str(exc_info.value)
 
-    def test_normal(self, bk_deployment):
+    def test_spec_v2(self, bk_deployment):
         json_data = {
             "env_variables": [
                 {"key": "FOO", "value": "1"},
@@ -58,7 +58,7 @@ class TestEnvVariablesField:
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert len(desc_obj.env_variables) == 2
+        assert len(desc_obj.get_env_variables()) == 2
 
 
 class TestEnvVariablesReader:
@@ -99,12 +99,16 @@ class TestSvcDiscoveryField:
     def test_store(self, bk_deployment):
         self.apply_config(bk_deployment)
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert desc_obj.runtime["svc_discovery"] == {
-            "bk_saas": [
-                {"bk_app_code": "foo-app", "module_name": None},
-                {"bk_app_code": "bar-app", "module_name": "api"},
-            ]
-        }
+
+        assert desc_obj.get_svc_discovery() == cattr.structure(
+            {
+                "bk_saas": [
+                    {"bk_app_code": "foo-app", "module_name": None},
+                    {"bk_app_code": "bar-app", "module_name": "api"},
+                ]
+            },
+            SvcDiscovery,
+        )
 
     def test_as_env_vars_domain(self, bk_deployment):
         with mock_cluster_service(
@@ -156,7 +160,7 @@ class TestHookField:
             ({"language": "python"}, HookList()),
             (
                 {"language": "python", "scripts": {"pre_release_hook": "echo 1;"}},
-                HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 1;"}, Hook)]),
+                HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "1;"]}, Hook)]),
             ),
         ],
     )
@@ -177,7 +181,7 @@ class TestHookField:
             ),
             (
                 {"language": "python", "scripts": {"pre_release_hook": "echo 2;"}},
-                HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 2;"}, Hook)]),
+                HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "2;"]}, Hook)]),
             ),
         ],
     )
@@ -196,7 +200,7 @@ class TestHookField:
             ({"language": "python"}, HookList()),
             (
                 {"language": "python", "scripts": {"pre_release_hook": "echo 2;"}},
-                HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 2;"}, Hook)]),
+                HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "2;"]}, Hook)]),
             ),
         ],
     )

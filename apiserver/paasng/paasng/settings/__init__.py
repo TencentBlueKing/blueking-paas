@@ -1304,5 +1304,8 @@ for key in dir(workloads_settings):
 #  挂载卷相关配置
 # ---------------------------------------------
 
-# pv 默认存储类
-DEFAULT_STORAGE_CLASS_NAME = settings.get("DEFAULT_STORAGE_CLASS_NAME", "cfs")
+# 持久存储默认存储类型
+DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE_CLASS_NAME", "cfs")
+
+# 持久存储默认存储大小
+DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")

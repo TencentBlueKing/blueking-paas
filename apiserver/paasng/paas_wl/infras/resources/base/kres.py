@@ -671,6 +671,10 @@ class KPersistentVolumeClaim(BaseKresource):
     kind = "PersistentVolumeClaim"
 
 
+class KStorageClass(BaseKresource):
+    kind = "StorageClass"
+
+
 # Individual resource types end
 
 

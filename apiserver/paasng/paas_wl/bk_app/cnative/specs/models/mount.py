@@ -16,9 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import uuid
-from typing import Optional
-
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -35,7 +32,14 @@ SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 
 class ConfigMapSourceManager(models.Manager):
-    def get_by_mount(self, m: "Mount"):
+    def get_by_mount(self, m: "Mount") -> "ConfigMapSource":
+        """
+        根据传入的 Mount 对象查找对应的 configmap 资源
+
+        :param m: Mount object
+        :return ConfigMapSource: 与传入的 Mount 对象对应的 configmap 资源
+        :raises ValueError: 如果未传入 source_config.configMap
+        """
         if not m.source_config.configMap:
             raise ValueError(f"Mount {m.name} is invalid: source_config.configMap is none")
         return self.get(
@@ -62,20 +66,27 @@ class ConfigMapSource(TimestampedModel):
         unique_together = ("name", "application_id", "environment_name")
 
 
-class PVCSourceManager(models.Manager):
-    def get_by_mount(self, m: "Mount"):
-        if not m.source_config.persistentVolumeClaim:
-            raise ValueError(f"Mount {m.name} is invalid: source_config.persistentVolumeClaim is none")
+class PersistentStorageManager(models.Manager):
+    def get_by_mount(self, m: "Mount") -> "PersistentStorageSource":
+        """
+        根据传入的 Mount 对象查找对应的持久存储资源
+
+        :param m: Mount object
+        :return PersistentStorageSource: 与传入的 Mount 对象对应的持久存储资源
+        :raises ValueError: 如果未传入 source_config.persistentStorage
+        """
+        if not m.source_config.persistentStorage:
+            raise ValueError(f"Mount {m.name} is invalid: source_config.persistentStorage is none")
 
         return self.get(
             application_id=m.module.application_id,
             environment_name=m.environment_name,
-            name=m.source_config.persistentVolumeClaim.name,
+            name=m.source_config.persistentStorage.name,
         )
 
 
-class PersistentVolumeClaimSource(TimestampedModel):
-    """PVC 类型的挂载资源"""
+class PersistentStorageSource(TimestampedModel):
+    """持久存储类型的挂载资源"""
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
     module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
@@ -86,40 +97,10 @@ class PersistentVolumeClaimSource(TimestampedModel):
     storage = models.CharField(max_length=63)
     storage_class_name = models.CharField(max_length=63)
 
-    objects = PVCSourceManager()
+    objects = PersistentStorageManager()
 
     class Meta:
         unique_together = ("name", "application_id", "environment_name")
-
-
-class MountManager(models.Manager):
-    def new(
-        self,
-        app_code: str,
-        module_id: uuid.UUID,
-        name: str,
-        environment_name: str,
-        mount_path: str,
-        source_type: str,
-        region: str,
-        source_name: Optional[str] = None,
-    ):
-        # 根据 source_type 生成对应的 source_config
-        from paas_wl.bk_app.cnative.specs.mounts import generate_source_config_name, init_source_controller
-
-        source_config_name = source_name or generate_source_config_name(app_code=app_code)
-        controller = init_source_controller(source_type)
-        source_config = controller.new_volume_source(name=source_config_name)
-
-        return Mount.objects.create(
-            module_id=module_id,
-            name=name,
-            environment_name=environment_name,
-            mount_path=mount_path,
-            source_type=source_type,
-            region=region,
-            source_config=source_config,
-        )
 
 
 class Mount(TimestampedModel):
@@ -135,8 +116,6 @@ class Mount(TimestampedModel):
     mount_path = models.CharField(max_length=128)
     source_type = models.CharField(choices=VolumeSourceType.get_choices(), max_length=32)
     source_config: VolumeSource = SourceConfigField()
-
-    objects = MountManager()
 
     class Meta:
         unique_together = ("module_id", "mount_path", "environment_name")

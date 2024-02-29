@@ -21,12 +21,12 @@ import logging
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import PVCSTORAGE, MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.constants import MountEnvName, PersistentStorageSize, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
 
 from .constants import DeployStatus
-from .models import AppModelDeploy, AppModelRevision, ConfigMapSource, Mount, PersistentVolumeClaimSource
+from .models import AppModelDeploy, AppModelRevision, ConfigMapSource, Mount, PersistentStorageSource
 
 logger = logging.getLogger(__name__)
 
@@ -179,8 +179,8 @@ class ConfigMapSLZ(serializers.Serializer):
         return value
 
 
-class PVCSLZ(serializers.Serializer):
-    storage = serializers.ChoiceField(choices=PVCSTORAGE.get_choices(), allow_null=True)
+class PersistentStorageSLZ(serializers.Serializer):
+    storage = serializers.ChoiceField(choices=PersistentStorageSize.get_choices(), allow_null=True)
 
 
 class UpsertMountSLZ(serializers.Serializer):
@@ -194,7 +194,7 @@ class UpsertMountSLZ(serializers.Serializer):
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
-    pvc_source = PVCSLZ(required=False, allow_null=True)
+    pvc_source = PersistentStorageSLZ(required=False, allow_null=True)
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -225,7 +225,7 @@ class UpsertMountSLZ(serializers.Serializer):
 
 class MountSLZ(serializers.ModelSerializer):
     configmap_source = serializers.SerializerMethodField(label=_("configmap 挂载"))
-    pvc_source = serializers.SerializerMethodField(label=_("pvc 资源"))
+    persistent_storage_source = serializers.SerializerMethodField(label=_("pvc 资源"))
 
     class Meta:
         model = Mount
@@ -241,7 +241,7 @@ class MountSLZ(serializers.ModelSerializer):
             "source_type",
             "source_config",
             "configmap_source",
-            "pvc_source",
+            "persistent_storage_source",
         )
 
     def get_configmap_source(self, obj):
@@ -255,8 +255,8 @@ class MountSLZ(serializers.ModelSerializer):
         else:
             return {"source_config_data": source.data}
 
-    def get_pvc_source(self, obj):
-        if obj.source_type != VolumeSourceType.PersistentVolumeClaim.value:
+    def get_persistent_storage_source(self, obj):
+        if obj.source_type != VolumeSourceType.PersistentStorage.value:
             return None
         try:
             controller = init_source_controller(obj.source_type)
@@ -281,7 +281,7 @@ class CreateMountSourceSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
-    pvc_source = PVCSLZ(required=False, allow_null=True)
+    pvc_source = PersistentStorageSLZ(required=False, allow_null=True)
 
 
 class DeleteMountSourcesSLZ(serializers.Serializer):
@@ -302,8 +302,8 @@ class MountSourceSLZ(serializers.Serializer):
     def get_source_type(self, obj):
         if isinstance(obj, ConfigMapSource):
             return VolumeSourceType.ConfigMap.value
-        elif isinstance(obj, PersistentVolumeClaimSource):
-            return VolumeSourceType.PersistentVolumeClaim.value
+        elif isinstance(obj, PersistentStorageSource):
+            return VolumeSourceType.PersistentStorage.value
         return None
 
     def get_binded_modules(self, obj):

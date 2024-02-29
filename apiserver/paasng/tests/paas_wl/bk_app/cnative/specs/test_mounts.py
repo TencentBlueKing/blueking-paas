@@ -21,10 +21,10 @@ import pytest
 from paas_wl.bk_app.cnative.specs import mounts
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentVolumeClaimSource as PersistentVolumeClaimSourceSpec
+from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentStorage as PersistentStorageSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
-from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentVolumeClaimSource
-from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
+from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
+from paas_wl.bk_app.cnative.specs.mounts import MountManager, init_source_controller
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -65,8 +65,8 @@ def _create_mounts(bk_module):
         environment_name=MountEnvName.STAG.name,
         mount_path="/etc/etcd",
         name="etcd",
-        source_type=VolumeSourceType.PersistentVolumeClaim,
-        source_config=VolumeSource(persistentVolumeClaim=PersistentVolumeClaimSourceSpec(name="etcd-pvc")),
+        source_type=VolumeSourceType.PersistentStorage,
+        source_config=VolumeSource(persistentStorage=PersistentStorageSpec(name="etcd-pvc")),
     )
 
 
@@ -87,7 +87,7 @@ class TestVolumeSourceController:
             environment_name=MountEnvName.GLOBAL,
             data={"redis.conf": "port 6379"},
         )
-        PersistentVolumeClaimSource.objects.create(
+        PersistentStorageSource.objects.create(
             application_id=bk_module.application_id,
             module_id=bk_module.id,
             name="etcd-pvc",
@@ -117,7 +117,7 @@ class TestVolumeSourceController:
 
     @pytest.fixture()
     def mount_configmap(self, bk_app, bk_module):
-        mount = Mount.objects.new(
+        mount = MountManager.new(
             app_code=bk_app.code,
             module_id=bk_module.id,
             mount_path="/path/",
@@ -143,13 +143,13 @@ class TestVolumeSourceController:
 
     @pytest.fixture()
     def mount_pvc(self, bk_app, bk_module):
-        mount = Mount.objects.new(
+        mount = MountManager.new(
             app_code=bk_app.code,
             module_id=bk_module.id,
             mount_path="/path/",
             environment_name=MountEnvName.STAG,
             name="mount-pvc",
-            source_type=VolumeSourceType.PersistentVolumeClaim.value,
+            source_type=VolumeSourceType.PersistentStorage.value,
             region=bk_app.region,
             source_name="etcd-pvc",
         )

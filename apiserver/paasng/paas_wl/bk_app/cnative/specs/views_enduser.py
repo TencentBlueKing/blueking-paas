@@ -41,7 +41,6 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.cnative.specs.constants import (
     BKPAAS_DEPLOY_ID_ANNO_KEY,
-    DEFAULT_STORAGE,
     ResQuotaPlan,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
@@ -57,7 +56,7 @@ from paas_wl.bk_app.cnative.specs.models import (
     to_error_string,
     update_app_resource,
 )
-from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
+from paas_wl.bk_app.cnative.specs.mounts import MountManager, check_storage_class_exists, init_source_controller
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
@@ -442,7 +441,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # 创建 Mount
         try:
-            mount_instance = Mount.objects.new(
+            mount_instance = MountManager.new(
                 module_id=module.id,
                 app_code=application.code,
                 name=validated_data["name"],
@@ -531,6 +530,7 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz = MountSourceSLZ(queryset, many=True)
         return Response(data=slz.data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(request_body=CreateMountSourceSLZ, responses={201: MountSourceSLZ(many=True)})
     def create(self, request, code):
         app = self.get_application()
 
@@ -540,7 +540,7 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         environment_name = validated_data.get("environment_name")
         source_type = validated_data.get("source_type")
-        storage = validated_data.get("pvc_source", {}).get("storage") or DEFAULT_STORAGE
+        storage = validated_data.get("pvc_source", {}).get("storage") or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
 
         controller = init_source_controller(source_type)
         queryset = controller.create_by_app(application_id=app.id, environment_name=environment_name, storage=storage)
@@ -562,3 +562,15 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         controller.delete_by_app(application_id=app.id, source_name=source_name)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StorageClassViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def check(self, request, code):
+        """确认部署集群是否开启了默认 StorageClass"""
+        app = self.get_application()
+        exists = check_storage_class_exists(
+            application=app, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
+        )
+        return Response(exists)

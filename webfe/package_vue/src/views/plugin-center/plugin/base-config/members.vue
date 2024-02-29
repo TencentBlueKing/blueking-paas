@@ -1,8 +1,9 @@
 <template lang="html">
-  <div class="right-main">
+  <div class="plugin-members">
     <paas-plugin-title />
     <paas-content-loader
-      class="app-container middle"
+      class="app-container container"
+      style="width: 100%"
       :is-loading="loading"
       placeholder="roles-loading"
       :is-transform="false"
@@ -619,6 +620,12 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.plugin-members {
+  .app-container.container {
+    margin: 0 auto !important;
+    padding-top: 16px !important;
+  }
+}
 .member-table-cls {
   background-color: #fff;
 }

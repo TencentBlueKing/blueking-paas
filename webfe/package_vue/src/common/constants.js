@@ -228,3 +228,12 @@ export const PLUGIN_VERSION_MAP = {
   subpage: 'test',
   itsm: 'itsm',
 };
+
+/**
+ * 版本号类型
+ */
+export const VERSION_NUMBER_TYPE = {
+  major: '重大版本',
+  minor: '次版本',
+  patch: '修正版本',
+};

@@ -1,6 +1,6 @@
 <template lang="html">
   <div class="container biz-create-success">
-    <paas-plugin-title />
+    <paas-plugin-title :name="isOfficialVersion ? $t('新建版本') : $t('新建测试')" />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="plugin-new-version-loading"
@@ -67,6 +67,7 @@
                 :placeholder="$t('请选择版本，已经发布过的版本不可选择。')"
                 searchable
                 :loading="isBranchLoading"
+                @change="handleSourceVersionChange"
               >
                 <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
                 <bk-option
@@ -228,7 +229,7 @@
               <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('log')">
+          <bk-table-column label="log">
             <template slot-scope="{ row }">
               <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
             </template>
@@ -316,6 +317,12 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    versionType() {
+      return this.$route.query.type || 'prod';
+    },
+    isOfficialVersion() {
+      return this.versionType === 'prod';
+    },
   },
   watch: {
     'curVersion.source_versions'() {
@@ -344,6 +351,7 @@ export default {
       const data = {
         pdId: this.pdId,
         pluginId: this.pluginId,
+        type: this.versionType,
       };
       try {
         const res = await this.$store.dispatch('plugin/getNewVersionFormat', data);
@@ -429,6 +437,7 @@ export default {
         source_version_name: versionData[0].name,
         version: this.curVersion.version,
         comment: this.curVersion.comment,
+        type: this.versionType,
       };
 
       // 仅 versionNo=automatic 需要传递
@@ -509,11 +518,9 @@ export default {
     },
 
     changeVersionType() {
-      try {
-        this.$refs.versionForm.validate();
-      } catch (error) {
+      this.$refs.versionForm.validate().catch((e) => {
         console.error(e);
-      }
+      });
     },
 
     // 新建Tag
@@ -537,6 +544,13 @@ export default {
         return this.curVersionData.releasing_source_versions.includes(data.name);
       }
       return false;
+    },
+
+    handleSourceVersionChange(v) {
+      if (this.curVersionData.version_no === 'branch-timestamp') {
+        const timestamp = Date.now();
+        this.curVersion.version = `${v}-${timestamp}`;
+      }
     },
   },
 };

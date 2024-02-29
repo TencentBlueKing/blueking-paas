@@ -1,29 +1,34 @@
 <template lang="html">
-  <div class="container biz-create-success">
-    <paas-plugin-title />
+  <div class="biz-create-success">
+    <version-manage-title
+      :type="curVersionType"
+      :is-show-tab="curPluginInfo.has_test_version"
+      @change-type="handlerChangeRouter"
+    />
     <paas-content-loader
-      class="app-container"
+      class="app-container container"
+      style="width: 100%"
       :is-loading="isLoading"
       placeholder="pluin-version-list-Loading"
       :is-transform="false"
     >
-      <div class="version-management">
-        <div class="ag-top-header">
+      <div class="top-operate-wrapper">
+        <section class="left">
           <!-- 有发布任务，禁用 -->
-          <div
-            v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !curIsPending }"
-            style="display: inline-block"
-          >
+          <span v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !curIsPending }">
             <bk-button
               theme="primary"
               class="mr15"
               :disabled="curIsPending ? true : false"
-              @click="handleCreateVersion('formal')"
+              @click="handleCreateVersion(isOfficialVersion ? 'prod' : 'test')"
             >
-              {{ $t('新建版本') }}
+              {{ isOfficialVersion ? $t('新建版本') : $t('新建测试') }}
             </bk-button>
-          </div>
-          <span v-bk-tooltips="{ content: accessDisabledTips, disabled: !isAccessDisabled }">
+          </span>
+          <span
+            v-if="isOfficialVersion"
+            v-bk-tooltips="{ content: accessDisabledTips, disabled: !isAccessDisabled }"
+          >
             <bk-button
               v-if="pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS"
               text
@@ -35,138 +40,158 @@
               <i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" />
             </bk-button>
           </span>
+          <!-- 去发布： 版本发布 -> 新建版本的快捷操作 -->
+          <bk-button
+            v-if="!isOfficialVersion"
+            theme="default"
+            class="mr15"
+            @click="handleCreateVersion('prod')"
+          >
+            {{ $t('去发布') }}
+          </bk-button>
+        </section>
+
+        <section class="left">
+          <!-- 过滤出我创建的测试版本 -->
+          <bk-button
+            v-if="!isOfficialVersion"
+            theme="default"
+            class="mr15"
+            :disabled="!versionList.length"
+            @click="handleMyInitiatedTest"
+          >
+            {{ $t('我发起的测试') }}
+          </bk-button>
           <bk-input
             v-model="keyword"
             class="fr"
             :clearable="true"
-            :placeholder="$t('版本号/代码分支/代码 Commit/创建人/发布进度')"
+            :placeholder="inputPlaceholder"
             :right-icon="'bk-icon icon-search'"
-            style="width: 480px"
+            :style="{ width: `${isOfficialVersion ? 480 : 300}px` }"
             @enter="handleSearch"
           />
-        </div>
-
-        <bk-table
-          ref="versionTable"
-          v-bkloading="{ isLoading: isTableLoading }"
-          class="ps-version-list"
-          :data="versionList"
-          :size="'small'"
-          :pagination="pagination"
-          @page-limit-change="limitChange"
-          @page-change="pageChange"
-          @filter-change="handleFilterChange"
-        >
-          <!-- 如果存在数据展示默认Exception -->
-          <div slot="empty">
-            <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
-              @reacquire="getVersionList"
-              @clear-filter="clearFilterKey"
-            />
-          </div>
-          <bk-table-column
-            :label="$t('版本')"
-            prop="version"
-            :show-overflow-tooltip="true"
-          >
-            <template slot-scope="{ row }">
-              <span
-                v-bk-tooltips="row.version"
-                :class="{ 'version-num': row.version }"
-                style="cursor: pointer"
-                @click="handleDetail(row)"
-              >
-                {{ row.version || '--' }}
-              </span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('代码分支')"
-            prop="source_version_name"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span>{{ row.source_version_name || '--' }}</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('代码 Commit')"
-            prop="comment"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span>{{ row.source_hash || '--' }}</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('创建人')"
-            prop="creator"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span>{{ row.creator || '--' }}</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('创建时间')"
-            prop="created"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span>{{ row.created || '--' }}</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('状态')"
-            prop="status"
-            column-key="status"
-            :filters="statusFilters"
-            :filter-multiple="true"
-          >
-            <template slot-scope="{ row }">
-              <round-loading v-if="row.status === 'pending' || row.status === 'initial'" />
-              <div
-                v-else
-                :class="['dot', row.status]"
-              />
-              <span>{{ $t(versionStatus[row.status]) || '--' }}</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('操作')"
-            :width="localLanguage === 'en' ? 280 : 200"
-          >
-            <template slot-scope="{ row }">
-              <bk-button
-                theme="primary"
-                text
-                class="mr10"
-                @click="handleDetail(row)"
-              >
-                {{ $t('详情') }}
-              </bk-button>
-              <bk-button
-                theme="primary"
-                text
-                class="mr10"
-                @click="handleRelease(row)"
-              >
-                {{ $t('发布进度') }}
-              </bk-button>
-              <bk-button
-                v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
-                theme="primary"
-                text
-                @click="handleRelease(row, 'reset')"
-              >
-                {{ $t('重新发布') }}
-              </bk-button>
-            </template>
-          </bk-table-column>
-        </bk-table>
+        </section>
       </div>
+
+      <bk-table
+        ref="versionTable"
+        v-bkloading="{ isLoading: isTableLoading }"
+        class="pugin-version-list"
+        :data="versionList"
+        :size="'small'"
+        :pagination="pagination"
+        :show-overflow-tooltip="true"
+        @page-limit-change="limitChange"
+        @page-change="pageChange"
+        @filter-change="handleFilterChange"
+      >
+        <div slot="empty">
+          <table-empty
+            :keyword="tableEmptyConf.keyword"
+            :abnormal="tableEmptyConf.isAbnormal"
+            @reacquire="getVersionList"
+            @clear-filter="clearFilterKey"
+          />
+        </div>
+        <bk-table-column
+          :label="$t('版本')"
+          prop="version"
+          :show-overflow-tooltip="true"
+        >
+          <template slot-scope="{ row }">
+            <span
+              v-bk-tooltips="row.version"
+              :class="{ 'version-num': row.version }"
+              style="cursor: pointer"
+              @click="handleDetail(row)"
+            >
+              {{ row.version || '--' }}
+            </span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('代码分支')"
+          prop="source_version_name"
+          :render-header="$renderHeader"
+        >
+          <template slot-scope="{ row }">
+            <span>{{ row.source_version_name || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('代码 Commit')"
+          prop="comment"
+          :render-header="$renderHeader"
+        >
+          <template slot-scope="{ row }">
+            <span>{{ row.source_hash || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('创建人')"
+          prop="creator"
+        >
+          <template slot-scope="{ row }">
+            <span>{{ row.creator || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('创建时间')"
+          prop="created"
+        >
+          <template slot-scope="{ row }">
+            <span>{{ row.created || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('状态')"
+          prop="status"
+          column-key="status"
+          :filters="statusFilters"
+          :filter-multiple="true"
+        >
+          <template slot-scope="{ row }">
+            <round-loading v-if="row.status === 'pending' || row.status === 'initial'" />
+            <div
+              v-else
+              :class="['dot', row.status]"
+            />
+            <span>{{ $t(versionStatus[row.status]) || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('操作')"
+          :width="localLanguage === 'en' ? 280 : 200"
+        >
+          <template slot-scope="{ row }">
+            <bk-button
+              theme="primary"
+              text
+              class="mr10"
+              @click="handleDetail(row)"
+            >
+              {{ $t('详情') }}
+            </bk-button>
+            <bk-button
+              theme="primary"
+              text
+              class="mr10"
+              @click="handleRelease(row)"
+            >
+              {{ $t('发布进度') }}
+            </bk-button>
+            <bk-button
+              v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
+              theme="primary"
+              text
+              @click="handleRelease(row, 'reset')"
+            >
+              {{ $t('重新发布') }}
+            </bk-button>
+          </template>
+        </bk-table-column>
+      </bk-table>
     </paas-content-loader>
 
     <!-- 详情 -->
@@ -220,7 +245,7 @@
               {{ $t('版本号类型') }}
             </div>
             <div class="content">
-              {{ versionTypeMap[versionDetail.semver_type] }}
+              {{ $t(versionNumberType[versionDetail.semver_type]) || '--' }}
             </div>
           </li>
           <li class="item-info h-auto">
@@ -275,25 +300,19 @@
   </div>
 </template>
 
-<script>import paasPluginTitle from '@/components/pass-plugin-title';
-import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-import { PLUGIN_VERSION_STATUS } from '@/common/constants';
-import i18n from '@/language/i18n.js';
+<script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import versionManageTitle from './comps/version-manage-title.vue';
+import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE } from '@/common/constants';
 import { formatDate } from '@/common/tools';
 import { clearFilter } from '@/common/utils';
+import auth from '@/auth';
 
 export default {
   components: {
-    paasPluginTitle,
+    versionManageTitle,
   },
   mixins: [pluginBaseMixin],
   data() {
-    // 是否根据version判断
-    this.versionTypeMap = {
-      major: i18n.t('重大版本'),
-      minor: i18n.t('次版本'),
-      patch: i18n.t('修正版本'),
-    };
     return {
       isLoading: true,
       keyword: '',
@@ -310,8 +329,9 @@ export default {
       },
       versionDetailLoading: true,
       versionStatus: PLUGIN_VERSION_STATUS,
+      versionNumberType: VERSION_NUMBER_TYPE,
       filterCreator: '',
-      filterStatus: '',
+      filterStatus: [],
       curIsPending: '',
       formatDate,
       isPluginAccessEntry: true,
@@ -325,6 +345,8 @@ export default {
       // 插件访问入口禁用
       isAccessDisabled: false,
       accessDisabledTips: '',
+      curVersionType: 'prod',
+      user: {},
     };
   },
   computed: {
@@ -341,9 +363,21 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    inputPlaceholder() {
+      return this.isOfficialVersion ? this.$t('版本号/代码分支/代码 Commit/创建人/发布进度') : this.$t('代码分支/代码 Commit/创建人/测试进度');
+    },
+    // 正式版
+    isOfficialVersion() {
+      return this.curVersionType === 'prod';
+    },
+    curUserInfo() {
+      return this.$store.state.curUserInfo;
+    },
   },
   watch: {
     $route() {
+      this.isLoading = true;
+      this.filterCreator = '';
       this.init();
     },
     keyword(newVal, oldVal) {
@@ -363,8 +397,19 @@ export default {
   },
   methods: {
     init() {
+      if (!this.curPluginInfo.has_test_version) {
+        // 不区分版本
+        this.curVersionType = 'prod';
+        this.handlerChangeRouter();
+      } else {
+        this.curVersionType = this.$route.query.type || 'prod';
+      }
       this.getVersionList();
-      if (this.pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS) {
+      // 获取当前用户信息
+      if (this.curVersionType === 'test' && !this.curUserInfo.username) {
+        this.getCurrentUser();
+      }
+      if (this.pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS && this.curVersionType === 'prod') {
         this.getPluginAccessEntry();
       }
     },
@@ -382,25 +427,29 @@ export default {
       this.getVersionList(newPage);
     },
 
-    // 获取版本列表
-    async getVersionList(page = 1) {
-      this.isTableLoading = true;
+    formatPageParams(page) {
       const curPage = page || this.pagination.current;
-      const pageParams = {
+      const params = {
         order_by: '-created',
         search_term: this.keyword,
         limit: this.pagination.limit,
         offset: this.pagination.limit * (curPage - 1),
+        type: this.curVersionType,
       };
+      // 创建人
       if (this.filterCreator) {
-        pageParams.creator = this.filterCreator;
+        params.creator = this.filterCreator;
       }
-      // 选择发布中直接传递 status=pending&status=inital
+      return params;
+    },
+
+    formatStatusParams() {
+      // 状态
       let statusParams = '';
       if (this.filterStatus.length) {
-        // pageParams.status = this.filterStatus;
         let paramsText = '';
         this.filterStatus.forEach((item) => {
+          // 选择发布中直接传递 status=pending&status=inital
           if (item === 'pending') {
             paramsText += 'status=pending&status=initial&';
           } else {
@@ -409,11 +458,18 @@ export default {
         });
         statusParams = paramsText.substring(0, paramsText.length - 1);
       }
-      this.isDataLoading = true;
+      return statusParams;
+    },
+
+    // 获取版本列表
+    async getVersionList(page = 1) {
+      this.isTableLoading = true;
       const data = {
         pdId: this.pdId,
         pluginId: this.pluginId,
       };
+      const pageParams = this.formatPageParams(page);
+      const statusParams = this.formatStatusParams();
       try {
         const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
           data,
@@ -438,6 +494,14 @@ export default {
           this.isLoading = false;
         }, 200);
       }
+    },
+
+    // 获取当前用户信息
+    getCurrentUser() {
+      auth.requestCurrentUser().then((user) => {
+        this.user = user;
+        this.$store.commit('updataUserInfo', user);
+      });
     },
 
     // 获取版本详情
@@ -472,9 +536,8 @@ export default {
       }
     },
 
-    handleCreateVersion(difference) {
+    handleCreateVersion(type) {
       // 正式版 / 测试版
-      // formal / test
       this.$router.push({
         name: 'pluginVersionEditor',
         params: {
@@ -483,6 +546,7 @@ export default {
         },
         query: {
           isPending: this.curIsPending,
+          type,
         },
       });
     },
@@ -508,6 +572,7 @@ export default {
           name: 'pluginVersionRelease',
           query: {
             release_id: data.id,
+            type: this.curVersionType,
           },
         });
       }
@@ -574,6 +639,24 @@ export default {
       }
       this.tableEmptyConf.keyword = '';
     },
+
+    handlerChangeRouter(key) {
+      const query = {};
+      if (key) {
+        this.curVersionType = key;
+        query.type = key;
+      }
+      this.$router.push({
+        query,
+      });
+    },
+
+    // 过滤出我发起的测试
+    handleMyInitiatedTest() {
+      const username = this.curUserInfo.username || this.user.username;
+      this.filterCreator = username;
+      this.getVersionList();
+    },
   },
 };
 </script>
@@ -602,7 +685,7 @@ export default {
   }
 }
 
-.ps-version-list {
+.pugin-version-list {
   margin-top: 22px;
   background: #fff;
 
@@ -730,6 +813,19 @@ export default {
   .clear-search {
     cursor: pointer;
     color: #3a84ff;
+  }
+}
+.top-operate-wrapper {
+  display: flex;
+  justify-content: space-between;
+  .right {
+    display: flex;
+  }
+}
+.biz-create-success {
+  .app-container.container {
+    margin: 0 auto !important;
+    padding-top: 16px !important;
   }
 }
 </style>

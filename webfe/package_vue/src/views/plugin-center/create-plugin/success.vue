@@ -19,7 +19,7 @@
             <bk-button
               :theme="'default'"
               type="submit"
-              @click="handlePageJump(pluginInfo.has_test_version ? 'pluginVersionManager' : 'pluginVersionEditor')"
+              @click="handlePageJump('test')"
             >
               {{ $t('测试插件') }}
             </bk-button>
@@ -147,13 +147,20 @@ export default {
         console.error(e);
       }
     },
-    handlePageJump(name) {
+    handlePageJump(key) {
+      let name = key;
+      let query = {};
+      if (name === 'test') {
+        name = this.pluginInfo.has_test_version ? 'pluginVersionManager' : 'pluginVersionEditor';
+        query = { type: 'test' };
+      }
       this.$router.push({
         name,
         params: {
           pluginTypeId: this.pluginTypeId,
           id: this.pluginId,
         },
+        query,
       });
     },
   },

@@ -15,7 +15,11 @@
         class="plugin-release-top"
       >
         <div class="bg-top">
-          <paas-plugin-title :no-shadow="true" :version="curVersion" />
+          <paas-plugin-title
+            :name="isOfficialVersion ? $t('发布') : $t('测试')"
+            :no-shadow="true"
+            :version="curVersion"
+          />
           <!-- 结束发布流程禁用终止发布 -->
           <bk-button
             v-if="pluginFeatureFlags.CANCEL_RELEASE"
@@ -252,6 +256,13 @@ export default {
     // 是否为手动切换预览步骤
     isManualPreview() {
       return this.currentStepId !== this.stageId;
+    },
+    versionType() {
+      return this.$route.query.type || 'prod';
+    },
+    // 正式版
+    isOfficialVersion() {
+      return this.versionType === 'prod';
     },
   },
   watch: {

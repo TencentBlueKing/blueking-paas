@@ -53,8 +53,12 @@ export default {
   methods: {
     goBack() {
       if (this.version) {
+        const type = this.$route.query.type || 'prod';
         bus.$emit('stop-deploy', true);
-        this.$router.push({ name: 'pluginVersionManager' });
+        this.$router.push({
+          name: 'pluginVersionManager',
+          query: { type },
+        });
       } else {
         this.$router.go(-1);
       }

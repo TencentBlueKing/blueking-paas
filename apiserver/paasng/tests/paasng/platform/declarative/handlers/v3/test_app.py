@@ -25,7 +25,7 @@ import yaml
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.constants import AppDescPluginType
-from paasng.platform.declarative.handlers import AppDescriptionHandler, DescriptionHandler
+from paasng.platform.declarative.handlers import CNativeAppDescriptionHandler, DescriptionHandler
 from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
 from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.utils import generate_temp_file
@@ -36,25 +36,27 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 def get_desc_handler(yaml_content: str) -> DescriptionHandler:
     handler = _get_desc_handler(yaml.safe_load(yaml_content))
-    assert isinstance(handler, AppDescriptionHandler)
+    assert isinstance(handler, CNativeAppDescriptionHandler)
     return handler
 
 
-class TestAppDescriptionHandler:
+class TestCNativeAppDescriptionHandler:
     def test_app_normal(self, random_name, bk_user, one_px_png):
         yaml_content = dedent(
             f"""
-        spec_version: 2
+        spec_version: 3
+        app_version: 0.0.1
         app:
-            bk_app_code: {random_name}
-            bk_app_name: {random_name}
-            market:
+          bkAppCode: {random_name}
+          bkAppName: {random_name}
+          market:
               introduction: dummy
-              logo_b64data: "base64,{base64.b64encode(one_px_png).decode()}"
+              logoB64data: "base64,{base64.b64encode(one_px_png).decode()}"
         modules:
-            default:
-                is_default: true
-                language: python
+        - name: default
+          isDefault: true
+          language: python
+          spec: {{}}
         """
         )
 
@@ -70,16 +72,18 @@ class TestAppDescriptionHandler:
     def test_app_from_stat(self, random_name, bk_user, one_px_png):
         yaml_content = dedent(
             f"""
-        spec_version: 2
+        spec_version: 3
+        app_version: 0.0.1
         app:
-            bk_app_code: {random_name}
-            bk_app_name: {random_name}
-            market:
+          bkAppCode: {random_name}
+          bkAppName: {random_name}
+          market:
               introduction: dummy
         modules:
-            default:
-                is_default: true
-                language: python
+        - name: default
+          isDefault: true
+          language: python
+          spec: {{}}
         """
         )
 
@@ -105,15 +109,16 @@ class TestAppDescriptionHandler:
 def test_app_data_to_desc(random_name):
     app_data = dedent(
         f"""
-    spec_version: 2
+    spec_version: 3
     app_version: 0.0.1
     app:
-        bk_app_code: {random_name}
-        bk_app_name: {random_name}
+      bkAppCode: {random_name}
+      bkAppName: {random_name}
     modules:
-        default:
-            is_default: True
-            language: python
+    - name: default
+      isDefault: true
+      language: python
+      spec: {{}}
     """
     )
 

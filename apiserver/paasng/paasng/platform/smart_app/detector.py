@@ -128,6 +128,7 @@ class SourcePackageStatReader:
             logo_b64data = self._load_logo(archive=archive, relative_path=relative_path)
             if logo_b64data:
                 meta_info["logo_b64data"] = logo_b64data
+                meta_info["logoB64data"] = logo_b64data
 
             return relative_path, meta_info
 

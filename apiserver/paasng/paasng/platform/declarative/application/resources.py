@@ -98,7 +98,7 @@ class ModuleDiffResult(BaseModel):
 
 
 class ModuleDesc(BaseModel):
-    name: str = Field(..., description="模块名")
+    name: Optional[str] = Field(..., description="模块名")
     language: AppLanguage = Field(AppLanguage.PYTHON, description="模块开发语言")
     is_default: bool = Field(False, description="是否为主模块?")
     source_dir: str = Field("", description="源码目录")

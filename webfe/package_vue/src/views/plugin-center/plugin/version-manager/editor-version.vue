@@ -159,13 +159,14 @@
             </bk-form-item>
             <bk-form-item label="">
               <div
-                v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isPending }"
+                v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isReleaseDisabled }"
                 style="display: inline-block"
               >
+                <!-- 测试无需限制 -->
                 <bk-button
                   theme="primary"
                   :loading="isSubmitLoading"
-                  :disabled="isPending ? true : false"
+                  :disabled="isReleaseDisabled"
                   @click="submitVersionForm"
                 >
                   {{ $t('提交并发布') }}
@@ -322,6 +323,9 @@ export default {
     },
     isOfficialVersion() {
       return this.versionType === 'prod';
+    },
+    isReleaseDisabled() {
+      return this.isOfficialVersion ? this.isPending : false;
     },
   },
   watch: {

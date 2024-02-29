@@ -14,12 +14,12 @@
     >
       <div class="top-operate-wrapper">
         <section class="left">
-          <!-- 有发布任务，禁用 -->
-          <span v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !curIsPending }">
+          <!-- 真是版本有发布任务，禁用，测试无需限制 -->
+          <span v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isNewVersionDisabled }">
             <bk-button
               theme="primary"
               class="mr15"
-              :disabled="curIsPending ? true : false"
+              :disabled="isNewVersionDisabled"
               @click="handleCreateVersion(isOfficialVersion ? 'prod' : 'test')"
             >
               {{ isOfficialVersion ? $t('新建版本') : $t('新建测试') }}
@@ -372,6 +372,9 @@ export default {
     },
     curUserInfo() {
       return this.$store.state.curUserInfo;
+    },
+    isNewVersionDisabled() {
+      return this.isOfficialVersion ? this.curIsPending : false;
     },
   },
   watch: {

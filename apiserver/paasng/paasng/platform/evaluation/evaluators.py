@@ -53,23 +53,19 @@ class AppOperationEvaluator:
         """根据成员状态评估应用"""
         members = [m["username"] for m in fetch_application_members(self.app.code)]
 
-        # 应用成员为空，妥妥的无主应用
-        if not members:
-            return ["应用成员列表为空"]
+        # 平台管理员创建的应用，暂不认为是无主应用
+        creator = get_username_by_bkpaas_user_id(self.app.creator)
+        if creator in settings.BKPAAS_PLATFORM_MANAGERS:
+            return []
 
-        # 检查应用成员中，非平台管理员的，是否有在职的
         for m in members:
             if m in settings.BKPAAS_PLATFORM_MANAGERS:
                 continue
             if self.employee_status_provider.is_active_employee(m):
                 return []
 
-        creator = get_username_by_bkpaas_user_id(self.app.creator)
-        # 前面步骤检查了所有非平台管理员的成员是否在职，若都不在职，且创建者不是平台管理员，则认为是无主应用
-        if creator not in settings.BKPAAS_PLATFORM_MANAGERS:
-            return ["应用创建者不是平台管理员，但在职的应用成员都是平台管理员"]
-
-        return []
+        # 对于不是平台管理员创建的应用，如果在职的成员只有管理员，则也认为是无主应用
+        return ["应用成员中不包含除平台管理员之外的在职人员"]
 
     def _evaluate_by_user_activity(self, metrics: Dict[str, Any]) -> List[str]:
         """根据用户活跃度评估应用"""

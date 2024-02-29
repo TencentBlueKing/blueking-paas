@@ -16,15 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import io
 from textwrap import dedent
 
 import pytest
+import yaml
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProbeType
 from paas_wl.bk_app.processes.models import ProcessProbe
-from paasng.platform.declarative.handlers import AppDescriptionHandler
+from paasng.platform.declarative.handlers import CNativeAppDescriptionHandler, DescriptionHandler
+from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -33,31 +34,32 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 def yaml_content():
     return dedent(
         """
-        spec_version: 2
+        spec_version: 3
         app_version: "1.0"
-        app:
-            region: default
-            bk_app_code: "foo-app"
-            bk_app_name: 默认应用名称
-            bk_app_name_en: default-app-name
         modules:
-            default:
-                source_dir: src/frontend
-                language: NodeJS
-                processes:
-                    web:
-                        command: npm run server
-                        plan: 4C1G5R
-                        replicas: 2
-                        probes:
-                            liveness:
-                                exec:
-                                    command:
-                                    - cat
-                                    - /tmp/healthy
-                            readiness:
-                                tcp_socket:
-                                    port: ${PORT}
+        - name: default
+          language: NodeJS
+          sourceDir: src/frontend
+          isDefault: True
+          spec:
+            processes:
+            - name: web
+              replicas: 1
+              command:
+              - npm
+              args:
+              - run
+              - server
+              resQuotaPlan: 4C1G
+              probes:
+                liveness:
+                  exec:
+                    command:
+                    - cat
+                    - /tmp/healthy
+                readiness:
+                  tcpSocket:
+                    port: ${PORT}
         """
     )
 
@@ -66,33 +68,40 @@ def yaml_content():
 def yaml_content_after_change():
     return dedent(
         """
-        spec_version: 2
+        spec_version: 3
         app_version: "1.0"
-        app:
-            region: default
-            bk_app_code: "foo-app"
-            bk_app_name: 默认应用名称
-            bk_app_name_en: default-app-name
         modules:
-            default:
-                source_dir: src/frontend
-                language: NodeJS
-                processes:
-                    web:
-                        command: npm run server
-                        plan: 4C1G5R
-                        replicas: 2
-                        probes:
-                            liveness:
-                                exec:
-                                    command:
-                                    - cat
-                                    - /tmp/healthy
-                            startup:
-                                tcp_socket:
-                                    port: ${PORT}
+        - name: default
+          language: NodeJS
+          sourceDir: src/frontend
+          isDefault: True
+          spec:
+            processes:
+            - name: web
+              replicas: 2
+              command:
+              - npm
+              args:
+              - run
+              - server
+              resQuotaPlan: 4C1G
+              probes:
+                liveness:
+                  exec:
+                    command:
+                    - cat
+                    - /tmp/healthy
+                startup:
+                  tcpSocket:
+                    port: ${PORT}
         """
     )
+
+
+def get_desc_handler(yaml_content: str) -> DescriptionHandler:
+    handler = _get_desc_handler(yaml.safe_load(yaml_content))
+    assert isinstance(handler, CNativeAppDescriptionHandler)
+    return handler
 
 
 class TestSaasProbes:
@@ -103,9 +112,7 @@ class TestSaasProbes:
         region = bk_deployment.app_environment.engine_app.region
         wlapp = WlApp.objects.create(name=name, region=region)
 
-        fp = io.StringIO(yaml_content)
-        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
-
+        get_desc_handler(yaml_content).handle_deployment(bk_deployment)
         liveness_probe: ProcessProbe = ProcessProbe.objects.get(
             app=wlapp, process_type="web", probe_type=ProbeType.LIVENESS
         )
@@ -131,12 +138,9 @@ class TestSaasProbes:
         bk_deployment_full.app_environment.engine_app.name = name
         bk_deployment_full.app_environment.engine_app.region = region
 
-        fp = io.StringIO(yaml_content)
-        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
-
+        get_desc_handler(yaml_content).handle_deployment(bk_deployment_full)
         # 模拟重新部署过程
-        fp = io.StringIO(yaml_content_after_change)
-        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment_full)
+        get_desc_handler(yaml_content_after_change).handle_deployment(bk_deployment_full)
 
         # liveness_probe 无变化
         liveness_probe: ProcessProbe = ProcessProbe.objects.get(

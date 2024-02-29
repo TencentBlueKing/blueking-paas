@@ -18,11 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List
 
-import cattr
 from django.utils.translation import gettext_lazy as _
-from rest_framework import serializers
+from pydantic import ValidationError as PDValidationError
+from rest_framework import exceptions, serializers
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
+from paas_wl.bk_app.cnative.specs.models import to_error_string
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
 from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
@@ -80,16 +81,17 @@ class MarketSLZ(serializers.Serializer):
         tag = attrs.pop("tag", None)
         if tag:
             attrs["tag_id"] = tag.pk
-        return cattr.structure(
-            attrs,
-            MarketDesc,
-        )
+        return MarketDesc(**attrs)
 
 
 class ModuleSpecField(serializers.DictField):
     def to_internal_value(self, data):
         attrs = super().to_internal_value(data)
-        return bk_app.BkAppSpec(**attrs)
+        try:
+            obj = bk_app.BkAppSpec(**attrs)
+        except PDValidationError as e:
+            raise exceptions.ValidationError(to_error_string(e))
+        return obj
 
     def to_representation(self, value):
         if isinstance(value, bk_app.BkAppSpec):

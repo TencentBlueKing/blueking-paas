@@ -90,7 +90,7 @@ class DeploymentDeclarativeController:
             # 云原生应用
             # 应用描述文件中的环境变量不展示到产品页面
             exclude = {
-                "configuration": {},
+                "configuration": ...,
                 "envOverlay": {"envVariables"},
             }
             # TODO: 优化 import 方式, 例如直接接受 desc.spec

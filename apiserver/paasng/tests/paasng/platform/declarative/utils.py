@@ -18,6 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Any, Callable, Dict, List, Optional
 
+from paasng.accessories.publish.market.models import Tag
+
 
 class AppDescV2Builder:
     @staticmethod
@@ -36,6 +38,37 @@ class AppDescV2Builder:
         return result
 
     @staticmethod
+    def make_module_desc(
+        module_name: str,
+        is_default: bool,
+        language: str = "python",
+        source_dir: Optional[str] = None,
+        services: Optional[List] = None,
+        env_variables: Optional[List] = None,
+        processes: Optional[Dict] = None,
+    ):
+        module_desc = {
+            "is_default": is_default,
+            "language": language,
+        }
+        if source_dir:
+            module_desc["source_dir"] = source_dir
+        if services:
+            module_desc["services"] = services
+        if env_variables:
+            module_desc["env_variables"] = env_variables
+        if processes:
+            module_desc["processes"] = processes
+        return module_desc
+
+    @staticmethod
+    def with_region(region: str):
+        def apply(app_desc: Dict):
+            app_desc["region"] = region
+
+        return apply
+
+    @staticmethod
     def with_module(
         module_name: str,
         is_default: bool,
@@ -51,19 +84,35 @@ class AppDescV2Builder:
             if module_name in app_desc["modules"]:
                 raise ValueError(f"module already exists: name={module_name}")
 
-            module_desc = {
-                "is_default": is_default,
-                "language": language,
+            app_desc["modules"][module_name] = AppDescV2Builder.make_module_desc(
+                module_name, is_default, language, source_dir, services, env_variables, processes
+            )
+
+        return apply
+
+    @staticmethod
+    def with_market(
+        introduction: Optional[str] = None,
+        description: Optional[str] = None,
+        display_options: Optional[Dict] = None,
+        introduction_en: Optional[str] = None,
+        description_en: Optional[str] = None,
+        tag: Optional[Tag] = None,
+    ):
+        def apply(app_desc: Dict):
+            market: Dict[str, Any] = {
+                "introduction": introduction or "introduction",
+                "introduction_en": introduction_en or "introduction_en",
             }
-            if source_dir:
-                module_desc["source_dir"] = source_dir
-            if services:
-                module_desc["services"] = services
-            if env_variables:
-                module_desc["env_variables"] = env_variables
-            if processes:
-                module_desc["processes"] = processes
-            app_desc["modules"][module_name] = module_desc
+            if description:
+                market["description"] = description
+            if description_en:
+                market["description_en"] = description_en
+            if display_options:
+                market["display_options"] = display_options
+            if tag is not None:
+                market["category"] = tag.name
+            app_desc["market"] = market
 
         return apply
 
@@ -84,6 +133,12 @@ class AppDescV3Builder:
         return result
 
     @staticmethod
+    def make_module(
+        module_name: str, is_default: bool = True, language: str = "python", module_spec: Optional[Dict] = None
+    ):
+        return {"name": module_name, "isDefault": is_default, "language": language, "spec": module_spec or {}}
+
+    @staticmethod
     def with_module(module_name: str, is_default: bool, language: str = "python", module_spec: Optional[Dict] = None):
         def apply(app_desc: Dict):
             if "modules" not in app_desc:
@@ -91,8 +146,39 @@ class AppDescV3Builder:
             for module_desc in app_desc["modules"]:
                 if module_desc["name"] == module_name:
                     raise ValueError(f"module already exists: name={module_name}")
-            app_desc["modules"].append(
-                {"name": module_name, "isDefault": is_default, "language": language, "spec": module_spec or {}}
-            )
+            app_desc["modules"].append(AppDescV3Builder.make_module(module_name, is_default, language, module_spec))
+
+        return apply
+
+    @staticmethod
+    def with_region(region: str):
+        def apply(app_desc: Dict):
+            app_desc["region"] = region
+
+        return apply
+
+    @staticmethod
+    def with_market(
+        introduction: Optional[str] = None,
+        description: Optional[str] = None,
+        display_options: Optional[Dict] = None,
+        introduction_en: Optional[str] = None,
+        description_en: Optional[str] = None,
+        tag: Optional[Tag] = None,
+    ):
+        def apply(app_desc: Dict):
+            market: Dict[str, Any] = {
+                "introduction": introduction or "introduction",
+                "introduction_en": introduction_en or "introduction_en",
+            }
+            if description:
+                market["description"] = description
+            if description_en:
+                market["description_en"] = description_en
+            if display_options:
+                market["displayOptions"] = display_options
+            if tag is not None:
+                market["category"] = tag.name
+            app_desc["market"] = market
 
         return apply

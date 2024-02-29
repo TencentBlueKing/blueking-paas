@@ -17,9 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import cattr
-from rest_framework import serializers
+from pydantic import ValidationError as PDValidationError
+from rest_framework import exceptions, serializers
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
+from paas_wl.bk_app.cnative.specs.models import to_error_string
 from paasng.platform.declarative.application.resources import (
     ModuleDesc,
 )
@@ -34,7 +36,11 @@ module_name_field = ModuleNameField()
 class ModuleSpecField(serializers.DictField):
     def to_internal_value(self, data):
         attrs = super().to_internal_value(data)
-        return bk_app.BkAppSpec(**attrs)
+        try:
+            obj = bk_app.BkAppSpec(**attrs)
+        except PDValidationError as e:
+            raise exceptions.ValidationError(to_error_string(e))
+        return obj
 
     def to_representation(self, value):
         if isinstance(value, bk_app.BkAppSpec):

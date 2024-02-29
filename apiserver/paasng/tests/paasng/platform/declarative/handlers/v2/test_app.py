@@ -20,23 +20,19 @@ import base64
 import io
 import json
 from textwrap import dedent
-from typing import Dict
 from unittest import mock
 
 import cattr
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paasng.accessories.publish.market.models import Product
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
-from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader, get_desc_env_variables
+from paasng.platform.declarative.deployment.env_vars import get_desc_env_variables
 from paasng.platform.declarative.deployment.svc_disc import get_services_as_env_variables
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler, SMartDescriptionHandler, get_desc_handler
-from paasng.platform.declarative.models import DeploymentDescription
+from paasng.platform.declarative.handlers import AppDescriptionHandler, get_desc_handler
 from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
@@ -194,128 +190,14 @@ class TestAppDescriptionHandler:
             assert cattr.unstructure(update_bkmonitor.call_args[0][0]) == expected["bk_monitor"]
 
 
-class TestSMartDescriptionHandler:
-    @pytest.fixture()
-    def app_desc(self, one_px_png) -> Dict:
-        return {
-            "author": "blueking",
-            "introduction": "blueking app",
-            "is_use_celery": False,
-            "version": "0.0.1",
-            "env": [],
-            "logo_b64data": one_px_png,
-        }
-
-    def test_app_creation(self, random_name, bk_user, app_desc, one_px_png):
-        app_desc.update(
-            {
-                "app_code": random_name,
-                "app_name": random_name,
-            }
-        )
-        SMartDescriptionHandler(app_desc).handle_app(bk_user)
-        application = Application.objects.get(code=random_name)
-        assert application is not None
-        # 由于 ProcessedImageField 会将 logo 扩展为 144,144, 因此这里判断对应的位置的标记位
-        logo_content = application.logo.read()
-        assert logo_content[19] == 144
-        assert logo_content[23] == 144
-
-    def test_app_update_existed(self, bk_app, bk_user, app_desc):
-        app_desc.update(
-            {
-                "app_code": bk_app.code,
-                "app_name": bk_app.name,
-                "desktop": {"width": 303, "height": 100},
-            }
-        )
-        SMartDescriptionHandler(app_desc).handle_app(bk_user)
-        product = Product.objects.get(code=bk_app.code)
-        assert product.displayoptions.width == 303
-
-    def test_deployment_normal(self, random_name, bk_deployment, app_desc):
-        app_desc.update(
-            {
-                "app_code": random_name,
-                "app_name": random_name,
-                "env": [{"key": "BKAPP_FOO", "value": "1"}],
-            }
-        )
-        SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
-
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert EnvVariablesReader(desc_obj).read_as_dict() == {"BKAPP_FOO": "1"}
-
-    @pytest.mark.parametrize(
-        ("memory", "expected_plan_name"),
-        [
-            (512, "default"),
-            (1024, "default"),
-            (1536, "4C2G"),
-            (2048, "4C2G"),
-            (3072, "4C4G"),
-            (4096, "4C4G"),
-            (8192, "4C4G"),
-        ],
-    )
-    def test_bind_process_spec_plans(self, random_name, bk_deployment, app_desc, memory, expected_plan_name):
-        app_desc.update(
-            {
-                "app_code": random_name,
-                "app_name": random_name,
-                "env": [{"key": "BKAPP_FOO", "value": "1"}],
-                "container": {"memory": memory},
-            }
-        )
-        SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
-
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert desc_obj.spec.processes[0].resQuotaPlan == expected_plan_name
-
-    @pytest.mark.parametrize(
-        ("is_use_celery", "expected_services"),
-        [
-            (True, [bk_app.BkAppAddon(name="mysql"), bk_app.BkAppAddon(name="rabbitmq")]),
-            (False, [bk_app.BkAppAddon(name="mysql")]),
-        ],
-    )
-    def test_app_data_to_desc(self, random_name, app_desc, is_use_celery, expected_services):
-        app_desc.update({"app_code": random_name, "app_name": random_name, "is_use_celery": is_use_celery})
-        assert SMartDescriptionHandler(app_desc).app_desc.default_module.spec.addons == expected_services
-
-    @pytest.mark.parametrize(
-        ("libraries", "expected"), [([], []), ([dict(name="foo", version="bar")], [dict(name="foo", version="bar")])]
-    )
-    def test_libraries(self, random_name, app_desc, libraries, expected):
-        app_desc.update({"app_code": random_name, "app_name": random_name, "libraries": libraries})
-        plugin = SMartDescriptionHandler(app_desc).app_desc.get_plugin(AppDescPluginType.APP_LIBRARIES)
-        assert plugin
-        assert plugin["data"] == expected
-
-
-@pytest.fixture()
-def app_data(request, random_name):
-    if request.param == AppSpecVersion.VER_1:
-        return {
-            "author": "blueking",
-            "introduction": "blueking app",
-            "is_use_celery": False,
-            "version": "0.0.1",
-            "env": [],
-            "language": "python",
-            "app_code": random_name,
-            "app_name": random_name,
-        }
-    return {
+def test_app_data_to_desc(random_name):
+    app_data = {
         "spec_version": AppSpecVersion.VER_2,
         "app_version": "0.0.1",
         "app": {"bk_app_code": random_name, "bk_app_name": random_name},
         "modules": {"default": {"is_default": True, "language": "python"}},
     }
 
-
-@pytest.mark.parametrize("app_data", [(AppSpecVersion.VER_1), (AppSpecVersion.VER_2)], indirect=True)
-def test_app_data_to_desc(app_data, random_name):
     desc = get_desc_handler(app_data).app_desc
     assert desc.name_zh_cn == random_name
     assert desc.code == random_name

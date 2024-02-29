@@ -35,6 +35,7 @@ from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController, PerformResult
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.deployment.validations import v2 as deploy_spec_v2
+from paasng.platform.declarative.deployment.validations import v3 as deploy_spec_v3
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import SMartV1DescriptionSLZ, UniConfigSLZ, validate_desc
 from paasng.platform.engine.models.deployment import Deployment
@@ -55,7 +56,9 @@ def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
 
 
 def detect_spec_version(json_data: Dict) -> AppSpecVersion:
-    return AppSpecVersion(json_data.get("spec_version", AppSpecVersion.VER_1.value))
+    if spec_version := json_data.get("spec_version") or json_data.get("specVersion"):
+        return AppSpecVersion(spec_version)
+    return AppSpecVersion.VER_1
 
 
 class DescriptionHandler(Protocol):
@@ -115,15 +118,15 @@ class CNativeAppDescriptionHandler:
 
     def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
         module_desc = self.json_data.get("module")
-        if "modules" in self.json_data and module_name in self.json_data["modules"]:
+        if "modules" in self.json_data:
+            found = next(filter(lambda x: x["name"] == module_name, self.json_data["modules"]), None)
             if module_desc is not None:
                 logger.warning("Duplicate definition of module information !")
-            module_desc = self.json_data["modules"][module_name]
+            module_desc = found
         if not module_desc:
             logger.info("Skip running deployment controller because not content was provided")
             raise DescriptionValidationError({"module": _("内容不能为空")})
-        # TODO: deploy_spec_v3
-        desc = validate_desc(deploy_spec_v2.DeploymentDescSLZ, module_desc)
+        desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, {"module": module_desc})
         return desc
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:

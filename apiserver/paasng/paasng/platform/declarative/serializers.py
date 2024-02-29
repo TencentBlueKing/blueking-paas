@@ -189,7 +189,6 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
         if attrs.get("tag"):
             market_desc.tag_id = attrs["tag"].id
 
-        # TODO: 类型
         package_plan = get_quota_plan(attrs.get("package_plan")) if attrs.get("package_plan") else None
         addons = [bk_app.BkAppAddon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
         processes = [{"name": "web", "args": shlex.split(constants.WEB_PROCESS), "resQuotaPlan": package_plan}]

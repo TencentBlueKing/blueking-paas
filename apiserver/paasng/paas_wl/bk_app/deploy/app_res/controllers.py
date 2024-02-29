@@ -20,7 +20,7 @@ import datetime
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arrow
 from django.conf import settings
@@ -39,8 +39,8 @@ from paas_wl.infras.resources.base.exceptions import (
     ResourceMissing,
 )
 from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod, KReplicaSet, set_default_options
-from paas_wl.infras.resources.generation.mapper import MapperProcConfig
-from paas_wl.infras.resources.generation.version import AppResVerManager, get_proc_deployment_name
+from paas_wl.infras.resources.generation.mapper import MapperProcConfig, ResourceIdentifiers
+from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -89,13 +89,39 @@ class ProcessesHandler(ResourceHandlerBase):
         super().__init__(*args, **kwargs)
         self.process_manager = AppEntityManager(Process)
 
-    def deploy(self, process: Process):
-        """Deploy a process to the cluster."""
-        mapper_ver = AppResVerManager(process.app).curr_version
-        try:
-            self.process_manager.update(process, "replace", mapper_version=mapper_ver, allow_not_concrete=True)
-        except AppEntityNotFound:
-            self.process_manager.create(process, mapper_version=mapper_ver)
+    def deploy(self, processes: List[Process]):
+        """Deploy a list process objects.
+
+        :param processes: The process list.
+        """
+        for process in processes:
+            mapper_ver = AppResVerManager(process.app).curr_version
+            try:
+                self.process_manager.update(process, "replace", mapper_version=mapper_ver, allow_not_concrete=True)
+            except AppEntityNotFound:
+                self.process_manager.create(process, mapper_version=mapper_ver)
+            self.get_default_services(process.app, process.type).create_or_patch()
+
+    def shutdown(self, config: MapperProcConfig):
+        """Shutdown a process.
+
+        :param config: The mapper proc config object.
+        """
+        self.scale(config, 0)
+
+    def scale(self, config: MapperProcConfig, replicas: int):
+        """Scale a process's replicas to given value.
+
+        :param config: The mapper proc config object.
+        :param replicas: The replicas value, such as 2.
+        """
+        self.get_default_services(config.app, config.type).create_or_patch()
+
+        # Send patch request
+        patch_body = {"spec": {"replicas": replicas}}
+        KDeployment(self.client).patch(
+            self.res_identifiers(config).deployment_name, namespace=config.app.namespace, body=patch_body
+        )
 
     def delete(self, config: MapperProcConfig, remove_svc: bool):
         """Delete a process by the config object.
@@ -107,30 +133,26 @@ class ProcessesHandler(ResourceHandlerBase):
         if remove_svc:
             self.get_default_services(app, config.type).remove()
 
-        mapper_version = AppResVerManager(config.app).curr_version
-        deploy_info = mapper_version.deployment(config)
-
         # Delete the resources
-        KDeployment(self.client).delete(deploy_info.name, namespace=app.namespace, non_grace_period=True)
+        res = self.res_identifiers(config)
+        KDeployment(self.client).delete(res.deployment_name, namespace=app.namespace, non_grace_period=True)
         # Delete ReplicaSet and Pods manually
-        KReplicaSet(self.client).ops_label.delete_collection(labels=deploy_info.match_labels, namespace=app.namespace)
-        KPod(self.client).ops_label.delete_individual(labels=deploy_info.match_labels, namespace=app.namespace)
+        KReplicaSet(self.client).ops_label.delete_collection(labels=res.match_labels, namespace=app.namespace)
+        KPod(self.client).ops_label.delete_individual(labels=res.match_labels, namespace=app.namespace)
 
-    def delete_gracefully(self, app: "WlApp", process_type: str):
-        """Delete a process gracefully."""
-        res_name = get_proc_deployment_name(app, process_type)
-        KDeployment(self.client).delete(res_name, namespace=app.namespace)
+    def delete_gracefully(self, config: MapperProcConfig):
+        """Delete a process gracefully by the config object.
 
-    def scale(self, app: "WlApp", process_type: str, replicas: int):
-        """Scale a process's replicas to given value.
-
-        :param app: The application object.
-        :param process_type: The type of process, such as "web".
-        :param replicas: The replicas value, such as 2.
+        :param config: The mapper proc config object.
         """
-        patch_body = {"spec": {"replicas": replicas}}
-        res_name = get_proc_deployment_name(app, process_type)
-        KDeployment(self.client).patch(res_name, namespace=app.namespace, body=patch_body)
+        res = self.res_identifiers(config)
+        KDeployment(self.client).delete(res.deployment_name, namespace=config.app.namespace)
+
+    @staticmethod
+    def res_identifiers(config: MapperProcConfig) -> ResourceIdentifiers:
+        """Get the resource identifiers of a process."""
+        mapper_version = AppResVerManager(config.app).curr_version
+        return mapper_version.proc_resources(config)
 
     @staticmethod
     def get_default_services(app: "WlApp", process_type: str) -> ProcDefaultServices:

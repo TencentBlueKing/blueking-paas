@@ -18,13 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional, Protocol, Type, Union
+from typing import Any, Optional, Protocol, Type, Union
 
-from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.applications.models import Release, WlApp
 from paas_wl.utils.command import get_command_name
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models import Release
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +40,7 @@ class ResourceIdentifiers:
 
     def __init__(self, process: "Union[Process, MapperProcConfig]"):
         if not isinstance(process, MapperProcConfig):
-            _proc_config = get_mapper_proc_config(process)
+            _proc_config = _to_mapper_proc_config(process)
             if not _proc_config:
                 raise TypeError("process argument is invalid")
         else:
@@ -52,38 +49,36 @@ class ResourceIdentifiers:
         self.proc_config: "MapperProcConfig" = _proc_config
 
     @property
-    def name(self) -> str:
-        """获取资源名"""
+    def pod_name(self) -> str:
+        """The name of pod resource."""
         raise NotImplementedError
 
     @property
-    def labels(self) -> dict:
-        """创建该资源时添加的 labels"""
+    def deployment_name(self) -> str:
+        """The name of deployment resource."""
         raise NotImplementedError
 
     @property
     def match_labels(self) -> dict:
-        """用于匹配该资源时使用的 labels"""
+        """The labels for matching the pods."""
         raise NotImplementedError
 
     @property
     def pod_selector(self) -> str:
-        """用户匹配 pod 的选择器"""
+        """The labels for selecting the pods, used by services."""
         raise NotImplementedError
 
     @property
-    def namespace(self):
-        """对于目前所有资源，namespace 都和 process 保持一致"""
-        return self.proc_config.app.namespace
+    def labels(self) -> dict:
+        """The labels for creating workloads."""
+        raise NotImplementedError
 
 
 class MapperPack:
     version: str
 
-    # Set these identifier types in child classes
-    pod: Type[ResourceIdentifiers] = ResourceIdentifiers
-    deployment: Type[ResourceIdentifiers] = ResourceIdentifiers
-    replica_set: Type[ResourceIdentifiers] = ResourceIdentifiers
+    # Set the identifier type in child classes
+    proc_resources: Type[ResourceIdentifiers] = ResourceIdentifiers
 
 
 @dataclass
@@ -98,7 +93,39 @@ class MapperProcConfig:
     command_name: str
 
 
-def get_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
+def get_mapper_proc_config(release: "Release", process_type: str) -> MapperProcConfig:
+    """Get the proc config object by release.
+
+    :param release: The release object.
+    :param process_type: The type of process.
+    """
+    version = release.version
+    command_name = get_command_name(release.get_procfile()[process_type])
+    return MapperProcConfig(app=release.app, type=process_type, version=version, command_name=command_name)
+
+
+def get_mapper_proc_config_latest(app: "WlApp", process_type: str, use_default: bool = True) -> MapperProcConfig:
+    """Get the proc config object, use the latest release object by default.
+
+    :param app: The app object.
+    :param process_type: The type of process.
+    :param use_default: Whether to use the default config if no release object found.
+    :raise: ValueError when no release object found and `use_default` is False.
+    """
+    # Get the command name by reading the latest successful release
+    try:
+        release = Release.objects.get_latest(app)
+        version = release.version
+        command_name = get_command_name(release.get_procfile()[process_type])
+    except (Release.DoesNotExist, KeyError):
+        logger.warning("Unable to get the deployment name of %s, app: %s", process_type, app)
+        if use_default:
+            return MapperProcConfig(app=app, type=process_type, version=1, command_name="")
+        raise ValueError(f"invalid proc type: {process_type}")
+    return MapperProcConfig(app=app, type=process_type, version=version, command_name=command_name)
+
+
+def _to_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
     """Try to get the proc_config object by the given process object.
 
     :param proc: The input process object.
@@ -115,14 +142,3 @@ def get_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
     except Exception:
         logger.warning("Error getting mapper_proc_config object, process: %s", proc)
         return None
-
-
-def get_mapper_proc_config_from_release(release: "Release", process_type: str) -> MapperProcConfig:
-    """Get the proc config object by release.
-
-    :param release: The release object.
-    :param process_type: The type of process.
-    """
-    version = release.version
-    command_name = get_command_name(release.get_procfile()[process_type])
-    return MapperProcConfig(app=release.app, type=process_type, version=version, command_name=command_name)

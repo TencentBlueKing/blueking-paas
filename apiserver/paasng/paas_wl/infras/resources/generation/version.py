@@ -21,11 +21,9 @@ from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from django.conf import settings
 
-from paas_wl.bk_app.applications.models.release import Release
-from paas_wl.infras.resources.generation.mapper import MapperProcConfig
+from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.infras.resources.generation.v1 import V1Mapper
 from paas_wl.infras.resources.generation.v2 import V2Mapper
-from paas_wl.utils.command import get_command_name
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
@@ -88,21 +86,5 @@ def get_proc_deployment_name(app: "WlApp", process_type: str) -> str:
     """A shortcut function which gets the name of deployment resource for the given
     app and process_type.
     """
-    mapper_version = AppResVerManager(app).curr_version
-
-    # Get the command name by reading the latest successful release, when failed, use
-    # an empty command name instead. The empty command name may generate wrong result
-    # when the algorithm of the mapper's algorithm relies on it.
-    #
-    # TODO: Remove this logic entirely when the mapper version was removed.
-    try:
-        release = Release.objects.get_latest(app)
-        version = release.version
-        command_name = get_command_name(release.get_procfile()[process_type])
-    except (Release.DoesNotExist, KeyError):
-        logger.warning("Unable to get the deployment name of %s, app: %s", process_type, app)
-        version = 1
-        command_name = ""
-
-    proc_config = MapperProcConfig(app=app, type=process_type, version=version, command_name=command_name)
-    return mapper_version.deployment(process=proc_config).name
+    proc_config = get_mapper_proc_config_latest(app, process_type, use_default=True)
+    return AppResVerManager(app).curr_version.proc_resources(process=proc_config).deployment_name

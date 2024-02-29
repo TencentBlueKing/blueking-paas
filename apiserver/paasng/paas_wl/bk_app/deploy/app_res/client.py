@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import (
@@ -27,12 +27,9 @@ from paas_wl.bk_app.deploy.app_res.controllers import (
     ProcAutoscalingHandler,
     ProcessesHandler,
 )
-from paas_wl.bk_app.monitoring.app_monitor.utils import build_monitor_port
-from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paas_wl.workloads.images.kres_entities import ImageCredentials, credentials_kmodel
-from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultServices
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command
 
 if TYPE_CHECKING:
@@ -62,30 +59,6 @@ class K8sScheduler:
         self.command_handler = CommandHandler(client)
         self.credential_handler = credentials_kmodel
         self.autoscaling_handler = ProcAutoscalingHandler(client)
-
-    #################
-    # processes API #
-    #################
-
-    def deploy_processes(self, processes: List[Process], **kwargs):
-        """Deploy processes will create the Deployment and the Service"""
-        for process in processes:
-            self.processes_handler.deploy(process=process)
-            self.get_default_services(process.app, process.type).create_or_patch()
-
-    def scale_process(self, app: WlApp, process_type: str, replicas: int):
-        """Scale Process will patch the Deployment and Service"""
-        self.get_default_services(app, process_type).create_or_patch()
-        self.processes_handler.scale(app, process_type, replicas)
-
-    def shutdown_process(self, app: WlApp, process_type: str):
-        """Shutdown process will set the replicas to zero, but not delete the Deployment"""
-        self.scale_process(app, process_type, 0)
-
-    @staticmethod
-    def get_default_services(app: WlApp, process_type: str) -> ProcDefaultServices:
-        monitor_port = build_monitor_port(app)
-        return ProcDefaultServices(app, process_type, monitor_port=monitor_port)
 
     #############
     # build API #

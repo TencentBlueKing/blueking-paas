@@ -30,7 +30,7 @@ from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
-from paas_wl.infras.resources.generation.mapper import MapperProcConfig, get_mapper_proc_config_from_release
+from paas_wl.infras.resources.generation.mapper import MapperProcConfig, get_mapper_proc_config
 from paas_wl.infras.resources.generation.version import AppResVerManager
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -61,8 +61,9 @@ class DeployAction:
         self.scheduler_client.ensure_image_credentials_secret(self.wl_app)
         # update deploy info in scheduler module
         processes = AppProcessManager(app=self.wl_app).assemble_processes(extra_envs=self.extra_envs)
+        handler = ProcessesHandler.new_by_app(self.wl_app)
         try:
-            self.scheduler_client.deploy_processes(list(processes))
+            handler.deploy(list(processes))
         except KubeException as e:
             self.release.fail(summary=f"deployed {str(self.release.uuid)[:7]} which failed for: {e}")
             raise
@@ -103,6 +104,9 @@ class ObsoleteProcessesCleaner:
 
     - 用户修改了 process_type
     - 用户修改了 command_name( v1 mapper 的资源名依赖了 command_name)
+
+    # NOTE: 暂时无法处理应用的 mapper version 发生变化的情况，比如从 v1 切换为 v2。
+    # 未来也许可以通过读取上一次 release 的 version 来实现。
 
     :param curr_release: Current release object.
     :param prev_release: Previous release object.
@@ -147,7 +151,7 @@ class ObsoleteProcessesCleaner:
 
         results = []
         for prev_type in prev_procfile:
-            proc_config = get_mapper_proc_config_from_release(self.prev_release, prev_type)
+            proc_config = get_mapper_proc_config(self.prev_release, prev_type)
             # Check if the process type has been removed
             if prev_type not in curr_procfile:
                 # In this case, the service should also be removed
@@ -158,9 +162,7 @@ class ObsoleteProcessesCleaner:
             # This happens when the app is using a legacy mapper version and the resource name
             # depends on the command name.
             prev_deploy_name = self.get_deployment_name(proc_config)
-            curr_deploy_name = self.get_deployment_name(
-                get_mapper_proc_config_from_release(self.curr_release, prev_type)
-            )
+            curr_deploy_name = self.get_deployment_name(get_mapper_proc_config(self.curr_release, prev_type))
             if prev_deploy_name != curr_deploy_name:
                 # Don't remove the service resource
                 results.append((proc_config, False))
@@ -170,4 +172,4 @@ class ObsoleteProcessesCleaner:
     def get_deployment_name(proc_config: MapperProcConfig) -> str:
         """Get the name of deployment resource for the given process type."""
         mapper_version = AppResVerManager(proc_config.app).curr_version
-        return mapper_version.deployment(proc_config).name
+        return mapper_version.proc_resources(proc_config).deployment_name

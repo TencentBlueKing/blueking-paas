@@ -106,6 +106,7 @@
       :quick-close="true"
       :width="960"
       ext-cls="volume-slider"
+      :before-close="handleBeforeClose"
     >
       <div slot="header">
         {{volumeFormData.id ? $t('编辑') : $t('新增')}}{{ $t('挂载卷') }}
@@ -238,12 +239,13 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import ResourceEditor from './comps/deploy-resource-editor';
 import { ENV_ENUM } from '@/common/constants';
 import { isJsonString } from '@/common/utils';
+import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 
 export default {
   components: {
     ResourceEditor,
   },
-  mixins: [appBaseMixin],
+  mixins: [appBaseMixin, sidebarDiffMixin],
   data() {
     return {
       sliderEditordetail: '',
@@ -372,6 +374,7 @@ export default {
           }, []);
         // 重置数据
         this.resetData();
+        this.initSidebarFormData(this.volumeFormData);
       }
     },
     // 监听编辑器的值
@@ -411,6 +414,7 @@ export default {
         sourceConfigArrData: [],
       };
       this.volumeDefaultSettings.isShow = true;
+      this.initSidebarFormData(this.volumeFormData);
     },
     // 获取挂载卷list
     getVolumeList() {
@@ -667,6 +671,10 @@ export default {
       this.sliderEditordetail = isJsonStr
         ? JSON.stringify(JSON.parse(value)) : value;
       this.$refs.editorRefSlider?.setValue(this.sliderEditordetail);
+    },
+
+    async handleBeforeClose() {
+      return this.$isSidebarClosed(JSON.stringify(this.volumeFormData));
     },
   },
 };

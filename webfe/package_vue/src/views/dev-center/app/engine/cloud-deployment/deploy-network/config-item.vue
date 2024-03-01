@@ -494,6 +494,7 @@ export default {
           theme: 'success',
           message: this.$t('保存成功'),
         });
+        this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
         this.$emit('refresh');
         // 更新服务发现
         this.isEdit = false;
@@ -523,7 +524,9 @@ export default {
     // 调用对用接口
     saveExecution() {
       // 备份数据更新
-      this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
+      if (this.dataName !== 'serviceFormData') {
+        this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
+      }
       switch (this.dataName) {
         case 'serviceFormData':
           this.saveServiceDiscoveryData();

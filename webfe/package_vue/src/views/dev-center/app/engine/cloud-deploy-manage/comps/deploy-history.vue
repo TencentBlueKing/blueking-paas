@@ -63,6 +63,7 @@
         @page-change="handlePageChange"
         @sort-change="handleSortChange"
         @filter-change="handleFilterChange"
+        @row-click="handleShowLogSideslider"
       >
         <div slot="empty">
           <table-empty
@@ -160,10 +161,10 @@
           :label="$t('操作')"
         >
           <template slot-scope="{ row }">
-            <bk-button :text="true" class="mr15" @click="handleShowLogSideslider(row)">
+            <bk-button :text="true" class="mr15" @click.stop="handleShowLogSideslider(row)">
               {{$t('部署日志')}}
             </bk-button>
-            <bk-button :text="true" @click="handleShowYamlSideslider(row)">
+            <bk-button :text="true" @click.stop="handleShowYamlSideslider(row)">
               {{$t('查看 YAML')}}
             </bk-button>
           </template>

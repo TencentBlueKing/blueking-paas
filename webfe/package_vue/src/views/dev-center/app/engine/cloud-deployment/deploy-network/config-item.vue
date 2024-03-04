@@ -451,6 +451,20 @@ export default {
 
     // 编辑
     handleEdit() {
+      // 当前数据为空，重置默认值
+      if (this[this.dataName].service.length < 1) {
+        switch (this.dataName) {
+          case 'serviceFormData':
+            this[this.dataName].service.push({ id: '', module: '' });
+            break;
+          case 'dnsRuleFormData':
+            this[this.dataName].service.push({ ip: '', hostnames: [] });
+            break;
+          default:
+            this[this.dataName].service.push({ name: '' });
+            break;
+        }
+      }
       this.isEdit = true;
     },
 

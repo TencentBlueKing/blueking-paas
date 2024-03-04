@@ -245,7 +245,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                 "default": {
                     "name": "default",
                     "is_default": True,
-                    "spec": spec,
+                    "services": [{"name": addon.name} for addon in addons],
                 }
             },
             plugins=plugins,

@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 def get_deployment_description(module_desc: Dict) -> DeploymentDesc:
     """A help tool get parse the application json data, describe at app_desc.yml::module part to DeploymentDesc"""
-    desc = validate_desc(DeploymentDescSLZ, {"module": module_desc})
+    desc = validate_desc(DeploymentDescSLZ, module_desc)
     return desc
 
 

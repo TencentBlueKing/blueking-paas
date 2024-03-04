@@ -126,7 +126,7 @@ class CNativeAppDescriptionHandler:
         if not module_desc:
             logger.info("Skip running deployment controller because not content was provided")
             raise DescriptionValidationError({"module": _("内容不能为空")})
-        desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, {"module": module_desc})
+        desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, module_desc)
         return desc
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:

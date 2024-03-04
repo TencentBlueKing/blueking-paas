@@ -25,7 +25,6 @@ from django.utils.functional import Promise
 from django.utils.translation import gettext as _
 from pydantic import BaseModel, Field
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.constant import OpenMode
 from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.platform.applications.constants import AppLanguage
@@ -103,7 +102,6 @@ class ModuleDesc(BaseModel):
     is_default: bool = Field(False, description="是否为主模块?")
     source_dir: str = Field("", description="源码目录")
     services: List[ServiceSpec] = Field(default_factory=list)
-    spec: bk_app.BkAppSpec
 
 
 class ApplicationDesc(BaseModel):
@@ -155,7 +153,7 @@ class ApplicationDescDiffDog:
             if module_name not in diffs:
                 diffs[module_name] = ModuleDiffResult(
                     services=self._diff_services(
-                        current_services=set(), expected_services={item.name for item in module_desc.spec.addons}
+                        current_services=set(), expected_services={item.name for item in module_desc.services}
                     )
                 )
         return diffs
@@ -171,7 +169,7 @@ class ApplicationDescDiffDog:
             raise ValueError(f"Module<{module.name}> not found!")
 
         current_services = {service.name for service in mixed_service_mgr.list_binded(module)}  # type: ignore
-        expected_services = {item.name for item in self.desc.modules[module.name].spec.addons}
+        expected_services = {item.name for item in self.desc.modules[module.name].services}
 
         return ModuleDiffResult(services=self._diff_services(current_services, expected_services))
 

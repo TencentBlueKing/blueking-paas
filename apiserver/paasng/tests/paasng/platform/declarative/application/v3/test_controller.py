@@ -275,15 +275,17 @@ class TestMarketDisplayOptionsField:
         app_desc = builder.make_app_desc(
             random_name,
             decorator.with_module("default", True),
-            decorator.with_market(display_options={"width": 99, "height": 99, "open_mode": "desktop"}),
+            decorator.with_market(display_options={"width": 99, "height": 99, "openMode": "desktop"}),
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
+        product = Product.objects.get(code=random_name)
+        assert product.displayoptions.open_mode == "desktop"
 
         app_desc = builder.make_app_desc(
             random_name,
             decorator.with_module("default", True),
-            decorator.with_market(display_options={"height": 10, "open_mode": "new_tab"}),
+            decorator.with_market(display_options={"height": 10, "openMode": "new_tab"}),
         )
         AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
 

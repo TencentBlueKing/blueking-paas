@@ -53,8 +53,8 @@ class TestEnvVariablesField:
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
-        with pytest.raises(DescriptionValidationError, match="module.spec: configuration -> env"):
-            controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"module": json_data}))
+        with pytest.raises(DescriptionValidationError, match="spec: configuration -> env"):
+            controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
     def test_spec(self, bk_deployment):
         json_data = builder.make_module(
@@ -70,7 +70,7 @@ class TestEnvVariablesField:
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"module": json_data}))
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert len(desc_obj.get_env_variables()) == 3
@@ -92,7 +92,7 @@ class TestEnvVariablesReader:
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"module": json_data}))
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
     def test_read_as_dict(self, bk_deployment):
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
@@ -109,7 +109,7 @@ class TestSvcDiscoveryField:
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"module": json_data}))
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
     def test_store(self, bk_deployment):
         self.apply_config(bk_deployment)
@@ -184,7 +184,7 @@ class TestHookField:
     )
     def test_hooks(self, bk_deployment, json_data, expected):
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"module": json_data}))
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert desc_obj.get_deploy_hooks() == expected
@@ -211,7 +211,7 @@ class TestHookField:
         bk_deployment.save()
 
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"module": json_data}))
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
         assert bk_deployment.get_deploy_hooks() == expected
 
@@ -237,6 +237,6 @@ class TestHookField:
         bk_deployment.save()
 
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"module": json_data}))
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
         bk_deployment.refresh_from_db()
         assert bk_deployment.get_deploy_hooks() == expected

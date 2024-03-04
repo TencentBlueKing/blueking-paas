@@ -34,6 +34,7 @@ from paasng.platform.declarative.application.resources import (
     ModuleDesc,
 )
 from paasng.platform.declarative.constants import AppDescPluginType
+from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.modules.serializers import ModuleNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField
@@ -51,7 +52,7 @@ class DisplayOptionsSLZ(serializers.Serializer):
         required=False, default=False, source="is_win_maximize", help_text="窗口是否最大化"
     )
     isVisible = serializers.BooleanField(required=False, default=True, source="visible", help_text="是否展示")
-    openMode = serializers.CharField(required=False, help_text="打开方式")
+    openMode = serializers.CharField(required=False, help_text="打开方式", source="open_mode")
 
     @classmethod
     def gen_default_value(cls) -> DisplayOptions:
@@ -101,6 +102,8 @@ class ModuleSpecField(serializers.DictField):
 
 class ModuleDescriptionSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="模块名称", required=True)
+    language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
+    sourceDir = serializers.CharField(help_text="源码目录", default="", source="source_dir")
     isDefault = serializers.BooleanField(default=False, help_text="是否为主模块", source="is_default")
     spec = ModuleSpecField(required=True)
 
@@ -116,7 +119,14 @@ class ModuleDescriptionSLZ(serializers.Serializer):
                     "shared_from": addon.sharedFrom,
                 }
             )
-        return ModuleDesc(**attrs)
+
+        return ModuleDesc(
+            name=attrs["name"],
+            language=attrs["language"],
+            is_default=attrs["is_default"],
+            source_dir=attrs.get("source_dir") or "",
+            services=services,
+        )
 
 
 class AppDescriptionSLZ(serializers.Serializer):

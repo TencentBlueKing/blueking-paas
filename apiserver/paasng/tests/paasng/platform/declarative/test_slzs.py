@@ -77,18 +77,16 @@ class TestAppDescriptionSLZ:
             "market": None,
             "modules": {
                 "nodejs": {
-                    "name": "nodejs",
-                    "isDefault": True,
-                    "spec": {
-                        "addons": [{"name": "mysql", "specs": [], "sharedFrom": "python"}],
-                    },
+                    "is_default": True,
+                    "language": "NodeJS",
+                    "source_dir": "",
+                    "services": [{"name": "mysql", "shared_from": "python", "specs": {}}],
                 },
                 "python": {
-                    "name": "python",
-                    "isDefault": False,
-                    "spec": {
-                        "addons": [{"name": "mysql", "specs": []}],
-                    },
+                    "is_default": False,
+                    "language": "Python",
+                    "source_dir": "",
+                    "services": [{"name": "mysql", "shared_from": None, "specs": {}}],
                 },
             },
             "name_zh_cn": random_name,
@@ -103,7 +101,10 @@ class TestAppDescriptionSLZ:
                 "nodejs",
                 is_default=True,
                 language="nodejs",
-                module_spec={"processes": [{"name": "web", "command": ["npm", "run", "server"]}]},
+                module_spec={
+                    "processes": [{"name": "web", "command": ["npm", "run", "server"]}],
+                    "addons": [{"name": "mysql", "sharedFrom": "python"}],
+                },
             ),
             v3_decorator.with_module(
                 "python",
@@ -123,7 +124,8 @@ class TestAppDescriptionSLZ:
                             "args": ["wsgi"],
                             "replicas": 2,
                         },
-                    ]
+                    ],
+                    "addons": [{"name": "mysql"}],
                 },
             ),
         )
@@ -138,29 +140,16 @@ class TestAppDescriptionSLZ:
             "market": None,
             "modules": {
                 "nodejs": {
-                    "name": "nodejs",
-                    "isDefault": True,
-                    "spec": {"processes": [{"name": "web", "command": ["npm", "run", "server"]}]},
+                    "is_default": True,
+                    "language": "NodeJS",
+                    "source_dir": "",
+                    "services": [{"name": "mysql", "shared_from": "python", "specs": {}}],
                 },
                 "python": {
-                    "name": "python",
-                    "isDefault": False,
-                    "spec": {
-                        "processes": [
-                            {
-                                "name": "beat",
-                                "command": ["python"],
-                                "args": ["manage.py", "celery", "beat", "-l", "info"],
-                                "replicas": 1,
-                            },
-                            {
-                                "name": "web",
-                                "command": ["gunicorn"],
-                                "args": ["wsgi"],
-                                "replicas": 2,
-                            },
-                        ]
-                    },
+                    "is_default": False,
+                    "language": "Python",
+                    "source_dir": "",
+                    "services": [{"name": "mysql", "shared_from": None, "specs": {}}],
                 },
             },
             "name_zh_cn": random_name,

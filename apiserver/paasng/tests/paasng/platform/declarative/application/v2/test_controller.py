@@ -279,6 +279,8 @@ class TestMarketDisplayOptionsField:
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
+        product = Product.objects.get(code=random_name)
+        assert product.displayoptions.open_mode == "desktop"
 
         app_desc = builder.make_app_desc(
             random_name,

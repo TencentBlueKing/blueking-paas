@@ -25,13 +25,15 @@ from kubernetes.utils import parse_quantity
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
-from paas_wl.bk_app.processes.models import ProcessSpecPlan
 
 logger = logging.getLogger(__name__)
 
 
 def get_quota_plan(spec_plan_name: str) -> bk_app.ResQuotaPlan:
     """Get ProcessSpecPlan by name and transform it to ResQuotaPlan"""
+    # TODO: fix circular import
+    from paas_wl.bk_app.processes.models import ProcessSpecPlan
+
     try:
         return bk_app.ResQuotaPlan(spec_plan_name)
     except ValueError:

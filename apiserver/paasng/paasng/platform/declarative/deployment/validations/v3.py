@@ -22,9 +22,6 @@ from rest_framework import exceptions, serializers
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.cnative.specs.models import to_error_string
-from paasng.platform.declarative.application.resources import (
-    ModuleDesc,
-)
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.serializers import validate_language
@@ -48,29 +45,19 @@ class ModuleSpecField(serializers.DictField):
         return super().to_representation(value)
 
 
-class ModuleDescriptionSLZ(serializers.Serializer):
-    name = serializers.CharField(help_text="模块名称", required=True)
+class DeploymentDescSLZ(serializers.Serializer):
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
     sourceDir = serializers.CharField(help_text="源码目录", default="", source="source_dir")
-    isDefault = serializers.BooleanField(default=False, help_text="是否为主模块", source="is_default")
     spec = ModuleSpecField(required=True)
 
-    def to_internal_value(self, data) -> ModuleDesc:
-        attrs = super().to_internal_value(data)
-        return ModuleDesc(**attrs)
-
-
-class DeploymentDescSLZ(serializers.Serializer):
-    module = ModuleDescriptionSLZ()
-
     def to_internal_value(self, data) -> DeploymentDesc:
-        module_desc = super().to_internal_value(data)["module"]
+        attrs = super().to_internal_value(data)
         return cattr.structure(
             {
-                "language": module_desc.language,
-                "source_dir": module_desc.source_dir,
+                "language": attrs["language"],
+                "source_dir": attrs["source_dir"],
                 "spec_version": AppSpecVersion.VER_3,
-                "spec": module_desc.spec,
+                "spec": attrs["spec"],
             },
             DeploymentDesc,
         )

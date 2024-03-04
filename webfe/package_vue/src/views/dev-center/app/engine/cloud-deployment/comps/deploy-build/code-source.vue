@@ -315,12 +315,12 @@ export default {
   methods: {
     async init() {
       // 获取模块基本信息
-      this.fetchModuleInfo();
+      await this.fetchModuleInfo();
+      await this.fetchLanguageInfo();
       // 获取代码源列表
       await this.fetchAccountAllowSourceControlType();
       // 获取代码检查详情
       this.getCodeInspection();
-      this.fetchLanguageInfo();
 
       const sourceControlTypes = this.sourceControlTypes.map(e => e.value);
       // 初始化 repo List
@@ -328,6 +328,9 @@ export default {
         const config = this.gitExtendConfig[key];
         sourceControlTypes.includes(key) && config.fetchMethod && config.fetchMethod();
       }
+      this.$nextTick(() => {
+        this.$emit('close-content-loader');
+      });
     },
 
     // 获取代码源列表
@@ -639,8 +642,9 @@ export default {
         const { region } = this.curAppModule;
 
         this.initTemplateDesc = '';
+        const initLanguage = this.curAppModule?.language;
         if (res[region] && res[region].languages) {
-          const languages = res[region].languages[this.initLanguage] || [];
+          const languages = res[region].languages[initLanguage] || [];
           const lanObj = languages.find(item => item.display_name === this.initTemplateType) || {};
           this.initTemplateDesc = lanObj.description || '--';
         }

@@ -398,10 +398,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        setTimeout(() => {
-          this.$emit('close-content-loader', false);
-        }, 200);
       }
     },
 

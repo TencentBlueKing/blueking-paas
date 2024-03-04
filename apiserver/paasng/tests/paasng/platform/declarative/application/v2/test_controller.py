@@ -39,6 +39,7 @@ from paasng.platform.declarative.application.validations.v2 import AppDescriptio
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
 from tests.paasng.platform.declarative.utils import AppDescV2Builder as builder  # noqa: N813
+from tests.paasng.platform.declarative.utils import AppDescV2Decorator as decorator  # noqa: N813
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
@@ -82,7 +83,7 @@ class TestAppDeclarativeControllerCreation:
     def test_app_code_length(self, bk_user, random_name, bk_app_code_len, ctx):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len-2))}"
-        app_json = builder.make_app_desc(bk_app_code, builder.with_module("default", True))
+        app_json = builder.make_app_desc(bk_app_code, decorator.with_module("default", True))
 
         controller = AppDeclarativeController(bk_user)
         with ctx:
@@ -100,7 +101,7 @@ class TestAppDeclarativeControllerCreation:
 
     @pytest.mark.parametrize("module_name", ["$", "0us0", "-a", "a-", "_a", "a_", "a0us0b"])
     def test_invalid_module_name(self, module_name, random_name):
-        app_json = builder.make_app_desc(random_name, builder.with_module(module_name=module_name, is_default=True))
+        app_json = builder.make_app_desc(random_name, decorator.with_module(module_name=module_name, is_default=True))
         with pytest.raises(DescriptionValidationError):
             get_app_description(app_json)
 
@@ -120,7 +121,7 @@ class TestAppDeclarativeControllerCreation:
             user_profile.save()
 
             app_json = builder.make_app_desc(
-                random_name, builder.with_module("default", True), builder.with_region(region)
+                random_name, decorator.with_module("default", True), decorator.with_region(region)
             )
             controller = AppDeclarativeController(bk_user)
             if not is_success:
@@ -131,15 +132,15 @@ class TestAppDeclarativeControllerCreation:
                 controller.perform_action(get_app_description(app_json))
 
     def test_normal(self, bk_user, random_name):
-        app_json = builder.make_app_desc(random_name, builder.with_module("default", True))
+        app_json = builder.make_app_desc(random_name, decorator.with_module("default", True))
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_json))
 
     def test_i18n(self, bk_user, random_name):
         app_json = builder.make_app_desc(
             random_name,
-            builder.with_module("default", True),
-            builder.with_market(
+            decorator.with_module("default", True),
+            decorator.with_market(
                 introduction="介绍", description="描述", introduction_en="introduction", description_en="description"
             ),
         )
@@ -159,7 +160,7 @@ class TestAppDeclarativeControllerUpdate:
         """Create an application before to test update"""
         app_json = builder.make_app_desc(
             random_name,
-            builder.with_module("default", True),
+            decorator.with_module("default", True),
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_json))
@@ -169,7 +170,7 @@ class TestAppDeclarativeControllerUpdate:
         another_user = create_user(username="another_user")
         app_json = builder.make_app_desc(
             existed_app.code,
-            builder.with_module("default", True),
+            decorator.with_module("default", True),
         )
 
         controller = AppDeclarativeController(another_user)
@@ -185,7 +186,7 @@ class TestAppDeclarativeControllerUpdate:
         # Use new region
         app_json = builder.make_app_desc(
             existed_app.code,
-            builder.with_module("default", True),
+            decorator.with_module("default", True),
         )
         app_json["bk_app_name"] = existed_app.name
         app_json["region"] = diff_region
@@ -198,7 +199,7 @@ class TestAppDeclarativeControllerUpdate:
         # Use new name
         app_json = builder.make_app_desc(
             existed_app.code,
-            builder.with_module("default", True),
+            decorator.with_module("default", True),
         )
         app_json["bk_app_name"] = existed_app.name + "2"
 
@@ -210,7 +211,7 @@ class TestAppDeclarativeControllerUpdate:
     def test_normal(self, bk_user, existed_app):
         app_json = builder.make_app_desc(
             existed_app.code,
-            builder.with_module("default", True),
+            decorator.with_module("default", True),
         )
         app_json["bk_app_name"] = existed_app.name
 
@@ -221,7 +222,9 @@ class TestAppDeclarativeControllerUpdate:
 class TestMarketField:
     def test_creation(self, bk_user, random_name, tag):
         app_desc = builder.make_app_desc(
-            random_name, builder.with_module("default", True), builder.with_market(introduction=random_name, tag=tag)
+            random_name,
+            decorator.with_module("default", True),
+            decorator.with_market(introduction=random_name, tag=tag),
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
@@ -233,8 +236,8 @@ class TestMarketField:
     def test_update_partial(self, bk_user, random_name):
         app_desc = builder.make_app_desc(
             random_name,
-            builder.with_module("default", True),
-            builder.with_market(introduction="foo", description="foo"),
+            decorator.with_module("default", True),
+            decorator.with_market(introduction="foo", description="foo"),
         )
         AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
         product = Product.objects.get(code=random_name)
@@ -243,7 +246,7 @@ class TestMarketField:
 
         # Update with description omitted
         app_desc = builder.make_app_desc(
-            random_name, builder.with_module("default", True), builder.with_market(introduction="bar")
+            random_name, decorator.with_module("default", True), decorator.with_market(introduction="bar")
         )
         AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
         product = Product.objects.get(code=random_name)
@@ -254,7 +257,7 @@ class TestMarketField:
 class TestMarketDisplayOptionsField:
     def test_creation_omitted(self, bk_user, random_name, tag):
         minimal_app_desc = builder.make_app_desc(
-            random_name, builder.with_module("default", True), builder.with_market(introduction=random_name)
+            random_name, decorator.with_module("default", True), decorator.with_market(introduction=random_name)
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(minimal_app_desc))
@@ -271,16 +274,16 @@ class TestMarketDisplayOptionsField:
     def test_update_partial(self, bk_user, random_name, tag):
         app_desc = builder.make_app_desc(
             random_name,
-            builder.with_module("default", True),
-            builder.with_market(display_options={"width": 99, "height": 99, "open_mode": "desktop"}),
+            decorator.with_module("default", True),
+            decorator.with_market(display_options={"width": 99, "height": 99, "open_mode": "desktop"}),
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
 
         app_desc = builder.make_app_desc(
             random_name,
-            builder.with_module("default", True),
-            builder.with_market(display_options={"height": 10, "open_mode": "new_tab"}),
+            decorator.with_module("default", True),
+            decorator.with_market(display_options={"height": 10, "open_mode": "new_tab"}),
         )
         AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
 
@@ -311,11 +314,11 @@ class TestServicesField:
     def app_desc(self, random_name, tag):
         return builder.make_app_desc(
             random_name,
-            builder.with_market(
+            decorator.with_market(
                 introduction="应用简介",
                 display_options={"open_mode": "desktop"},
             ),
-            builder.with_module(
+            decorator.with_module(
                 module_name=random_name,
                 is_default=True,
                 services=[{"name": "mysql"}],
@@ -354,7 +357,7 @@ class TestServicesField:
         assert len(list(services)) == 0
 
     def test_shared_service(self, bk_user, random_name, tag, app_desc):
-        builder.with_module(
+        decorator.with_module(
             random_name + "1", is_default=False, services=[{"name": "mysql", "shared_from": random_name}]
         )(app_desc)
 
@@ -371,7 +374,7 @@ class TestServicesField:
         assert info.module == module
 
     def test_shared_service_but_module_not_found(self, bk_user, random_name, tag, app_desc):
-        builder.with_module(
+        decorator.with_module(
             random_name + "1", is_default=False, services=[{"name": "mysql", "shared_from": random_name + "2"}]
         )(app_desc)
         with pytest.raises(DescriptionValidationError):

@@ -18,7 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from operator import itemgetter
+from typing import Any
 
+from blue_krill.cubing_case import shortcuts
 from kubernetes.utils import parse_quantity
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
@@ -51,3 +53,12 @@ def get_quota_plan(spec_plan_name: str) -> bk_app.ResQuotaPlan:
         if limit_memory >= expected_limit_memory:
             return quota_plan
     return quota_plan_memory[-1][1]
+
+
+def camel_to_snake_case(data: Any) -> Any:
+    """convert all camel case field name to snake case, and return the converted obj"""
+    if isinstance(data, dict):
+        return {shortcuts.to_lower_snake_case(key): camel_to_snake_case(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [camel_to_snake_case(item) for item in data]
+    return data

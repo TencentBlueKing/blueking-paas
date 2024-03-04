@@ -61,6 +61,8 @@ class AppDescV2Builder:
             module_desc["processes"] = processes
         return module_desc
 
+
+class AppDescV2Decorator:
     @staticmethod
     def with_region(region: str):
         def apply(app_desc: Dict):
@@ -138,6 +140,8 @@ class AppDescV3Builder:
     ):
         return {"name": module_name, "isDefault": is_default, "language": language, "spec": module_spec or {}}
 
+
+class AppDescV3Decorator:
     @staticmethod
     def with_module(module_name: str, is_default: bool, language: str = "python", module_spec: Optional[Dict] = None):
         def apply(app_desc: Dict):

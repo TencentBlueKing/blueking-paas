@@ -106,6 +106,16 @@ class ModuleDescriptionSLZ(serializers.Serializer):
 
     def to_internal_value(self, data) -> ModuleDesc:
         attrs = super().to_internal_value(data)
+        # spec.addons -> services
+        services = []
+        for addon in attrs["spec"].addons:
+            services.append(
+                {
+                    "name": addon.name,
+                    "specs": {spec.name: spec.value for spec in addon.specs},
+                    "shared_from": addon.sharedFrom,
+                }
+            )
         return ModuleDesc(**attrs)
 
 
@@ -150,8 +160,8 @@ class AppDescriptionSLZ(serializers.Serializer):
 
         # 校验 shared_from 的模块是否存在
         for idx, module_desc in enumerate(modules_list):
-            for addon in module_desc.spec.addons:
-                if addon.sharedFrom and addon.sharedFrom not in attrs["modules"]:
+            for svc in module_desc.services:
+                if svc.shared_from and svc.shared_from not in attrs["modules"]:
                     raise serializers.ValidationError(
                         {f"modules[{idx}].spec.addons": _("提供共享增强服务的模块不存在")}
                     )

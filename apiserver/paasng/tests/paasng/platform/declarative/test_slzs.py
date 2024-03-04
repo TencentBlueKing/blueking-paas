@@ -25,7 +25,9 @@ from paasng.platform.declarative.application.serializers import AppDescriptionSL
 from paasng.platform.declarative.application.validations import v2, v3
 from paasng.platform.declarative.serializers import validate_desc
 from tests.paasng.platform.declarative.utils import AppDescV2Builder as v2_builder  # noqa: N813
+from tests.paasng.platform.declarative.utils import AppDescV2Decorator as v2_decorator  # noqa: N813
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as v3_builder  # noqa: N813
+from tests.paasng.platform.declarative.utils import AppDescV3Decorator as v3_decorator  # noqa: N813
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -42,14 +44,14 @@ class TestAppDescriptionSLZ:
         random_name = f"ut{generate_random_string(length=10)}"
         app_desc_json = v2_builder.make_app_desc(
             random_name,
-            v2_builder.with_module(
+            v2_decorator.with_module(
                 "nodejs",
                 is_default=True,
                 language="nodejs",
                 processes={"web": {"command": "npm run server"}},
                 services=[{"name": "mysql", "shared_from": "python"}],
             ),
-            v2_builder.with_module(
+            v2_decorator.with_module(
                 "python",
                 is_default=False,
                 language="python",
@@ -97,13 +99,13 @@ class TestAppDescriptionSLZ:
         random_name = f"ut{generate_random_string(length=10)}"
         app_desc_json = v3_builder.make_app_desc(
             random_name,
-            v3_builder.with_module(
+            v3_decorator.with_module(
                 "nodejs",
                 is_default=True,
                 language="nodejs",
                 module_spec={"processes": [{"name": "web", "command": ["npm", "run", "server"]}]},
             ),
-            v3_builder.with_module(
+            v3_decorator.with_module(
                 "python",
                 is_default=False,
                 language="python",

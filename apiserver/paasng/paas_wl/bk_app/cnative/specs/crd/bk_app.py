@@ -21,6 +21,7 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
+import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
@@ -132,6 +133,12 @@ class BkAppProcess(BaseModel):
     image: Optional[str] = None
     # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
     imagePullPolicy: Optional[str] = None
+
+    def get_proc_command(self) -> str:
+        """get_proc_command: Procfile 风格的命令
+        使用场景: 普通应用启动 hook 使用该方法获取启动命令 -> ApplicationPreReleaseExecutor
+        """
+        return (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
 
 
 class Hook(BaseModel):
@@ -265,7 +272,7 @@ class BkAppAddon(BaseModel):
 
     name: str
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
-    sharedFrom: Optional[str]
+    sharedFrom: Optional[str] = None
 
 
 @register

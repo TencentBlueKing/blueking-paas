@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import shlex
 from typing import Dict, List, Optional
 
 import cattr
@@ -83,10 +82,7 @@ class DeploymentDescription(TimestampedModel):
         Procfile is a dict containing a process type and its corresponding command
         """
         if self.spec is not None:
-            return {
-                process.name: (shlex.join(process.command or []) + " " + shlex.join(process.args or [])).strip()
-                for process in self.spec.processes
-            }
+            return {process.name: process.get_proc_command() for process in self.spec.processes}
 
         processes = self.runtime.get("processes", {})
         return {key: process["command"] for key, process in processes.items()}

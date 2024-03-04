@@ -102,6 +102,7 @@ class ModuleDesc(BaseModel):
     language: AppLanguage = Field(AppLanguage.PYTHON, description="模块开发语言")
     is_default: bool = Field(False, description="是否为主模块?")
     source_dir: str = Field("", description="源码目录")
+    services: List[ServiceSpec] = Field(default_factory=list)
     spec: bk_app.BkAppSpec
 
 

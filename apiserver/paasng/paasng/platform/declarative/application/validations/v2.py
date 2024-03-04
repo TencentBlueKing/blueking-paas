@@ -39,6 +39,7 @@ from paasng.utils.serializers import Base64FileField
 from paasng.utils.validators import ReservedWordValidator
 
 module_name_field = ModuleNameField()
+ModuleNamePlaceholder = "should-set-by-parent-slz"
 
 
 class DisplayOptionsSLZ(serializers.Serializer):
@@ -102,25 +103,13 @@ class ModuleDescriptionSLZ(serializers.Serializer):
     def to_internal_value(self, data) -> ModuleDesc:
         """convert to cnative module desc format"""
         attrs = super().to_internal_value(data)
-        addons = []
-        for service in attrs.get("services", []):
-            shared_from = service.shared_from
-            addons.append(
-                {
-                    "name": service.name,
-                    "specs": [{"name": key, "value": value} for key, value in service.specs.items()],
-                    "sharedFrom": shared_from,
-                }
-            )
 
         return ModuleDesc(
-            name="should-set-by-parent-slz",
+            name=ModuleNamePlaceholder,
             language=attrs["language"],
             is_default=attrs["is_default"],
             source_dir=attrs.get("source_dir") or "",
-            spec={
-                "addons": addons,
-            },
+            services=attrs.get("services", []),
         )
 
 
@@ -164,8 +153,8 @@ class AppDescriptionSLZ(serializers.Serializer):
 
         # 校验 shared_from 的模块是否存在
         for module_name, module_desc in attrs["modules"].items():
-            for addon in module_desc.spec.addons:
-                if addon.sharedFrom and addon.sharedFrom not in attrs["modules"]:
+            for svc in module_desc.services:
+                if svc.shared_from and svc.shared_from not in attrs["modules"]:
                     raise serializers.ValidationError(
                         {f"modules[{module_name}].services": _("提供共享增强服务的模块不存在")}
                     )

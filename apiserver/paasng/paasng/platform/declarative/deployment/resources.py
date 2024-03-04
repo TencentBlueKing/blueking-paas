@@ -16,16 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import shlex
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import cattr
 from attrs import define, field, validators
-from blue_krill.cubing_case import shortcuts
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.declarative.constants import AppSpecVersion
+from paasng.platform.declarative.utils import camel_to_snake_case
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
@@ -172,17 +171,6 @@ class BluekingMonitor:
             self.target_port = self.port
 
 
-def camel_to_snake_case(data: Dict[str, Any]) -> Dict[str, Any]:
-    """convert all camel case field name to snake case, and return the converted dict"""
-    result = {}
-    for key, value in data.items():
-        if isinstance(value, dict):
-            result[shortcuts.to_lower_snake_case(key)] = camel_to_snake_case(value)
-        else:
-            result[shortcuts.to_lower_snake_case(key)] = value
-    return result
-
-
 @define
 class DeploymentDesc:
     """Resource: Deployment description
@@ -208,7 +196,7 @@ class DeploymentDesc:
         return cattr.structure(
             {
                 process.name: {
-                    "command": (shlex.join(process.command or []) + " " + shlex.join(process.args or [])).strip(),
+                    "command": process.get_proc_command(),
                     "replicas": process.replicas,
                     "plan": process.resQuotaPlan,
                     "probes": camel_to_snake_case(process.probes.dict()) if process.probes else None,

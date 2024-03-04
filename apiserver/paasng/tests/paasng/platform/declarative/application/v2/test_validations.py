@@ -26,6 +26,7 @@ from paasng.platform.declarative.application.validations.v2 import AppDescriptio
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
 from tests.paasng.platform.declarative.utils import AppDescV2Builder as builder  # noqa: N813
+from tests.paasng.platform.declarative.utils import AppDescV2Decorator as decorator  # noqa: N813
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -52,13 +53,13 @@ class TestValidations:
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=10)}"
         module_name = f"ut{generate_random_string(length=10)}"
-        app_json = builder.make_app_desc(bk_app_code, builder.with_module(module_name, is_default=True))
+        app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name, is_default=True))
         get_app_description(app_json)
 
     def test_invalid_name_length(self):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=20)}"
         module_name = f"ut{generate_random_string(length=10)}"
-        app_json = builder.make_app_desc(bk_app_code, builder.with_module(module_name, is_default=True))
+        app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name, is_default=True))
         with pytest.raises(DescriptionValidationError, match=r"bk_app_code: .*?20"):
             get_app_description(app_json)

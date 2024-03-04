@@ -26,6 +26,7 @@ from paasng.platform.declarative.application.validations.v3 import AppDescriptio
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
+from tests.paasng.platform.declarative.utils import AppDescV3Decorator as decorator  # noqa: N813
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -51,7 +52,7 @@ class TestValidateGoodCase:
     def test_one_module(self):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=10)}"
-        app_json = builder.make_app_desc(bk_app_code, builder.with_module(module_name="foo", is_default=True))
+        app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name="foo", is_default=True))
         get_app_description(app_json)
 
 
@@ -68,7 +69,7 @@ class TestValidateBadCase:
     def test_missing_default_module(self):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=10)}"
-        app_json = builder.make_app_desc(bk_app_code, builder.with_module(module_name="foo", is_default=False))
+        app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name="foo", is_default=False))
         with pytest.raises(DescriptionValidationError, match="modules: 一个应用必须有一个主模块"):
             get_app_description(app_json)
 
@@ -77,8 +78,8 @@ class TestValidateBadCase:
         bk_app_code = f"ut{generate_random_string(length=10)}"
         app_json = builder.make_app_desc(
             bk_app_code,
-            builder.with_module(module_name="foo", is_default=True),
-            builder.with_module(module_name="bar", is_default=True),
+            decorator.with_module(module_name="foo", is_default=True),
+            decorator.with_module(module_name="bar", is_default=True),
         )
         with pytest.raises(DescriptionValidationError, match="modules: 一个应用只能有一个主模块"):
             get_app_description(app_json)
@@ -87,7 +88,7 @@ class TestValidateBadCase:
         bk_app_code = f"ut{generate_random_string(length=10)}"
         app_json = builder.make_app_desc(
             bk_app_code,
-            builder.with_module(
+            decorator.with_module(
                 module_name="foo",
                 is_default=True,
                 module_spec={"addons": [{"name": "openai", "sharedFrom": "bar"}]},

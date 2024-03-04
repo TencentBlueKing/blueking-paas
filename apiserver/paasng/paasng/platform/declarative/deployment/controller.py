@@ -17,12 +17,13 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, Mapping, Optional, Union
 
 import cattr
 from attrs import define, fields
 from django.db.transaction import atomic
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.importer import import_manifest
@@ -38,6 +39,14 @@ logger = logging.getLogger(__name__)
 
 @define
 class PerformResult:
+    """应用描述文件的导入结果
+
+    :param loaded_processes: 导入的进程信息, 进程命令为 Procfile 格式.
+                             如进程信息与 Procfile 中的进程冲突, 将根据应用类型作出不同的策略.
+                             - 普通应用, 以 Procfile 为准
+                             - 云原生应用, 以应用描述文件为准
+    """
+
     loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
 
     def set_processes(self, processes: Dict[str, Process]):
@@ -53,6 +62,19 @@ class PerformResult:
             },
             Dict[str, ProcessTmpl],
         )
+
+
+def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
+    """将应用描述文件中的 BkAppSpec 转换成适合直接导入到模型的格式"""
+    # 应用描述文件中的环境变量不展示到产品页面
+    exclude: Mapping[Union[str, int], Any] = {
+        "configuration": ...,
+        "envOverlay": {"envVariables"},
+    }
+    return {
+        "metadata": {},
+        "spec": spec.dict(exclude_none=True, exclude_unset=True, exclude=exclude),
+    }
 
 
 class DeploymentDeclarativeController:
@@ -88,19 +110,11 @@ class DeploymentDeclarativeController:
         result.set_processes(processes=processes)
         if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:
             # 云原生应用
-            # 应用描述文件中的环境变量不展示到产品页面
-            exclude = {
-                "configuration": ...,
-                "envOverlay": {"envVariables"},
-            }
             # TODO: 优化 import 方式, 例如直接接受 desc.spec
             # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
             import_manifest(
                 module,
-                input_data={
-                    "metadata": {},
-                    "spec": deploy_desc.spec.dict(exclude_none=True, exclude_unset=True, exclude=exclude),
-                },
+                input_data=convert_bkapp_spec_to_manifest(deploy_desc.spec),
             )
             if hooks := deploy_desc.get_deploy_hooks():
                 self.deployment.update_fields(hooks=hooks)

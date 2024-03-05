@@ -177,13 +177,16 @@
           <div class="mb10 flex-row justify-content-between">
             <div>{{ isSmartApp ? $t('版本') : $t('代码分支选择') }}</div>
             <!-- smartAPP 不展示，代码版本差异 -->
-            <div
+            <bk-button
               v-if="isShowCodeDifferences"
-              class="version-code"
+              style="font-size: 12px;"
+              theme="primary"
+              text
+              :disabled="isVersionDifferenceDisabled"
               @click="handleShowCommits"
             >
               {{ $t('查看代码版本差异') }}
-            </div>
+            </bk-button>
           </div>
           <!-- 代码分支禁用 -->
           <bk-select
@@ -351,6 +354,102 @@
         ></deploy-status-detail>
       </div>
     </bk-sideslider>
+
+    <bk-dialog
+      v-model="commitDialog.visiable"
+      width="740"
+      :title="$t('查看版本差异')"
+      :theme="'primary'"
+      :mask-close="true"
+      :show-footer="false"
+    >
+      <div class="result">
+        <!-- commitsList 根据 显示 -->
+        <paas-loading :loading="commitDialog.isLoading">
+          <div
+            v-if="!commitDialog.isLoading"
+            slot="loadingContent"
+          >
+            <!-- 改为部署内容 -->
+            <form
+              v-if="moduleReleaseInfo"
+              class="ps-form ps-form-horizontal"
+            >
+              <div class="middle-list mb15">
+                <span class="">
+                  {{ $t('已选中分支：') }}
+                  <strong>{{ branchValue.split(':')[1] || '--' }}</strong>
+                </span>
+                <span class="revision-diff-sep ml25 mr25"> &lt; &gt; </span>
+                <span class="">
+                  {{ $t('已部署分支：') }}
+                  <strong>
+                    {{ moduleReleaseInfo.repo.name }}
+                    （{{ $t('版本号') }}: {{ moduleReleaseInfo.repo.version }} ）
+                  </strong>
+                </span>
+              </div>
+            </form>
+            <table class="ps-table ps-table-default ps-table-outline">
+              <colgroup>
+                <col style="width:150px">
+                <col style="width:150px">
+                <col style="width:170px">
+                <col style="width:250px">
+              </colgroup>
+              <tr class="ps-table-environment-header">
+                <th> {{ $t('版本号') }} </th>
+                <th> {{ $t('提交人') }} </th>
+                <th> {{ $t('提交时间') }} </th>
+                <th> {{ $t('注释') }} </th>
+              </tr>
+              <tr
+                v-if="!commitsList.length"
+                class="ps-table-slide-up"
+              >
+                <td colspan="4">
+                  <div class="ps-no-result">
+                    <div class="text">
+                      <p><i class="paasng-icon paasng-empty no-data" /></p>
+                      <p> {{ $t('暂无版本差异记录') }} </p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tbody
+                v-for="(cItem, index) in commitsList"
+                v-else
+                :key="index"
+                :class="['ps-table-template',{ 'open': commitDialog.curCommitsIndex === index }]"
+              >
+                <tr
+                  class="ps-table-slide-up"
+                  @click.stop.prevent="handleToggleCommitsDetail(index)"
+                >
+                  <td class="pl50">
+                    <i class="icon" />
+                    <a>{{ cItem.revision }}</a>
+                  </td>
+                  <td>{{ cItem.author }}</td>
+                  <td>{{ cItem.date }}</td>
+                  <td>{{ cItem.message }}</td>
+                </tr>
+                <tr class="ps-table-slide-down">
+                  <td colspan="4">
+                    <pre>
+                      <p
+                        v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
+                        :key="chagnItemIndex"
+                      >{{ chagnItem[0] }} {{ chagnItem[1] }}</p>
+                    </pre>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </paas-loading>
+      </div>
+    </bk-dialog>
   </div>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
@@ -450,6 +549,13 @@ export default {
       },
       deployRefreshLoading: false,
       codeRefreshLoading: false,
+      commitDialog: {
+        visiable: false,
+        isLoading: false,
+        curCommitsIndex: -1,
+      },
+      commitsList: [],
+      moduleReleaseInfo: null,
     };
   },
   computed: {
@@ -565,6 +671,11 @@ export default {
       }
       return true;
     },
+
+    // svn查看代码版本差异
+    isVersionDifferenceDisabled() {
+      return this.curAppModule.repo.diff_feature.method !== 'external' && this.moduleReleaseInfo === null;
+    },
   },
   watch: {
     show: {
@@ -586,6 +697,8 @@ export default {
 
         this.setCurData();
         this.getModuleRuntimeOverview();
+        // 获取当前模块部署信息
+        this.getModuleReleaseInfo();
         // 上次选择的镜像拉取策略
         if (this.lastSelectedImagePullStrategy) {
           this.imagePullStrategy = this.lastSelectedImagePullStrategy;
@@ -661,7 +774,7 @@ export default {
         //  Smart 应用(预发布/生产)显示最新分支
         if (this.isSmartApp) {
           const sortList = res.results.sort(this.sortData);
-          this.branchSelection = `${sortList[0].type}:${sortList[0].name}`;
+          this.branchValue = `${sortList[0].type}:${sortList[0].name}`;
         }
         this.branchesData = res.results;
         const branchesList = [];
@@ -716,11 +829,11 @@ export default {
 
       // eslint-disable-next-line no-prototype-builtins
       if (favBranchName && this.branchesMap.hasOwnProperty(favBranchName)) {
-        this.branchSelection = favBranchName;
+        this.branchValue = favBranchName;
         return;
       }
 
-      if (this.branchList.length && !this.branchSelection) {
+      if (this.branchList.length && !this.branchValue) {
         if (this.environment === 'prod') {
           if (this.availableBranch) {
             this.branchValue = this.availableBranch;
@@ -759,13 +872,12 @@ export default {
 
     // 查看代码差异
     async handleShowCommits() {
-      // console.log('this.curAppModule', this.curAppModule);
-      // if (this.curAppModule.repo.diff_feature.method === 'external') {
-      //   this.showCompare();
-      // } else {
-      //   this.showCommits();
-      // }
-      this.showCompare();
+      if (this.curAppModule.repo.diff_feature.method === 'external') {
+        this.showCompare();
+      } else {
+        // svn
+        this.showCommits();
+      }
     },
 
     // 查看代码对比
@@ -780,14 +892,105 @@ export default {
 
       const fromVersion = this.deploymentInfoBackUp?.version_info?.revision;
       const toVersion = this.branchValue;
-      const win = window.open();
       const res = await this.$store.dispatch('deploy/getGitCompareUrl', {
         appCode: this.appCode,
         moduleId: this.curModuleId,
         fromVersion,
         toVersion,
       });
-      win.location.href = res.result;
+      window.open(res.result, '_blank');
+    },
+
+    /**
+     * 查看代码提交记录
+     */
+    async showCommits() {
+      if (!this.branchValue) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请选择部署分支'),
+        });
+        return false;
+      }
+
+      this.commitDialog.visiable = true;
+      this.commitDialog.isLoading = true;
+
+      try {
+        const fromVersion = this.moduleReleaseInfo.repo?.revision;
+        const toVersion = this.branchValue;
+
+        // 根据用户选择的分支获取提交记录
+        const res = await this.$store.dispatch('deploy/getSvnCommits', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          fromVersion,
+          toVersion,
+        });
+        this.commitsList = res.results;
+      } catch (e) {
+        this.commitsList = [];
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.commitDialog.isLoading = false;
+      }
+    },
+
+    // 获取模块发布信息
+    async getModuleReleaseInfo() {
+      try {
+        const res = await this.$store.dispatch('deploy/getModuleReleaseInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+        });
+
+        if (!res.code) {
+          // 已下架
+          if (res.is_offlined) {
+            res.offline.repo.version = this.formatRevision(res.offline.repo.revision);
+            this.moduleReleaseInfo = res.offline;
+          } else if (res.deployment) {
+            res.deployment.repo.version = this.formatRevision(res.deployment.repo.revision);
+            this.moduleReleaseInfo = res.deployment;
+          } else {
+            this.moduleReleaseInfo = {
+              repo: {},
+            };
+          }
+        }
+      } catch (e) {
+        this.moduleReleaseInfo = null;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    formatRevision(revision) {
+      // 修改后端返回的 repo 数据，增加额外字段
+      // 追加 version 字段
+      // 为 Git 类型版本号取前 8 位
+      const reg = RegExp('^[a-z0-9]{40}$');
+      let version = '';
+      if (reg.test(revision)) {
+        version = revision.substring(0, 8);
+      } else {
+        version = revision;
+      }
+      return version;
+    },
+
+    handleToggleCommitsDetail(index) {
+      if (this.commitDialog.curCommitsIndex === index) {
+        this.commitDialog.curCommitsIndex = -1;
+      } else {
+        this.commitDialog.curCommitsIndex = index;
+      }
     },
 
     async handleConfirmValidate() {

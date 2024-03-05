@@ -14,10 +14,9 @@ def list_proc_types(env: ModuleEnvironment) -> List[str]:
 
 def refresh_services(env: ModuleEnvironment):
     """Refresh the service resource for the given environment."""
-    handler = ProcessesHandler.new_by_app(env.wl_app)
     for proc_type in list_proc_types(env):
         # Recreate the service resource to select the new pods
-        svc = handler.get_default_services(env.wl_app, proc_type)
+        svc = ProcessesHandler.get_default_services(env.wl_app, proc_type)
         svc.remove()
         svc.create_or_patch()
 

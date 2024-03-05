@@ -63,10 +63,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# NOTE: dynamic client only support a single timeout parameter, use summed value as
-# the total timeout seconds.
-_default_request_timeout: float = settings.K8S_DEFAULT_CONNECT_TIMEOUT + settings.K8S_DEFAULT_READ_TIMEOUT
-set_default_options({"request_timeout": _default_request_timeout})
+# Set the default timeout
+set_default_options({"request_timeout": (settings.K8S_DEFAULT_CONNECT_TIMEOUT, settings.K8S_DEFAULT_READ_TIMEOUT)})
 
 
 class ResourceHandlerBase:

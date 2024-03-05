@@ -31,34 +31,67 @@ import (
 
 var _ = Describe("Test supervisorctl", func() {
 	var ctl *SupervisorCtl
+	var supervisorTmpDir string
 
-	oldDir := supervisorDir
 	oldConfFilePath := confFilePath
 
 	BeforeEach(func() {
-		supervisorDir, _ = os.MkdirTemp("", "supervisor")
-		confFilePath = filepath.Join(supervisorDir, "dev.conf")
-
+		supervisorTmpDir, _ = os.MkdirTemp("", "supervisor")
+		confFilePath = filepath.Join(supervisorTmpDir, "dev.conf")
 		ctl = NewSupervisorCtl()
 	})
 	AfterEach(func() {
-		Expect(os.RemoveAll(supervisorDir)).To(BeNil())
-
-		supervisorDir = oldDir
+		Expect(os.RemoveAll(supervisorTmpDir)).To(BeNil())
 		confFilePath = oldConfFilePath
 	})
 
-	DescribeTable("Test refreshConf", func(conf *SupervisorConf, expectedConfContent string) {
+	DescribeTable(
+		"Test MakeSupervisorConf with invalid environment variables",
+		func(processes []Process, procEnv []appdesc.Env, expectedErrorStr string) {
+			_, err := MakeSupervisorConf(processes, procEnv...)
+			Expect(err.Error()).To(Equal(expectedErrorStr))
+		}, Entry(
+			"invalid with (%)",
+			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]appdesc.Env{
+				{Key: "FOO", Value: `%abc`},
+				{Key: "BAR", Value: `ab%c`},
+			},
+			`environment variables: FOO, BAR has invalid characters ("%)`,
+		),
+		Entry(
+			"invalid with (%)",
+			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]appdesc.Env{
+				{Key: "FOO", Value: `%abc`},
+				{Key: "BAR", Value: `abc`},
+			},
+			`environment variables: FOO has invalid characters ("%)`,
+		),
+		Entry(
+			`invalid with ("%)`,
+			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]appdesc.Env{
+				{Key: "FOO_TEST", Value: `http://abc.com/cc`},
+				{Key: "FOO", Value: `%abc`},
+				{Key: "BAR", Value: `ab"c`},
+			},
+			`environment variables: FOO, BAR has invalid characters ("%)`,
+		),
+	)
+
+	DescribeTable("Test refreshConf", func(processes []Process, procEnv []appdesc.Env, expectedConfContent string) {
+		conf, _ := MakeSupervisorConf(processes, procEnv...)
 		Expect(ctl.refreshConf(conf)).To(BeNil())
 
 		content, _ := os.ReadFile(confFilePath)
 		Expect(string(content)).To(Equal(expectedConfContent))
-	}, Entry("with env_variables", MakeSupervisorConf(
+	}, Entry("without env_variables",
 		[]Process{
 			{ProcType: "web", CommandPath: "/cnb/processes/web"},
 			{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
-		},
-	), fmt.Sprintf(`[unix_http_server]
+		}, []appdesc.Env{},
+		fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 
 [supervisorctl]
@@ -81,13 +114,15 @@ command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
 `, supervisorDir)),
-		Entry("without env_variables", MakeSupervisorConf(
+		Entry("with env_variables",
 			[]Process{
 				{ProcType: "web", CommandPath: "/cnb/processes/web"},
 				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
 			},
-			[]appdesc.Env{{"DJANGO_SETTINGS_MODULE", "settings"}, {"WHITENOISE_STATIC_PREFIX", "/static/"}}...,
-		), fmt.Sprintf(`[unix_http_server]
+			[]appdesc.Env{
+				{"DJANGO_SETTINGS_MODULE", "settings"},
+				{"WHITENOISE_STATIC_PREFIX", "/static/"},
+			}, fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 
 [supervisorctl]

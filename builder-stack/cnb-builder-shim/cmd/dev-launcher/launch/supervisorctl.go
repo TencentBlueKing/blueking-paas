@@ -84,15 +84,18 @@ type SupervisorConf struct {
 }
 
 // MakeSupervisorConf returns a new SupervisorConf
-func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) *SupervisorConf {
+func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
 	}
 
 	if procEnvs != nil {
+		if err := validateEnvironment(procEnvs); err != nil {
+			return nil, err
+		}
 		envs := make([]string, len(procEnvs))
 		for indx, env := range procEnvs {
-			envs[indx] = fmt.Sprintf("%s=\"%s\"", env.Key, env.Value)
+			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Key, env.Value)
 		}
 		conf.Environment = strings.Join(envs, ",")
 	}
@@ -103,7 +106,7 @@ func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) *Superviso
 			ProcLogFile: filepath.Join(conf.RootDir, "log", p.ProcType+".log"),
 		})
 	}
-	return conf
+	return conf, nil
 }
 
 // NewSupervisorCtl returns a new SupervisorCtl
@@ -156,4 +159,25 @@ func (ctl *SupervisorCtl) reload() error {
 	cmd.Stdout = os.Stdout
 
 	return cmd.Run()
+}
+
+// validateEnvironment validates the environment variables for supervisor conf.
+// see detail environment conf in http://supervisord.org/configuration.html
+func validateEnvironment(procEnvs []appdesc.Env) error {
+	invalidChars := `"%`
+	invalidEnvNames := []string{}
+	for _, env := range procEnvs {
+		if strings.ContainsAny(env.Value, invalidChars) {
+			invalidEnvNames = append(invalidEnvNames, env.Key)
+		}
+	}
+	if len(invalidEnvNames) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"environment variables: %s has invalid characters (%s)",
+		strings.Join(invalidEnvNames, ", "),
+		invalidChars,
+	)
 }

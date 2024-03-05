@@ -49,11 +49,13 @@ func Run(mdProcesses metaProcesses, desc *appdesc.AppDesc) error {
 		return errors.Wrap(err, "symlink process launcher")
 	}
 
-	if err = runPreReleaseHook(desc); err != nil {
-		return errors.Wrap(err, "run pre release hook")
+	if releaseHook := desc.Module.Scripts.PreReleaseHook; releaseHook != "" {
+		if err = runPreReleaseHook(releaseHook, desc.Module.ProcEnvs); err != nil {
+			return errors.Wrap(err, "run pre release hook")
+		}
 	}
 
-	if err = reloadProcesses(processes, desc); err != nil {
+	if err = reloadProcesses(processes, desc.Module.ProcEnvs); err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
 
@@ -101,39 +103,26 @@ func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 	return processes, nil
 }
 
-func runPreReleaseHook(desc *appdesc.AppDesc) error {
-	releaseHook := desc.Module.Scripts.PreReleaseHook
-	if releaseHook == "" {
-		return nil
-	}
-
+func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 	cmd := exec.Command(launch.LauncherPath, releaseHook)
 	cmd.Dir = DefaultAppDir
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
 	cmd.Env = os.Environ()
-	if desc.Module.ProcEnvs != nil {
-		for _, env := range desc.Module.ProcEnvs {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Key, env.Value))
-		}
+	for _, env := range runEnvs {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Key, env.Value))
 	}
 
 	return cmd.Run()
 }
 
-func reloadProcesses(processes []Process, appDesc *appdesc.AppDesc) error {
-	ctl := NewSupervisorCtl()
-
-	var conf *SupervisorConf
-
-	if appDesc.Module.ProcEnvs != nil {
-		conf = MakeSupervisorConf(processes, appDesc.Module.ProcEnvs...)
+func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
+	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
+		return err
 	} else {
-		conf = MakeSupervisorConf(processes)
+		return NewSupervisorCtl().Reload(conf)
 	}
-
-	return ctl.Reload(conf)
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

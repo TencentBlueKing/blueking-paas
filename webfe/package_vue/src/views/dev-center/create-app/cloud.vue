@@ -613,6 +613,7 @@ import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-ho
 import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import defaultAppType from './default-app-type';
 import createSmartApp from './smart';
+import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 export default {
   components: {
     gitExtend,
@@ -623,6 +624,7 @@ export default {
     defaultAppType,
     createSmartApp,
   },
+  mixins: [sidebarDiffMixin],
   data() {
     return {
       formData: {
@@ -911,15 +913,41 @@ export default {
     this.init();
   },
   methods: {
-    init() {
-      this.fetchLanguageInfo();
-      this.fetchSourceControlTypesData();
-      this.fetchAdvancedOptions();
+    async init() {
+      await this.fetchLanguageInfo();
+      await this.fetchSourceControlTypesData();
+      await this.fetchAdvancedOptions();
+      // 收集依赖
+      const data = this.collectDependencies();
+      this.initSidebarFormData(data);
     },
     handleSelected(item, key) {
       this.buttonActive = key;
       this.languagesList = item;
       this.formData.sourceInitTemplate = this.languagesList[0].name;
+    },
+
+    // 收集基本表单依赖
+    collectDependencies() {
+      const data = {
+        code: this.formData.code,
+        name: this.formData.name,
+        source_config: {
+          source_init_template: this.formData.sourceInitTemplate,
+          source_control_type: this.sourceControlTypeItem,
+          source_repo_url: this.formData.sourceRepoUrl,
+          source_dir: this.formData.buildDir || '',
+        },
+      };
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)) {
+        data.source_config.source_repo_url = this.repoData.url;
+        data.source_config.source_repo_auth_info = {
+          username: this.repoData.account,
+          password: this.repoData.password,
+        };
+        data.source_config.source_dir = this.repoData.sourceDir;
+      }
+      return data;
     },
 
     // 获取模版来源
@@ -1099,7 +1127,12 @@ export default {
     },
 
     // 处理取消
-    handleCancel() {
+    async handleCancel() {
+      // 内容变更输入弹窗提示
+      const isSwitching = await this.handleBeforeFunction();
+      if (!isSwitching) {
+        return;
+      }
       this.$refs?.processRef?.handleCancel();
       this.initCloudAppData = _.cloneDeep(this.localCloudAppData);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
@@ -1384,6 +1417,11 @@ export default {
       } else {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
       }
+    },
+
+    async handleBeforeFunction() {
+      const data = this.collectDependencies();
+      return this.$isSidebarClosed(JSON.stringify(data));
     },
   },
 };

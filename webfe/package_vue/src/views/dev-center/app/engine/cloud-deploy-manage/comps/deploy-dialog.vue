@@ -1127,8 +1127,9 @@ export default {
     // 选择分支
     handleChangeBranch() {
       if (!this.branchesData.length) return;
+      const branchName = this.branchValue.split(':')[1] || this.branchValue;
       this.curSelectData = this.branchesData.find((e) => {
-        if (this.branchValue.includes(e.name)) {
+        if (branchName === e.name) {
           return e;
         }
       });

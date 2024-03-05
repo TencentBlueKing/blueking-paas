@@ -20,8 +20,10 @@ package reconcilers
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
@@ -54,7 +57,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	log.Info("OnGarbageCollection")
 
 	// our finalizer is present, so lets handle any external dependency
-	finished, err := r.hooksFinished(ctx, bkapp)
+	finished, err := r.allHooksFinishedOrTimeout(ctx, bkapp)
 	if err != nil {
 		metrics.IncHooksFinishedFailures(bkapp)
 		return r.Result.WithError(errors.Wrap(err, "failed to check hook status"))
@@ -84,8 +87,12 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	return r.Result.End()
 }
 
-// 检查是否所有 Hooks 都执行完毕
-func (r *BkappFinalizer) hooksFinished(ctx context.Context, bkapp *paasv1alpha2.BkApp) (bool, error) {
+// allHooksFinishedOrTimeout 检查是否所有 Hooks 都执行完毕或执行超时
+func (r *BkappFinalizer) allHooksFinishedOrTimeout(
+	ctx context.Context,
+	bkapp *paasv1alpha2.BkApp,
+) (bool, error) {
+	log := logf.FromContext(ctx)
 	pods := &corev1.PodList{}
 	err := r.Client.List(
 		ctx, pods,
@@ -99,12 +106,24 @@ func (r *BkappFinalizer) hooksFinished(ctx context.Context, bkapp *paasv1alpha2.
 		return false, err
 	}
 
-	for _, pod := range pods.Items {
+	// 检查 PodList 里是否有仍然在执行中的 Pod
+	anyRunning := lo.ContainsBy(pods.Items, func(pod corev1.Pod) bool {
 		if pod.Status.Phase == corev1.PodRunning {
-			return false, nil
+			if podExecuteTimeoutThreshold(pod, resources.HookExecuteTimeoutThreshold) {
+				log.V(1).Info("pod have executed timeout, ignore", "pod-name", pod.GetName())
+				return false
+			}
+			return true
 		}
-	}
-	return true, nil
+		return false
+	})
+	return !anyRunning, nil
+}
+
+// podExecuteTimeoutThreshold 检查 pod 的运行时间是否超过阈值
+func podExecuteTimeoutThreshold(pod corev1.Pod, timeout time.Duration) bool {
+	return !pod.Status.StartTime.IsZero() &&
+		pod.Status.StartTime.Add(timeout).Before(time.Now())
 }
 
 // deleteResources delete all related resources of BkApp object

@@ -161,10 +161,18 @@
           :label="$t('操作')"
         >
           <template slot-scope="{ row }">
-            <bk-button :text="true" class="mr15" @click.stop="handleShowLogSideslider(row)">
+            <bk-button
+              text
+              class="mr15"
+              @click.stop="handleShowLogSideslider(row)"
+            >
               {{$t('部署日志')}}
             </bk-button>
-            <bk-button :text="true" @click.stop="handleShowYamlSideslider(row)">
+            <bk-button
+              text
+              :disabled="row.operation_type === 'offline'"
+              @click.stop="handleShowYamlSideslider(row)"
+            >
               {{$t('查看 YAML')}}
             </bk-button>
           </template>
@@ -477,7 +485,6 @@ export default {
      * 查看侧栏
      */
     handleShowYamlSideslider(row) {
-      // this.$refs.logSidesliderRef?.handleShowLog(row);
       this.yamlSidesliderConfig.isShow = true;
       this.getDeployVersionDetails(row);
     },
@@ -492,8 +499,8 @@ export default {
           environment: data.environment,
           revisionId: data.deployment.bkapp_revision_id,
         });
-        this.yamlData = res.deployed_value;
-      } catch (error) {
+        this.yamlData = res.json_value || {};
+      } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message,

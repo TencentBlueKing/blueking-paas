@@ -79,11 +79,15 @@ export default {
     }
   }
   .title-container {
+    position: relative;
+    justify-content: center;
     .title {
+      position: absolute;
+      left: 0;
+      top: 0;
       font-size: 16px;
       color: #313238;
       letter-spacing: 0;
-      line-height: 24px;
     }
     .icon-cls-back {
       color: #3a84ff;
@@ -102,6 +106,8 @@ export default {
       position: relative;
       padding: 0 24px;
       line-height: 52px;
+      font-size: 14px;
+      color: #63656E;
 
       &:hover {
         cursor: pointer;
@@ -116,7 +122,7 @@ export default {
           width: 100%;
           top: 0;
           left: 0;
-          height: 3px;
+          height: 1px;
           background: #3a84ff;
         }
       }

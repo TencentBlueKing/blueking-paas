@@ -64,7 +64,7 @@
                 v-model="curVersion.source_versions"
                 :disabled="false"
                 ext-cls="select-custom-cls"
-                :placeholder="$t('请选择版本，已经发布过的版本不可选择。')"
+                :placeholder="codeBranchPlaceholder"
                 searchable
                 :loading="isBranchLoading"
                 @change="handleSourceVersionChange"
@@ -326,6 +326,10 @@ export default {
     },
     isReleaseDisabled() {
       return this.isOfficialVersion ? this.isPending : false;
+    },
+    codeBranchPlaceholder() {
+      const revisionPolicy = this.curVersionData.revision_policy;
+      return revisionPolicy === 'disallow_releasing_source_version' ? this.$t('请选择代码分支，正在发布的代码分支不可选择') : this.$t('请选择版本，已经发布过的版本不可选择');
     },
   },
   watch: {

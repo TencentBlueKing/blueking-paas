@@ -157,7 +157,7 @@
               v-else
               :class="['dot', row.status]"
             />
-            <span>{{ $t(versionStatus[row.status]) || '--' }}</span>
+            <span>{{ $t(curVersionStatus[row.status]) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -165,21 +165,32 @@
           :width="localLanguage === 'en' ? 280 : 200"
         >
           <template slot-scope="{ row }">
+            <template v-if="isOfficialVersion">
+              <bk-button
+                theme="primary"
+                text
+                class="mr10"
+                @click="handleDetail(row)"
+              >
+                {{ $t('详情') }}
+              </bk-button>
+              <bk-button
+                theme="primary"
+                text
+                class="mr10"
+                @click="handleRelease(row)"
+              >
+                {{ $t('发布进度') }}
+              </bk-button>
+            </template>
             <bk-button
-              theme="primary"
-              text
-              class="mr10"
-              @click="handleDetail(row)"
-            >
-              {{ $t('详情') }}
-            </bk-button>
-            <bk-button
+              v-else
               theme="primary"
               text
               class="mr10"
               @click="handleRelease(row)"
             >
-              {{ $t('发布进度') }}
+              {{ $t('详情') }}
             </bk-button>
             <bk-button
               v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
@@ -268,10 +279,10 @@
                   :class="['dot', versionDetail.status]"
                 />
                 <span
-                  v-bk-tooltips="$t(versionStatus[versionDetail.status])"
+                  v-bk-tooltips="$t(curVersionStatus[versionDetail.status])"
                   class="pl5"
                 >
-                  {{ $t(versionStatus[versionDetail.status]) || '--' }}
+                  {{ $t(curVersionStatus[versionDetail.status]) || '--' }}
                 </span>
                 <template v-if="versionDetail.status === 'failed'">
                   （{{ $t('部署失败，查看') }}
@@ -302,7 +313,7 @@
 
 <script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import versionManageTitle from './comps/version-manage-title.vue';
-import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE } from '@/common/constants';
+import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE, PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
 import { formatDate } from '@/common/tools';
 import { clearFilter } from '@/common/utils';
 import auth from '@/auth';
@@ -328,7 +339,6 @@ export default {
         isShow: false,
       },
       versionDetailLoading: true,
-      versionStatus: PLUGIN_VERSION_STATUS,
       versionNumberType: VERSION_NUMBER_TYPE,
       filterCreator: '',
       filterStatus: [],
@@ -352,10 +362,10 @@ export default {
   computed: {
     statusFilters() {
       const statusList = [];
-      for (const key in this.versionStatus) {
+      for (const key in this.curVersionStatus) {
         statusList.push({
           value: key,
-          text: this.$t(this.versionStatus[key]),
+          text: this.$t(this.curVersionStatus[key]),
         });
       }
       return statusList;
@@ -375,6 +385,10 @@ export default {
     },
     isNewVersionDisabled() {
       return this.isOfficialVersion ? this.curIsPending : false;
+    },
+    // 当前版本状态
+    curVersionStatus() {
+      return this.isOfficialVersion ? PLUGIN_VERSION_STATUS : PLUGIN_TEST_VERSION_STATUS;
     },
   },
   watch: {

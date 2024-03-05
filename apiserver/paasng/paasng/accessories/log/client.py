@@ -95,14 +95,19 @@ class BKLogClient:
             "scenario_id": self.config.scenarioID,
             "body": search.to_dict(),
             "scroll": scroll,
+            # TODO: -1 是日志平台提供的跳过参数的占位值. 待日志平台移除对该参数的必要校验后, 移除该参数.
+            "storage_cluster_id": -1,
         }
         if scroll_id:
             data["scroll_id"] = scroll_id
             resp = self._call_api(self._esclient.esquery_scroll, data=data, timeout=timeout)
         else:
-            raise NotImplementedError(_("esquery_dsl 目前不支持 scroll 参数"))
             resp = self._call_api(self._esclient.esquery_dsl, data=data, timeout=timeout)
-        # TODO: 处理 scroll_id 不存在的报错
+
+        if not resp["result"]:
+            # 有可能是 scroll id 失效了, 反正抛异常就对了
+            raise ScanError(scroll_id, "Scroll request has failed on `{}`".format(resp["message"]))
+
         response = Response(search.search, resp["data"])
         total = resp["data"]["hits"]["total"]
         return response, total

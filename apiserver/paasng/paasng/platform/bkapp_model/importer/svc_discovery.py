@@ -36,7 +36,9 @@ def import_svc_discovery(module: Module, svc_disc: SvcDiscConfigSpec) -> CommonI
 
     _, created = SvcDiscConfig.objects.update_or_create(
         application=module.application,
-        bk_saas=svc_disc.bkSaaS,
+        defaults={
+            "bk_saas": svc_disc.bkSaaS,
+        },
     )
 
     ret.incr_by_created_flag(created)

@@ -25,7 +25,7 @@ from paasng.platform.bkapp_model.models import DomainResolution
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class Test__import_svc_discoverys:
+class Test__import_domain_resolution:
     def test_integrated(self, bk_module):
         manifest = {
             "spec": {

@@ -36,8 +36,10 @@ def import_domain_resolution(module: Module, domain_res: DomainResolutionSpec) -
 
     _, created = DomainResolution.objects.update_or_create(
         application=module.application,
-        nameservers=domain_res.nameservers,
-        host_aliases=domain_res.hostAliases,
+        defaults={
+            "nameservers": domain_res.nameservers,
+            "host_aliases": domain_res.hostAliases,
+        },
     )
     ret.incr_by_created_flag(created)
     return ret

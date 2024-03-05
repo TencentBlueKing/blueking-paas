@@ -210,7 +210,7 @@ class HostAliasSLZ(serializers.Serializer):
     hostnames = serializers.ListField(child=serializers.CharField())
 
 
-class DomainResolutionSLZ(serializers.Serializer):
+class DomainResolutionInputSLZ(serializers.Serializer):
     nameservers = serializers.ListField(child=serializers.IPAddressField(), required=False)
     hostAliases = serializers.ListField(child=HostAliasSLZ(), required=False)
 
@@ -229,4 +229,4 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     hooks = HooksInputSLZ(allow_null=True, default=None)
     envOverlay = EnvOverlayInputSLZ(required=False)
     svcDiscovery = ServiceDiscoveryInputSLZ(required=False)
-    domainResolution = DomainResolutionSLZ(required=False)
+    domainResolution = DomainResolutionInputSLZ(required=False)

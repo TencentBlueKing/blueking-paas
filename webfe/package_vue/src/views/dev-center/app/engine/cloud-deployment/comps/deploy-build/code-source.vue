@@ -47,7 +47,7 @@
             <bk-form-item :label="`${$t('初始化模板')}：`" v-if="isInitTemplate">
               <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
               <a
-                v-if="!isPluginApp"
+                v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc !== '--'"
                 class="download"
                 href="javascript: void(0);"
                 @click="handleDownloadTemplate"
@@ -197,6 +197,8 @@ export default {
         // 部署目录
         sourceDir: '',
       },
+      initTemplateDesc: '',
+      initTemplateType: '',
       gitExtendConfig: {
         // 蓝鲸 gitlab
         bk_gitlab: {
@@ -316,9 +318,9 @@ export default {
       this.fetchModuleInfo();
       // 获取代码源列表
       await this.fetchAccountAllowSourceControlType();
-
       // 获取代码检查详情
       this.getCodeInspection();
+      this.fetchLanguageInfo();
 
       const sourceControlTypes = this.sourceControlTypes.map(e => e.value);
       // 初始化 repo List
@@ -603,6 +605,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
+        this.initTemplateType = this.curAppModule.template_display_name;
 
         if (this.curAppModule.source_origin === 1
          || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
@@ -626,6 +629,26 @@ export default {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    async fetchLanguageInfo() {
+      try {
+        const res = await this.$store.dispatch('module/getLanguageInfo');
+        const { region } = this.curAppModule;
+
+        this.initTemplateDesc = '';
+        if (res[region] && res[region].languages) {
+          const languages = res[region].languages[this.initLanguage] || [];
+          const lanObj = languages.find(item => item.display_name === this.initTemplateType) || {};
+          this.initTemplateDesc = lanObj.description || '--';
+        }
+      } catch (res) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: res.detail || res.message || this.$t('接口异常'),
         });
       }
     },

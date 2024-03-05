@@ -315,10 +315,11 @@ export default {
   methods: {
     async init() {
       // 获取模块基本信息
-      await this.fetchModuleInfo();
+      await Promise.all([
+        this.fetchModuleInfo(),
+        this.fetchAccountAllowSourceControlType(),
+      ]);
       await this.fetchLanguageInfo();
-      // 获取代码源列表
-      await this.fetchAccountAllowSourceControlType();
       // 获取代码检查详情
       this.getCodeInspection();
 

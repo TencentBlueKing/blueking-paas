@@ -914,9 +914,11 @@ export default {
   },
   methods: {
     async init() {
-      await this.fetchLanguageInfo();
-      await this.fetchSourceControlTypesData();
-      await this.fetchAdvancedOptions();
+      await Promise.all([
+        this.fetchLanguageInfo(),
+        this.fetchSourceControlTypesData(),
+        this.fetchAdvancedOptions(),
+      ]);
       // 收集依赖
       const data = this.collectDependencies();
       this.initSidebarFormData(data);

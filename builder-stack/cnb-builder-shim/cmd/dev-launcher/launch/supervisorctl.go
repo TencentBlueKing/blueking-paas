@@ -162,7 +162,9 @@ func (ctl *SupervisorCtl) reload() error {
 }
 
 // validateEnvironment validates the environment variables for supervisor conf.
+//
 // see detail environment conf in http://supervisord.org/configuration.html
+// char " and % in environment value will cause supervisord to fail
 func validateEnvironment(procEnvs []appdesc.Env) error {
 	invalidChars := `"%`
 	invalidEnvNames := []string{}

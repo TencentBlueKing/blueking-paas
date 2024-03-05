@@ -353,6 +353,7 @@ export default {
       } finally {
         this.isPageLoading = false;
         this.isDataLoading = false;
+        this.$emit('close-content-loader');
       }
     },
 

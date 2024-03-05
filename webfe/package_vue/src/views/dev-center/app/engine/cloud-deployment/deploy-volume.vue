@@ -537,8 +537,12 @@ export default {
         this.addLoading = false;
       }
     },
-    // 取消新增或编辑挂载券
-    handleCancelVolume() {
+    // 取消编辑
+    async handleCancelVolume() {
+      const isClosed = await this.handleBeforeClose();
+      if (!isClosed) {
+        return;
+      }
       this.volumeDefaultSettings.isShow = false;
     },
     // 转换数据格式

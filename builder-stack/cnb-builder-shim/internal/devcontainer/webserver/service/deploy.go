@@ -202,14 +202,12 @@ func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 		oldFilePath := path.Join(oldDir, fileName)
 		newFilePath := path.Join(newDir, fileName)
 
-		_, oldErr := os.Stat(oldFilePath)
 		_, newErr := os.Stat(newFilePath)
 
 		// ignore if build dependent file does not exist
-		if os.IsNotExist(oldErr) && os.IsNotExist(newErr) {
+		if os.IsNotExist(newErr) {
 			continue
 		}
-
 		// 根据目前 requirements.txt, Aptfile, runtime.txt 文件特点, 使用 SortedCompareFile 进行文件比较
 		// TODO 针对不同的依赖文件, 提供更准确的比较方案
 		eq, err := utils.SortedCompareFile(oldFilePath, newFilePath)

@@ -63,7 +63,7 @@ class Hook:
         """
         if isinstance(self.command, str):
             return self.command
-        return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
+        return (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
 
 
 class HookList(List[Hook]):

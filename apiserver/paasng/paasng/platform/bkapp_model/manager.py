@@ -293,7 +293,7 @@ def sync_hooks(module: Module, hooks: HookList):
 
     for hook in hooks:
         if hook.enabled:
-            module.deploy_hooks.enable_hook(type_=hook.type, proc_command=hook.command)
+            module.deploy_hooks.enable_hook(type_=hook.type, proc_command=hook.get_proc_command())
             # Move out from the index
             existing_index.pop(hook.type, None)
 

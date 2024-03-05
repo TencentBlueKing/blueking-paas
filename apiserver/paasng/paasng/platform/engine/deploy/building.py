@@ -38,7 +38,7 @@ from paasng.platform.declarative.exceptions import (
     ControllerError,
     DescriptionValidationError,
 )
-from paasng.platform.declarative.handlers import AppDescriptionHandler
+from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler
 from paasng.platform.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
@@ -183,7 +183,7 @@ class BaseBuilder(DeployStep):
             return None
 
         handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
-        if handler is None or not isinstance(handler, AppDescriptionHandler):
+        if handler is None or not isinstance(handler, (AppDescriptionHandler, CNativeAppDescriptionHandler)):
             raise AppDescriptionNotFoundError("No valid app description file found.")
 
         return handler.handle_deployment(self.deployment)

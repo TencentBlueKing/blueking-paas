@@ -32,7 +32,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler, PerformResult
+from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler, PerformResult
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
@@ -180,7 +180,7 @@ class ImageReleaseMgr(DeployStep):
             logger.debug("No valid app description file found.")
             return None
 
-        if not isinstance(handler, AppDescriptionHandler):
+        if not isinstance(handler, (AppDescriptionHandler, CNativeAppDescriptionHandler)):
             logger.debug(
                 "Currently only runtime configs such as environment variables declared in app_desc.yaml are applied."
             )

@@ -9,7 +9,7 @@
 >   # 因此对于 beego 框架, 如未指定 GO_INSTALL_PACKAGE_SPEC, 默认使用应用名作为构建入口
 >   if [ "${GO_BKAPP_FRAMEWORK}" == "1" ] && [ -z "${GO_INSTALL_PACKAGE_SPEC}" ]; then
 >     echo ${BKPAAS_APP_ID}
->   elif
+>   else
 >     # For an explanation of what this is doing, see https://dave.cheney.net/2014/09/14/go-list-your-swiss-army-knife
 >     go list -f '{{ if eq .Name "main" }} {{.ImportPath}} {{ end }}' ./...
 >   fi

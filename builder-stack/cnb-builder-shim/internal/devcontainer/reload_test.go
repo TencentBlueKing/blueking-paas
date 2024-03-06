@@ -89,7 +89,7 @@ var _ = Describe("Test ReloadResultFile", func() {
 		reloadID := uuid.NewString()
 		expectedLog := "build done..."
 
-		os.WriteFile(filepath.Join(ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
+		_ = os.WriteFile(filepath.Join(ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
 
 		log, _ := storage.ReadLog(reloadID)
 		Expect(log).To(Equal(expectedLog))

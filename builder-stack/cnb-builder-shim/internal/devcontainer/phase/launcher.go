@@ -23,8 +23,10 @@ import (
 	"os/exec"
 )
 
+// DefaultDevLauncherPath TODO
 const DefaultDevLauncherPath = "/cnb/devcontainer/bin/dev-launcher"
 
+// MakeLauncherCmd TODO
 func MakeLauncherCmd() *exec.Cmd {
 	cmd := exec.Command(DefaultDevLauncherPath)
 	cmd.Env = os.Environ()

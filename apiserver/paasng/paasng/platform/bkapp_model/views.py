@@ -305,7 +305,6 @@ class ManifestViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         serializer = ManifestSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # TODO: 当 manifest 提供时，检查 manifest 是否有变化
         manifest = serializer.validated_data.get("manifest")
 
         update_app_resource(application, module, manifest)
@@ -322,4 +321,4 @@ class ManifestViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
                 application=application, wl_app=env.wl_app, references=credential_refs
             )
 
-        return Response(status=status.HTTP_200_OK)
+        return Response(data=get_manifest(module), status=status.HTTP_200_OK)

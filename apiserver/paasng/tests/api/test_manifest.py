@@ -16,28 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
-from paasng.platform.bkapp_model.models import SvcDiscConfig
-from paasng.platform.modules.models import Module
-
-from .entities import CommonImportResult
 
 
-def import_svc_discovery(module: Module, svc_disc: SvcDiscConfigSpec) -> CommonImportResult:
-    """Import svc discovery relations, existing data that is not in the input list may be removed.
+class TestManifestViewSet:
+    def test_import(self, api_client, bk_app, bk_module, bk_stag_env):
+        url = (
+            f"/api/bkapps/applications/"
+            f"{bk_app.code}/modules/{bk_module.name}/environments/{bk_stag_env.environment}"
+            f"/bkapp_model/manifests/current/$"
+        )
 
-    :param svc_disc: SvcDiscConfig Object
-    :return: A result object.
-    """
-    ret = CommonImportResult()
-    if not svc_disc.bkSaaS:
-        ret.deleted_num = SvcDiscConfig.objects.filter(application=module.application).delete()
-        return ret
-
-    _, created = SvcDiscConfig.objects.update_or_create(
-        application=module.application,
-        defaults={"bk_saas": svc_disc.bkSaaS},
-    )
-
-    ret.incr_by_created_flag(created)
-    return ret
+        response = api_client.post(url)
+        print(response.data)
+        assert response.status_code == 200

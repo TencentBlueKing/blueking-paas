@@ -59,7 +59,7 @@ urlpatterns = [
         name="api.applications.domain_resolution",
     ),
     re_path(
-        make_app_pattern(r"/import_manifests/$", include_envs=True),
+        make_app_pattern(r"/bkapp_model/manifests/current/$", include_envs=True),
         views.ManifestViewSet.as_view({"post": "import_bkapp_models"}),
         name="api.cnative.import_manifests",
     ),

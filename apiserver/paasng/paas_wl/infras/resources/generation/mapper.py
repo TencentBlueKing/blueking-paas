@@ -17,19 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from contextlib import contextmanager
 from dataclasses import dataclass
-from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Protocol, Tuple, Type, TypeVar, Union
+from typing import Any, Optional, Protocol, Type, Union
 
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.resources.base.kres import BaseKresource, KDeployment, KPod, KReplicaSet
+from paas_wl.bk_app.applications.models import Release, WlApp
 from paas_wl.utils.command import get_command_name
-
-if TYPE_CHECKING:
-    from paas_wl.infras.resources.base.base import EnhancedApiClient
-
-MapperResource = TypeVar("MapperResource", bound=BaseKresource)
 
 logger = logging.getLogger(__name__)
 
@@ -43,152 +35,50 @@ class Process(Protocol):
     runtime: Any
 
 
-class Mapper(Generic[MapperResource]):
-    """映射器，用于将 WlApp 映射到 k8s 资源"""
+class ResourceIdentifiers:
+    """A class that stores the identifiers for kubernetes resources, such as name, labels."""
 
-    # 主要映射两种东西：
-    # - 属性值
-    # - 具体到 k8s 的行为
-
-    # 前者是简单的名字转换，类似 v1 pod 名称是 xxx, v2 pod 名称是 yyy
-    # 后者是行为的不同: v1 pod 通过 get() 方法获取(from NameBasedOperations),
-    #                v2 pod 则是通过 list() 获取(from LabelBasedOperations)
-    # 这里的行为映射，并不只是 kres 的等量替换，而是在 kres 上的一层封装
-
-    kres_class: Type[MapperResource]
-
-    def __init__(self, process: "Union[Process, MapperProcConfig]", client: Optional["EnhancedApiClient"] = None):
+    def __init__(self, process: "Union[Process, MapperProcConfig]"):
         if not isinstance(process, MapperProcConfig):
-            _proc_config = get_mapper_proc_config(process)
+            _proc_config = _to_mapper_proc_config(process)
             if not _proc_config:
                 raise TypeError("process argument is invalid")
         else:
             _proc_config = process
 
         self.proc_config: "MapperProcConfig" = _proc_config
-        self.client = client
 
-    ##############
-    # attributes #
-    ##############
     @property
-    def name(self) -> str:
-        """获取资源名"""
+    def pod_name(self) -> str:
+        """The name of pod resource."""
         raise NotImplementedError
 
     @property
-    def labels(self) -> dict:
-        """创建该资源时添加的 labels"""
+    def deployment_name(self) -> str:
+        """The name of deployment resource."""
         raise NotImplementedError
 
     @property
     def match_labels(self) -> dict:
-        """用于匹配该资源时使用的 labels"""
+        """The labels for matching the pods."""
         raise NotImplementedError
 
     @property
     def pod_selector(self) -> str:
-        """用户匹配 pod 的选择器"""
+        """The labels for selecting the pods, used by services."""
         raise NotImplementedError
 
     @property
-    def namespace(self):
-        """对于目前所有资源，namespace 都和 process 保持一致"""
-        return self.proc_config.app.namespace
-
-
-class CallThroughKresMapper(Mapper, Generic[MapperResource]):
-    """针对特定版本，只需要代理指向 kres 请求"""
-
-    @contextmanager
-    def kres(self):
-        """Return kres object as a context manager which was initialized with kubernetes client, will close all
-        connection automatically when exit to avoid connections leaking.
-        """
-        if self.client is None:
-            raise ValueError("client is required when calling kres")
-
-        with self.client:
-            yield self.kres_class(self.client)
-
-    def _kres_call_through(self, method: str, use_label_based: bool = False) -> Callable:
-        with self.kres() as target_obj:
-            if use_label_based:
-                return getattr(target_obj.ops_label, method)
-            else:
-                return getattr(target_obj, method)
-
-    def get(self) -> MapperResource:
-        """get 方法快捷注入"""
-        return self._kres_call_through("get")(name=self.name, namespace=self.namespace)
-
-    def create(self, body) -> MapperResource:
-        """get 方法快捷注入"""
-        return self._kres_call_through("create")(name=self.name, namespace=self.namespace, body=body)
-
-    def replace_or_patch(self, body) -> MapperResource:
-        """replace_or_patch 方法快捷注入"""
-        return self._kres_call_through("replace_or_patch")(body=body, name=self.name, namespace=self.namespace)
-
-    def create_or_update(self, body, update_method: str = "replace") -> Tuple[MapperResource, bool]:
-        """create_or_update 方法快捷注入"""
-        return self._kres_call_through("create_or_update")(
-            body=body, update_method=update_method, name=self.name, namespace=self.namespace
-        )
-
-    def delete(self, non_grace_period: bool = True):
-        """delete 方法快捷注入"""
-        return self._kres_call_through("delete")(
-            non_grace_period=non_grace_period, name=self.name, namespace=self.namespace
-        )
-
-    def delete_individual(self):
-        """delete_individual 方法快捷注入"""
-        return self._kres_call_through("delete_individual", use_label_based=True)(
-            labels=self.match_labels, namespace=self.namespace
-        )
-
-    def delete_collection(self, non_grace_period: bool = True):
-        """delete_collection 方法快捷注入"""
-        return self._kres_call_through("delete_collection", use_label_based=True)(
-            labels=self.match_labels, namespace=self.namespace
-        )
-
-
-class MapperField(Generic[MapperResource]):
-    """MapperField 使用描述符协议为 CallThroughKresMapper 提供默认的 client 属性"""
-
-    def __init__(self, mapper_class: Type[CallThroughKresMapper[MapperResource]]):
-        self.mapper_class = mapper_class
-
-    def __call__(
-        self, instance: "MapperPack", process: Process, client: Optional["EnhancedApiClient"] = None
-    ) -> CallThroughKresMapper[MapperResource]:
-        return self.mapper_class(process=process, client=client or instance.client)
-
-    def __get__(
-        self, instance: Optional["MapperPack"], owner: Type["MapperPack"]
-    ) -> Callable[..., CallThroughKresMapper[MapperResource]]:
-        if instance is None:
-            return self
-        return partial(self.__call__, instance)
+    def labels(self) -> dict:
+        """The labels for creating workloads."""
+        raise NotImplementedError
 
 
 class MapperPack:
-    _ignore_command_name = False
     version: str
-    pod: MapperField[KPod]
-    deployment: MapperField[KDeployment]
-    replica_set: MapperField[KReplicaSet]
 
-    def __init__(self, client: Optional["EnhancedApiClient"] = None):
-        # client can only be used at CallThroughKresMapper
-        # never be used at Mapper
-        self.client = client
-
-    @property
-    def ignore_command_name(self) -> bool:
-        return self._ignore_command_name
+    # Set the identifier type in child classes
+    proc_resources: Type[ResourceIdentifiers] = ResourceIdentifiers
 
 
 @dataclass
@@ -203,7 +93,39 @@ class MapperProcConfig:
     command_name: str
 
 
-def get_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
+def get_mapper_proc_config(release: "Release", process_type: str) -> MapperProcConfig:
+    """Get the proc config object by release.
+
+    :param release: The release object.
+    :param process_type: The type of process.
+    """
+    version = release.version
+    command_name = get_command_name(release.get_procfile()[process_type])
+    return MapperProcConfig(app=release.app, type=process_type, version=version, command_name=command_name)
+
+
+def get_mapper_proc_config_latest(app: "WlApp", process_type: str, use_default: bool = True) -> MapperProcConfig:
+    """Get the proc config object, use the latest release object by default.
+
+    :param app: The app object.
+    :param process_type: The type of process.
+    :param use_default: Whether to use the default config if no release object found.
+    :raise: ValueError when no release object found and `use_default` is False.
+    """
+    # Get the command name by reading the latest successful release
+    try:
+        release = Release.objects.get_latest(app)
+        version = release.version
+        command_name = get_command_name(release.get_procfile()[process_type])
+    except (Release.DoesNotExist, KeyError):
+        logger.warning("Unable to get the deployment name of %s, app: %s", process_type, app)
+        if use_default:
+            return MapperProcConfig(app=app, type=process_type, version=1, command_name="")
+        raise ValueError(f"invalid proc type: {process_type}")
+    return MapperProcConfig(app=app, type=process_type, version=version, command_name=command_name)
+
+
+def _to_mapper_proc_config(proc: Process) -> Optional[MapperProcConfig]:
     """Try to get the proc_config object by the given process object.
 
     :param proc: The input process object.

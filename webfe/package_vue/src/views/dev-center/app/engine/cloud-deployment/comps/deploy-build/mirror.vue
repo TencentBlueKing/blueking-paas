@@ -264,21 +264,23 @@ import transferDrag from '@/mixins/transfer-drag';
 import { TAG_MAP } from '@/common/constants.js';
 import { cloneDeep } from 'lodash';
 
+const defaultMirrorData = {
+  tag_options: {
+    prefix: null,
+    with_version: false,
+    with_build_time: false,
+    with_commit_id: false,
+  },
+  docker_build_args: {},
+};
+
 export default {
   mixins: [appBaseMixin, transferDrag],
   data() {
     return {
       isMirrorEdit: false,
       switchLoading: false,
-      mirrorData: {
-        tag_options: {
-          prefix: null,
-          with_version: false,
-          with_build_time: false,
-          with_commit_id: false,
-        },
-        docker_build_args: {},
-      },
+      mirrorData: defaultMirrorData,
       // 构建方式
       constructMethod: [
         {
@@ -383,7 +385,7 @@ export default {
           moduleId: this.curModuleId,
         });
         this.$emit('set-build-method', results.build_method);
-        this.mirrorData = results || {};
+        this.mirrorData = results || defaultMirrorData;
         // 基础镜像
         if (!this.mirrorData.bp_stack_name) {
           this.mirrorData.bp_stack_name = '';
@@ -396,10 +398,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        setTimeout(() => {
-          this.$emit('close-content-loader', false);
-        }, 200);
       }
     },
 

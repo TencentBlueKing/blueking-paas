@@ -294,7 +294,7 @@ class MountSourceSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     name = serializers.CharField(max_length=63, required=True)
     source_type = serializers.SerializerMethodField(label=_("挂载卷资源类型"))
-    binded_modules = serializers.SerializerMethodField(label=_("已绑定模块"))
+    binded_modules = serializers.SerializerMethodField(label=_("已绑定模块信息"))
     data = serializers.JSONField(required=False)
     storage = serializers.CharField(required=False)
     storage_class_name = serializers.CharField(required=False)
@@ -313,4 +313,4 @@ class MountSourceSLZ(serializers.Serializer):
         mounts = Mount.objects.filter(
             source_config=controller.new_volume_source(obj.name),
         )
-        return [mount.name for mount in mounts]
+        return [(mount.name, mount.mount_path) for mount in mounts]

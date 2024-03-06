@@ -76,4 +76,8 @@ urlpatterns = [
         r"api/bkapps/applications/(?P<code>[^/]+)/mres/mount_sources/$",
         views_enduser.MountSourceViewSet.as_view({"get": "list", "post": "create", "delete": "destroy"}),
     ),
+    url(
+        r"api/bkapps/applications/(?P<code>[^/]+)/mres/storageclass/$",
+        views_enduser.StorageClassViewSet.as_view({"get": "check"}),
+    ),
 ]

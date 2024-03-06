@@ -540,7 +540,10 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         environment_name = validated_data.get("environment_name")
         source_type = validated_data.get("source_type")
-        storage = validated_data.get("pvc_source", {}).get("storage") or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
+        storage = (
+            validated_data.get("persistent_storage_source", {}).get("storage")
+            or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
+        )
 
         controller = init_source_controller(source_type)
         queryset = controller.create_by_app(application_id=app.id, environment_name=environment_name, storage=storage)

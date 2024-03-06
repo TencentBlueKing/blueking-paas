@@ -343,11 +343,12 @@ class TestMountSourceViewSet:
         request_body = {
             "environment_name": "stag",
             "source_type": "PersistentStorage",
-            "persistent_storage_source": {"storage": "1Gi"},
+            "persistent_storage_source": {"storage": "2Gi"},
         }
         response = api_client.post(url, request_body)
         assert response.status_code == 201
         assert response.data["environment_name"] == "stag"
+        assert response.data["storage"] == "2Gi"
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_destroy(self, api_client, bk_app):

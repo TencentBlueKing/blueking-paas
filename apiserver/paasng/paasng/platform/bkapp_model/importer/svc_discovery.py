@@ -24,7 +24,7 @@ from .entities import CommonImportResult
 
 
 def import_svc_discovery(module: Module, svc_disc: SvcDiscConfigSpec) -> CommonImportResult:
-    """Import mount relations, existing data that is not in the input list may be removed.
+    """Import svc discovery relations, existing data that is not in the input list may be removed.
 
     :param svc_disc: SvcDiscConfig Object
     :return: A result object.

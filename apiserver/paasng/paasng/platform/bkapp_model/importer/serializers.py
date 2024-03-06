@@ -192,7 +192,7 @@ class BkSaaSInputSLZ(serializers.Serializer):
     """Validate the `bkSaaS` field."""
 
     bkAppCode = serializers.CharField()
-    mouduleName = serializers.CharField(required=False, allow_null=True)
+    moduleName = serializers.CharField(required=False, allow_null=True)
 
 
 class ServiceDiscoveryInputSLZ(serializers.Serializer):

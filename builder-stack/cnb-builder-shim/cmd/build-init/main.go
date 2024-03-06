@@ -34,6 +34,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 const (
@@ -45,6 +46,8 @@ const (
 	OutputImageEnvVarKey = "OUTPUT_IMAGE"
 	// RunImageEnvVarKey The env var key that store runner image
 	RunImageEnvVarKey = "CNB_RUN_IMAGE"
+	// UseDockerDaemonEnvVarKey The env var key that store a flag meaning if use docker daemon
+	UseDockerDaemonEnvVarKey = "USE_DOCKER_DAEMON"
 	// SourceUrlEnvVarKey The env var key that store source url
 	SourceUrlEnvVarKey = "SOURCE_GET_URL"
 	// GitRevisionEnvVarKey The env var key that store git revision info
@@ -61,6 +64,7 @@ const (
 var (
 	outputImage = flag.String("output-image", os.Getenv(OutputImageEnvVarKey), "The name of image that will get created by the lifecycle.")
 	runImage    = flag.String("run-image", os.Getenv(RunImageEnvVarKey), "The base image from which application images are built.")
+	useDaemon   = flag.Bool("daemon", utils.BoolEnv(UseDockerDaemonEnvVarKey), "export image to docker daemon")
 
 	buildpacks = flag.String("buildpacks", os.Getenv(RequiredBuildpacksEnvVarKey), "Those buildpacks that will used by the lifecycle.")
 
@@ -101,24 +105,27 @@ func main() {
 	}
 
 	var (
-		keychain authn.Keychain
-		err      error
+		err error
 	)
 	logger.Info("Setup Build Environ")
 	logger.Info("Loading registry credentials...")
-	if keychain, err = dockercreds.DefaultKeychain(); err != nil {
-		logger.Error(err, "Failed to load registry credentials")
-		os.Exit(1)
-	}
 
-	logger.Info("Verifying accessibility to container image registry...")
-	if err = verifyOutputImageWritable(keychain); err != nil {
-		logger.Error(err, "OutputImage is not writable")
-		os.Exit(1)
-	}
-	if err = verifyRunImageReadable(keychain); err != nil {
-		logger.Error(err, "RunImage is not readable")
-		os.Exit(1)
+	if !*useDaemon {
+		logger.Info("Verifying accessibility to container image registry...")
+		var keychain authn.Keychain
+		if keychain, err = dockercreds.DefaultKeychain(); err != nil {
+			logger.Error(err, "Failed to load registry credentials from env")
+			os.Exit(1)
+		}
+
+		if err = verifyOutputImageWritable(keychain); err != nil {
+			logger.Error(err, "OutputImage is not writable")
+			os.Exit(1)
+		}
+		if err = verifyRunImageReadable(keychain); err != nil {
+			logger.Error(err, "RunImage is not readable")
+			os.Exit(1)
+		}
 	}
 
 	logger.Info("Initializing platform env...")

@@ -36,7 +36,7 @@ const EnvRegistryAuth = "CNB_REGISTRY_AUTH"
 func DefaultKeychain() (authn.Keychain, error) {
 	envKeychain, err := NewEnvKeychain(EnvRegistryAuth)
 	if err != nil {
-		return nil, err
+		return authn.DefaultKeychain, err
 	}
 	return authn.NewMultiKeychain(
 		envKeychain,

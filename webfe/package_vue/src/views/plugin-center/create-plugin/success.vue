@@ -21,7 +21,7 @@
               type="submit"
               @click="handlePageJump('test')"
             >
-              {{ $t('测试插件') }}
+              {{ isTestVersion ? $t('测试插件') : $t('新建版本') }}
             </bk-button>
           </p>
         </div>
@@ -128,6 +128,9 @@ export default {
     pluginTypeId() {
       return this.$route.params.pluginTypeId;
     },
+    isTestVersion() {
+      return this.pluginInfo.has_test_version;
+    },
   },
   created() {
     this.init();
@@ -151,8 +154,10 @@ export default {
       let name = key;
       let query = {};
       if (name === 'test') {
-        name = this.pluginInfo.has_test_version ? 'pluginVersionManager' : 'pluginVersionEditor';
-        query = { type: 'test' };
+        name = this.isTestVersion ? 'pluginVersionManager' : 'pluginVersionEditor';
+        query = {
+          type: this.isTestVersion ? 'test' : 'prod',
+        };
       }
       this.$router.push({
         name,

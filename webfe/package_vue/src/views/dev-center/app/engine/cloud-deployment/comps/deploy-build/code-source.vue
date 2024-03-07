@@ -47,7 +47,7 @@
             <bk-form-item :label="`${$t('初始化模板')}：`" v-if="isInitTemplate">
               <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
               <a
-                v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc !== '--'"
+                v-if="!curAppModule.repo?.linked_to_internal_svn && initTemplateDesc !== '--'"
                 class="download"
                 href="javascript: void(0);"
                 @click="handleDownloadTemplate"

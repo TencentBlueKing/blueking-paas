@@ -1189,6 +1189,8 @@ DOCKER_REGISTRY_CONFIG = settings.get(
     "DOCKER_REGISTRY_CONFIG", {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
 
+ENABLE_IMAGE_APP_BIND_REPO = settings.get("ENABLE_IMAGE_APP_BIND_REPO", False)
+
 # -----------------
 # 插件开发中心配置项
 # -----------------

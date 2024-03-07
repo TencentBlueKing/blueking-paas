@@ -4,23 +4,6 @@
 
 declare build
 
-# beego migration 目录需要使用 bee 命令编译
-# 使用 go mod 不指定入口会错误对 beego migration 进行编译导致失败
-# 框架提供的入口都是应用名，如果有特殊的，指定 GO_INSTALL_PACKAGE_SPEC 即可
-if [ "${GO_BKAPP_FRAMEWORK}" == "1" ] && [ -z "${GO_INSTALL_PACKAGE_SPEC}" ]; then
-    GO_INSTALL_PACKAGE_SPEC=${BKPAAS_APP_ID}
-    export GO_INSTALL_PACKAGE_SPEC
-fi
-
-# heroku buildpack 通过识别 go.mod 文件中类似：// +heroku goVersion go1.11
-# 这样的格式的注释来识别具体指定的 go 版本，但是事实上，go.mod 已经有类似：go 1.14
-# 这样的格式来描述版本信息，因此需要修改对应的规则：
-# 1. 如果指定了 GOVERSION 环境变量，使用该版本
-# 2. 如果 go.mod 有版本信息，使用该版本
-# 3. 如果 go.mod 有 +heroku goVersion 注释，使用该版本
-# 4. 使用默认版本
-sed -i "/info \"Detected go modules via go.mod\"/a GOVERSION=\${GOVERSION:-\$(awk '{ if (\$1 == \"go\" ) { print \$2; exit } }' \${goMOD})}" "${buildpack}/lib/common.sh"
-
 # 修复不正确的缩进
 sed -i 's/echo -e "\${GREEN}       \$@\${NC}"/echo -e "\${GREEN}\$@\${NC}"/' "${buildpack}/lib/common.sh"
 sed -i 's/echo -e "\${YELLOW} !!    \$@\${NC}"/echo -e "\${YELLOW}!! \$@\${NC}"/' "${buildpack}/lib/common.sh"
@@ -30,7 +13,7 @@ sed -i 's/echo -e >\&2 "\${RED} !!    \$@\${NC}"/echo -e >\&2 "\${RED}!! \$@\${N
 sed -i '/setGitCredHelper() {/a \    return' "${buildpack}/lib/common.sh"
 sed -i '/clearGitCredHelper() {/a \    return' "${buildpack}/lib/common.sh"
 
-# 创建到 /tmp/build 的软链接，兼容旧版应用
+# 创建到 /tmp/build 的软链接，兼容 legacy-builder(PaaS V2)
 if [ ! -e /tmp/build ]; then
     ln -sf "${build}" /tmp/build
 fi

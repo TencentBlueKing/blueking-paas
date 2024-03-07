@@ -64,12 +64,8 @@ def init_model_resource(bk_app, bk_module, random_resource_name):
 
 class TestManifestViewSet:
     def test_import(self, api_client, bk_app, bk_module, bk_stag_env, init_model_resource, base_manifest):
-        url = (
-            f"/api/bkapps/applications/"
-            f"{bk_app.code}/modules/{bk_module.name}/envs/{bk_stag_env.environment}/"
-            f"bkapp_model/manifests/current/"
-        )
+        url = f"/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/" f"bkapp_model/manifests/current/"
 
-        response = api_client.post(url, {"manifest": base_manifest})
+        response = api_client.put(url, {"manifest": base_manifest})
         assert response.data[0]["metadata"]["name"] == bk_app.code
         assert response.status_code == 200

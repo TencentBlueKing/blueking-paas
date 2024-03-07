@@ -30,11 +30,8 @@ from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
-from paas_wl.bk_app.cnative.specs.credentials import get_references, validate_references
-from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.bk_app.cnative.specs.models import update_app_resource
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -108,9 +105,22 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             return Response(get_manifest(module))
 
     def replace(self, request, code, module_name):
-        """替换当前模块的蓝鲸应用模型数据。"""
-        # TODO: Add logics
-        return Response({})
+        """通过 manifest 更新应用模型资源"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+
+        serializer = ManifestSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        manifest = serializer.validated_data.get("manifest")
+
+        update_app_resource(application, module, manifest)
+        try:
+            import_manifest(module, manifest)
+        except Exception as e:
+            raise error_codes.IMPORT_MANIFEST_FAILED.f(str(e))
+
+        return Response(data=get_manifest(module), status=status.HTTP_200_OK)
 
 
 class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -291,37 +301,3 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
 
         domain_resolution.refresh_from_db()
         return Response(DomainResolutionSLZ(domain_resolution).data, status=status.HTTP_200_OK)
-
-
-class ManifestViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
-    def import_bkapp_models(self, request, code, module_name, environment):
-        """通过 manifest 更新应用模型资源"""
-        application = self.get_application()
-        module = self.get_module_via_path()
-        env = self.get_env_via_path()
-
-        serializer = ManifestSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        manifest = serializer.validated_data.get("manifest")
-
-        update_app_resource(application, module, manifest)
-        try:
-            import_manifest(module, manifest)
-        except Exception as e:
-            raise error_codes.IMPORT_MANIFEST_FAILED.f(str(e))
-
-        try:
-            credential_refs = get_references(manifest)
-            validate_references(application, credential_refs)
-        except InvalidImageCredentials:
-            raise error_codes.IMPORT_MANIFEST_FAILED.f("invalid image-credentials")
-        # flush credentials if needed
-        if credential_refs:
-            AppImageCredential.objects.flush_from_refs(
-                application=application, wl_app=env.wl_app, references=credential_refs
-            )
-
-        return Response(data=get_manifest(module), status=status.HTTP_200_OK)

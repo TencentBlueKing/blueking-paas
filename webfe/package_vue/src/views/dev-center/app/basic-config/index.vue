@@ -24,8 +24,9 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      active: 'url',
+      active: 'storage',
       routeIndex: 0,
+      isPersistentStorage: true,
     };
   },
   computed: {
@@ -33,20 +34,21 @@ export default {
       return this.curAppInfo.web_config.engine_enabled;
     },
     panels() {
-      // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
-      if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
-        return [
-          { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
-          { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
-          { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
-        ];
-      }
-      return [
+      let panels = [
+        { name: 'storage', label: this.$t('持久存储'), routeName: 'appPersistentStorage' },
         { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
         { name: 'appMobileMarket', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
         { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
         { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
       ];
+      // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
+      if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
+        panels = panels.filter(tab => tab.name !== 'appMobileMarket');
+      }
+      if (!this.isCloudNativeApp || !this.isPersistentStorage) {
+        panels = panels.filter(tab => tab.name !== 'storage');
+      }
+      return panels;
     },
   },
   watch: {
@@ -56,6 +58,9 @@ export default {
       },
       immediate: true,
     },
+  },
+  created() {
+    this.getPersistentStorageFeatureToggle();
   },
   methods: {
     handleTabChange(name) {
@@ -78,6 +83,21 @@ export default {
 
     goBack() {
       this.$router.go(-1);
+    },
+
+    async getPersistentStorageFeatureToggle() {
+      try {
+        const res = await this.$store.dispatch('persistentStorage/getPersistentStorageFeatureToggle', {
+          appCode: this.appCode,
+        });
+        this.isPersistentStorage = res || false;
+        this.handleTabChange(res ? 'storage' : 'market');
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };

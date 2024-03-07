@@ -182,6 +182,11 @@ const codeReview = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev
 const appMarket = () => import(/* webpackChunkName: 'app-market' */'@/views/dev-center/app/market').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
+
+const appPersistentStorage = () => import(/* webpackChunkName: 'app-market' */'@/views/dev-center/app/market/persistent-storage').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const appMobileMarket = () => import(/* webpackChunkName: 'app-market' */'@/views/dev-center/app/market/mobile-market').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -468,9 +473,17 @@ const router = new Router({
           component: appConfigs,
           name: 'appConfigs',
           redirect: {
-            name: 'appMarket',
+            name: 'appPersistentStorage',
           },
           children: [
+            {
+              path: 'storage',
+              component: appPersistentStorage,
+              name: 'appPersistentStorage',
+              meta: {
+                module: 'storage',
+              },
+            },
             {
               path: 'market',
               component: appMarket,

@@ -45,11 +45,11 @@ class Migration(migrations.Migration):
                 ("res_summary", models.JSONField(default=dict, verbose_name="资源使用详情汇总")),
                 ("pv", models.BigIntegerField(default=0, verbose_name="近 30 天页面访问量")),
                 ("uv", models.BigIntegerField(default=0, verbose_name="近 30 天访问用户数")),
-                ("last_deployed_at", models.DateTimeField(null=True, verbose_name="最新部署时间")),
-                ("last_deployer", models.CharField(max_length=128, null=True, verbose_name="最新部署人")),
-                ("last_operated_at", models.DateTimeField(null=True, verbose_name="最新操作时间")),
-                ("last_operator", models.CharField(max_length=128, null=True, verbose_name="最新操作人")),
-                ("last_operation", models.CharField(max_length=128, null=True, verbose_name="最新操作内容")),
+                ("latest_deployed_at", models.DateTimeField(null=True, verbose_name="最新部署时间")),
+                ("latest_deployer", models.CharField(max_length=128, null=True, verbose_name="最新部署人")),
+                ("latest_operated_at", models.DateTimeField(null=True, verbose_name="最新操作时间")),
+                ("latest_operator", models.CharField(max_length=128, null=True, verbose_name="最新操作人")),
+                ("latest_operation", models.CharField(max_length=128, null=True, verbose_name="最新操作内容")),
                 (
                     "issue_type",
                     models.CharField(

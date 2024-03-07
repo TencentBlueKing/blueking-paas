@@ -23,8 +23,8 @@ from django.utils.translation import gettext_lazy as _
 class EmailReceiverType(str, StructuredEnum):
     """邮件接收者类型"""
 
-    PLAT_MANAGER = EnumField("plat_manager", label=_("平台管理员"))
-    APP_MANAGER = EnumField("app_manager", label=_("应用管理员"))
+    PLAT_ADMIN = EnumField("plat_admin", label=_("平台管理员"))
+    APP_ADMIN = EnumField("app_admin", label=_("应用管理员"))
 
 
 class OperationIssueType(str, StructuredEnum):

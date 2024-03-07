@@ -83,11 +83,11 @@ def _update_or_create_operation_report(app: Application):
                 total_uv += resp["result"]["results"]["uv"]
 
     # 最近部署记录
-    last_deployment = (
+    latest_deployment = (
         Deployment.objects.filter(app_environment__application__code=app.code).order_by("-created").first()
     )
     # 最新的操作记录
-    last_operation = Operation.objects.filter(application=app).order_by("-created").first()
+    latest_operation = Operation.objects.filter(application=app).order_by("-created").first()
 
     defaults = {
         "cpu_requests": cpu_requests,
@@ -99,11 +99,11 @@ def _update_or_create_operation_report(app: Application):
         "res_summary": asdict(summary),
         "pv": total_pv,
         "uv": total_uv,
-        "last_deployed_at": last_deployment.created if last_deployment else None,
-        "last_deployer": get_username_by_bkpaas_user_id(last_deployment.operator) if last_deployment else None,
-        "last_operated_at": last_operation.created if last_operation else None,
-        "last_operator": last_operation.get_operator() if last_operation else None,
-        "last_operation": last_operation.get_operate_display() if last_operation else None,
+        "latest_deployed_at": latest_deployment.created if latest_deployment else None,
+        "latest_deployer": get_username_by_bkpaas_user_id(latest_deployment.operator) if latest_deployment else None,
+        "latest_operated_at": latest_operation.created if latest_operation else None,
+        "latest_operator": latest_operation.get_operator() if latest_operation else None,
+        "latest_operation": latest_operation.get_operate_display() if latest_operation else None,
         "collected_at": timezone.now(),
     }
     issue_type, issues = AppOperationEvaluator(app).evaluate(defaults)
@@ -132,4 +132,4 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
 
     # 根据配置判断是否发送报告邮件给到平台管理员
     if settings.ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE:
-        AppOperationReportNotifier().send(EmailReceiverType.PLAT_MANAGER, settings.BKPAAS_PLATFORM_MANAGERS)
+        AppOperationReportNotifier().send(EmailReceiverType.PLAT_ADMIN, settings.BKPAAS_PLATFORM_MANAGERS)

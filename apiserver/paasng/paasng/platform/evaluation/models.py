@@ -38,11 +38,11 @@ class AppOperationReport(models.Model):
     pv = models.BigIntegerField(verbose_name="近 30 天页面访问量", default=0)
     uv = models.BigIntegerField(verbose_name="近 30 天访问用户数", default=0)
     # 运维操作
-    last_deployed_at = models.DateTimeField(verbose_name="最新部署时间", null=True)
-    last_deployer = models.CharField(verbose_name="最新部署人", max_length=128, null=True)
-    last_operated_at = models.DateTimeField(verbose_name="最新操作时间", null=True)
-    last_operator = models.CharField(verbose_name="最新操作人", max_length=128, null=True)
-    last_operation = models.CharField(verbose_name="最新操作内容", max_length=128, null=True)
+    latest_deployed_at = models.DateTimeField(verbose_name="最新部署时间", null=True)
+    latest_deployer = models.CharField(verbose_name="最新部署人", max_length=128, null=True)
+    latest_operated_at = models.DateTimeField(verbose_name="最新操作时间", null=True)
+    latest_operator = models.CharField(verbose_name="最新操作人", max_length=128, null=True)
+    latest_operation = models.CharField(verbose_name="最新操作内容", max_length=128, null=True)
     # 汇总
     issue_type = models.CharField(verbose_name="问题类型", default=OperationIssueType.NONE, max_length=32)
     issues = models.JSONField(verbose_name="问题详情", default=list)

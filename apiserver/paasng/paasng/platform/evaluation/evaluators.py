@@ -75,14 +75,14 @@ class AppOperationEvaluator:
         if not (metrics["pv"] and metrics["uv"]):
             issues.append("应用最近 30 天没有访问记录")
 
-        if not metrics["last_deployed_at"]:
+        if not metrics["latest_deployed_at"]:
             issues.append("应用未部署过")
-        elif metrics["last_deployed_at"] < timezone.now() - timedelta(days=180):
+        elif metrics["latest_deployed_at"] < timezone.now() - timedelta(days=180):
             issues.append("应用最近半年没有部署记录")
 
-        if not metrics["last_operated_at"]:
+        if not metrics["latest_operated_at"]:
             issues.append("应用没有操作记录")
-        elif metrics["last_operated_at"] < timezone.now() - timedelta(days=90):
+        elif metrics["latest_operated_at"] < timezone.now() - timedelta(days=90):
             issues.append("应用最近 3 个月没有操作记录")
 
         return issues

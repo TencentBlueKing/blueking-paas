@@ -65,8 +65,8 @@
         <bk-table-column label="CPU 使用率（7d)" prop="cpu_usage_avg" sortable="custom"></bk-table-column>
         <bk-table-column label="PV (30d)" prop="pv" sortable="custom"></bk-table-column>
         <bk-table-column label="UV (30d)" prop="uv" sortable="custom"></bk-table-column>
-        <bk-table-column label="最新操作人" prop="last_operator"></bk-table-column>
-        <bk-table-column label="最新操作时间" prop="last_operated_at"></bk-table-column>
+        <bk-table-column label="最新操作人" prop="latest_operator"></bk-table-column>
+        <bk-table-column label="最新操作时间" prop="latest_operated_at"></bk-table-column>
         <bk-table-column label="采集时间" prop="collected_at"></bk-table-column>
     </bk-table>
     <pagination
@@ -106,13 +106,13 @@
                 <bk-col><label class="m10">采集时间:</label> $[dialog.form.collected_at]</bk-col>
             </bk-row>
             <bk-row>
-                <bk-col><label class="m10">最新操作人:</label> $[dialog.form.last_operator || '--' ]</bk-col>
-                <bk-col><label class="m10">操作时间:</label> $[dialog.form.last_operated_at || '--' ]</bk-col>
-                <bk-col><label class="m10">内容:</label> $[dialog.form.last_operation || '--' ]</bk-col>
+                <bk-col><label class="m10">最新操作人:</label> $[dialog.form.latest_operator || '--' ]</bk-col>
+                <bk-col><label class="m10">操作时间:</label> $[dialog.form.latest_operated_at || '--' ]</bk-col>
+                <bk-col><label class="m10">内容:</label> $[dialog.form.latest_operation || '--' ]</bk-col>
             </bk-row>
             <bk-row>
-                <bk-col><label class="m10">最新部署人:</label> $[dialog.form.last_deployer || '--' ]</bk-col>
-                <bk-col><label class="m10">部署时间:</label> $[dialog.form.last_deployed_at || '--' ]</bk-col>
+                <bk-col><label class="m10">最新部署人:</label> $[dialog.form.latest_deployer || '--' ]</bk-col>
+                <bk-col><label class="m10">部署时间:</label> $[dialog.form.latest_deployed_at || '--' ]</bk-col>
                 <bk-col>
                     <label class="m10">
                         <a :href="appOverviewPageUrl(dialog.form.app_code)" target="_blank">跳转到应用概览</a>

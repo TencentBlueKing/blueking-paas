@@ -1,6 +1,7 @@
-13a14
+13a14,15
 > source "${buildpack}/hooks/pre-compile"
-428,429c429,437
+> 
+428,429c430,438
 <   # For an explanation of what this is doing, see https://dave.cheney.net/2014/09/14/go-list-your-swiss-army-knife
 <   go list -find "${FLAGS[@]}" -f '{{ if eq .Name "main" }} {{.ImportPath}} {{ end }}' ./...
 ---
@@ -13,7 +14,6 @@
 >     # For an explanation of what this is doing, see https://dave.cheney.net/2014/09/14/go-list-your-swiss-army-knife
 >     go list -f '{{ if eq .Name "main" }} {{.ImportPath}} {{ end }}' ./...
 >   fi
-718a727,728
+718a728,729
 > 
 > source "${buildpack}/hooks/post-compile"
-\ No newline at end of file

@@ -310,7 +310,7 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
 
         deployment_body: Dict[str, Any] = {
             "metadata": {
-                "labels": mapper_version.deployment(process=obj).labels,
+                "labels": mapper_version.proc_resources(process=obj).labels,
                 "name": obj.name,
                 "annotations": {PROCESS_MAPPER_VERSION_KEY: mapper_version.version},
             },
@@ -325,13 +325,13 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
                         "maxSurge": "75%",
                     },
                 },
-                "selector": {"matchLabels": mapper_version.deployment(process=obj).match_labels},
+                "selector": {"matchLabels": mapper_version.proc_resources(process=obj).match_labels},
                 "minReadySeconds": 1,
                 "template": {
                     "spec": self._construct_pod_body_specs(obj),
                     "metadata": {
-                        "labels": mapper_version.pod(process=obj).labels,
-                        "name": mapper_version.pod(process=obj).name,
+                        "labels": mapper_version.proc_resources(process=obj).labels,
+                        "name": mapper_version.proc_resources(process=obj).pod_name,
                     },
                 },
                 "replicas": obj.replicas,

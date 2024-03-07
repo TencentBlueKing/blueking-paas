@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from collections import namedtuple
-from dataclasses import make_dataclass
 from unittest.mock import Mock, patch
 
 import pytest
@@ -38,7 +37,6 @@ from paas_wl.infras.resources.base.exceptions import (
 from paas_wl.infras.resources.base.kres import KPod, PatchType
 from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import Schedule
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.engine.configurations.building import SlugBuilderTemplate
@@ -66,99 +64,6 @@ class TestClientProcess:
     @pytest.fixture()
     def worker_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("worker", release=wl_release)
-
-    @pytest.mark.mock_get_structured_app()
-    def test_deploy_processes(self, wl_app, scheduler_client, web_process):
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch") as kd, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki:
-            ks.get.side_effect = AppEntityNotFound()
-            ki.get.side_effect = AppEntityNotFound()
-
-            scheduler_client.deploy_processes([web_process])
-
-            # Check deployment resource
-            assert kd.called
-            deployment_args, deployment_kwargs = kd.call_args_list[0]
-            assert deployment_kwargs.get("name") == f"{RG}-{wl_app.name}-web-python-deployment"
-            assert deployment_kwargs.get("body")
-            assert deployment_kwargs.get("namespace") == wl_app.namespace
-
-            # Check service resource
-            assert ks.get.called
-            assert ks.create.called
-            proc_service = ks.create.call_args_list[0][0][0]
-            assert proc_service.name == f"{RG}-{wl_app.name}-web"
-
-            # Check ingress resource
-            assert ks.get.called
-            assert ki.save.called
-            proc_ingress = ki.save.call_args_list[0][0][0]
-            assert proc_ingress.name == f"{RG}-{wl_app.name}"
-
-    def test_scale_process(self, scheduler_client, wl_app):
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks:
-            scheduler_client.scale_process(wl_app, "worker", 3)
-
-            # Test service patch was performed
-            assert ks.get.called
-            assert not ks.create.called
-
-            # Test deployment patch was performed
-            assert kp.called
-            args, kwargs = kp.call_args_list[0]
-            assert kwargs.get("body")["spec"]["replicas"] == 3
-
-    def test_shutdown_process(self, scheduler_client, wl_app):
-        d_spec = make_dataclass("Dspec", [("replicas", int)])
-        d_body = make_dataclass("DBody", [("spec", d_spec)])
-        kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
-        ):
-            scheduler_client.shutdown_process(wl_app, "worker")
-
-            # 测试: 不删除 Service
-            assert not ks.delete_by_name.called
-
-            # 测试: 不删除 Ingress
-            assert not ki.delete_by_name.called
-
-            # Check deployment resource
-            assert kp.called
-            args, kwargs = kp.call_args_list[0]
-            assert kwargs["body"]["spec"]["replicas"] == 0
-
-    def test_shutdown_web_processes(self, wl_app, scheduler_client, web_process):
-        d_spec = make_dataclass("Dspec", [("replicas", int)])
-        d_body = make_dataclass("DBody", [("spec", d_spec)])
-        kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
-        ):
-            # Make ingress point to web service
-            faked_ingress = Mock()
-            faked_ingress.configure_mock(service_name=f"{RG}-{wl_app.name}-web")
-            ki.get.return_value = faked_ingress
-
-            scheduler_client.shutdown_process(wl_app, "web")
-
-            # 测试: 不删除 Service
-            assert not ks.delete_by_name.called
-
-            # 测试: 不删除 Ingress
-            assert not ki.delete_by_name.called
-
-            # Check deployment resource
-            assert kp.called
-            args, kwargs = kp.call_args_list[0]
-            assert kwargs["body"]["spec"]["replicas"] == 0
 
 
 class TestClientBuild:

@@ -11,24 +11,61 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
-// NewHookFinishedPredicate create an HookFinishedPredicate instance
-func NewHookFinishedPredicate() predicate.Predicate {
-	return &HookFinishedPredicate{
+// NewHookSuccessPredicate create an GenericHookPredicate instance which will handle hook run successful event.
+//
+// This predicate will skip all other events unless the pod is changing to healthy.
+// (healthy is meaning that the Pod is successfully complete or is Ready)
+//   - With this predicate, any successful hook will wake up the bkapp reconciler.
+//   - Only the pod state is changing to healthy will be handled, other update events will be ignored by this predicate
+//     even the pod have already healthy.
+func NewHookSuccessPredicate() predicate.Predicate {
+	return &GenericHookPredicate{
 		Logger: logf.Log,
+		updateFunc: func(oldPod, newPod *corev1.Pod) bool {
+			oldHealthStatus := kubestatus.CheckPodHealthStatus(oldPod)
+			newHealthStatus := kubestatus.CheckPodHealthStatus(newPod)
+
+			// the pod state is changing to ready
+			return (oldHealthStatus.Phase != paasv1alpha2.HealthHealthy) &&
+				(newHealthStatus.Phase == paasv1alpha2.HealthHealthy)
+		},
 	}
 }
 
-// HookFinishedPredicate implements an update predicate function on the Hook Pod being ready.
+// NewHookFailedPredicate create an GenericHookPredicate instance which will handle hook run failed event.
 //
-// This predicate will skip all other events unless the pod state is change from not-ready to ready.
-// * With this predicate, any successful hook will wake up the bkapp reconciler.
-type HookFinishedPredicate struct {
-	Logger logr.Logger
-	predicate.Funcs
+// This predicate will skip all other events unless the pod is changing to unhealthy.
+// (unhealthy is meaning that the Pod is restarting or is Failed)
+//   - With this predicate, any failed hook will wake up the bkapp reconciler.
+//   - Only the pod is changing to unhealthy will be handled, other update events will be ignored by this predicate
+//     even the pod have already unhealthy.
+func NewHookFailedPredicate() predicate.Predicate {
+	return &GenericHookPredicate{
+		Logger: logf.Log,
+		updateFunc: func(oldPod, newPod *corev1.Pod) bool {
+			oldHealthStatus := kubestatus.CheckPodHealthStatus(oldPod)
+			newHealthStatus := kubestatus.CheckPodHealthStatus(newPod)
+
+			// the pod state is changing to not-ready
+			return (oldHealthStatus.Phase != paasv1alpha2.HealthUnhealthy) &&
+				(newHealthStatus.Phase == paasv1alpha2.HealthUnhealthy)
+		},
+	}
 }
 
-// Update implements UpdateEvent filter for validating whether the pod state is change from not-ready to ready.
-func (p HookFinishedPredicate) Update(e event.UpdateEvent) bool {
+// GenericHookPredicate implements predicate functions on the Hook Pod status changed.
+//
+// This predicate will skip all other events not triggered by hook pod.
+type GenericHookPredicate struct {
+	predicate.Funcs
+
+	Logger logr.Logger
+	// updateFunc returns true if the Update event should be processed
+	updateFunc func(oldPod, newPod *corev1.Pod) bool
+}
+
+// Update returns true if the Update event should be processed.
+func (p GenericHookPredicate) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil {
 		p.Logger.Error(nil, "Update event has no old object to update", "event", e)
 		return false
@@ -43,10 +80,6 @@ func (p HookFinishedPredicate) Update(e event.UpdateEvent) bool {
 	}
 	oldPod := e.ObjectOld.(*corev1.Pod)
 	newPod := e.ObjectNew.(*corev1.Pod)
-	oldHealthStatus := kubestatus.CheckPodHealthStatus(oldPod)
-	newHealthStatus := kubestatus.CheckPodHealthStatus(newPod)
 
-	// the pod state is change from not-ready to ready
-	return (oldHealthStatus.Phase != paasv1alpha2.HealthHealthy) &&
-		(newHealthStatus.Phase == paasv1alpha2.HealthHealthy)
+	return p.updateFunc(oldPod, newPod)
 }

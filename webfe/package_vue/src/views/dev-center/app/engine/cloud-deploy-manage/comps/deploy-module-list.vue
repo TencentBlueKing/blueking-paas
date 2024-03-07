@@ -80,16 +80,19 @@
                   </div>
                 </div>
               </template>
-              <template v-else-if="deploymentInfo.state.deployment.latest">
+              <template v-else-if="!deploymentInfo.state.deployment.latest">
+                <div class="not-deployed">{{$t('暂未部署')}}</div>
+              </template>
+              <template v-else-if="isRemoved(deploymentInfo)">
+                <div class="not-deployed">{{$t('已下架')}}</div>
+              </template>
+              <template v-else>
                 <div class="not-deployed">
-                  <span v-bk-tooltips="{content: 'Error: ' + deploymentInfo.state.deployment.latest.err_detail}">
+                  <span v-bk-tooltips="{content: 'Error: ' + deploymentInfo.state.deployment?.latest?.err_detail}">
                     <i class="paasng-icon paasng-info-line info-icon mr5" />
                     {{ $t('暂未成功部署') }}
                   </span>
                 </div>
-              </template>
-              <template v-else>
-                <div class="not-deployed">{{$t('暂未部署')}}</div>
               </template>
             </div>
             <div class="right-btn">
@@ -526,6 +529,13 @@ export default {
       console.log('this.curDeploymentInfoItem.isExpand', this.curDeploymentInfoItem.isExpand);
       this.isDialogShowSideslider = false;
       this.handleRefresh();
+    },
+
+    // 判断当前模块是否已下架
+    isRemoved(data) {
+      const deploymentTime = data.state.deployment?.latest ? new Date(data.state.deployment.latest?.created) : 0;
+      const offlineTime = data.state.offline?.latest ? new Date(data.state.offline.latest?.created) : 0;
+      return offlineTime > deploymentTime;
     },
   },
 };

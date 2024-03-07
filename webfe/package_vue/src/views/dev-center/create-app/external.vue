@@ -165,7 +165,9 @@
 </template>
 <script>
 import _ from 'lodash';
+import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 export default {
+  mixins: [sidebarDiffMixin],
   data() {
     return {
       formLoading: false,
@@ -199,12 +201,9 @@ export default {
     this.fetchSpecsByRegion();
   },
   methods: {
-    submitCreateForm() {
-      if (!this.form.isValid()) {
-        return;
-      }
+    // 格式化参数
+    formatParams() {
       const formData = this.$form.serializeObject();
-
       const params = {
         region: this.regionChoose || formData.region,
         code: formData.code,
@@ -213,6 +212,14 @@ export default {
           source_tp_url: formData.source_tp_url,
         },
       };
+      return params;
+    },
+
+    submitCreateForm() {
+      if (!this.form.isValid()) {
+        return;
+      }
+      const params = this.formatParams();
 
       this.$http.post(`${BACKEND_URL}/api/bkapps/third-party/`, params).then((resp) => {
         const objectKey = `SourceInitResult${Math.random().toString(36)}`;
@@ -269,9 +276,19 @@ export default {
         });
         this.regionChoose = this.regionChoices[0].key;
         this.regionDescription = this.allRegionsSpecs[this.regionChoose].description;
+        // 收集初始依赖
+        this.$nextTick(() => {
+          const data = this.formatParams();
+          this.initSidebarFormData(data);
+        });
       });
     },
-    back() {
+    async back() {
+      // 内容变更输入弹窗提示
+      const isSwitching = await this.handleBeforeFunction();
+      if (!isSwitching) {
+        return;
+      }
       this.$router.push({
         name: 'myApplications',
       });
@@ -285,6 +302,10 @@ export default {
           this.errorFields.splice(this.errorFields.indexOf(key), 1);
         }
       }
+    },
+    async handleBeforeFunction() {
+      const data = this.formatParams();
+      return this.$isSidebarClosed(JSON.stringify(data));
     },
   },
 };

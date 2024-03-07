@@ -14,18 +14,16 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional
 
 from kubernetes.utils import parse_quantity
 
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_REQUEST_QUOTA_MAP
-from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paasng.misc.monitoring.metrics.constants import MetricsSeriesType
 from paasng.misc.monitoring.metrics.models import MetricsInstanceResult, get_resource_metric_manager
 from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName, MetricsType
 from paasng.platform.modules.models import Module
@@ -86,10 +84,7 @@ class ProcSummary:
     quota: Optional[ResQuota] = None
     cpu: Optional[ResSummary] = None
     memory: Optional[ResSummary] = None
-    suitable: bool = False
-    reasons: List[str] = field(default_factory=list)
     current_plan: Optional[str] = None
-    optimal_plan: Optional[str] = None
 
 
 @dataclass
@@ -110,8 +105,8 @@ class AppSummary:
     modules: List[ModuleSummary]
 
 
-class AppResQuotaEvaluator:
-    """评估应用资源历史使用数据"""
+class AppResQuotaCollector:
+    """应用资源历史使用数据采集器"""
 
     def __init__(self, app: Application, step: str = "15m", time_range_str: str = "7d"):
         self.app = app
@@ -124,7 +119,7 @@ class AppResQuotaEvaluator:
             for plan, quota in PLAN_TO_REQUEST_QUOTA_MAP.items()
         }
 
-    def evaluate(self) -> AppSummary:
+    def collect(self) -> AppSummary:
         module_summaries = [self._calc_module_summary(module) for module in self.app.modules.all()]
         return AppSummary(app_code=self.app.code, app_type=self.app.type, modules=module_summaries)
 
@@ -174,18 +169,13 @@ class AppResQuotaEvaluator:
         cpu_summary = self._calc_res_summary(cpu_metrics, trans_unit_func=lambda x: x * 1000)
         mem_summary = self._calc_res_summary(mem_metrics, trans_unit_func=lambda x: x / 1024 / 1024)
         res_quota = self._get_proc_res_quota(proc_spec)
-        suitable, reasons = self._evaluate_quota_suitable(res_quota, cpu_summary, mem_summary)
-        optimal_plan = self._recommend_resource_plan(cpu_summary, mem_summary)
         return ProcSummary(
             name=proc_spec["name"],
             replicas=replicas,
             quota=res_quota,
             cpu=cpu_summary,
             memory=mem_summary,
-            suitable=suitable,
-            reasons=reasons,
             current_plan=proc_spec["plan_name"],
-            optimal_plan=optimal_plan,
         )
 
     def _calc_res_summary(self, metrics: List, trans_unit_func: Callable) -> ResSummary:
@@ -235,76 +225,6 @@ class AppResQuotaEvaluator:
                 memory=self._format_memory(res_requests["memory"]),
             ),
         )
-
-    def _evaluate_quota_suitable(
-        self, res_quota: ResQuota, cpu_summary: ResSummary, mem_summary: ResSummary
-    ) -> Tuple[bool, List[str]]:
-        """评估资源套餐是否合适
-        :returns: 是否合适，不合适的原因
-        """
-        if not (cpu_summary.cnt and mem_summary.cnt):
-            return False, ["no metrics available"]
-
-        cpu_req = res_quota.requests.cpu
-        mem_req = res_quota.requests.memory
-        suitable, reasons = True, []
-
-        validators = [
-            {
-                "name": "cpu avg",
-                "value": cpu_summary.avg,
-                "request": cpu_req,
-                "tolerance": 0.2,
-            },
-            {
-                "name": "memory avg",
-                "value": mem_summary.avg,
-                "request": mem_req,
-                "tolerance": 0.2,
-            },
-            {
-                "name": "cpu p75",
-                "value": cpu_summary.p75,
-                "request": cpu_req,
-                "tolerance": 0.2,
-            },
-            {
-                "name": "memory p75",
-                "value": mem_summary.p75,
-                "request": mem_req,
-                "tolerance": 0.2,
-            },
-        ]
-
-        for v in validators:
-            if (abs(v["value"] - v["request"]) / v["request"]) > v["tolerance"]:  # type: ignore
-                reasons.append(f"{v['name']} intolerable ({v['tolerance']})")
-                suitable = False
-
-        return suitable, reasons
-
-    def _recommend_resource_plan(self, cpu_summary: ResSummary, mem_summary: ResSummary) -> Optional[str]:
-        """根据目前资源使用情况，推荐合适的应用的资源套餐方案"""
-        if self.app.type == ApplicationType.CLOUD_NATIVE:
-            for plan, (cpu, mem) in self.bkapp_plan_to_request_map.items():
-                if cpu > cpu_summary.avg and mem > mem_summary.avg:
-                    return plan
-
-        optimal_plan, min_dist = None, None
-        for p in ProcessSpecPlan.objects.all():
-            cpu_req = self._format_cpu(p.requests["cpu"])
-            mem_req = self._format_memory(p.requests["memory"])
-            cpu_limit = self._format_cpu(p.limits["cpu"])
-            mem_limit = self._format_memory(p.limits["memory"])
-
-            dist = abs(cpu_req - cpu_summary.avg) / cpu_req + abs(mem_req - mem_summary.avg) / mem_req
-            exceed_limit = (cpu_summary.max > cpu_limit) or (mem_summary.max > mem_limit)
-            # 尝试推荐最大资源使用量不超过限制，且平均使用量尽可能贴合 requests 的套餐方案
-            if not exceed_limit and (not min_dist or dist < min_dist):
-                optimal_plan = p.name
-                min_dist = dist
-
-        return optimal_plan
 
     @staticmethod
     def _format_cpu(cpu: str) -> int:

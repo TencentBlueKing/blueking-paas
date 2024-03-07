@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Generator, List, Optional
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
@@ -187,21 +186,3 @@ def get_resource_metric_manager(app: WlApp, process_type: str):
         metric_client=metric_client,
         bcs_cluster_id=cluster.bcs_cluster_id,
     )
-
-
-class AppResourceUsageReport(models.Model):
-    """应用资源使用报告"""
-
-    app_code = models.CharField(verbose_name="应用 Code", max_length=128, primary_key=True)
-    app_name = models.CharField(verbose_name="应用名称", max_length=128)
-    cpu_requests = models.IntegerField(verbose_name="CPU 请求", default=0)
-    mem_requests = models.IntegerField(verbose_name="内存请求", default=0)
-    cpu_limits = models.IntegerField(verbose_name="CPU 限制", default=0)
-    mem_limits = models.IntegerField(verbose_name="内存限制", default=0)
-    cpu_usage_avg = models.FloatField(verbose_name="CPU 平均使用率", default=0)
-    mem_usage_avg = models.FloatField(verbose_name="内存平均使用率", default=0)
-    pv = models.BigIntegerField(verbose_name="近一周页面访问量", default=0)
-    uv = models.BigIntegerField(verbose_name="近一周访问用户数", default=0)
-    summary = models.JSONField(verbose_name="资源使用详情汇总", default=dict)
-    operator = models.CharField(verbose_name="最后操作人", max_length=128, null=True)
-    collected_at = models.DateTimeField(verbose_name="数据统计时间")

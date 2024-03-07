@@ -19,7 +19,6 @@ package http_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -52,7 +51,7 @@ var _ = Describe("Http", func() {
 
 	BeforeEach(func() {
 		var err error
-		destDir, err = ioutil.TempDir("", "fetch_test")
+		destDir, err = os.MkdirTemp("", "fetch_test")
 		Expect(err).To(BeNil())
 
 	})
@@ -65,7 +64,7 @@ var _ = Describe("Http", func() {
 		err := fetcher.NewFetcher(logging.Default()).Fetch(sourceUrl, destDir)
 		Expect(err).To(BeNil())
 
-		content, err := ioutil.ReadFile(filepath.Join(destDir, "Procfile"))
+		content, err := os.ReadFile(filepath.Join(destDir, "Procfile"))
 		Expect(err).To(BeNil())
 		Expect(string(content)).To(Equal(expected))
 	},

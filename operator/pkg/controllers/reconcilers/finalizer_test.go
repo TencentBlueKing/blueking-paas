@@ -20,9 +20,11 @@ package reconcilers
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -34,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
 
@@ -100,10 +103,10 @@ var _ = Describe("Test BkappFinalizer", func() {
 		builder.WithScheme(scheme)
 	})
 
-	Context("test hooksFinished", func() {
+	Context("test allHooksFinishedOrTimeout", func() {
 		It("no any pods", func() {
 			r := NewBkappFinalizer(builder.Build())
-			finished, err := r.hooksFinished(context.Background(), bkapp)
+			finished, err := r.allHooksFinishedOrTimeout(context.Background(), bkapp)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(finished).To(BeTrue())
@@ -113,7 +116,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 			pod.Status.Phase = corev1.PodSucceeded
 			r := NewBkappFinalizer(builder.WithObjects(pod).Build())
 
-			finished, err := r.hooksFinished(context.Background(), bkapp)
+			finished, err := r.allHooksFinishedOrTimeout(context.Background(), bkapp)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(finished).To(BeTrue())
@@ -123,10 +126,21 @@ var _ = Describe("Test BkappFinalizer", func() {
 			pod.Status.Phase = corev1.PodRunning
 			r := NewBkappFinalizer(builder.WithObjects(pod).Build())
 
-			finished, err := r.hooksFinished(context.Background(), bkapp)
+			finished, err := r.allHooksFinishedOrTimeout(context.Background(), bkapp)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(finished).To(BeFalse())
+		})
+
+		It("with running pods but all is timeout", func() {
+			pod.Status.Phase = corev1.PodRunning
+			pod.Status.StartTime = lo.ToPtr(metav1.NewTime(time.Now().Add(-resources.HookExecuteTimeoutThreshold)))
+			r := NewBkappFinalizer(builder.WithObjects(pod).Build())
+
+			finished, err := r.allHooksFinishedOrTimeout(context.Background(), bkapp)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(finished).To(BeTrue())
 		})
 	})
 

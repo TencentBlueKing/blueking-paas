@@ -82,7 +82,7 @@ func (s *WebServer) Start() error {
 	return s.server.Run(s.env.DevServerAddr)
 }
 
-// ReadReloadEvents blocking read on reload event
+// ReadReloadEvent blocking read on reload event
 func (s *WebServer) ReadReloadEvent() (dc.AppReloadEvent, error) {
 	return <-s.ch, nil
 }

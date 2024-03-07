@@ -106,7 +106,7 @@ class AppSummary:
 
 
 class AppResQuotaCollector:
-    """评估应用资源历史使用数据"""
+    """应用资源历史使用数据采集器"""
 
     def __init__(self, app: Application, step: str = "15m", time_range_str: str = "7d"):
         self.app = app

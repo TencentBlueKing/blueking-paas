@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class EmployeeStatusProvider:
+class StaffStatusProvider:
     """提供员工状态"""
 
-    def is_active_employee(self, username: str) -> bool:
+    def is_active(self, username: str) -> bool:
         """判断员工是否在职"""
         # 员工状态各个公司不尽相同，这里默认都是在职
         # 定制化需要通过在 providers_ext 中实现同名类

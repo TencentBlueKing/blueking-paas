@@ -17,15 +17,16 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from datetime import timedelta
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Generator, List, Tuple
 
 from django.conf import settings
 from django.utils import timezone
 
 from paasng.infras.iam.helpers import fetch_application_members
 from paasng.platform.applications.models import Application
+from paasng.platform.evaluation.collectors import AppSummary, ProcSummary
 from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.providers import EmployeeStatusProvider
+from paasng.platform.evaluation.providers import StaffStatusProvider
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 
@@ -34,7 +35,7 @@ class AppOperationEvaluator:
 
     def __init__(self, app: Application):
         self.app = app
-        self.employee_status_provider = EmployeeStatusProvider()
+        self.staff_status_provider = StaffStatusProvider()
 
     def evaluate(self, metrics: Dict[str, Any]) -> Tuple[OperationIssueType, List[str]]:
         """评估应用运营情况"""
@@ -61,7 +62,7 @@ class AppOperationEvaluator:
         for m in members:
             if m in settings.BKPAAS_PLATFORM_MANAGERS:
                 continue
-            if self.employee_status_provider.is_active_employee(m):
+            if self.staff_status_provider.is_active(m):
                 return []
 
         # 对于不是平台管理员创建的应用，如果在职的成员只有管理员，则也认为是无主应用
@@ -92,18 +93,22 @@ class AppOperationEvaluator:
 
         # 平均内存使用率不超过 15% 的，需要检查内存最大使用量，如果不及配额的 1/2，应该提示缩容
         if metrics["mem_usage_avg"] and metrics["mem_usage_avg"] < 0.15:
-            for mod in metrics["res_summary"].modules:
-                for env, procs in [("stag", mod.stag_procs), ("prod", mod.prod_procs)]:
-                    for proc in procs:
-                        # 没有统计到内存数据的忽略
-                        if not (proc.quota and proc.memory):
-                            continue
+            for mod, env, proc in self._iter_procs(metrics["res_summary"]):
+                # 没有统计到内存数据的忽略
+                if not (proc.quota and proc.memory):
+                    continue
 
-                        if proc.quota.limits.memory / proc.memory.max < 2:
-                            issues.append(
-                                "应用平均内存使用率不超过 15%，"
-                                f"模块 {mod.module_name} 环境 {env} 进程 {proc.name} "
-                                "内存最大使用量未超过 Limits 的一半"
-                            )
+                if proc.quota.limits.memory / proc.memory.max < 2:
+                    issues.append(
+                        f"应用平均内存使用率不超过 15%，模块 {mod} 环境 {env} 进程 {proc.name} 内存最大使用量未超过 Limits 的一半",
+                    )
 
         return issues
+
+    @staticmethod
+    def _iter_procs(res_summary: AppSummary) -> Generator[Tuple[str, str, ProcSummary], None, None]:
+        """迭代所有的进程"""
+        for mod in res_summary.modules:
+            for env, procs in [("stag", mod.stag_procs), ("prod", mod.prod_procs)]:
+                for proc in procs:
+                    yield mod.module_name, env, proc

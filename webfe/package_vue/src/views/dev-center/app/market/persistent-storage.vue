@@ -180,8 +180,8 @@
             >
               <bk-radio-group v-model="createPersistentStorageData.capacity">
                 <bk-radio :value="'1Gi'">1Gi</bk-radio>
-                <bk-radio :value="'2Gi'">2Gi</bk-radio>
-                <bk-radio :value="'4Gi'">4Gi</bk-radio>
+                <bk-radio :value="'2Gi'" :disabled="preReleaseEnvironment">2Gi</bk-radio>
+                <bk-radio :value="'4Gi'" :disabled="preReleaseEnvironment">4Gi</bk-radio>
               </bk-radio-group>
               <p class="capacity-tips">{{ $t('容量无法更改，请合理评估容量') }}</p>
             </bk-form-item>
@@ -273,6 +273,9 @@ export default {
         '删除持久存储后无法恢复，目前有 {c} 个模块绑定了该存储，请确认影响',
         { c: this.curDeleteData.binded_modules.length },
       );
+    },
+    preReleaseEnvironment() {
+      return this.createPersistentStorageData.stage === 'stag';
     },
   },
   watch: {

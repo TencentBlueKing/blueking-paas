@@ -57,17 +57,17 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	log.Info("OnGarbageCollection")
 
 	// our finalizer is present, so lets handle any external dependency
-	finished, err := r.allHooksFinishedOrTimeout(ctx, bkapp)
+	canFinalizeHooks, err := r.allHooksFinishedOrTimeout(ctx, bkapp)
 	if err != nil {
 		metrics.IncHooksFinishedFailures(bkapp)
 		return r.Result.WithError(errors.Wrap(err, "failed to check hook status"))
 	}
-	if !finished {
+	if !canFinalizeHooks {
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               paasv1alpha2.AppAvailable,
 			Status:             metav1.ConditionFalse,
 			Reason:             "Terminating",
-			Message:            "Deletion request was issued, but hooks are not finished.",
+			Message:            "Deletion request was issued, but hooks are not canFinalizeHooks.",
 			ObservedGeneration: bkapp.Generation,
 		})
 		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
@@ -109,7 +109,7 @@ func (r *BkappFinalizer) allHooksFinishedOrTimeout(
 	// 检查 PodList 里是否有仍然在执行中的 Pod
 	anyRunning := lo.ContainsBy(pods.Items, func(pod corev1.Pod) bool {
 		if pod.Status.Phase == corev1.PodRunning {
-			if podExecuteTimeoutThreshold(pod, resources.HookExecuteTimeoutThreshold) {
+			if isPodExecTimeout(pod, resources.HookExecuteTimeoutThreshold) {
 				log.V(1).Info("pod have executed timeout, ignore", "pod-name", pod.GetName())
 				return false
 			}
@@ -120,8 +120,8 @@ func (r *BkappFinalizer) allHooksFinishedOrTimeout(
 	return !anyRunning, nil
 }
 
-// podExecuteTimeoutThreshold 检查 pod 的运行时间是否超过阈值
-func podExecuteTimeoutThreshold(pod corev1.Pod, timeout time.Duration) bool {
+// isPodExecTimeout 检查 pod 的运行时间是否超过阈值
+func isPodExecTimeout(pod corev1.Pod, timeout time.Duration) bool {
 	return !pod.Status.StartTime.IsZero() &&
 		pod.Status.StartTime.Add(timeout).Before(time.Now())
 }

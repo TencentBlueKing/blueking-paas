@@ -279,7 +279,7 @@ class ApplicationSLZ4Record(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ["id", "code", "name", "logo_url", "config_info"]
+        fields = ["id", "type", "code", "name", "logo_url", "config_info"]
 
 
 class MarketAppMinimalSLZ(serializers.Serializer):

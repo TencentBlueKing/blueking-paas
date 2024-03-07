@@ -61,3 +61,13 @@ repos:
         name: run make lint for "operator"
         entry: bash -c "cd operator && make lint"
         files: '^operator/'
+      - id: cnb-builder-shim-lint
+        language: system
+        name: run make lint for "builder-stack/cnb-builder-shim"
+        entry: bash -c "cd builder-stack/cnb-builder-shim && make lint"
+        files: '^builder-stack/cnb-builder-shim/'
+      - id: kaniko-shim-lint
+        language: system
+        name: run make lint for "builder-stack/kaniko-shim"
+        entry: bash -c "cd builder-stack/kaniko-shim && make lint"
+        files: '^builder-stack/kaniko-shim/'

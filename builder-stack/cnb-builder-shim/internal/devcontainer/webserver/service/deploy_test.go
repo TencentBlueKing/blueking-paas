@@ -89,9 +89,9 @@ var _ = Describe("Test DeployManager", func() {
 		})
 		It("Test get result", func() {
 			reloadID := uuid.NewString()
-			storage.WriteStatus(reloadID, dc.ReloadSuccess)
+			_ = storage.WriteStatus(reloadID, dc.ReloadSuccess)
 			expectedLog := "build done..."
-			os.WriteFile(filepath.Join(dc.ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
+			_ = os.WriteFile(filepath.Join(dc.ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
 
 			result, _ := m.Result(reloadID, false)
 			Expect(result.Status).To(Equal(dc.ReloadSuccess))

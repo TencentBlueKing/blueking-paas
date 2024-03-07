@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
@@ -23,54 +24,27 @@ from paas_wl.bk_app.cnative.specs.constants import (
     RESOURCE_TYPE_KEY,
     WLAPP_NAME_ANNO_KEY,
 )
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
-from paas_wl.infras.resources.base.kres import KDeployment, KPod, KReplicaSet
 from paas_wl.utils.basic import digest_if_length_exceeded
 
-from .mapper import CallThroughKresMapper, MapperField, MapperPack
+from .mapper import MapperPack, ResourceIdentifiers
 
 
-class PodMapper(CallThroughKresMapper[KPod]):
-    kres_class = KPod
+class V2ProcResIdentifiers(ResourceIdentifiers):
+    """Resource identifiers for process, v2"""
 
     @property
-    def name(self) -> str:
+    def deployment_name(self) -> str:
+        """The name of deployment."""
         return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
 
     @property
-    def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.proc_config.app.name}-{self.proc_config.type}", 63)
-
-    @property
-    def labels(self) -> dict:
-        mdata = get_metadata(self.proc_config.app)
-        return {
-            "pod_selector": self.pod_selector,
-            "release_version": str(self.proc_config.version),
-            "region": self.proc_config.app.region,
-            "app_code": mdata.get_paas_app_code(),
-            "module_name": mdata.module_name,
-            "env": mdata.environment,
-            "process_id": self.proc_config.type,
-            "category": "bkapp",
-            "mapper_version": "v2",
-            # 新 labels
-            BKAPP_CODE_ANNO_KEY: mdata.get_paas_app_code(),
-            MODULE_NAME_ANNO_KEY: mdata.module_name,
-            ENVIRONMENT_ANNO_KEY: mdata.environment,
-            WLAPP_NAME_ANNO_KEY: self.proc_config.app.name,
-            RESOURCE_TYPE_KEY: "process",
-        }
+    def pod_name(self) -> str:
+        """The name of pod."""
+        return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
 
     @property
     def match_labels(self) -> dict:
-        return dict(
-            pod_selector=self.pod_selector,
-        )
-
-
-class DeploymentMapper(CallThroughKresMapper[KDeployment]):
-    kres_class = KDeployment
+        return {"pod_selector": self.pod_selector}
 
     @property
     def pod_selector(self) -> str:
@@ -97,38 +71,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
             RESOURCE_TYPE_KEY: "process",
         }
 
-    @property
-    def match_labels(self) -> dict:
-        return dict(
-            pod_selector=self.pod_selector,
-        )
-
-    @property
-    def name(self) -> str:
-        return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
-
-
-class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
-    kres_class = KReplicaSet
-
-    @property
-    def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.proc_config.app.name}-{self.proc_config.type}", 63)
-
-    @property
-    def name(self) -> str:
-        return f"{self.proc_config.app.scheduler_safe_name}--{self.proc_config.type}"
-
-    @property
-    def match_labels(self) -> dict:
-        return dict(
-            pod_selector=self.pod_selector,
-        )
-
 
 class V2Mapper(MapperPack):
     version = "v2"
-    _ignore_command_name = True
-    pod: MapperField[KPod] = MapperField(PodMapper)
-    deployment: MapperField[KDeployment] = MapperField(DeploymentMapper)
-    replica_set: MapperField[KReplicaSet] = MapperField(ReplicaSetMapper)
+    proc_resources = V2ProcResIdentifiers

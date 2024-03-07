@@ -254,6 +254,7 @@ class BkAppStatus(BaseModel):
     observedGeneration: int = Field(default=0)
     conditions: List[MetaV1Condition] = Field(default_factory=list)
     lastUpdate: Optional[datetime.datetime]
+    deployId: str = ""
 
 
 class BkAppResource(BaseModel):

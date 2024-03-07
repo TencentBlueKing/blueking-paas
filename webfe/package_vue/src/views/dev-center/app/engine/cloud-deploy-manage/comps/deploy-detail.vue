@@ -97,10 +97,13 @@
                     :class="instance.rich_status"
                   >
                   </div>
-                  <span
-                    v-dashed="{disabled: instance.rich_status === 'Running'}"
-                    v-bk-tooltips="instance.state_message || ''">
-                    {{ instance.rich_status || '--' }}
+                  <span v-bk-tooltips="instance.state_message || ''">
+                    <em
+                      v-dashed="{disabled: instance.rich_status === 'Running'}"
+                      class="instance-item-status"
+                    >
+                      {{ instance.rich_status || '--' }}
+                    </em>
                   </span>
                 </div>
               </div>
@@ -1650,6 +1653,10 @@ export default {
             text-overflow: ellipsis;
             display: flex;
             align-items: center;
+          }
+
+          .instance-item-status {
+            padding-bottom: 2px;
           }
 
           // .hoverBackground {

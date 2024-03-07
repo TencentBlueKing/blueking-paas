@@ -27,6 +27,7 @@ from paasng.core.region.app import BuiltInEnvsRegionHelper
 from paasng.core.region.models import get_region
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv
@@ -73,7 +74,8 @@ def get_env_variables(
     result.update({"BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix()})
 
     # Part: insert blobstore env vars
-    result.update(generate_blobstore_env_vars(engine_app))
+    if env.application.type != ApplicationType.CLOUD_NATIVE:
+        result.update(generate_blobstore_env_vars(engine_app))
 
     # Part: user defined env vars
     # Q: Why don't we using engine_app directly to get ConfigVars?
@@ -214,41 +216,3 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
     envs_by_region_and_env = generate_env_vars_by_region_and_env(region, environment, config_vars_prefix)
 
     return {**app_info_envs, **runtime_envs, **bk_address_envs, **envs_by_region_and_env}
-
-
-def get_cnative_builtin_env_variables(
-    env: ModuleEnvironment, deployment: Optional[Deployment] = None
-) -> Dict[str, str]:
-    """Get env vars for current environment of cloud-native app, this will includes:
-    - built-in env vars
-    - env vars from services
-    - (optional) vars defined by deployment description file,for example app_desc.yaml
-
-    与普通应用获取环境变量 get_env_variables 的差异点有:
-    - 无对象存储相关环境变量
-        - generate_blobstore_env_vars(engine_app): BKREPO_CONF
-    - 无 sub domains/paths 相关环境变量:
-        - AppDefaultDomains(env).as_env_vars():BKPAAS_ENGINE_APP_DEFAULT_SUBDOMAINS
-        - AppDefaultSubpaths(env).as_env_vars():BKPAAS_SUB_PATH、BKPAAS_DEFAULT_SUBPATH_ADDRESS
-    TODO: 与 get_env_variables 合并
-    """
-    result = {}
-    engine_app = env.engine_app
-
-    # Part: Gather values from registered env variables providers, it has lowest priority
-    # Contains environment variables defined by users in yaml files
-    result.update(env_vars_providers.gather(env, deployment))
-
-    # Part: system-wide env vars
-    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
-
-    # Part: Address for bk_docs_center saas
-    result.update({"BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix()})
-
-    # Part: env vars shared from other modules
-    result.update(ServiceSharingManager(env.module).get_env_variables(env))
-
-    # Part: env vars provided by services
-    result.update(mixed_service_mgr.get_env_vars(engine_app))
-
-    return result

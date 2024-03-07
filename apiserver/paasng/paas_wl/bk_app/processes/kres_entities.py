@@ -143,7 +143,7 @@ class Process(AppEntity):
             ),
             resources=Resources(**config.resource_requirements.get(type_, {})),
         )
-        process.name = mapper_version.deployment(process=process).name
+        process.name = mapper_version.proc_resources(process=process).deployment_name
         return process
 
     @property

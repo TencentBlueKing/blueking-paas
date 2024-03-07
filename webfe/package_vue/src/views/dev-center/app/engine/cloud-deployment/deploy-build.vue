@@ -22,9 +22,16 @@
       </template>
       <template v-else>
         <!-- lesscode/smart应用 源码信息 -->
-        <packages-view v-if="isLesscodeApp || isSmartApp" />
+        <packages-view
+          v-if="isLesscodeApp || isSmartApp"
+          @close-content-loader="closeContentLoader"
+        />
         <!-- 代码源 -->
-        <code-source v-else :build-method="buildMethod" />
+        <code-source
+          v-else
+          :build-method="buildMethod"
+          @close-content-loader="closeContentLoader"
+        />
         <!-- 镜像信息 -->
         <mirror @close-content-loader="closeContentLoader" @set-build-method="setBuildMethod" />
       </template>

@@ -308,7 +308,10 @@ class ManifestViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         manifest = serializer.validated_data.get("manifest")
 
         update_app_resource(application, module, manifest)
-        import_manifest(module, manifest)
+        try:
+            import_manifest(module, manifest)
+        except Exception as e:
+            raise error_codes.IMPORT_MANIFEST_FAILED.f(str(e))
 
         try:
             credential_refs = get_references(manifest)

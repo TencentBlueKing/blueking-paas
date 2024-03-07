@@ -41,9 +41,9 @@ from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import DomainResolution, ModuleProcessSpec, SvcDiscConfig
 from paasng.platform.bkapp_model.serializers import (
+    BkAppModelSLZ,
     DomainResolutionSLZ,
     GetManifestInputSLZ,
-    ManifestSLZ,
     ModuleDeployHookSLZ,
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
@@ -104,12 +104,13 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         else:
             return Response(get_manifest(module))
 
+    @swagger_auto_schema(request_body=BkAppModelSLZ)
     def replace(self, request, code, module_name):
         """通过 manifest 更新应用模型资源"""
         application = self.get_application()
         module = self.get_module_via_path()
 
-        serializer = ManifestSLZ(data=request.data)
+        serializer = BkAppModelSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         manifest = serializer.validated_data.get("manifest")

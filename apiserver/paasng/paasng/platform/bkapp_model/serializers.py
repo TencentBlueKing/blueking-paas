@@ -18,11 +18,14 @@ to the current version of the project delivered to anyone in the future.
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion, ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
+from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.platform.modules.constants import DeployHookType, ModuleName
 from paasng.platform.modules.models.module import Module
+from paasng.utils.serializers import field_env_var_key
+from paasng.utils.validators import PROC_TYPE_PATTERN
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -143,7 +146,179 @@ class DomainResolutionSLZ(serializers.Serializer):
         return data
 
 
-class ManifestSLZ(serializers.Serializer):
-    """部署云原生应用 Serializer"""
+class BaseEnvVarFields(serializers.Serializer):
+    """Base fields for validating EnvVar."""
 
-    manifest = serializers.JSONField(label=_("BkApp 配置信息"))
+    name = field_env_var_key()
+    value = serializers.CharField(allow_blank=False)
+
+
+class EnvVarInputSLZ(BaseEnvVarFields):
+    pass
+
+
+class EnvVarOverlayInputSLZ(BaseEnvVarFields):
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+
+
+class BaseMountFields(serializers.Serializer):
+    """Base fields for validating Mount."""
+
+    class SourceInputSLZ(serializers.Serializer):
+        class ConfigMapInputSLZ(serializers.Serializer):
+            name = serializers.CharField()
+
+        configMap = ConfigMapInputSLZ()
+
+    name = serializers.RegexField(regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63)
+    mountPath = serializers.RegexField(regex=r"^/([^/\0]+(/)?)*$")
+    source = SourceInputSLZ()
+
+
+class MountInputSLZ(BaseMountFields):
+    """Validate the `mounts` field's item."""
+
+
+class MountOverlayInputSLZ(BaseMountFields):
+    """Validate the `mounts` field in envOverlay."""
+
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+
+
+class ReplicasOverlayInputSLZ(serializers.Serializer):
+    """Validate the `replicas` field in envOverlay."""
+
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    process = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class ResQuotaOverlayInputSLZ(serializers.Serializer):
+    """Validate the `resQuotas` field in envOverlay"""
+
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    process = serializers.CharField()
+    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
+
+
+class AutoscalingSpecInputSLZ(serializers.Serializer):
+    """Base fields for validating AutoscalingSpec."""
+
+    minReplicas = serializers.IntegerField(required=True, min_value=1)
+    maxReplicas = serializers.IntegerField(required=True, min_value=1)
+    policy = serializers.ChoiceField(default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices())
+
+
+class AutoscalingOverlayInputSLZ(AutoscalingSpecInputSLZ):
+    """Validate the `autoscaling` field in envOverlay"""
+
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    process = serializers.CharField()
+
+
+class EnvOverlayInputSLZ(serializers.Serializer):
+    """Validate the `envOverlay` field."""
+
+    replicas = serializers.ListField(child=ReplicasOverlayInputSLZ(), required=False)
+    resQuotas = serializers.ListField(child=ResQuotaOverlayInputSLZ(), required=False)
+    envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), required=False)
+    autoscaling = serializers.ListField(child=AutoscalingOverlayInputSLZ(), required=False)
+    mounts = serializers.ListField(child=MountOverlayInputSLZ(), required=False)
+
+
+class ConfigurationInputSLZ(serializers.Serializer):
+    """Validate the `configuration` field."""
+
+    env = serializers.ListField(child=EnvVarInputSLZ())
+
+
+class BuildInputSLZ(serializers.Serializer):
+    """Validate the `build` field."""
+
+    image = serializers.CharField(allow_null=True, required=False, allow_blank=True)
+    imagePullPolicy = serializers.ChoiceField(choices=ImagePullPolicy.get_choices(), required=False)
+    imageCredentialsName = serializers.CharField(allow_null=True, required=False, allow_blank=True)
+
+
+class ProcessInputSLZ(serializers.Serializer):
+    """Validate the `processes` field."""
+
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN)
+    replicas = serializers.IntegerField(min_value=0)
+    resQuotaPlan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, required=False)
+    targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, required=False)
+    command = serializers.ListField(child=serializers.CharField(), allow_null=True, required=False)
+    args = serializers.ListField(child=serializers.CharField(), allow_null=True, required=False)
+    autoscaling = AutoscalingSpecInputSLZ(allow_null=True, required=False)
+
+    # TODO 删除 v1alpha1 的配置
+    # v1alpha1
+    image = serializers.CharField(allow_null=True, required=False, allow_blank=True)
+    imagePullPolicy = serializers.ChoiceField(
+        choices=ImagePullPolicy.get_choices(), allow_null=True, required=False, allow_blank=True
+    )
+    cpu = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    memory = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class HooksInputSLZ(serializers.Serializer):
+    """Validate the `hooks` field."""
+
+    class HookInputSLZ(serializers.Serializer):
+        command = serializers.ListField(child=serializers.CharField(), allow_null=True, required=False)
+        args = serializers.ListField(child=serializers.CharField(), allow_null=True, required=False)
+
+    preRelease = HookInputSLZ(allow_null=True, required=False)
+
+
+class BkSaaSInputSLZ(serializers.Serializer):
+    """Validate the `bkSaaS` field."""
+
+    bkAppCode = serializers.CharField()
+    moduleName = serializers.CharField(required=False, allow_null=True)
+
+
+class ServiceDiscoveryInputSLZ(serializers.Serializer):
+    """Validate the `serviceDiscovery` field."""
+
+    bkSaaS = serializers.ListField(child=BkSaaSInputSLZ(), required=False, allow_empty=True)
+
+
+class HostAliasInputSLZ(serializers.Serializer):
+    ip = serializers.IPAddressField()
+    hostnames = serializers.ListField(child=serializers.CharField())
+
+
+class DomainResolutionInputSLZ(serializers.Serializer):
+    nameservers = serializers.ListField(child=serializers.IPAddressField(), required=False)
+    hostAliases = serializers.ListField(child=HostAliasInputSLZ(), required=False)
+
+
+class BkAppSpecInputSLZ(serializers.Serializer):
+    """Validate the `spec` field of BkApp resource."""
+
+    build = BuildInputSLZ(required=False)
+    processes = serializers.ListField(child=ProcessInputSLZ())
+    configuration = ConfigurationInputSLZ(required=False)
+    mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)
+    hooks = HooksInputSLZ(required=False)
+    envOverlay = EnvOverlayInputSLZ(required=False)
+    svcDiscovery = ServiceDiscoveryInputSLZ(required=False)
+    domainResolution = DomainResolutionInputSLZ(required=False)
+
+
+class MetadataSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="资源名称")
+    annotations = serializers.DictField(help_text="注释", required=False)
+    generation = serializers.IntegerField(help_text="资源版本", required=False)
+
+
+class ManifestInputSLZ(serializers.Serializer):
+    apiVersion = serializers.ChoiceField(choices=ApiVersion.get_choices(), help_text="K8S API 版本")
+    kind = serializers.CharField(help_text="资源类型")
+    metadata = MetadataSLZ(help_text="元数据")
+    spec = BkAppSpecInputSLZ(help_text="资源配置信息")
+
+
+class BkAppModelSLZ(serializers.Serializer):
+    manifest = ManifestInputSLZ(label=_("BkApp 配置信息"))

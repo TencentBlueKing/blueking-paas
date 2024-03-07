@@ -67,5 +67,6 @@ class TestManifestViewSet:
         url = f"/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/" f"bkapp_model/manifests/current/"
 
         response = api_client.put(url, {"manifest": base_manifest})
+
         assert response.data[0]["metadata"]["name"] == bk_app.code
         assert response.status_code == 200

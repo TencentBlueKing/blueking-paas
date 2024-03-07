@@ -68,15 +68,16 @@ class ImageReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        module = self.module_environment.module
+        is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
         # 更新 deployment 的 bkapp_revision_id
-        bkapp_revision_id = self.create_bkapp_revision()
-        self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
+        if not is_smart_app:
+            bkapp_revision_id = self.create_bkapp_revision()
+            self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
 
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
 
-        module = self.module_environment.module
-        is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure("解析应用进程信息", phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id

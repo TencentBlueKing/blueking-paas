@@ -33,15 +33,15 @@ const EnvRegistryAuth = "CNB_REGISTRY_AUTH"
 // from the following sources, if they exist, in order of precedence:
 // the provided environment variable
 // the docker config.json file
-func DefaultKeychain() (authn.Keychain, error) {
+func DefaultKeychain() authn.Keychain {
 	envKeychain, err := NewEnvKeychain(EnvRegistryAuth)
 	if err != nil {
-		return authn.DefaultKeychain, err
+		return authn.DefaultKeychain
 	}
 	return authn.NewMultiKeychain(
 		envKeychain,
 		authn.DefaultKeychain,
-	), nil
+	)
 }
 
 // NewEnvKeychain returns an authn.Keychain that uses the provided environment variable as a source of credentials.

@@ -42,6 +42,8 @@ const (
 	platformDir = "/platform"
 	cnbDir      = "/cnb"
 
+	// CacheImageEnvVarKey The env var key that store cache image
+	CacheImageEnvVarKey = "CACHE_IMAGE"
 	// OutputImageEnvVarKey The env var key that store output image
 	OutputImageEnvVarKey = "OUTPUT_IMAGE"
 	// RunImageEnvVarKey The env var key that store runner image
@@ -62,6 +64,7 @@ const (
 )
 
 var (
+	cacheImage  = flag.String("cache-image", os.Getenv(CacheImageEnvVarKey), "cache image tag name")
 	outputImage = flag.String("output-image", os.Getenv(OutputImageEnvVarKey), "The name of image that will get created by the lifecycle.")
 	runImage    = flag.String("run-image", os.Getenv(RunImageEnvVarKey), "The base image from which application images are built.")
 	useDaemon   = flag.Bool("daemon", utils.BoolEnv(UseDockerDaemonEnvVarKey), "export image to docker daemon")
@@ -109,21 +112,23 @@ func main() {
 	)
 	logger.Info("Setup Build Environ")
 	logger.Info("Loading registry credentials...")
+	keychain := dockercreds.DefaultKeychain()
 
 	if !*useDaemon {
 		logger.Info("Verifying accessibility to container image registry...")
-		var keychain authn.Keychain
-		if keychain, err = dockercreds.DefaultKeychain(); err != nil {
-			logger.Error(err, "Failed to load registry credentials from env")
-			os.Exit(1)
-		}
-
 		if err = verifyOutputImageWritable(keychain); err != nil {
 			logger.Error(err, "OutputImage is not writable")
 			os.Exit(1)
 		}
 		if err = verifyRunImageReadable(keychain); err != nil {
 			logger.Error(err, "RunImage is not readable")
+			os.Exit(1)
+		}
+	}
+	if *cacheImage != "" {
+		logger.Info("Verifying accessibility to cache registry...")
+		if err = verifyCacheImageWritable(keychain); err != nil {
+			logger.Error(err, "CacheImage is not writable")
 			os.Exit(1)
 		}
 	}
@@ -276,6 +281,14 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 func verifyOutputImageWritable(keychain authn.Keychain) error {
 	if err := dockercreds.VerifyWriteAccess(keychain, *outputImage); err != nil {
 		return errors.Wrapf(err, "Error verifying write access to %q", *outputImage)
+	}
+	return nil
+}
+
+// verifyCacheImageWritable: 测试是否具有 output image 镜像的写权限
+func verifyCacheImageWritable(keychain authn.Keychain) error {
+	if err := dockercreds.VerifyWriteAccess(keychain, *cacheImage); err != nil {
+		return errors.Wrapf(err, "Error verifying write access to %q", *cacheImage)
 	}
 	return nil
 }

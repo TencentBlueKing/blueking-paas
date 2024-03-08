@@ -264,7 +264,15 @@ class MountSLZ(serializers.ModelSerializer):
         except ValueError as e:
             raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
         else:
-            return {"storage": source.storage}
+            mounts = Mount.objects.filter(
+                source_config=controller.new_volume_source(source.name),
+            )
+            bound_modules = [{"module": mount.name, "path": mount.mount_path} for mount in mounts]
+            return {
+                "name": source.name,
+                "storage": source.storage,
+                "bound_modules": bound_modules,
+            }
 
 
 class QueryMountsSLZ(serializers.Serializer):
@@ -294,7 +302,7 @@ class MountSourceSLZ(serializers.Serializer):
     environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=False)
     name = serializers.CharField(max_length=63, required=True)
     source_type = serializers.SerializerMethodField(label=_("挂载卷资源类型"))
-    binded_modules = serializers.SerializerMethodField(label=_("已绑定模块信息"))
+    bound_modules = serializers.SerializerMethodField(label=_("已绑定模块信息"))
     data = serializers.JSONField(required=False)
     storage = serializers.CharField(required=False)
     storage_class_name = serializers.CharField(required=False)
@@ -306,11 +314,11 @@ class MountSourceSLZ(serializers.Serializer):
             return VolumeSourceType.PersistentStorage.value
         return None
 
-    def get_binded_modules(self, obj):
+    def get_bound_modules(self, obj):
         """返回已绑定的模块"""
         source_type = self.get_source_type(obj)
         controller = init_source_controller(source_type)
         mounts = Mount.objects.filter(
             source_config=controller.new_volume_source(obj.name),
         )
-        return [(mount.name, mount.mount_path) for mount in mounts]
+        return [{"module": mount.name, "path": mount.mount_path} for mount in mounts]

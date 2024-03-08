@@ -58,6 +58,19 @@ def pvc_source(bk_app, bk_module):
 
 
 @pytest.fixture()
+def pvc_source_update(bk_app, bk_module):
+    pvc = PersistentStorageSource.objects.create(
+        application_id=bk_app.id,
+        module_id=bk_module.id,
+        environment_name=MountEnvName.STAG,
+        name="pvc-source-test-update",
+        storage="1Gi",
+        storage_class_name="storage-class-test",
+    )
+    return pvc
+
+
+@pytest.fixture()
 def mount_pvc(bk_app, bk_module, pvc_source):
     """创建一个 pvc mount 对象"""
     mount = MountManager.new(
@@ -270,15 +283,17 @@ class TestVolumeMountViewSet:
         assert response.status_code == 204
         assert not mount_query.exists()
 
-    def test_update_pvc(self, api_client, bk_app, bk_module, mount_pvc):
+    def test_update_pvc(self, api_client, bk_app, bk_module, mount_pvc, pvc_source_update):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
         body = MountSLZ(mount_pvc).data
         body["name"] = "mount-pvc-test"
+        body["source_name"] = pvc_source_update.name
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount_pvc.pk)
 
         assert response.status_code == 200
         assert mount_updated.name == "mount-pvc-test"
+        assert mount_updated.source_config.persistentStorage.name == pvc_source_update.name
 
     def test_destroy_pvc(self, api_client, bk_app, bk_module, mount_pvc):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"

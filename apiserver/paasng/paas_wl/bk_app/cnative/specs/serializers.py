@@ -220,6 +220,12 @@ class UpsertMountSLZ(serializers.Serializer):
         configmap_source = attrs.get("configmap_source") or {}
         if source_type == VolumeSourceType.ConfigMap.value and not configmap_source.get("source_config_data"):
             raise serializers.ValidationError(_("挂载卷内容不可为空"))
+
+        # 如果传入了 source_name ，需要校验 source_name 对应的资源是否存在
+        if source_name := attrs.get("source_name"):
+            controller = init_source_controller(attrs["source_type"])
+            if not controller.model_class.objects.filter(name=source_name, environment_name=environment_name).exists():
+                raise serializers.ValidationError(_(f"挂载资源 {source_name} 不存在"))
         return attrs
 
 

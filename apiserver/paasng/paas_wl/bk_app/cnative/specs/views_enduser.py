@@ -474,19 +474,21 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id, "mount_id": mount_instance.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
+        controller = init_source_controller(mount_instance.source_type)
 
         # 更新 Mount
         mount_instance.name = validated_data["name"]
         mount_instance.environment_name = validated_data["environment_name"]
         mount_instance.mount_path = validated_data["mount_path"]
+        if source_name := validated_data.get("source_name"):
+            mount_instance.source_config = controller.new_volume_source(source_name)
         try:
-            mount_instance.save(update_fields=["name", "environment_name", "mount_path"])
+            mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
         # 更新 Mount source
         configmap_source = validated_data.get("configmap_source") or {}
-        controller = init_source_controller(mount_instance.source_type)
         controller.update_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
 
         try:

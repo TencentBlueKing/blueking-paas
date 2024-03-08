@@ -125,6 +125,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	// 目前 lifecycle 只支持导出 cache image 到 registry
 	if *cacheImage != "" {
 		logger.Info("Verifying accessibility to cache registry...")
 		if err = verifyCacheImageWritable(keychain); err != nil {

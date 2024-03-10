@@ -19,6 +19,8 @@ to the current version of the project delivered to anyone in the future.
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.models import Cluster
 
+from .shim import RegionClusterService
+
 
 def get_default_cluster_by_region(region: str) -> Cluster:
     """Get default cluster name by region"""
@@ -34,6 +36,9 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
     :param app: WlApp object
     :raise RuntimeError: App has an invalid cluster_name defined
     """
+    if app.run_dev_mode:
+        return get_dev_mode_cluster(app)
+
     cluster_name = app.config_set.latest().cluster
     if not cluster_name:
         return get_default_cluster_by_region(app.region)
@@ -42,3 +47,8 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
         return Cluster.objects.get(name=cluster_name)
     except Cluster.DoesNotExist:
         raise RuntimeError(f"Can not find a cluster called {cluster_name}")
+
+
+def get_dev_mode_cluster(app: WlApp) -> Cluster:
+    # 目前云原生集群的 k8s 版本 >= 1.20.x, 因此默认选择云原生集群作为开发容器集群, 以减少 ingress 等资源版本的兼容问题
+    return RegionClusterService(app.region).get_cnative_app_default_cluster()

@@ -77,6 +77,12 @@ class App(UuidAuditedModel):
     def latest_config(self):
         return self.config_set.latest()
 
+    @property
+    def run_dev_mode(self) -> bool:
+        if self.name.endswith("-dev"):
+            return True
+        return False
+
     def __str__(self) -> str:
         return f"<{self.name}, region: {self.region}, type: {self.type}>"
 

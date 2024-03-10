@@ -173,6 +173,8 @@ class ErrorCodes:
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode("Failed to create credentials")
 
+    DEVCONTAINER_ALREADY_EXISTS = ErrorCode("devcontainer already exists", status_code=409)
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

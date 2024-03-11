@@ -84,7 +84,7 @@
                 <div class="info">
                   <span>{{ $t('生效环境') }}：{{ item.environment_name }}</span>
                   <span>{{ $t('容量') }}：{{ item.storage }}</span>
-                  <span>{{ $t('已绑定模块数') }}：{{ item.binded_modules.length || 0 }}</span>
+                  <span>{{ $t('已绑定模块数') }}：{{ item.binded_modules?.length || 0 }}</span>
                 </div>
               </div>
               <div
@@ -98,7 +98,7 @@
             </section>
             <section class="content" v-if="item.isExpanded">
               <bk-table
-                :data="item.formatBindedModules"
+                :data="item.binded_modules"
                 :outer-border="false"
                 ext-cls="store-module-table-cls"
               >
@@ -271,7 +271,7 @@ export default {
     deleteAlertTip() {
       return this.$t(
         '删除持久存储后无法恢复，目前有 {c} 个模块绑定了该存储，请确认影响',
-        { c: this.curDeleteData.binded_modules.length },
+        { c: this.curDeleteData.binded_modules?.length || 0 },
       );
     },
     preReleaseEnvironment() {
@@ -304,16 +304,6 @@ export default {
 
         if (res.length) {
           res = res.map((item) => {
-            item.formatBindedModules = [];
-            // binded_modules 二维数组
-            if (item.binded_modules.length) {
-              item.binded_modules.map((v) => {
-                item.formatBindedModules.push({
-                  module: v[0],
-                  path: v[1],
-                });
-              });
-            }
             item.isExpanded = false;
             return item;
           });

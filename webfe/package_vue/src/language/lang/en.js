@@ -2555,4 +2555,6 @@ export default {
   '持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。': 'Persistent storage uses Tencent Cloud CFS, available for data-sharing across multiple modules and processes.',
   暂无持久存储资源: 'No persistent storage resources available',
   申请持久存储: 'Apply for Persistent Storage',
+  可用于将用于自定义的配置文件注入到容器中: 'Can be used to inject custom configuration files into the container',
+  '由平台分配的持久化存储，可用于多个模块、进程间共享数据': 'Persistent storage allocated by the platform, available for data sharing across multiple modules and processes',
 };

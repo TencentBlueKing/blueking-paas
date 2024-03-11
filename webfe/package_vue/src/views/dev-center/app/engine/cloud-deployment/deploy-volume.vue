@@ -17,7 +17,14 @@
         <bk-button theme="primary" class="mb15 mt20" @click="handleCreate">
           <i class="paasng-icon paasng-plus mr5" /> {{ $t('新增挂载') }}
         </bk-button>
-        <bk-table :data="volumeList" size="small" :outer-border="false" :header-border="false">
+        <bk-table
+          :data="volumeList"
+          size="small"
+          style="width: 100%"
+          :outer-border="false"
+          :header-border="false"
+          v-bkloading="{ isLoading: isTableLoaing, zIndex: 10 }"
+        >
           <bk-table-column :label="$t('名称')" prop="name"></bk-table-column>
           <bk-table-column :label="$t('挂载目录')" prop="mount_path"></bk-table-column>
           <bk-table-column
@@ -31,40 +38,61 @@
               <div>{{ $t(envEnums[row.environment_name]) || $t('所有环境') }}</div>
             </template>
           </bk-table-column>
+          <bk-table-column :label="$t('资源类型')" prop="source_type">
+            <template slot-scope="{ row }">
+              {{ row.source_type === 'PersistentStorage' ? $t('持久存储') : $t('文件') }}
+            </template>
+          </bk-table-column>
           <bk-table-column :label="$t('文件内容')" width="410" prop="source_config_data">
             <template slot-scope="{ row, $index }">
               <div class="tag-container">
-                <bk-tag
-                  v-for="item in visibleTags(row.source_config_data)"
-                  :key="item"
-                  class="activeTag"
-                  @click="handleTag(row.source_config_data, item)"
-                >
-                  {{ item }}
-                </bk-tag>
-                <div
-                  id="tooltipContent"
-                  v-if="Object.keys(row.source_config_data).length !== visibleTags(row.source_config_data).length"
-                >
+                <!-- 持久存储 -->
+                <template v-if="row.source_type === 'PersistentStorage'">
                   <bk-tag
-                    class="activeTag"
-                    v-for="item in formatConfigData(row.source_config_data)"
+                    v-for="item in visibleTags(row)"
                     :key="item"
-                    @click="handleTag(row.source_config_data, item)"
+                    class="activeTag"
+                    v-bk-tooltips="{ content: item, disabled: item.length < 12 }"
+                    @click="handlePersistentStorageDetails(row, item)"
+                  >
+                    {{ item.length > 12 ? `${item.slice(0, 12)}...` : item }}
+                  </bk-tag>
+                </template>
+                <!-- 文件 -->
+                <template v-else>
+                  <bk-tag
+                    v-for="item in visibleTags(row)"
+                    :key="item"
+                    class="activeTag file-tag"
+                    @click="handleTag(row, item)"
                   >
                     {{ item }}
                   </bk-tag>
-                </div>
-                <a
-                  :ref="`tooltipContent${$index}`"
-                  class="plusIcon"
-                  v-bk-tooltips="tagTipConfig"
-                  v-if="Object.keys(row.source_config_data).length !== visibleTags(row.source_config_data).length"
-                >
-                  <bk-tag :key="'more'">
-                    +{{ Object.keys(row.source_config_data).length - visibleTags(row.source_config_data).length }}
-                  </bk-tag>
-                </a>
+                  <!-- tooltips 显示模板 -->
+                  <div
+                    id="tooltipContent"
+                    v-if="getCourceConfigDataLength(row) !== visibleTags(row).length"
+                  >
+                    <bk-tag
+                      class="activeTag"
+                      v-for="item in formatConfigData(row)"
+                      :key="item"
+                      @click="handleTag(row, item)"
+                    >
+                      {{ item }}
+                    </bk-tag>
+                  </div>
+                  <a
+                    v-if="getCourceConfigDataLength(row) !== visibleTags(row).length"
+                    :ref="`tooltipContent${$index}`"
+                    class="plusIcon"
+                    v-bk-tooltips="tagTipConfig"
+                  >
+                    <bk-tag :key="'more'">
+                      +{{ getCourceConfigDataLength(row) - visibleTags(row).length }}
+                    </bk-tag>
+                  </a>
+                </template>
               </div>
             </template>
           </bk-table-column>
@@ -107,6 +135,7 @@
       :width="960"
       ext-cls="volume-slider"
       :before-close="handleBeforeClose"
+      @hidden="handleHidden"
     >
       <div slot="header">
         {{volumeFormData.id ? $t('编辑') : $t('新增')}}{{ $t('挂载卷') }}
@@ -143,84 +172,139 @@
               ></bk-input>
             </bk-form-item>
             <bk-form-item
-              :label="$t('生效环境')"
+              :label="$t('资源类型')"
               :required="true"
-              style="margin-top: 27px"
-              :property="'environment_name'"
+              style="width: 560px; margin-top: 15px"
+              :property="'source_type'"
             >
-              <bk-radio-group v-model="volumeFormData.environment_name">
-                <bk-radio :value="'stag'">{{ $t('仅预发布环境') }} </bk-radio>
-                <bk-radio :value="'prod'">{{ $t('仅生产环境') }} </bk-radio>
-                <bk-radio :value="'_global_'">{{ $t('所有环境') }} </bk-radio>
+              <bk-radio-group v-model="volumeFormData.source_type">
+                <div
+                  v-for="item in sourceTypeList"
+                  :class="['radio-style-wrapper', { active: volumeFormData.source_type === item.value }]"
+                  @click="handleChangeSourceType(item.value)"
+                  :key="item.value"
+                >
+                  <bk-radio :value="item.value">{{ item.label }}</bk-radio>
+                  <span class="tip">{{ item.tip }}</span>
+                </div>
               </bk-radio-group>
             </bk-form-item>
-            <bk-form-item
-              :label="$t('文件内容')"
-              :required="true"
-              style="margin-top: 15px"
-              :property="'source_config_data'"
-              ext-cls="volume-file-content"
-            >
-              <div class="file-container flex-row">
-                <div class="label-container">
-                  <div class="addFile">
-                    <div class="addFileText" v-if="!isAddFile" @click="handleAddFile">
-                      <i class="icon paasng-icon paasng-plus-circle-shape pr10" />{{ $t('添加文件') }}
-                    </div>
-                    <div class="addFileInput" v-else>
-                      <bk-input
-                        ref="addFileInputRef"
-                        :placeholder="$t('请输入')"
-                        v-model="addFileInput"
-                        @blur="handlerAddConfirm"
-                        @enter="handleEnter('add')"
-                      ></bk-input>
-                    </div>
-                  </div>
-                  <div
-                    class="label-container flex-row justify-content-between"
-                    v-for="(item, index) in volumeFormData.sourceConfigArrData"
-                    :key="index"
-                    @mouseenter="hoverKey = item.value"
-                    @mouseleave="hoverKey = ''"
-                    :class="[activeIndex === index ? 'active' : '', item.isEdit ? 'is-edit' : '']">
-                    <div class="label-item flex-row justify-content-between align-items-center" v-if="item.isEdit">
-                      <bk-input
-                        ref="editFileInputRef"
-                        :placeholder="$t('请输入')"
-                        v-model="item.value"
-                        @blur="handleBlur(item, index)"
-                        @enter="handleEnter('edit')"
-                      ></bk-input>
+            <template v-if="volumeFormData.source_type === 'ConfigMap'">
+              <bk-form-item
+                :label="$t('生效环境')"
+                :required="true"
+                style="margin-top: 27px"
+                :property="'environment_name'"
+              >
+                <bk-radio-group v-model="volumeFormData.environment_name">
+                  <bk-radio :value="'stag'">{{ $t('仅预发布环境') }} </bk-radio>
+                  <bk-radio :value="'prod'">{{ $t('仅生产环境') }} </bk-radio>
+                  <bk-radio :value="'_global_'">{{ $t('所有环境') }} </bk-radio>
+                </bk-radio-group>
+              </bk-form-item>
+              <bk-form-item
+                :label="$t('文件内容')"
+                :required="true"
+                style="margin-top: 15px"
+                :property="'source_config_data'"
+                ext-cls="volume-file-content"
+              >
+                <div class="file-container flex-row">
+                  <div class="label-container">
+                    <div class="addFile">
+                      <div class="addFileText" v-if="!isAddFile" @click="handleAddFile">
+                        <i class="icon paasng-icon paasng-plus-circle-shape pr10" />{{ $t('添加文件') }}
+                      </div>
+                      <div class="addFileInput" v-else>
+                        <bk-input
+                          ref="addFileInputRef"
+                          :placeholder="$t('请输入')"
+                          v-model="addFileInput"
+                          @blur="handlerAddConfirm"
+                          @enter="handleEnter('add')"
+                        ></bk-input>
+                      </div>
                     </div>
                     <div
-                      class="label-item flex-row justify-content-between"
-                      @click.stop="handleClickLabelItem(index, item.value)" v-else>
-                      <div class="label-text flex-1">
-                        {{item.value}}
-                        <i
-                          v-if="!volumeFormData.source_config_data[item.value]"
-                          class="icon paasng-icon paasng-paas-remind-fill tips-icon"
-                          v-bk-tooltips="$t('文件内容不能为空')"></i>
+                      class="label-container flex-row justify-content-between"
+                      v-for="(item, index) in volumeFormData.sourceConfigArrData"
+                      :key="index"
+                      @mouseenter="hoverKey = item.value"
+                      @mouseleave="hoverKey = ''"
+                      :class="[activeIndex === index ? 'active' : '', item.isEdit ? 'is-edit' : '']">
+                      <div class="label-item flex-row justify-content-between align-items-center" v-if="item.isEdit">
+                        <bk-input
+                          ref="editFileInputRef"
+                          :placeholder="$t('请输入')"
+                          v-model="item.value"
+                          @blur="handleBlur(item, index)"
+                          @enter="handleEnter('edit')"
+                        ></bk-input>
                       </div>
-                      <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
-                        <i class="paasng-icon paasng-edit-2 mr5" @click="handleEditLabel(item)" />
-                        <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(item.value, index)" />
+                      <div
+                        class="label-item flex-row justify-content-between"
+                        @click.stop="handleClickLabelItem(index, item.value)" v-else>
+                        <div class="label-text flex-1">
+                          {{item.value}}
+                          <i
+                            v-if="!volumeFormData.source_config_data[item.value]"
+                            class="icon paasng-icon paasng-paas-remind-fill tips-icon"
+                            v-bk-tooltips="$t('文件内容不能为空')"></i>
+                        </div>
+                        <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
+                          <i class="paasng-icon paasng-edit-2 mr5" @click="handleEditLabel(item)" />
+                          <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(item.value, index)" />
+                        </div>
                       </div>
                     </div>
                   </div>
+                  <div class="editor flex-1">
+                    <resource-editor
+                      ref="editorRefSlider"
+                      key="editor"
+                      v-model="sliderEditordetail"
+                      v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
+                      :height="fullScreen ? clientHeight : fileSliderConfig.height"
+                    />
+                  </div>
                 </div>
-                <div class="editor flex-1">
-                  <resource-editor
-                    ref="editorRefSlider"
-                    key="editor"
-                    v-model="sliderEditordetail"
-                    v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
-                    :height="fullScreen ? clientHeight : fileSliderConfig.height"
-                  />
-                </div>
-              </div>
-            </bk-form-item>
+              </bk-form-item>
+            </template>
+            <template v-else>
+              <bk-form-item
+                :label="$t('持久存储')"
+                :required="true"
+                style="margin-top: 27px"
+                :property="'source_name'"
+              >
+                <bk-select
+                  :disabled="false"
+                  v-model="volumeFormData.source_name"
+                  style="width: 560px;"
+                  searchable
+                  ext-popover-cls="store-select-popover-custom"
+                >
+                  <bk-option
+                    v-for="option in persistentStorageList"
+                    :key="option.name"
+                    :id="option.name"
+                    :name="option.name">
+                  </bk-option>
+                  <div
+                    slot="extension"
+                    class="create-persistent-storage-cls"
+                  >
+                    <div class="content" @click="createPersistentStorage">
+                      <i class="bk-icon icon-plus-circle mr5"></i> {{ $t('新增持久存储') }}
+                    </div>
+                    <div class="refresh" @click.stop="getPersistentStorageList">
+                      <i class="paasng-icon paasng-refresh-line" v-if="!isPersistentStorageLoading" />
+                      <round-loading class="round-loading-cls" v-else />
+                    </div>
+                  </div>
+                </bk-select>
+              </bk-form-item>
+            </template>
           </bk-form>
         </div>
       </div>
@@ -231,6 +315,45 @@
         <bk-button theme="default" @click="handleCancelVolume()">{{ $t('取消') }}</bk-button>
       </div>
     </bk-sideslider>
+
+    <!-- 持久存储详情 -->
+    <bk-dialog
+      v-model="storageDetailsDialogConfig.visible"
+      theme="primary"
+      header-position="left"
+      :width="480"
+      :mask-close="false"
+      :show-footer="false">
+      <div slot="header" class="storage-header-title">
+        {{ $t('持久存储详情') }}
+        <span class="storage-header-sub-tip">
+          {{ $t('容量') }}：<span>{{ storageDetailsDialogConfig.storage }}</span>
+        </span>
+      </div>
+      <div>
+        <bk-table
+          :data="storageDetailsDialogConfig.bound_modules"
+          :outer-border="false"
+          ext-cls="store-module-table-cls"
+        >
+          <bk-table-column
+            :label="$t('绑定模块')"
+            prop="module"
+            :width="150"
+          ></bk-table-column>
+          <bk-table-column
+            :label="$t('挂载目录')"
+            prop="path"
+          ></bk-table-column>
+        </bk-table>
+      </div>
+    </bk-dialog>
+
+    <!-- 新增持久存储 -->
+    <create-persistent-storage-dailog
+      v-model="persistentStorageDailogVisible"
+      @get-list="getPersistentStorageList"
+    />
   </div>
 </template>
 
@@ -240,10 +363,16 @@ import ResourceEditor from './comps/deploy-resource-editor';
 import { ENV_ENUM } from '@/common/constants';
 import { isJsonString } from '@/common/utils';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
+import createPersistentStorageDailog from '@/components/create-persistent-storage-dailog';
+
+const defaultSourceType = 'PersistentStorage';
+const containerWidth = 400;
+const tagWidth = 90;
 
 export default {
   components: {
     ResourceEditor,
+    createPersistentStorageDailog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   data() {
@@ -273,6 +402,7 @@ export default {
         allowHTML: true,
         theme: 'light',
         content: '#tooltipContent',
+        extCls: 'ellipsis-display-tips-cls',
       },
       volumeDefaultSettings: {
         isShow: false,
@@ -317,6 +447,8 @@ export default {
         source_config_data: {},
         source_type: 'ConfigMap',
         sourceConfigArrData: [],
+        // 持久存储名
+        source_name: '',
       },
       envSelectList: [
         { value: '_global_', text: this.$t('所有环境') },
@@ -329,12 +461,34 @@ export default {
       curValue: '',
       addLoading: false,
       mountPathTip: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）'),
+      sourceTypeList: [
+        {
+          label: this.$t('文件'),
+          value: 'ConfigMap',
+          tip: this.$t('可用于将用于自定义的配置文件注入到容器中'),
+        },
+        {
+          label: this.$t('持久存储'),
+          value: defaultSourceType,
+          tip: this.$t('由平台分配的持久化存储，可用于多个模块、进程间共享数据'),
+        },
+      ],
+      persistentStorageList: [],
+      persistentStorageDailogVisible: false,
+      isPersistentStorageLoading: false,
+      storageDetailsDialogConfig: {
+        visible: false,
+        bound_modules: [],
+        storage: '1Gi',
+      },
+      maxTags: 0,
+      isTableLoaing: false,
     };
   },
   computed: {
     formatConfigData() {
-      return function (tags) {
-        const containerWidth = 410;
+      return function (data) {
+        const tags = data.configmap_source?.source_config_data || {};
         const tagWidth = 90;
         const maxVisibleCount = Math.floor(containerWidth / tagWidth);
         const curTags = Object.keys(tags);
@@ -346,16 +500,33 @@ export default {
       };
     },
     visibleTags() {
-      return function (tags) {
-        const containerWidth = 410;
-        const tagWidth = 90;
-        const maxVisibleCount = Math.floor(containerWidth / tagWidth);
-        const curTags = Object.keys(tags);
-        if (curTags.length <= maxVisibleCount) {
-          return curTags;
+      return function (data) {
+        // 持久存储
+        if (data.source_type === defaultSourceType) {
+          const persistentStorage = data.source_config.filter(item => item[0] === 'persistentStorage');
+          const storageData = persistentStorage[0][1];
+          return Array.isArray(storageData) ? [storageData[0][1]] : [];
         }
-        return curTags.slice(0, maxVisibleCount);
+        // 文件
+        let totalTagWidth = 0;
+        let maxTags = 0;
+        const maxPossibleTags = Math.floor(containerWidth / tagWidth);
+        for (let i = 0; i < maxPossibleTags; i++) {
+          if ((totalTagWidth + tagWidth) <= containerWidth) {
+            totalTagWidth += tagWidth;
+            // eslint-disable-next-line no-plusplus
+            maxTags++;
+          } else {
+            break;
+          }
+        }
+        const files = data.configmap_source?.source_config_data || {};
+        const tags = Object.keys(files);
+        return tags.slice(0, maxTags);
       };
+    },
+    isPersistentStorage() {
+      return this.volumeFormData.source_type === defaultSourceType;
     },
   },
   watch: {
@@ -364,6 +535,10 @@ export default {
         this.sliderEditordetail = '';
         this.isAddFile = false;
         this.curValue = '';
+        if (this.volumeFormData.source_type === defaultSourceType) {
+          this.volumeFormData.sourceConfigArrData = [];
+          this.volumeFormData.source_config_data = {};
+        }
         this.volumeFormData.sourceConfigArrData = (Object.keys(this.volumeFormData.source_config_data) || [])
           .reduce((p, v) => {
             p.push({
@@ -412,12 +587,14 @@ export default {
         source_config_data: {},
         source_type: 'ConfigMap',
         sourceConfigArrData: [],
+        source_name: '',
       };
       this.volumeDefaultSettings.isShow = true;
       this.initSidebarFormData(this.volumeFormData);
     },
     // 获取挂载卷list
     getVolumeList() {
+      this.isTableLoaing = true;
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/`;
       this.$http
         .get(url)
@@ -432,13 +609,23 @@ export default {
         })
         .finally(() => {
           this.isLoading = false;
+          this.isTableLoaing = false;
         });
     },
     // 编辑挂载券
-    handleEditVolume(row) {
+    async handleEditVolume(row) {
       this.volumeFormData = cloneDeep(row);
-      this.$set(this.volumeFormData, 'sourceConfigArrData', []);
+      // 文件
+      if (row.source_type === 'ConfigMap') {
+        this.$set(this.volumeFormData, 'sourceConfigArrData', []);
+        this.volumeFormData.source_config_data = row.configmap_source?.source_config_data || {};
+      } else {
+        this.volumeFormData.source_name = row.persistent_storage_source?.name;
+        this.getPersistentStorageList();
+      }
       this.volumeDefaultSettings.isShow = true;
+      await this.getPersistentStorageList();
+      this.initSidebarFormData(this.volumeFormData);
     },
     // 确认删除挂载券
     deleteVolume(row) {
@@ -474,6 +661,10 @@ export default {
     },
     // 点击标签
     handleTag(row, item) {
+      if (row.source_type === defaultSourceType) {
+        return;
+      }
+      row = row.configmap_source?.source_config_data || {};
       this.fileDialogConfig.visiable = true;
       const addressDom = document.querySelectorAll('.plusIcon');
       for (const item of addressDom) {
@@ -503,24 +694,43 @@ export default {
       const { property } = column;
       return row[property] === value;
     },
+    // 格式化参数
+    formatParams() {
+      const data = cloneDeep(this.volumeFormData);
+      // 持久存储
+      if (this.isPersistentStorage) {
+        const curStorage = this.persistentStorageList.find(v => v.name === this.volumeFormData.source_name);
+        data.environment_name = curStorage.environment_name;
+        delete data.sourceConfigArrData;
+        delete data.source_config_data;
+      } else {
+        data.configmap_source = {
+          source_config_data: data.source_config_data,
+        };
+        delete data.source_config_data;
+      }
+
+      const params = {
+        appCode: this.appCode,
+        moduleId: this.curModuleId,
+        data,
+      };
+      // 更新
+      if (this.volumeFormData.id) {
+        params.id = this.volumeFormData.id;
+      }
+      return params;
+    },
     // 确定新增或编辑挂载券
     async handleConfirmVolume() {
       await this.$refs.formRef?.validate();
       try {
         this.addLoading = true;
         const fetchUrl = this.volumeFormData.id ? 'deploy/updateVolumeData' : 'deploy/createVolumeData';
-        const param = {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-          data: this.volumeFormData,
-        };
-        // 更新
-        if (this.volumeFormData.id) {
-          param.id = this.volumeFormData.id;
-        }
+        const params = this.formatParams();
         await this.$store.dispatch(
           fetchUrl,
-          param,
+          params,
         );
         this.volumeDefaultSettings.isShow = false;
         this.$paasMessage({
@@ -680,6 +890,59 @@ export default {
     async handleBeforeClose() {
       return this.$isSidebarClosed(JSON.stringify(this.volumeFormData));
     },
+
+    getCourceConfigDataLength(row) {
+      const files = row.configmap_source?.source_config_data || {};
+      return Object.keys(files).length;
+    },
+
+    // 持久存储详情
+    handlePersistentStorageDetails(row) {
+      this.storageDetailsDialogConfig.visible = true;
+      this.storageDetailsDialogConfig.bound_modules = row.persistent_storage_source?.bound_modules || [];
+      this.storageDetailsDialogConfig.storage = row.persistent_storage_source?.storage || '1Gi';
+    },
+
+    // 获取持久化存储列表
+    async getPersistentStorageList() {
+      if (this.isPersistentStorageLoading) {
+        return;
+      }
+      this.isPersistentStorageLoading = true;
+      try {
+        const res = await this.$store.dispatch('persistentStorage/getPersistentStorageList', {
+          appCode: this.appCode,
+          sourceType: defaultSourceType,
+        });
+        this.persistentStorageList = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        setTimeout(() => {
+          this.isPersistentStorageLoading = false;
+        }, 500);
+      }
+    },
+
+    // 新增持久存储
+    createPersistentStorage() {
+      this.persistentStorageDailogVisible = true;
+    },
+
+    // 切换资源类型
+    handleChangeSourceType(value) {
+      this.volumeFormData.source_type = value;
+      if (value === defaultSourceType && !this.persistentStorageList.length) {
+        this.getPersistentStorageList();
+      }
+    },
+
+    handleHidden() {
+      this.persistentStorageList = [];
+    },
   },
 };
 </script>
@@ -695,12 +958,28 @@ export default {
 .volume-slider {
   .bk-sideslider-wrapper {
     .bk-sideslider-content {
-      height: calc(100vh - 129px);
+      height: calc(100% - 115px);
     }
+  }
+  .bk-sideslider-footer {
+    border-top: 1px solid #DCDEE5 !important;
+    background: #FAFBFD !important;
   }
 }
 .delete-volume-info-cls .bk-dialog-header-inner {
   word-break: break-word !important;
+}
+.store-select-popover-custom .bk-select-extension {
+  padding: 0 10px;
+}
+.ellipsis-display-tips-cls .tippy-tooltip {
+  padding: 8px !important;
+  .bk-tag:first-child {
+    cursor: pointer;
+    &:first-child {
+      margin-left: 0px;
+    }
+  }
 }
 </style>
 
@@ -726,6 +1005,91 @@ export default {
 
   &:hover {
     color: #3A84FF;
+  }
+}
+
+.radio-style-wrapper {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 24px;
+  background: #FFFFFF;
+  border: 1px solid #C4C6CC;
+  border-radius: 2px;
+
+  .tip {
+    margin-left: 24px;
+    font-size: 14px;
+    color: #979BA5;
+  }
+
+  &.active {
+    background: #E1ECFF;
+    border: 1px solid #3A84FF;
+  }
+
+  &:last-child {
+    margin-top: 12px;
+  }
+}
+
+.create-persistent-storage-cls {
+  display: flex;
+  align-items: center;
+  .content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    color: #63656E;
+    cursor: pointer;
+    i {
+      font-size: 14px;
+      transform: translateY(-1px);
+      color: #979BA5;
+    }
+  }
+  .refresh {
+    width: 20px;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: -10px;
+      width: 1px;
+      height: 23px;
+      background: #DCDEE5;
+      transform: translateY(-50%);
+    }
+    i {
+      font-size: 14px;
+      color: #63656E;
+    }
+  }
+}
+
+.storage-header-title {
+  color: #313238;
+  .storage-header-sub-tip {
+    margin-left: 20px;
+    font-size: 14px;
+    color: #63656E;
+    span {
+      color: #313238;
+    }
+  }
+}
+
+.tag-container {
+  &>.bk-tag:first-child {
+    margin-left: 0px;
+  }
+  .bk-tag {
+    cursor: pointer;
   }
 }
 

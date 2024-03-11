@@ -21,7 +21,7 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.devcontainer.controller import DevContainerController
-from paas_wl.bk_app.devcontainer.entities import ContainerDetail
+from paas_wl.bk_app.devcontainer.entities import ContainerDetail, HealthPhase
 from paas_wl.bk_app.devcontainer.exceptions import DevContainerAlreadyExists
 from tests.utils.helpers import generate_random_string
 
@@ -57,7 +57,7 @@ class TestDevContainerViewSet:
         with mock.patch.object(DevContainerController, "get_container_detail") as mocked_get:
             token = generate_random_string(8)
             mocked_get.return_value = ContainerDetail(
-                url="http://bkpaas.devcontainer.com", envs={"TOKEN": token}, status="Healthy"
+                url="http://bkpaas.devcontainer.com", envs={"TOKEN": token}, status=HealthPhase.HEALTHY
             )
             response = api_client.get(
                 f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainers/"

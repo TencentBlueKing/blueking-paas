@@ -17,13 +17,24 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import pytest
+from kubernetes.client.apis import VersionApi
 
 from paas_wl.bk_app.devcontainer.controller import DevContainerController
 from paas_wl.bk_app.devcontainer.exceptions import DevContainerAlreadyExists
 from paas_wl.bk_app.devcontainer.kres_entities.ingress import get_ingress_name, get_sub_domain_host
 from paas_wl.bk_app.devcontainer.kres_entities.service import get_service_name
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _skip_if_low_k8s_version():
+    k8s_client = get_client_by_cluster_name(CLUSTER_NAME_FOR_TESTING)
+    k8s_version = VersionApi(k8s_client).get_code()
+    if (int(k8s_version.major), int(k8s_version.minor)) < (1, 20):
+        pytest.skip("Skip TestDevContainerController because current k8s version less than 1.20")
 
 
 class TestDevContainerController:

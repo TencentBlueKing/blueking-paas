@@ -22,6 +22,7 @@ import pytest
 
 from paas_wl.bk_app.devcontainer.controller import DevContainerController
 from paas_wl.bk_app.devcontainer.entities import ContainerDetail
+from paas_wl.bk_app.devcontainer.exceptions import DevContainerAlreadyExists
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -35,6 +36,14 @@ class TestDevContainerViewSet:
                 f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainer/"
             )
             assert response.status_code == 201
+
+    def test_deploy_when_already_exists(self, api_client, bk_app, bk_module):
+        with mock.patch.object(DevContainerController, "deploy") as mocked_deploy:
+            mocked_deploy.side_effect = DevContainerAlreadyExists
+            response = api_client.post(
+                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainer/"
+            )
+            assert response.status_code == 409
 
     def test_delete(self, api_client, bk_app, bk_module):
         with mock.patch.object(DevContainerController, "delete") as mocked_delete:

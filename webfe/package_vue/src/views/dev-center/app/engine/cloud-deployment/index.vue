@@ -1,6 +1,7 @@
 <template>
   <div class="right-main">
     <module-top-bar
+      :key="topBarIndex"
       :app-code="appCode"
       :title="$t('模块配置')"
       :can-create="canCreateModule"
@@ -135,6 +136,7 @@ export default {
       envValidate: true,
       isTab: true,
       dialogCloudAppData: [],
+      topBarIndex: 0,
     };
   },
   computed: {
@@ -194,6 +196,9 @@ export default {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
       this.$store.commit('cloudApi/updatePageEdit', false);
+    },
+    appCode() {
+      this.topBarIndex += 1;
     },
   },
   created() {

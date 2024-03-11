@@ -50,7 +50,12 @@
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
-                      v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      v-bk-tooltips="{
+                        content: varItem.value,
+                        trigger: 'mouseenter',
+                        maxWidth: 400,
+                        extCls: 'env-var-popover'
+                      }"
                       class="desc-form-content"
                     >
                       {{ varItem.value }}
@@ -73,7 +78,12 @@
                   <template v-if="isReadOnlyRow(index)">
                     <div
                       v-if="varItem.description !== ''"
-                      v-bk-tooltips="{ content: varItem.description, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      v-bk-tooltips="{
+                        content: varItem.description,
+                        trigger: 'mouseenter',
+                        maxWidth: 400,
+                        extCls: 'env-var-popover'
+                      }"
                       class="desc-form-content"
                     >
                       {{ varItem.description }}
@@ -291,8 +301,7 @@ export default {
     async getEnvVarList() {
       this.isVarLoading = true;
       try {
-        const { pdId } = this;
-        const { pluginId } = this;
+        const { pdId, pluginId } = this;
         const res = await this.$store.dispatch('plugin/getEnvVarList', { pdId, pluginId });
         this.envVarList = res;
         this.envVarListBackup = JSON.parse(JSON.stringify(this.envVarList));
@@ -323,8 +332,7 @@ export default {
         description: this.newVarConfig.description,
       };
       try {
-        const { pdId } = this;
-        const { pluginId } = this;
+        const { pdId, pluginId } = this;
         await this.$store.dispatch('plugin/editEnvVar', { pdId, pluginId, data: createForm });
         this.$paasMessage({
           theme: 'success',
@@ -348,8 +356,8 @@ export default {
       if (type === 'cancel') {
         const currentItem = this.envVarListBackup.find(envItem => envItem.__id__ === rowItem.__id__);
         rowItem = currentItem;
-        if (this.$refs[`${rowItem.key}`] && this.$refs[`${rowItem.key}`].length) {
-          this.$refs[`${rowItem.key}`][0].formItems.forEach((item) => {
+        if (this.$refs[rowItem.key]?.length) {
+          this.$refs[rowItem.key][0].formItems.forEach((item) => {
             item.validator.content = '';
             item.validator.state = '';
           });
@@ -368,8 +376,7 @@ export default {
       this.$refs[curRef][0].validate().then(async () => {
         const editForm = varItem;
         try {
-          const { pdId } = this;
-          const { pluginId } = this;
+          const { pdId, pluginId } = this;
           await this.$store.dispatch('plugin/editEnvVar', { pdId, pluginId, data: editForm });
           this.$paasMessage({
             theme: 'success',
@@ -389,8 +396,7 @@ export default {
     // 删除环境变量
     async deleteConfigVar(configVarID) {
       try {
-        const { pdId } = this;
-        const { pluginId } = this;
+        const { pdId, pluginId } = this;
         await this.$store.dispatch('plugin/deleteEnvVar', { pdId, pluginId, configId: configVarID });
         this.$paasMessage({
           theme: 'success',

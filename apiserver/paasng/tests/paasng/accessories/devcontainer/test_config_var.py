@@ -32,6 +32,7 @@ def test_generate_envs(bk_app, bk_module):
     expected_env_keys = [
         f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}",
         f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_ID}",
+        "DEV_SERVER_ADDR",
     ]
 
     if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:

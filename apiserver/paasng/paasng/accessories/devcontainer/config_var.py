@@ -35,7 +35,6 @@ def generate_envs(app: Application, module: Module) -> Dict[str, str]:
     envs = generate_env_vars_for_app(app, settings.CONFIGVAR_SYSTEM_PREFIX)
     envs.update(
         {
-            CONTAINER_TOKEN_ENV: get_random_string(length=8),
             f"{settings.CONFIGVAR_SYSTEM_PREFIX}ENVIRONMENT": "dev",
             f"{settings.CONFIGVAR_SYSTEM_PREFIX}APP_LOG_PATH": settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
         }
@@ -51,6 +50,7 @@ def generate_envs(app: Application, module: Module) -> Dict[str, str]:
     if buildpacks := build_info.buildpacks_info:
         envs["REQUIRED_BUILDPACKS"] = _buildpacks_as_build_env(buildpacks)
 
+    envs.update(_get_devserver_env())
     return envs
 
 
@@ -71,3 +71,11 @@ def _buildpacks_as_build_env(buildpacks: List[Dict]) -> str:
         required_buildpacks.append(" ".join(buildpack))
 
     return ";".join(required_buildpacks)
+
+
+def _get_devserver_env() -> Dict[str, str]:
+    """获取 devserver 的运行环境变量"""
+    return {
+        CONTAINER_TOKEN_ENV: get_random_string(length=8),
+        "DEV_SERVER_ADDR": f":{settings.DEVSERVER_PORT}",
+    }

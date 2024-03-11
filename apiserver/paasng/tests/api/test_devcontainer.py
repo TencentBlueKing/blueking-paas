@@ -33,7 +33,7 @@ class TestDevContainerViewSet:
         with mock.patch.object(DevContainerController, "deploy") as mocked_deploy:
             mocked_deploy.return_value = None
             response = api_client.post(
-                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainer/"
+                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainers/"
             )
             assert response.status_code == 201
 
@@ -41,7 +41,7 @@ class TestDevContainerViewSet:
         with mock.patch.object(DevContainerController, "deploy") as mocked_deploy:
             mocked_deploy.side_effect = DevContainerAlreadyExists
             response = api_client.post(
-                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainer/"
+                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainers/"
             )
             assert response.status_code == 409
 
@@ -49,7 +49,7 @@ class TestDevContainerViewSet:
         with mock.patch.object(DevContainerController, "delete") as mocked_delete:
             mocked_delete.return_value = None
             response = api_client.delete(
-                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainer/"
+                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainers/"
             )
             assert response.status_code == 204
 
@@ -59,6 +59,8 @@ class TestDevContainerViewSet:
             mocked_get.return_value = ContainerDetail(
                 url="http://bkpaas.devcontainer.com", envs={"TOKEN": token}, status="Healthy"
             )
-            response = api_client.get(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainer/")
+            response = api_client.get(
+                f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/devcontainers/"
+            )
             assert response.status_code == 200
             assert response.data == {"url": "http://bkpaas.devcontainer.com", "token": token, "status": "Healthy"}

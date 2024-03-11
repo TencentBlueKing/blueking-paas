@@ -86,4 +86,4 @@ def get_process_selector(app: "WlApp", process_type: str) -> Dict[str, str]:
         version=release.version,
         command_name=command_name,
     )
-    return {"pod_selector": AppResVerManager(app).curr_version.deployment(proc_config).pod_selector}
+    return {"pod_selector": AppResVerManager(app).curr_version.proc_resources(proc_config).pod_selector}

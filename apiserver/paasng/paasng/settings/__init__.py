@@ -125,6 +125,7 @@ INSTALLED_APPS = [
     "paasng.platform.bkapp_model",
     "paasng.platform.engine",
     "paasng.platform.engine.streaming",
+    "paasng.platform.evaluation",
     "paasng.accessories.publish.market",
     "paasng.accessories.publish.sync_market",
     "paasng.platform.sourcectl",
@@ -1191,6 +1192,8 @@ DOCKER_REGISTRY_CONFIG = settings.get(
     "DOCKER_REGISTRY_CONFIG", {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
 
+ENABLE_IMAGE_APP_BIND_REPO = settings.get("ENABLE_IMAGE_APP_BIND_REPO", False)
+
 # -----------------
 # 插件开发中心配置项
 # -----------------
@@ -1288,6 +1291,12 @@ THIRD_APP_INIT_CODES = settings.get("THIRD_APP_INIT_CODES", "")
 ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
+# 开发者中心管理员，主要用于应用运营报告通知
+BKPAAS_PLATFORM_MANAGERS = settings.get("BKPAAS_PLATFORM_MANAGERS", [])
+# 是否向平台管理员发送应用运营报告邮件
+ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE = settings.get(
+    "ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE", False
+)
 
 # 引入 workloads 相关配置
 # fmt: off

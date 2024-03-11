@@ -48,10 +48,10 @@ var _ = Describe("Test webserver api", func() {
 
 	BeforeEach(func() {
 		tmpUploadDir, _ = os.MkdirTemp("", "upload")
-		os.Setenv("UPLOAD_DIR", tmpUploadDir)
+		_ = os.Setenv("UPLOAD_DIR", tmpUploadDir)
 
 		cfg := envConfig{}
-		env.Parse(&cfg)
+		_ = env.Parse(&cfg)
 
 		r := gin.Default()
 		r.Use(tokenAuthMiddleware(cfg.Token))
@@ -68,8 +68,8 @@ var _ = Describe("Test webserver api", func() {
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(tmpUploadDir)
-		os.Setenv("UPLOAD_DIR", oldUploadDir)
+		_ = os.RemoveAll(tmpUploadDir)
+		_ = os.Setenv("UPLOAD_DIR", oldUploadDir)
 	})
 
 	Describe("deploy", func() {
@@ -82,8 +82,8 @@ var _ = Describe("Test webserver api", func() {
 			body := &bytes.Buffer{}
 			writer := multipart.NewWriter(body)
 			part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
-			io.Copy(part, file)
-			writer.Close()
+			_, _ = io.Copy(part, file)
+			_ = writer.Close()
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/deploys", body)

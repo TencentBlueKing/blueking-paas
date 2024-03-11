@@ -36,10 +36,12 @@
     <create-cloud-app
       v-else-if="appType === 'cloud'"
       key="cloud"
+      ref="cloud"
     />
     <create-external-app
       v-else-if="appType === 'external'"
       key="external"
+      ref="external"
     />
   </div>
 </template>
@@ -85,7 +87,13 @@ export default {
     this.switchAppType();
   },
   methods: {
-    handleToggleType(type) {
+    async handleToggleType(type) {
+      // 内容变更弹窗提示
+      const isSwitching = await this.$refs[this.appType]?.handleBeforeFunction();
+      // 存在undefined情况，直接判断是否为false
+      if (isSwitching === false) {
+        return;
+      }
       if (this.searchQuery.type) {
         const query = JSON.parse(JSON.stringify(this.searchQuery));
         query.type = queryMap[type];

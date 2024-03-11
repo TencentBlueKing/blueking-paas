@@ -16,10 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf.urls import url
+from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
-from .views import SvcWorkloadsEndUserView
 
-urlpatterns = [
-    url(r"^svc_workloads/(?P<path>.*)$", SvcWorkloadsEndUserView.as_view(), name="workloads.proxy"),
-]
+class EmailReceiverType(str, StructuredEnum):
+    """邮件接收者类型"""
+
+    PLAT_ADMIN = EnumField("plat_admin", label=_("平台管理员"))
+    APP_ADMIN = EnumField("app_admin", label=_("应用管理员"))
+
+
+class OperationIssueType(str, StructuredEnum):
+    """应用运营问题类型"""
+
+    NONE = EnumField("none", label=_("无"))
+    OWNERLESS = EnumField("ownerless", label=_("无主"))
+    INACTIVE = EnumField("inactive", label=_("不活跃"))
+    MISCONFIGURED = EnumField("misconfigured", label=_("配置错误"))

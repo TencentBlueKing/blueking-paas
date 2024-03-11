@@ -24,15 +24,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 	"github.com/go-logr/logr"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pkg/errors"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 const (
-	platformDir                 = "/platform"
-	cnbDir                      = "/cnb"
+	platformDir = "/platform"
+	cnbDir      = "/cnb"
+	// RequiredBuildpacksEnvVarKey The env var key that store required buildpacks info
 	RequiredBuildpacksEnvVarKey = "REQUIRED_BUILDPACKS"
 )
 

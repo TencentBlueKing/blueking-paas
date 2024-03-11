@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 Namespace = Optional[str]
 Manifest = Union[Dict[str, Any], ResourceInstance]
 
-ClientOptionsDict = Dict[str, Optional[Union[float, int]]]
+ClientOptionsDict = Dict[str, Any]
 
 _default_options: ClientOptionsDict = {}
 
@@ -226,7 +226,7 @@ class BaseOperations:
     def default_kwargs(self) -> Dict[str, Union[str, float]]:
         """The default request kwargs"""
         if self.request_timeout:
-            return {"timeout_seconds": self.request_timeout}
+            return {"_request_timeout": self.request_timeout}
         else:
             return {}
 
@@ -489,8 +489,14 @@ class LabelBasedOperations(BaseOperations):
         :param int timeout_seconds/timeout: the total timeout for this watch request
         """
         kwargs = {**self.default_kwargs, **kwargs}
+
         # be compatible with timeout_seconds parameter
         kwargs.setdefault("timeout", kwargs.pop("timeout_seconds", None))
+        if not kwargs.get("timeout"):
+            raise ValueError("timeout parameter is required")
+        # Watch method does not support _request_timeout parameter, remove it.
+        kwargs.pop("_request_timeout", None)
+
         return self.resource.watch(label_selector=self.make_labels_string(labels), namespace=namespace, **kwargs)
 
     @staticmethod

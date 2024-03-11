@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import pytest
-from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.models import (
@@ -25,7 +24,6 @@ from paas_wl.bk_app.cnative.specs.models import (
     AppModelResource,
     create_app_resource,
     generate_bkapp_name,
-    update_app_resource,
 )
 from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy
 
@@ -71,7 +69,13 @@ class TestCreateAppResource:
                 "svcDiscovery": None,
                 "configuration": {"env": []},
             },
-            "status": {"conditions": [], "lastUpdate": None, "phase": "Pending", "observedGeneration": 0},
+            "status": {
+                "conditions": [],
+                "lastUpdate": None,
+                "phase": "Pending",
+                "observedGeneration": 0,
+                "deployId": "",
+            },
         }
 
     def test_v1alpha2(self, bkapp_manifest):
@@ -122,42 +126,6 @@ def init_model_resource(bk_app, bk_module, resource_name):
         target_port=None,
     )
     return AppModelResource.objects.create_from_resource(bk_app.region, bk_app.id, bk_module.id, resource)
-
-
-class TestUpdateAppResource:
-    def test_uninitialized(self, bk_app, bk_module, spec_example, resource_name):
-        payload = {"kind": "BkApp", "metadata": {"name": resource_name}, "spec": spec_example}
-        with pytest.raises(ValueError, match=r".* not initialized"):
-            update_app_resource(bk_app, bk_module, payload)
-
-    def test_change_envvars_wrong_format(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
-        spec_example["configuration"]["env"] = [{"not_a_key": "not_a_value"}]
-        payload = {"kind": "BkApp", "metadata": {"name": resource_name}, "spec": spec_example}
-        with pytest.raises(ValidationError):
-            update_app_resource(bk_app, bk_module, payload)
-
-    def test_change_kind(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
-        payload = {"kind": "NotAValidKind", "metadata": {"name": resource_name}, "spec": spec_example}
-        with pytest.raises(ValidationError):
-            update_app_resource(bk_app, bk_module, payload)
-
-    def test_change_replicas(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
-        # Update "replicas" field of first process
-        spec_example["processes"][0]["replicas"] = 2
-        payload = {"kind": "BkApp", "metadata": {"name": resource_name}, "spec": spec_example}
-        update_app_resource(bk_app, bk_module, payload)
-        assert AppModelResource.objects.get_json(bk_app, bk_module)["spec"]["processes"][0]["replicas"] == 2
-
-    def test_change_envvars_normal(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
-        spec_example["configuration"]["env"] = [
-            {"name": "foo", "value": "foo-value"},
-            {"name": "bar", "value": "bar-value"},
-        ]
-        payload = {"kind": "BkApp", "metadata": {"name": resource_name}, "spec": spec_example}
-        update_app_resource(bk_app, bk_module, payload)
-        envs = AppModelResource.objects.get_json(bk_app, bk_module)["spec"]["configuration"]["env"]
-        assert len(envs) == 2
-        assert envs[0]["name"] == "foo"
 
 
 class TestAppModelDeploy:

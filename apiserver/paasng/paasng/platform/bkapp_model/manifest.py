@@ -80,7 +80,7 @@ from paasng.platform.bkapp_model.models import (
     SvcDiscConfig,
 )
 from paasng.platform.bkapp_model.utils import merge_env_vars, override_env_vars_overlay
-from paasng.platform.engine.configurations.config_var import get_cnative_builtin_env_variables
+from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.deployment import Deployment
@@ -515,7 +515,7 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, dep
     environment = env.environment
     builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
 
-    for name, value in get_cnative_builtin_env_variables(env, deployment).items():
+    for name, value in get_env_variables(env, True, deployment).items():
         env_vars.append(EnvVar(name=name, value=value))
         builtin_env_vars_overlay.append(EnvVarOverlay(envName=environment, name=name, value=value))
 

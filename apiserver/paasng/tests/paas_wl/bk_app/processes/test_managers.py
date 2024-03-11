@@ -69,12 +69,12 @@ class TestProcInstManager:
 
     @pytest.fixture()
     def pod(self, wl_app, release, client, process_manager, process, v2_mapper):
-        pod_name = v2_mapper.pod(process=process).name
+        pod_name = v2_mapper.proc_resources(process=process).pod_name
         serializer = process_manager._make_serializer(wl_app)
         pod_body = {
             "apiVersion": "v1",
             "kind": "Pod",
-            "metadata": {"labels": v2_mapper.pod(process=process).labels, "name": pod_name},
+            "metadata": {"labels": v2_mapper.proc_resources(process=process).labels, "name": pod_name},
             "spec": serializer._construct_pod_body_specs(process),  # type: ignore
         }
         pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
@@ -141,7 +141,7 @@ class TestProcInstManager:
         assert len(events) > 0
 
     def test_watch_unknown_res(self, wl_app, client, process_manager, process, v2_mapper):
-        pod_name = v2_mapper.pod(process=process).name
+        pod_name = v2_mapper.proc_resources(process=process).pod_name
         serializer = process_manager._make_serializer(wl_app)
         pod_body = {
             "apiVersion": "v1",

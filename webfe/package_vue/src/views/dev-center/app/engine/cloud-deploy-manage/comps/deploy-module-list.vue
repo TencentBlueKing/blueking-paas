@@ -533,8 +533,8 @@ export default {
 
     // 判断当前模块是否已下架
     isRemoved(data) {
-      const deploymentTime =  data.state.deployment?.latest?.created ? data.state.deployment.latest : 0;
-      const offlineTime =  data.state.offline?.latest?.created ? data.state.offline.latest : 0;
+      const deploymentTime = data.state.deployment?.latest ? new Date(data.state.deployment.latest?.created) : 0;
+      const offlineTime = data.state.offline?.latest ? new Date(data.state.offline.latest?.created) : 0;
       return offlineTime > deploymentTime;
     },
   },

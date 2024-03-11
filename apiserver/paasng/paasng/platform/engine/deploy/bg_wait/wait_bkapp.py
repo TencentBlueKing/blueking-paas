@@ -34,7 +34,11 @@ from blue_krill.async_utils.poll_task import (
 from django.utils import timezone
 from pydantic import ValidationError as PyDanticValidationError
 
-from paas_wl.bk_app.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS, DeployStatus
+from paas_wl.bk_app.cnative.specs.constants import (
+    BKPAAS_DEPLOY_ID_ANNO_KEY,
+    CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS,
+    DeployStatus,
+)
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paas_wl.bk_app.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
 from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
@@ -158,8 +162,9 @@ class WaitAppModelReady(WaitProcedurePoller):
     # Abort policies were extra rules which were used to break current polling procedure
     abort_policies: List[AbortPolicy] = [UserInterruptedPolicy()]
 
-    def get_status(self) -> PollingResult:
-        dp = AppModelDeploy.objects.get(id=self.params["deploy_id"])
+    def get_status(self) -> PollingResult:  # noqa: PLR0911
+        deploy_id = self.params["deploy_id"]
+        dp = AppModelDeploy.objects.get(id=deploy_id)
         mres = get_mres_from_cluster(
             ModuleEnvironment.objects.get(
                 application_id=dp.application_id, module_id=dp.module_id, environment=dp.environment_name
@@ -168,6 +173,19 @@ class WaitAppModelReady(WaitProcedurePoller):
 
         if not mres:
             return PollingResult.doing()
+
+        # 注解中的 deploy-id 与期望的 deploy_id 不一致, 说明 bkapp 已经不是该次部署下发的, 结束状态轮询.
+        if mres.metadata.annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY) != str(deploy_id):
+            return PollingResult.done(
+                data={
+                    "state": ModelResState(DeployStatus.UNKNOWN, "Abandoned", "deployment have been abandoned"),
+                    "last_update": mres.status.lastUpdate,
+                }
+            )
+
+        # 状态中的 deploy_id 与期望的 deploy_id 不一致, 说明 operator 尚未处理当前下发的 bkapp, 继续等待.
+        if mres.status.deployId != str(deploy_id):
+            return PollingResult.doing(data={"bkapp.status.deployId": mres.status.deployId})
 
         state = MresConditionParser(mres).detect_state()
         if state.status == DeployStatus.READY:

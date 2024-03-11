@@ -135,9 +135,9 @@
     const clusterComponents = {{ cluster_components | to_json }}
 
     const URLRouter = {
-        listClusters: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
-        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/components/' %}"),
-        retrieve: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/components/${comp_name}/' %}"),
+        listClusters: decodeURI("{{ '/admin42/wl_api/platform/clusters/' }}"),
+        list: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_name}/components/' }}"),
+        retrieve: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_name}/components/${comp_name}/' }}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {

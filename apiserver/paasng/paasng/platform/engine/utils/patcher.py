@@ -56,11 +56,19 @@ class SourceCodePatcherWithDBDriver:
             # dockerfile 类型的构建方式不需要注入 procfile
             raise SkipPatchCode("Dockerfile-type builds do not require a Procfile")
 
-        procfile = self.deploy_description.get_procfile()
+        try:
+            procfile = self.deploy_description.get_procfile()
+        except DeploymentDescription.DoesNotExist:
+            raise SkipPatchCode("DeploymentDescription does not exist, skip the injection process")
 
-        # 云原生应用即使 Procfile 已存在, 也直接覆盖
-        # 因为云原生应用的进程信息只能根据 app_desc.yaml 定义
+        if not procfile:
+            raise SkipPatchCode("Procfile is undefined")
+
+        # 云原生应用如果 Procfile 已存在则不覆盖
         key = self._make_key("Procfile")
+        if key.exists():
+            raise SkipPatchCode("Procfile already exists")
+
         key.parent.mkdir(parents=True, exist_ok=True)
         key.write_text(yaml.safe_dump(procfile))
 

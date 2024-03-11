@@ -24,7 +24,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Union
 
-import pymysql
+import MySQLdb
 import pytest
 import sqlalchemy as sa
 from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
@@ -130,7 +130,7 @@ def _drop_legacy_db(request, django_db_keepdb: bool):
     def drop_legacy_db_core():
         mysql_config = asdict(transfer_django_db_settings(settings.PAAS_LEGACY_DBCONF))
         db = mysql_config.pop("database")
-        connection = pymysql.connect(charset="utf8", **mysql_config)
+        connection = MySQLdb.connect(charset="utf8", **mysql_config)
         with suppress(Exception), connection.cursor() as cursor:
             cursor.execute(f"drop database {db}")
 

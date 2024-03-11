@@ -530,10 +530,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         type = request.data.get("type", constants.PluginReleaseType.PROD)
         # 有正在发布的正式版本，则无法再新建新的正式版本
-        if (
-            type == constants.PluginReleaseType.PROD
-            and plugin.all_prod_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists()
-        ):
+        if type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
         version_type = request.data["source_version_type"]
@@ -593,9 +590,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         plugin = self.get_plugin_instance()
         release = self.get_queryset().get(pk=release_id)
         if release.type == constants.PluginReleaseType.PROD and (
-            plugin.all_prod_versions.filter(status__in=constants.PluginReleaseStatus.running_status())
-            .exclude(pk=release_id)
-            .exists()
+            plugin.prod_releasing_versions.exclude(pk=release_id).exists()
         ):
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
@@ -608,10 +603,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         """重新发布版本"""
         plugin = self.get_plugin_instance()
         release = self.get_queryset().get(pk=release_id)
-        if (
-            release.type == constants.PluginReleaseType.PROD
-            and plugin.all_prod_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists()
-        ):
+        if release.type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
         PluginReleaseExecutor(release).reset_release(operator=request.user.username)

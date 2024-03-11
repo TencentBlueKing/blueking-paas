@@ -123,12 +123,18 @@ class PluginInstance(UuidAuditedModel):
         return self.pd.basic_info_definition.api.reactivate is not None
 
     @property
-    def all_test_versions(self):
+    def test_versions(self):
         return self.all_versions.filter(type=constants.PluginReleaseType.TEST)
 
     @property
-    def all_prod_versions(self):
+    def prod_versions(self):
         return self.all_versions.filter(type=constants.PluginReleaseType.PROD)
+
+    @property
+    def prod_releasing_versions(self):
+        return self.all_versions.filter(
+            type=constants.PluginReleaseType.PROD, status__in=constants.PluginReleaseStatus.running_status()
+        )
 
     @property
     def has_test_version(self) -> bool:

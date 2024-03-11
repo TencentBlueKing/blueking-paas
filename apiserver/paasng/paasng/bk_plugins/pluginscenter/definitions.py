@@ -215,7 +215,7 @@ class ReleaseStageDefinition(BaseModel):
 
     id: str
     name: str
-    invokeMethod: Literal["deployAPI", "pipeline", "subpage", "itsm", "builtin", "grayWithItsm"] = Field(
+    invokeMethod: Literal["deployAPI", "pipeline", "subpage", "itsm", "builtin", "canaryWithItsm"] = Field(
         description="触发方式"
     )
     api: Optional[PluginReleaseAPI] = Field(description="类型为 api/subpage 时必填")

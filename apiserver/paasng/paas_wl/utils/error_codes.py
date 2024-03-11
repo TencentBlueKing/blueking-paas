@@ -46,8 +46,6 @@ class ErrorCodes:
 
     # cnative
     BKAPP_NOT_SET = ErrorCode(_("未设置部署信息"))
-    DEPLOY_BKAPP_FAILED = ErrorCode(_("Failed to deploy bkapp"))
-    GET_MRES_FAILED = ErrorCode(_("Failed to find bkapp in Kubernetes"))
     INVALID_MRES = ErrorCode(_("The bkapp is invalid"))
     GET_DEPLOYMENT_FAILED = ErrorCode(_("Failed to find deployed version"))
     LIST_TAGS_FAILED = ErrorCode(_("Failed to list tag from image repository"))

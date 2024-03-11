@@ -51,8 +51,6 @@ def initialize_deployment(
     :param operator: 当前 operator 的 user id
     :param version_info: 需要部署的源码版本信息
     :param advanced_options: AdvancedOptionsField, 部署的高级选项.
-
-    :raise: `ValidationError`、`ValueError` from update_app_resource
     """
     module: Module = env.module
     application = module.application

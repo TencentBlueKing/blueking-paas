@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.devcontainer.controller import DevContainerController
-from paas_wl.bk_app.devcontainer.exceptions import DevContainerAlreadyExists
+from paas_wl.bk_app.devcontainer.exceptions import DevContainerAlreadyExists, DevContainerResourceNotFound
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -54,7 +54,11 @@ class DevContainerViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     def get_container_detail(self, request, code, module_name):
         controller = DevContainerController(self.get_application(), module_name)
-        detail = controller.get_container_detail()
+        try:
+            detail = controller.get_container_detail()
+        except DevContainerResourceNotFound:
+            raise error_codes.DEVCONTAINER_NOT_FOUND
+
         serializer = ContainerDetailSLZ(
             {"url": detail.url, "token": detail.envs[CONTAINER_TOKEN_ENV], "status": detail.status}
         )

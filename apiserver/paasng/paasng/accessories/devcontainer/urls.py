@@ -22,7 +22,7 @@ from .views import DevContainerViewSet
 
 urlpatterns = [
     re_path(
-        make_app_pattern(r"/devcontainer/$", include_envs=False),
+        make_app_pattern(r"/devcontainers/$", include_envs=False),
         DevContainerViewSet.as_view({"post": "deploy", "delete": "delete", "get": "get_container_detail"}),
     ),
 ]

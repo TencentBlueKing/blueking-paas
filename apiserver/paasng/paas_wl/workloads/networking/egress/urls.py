@@ -16,19 +16,31 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_path
+from functools import partial
 
-from . import views_enduser
+from paasng.utils.basic import make_app_pattern, re_path
+
+from . import views
+
+# In legacy architecture, all workloads's APIs starts with a fixed prefix "/svc_workloads" and use
+# a slightly different format. While the prefix is not required in the new architecture, we have
+# to keep it to maintain backward-compatibility.
+#
+# This function helps up to build paths with the legacy prefix.
+#
+# TODO: Remove the 'svc_workloads' prefix and clean up the URL paths.
+make_app_pattern_legacy_wl = partial(make_app_pattern, prefix="svc_workloads/api/scheduling/applications/")
+
 
 urlpatterns = [
     re_path(
-        make_app_pattern_with_applications_prefix(r"/egress_gateway_infos/$"),
-        views_enduser.EgressGatewayInfosViewSet.as_view({"post": "create"}),
+        make_app_pattern_legacy_wl(r"/egress_gateway_infos/$"),
+        views.EgressGatewayInfosViewSet.as_view({"post": "create"}),
         name="api.egress_gateway_infos",
     ),
     re_path(
-        make_app_pattern_with_applications_prefix(r"/egress_gateway_infos/default/$"),
-        views_enduser.EgressGatewayInfosViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
+        make_app_pattern_legacy_wl(r"/egress_gateway_infos/default/$"),
+        views.EgressGatewayInfosViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
         name="api.egress_gateway_infos.default",
     ),
 ]

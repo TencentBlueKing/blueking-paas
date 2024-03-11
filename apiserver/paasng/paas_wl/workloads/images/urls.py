@@ -18,17 +18,29 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.urls import path
 
-from . import views_enduser
+from . import views
+
+
+# In legacy architecture, all workloads's APIs starts with a fixed prefix "/svc_workloads" and use
+# a slightly different format. While the prefix is not required in the new architecture, we have
+# to keep it to maintain backward-compatibility.
+#
+# This function helps up to build paths with the legacy prefix.
+#
+# TODO: Remove the 'svc_workloads' prefix and clean up the URL paths.
+def make_app_pattern_legacy_wl(suffix: str) -> str:
+    return r"svc_workloads/api/credentials/" + suffix
+
 
 urlpatterns = [
     path(
-        "applications/<str:code>/image_credentials/",
-        views_enduser.AppUserCredentialViewSet.as_view({"get": "list", "post": "create"}),
+        make_app_pattern_legacy_wl("applications/<str:code>/image_credentials/"),
+        views.AppUserCredentialViewSet.as_view({"get": "list", "post": "create"}),
         name="api.applications.image_credentials",
     ),
     path(
-        "applications/<str:code>/image_credentials/<str:name>",
-        views_enduser.AppUserCredentialViewSet.as_view({"put": "update", "delete": "destroy"}),
+        make_app_pattern_legacy_wl("applications/<str:code>/image_credentials/<str:name>"),
+        views.AppUserCredentialViewSet.as_view({"put": "update", "delete": "destroy"}),
         name="api.applications.image_credentials.detail",
     ),
 ]

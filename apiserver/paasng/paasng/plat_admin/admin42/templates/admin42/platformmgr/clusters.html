@@ -432,14 +432,14 @@
     }
 
     const URLRouter = {
-        create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
-        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
-        detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/' %}"),
-        setAsDefault: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/set_default/' %}"),
-        genNodeState: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/node_state/' %}"),
+        create: decodeURI("{{ '/admin42/wl_api/platform/clusters/' }}"),
+        list: decodeURI("{{ '/admin42/wl_api/platform/clusters/' }}"),
+        detail: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_id}/' }}"),
+        setAsDefault: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_id}/set_default/' }}"),
+        genNodeState: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_name}/node_state/' }}"),
         apiServer: {
-            upsert: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers' %}"),
-            delete: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers/${api_server_id}' %}"),
+            upsert: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_id}/api_servers' }}"),
+            delete: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_id}/api_servers/${api_server_id}' }}"),
         }
     }
 

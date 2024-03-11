@@ -16,35 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from functools import partial
-
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
 
-# In legacy architecture, all workloads's APIs starts with a fixed prefix "/svc_workloads" and use
-# a slightly different format. While the prefix is not required in the new architecture, we have
-# to keep it to maintain backward-compatibility.
-#
-# This function helps up to build paths with the legacy prefix.
-#
-# TODO: Remove the 'svc_workloads' prefix and clean up the URL paths.
-make_app_pattern_legacy_wl = partial(make_app_pattern, prefix="svc_workloads/api/services/applications/")
-
 urlpatterns = [
     re_path(
-        make_app_pattern_legacy_wl(r"/process_services/$"),
+        make_app_pattern(r"/process_services/$"),
         views.ProcessServicesViewSet.as_view({"get": "list"}),
         name="api.process_services",
     ),
     re_path(
-        make_app_pattern_legacy_wl(r"/process_services/(?P<service_name>[a-z0-9-]+)$"),
+        make_app_pattern(r"/process_services/(?P<service_name>[a-z0-9-]+)$"),
         views.ProcessServicesViewSet.as_view({"post": "update"}),
         name="api.process_services.single",
     ),
     # Manage the default ingress rule
     re_path(
-        make_app_pattern_legacy_wl(r"/process_ingresses/default$"),
+        make_app_pattern(r"/process_ingresses/default$"),
         views.ProcessIngressesViewSet.as_view({"post": "update"}),
         name="api.process_ingresses.default",
     ),

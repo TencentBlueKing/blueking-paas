@@ -173,6 +173,9 @@ class ErrorCodes:
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode("Failed to create credentials")
 
+    # Manifest
+    IMPORT_MANIFEST_FAILED = ErrorCode(_("导入应用模型失败"))
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

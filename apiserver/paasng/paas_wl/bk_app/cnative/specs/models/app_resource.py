@@ -23,6 +23,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
+from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.bk_app.cnative.specs.constants import DEFAULT_PROCESS_NAME, ApiVersion, DeployStatus
@@ -227,6 +228,32 @@ def create_app_resource(
         obj.spec.processes[0].image = image
 
     return obj
+
+
+def update_app_resource(app: Application, module: Module, payload: Dict):
+    """Update application's resource
+
+    :param payload: application model resource JSON
+    :raise: `ValidationError` when payload is invalid
+    :raise: `ValueError` if model resource has not been initialized for given application
+    """
+    # force replace metadata.name with app_code to avoid user modify
+    payload["metadata"]["name"] = generate_bkapp_name(module)
+
+    try:
+        obj = BkAppResource(**payload)
+    except PDValidationError as e:
+        raise ValidationError(to_error_string(e))
+
+    # Get current resource payload
+    try:
+        # Only the default module is supported currently, so `module_id` is ignored in query
+        # conditions.
+        model_resource = AppModelResource.objects.get(application_id=app.id, module_id=module.id)
+    except AppModelResource.DoesNotExist:
+        raise ValueError(f"{app.id} not initialized")
+
+    model_resource.use_resource(obj)
 
 
 def to_error_string(exc: PDValidationError) -> str:

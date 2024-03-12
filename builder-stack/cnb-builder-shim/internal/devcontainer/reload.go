@@ -90,10 +90,7 @@ func (m HotReloadManager) runCmd(reloadID string, cmd *exec.Cmd) error {
 	cmd.Stdout = multiWriter
 	cmd.Stderr = multiWriter
 
-	if err = cmd.Run(); err != nil {
-		return err
-	}
-	return nil
+	return cmd.Run()
 }
 
 // ReloadResultStorage is the interface that stores the result of app reload.

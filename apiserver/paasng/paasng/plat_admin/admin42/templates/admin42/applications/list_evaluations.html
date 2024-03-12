@@ -3,32 +3,70 @@
 {% load admin_utils %}
 
 {% block main_content %}
-<div id="app-res-usage-list" class="p20">
-    <div class="mb15" style="width: 40%">
+<div id="evaluation-list" class="p20">
+    <div class="mb15" style="display: flex; justify-content: space-between">
         <bk-input
-            placeholder="输入应用 ID 或名称，按 Enter 进行模糊搜索"
+            placeholder="输入应用 Code 或名称，按 Enter 进行模糊搜索"
             :clearable="true"
             :right-icon="'bk-icon icon-search'"
             v-model="filterKey"
-            @enter="handleSearch">
-        </bk-input>
+            @enter="handleSearch"
+            style="width: 40%"
+        ></bk-input>
+        <bk-button class="ml15 mr15" @click="handleExport">
+            导出数据
+        </bk-button>
+    </div>
+    <div class="mb15">
+        <p>按问题类型过滤：</p>
+        <bk-radio-group v-model="issueType" @change="handleSearch">
+            <bk-radio value="" class="m5">
+                <i class="bk-icon">不过滤</i>
+            </bk-radio>
+            <bk-radio value="none" class="m5">
+                <i class="bk-icon">正常</i>
+            </bk-radio>
+            <bk-radio value="ownerless" class="m5">
+                <i class="bk-icon">无主</i>
+            </bk-radio>
+            <bk-radio value="inactive" class="m5">
+                <i class="bk-icon">不活跃</i>
+            </bk-radio>
+            <bk-radio value="misconfigured" class="m5">
+                <i class="bk-icon">配置不当</i>
+            </bk-radio>
+        </bk-radio-group>
     </div>
     <bk-table :data="data" @sort-change="handleSortChange">
-        <bk-table-column label="应用 ID">
+        <bk-table-column label="应用 Code">
             <template slot-scope="props">
                 <a class="cell" @click="handleView(props.row)">$[props.row.app_code]</a>
             </template>
         </bk-table-column>
         <bk-table-column label="应用名称" prop="app_name"></bk-table-column>
+        <bk-table-column label="评估结果" width="100">
+            <template slot-scope="props">
+                <bk-tag
+                    theme="success"
+                    v-if="props.row.issue_type == 'none'"
+                > ✔ </bk-tag>
+                <bk-tag
+                    theme="danger"
+                    v-else
+                    v-bk-tooltips="genIssuesTooltipsConfig(props.row)"
+                > ✘ </bk-tag>
+            </template>
+        </bk-table-column>
         <bk-table-column label="内存 Requests" prop="mem_requests" sortable="custom"></bk-table-column>
         <bk-table-column label="内存 Limits" prop="mem_limits" sortable="custom"></bk-table-column>
         <bk-table-column label="内存使用率（7d)" prop="mem_usage_avg" sortable="custom"></bk-table-column>
         <bk-table-column label="CPU Requests" prop="cpu_requests" sortable="custom"></bk-table-column>
         <bk-table-column label="CPU Limits" prop="cpu_limits" sortable="custom"></bk-table-column>
         <bk-table-column label="CPU 使用率（7d)" prop="cpu_usage_avg" sortable="custom"></bk-table-column>
-        <bk-table-column label="PV (7d)" prop="pv" sortable="custom"></bk-table-column>
-        <bk-table-column label="UV (7d)" prop="uv" sortable="custom"></bk-table-column>
-        <bk-table-column label="最后操作人" prop="operator"></bk-table-column>
+        <bk-table-column label="PV (30d)" prop="pv" sortable="custom"></bk-table-column>
+        <bk-table-column label="UV (30d)" prop="uv" sortable="custom"></bk-table-column>
+        <bk-table-column label="最新操作人" prop="latest_operator"></bk-table-column>
+        <bk-table-column label="最新操作时间" prop="latest_operated_at"></bk-table-column>
         <bk-table-column label="采集时间" prop="collected_at"></bk-table-column>
     </bk-table>
     <pagination
@@ -47,7 +85,7 @@
         :show-footer="false"
     >
         <div slot="header">应用资源使用详情</div>
-        <bk-container :col="4">
+        <bk-container :col="3">
             <bk-row>
                 <bk-col><label class="m10">应用 Code:</label> $[dialog.form.app_code]</bk-col>
                 <bk-col><label class="m10">应用名称:</label> $[dialog.form.app_name]</bk-col>
@@ -63,22 +101,28 @@
                 <bk-col><label class="m10">平均使用率（7d）:</label> $[dialog.form.cpu_usage_avg]</bk-col>
             </bk-row>
             <bk-row>
-                <bk-col><label class="m10">PV（7d）:</label> $[dialog.form.pv]</bk-col>
-                <bk-col><label class="m10">UV（7d）:</label> $[dialog.form.uv]</bk-col>
-                <bk-col><label class="m10">最后操作人:</label> $[dialog.form.operator]</bk-col>
+                <bk-col><label class="m10">PV（30d）:</label> $[dialog.form.pv]</bk-col>
+                <bk-col><label class="m10">UV（30d）:</label> $[dialog.form.uv]</bk-col>
+                <bk-col><label class="m10">采集时间:</label> $[dialog.form.collected_at]</bk-col>
             </bk-row>
             <bk-row>
-                <bk-col><label class="m10">采集时间:</label> $[dialog.form.collected_at]</bk-col>
+                <bk-col><label class="m10">最新操作人:</label> $[dialog.form.latest_operator || '--' ]</bk-col>
+                <bk-col><label class="m10">操作时间:</label> $[dialog.form.latest_operated_at || '--' ]</bk-col>
+                <bk-col><label class="m10">内容:</label> $[dialog.form.latest_operation || '--' ]</bk-col>
+            </bk-row>
+            <bk-row>
+                <bk-col><label class="m10">最新部署人:</label> $[dialog.form.latest_deployer || '--' ]</bk-col>
+                <bk-col><label class="m10">部署时间:</label> $[dialog.form.latest_deployed_at || '--' ]</bk-col>
                 <bk-col>
                     <label class="m10">
-                        <a :href="appOverviewPageUrl(dialog.form.app_code)">跳转到应用概览</a>
+                        <a :href="appOverviewPageUrl(dialog.form.app_code)" target="_blank">跳转到应用概览</a>
                     </label>
                 </bk-col>
             </bk-row>
         </bk-container>
         <h4 class="mt20">模块进程</h4>
         <bk-collapse accordion>
-            <bk-collapse-item v-for="module in dialog.form.summary.modules" :name="module.module_name">
+            <bk-collapse-item v-for="module in dialog.form.res_summary.modules" :name="module.module_name">
                 $[ module.module_name ]
                 <div slot="content">
                     <bk-tab type="unborder-card">
@@ -86,13 +130,11 @@
                             v-for="(panel, index) in dialog.env_panels"
                             v-bind="panel"
                             :key="index">
-                            <bk-container :col="5" v-for="proc in getEnvProcs(module, panel.name)">
+                            <bk-container :col="5" v-for="proc in getEnvProcs(module, panel.name)" v-if="proc.quota">
                                 <bk-row>
-                                    <bk-col><label class="m10">进程名称:</label> $[proc.name]</bk-col>
+                                    <bk-col><label class="m10">进程名称:</label><b>$[proc.name]</b></bk-col>
                                     <bk-col><label class="m10">副本数量:</label> $[proc.replicas]</bk-col>
-                                    <bk-col><label class="m10">资源套餐:</label> $[proc.current_plan]
-                                        <span v-if="!proc.suitable" v-bk-tooltips="genTooltipsConfig(proc)">❗</span>
-                                    </bk-col>
+                                    <bk-col><label class="m10">资源套餐:</label> $[proc.current_plan]</bk-col>
                                 </bk-row>
                                 <bk-row>
                                     <bk-col><label class="m10">内存请求:</label> $[proc.quota.requests.memory] Mi</bk-col>
@@ -135,29 +177,34 @@
 const pagination = {{ pagination | to_json }}
 const data = {{ usage_report_list | to_json }}
 const SEARCH_PARAM = "search_term"
+const ISSUE_TYPE_PARAM = "issue_type"
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#app-res-usage-list",
+        el: "#evaluation-list",
         delimiters: ['$[', ']'],
         data: function () {
             let prefix = window.location.href
             let filterKey = undefined
+            let issueType = undefined
 
             if (prefix.indexOf("?") > 0) {
                 let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
                 filterKey = query[SEARCH_PARAM]
+                issueType = query[ISSUE_TYPE_PARAM]
             }
             return {
                 data,
                 pagination,
                 baseUrl: '{% url "admin.applications.detail.overview" "app_code" %}',
                 SEARCH_PARAM,
+                ISSUE_TYPE_PARAM,
                 filterKey,
+                issueType,
                 dialog: {
                     visible: false,
                     form: {
-                        summary: {
+                        res_summary: {
                             modules: []
                         }
                     },
@@ -193,7 +240,9 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             handleSearch() {
                 let query = {
-                    [this.SEARCH_PARAM]: this.filterKey, offset:0
+                    [this.SEARCH_PARAM]: this.filterKey,
+                    [this.ISSUE_TYPE_PARAM]: this.issueType,
+                    offset:0
                 }
                 this.handleQueryChange(query)
             },
@@ -207,9 +256,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 query = querystring.stringify(query)
                 window.location.href = `${prefix}?${query}`
             },
-            genTooltipsConfig: function (proc) {
+            handleExport() {
+                this.$bkMessage({theme: 'error', message: `暂不支持导出数据`})
+            },
+            genIssuesTooltipsConfig(row) {
                 return {
-                    content: 'Reasons:<br>' + proc.reasons.join('<br>'),
+                    content: row.issues.join('<br>'),
                     allowHTML: true
                 }
             }

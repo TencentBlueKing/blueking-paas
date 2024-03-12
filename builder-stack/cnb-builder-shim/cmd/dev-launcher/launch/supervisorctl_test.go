@@ -25,36 +25,73 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
 var _ = Describe("Test supervisorctl", func() {
 	var ctl *SupervisorCtl
+	var supervisorTmpDir string
 
-	oldDir := supervisorDir
 	oldConfFilePath := confFilePath
 
 	BeforeEach(func() {
-		supervisorDir, _ = os.MkdirTemp("", "supervisor")
-		confFilePath = filepath.Join(supervisorDir, "dev.conf")
-
+		supervisorTmpDir, _ = os.MkdirTemp("", "supervisor")
+		confFilePath = filepath.Join(supervisorTmpDir, "dev.conf")
 		ctl = NewSupervisorCtl()
 	})
 	AfterEach(func() {
-		Expect(os.RemoveAll(supervisorDir)).To(BeNil())
-
-		supervisorDir = oldDir
+		Expect(os.RemoveAll(supervisorTmpDir)).To(BeNil())
 		confFilePath = oldConfFilePath
 	})
 
-	It("Test refreshConf", func() {
-		conf := MakeSupervisorConf(
-			[]Process{
-				{ProcType: "web", CommandPath: "/cnb/processes/web"},
-				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
+	DescribeTable(
+		"Test MakeSupervisorConf with invalid environment variables",
+		func(processes []Process, procEnv []appdesc.Env, expectedErrorStr string) {
+			_, err := MakeSupervisorConf(processes, procEnv...)
+			Expect(err.Error()).To(Equal(expectedErrorStr))
+		}, Entry(
+			"invalid with (%)",
+			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]appdesc.Env{
+				{Key: "FOO", Value: `%abc`},
+				{Key: "BAR", Value: `ab%c`},
 			},
-		)
+			`environment variables: FOO, BAR has invalid characters ("%)`,
+		),
+		Entry(
+			"invalid with (%)",
+			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]appdesc.Env{
+				{Key: "FOO", Value: `%abc`},
+				{Key: "BAR", Value: `abc`},
+			},
+			`environment variables: FOO has invalid characters ("%)`,
+		),
+		Entry(
+			`invalid with ("%)`,
+			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]appdesc.Env{
+				{Key: "FOO_TEST", Value: `http://abc.com/cc`},
+				{Key: "FOO", Value: `%abc`},
+				{Key: "BAR", Value: `ab"c`},
+			},
+			`environment variables: FOO, BAR has invalid characters ("%)`,
+		),
+	)
 
-		expectedConfContent := fmt.Sprintf(`[unix_http_server]
+	DescribeTable("Test refreshConf", func(processes []Process, procEnv []appdesc.Env, expectedConfContent string) {
+		conf, _ := MakeSupervisorConf(processes, procEnv...)
+		Expect(ctl.refreshConf(conf)).To(BeNil())
+
+		content, _ := os.ReadFile(confFilePath)
+		Expect(string(content)).To(Equal(expectedConfContent))
+	}, Entry("without env_variables",
+		[]Process{
+			{ProcType: "web", CommandPath: "/cnb/processes/web"},
+			{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
+		}, []appdesc.Env{},
+		fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 
 [supervisorctl]
@@ -76,11 +113,37 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, ctl.RootDir)
+`, supervisorDir)),
+		Entry("with env_variables",
+			[]Process{
+				{ProcType: "web", CommandPath: "/cnb/processes/web"},
+				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
+			},
+			[]appdesc.Env{
+				{Key: "DJANGO_SETTINGS_MODULE", Value: "settings"},
+				{Key: "WHITENOISE_STATIC_PREFIX", Value: "/static/"},
+			}, fmt.Sprintf(`[unix_http_server]
+file = %[1]s/supervisor.sock
 
-		Expect(ctl.refreshConf(conf)).To(BeNil())
+[supervisorctl]
+serverurl = unix://%[1]s/supervisor.sock
 
-		content, _ := os.ReadFile(confFilePath)
-		Expect(string(content)).To(Equal(expectedConfContent))
-	})
+[supervisord]
+pidfile = %[1]s/supervisord.pid
+logfile = %[1]s/log/supervisord.log
+environment = DJANGO_SETTINGS_MODULE="settings",WHITENOISE_STATIC_PREFIX="/static/"
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[program:web]
+command = /cnb/processes/web
+stdout_logfile = %[1]s/log/web.log
+redirect_stderr = true
+
+[program:worker]
+command = /cnb/processes/worker
+stdout_logfile = %[1]s/log/worker.log
+redirect_stderr = true
+`, supervisorDir)))
 })

@@ -57,7 +57,7 @@ export default {
      * @param {Object} params 包括appCode instanceName env
      */
     getProcesses({}, { appCode, moduleId, env }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/`;
       return http.get(url, config);
     },
 
@@ -66,7 +66,7 @@ export default {
      * @param {Object} params 包括appCode instanceName env releaseId
      */
     getLastVersionProcesses({}, { appCode, moduleId, env, releaseId }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/?only_latest_version=true&release_id=${releaseId}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/?only_latest_version=true&release_id=${releaseId}`;
       return http.get(url, config);
     },
 
@@ -75,7 +75,7 @@ export default {
      * @param {Object} params 包括appCode instanceName env data
      */
     updateProcess({}, { appCode, moduleId, env, data }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/`;
       return http.post(url, data, config);
     },
 
@@ -93,7 +93,7 @@ export default {
      * @param {Object} params tplType模版类型, region应用版本 tplName模版名称
      */
     getProcessService({}, { appCode, moduleId, env }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
       return http.get(url, config);
     },
   },

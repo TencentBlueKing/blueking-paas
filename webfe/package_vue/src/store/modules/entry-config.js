@@ -31,7 +31,7 @@ export default {
          * @param {Object} params 包括appCode, env
          */
     getProcessServices({}, { appCode, moduleId, env }) {
-      const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
       return http.get(url);
     },
 
@@ -40,7 +40,7 @@ export default {
          * @param {Object} params 包括appCode, env, serviceName
          */
     updateServicePorts({}, { appCode, moduleId, env, serviceName, ports }) {
-      const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/${serviceName}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/${serviceName}`;
       return http.post(url, { ports });
     },
 
@@ -49,7 +49,7 @@ export default {
          * @param {Object} params 包括appCode, env, serviceName, servicePortName
          */
     setServiceMainEntry({}, { appCode, moduleId, env, serviceName, servicePortName }) {
-      const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/modules/${moduleId}/envs/${env}/process_ingresses/default`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/process_ingresses/default`;
       return http.post(url, {
         service_name: serviceName,
         service_port_name: servicePortName,
@@ -81,7 +81,7 @@ export default {
          * @param {Object} params
          */
     addDomainInfo({}, { appCode, data }) {
-      const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/domains/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domains/`;
       return http.post(url, data);
     },
 
@@ -90,7 +90,7 @@ export default {
          * @param {Object} params
          */
     updateDomainInfo({}, { appCode, data }) {
-      const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${appCode}/domains/${data.id}/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domains/${data.id}/`;
       return http.put(url, data);
     },
 

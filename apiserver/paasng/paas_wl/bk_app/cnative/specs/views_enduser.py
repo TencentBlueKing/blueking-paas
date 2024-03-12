@@ -56,7 +56,7 @@ from paas_wl.bk_app.cnative.specs.models import (
     to_error_string,
     update_app_resource,
 )
-from paas_wl.bk_app.cnative.specs.mounts import MountManager, check_storage_class_exists, init_source_controller
+from paas_wl.bk_app.cnative.specs.mounts import MountManager, check_storage_class_exists, init_volume_source_controller
 from paas_wl.bk_app.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster
@@ -457,7 +457,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not validated_data.get("source_name"):
             # 创建或更新 Mount source
             configmap_source = validated_data.get("configmap_source") or {}
-            controller = init_source_controller(mount_instance.source_type)
+            controller = init_volume_source_controller(mount_instance.source_type)
             controller.create_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
         try:
             slz = MountSLZ(mount_instance)
@@ -474,14 +474,14 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id, "mount_id": mount_instance.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
-        controller = init_source_controller(mount_instance.source_type)
+        controller = init_volume_source_controller(mount_instance.source_type)
 
         # 更新 Mount
         mount_instance.name = validated_data["name"]
         mount_instance.environment_name = validated_data["environment_name"]
         mount_instance.mount_path = validated_data["mount_path"]
         if source_name := validated_data.get("source_name"):
-            mount_instance.source_config = controller.new_volume_source(source_name)
+            mount_instance.source_config = controller.build_volume_source(source_name)
         try:
             mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])
         except IntegrityError:
@@ -502,7 +502,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        controller = init_source_controller(mount_instance.source_type)
+        controller = init_volume_source_controller(mount_instance.source_type)
         controller.delete_by_mount(mount_instance)
         mount_instance.delete()
 
@@ -523,7 +523,7 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         environment_name = params.get("environment_name")
         source_type = params.get("source_type")
 
-        controller = init_source_controller(source_type)
+        controller = init_volume_source_controller(source_type)
         queryset = controller.list_by_app(application_id=app.id)
 
         if environment_name:
@@ -542,15 +542,17 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         environment_name = validated_data.get("environment_name")
         source_type = validated_data.get("source_type")
-        storage = (
-            validated_data.get("persistent_storage_source", {}).get("storage")
+        storage_size = (
+            validated_data.get("persistent_storage_source", {}).get("storage_size")
             or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
         )
 
-        controller = init_source_controller(source_type)
-        queryset = controller.create_by_app(application_id=app.id, environment_name=environment_name, storage=storage)
+        controller = init_volume_source_controller(source_type)
+        spurce = controller.create_by_app(
+            application_id=app.id, environment_name=environment_name, storage_size=storage_size
+        )
 
-        slz = MountSourceSLZ(queryset)
+        slz = MountSourceSLZ(spurce)
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, code):
@@ -563,7 +565,7 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         source_type = params.get("source_type")
         source_name = params.get("source_name")
 
-        controller = init_source_controller(source_type)
+        controller = init_volume_source_controller(source_type)
         controller.delete_by_app(application_id=app.id, source_name=source_name)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

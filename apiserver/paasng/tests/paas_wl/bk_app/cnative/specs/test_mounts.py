@@ -24,7 +24,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMap
 from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentStorage as PersistentStorageSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
-from paas_wl.bk_app.cnative.specs.mounts import MountManager, init_source_controller
+from paas_wl.bk_app.cnative.specs.mounts import MountManager, init_volume_source_controller
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -127,14 +127,14 @@ class TestVolumeSourceController:
             region=bk_app.region,
         )
         source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
-        controller = init_source_controller(mount.source_type)
+        controller = init_volume_source_controller(mount.source_type)
         controller.create_by_mount(mount, data=source_data)
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_configmap(self, bk_stag_env, mount_configmap):
         mounts.BaseVolumeSourceController.deploy(bk_stag_env)
-        controller = init_source_controller(mount_configmap.source_type)
+        controller = init_volume_source_controller(mount_configmap.source_type)
         source = controller.get_by_mount(mount_configmap)
         assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         controller.delete_k8s_resource(source, bk_stag_env.wl_app)
@@ -158,7 +158,7 @@ class TestVolumeSourceController:
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_pvc(self, bk_stag_env, mount_pvc):
         mounts.BaseVolumeSourceController.deploy(bk_stag_env)
-        controller = init_source_controller(mount_pvc.source_type)
+        controller = init_volume_source_controller(mount_pvc.source_type)
         source = controller.get_by_mount(mount_pvc)
         assert pvc_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         controller.delete_k8s_resource(source, bk_stag_env.wl_app)

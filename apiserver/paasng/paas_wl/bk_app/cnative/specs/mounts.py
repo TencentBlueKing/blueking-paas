@@ -59,11 +59,11 @@ class BaseVolumeSourceController:
             module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
         )
         for m in mount_queryset:
-            controller = init_source_controller(m.source_type)
+            controller = init_volume_source_controller(m.source_type)
             source = controller.get_by_mount(m)
             controller.upsert_k8s_resource(source, env.wl_app)
 
-    def new_volume_source(self, name: str) -> VolumeSource:
+    def build_volume_source(self, name: str) -> VolumeSource:
         """创建对应 VolumeSource 对象"""
         raise NotImplementedError
 
@@ -108,7 +108,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
     volume_source_type = VolumeSourceType.ConfigMap
     model_class = ConfigMapSource
 
-    def new_volume_source(self, name: str) -> VolumeSource:
+    def build_volume_source(self, name: str) -> VolumeSource:
         return VolumeSource(configMap=ConfigMapSourceSpec(name=name))
 
     def list_by_app(self, application_id: str) -> QuerySet[ConfigMapSource]:
@@ -180,7 +180,7 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
     volume_source_type = VolumeSourceType.PersistentStorage
     model_class = PersistentStorageSource
 
-    def new_volume_source(self, name: str) -> VolumeSource:
+    def build_volume_source(self, name: str) -> VolumeSource:
         return VolumeSource(persistentStorage=PersistentStorageSpec(name=name))
 
     def list_by_app(self, application_id: str) -> QuerySet[PersistentStorageSource]:
@@ -192,14 +192,14 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             application_id=application_id,
             environment_name=environment_name,
             name=generate_source_config_name(app_code=application.code),
-            storage=kwargs.get("storage"),
+            storage_size=kwargs.get("storage_size"),
             storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME,
         )
 
     def delete_by_app(self, application_id: str, source_name: str) -> None:
         # 删除 k8s 资源
         mounts = Mount.objects.filter(
-            source_config=self.new_volume_source(source_name),
+            source_config=self.build_volume_source(source_name),
         )
         source = self.model_class.objects.get(application_id=application_id, name=source_name)
         for mount in mounts:
@@ -229,7 +229,7 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             PersistentVolumeClaim(
                 app=wl_app,
                 name=source.name,
-                storage=source.storage,
+                storage=source.storage_size,
                 storage_class_name=source.storage_class_name,
             )
         )
@@ -239,13 +239,13 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             PersistentVolumeClaim(
                 app=wl_app,
                 name=source.name,
-                storage=source.storage,
+                storage=source.storage_size,
                 storage_class_name=source.storage_class_name,
             )
         )
 
 
-def init_source_controller(volume_source_type: str) -> BaseVolumeSourceController:
+def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceController:
     return BaseVolumeSourceController.get_source_class(volume_source_type)()
 
 
@@ -268,8 +268,8 @@ class MountManager:
         source_name: Optional[str] = None,
     ) -> Mount:
         source_config_name = source_name or generate_source_config_name(app_code=app_code)
-        controller = init_source_controller(source_type)
-        source_config = controller.new_volume_source(name=source_config_name)
+        controller = init_volume_source_controller(source_type)
+        source_config = controller.build_volume_source(name=source_config_name)
 
         return Mount.objects.create(
             module_id=module_id,

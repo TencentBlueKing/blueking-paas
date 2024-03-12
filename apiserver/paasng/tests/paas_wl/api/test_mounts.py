@@ -20,7 +20,7 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
-from paas_wl.bk_app.cnative.specs.mounts import MountManager, init_source_controller
+from paas_wl.bk_app.cnative.specs.mounts import MountManager, init_volume_source_controller
 from paas_wl.bk_app.cnative.specs.serializers import MountSLZ
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -39,7 +39,7 @@ def mount_configmap(bk_app, bk_module, bk_stag_env, bk_stag_wl_app):
         region=bk_app.region,
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
-    controller = init_source_controller(mount.source_type)
+    controller = init_volume_source_controller(mount.source_type)
     controller.create_by_mount(mount, data=source_data)
     return mount
 
@@ -102,7 +102,7 @@ def mounts(bk_app, bk_module):
             region=bk_app.region,
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
-        controller = init_source_controller(mount.source_type)
+        controller = init_volume_source_controller(mount.source_type)
         controller.create_by_mount(mount, data=source_data)
         mount_list.append(mount)
     return mount_list
@@ -141,7 +141,7 @@ class TestVolumeMountViewSet:
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-configmap-test").first()
-        controller = init_source_controller(mount.source_type)
+        controller = init_volume_source_controller(mount.source_type)
         source = controller.get_by_mount(mount)
         assert response.status_code == 201
         assert mount
@@ -158,7 +158,7 @@ class TestVolumeMountViewSet:
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
-        controller = init_source_controller(mount.source_type)
+        controller = init_volume_source_controller(mount.source_type)
         source = controller.get_by_mount(mount)
         assert response.status_code == 201
         assert mount
@@ -259,7 +259,7 @@ class TestVolumeMountViewSet:
 
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount_configmap.pk)
-        controller = init_source_controller(mount_updated.source_type)
+        controller = init_volume_source_controller(mount_updated.source_type)
         source = controller.get_by_mount(mount_updated)
         assert response.status_code == 200
         assert mount_updated.name == mount_configmap.name

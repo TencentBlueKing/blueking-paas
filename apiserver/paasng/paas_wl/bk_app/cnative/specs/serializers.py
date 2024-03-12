@@ -23,7 +23,7 @@ from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, PersistentStorageSize, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
-from paas_wl.bk_app.cnative.specs.mounts import init_source_controller
+from paas_wl.bk_app.cnative.specs.mounts import init_volume_source_controller
 
 from .constants import DeployStatus
 from .models import AppModelDeploy, AppModelRevision, ConfigMapSource, Mount, PersistentStorageSource
@@ -170,13 +170,13 @@ class ConfigMapSLZ(serializers.Serializer):
         allow_null=True,
     )
 
-    def validate_source_config_data(self, value):
-        if not value:
+    def validate_source_config_data(self, data):
+        if not data:
             return None
-        for key in value:
+        for key in data:
             if not key:
                 raise serializers.ValidationError("key cannot be empty")
-        return value
+        return data
 
 
 class PersistentStorageSLZ(serializers.Serializer):
@@ -223,7 +223,7 @@ class UpsertMountSLZ(serializers.Serializer):
 
         # 如果传入了 source_name ，需要校验 source_name 对应的资源是否存在
         if source_name := attrs.get("source_name"):
-            controller = init_source_controller(attrs["source_type"])
+            controller = init_volume_source_controller(attrs["source_type"])
             if not controller.model_class.objects.filter(name=source_name, environment_name=environment_name).exists():
                 raise serializers.ValidationError(_(f"挂载资源 {source_name} 不存在"))
         return attrs
@@ -254,31 +254,30 @@ class MountSLZ(serializers.ModelSerializer):
         if obj.source_type != VolumeSourceType.ConfigMap.value:
             return None
         try:
-            controller = init_source_controller(obj.source_type)
+            controller = init_volume_source_controller(obj.source_type)
             source = controller.get_by_mount(obj)
         except ValueError as e:
             raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
-        else:
-            return {"source_config_data": source.data}
+        return {"source_config_data": source.data}
 
     def get_persistent_storage_source(self, obj):
         if obj.source_type != VolumeSourceType.PersistentStorage.value:
             return None
         try:
-            controller = init_source_controller(obj.source_type)
+            controller = init_volume_source_controller(obj.source_type)
             source = controller.get_by_mount(obj)
         except ValueError as e:
             raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
-        else:
-            mounts = Mount.objects.filter(
-                source_config=controller.new_volume_source(source.name),
-            )
-            bound_modules = [{"module": mount.name, "path": mount.mount_path} for mount in mounts]
-            return {
-                "name": source.name,
-                "storage": source.storage,
-                "bound_modules": bound_modules,
-            }
+
+        mounts = Mount.objects.filter(
+            source_config=controller.build_volume_source(source.name),
+        )
+        bound_modules = [{"module": mount.name, "path": mount.mount_path} for mount in mounts]
+        return {
+            "name": source.name,
+            "storage": source.storage,
+            "bound_modules": bound_modules,
+        }
 
 
 class QueryMountsSLZ(serializers.Serializer):
@@ -323,8 +322,8 @@ class MountSourceSLZ(serializers.Serializer):
     def get_bound_modules(self, obj):
         """返回已绑定的模块"""
         source_type = self.get_source_type(obj)
-        controller = init_source_controller(source_type)
+        controller = init_volume_source_controller(source_type)
         mounts = Mount.objects.filter(
-            source_config=controller.new_volume_source(obj.name),
+            source_config=controller.build_volume_source(obj.name),
         )
         return [{"module": mount.name, "path": mount.mount_path} for mount in mounts]

@@ -94,7 +94,7 @@ class PersistentStorageSource(TimestampedModel):
         verbose_name=_("环境名称"), choices=MountEnvName.get_choices(), null=False, max_length=16
     )
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
-    storage = models.CharField(max_length=63)
+    storage_size = models.CharField(max_length=63)
     storage_class_name = models.CharField(max_length=63)
 
     objects = PersistentStorageManager()

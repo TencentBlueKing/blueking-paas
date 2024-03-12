@@ -25,8 +25,8 @@ import (
 
 // VolumeSource 参考 k8s.io/api/core/v1.VolumeSource
 type VolumeSource struct {
-	ConfigMap             *ConfigMapSource             `json:"configMap"`
-	PersistentVolumeClaim *PersistentVolumeClaimSource `json:"PersistentVolumeClaim"`
+	ConfigMap             *ConfigMapSource             `json:"configMap,omitempty"`
+	PersistentVolumeClaim *PersistentVolumeClaimSource `json:"persistentVolumeClaim,omitempty"`
 }
 
 // ToValidator 将 volume source 转换成 VolumeSourceValidator
@@ -45,7 +45,7 @@ type VolumeSourceValidator interface {
 }
 
 // ConfigMapSource represents a configMap that should
-//populate this volume
+// populate this volume
 type ConfigMapSource struct {
 	Name string `json:"name"`
 }

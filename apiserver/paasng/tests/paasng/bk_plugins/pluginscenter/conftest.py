@@ -38,6 +38,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfoDefinition,
     PluginRelease,
     PluginReleaseStage,
+    PluginVisibleRangeDefinition,
 )
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
@@ -63,8 +64,16 @@ def pd():
                 "create": make_api_resource("create-release"),
                 "update": make_api_resource("update-release-{ version_id }"),
             },
+            "gradualReleaseStrategy": ["bkciProject", "organization"],
         },
         release_stages=[{"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"}],
+        test_release_revision={
+            "revisionType": "all",
+            "versionNo": "branch-timestamp",
+            # 不允许选择正在发布过的代码分支
+            "revisionPolicy": "disallow_releasing_source_version",
+        },
+        test_release_stages=[{"id": "test_approval", "name": "测试审批", "invokeMethod": "itsm"}],
         log_config={
             "backendType": "es",
             "stdout": log_params,
@@ -129,6 +138,12 @@ def pd():
             "bottomUrl": "http://example.com/bottom/{plugin_id}",
             "topUrl": "http://example.com/top/{plugin_id}",
         },
+    )
+    pd.visible_range_definition = G(
+        PluginVisibleRangeDefinition,
+        pd=pd,
+        description_zh_cn="仅可见范围内的组织、用户可在研发商店查看并使用该插件",
+        scope=["organization", "bkciProject"],
     )
 
     pd.config_definition = G(
@@ -198,7 +213,7 @@ def release(plugin):
 @pytest.fixture()
 def itsm_online_stage(release):
     stage = PluginReleaseStage.objects.filter(
-        release=release, invoke_method="itsm", stage_id="online_approval"
+        release=release, invoke_method="itsm", stage_id="online_approval", release__type="prod"
     ).first()
     return stage
 
@@ -230,3 +245,27 @@ def iam_policy_client():
 @pytest.fixture()
 def _setup_bk_user(bk_user):
     AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_PLUGIN_CENTER, True)
+
+
+@pytest.fixture()
+def test_release(plugin):
+    release: PluginRelease = G(
+        PluginRelease,
+        plugin=plugin,
+        source_location=plugin.repository,
+        type="test",
+        source_version_type="branch",
+        source_version_name="testbranch",
+        version="testbranch-2401191602",
+        comment="",
+    )
+    release.initial_stage_set()
+    return release
+
+
+@pytest.fixture()
+def itsm_test_stage(release):
+    stage = PluginReleaseStage.objects.filter(
+        release=release, invoke_method="itsm", stage_id="test_approval", release__type="test"
+    ).first()
+    return stage

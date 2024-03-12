@@ -24,7 +24,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
 var supervisorDir = "/cnb/devcontainer/supervisor"
@@ -40,6 +43,9 @@ serverurl = unix://{{ .RootDir }}/supervisor.sock
 [supervisord]
 pidfile = {{ .RootDir }}/supervisord.pid
 logfile = {{ .RootDir }}/log/supervisord.log
+{{- if .Environment }}
+environment = {{ .Environment }}
+{{- end }}
 
 [rpcinterface:supervisor]
 supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
@@ -72,14 +78,26 @@ type ProcessConf struct {
 
 // SupervisorConf is a supervisor template conf data
 type SupervisorConf struct {
-	RootDir   string
-	Processes []ProcessConf
+	RootDir     string
+	Processes   []ProcessConf
+	Environment string
 }
 
 // MakeSupervisorConf returns a new SupervisorConf
-func MakeSupervisorConf(processes []Process) *SupervisorConf {
+func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
+	}
+
+	if procEnvs != nil {
+		if err := validateEnvironment(procEnvs); err != nil {
+			return nil, err
+		}
+		envs := make([]string, len(procEnvs))
+		for indx, env := range procEnvs {
+			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Key, env.Value)
+		}
+		conf.Environment = strings.Join(envs, ",")
 	}
 
 	for _, p := range processes {
@@ -88,7 +106,7 @@ func MakeSupervisorConf(processes []Process) *SupervisorConf {
 			ProcLogFile: filepath.Join(conf.RootDir, "log", p.ProcType+".log"),
 		})
 	}
-	return conf
+	return conf, nil
 }
 
 // NewSupervisorCtl returns a new SupervisorCtl
@@ -140,9 +158,28 @@ func (ctl *SupervisorCtl) reload() error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
-	if err := cmd.Run(); err != nil {
-		return err
+	return cmd.Run()
+}
+
+// validateEnvironment validates the environment variables for supervisor conf.
+//
+// see detail environment conf in http://supervisord.org/configuration.html
+// char " and % in environment value will cause supervisord to fail
+func validateEnvironment(procEnvs []appdesc.Env) error {
+	invalidChars := `"%`
+	invalidEnvNames := []string{}
+	for _, env := range procEnvs {
+		if strings.ContainsAny(env.Value, invalidChars) {
+			invalidEnvNames = append(invalidEnvNames, env.Key)
+		}
+	}
+	if len(invalidEnvNames) == 0 {
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf(
+		"environment variables: %s has invalid characters (%s)",
+		strings.Join(invalidEnvNames, ", "),
+		invalidChars,
+	)
 }

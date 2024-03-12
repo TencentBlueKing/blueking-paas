@@ -74,6 +74,8 @@ class Command(BaseCommand):
                 "approval_config": pd_data.approvalConfig,
                 "release_revision": pd_data.releaseRevision,
                 "release_stages": pd_data.releaseStages,
+                "test_release_revision": pd_data.testReleaseRevision,
+                "test_release_stages": pd_data.testReleaseStages,
                 "log_config": pd_data.logConfig,
                 "features": pd_data.features,
             },
@@ -108,6 +110,16 @@ class Command(BaseCommand):
                 "extra_fields_order": pd_data.spec.marketInfo.extraFieldsOrder,
             },
         )
+
+        # 插件可见范围，非必填项
+        if pd_data.spec.visibleRange:
+            models.PluginVisibleRangeDefinition.objects.update_or_create(
+                pd=pd,
+                defaults={
+                    "description_zh_cn": pd_data.spec.visibleRange.description,
+                    "scope": pd_data.spec.visibleRange.scope,
+                },
+            )
 
         # 插件配置信息，非必填项
         if pd_data.spec.configInfo:

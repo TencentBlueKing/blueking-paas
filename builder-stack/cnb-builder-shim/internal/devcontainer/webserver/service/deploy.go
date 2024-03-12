@@ -188,9 +188,37 @@ func (m DeployManager) generateProcfile(appDir string) error {
 	return nil
 }
 
-// TODO 通过对比新旧文件的变化, 确定哪些步骤需要执行
+// parseDeployStepOpts generates deployStepOpts based on comparing build dependent files.
+//
+// Parameters:
+//
+//	oldDir string - the directory where old build dependent files are located
+//	newDir string - the directory where new build dependent files are located
 func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
-	return &deployStepOpts{true, true}
+	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt"}
+	rebuild := false
+
+	for _, fileName := range buildDependentFiles {
+		oldFilePath := path.Join(oldDir, fileName)
+		newFilePath := path.Join(newDir, fileName)
+
+		_, newErr := os.Stat(newFilePath)
+
+		// ignore if build dependent file does not exist
+		if os.IsNotExist(newErr) {
+			continue
+		}
+		// 根据目前 requirements.txt, Aptfile, runtime.txt 文件特点, 使用 SortedCompareFile 进行文件比较
+		// TODO 针对不同的依赖文件, 提供更准确的比较方案
+		eq, err := utils.SortedCompareFile(oldFilePath, newFilePath)
+		if err != nil || !eq {
+			rebuild = true
+			break
+		}
+
+	}
+
+	return &deployStepOpts{Rebuild: rebuild, Relaunch: true}
 }
 
 var _ DeployServiceHandler = (*DeployManager)(nil)

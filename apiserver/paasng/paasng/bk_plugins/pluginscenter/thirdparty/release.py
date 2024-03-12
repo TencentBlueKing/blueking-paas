@@ -31,7 +31,8 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
 
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
-    if not pd.release_revision.api or not pd.release_revision.api.create:
+    release_definition = pd.get_release_revision_by_type(version.type)
+    if not release_definition.api or not release_definition.api.create:
         return True
 
     slz = PluginReleaseAPIRequestSLZ(
@@ -44,7 +45,7 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
         }
     )
     data = slz.data
-    resp = utils.make_client(pd.release_revision.api.create).call(data=data, path_params={"plugin_id": instance.id})
+    resp = utils.make_client(release_definition.api.create).call(data=data, path_params={"plugin_id": instance.id})
     if not (result := resp.get("result", True)):
         logger.error(f"create release error: {resp}")
     return result
@@ -55,7 +56,8 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
 
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
-    if not pd.release_revision.api or not pd.release_revision.api.update:
+    release_definition = pd.get_release_revision_by_type(version.type)
+    if not release_definition.api or not release_definition.api.update:
         return True
 
     slz = PluginReleaseAPIRequestSLZ(
@@ -68,7 +70,7 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
         }
     )
     data = slz.data
-    resp = utils.make_client(pd.release_revision.api.update).call(
+    resp = utils.make_client(release_definition.api.update).call(
         data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
     )
     if not (result := resp.get("result", True)):

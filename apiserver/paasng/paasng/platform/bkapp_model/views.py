@@ -30,15 +30,18 @@ from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.bk_app.cnative.specs.models import update_app_resource
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.importer.importer import import_manifest
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import DomainResolution, ModuleProcessSpec, SvcDiscConfig
 from paasng.platform.bkapp_model.serializers import (
+    BkAppModelSLZ,
     DomainResolutionSLZ,
     GetManifestInputSLZ,
     ModuleDeployHookSLZ,
@@ -48,6 +51,7 @@ from paasng.platform.bkapp_model.serializers import (
 )
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +104,24 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         else:
             return Response(get_manifest(module))
 
+    @swagger_auto_schema(request_body=BkAppModelSLZ)
     def replace(self, request, code, module_name):
-        """替换当前模块的蓝鲸应用模型数据。"""
-        # TODO: Add logics
-        return Response({})
+        """通过 manifest 更新应用模型资源"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+
+        serializer = BkAppModelSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        manifest = serializer.validated_data.get("manifest")
+
+        update_app_resource(application, module, manifest)
+        try:
+            import_manifest(module, manifest)
+        except Exception as e:
+            raise error_codes.IMPORT_MANIFEST_FAILED.f(str(e))
+
+        return Response(data=get_manifest(module), status=status.HTTP_200_OK)
 
 
 class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

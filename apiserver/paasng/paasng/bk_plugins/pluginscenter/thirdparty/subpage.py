@@ -29,7 +29,7 @@ def can_enter_next_stage(
     pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, stage: PluginReleaseStage
 ) -> bool:
     """获取子页面的状态，用于判断是否可进入到下一个页面"""
-    sub_stage_definition = find_stage_by_id(pd.release_stages, stage.stage_id)
+    sub_stage_definition = find_stage_by_id(pd, version, stage.stage_id)
 
     if not sub_stage_definition or not sub_stage_definition.api or not sub_stage_definition.api.result:
         raise ValueError("this plugin does not support get sub page result via API")

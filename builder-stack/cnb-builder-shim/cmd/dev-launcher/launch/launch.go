@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/buildpacks/lifecycle/launch"
@@ -44,18 +43,20 @@ type Process struct {
 // metaProcesses is a list of launch.Process. meta prefix is inspired from lifecycle Metadata
 type metaProcesses []launch.Process
 
-// Run launches the given launch.Process list
-func Run(mdProcesses metaProcesses) error {
+// Run launches the given launch.Process list and app desc.
+func Run(mdProcesses metaProcesses, desc *appdesc.AppDesc) error {
 	processes, err := symlinkProcessLauncher(mdProcesses)
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
 	}
 
-	if err = runPreReleaseHook(); err != nil {
-		return errors.Wrap(err, "run pre release hook")
+	if releaseHook := desc.Module.Scripts.PreReleaseHook; releaseHook != "" {
+		if err = runPreReleaseHook(releaseHook, desc.Module.ProcEnvs); err != nil {
+			return errors.Wrap(err, "run pre release hook")
+		}
 	}
 
-	if err = reloadProcesses(processes); err != nil {
+	if err = reloadProcesses(processes, desc.Module.ProcEnvs); err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
 
@@ -103,34 +104,26 @@ func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 	return processes, nil
 }
 
-func runPreReleaseHook() error {
-	releaseHook, err := appdesc.ParsePreReleaseHook(filepath.Join(DefaultAppDir, "app_desc.yaml"))
-	if err != nil {
-		return err
-	}
-
-	if releaseHook == "" {
-		return nil
-	}
-
+func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 	cmd := exec.Command(launch.LauncherPath, releaseHook)
-
 	cmd.Dir = DefaultAppDir
-	cmd.Env = os.Environ()
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
-	if err = cmd.Run(); err != nil {
-		return err
+	cmd.Env = os.Environ()
+	for _, env := range runEnvs {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Key, env.Value))
 	}
 
-	return nil
+	return cmd.Run()
 }
 
-func reloadProcesses(processes []Process) error {
-	ctl := NewSupervisorCtl()
-	conf := MakeSupervisorConf(processes)
-	return ctl.Reload(conf)
+func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
+	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
+		return err
+	} else {
+		return NewSupervisorCtl().Reload(conf)
+	}
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

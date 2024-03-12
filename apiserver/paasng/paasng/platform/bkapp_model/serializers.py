@@ -141,3 +141,7 @@ class DomainResolutionSLZ(serializers.Serializer):
             raise serializers.ValidationError(_("至少需要提供一个有效值：nameservers 或 host_aliases"))
 
         return data
+
+
+class BkAppModelSLZ(serializers.Serializer):
+    manifest = serializers.JSONField(label=_("BkApp 配置信息"))

@@ -34,6 +34,7 @@ class PluginReleaseVersionRule(str, StructuredEnum):
     AUTOMATIC = EnumField("automatic", label="自动生成 semver")
     REVISION = EnumField("revision", label="与代码分支一致")
     COMMIT_HASH = EnumField("commit-hash", label="与提交哈希一致")
+    BRANCH_TIMESTAMP = EnumField("branch-timestamp", label="代码分支+时间戳")
     SELF_FILL = EnumField("self-fill", label="用户自助填写")
 
 
@@ -52,6 +53,7 @@ class ReleaseStageInvokeMethod(str, StructuredEnum):
     PIPELINE = EnumField("pipeline", label="流水线")
     SUBPAGE = EnumField("subpage", label="子页面")
     ITSM = EnumField("itsm", label="itsm 审批流程")
+    CANARY_WIHT_ITSM = EnumField("canaryWithItsm", label="带审批的灰度发布")
     BUILTIN = EnumField("builtin", label="内置功能(完善市场信息market, 灰度grayScale, 上线online)")
 
 
@@ -144,9 +146,24 @@ class SubjectTypes(str, StructuredEnum):
     """操作记录-主体"""
 
     PLUGIN = EnumField("plugin", label=_("插件"))
+    TEST_VERSION = EnumField("test_version", label=_("测试版本"))
     VERSION = EnumField("version", label=_("版本"))
     BASIC_INFO = EnumField("basic_info", label=_("基本信息"))
     LOGO = EnumField("logo", label=_("logo"))
     MARKET_INFO = EnumField("market_info", label=_("市场信息"))
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))
+
+
+class PluginReleaseType(str, StructuredEnum):
+    """插件版本发布类型"""
+
+    PROD = EnumField("prod", label=_("正式发布"))
+    TEST = EnumField("test", label=_("测试发布"))
+
+
+class PluginReleaseStrategy(str, StructuredEnum):
+    """插件发布策略"""
+
+    GRAY = EnumField("gray", label=_("灰度发布"))
+    FULL = EnumField("full", label=_("全量发布"))

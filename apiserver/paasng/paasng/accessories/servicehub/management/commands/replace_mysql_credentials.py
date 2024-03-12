@@ -77,11 +77,11 @@ class Command(BaseCommand):
         mgr = RemotePlainInstanceMgr(attachment, store)
 
         credentials = {
-            "GCS_MYSQL_HOST": options["mysql_host"],
-            "GCS_MYSQL_PORT": options["mysql_port"],
-            "GCS_MYSQL_NAME": options["mysql_name"],
-            "GCS_MYSQL_USER": options["mysql_user"],
-            "GCS_MYSQL_PASSWORD": options["mysql_password"],
+            "MYSQL_HOST": options["mysql_host"],
+            "MYSQL_PORT": options["mysql_port"],
+            "MYSQL_NAME": options["mysql_name"],
+            "MYSQL_USER": options["mysql_user"],
+            "MYSQL_PASSWORD": options["mysql_password"],
         }
         config = {
             "paas_app_info": {

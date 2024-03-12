@@ -34,6 +34,9 @@ func (vs *VolumeSource) ToValidator() (VolumeSourceValidator, error) {
 	if vs.ConfigMap != nil {
 		return vs.ConfigMap, nil
 	}
+	if vs.PersistentVolumeClaim != nil {
+		return vs.PersistentVolumeClaim, nil
+	}
 	return nil, errors.New("unknown volume source")
 }
 

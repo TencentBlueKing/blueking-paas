@@ -565,11 +565,11 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
 
         controller = init_volume_source_controller(source_type)
-        spurce = controller.create_by_app(
+        source = controller.create_by_app(
             application_id=app.id, environment_name=environment_name, storage_size=storage_size
         )
 
-        slz = MountSourceSLZ(spurce)
+        slz = MountSourceSLZ(source)
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, code):

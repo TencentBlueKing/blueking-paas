@@ -107,9 +107,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var (
-		err error
-	)
+	var err error
 	logger.Info("Setup Build Environ")
 	logger.Info("Loading registry credentials...")
 	keychain := dockercreds.DefaultKeychain()

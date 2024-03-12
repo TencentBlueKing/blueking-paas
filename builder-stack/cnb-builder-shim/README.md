@@ -76,7 +76,7 @@ docker run --rm \
     -e OUTPUT_IMAGE=$OUTPUT_IMAGE \
     -e CNB_RUN_IMAGE=$CNB_RUN_IMAGE \
     -e SOURCE_GET_URL="file:///tmp/source.tgz" \
-    -e USE_DOCKER_DAEMON=1 \
+    -e USE_DOCKER_DAEMON=true \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     --mount type=bind,source=/tmp/source.tgz,target=/tmp/source.tgz \
     $BUILDER_SHIM_IMAGE 

@@ -16,10 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf.urls import url
+from paasng.utils.basic import make_app_pattern, re_path
 
-from .views import SvcWorkloadsEndUserView
+from . import views
 
 urlpatterns = [
-    url(r"^svc_workloads/(?P<path>.*)$", SvcWorkloadsEndUserView.as_view(), name="workloads.proxy"),
+    re_path(
+        make_app_pattern(r"/egress_gateway_infos/$"),
+        views.EgressGatewayInfosViewSet.as_view({"post": "create"}),
+        name="api.egress_gateway_infos",
+    ),
+    re_path(
+        make_app_pattern(r"/egress_gateway_infos/default/$"),
+        views.EgressGatewayInfosViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
+        name="api.egress_gateway_infos.default",
+    ),
 ]

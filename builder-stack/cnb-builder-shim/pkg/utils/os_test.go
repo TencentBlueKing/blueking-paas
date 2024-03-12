@@ -27,7 +27,7 @@ import (
 )
 
 var _ = Describe("Test os utils", func() {
-	Describe("Test file utils", func() {
+	Describe("Test file zip and copy", func() {
 		srcFilePath := filepath.Join("testdata", "django-helloworld.zip")
 
 		var destAppPath, tmpPath string
@@ -51,6 +51,57 @@ var _ = Describe("Test os utils", func() {
 
 			_, err = os.Stat(filepath.Join(destAppPath, "manage.py"))
 			Expect(err).To(BeNil())
+		})
+	})
+	Describe("Test SortedCompareFile", func() {
+		var tmpPath string
+
+		BeforeEach(func() {
+			tmpPath, _ = os.MkdirTemp("", "dependency-files")
+		})
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpPath)).To(BeNil())
+		})
+
+		Context("When file exist", func() {
+			DescribeTable(
+				"compare file",
+				func(content1, content2 string, expectedEq bool) {
+					filePath1 := filepath.Join(tmpPath, "file1")
+					filePath2 := filepath.Join(tmpPath, "file2")
+					Expect(os.WriteFile(filePath1, []byte(content1), 0o644)).To(BeNil())
+					Expect(os.WriteFile(filePath2, []byte(content2), 0o644)).To(BeNil())
+
+					eq, err := SortedCompareFile(filePath1, filePath2)
+					Expect(err).To(BeNil())
+					Expect(eq).To(Equal(expectedEq))
+				},
+				Entry("the same content but disorder", `asyncclick~=8.1.3.4
+httpx~=0.25.1
+django-downloadview~=2.3.0
+bkstorages~=1.1.0
+
+# PaaS 增强服务需要的依赖包，请不要修改，否则可能导致增强服务不可用
+# for sentry
+raven==6.10.0
+`, `# PaaS 增强服务需要的依赖包，请不要修改，否则可能导致增强服务不可用
+# for sentry
+raven==6.10.0
+
+
+asyncclick~=8.1.3.4
+httpx~=0.25.1
+django-downloadview~=2.3.0
+bkstorages~=1.1.0
+`, true),
+				Entry("not the same content", "asyncclick~=8.1.3.4", "asyncclick~=9.1.3.4", false),
+			)
+		})
+		Context("When some file not exist", func() {
+			filePath1 := filepath.Join(tmpPath, "file1")
+			filePath2 := filepath.Join(tmpPath, "file2")
+			_, err := SortedCompareFile(filePath1, filePath2)
+			Expect(err).NotTo(BeNil())
 		})
 	})
 })

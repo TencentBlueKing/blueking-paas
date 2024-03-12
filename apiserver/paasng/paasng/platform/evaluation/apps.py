@@ -16,19 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_path
+from django.apps import AppConfig
 
-from . import views_enduser
 
-urlpatterns = [
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/egress_gateway_infos/$"),
-        views_enduser.EgressGatewayInfosViewSet.as_view({"post": "create"}),
-        name="api.egress_gateway_infos",
-    ),
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/egress_gateway_infos/default/$"),
-        views_enduser.EgressGatewayInfosViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
-        name="api.egress_gateway_infos.default",
-    ),
-]
+class EvaluationConfig(AppConfig):
+    name = "paasng.platform.evaluation"

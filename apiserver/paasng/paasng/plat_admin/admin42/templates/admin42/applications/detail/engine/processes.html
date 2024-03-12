@@ -108,10 +108,10 @@
     const processes = {{ processes | to_json }}
 
     const URLRouter = {
-        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/process_spec_plan/' %}"),
-        switch_process_plan: decodeURI("{% url 'workloads.proxy' 'admin42/regions/${region}/apps/${engine_app_name}/processes/${process_type}/plan' %}"),
-        scale: decodeURI("{% url 'workloads.proxy' 'admin42/regions/${region}/apps/${engine_app_name}/processes/${process_type}/scale' %}"),
-        retrieve: decodeURI("{% url 'workloads.proxy' 'admin42/regions/${region}/apps/${engine_app_name}/processes/${process_type}/instances/${process_instance_name}/' %}"),
+        list: decodeURI("{{ '/admin42/wl_api/platform/process_spec_plan/' }}"),
+        switch_process_plan: decodeURI("{{ '/admin42/wl_api/regions/${region}/apps/${engine_app_name}/processes/${process_type}/plan' }}"),
+        scale: decodeURI("{{ '/admin42/wl_api/regions/${region}/apps/${engine_app_name}/processes/${process_type}/scale' }}"),
+        retrieve: decodeURI("{{ '/admin42/wl_api/regions/${region}/apps/${engine_app_name}/processes/${process_type}/instances/${process_instance_name}/' }}"),
     }
 
 

@@ -16,24 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import copy
-
-import pytest
-
-from paas_wl.bk_app.cnative.specs.models import create_app_resource
-from paas_wl.bk_app.cnative.specs.procs.differ import ProcReplicasChange, diff_replicas
-from paasng.platform.engine.constants import AppEnvName
-
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
-class TestDiffReplicas:
-    def test_same(self, bk_stag_wl_app):
-        res = create_app_resource(bk_stag_wl_app.name, "busybox")
-        assert diff_replicas(res, res, AppEnvName.STAG) == []
+class EmailReceiverType(str, StructuredEnum):
+    """邮件接收者类型"""
 
-    def test_changed(self, bk_stag_wl_app):
-        res = create_app_resource(bk_stag_wl_app.name, "busybox")
-        res_new = copy.deepcopy(res)
-        res_new.spec.processes[0].replicas = 3
-        assert diff_replicas(res, res_new, AppEnvName.STAG) == [ProcReplicasChange("web", 1, 3)]
+    PLAT_ADMIN = EnumField("plat_admin", label=_("平台管理员"))
+    APP_ADMIN = EnumField("app_admin", label=_("应用管理员"))
+
+
+class OperationIssueType(str, StructuredEnum):
+    """应用运营问题类型"""
+
+    NONE = EnumField("none", label=_("无"))
+    OWNERLESS = EnumField("ownerless", label=_("无主"))
+    INACTIVE = EnumField("inactive", label=_("不活跃"))
+    MISCONFIGURED = EnumField("misconfigured", label=_("配置错误"))

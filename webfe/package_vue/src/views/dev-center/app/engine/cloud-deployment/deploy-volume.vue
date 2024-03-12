@@ -327,26 +327,24 @@
       <div slot="header" class="storage-header-title">
         {{ $t('持久存储详情') }}
         <span class="storage-header-sub-tip">
-          {{ $t('容量') }}：<span>{{ storageDetailsDialogConfig.storage }}</span>
+          {{ $t('容量') }}：<span>{{ storageDetailsDialogConfig.storage_size }}</span>
         </span>
       </div>
-      <div>
-        <bk-table
-          :data="storageDetailsDialogConfig.bound_modules"
-          :outer-border="false"
-          ext-cls="store-module-table-cls"
-        >
-          <bk-table-column
-            :label="$t('绑定模块')"
-            prop="module"
-            :width="150"
-          ></bk-table-column>
-          <bk-table-column
-            :label="$t('挂载目录')"
-            prop="path"
-          ></bk-table-column>
-        </bk-table>
-      </div>
+      <bk-table
+        :data="storageDetailsDialogConfig.bound_modules"
+        :outer-border="false"
+        ext-cls="volume-store-module-table-cls"
+      >
+        <bk-table-column
+          :label="$t('绑定模块')"
+          prop="module"
+          :width="150"
+        ></bk-table-column>
+        <bk-table-column
+          :label="$t('挂载目录')"
+          prop="path"
+        ></bk-table-column>
+      </bk-table>
     </bk-dialog>
 
     <!-- 新增持久存储 -->
@@ -479,7 +477,7 @@ export default {
       storageDetailsDialogConfig: {
         visible: false,
         bound_modules: [],
-        storage: '1Gi',
+        storage_size: '1Gi',
       },
       maxTags: 0,
       isTableLoaing: false,
@@ -900,7 +898,7 @@ export default {
     handlePersistentStorageDetails(row) {
       this.storageDetailsDialogConfig.visible = true;
       this.storageDetailsDialogConfig.bound_modules = row.persistent_storage_source?.bound_modules || [];
-      this.storageDetailsDialogConfig.storage = row.persistent_storage_source?.storage || '1Gi';
+      this.storageDetailsDialogConfig.storage_size = row.persistent_storage_source?.storage_size || '1Gi';
     },
 
     // 获取持久化存储列表
@@ -980,6 +978,9 @@ export default {
       margin-left: 0px;
     }
   }
+}
+.volume-store-module-table-cls.bk-table table {
+  width: 432px !important;
 }
 </style>
 

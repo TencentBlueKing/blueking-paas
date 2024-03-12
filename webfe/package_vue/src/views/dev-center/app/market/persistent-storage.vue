@@ -83,7 +83,7 @@
                 <p class="name">{{ item.name }}</p>
                 <div class="info">
                   <span>{{ $t('生效环境') }}：{{ item.environment_name }}</span>
-                  <span>{{ $t('容量') }}：{{ item.storage }}</span>
+                  <span>{{ $t('容量') }}：{{ item.storage_size }}</span>
                   <span>{{ $t('已绑定模块数') }}：{{ item.binded_modules?.length || 0 }}</span>
                 </div>
               </div>
@@ -118,76 +118,10 @@
       </section>
 
       <!-- 新增持久存储 -->
-      <bk-dialog
-        v-model="storageDialogConfig.visible"
-        theme="primary"
-        :width="640"
-        :mask-close="false"
-        :title="$t('新增持久存储')"
-        :auto-close="false"
-        header-position="left"
-      >
-        <div slot="footer">
-          <bk-button
-            theme="primary"
-            :loading="storageDialogConfig.isLoading"
-            @click="handlerConfirm"
-          >
-            {{ $t('确定') }}
-          </bk-button>
-          <bk-button
-            theme="default"
-            @click="handlerCancel"
-          >
-            {{ $t('取消') }}
-          </bk-button>
-        </div>
-        <section class="storage-dialog-content">
-          <bk-alert type="error" :show-icon="false">
-            <div slot="title">
-              <i class="paasng-icon paasng-remind remind-cls"></i>
-              {{ $t('持久存储会申请对应容量的腾讯云 CFS，新建后就会产生实际的费用，请按需申请。') }}
-              <bk-button
-                theme="primary"
-                text
-                style="font-size: 12px"
-                @click="viewBillingMethod"
-              >
-                {{ $t('查看计费方式') }}
-              </bk-button>
-            </div>
-          </bk-alert>
-          <bk-form
-            :label-width="localLanguage === 'en' ? 160 : 85"
-            :model="createPersistentStorageData"
-            ext-cls="form-cls"
-            style="margin-top: 16px"
-          >
-            <bk-form-item
-              :label="$t('生效环境')"
-              :required="true"
-              :property="'stage'"
-            >
-              <bk-radio-group v-model="createPersistentStorageData.stage">
-                <bk-radio :value="'stag'">{{ $t('预发布环境') }}</bk-radio>
-                <bk-radio :value="'prod'">{{ $t('生产环境') }}</bk-radio>
-              </bk-radio-group>
-            </bk-form-item>
-            <bk-form-item
-              :label="$t('容量')"
-              :required="true"
-              :property="'capacity'"
-            >
-              <bk-radio-group v-model="createPersistentStorageData.capacity">
-                <bk-radio :value="'1Gi'">1Gi</bk-radio>
-                <bk-radio :value="'2Gi'" :disabled="preReleaseEnvironment">2Gi</bk-radio>
-                <bk-radio :value="'4Gi'" :disabled="preReleaseEnvironment">4Gi</bk-radio>
-              </bk-radio-group>
-              <p class="capacity-tips">{{ $t('容量无法更改，请合理评估容量') }}</p>
-            </bk-form-item>
-          </bk-form>
-        </section>
-      </bk-dialog>
+      <create-persistent-storage-dailog
+        v-model="persistentStorageDailogVisible"
+        @get-list="getPersistentStorageList"
+      />
 
       <!-- 删除持久存储 -->
       <bk-dialog
@@ -232,33 +166,29 @@
   </div>
 </template>
 
-<script>const defaultSourceType = 'PersistentStorage';
+<script>import createPersistentStorageDailog from '@/components/create-persistent-storage-dailog';
+const defaultSourceType = 'PersistentStorage';
 
 export default {
   name: 'AppPersistentStorage',
+  components: {
+    createPersistentStorageDailog,
+  },
   data() {
     return {
       isLoading: true,
-      panels: [],
       persistentStorageList: [],
-      storageDialogConfig: {
-        visible: false,
-        isLoading: false,
-      },
       delteDialogConfig: {
         visible: false,
         isLoading: false,
         isDisabled: true,
-      },
-      createPersistentStorageData: {
-        stage: 'stag',
-        capacity: '1Gi',
       },
       curHoverPanels: '',
       deleteName: '',
       curDeleteData: {
         binded_modules: [],
       },
+      persistentStorageDailogVisible: false,
     };
   },
   computed: {
@@ -274,15 +204,15 @@ export default {
         { c: this.curDeleteData.binded_modules?.length || 0 },
       );
     },
-    preReleaseEnvironment() {
-      return this.createPersistentStorageData.stage === 'stag';
-    },
   },
   watch: {
     deleteName(newVal) {
       if (newVal === this.appCode) {
         this.delteDialogConfig.isDisabled = false;
       }
+    },
+    $route() {
+      this.init();
     },
   },
   created() {
@@ -326,52 +256,12 @@ export default {
     },
     // 新增持久存储
     handlerPersistentStorage() {
-      this.storageDialogConfig.visible = true;
+      this.persistentStorageDailogVisible = true;
     },
     // 查看计费方式
     viewBillingMethod() {
       const url = 'https://cloud.tencent.com/document/product/582/47378';
       window.open(url, '_blank');
-    },
-    // 新建存储
-    async handlerConfirm() {
-      this.storageDialogConfig.isLoading = true;
-      const data = {
-        environment_name: this.createPersistentStorageData.stage,
-        source_type: defaultSourceType,
-        persistent_storage_source: {
-          storage: this.createPersistentStorageData.capacity,
-        },
-      };
-      try {
-        await this.$store.dispatch('persistentStorage/createPersistentStorage', {
-          appCode: this.appCode,
-          data,
-        });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('新建成功！'),
-        });
-        this.handlerCancel();
-        this.getPersistentStorageList();
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.storageDialogConfig.isLoading = false;
-      }
-    },
-    // 新建存储数据重置
-    handlerCancel() {
-      this.storageDialogConfig.visible = false;
-      setTimeout(() => {
-        this.createPersistentStorageData = {
-          stage: 'stag',
-          capacity: '1Gi',
-        };
-      }, 500);
     },
     // 删除
     handlerDelete(data) {

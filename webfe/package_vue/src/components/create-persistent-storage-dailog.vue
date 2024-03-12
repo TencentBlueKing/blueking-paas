@@ -7,7 +7,7 @@
     :title="$t('新增持久存储')"
     :auto-close="false"
     header-position="left"
-    @after-leave="handleAfterLeave"
+    @after-leave="handlerCancel"
   >
     <div slot="footer">
       <bk-button
@@ -122,7 +122,7 @@ export default {
         environment_name: this.createPersistentStorageData.stage,
         source_type: defaultSourceType,
         persistent_storage_source: {
-          storage: this.createPersistentStorageData.capacity,
+          storage_size: this.createPersistentStorageData.capacity,
         },
       };
       try {
@@ -155,9 +155,6 @@ export default {
           capacity: '1Gi',
         };
       }, 500);
-    },
-    handleAfterLeave() {
-      this.$emit('change', false);
     },
     // 查看计费方式
     viewBillingMethod() {

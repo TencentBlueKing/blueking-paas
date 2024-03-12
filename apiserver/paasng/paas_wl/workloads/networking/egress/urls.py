@@ -16,9 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""service_proxy is a reversed proxy which forward requests to backend services, includes
-"workloads(engine controller)" etc.
+from paasng.utils.basic import make_app_pattern, re_path
 
-service_proxy works like an "API Gateway", it may perform authentication, authorization and
-other actions before forwarding requests.
-"""
+from . import views
+
+urlpatterns = [
+    re_path(
+        make_app_pattern(r"/egress_gateway_infos/$"),
+        views.EgressGatewayInfosViewSet.as_view({"post": "create"}),
+        name="api.egress_gateway_infos",
+    ),
+    re_path(
+        make_app_pattern(r"/egress_gateway_infos/default/$"),
+        views.EgressGatewayInfosViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
+        name="api.egress_gateway_infos.default",
+    ),
+]

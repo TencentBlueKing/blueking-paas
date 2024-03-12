@@ -79,7 +79,6 @@ ignore_imports =
     # a shared settings globally.
     paas_wl.** -> paas_wl.**.constants
     # view_enduser -> engine.deploy module, to be removed in the future if we find a better way
-    paas_wl.bk_app.cnative.specs.views_enduser -> paasng.platform.engine.deploy.release.operator
     paas_wl.infras.resource_templates.utils -> paas_wl.bk_app.processes.models
 
 

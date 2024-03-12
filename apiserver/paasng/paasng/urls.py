@@ -60,7 +60,6 @@ urlpatterns = [
     url(r"^", include("paasng.bk_plugins.bk_plugins.urls")),
     url(r"^", include("paasng.platform.templates.urls")),
     url(r"^", include("paasng.platform.smart_app.urls")),
-    url(r"^admin42/", include("paasng.plat_admin.admin42.urls")),
     url(r"^", include("paasng.plat_admin.api_doc.urls")),
     url(r"^", include("paasng.accessories.publish.market.urls")),
     url(r"^", include("paasng.accessories.publish.sync_market.urls")),
@@ -75,12 +74,17 @@ urlpatterns = [
     url(r"^", include("paasng.bk_plugins.pluginscenter.urls")),
     url(r"^", include("paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.urls")),
     url(r"^", include("paasng.accessories.app_secret.urls")),
-    # A universal reverse proxy for other services
-    url(r"^", include("paasng.misc.service_proxy.urls")),
+    # PaaS Admin system
+    url(r"^admin42/", include("paasng.plat_admin.admin42.urls")),
+    url(r"^admin42/", include("paas_wl.apis.admin.urls")),
     # switch language
     url(r"^i18n/setlang/$", django_i18n_views.set_language, name="set_language"),
     path("", include("paasng.misc.changelog.urls")),
+    # Views in paas_wl module
     path("", include("paas_wl.workloads.networking.entrance.urls")),
+    path("", include("paas_wl.workloads.networking.egress.urls")),
+    path("", include("paas_wl.workloads.networking.ingress.urls")),
+    path("", include("paas_wl.workloads.images.urls")),
     path("", include("paas_wl.bk_app.processes.urls")),
     path("", include("paas_wl.bk_app.cnative.specs.urls")),
     url(r"^", include("paasng.accessories.paas_analysis.urls")),

@@ -16,25 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_path
+from django.urls import path
 
-from . import views_enduser
+from . import views
 
 urlpatterns = [
-    # TODO: replace `api.processes` with `api.processes.update`
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/processes/$"),
-        views_enduser.ProcessesViewSet.as_view({"post": "update"}),
-        name="api.processes",
+    path(
+        "api/bkapps/applications/<str:code>/image_credentials/",
+        views.AppUserCredentialViewSet.as_view({"get": "list", "post": "create"}),
+        name="api.applications.image_credentials",
     ),
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/processes/list/$"),
-        views_enduser.ListAndWatchProcsViewSet.as_view({"get": "list"}),
-        name="api.list_processes",
-    ),
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/processes/watch/$"),
-        views_enduser.ListAndWatchProcsViewSet.as_view({"get": "watch"}),
-        name="api.watch_processes",
+    path(
+        "api/bkapps/applications/<str:code>/image_credentials/<str:name>",
+        views.AppUserCredentialViewSet.as_view({"put": "update", "delete": "destroy"}),
+        name="api.applications.image_credentials.detail",
     ),
 ]

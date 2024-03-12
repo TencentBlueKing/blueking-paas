@@ -22,6 +22,7 @@ from typing import Optional
 
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import BkAppProcScaler
+from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import ProcControllerHub
@@ -31,6 +32,7 @@ from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KDeployment
+from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.infras.resources.generation.version import get_proc_deployment_name
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
@@ -54,6 +56,7 @@ class AppProcessesController:
         self.app = env.wl_app
         self.env = env
         self.client = get_scheduler_client_by_app(self.app)
+        self.handler = ProcessesHandler.new_by_app(self.app)
 
     def start(self, proc_type: str):
         """Start a process, WILL update the service if necessary
@@ -65,7 +68,8 @@ class AppProcessesController:
         spec_updater.set_start()
         proc_spec = spec_updater.spec_object
         try:
-            self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
+            proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)
+            self.handler.scale(proc_config, proc_spec.target_replicas)
         except Exception as e:
             raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
@@ -79,7 +83,8 @@ class AppProcessesController:
         spec_updater.set_stop()
         proc_spec = spec_updater.spec_object
         try:
-            self.client.shutdown_process(self.app, proc_spec.name)
+            proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)
+            self.handler.shutdown(proc_config)
         except Exception as e:
             raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 
@@ -119,7 +124,8 @@ class AppProcessesController:
         spec_updater.change_replicas(target_replicas)
         proc_spec = spec_updater.spec_object
         try:
-            self.client.scale_process(self.app, proc_spec.name, proc_spec.target_replicas)
+            proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)
+            self.handler.scale(proc_config, proc_spec.target_replicas)
         except Exception as e:
             raise ScaleProcessError(proc_type=proc_spec.name, exception=e)
 

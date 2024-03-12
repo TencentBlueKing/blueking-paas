@@ -16,25 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_path
 
-from . import views_enduser
 
-urlpatterns = [
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/process_services/$"),
-        views_enduser.ProcessServicesViewSet.as_view({"get": "list"}),
-        name="api.process_services",
-    ),
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/process_services/(?P<service_name>[a-z0-9-]+)$"),
-        views_enduser.ProcessServicesViewSet.as_view({"post": "update"}),
-        name="api.process_services.single",
-    ),
-    # Manage the default ingress rule
-    re_path(
-        make_app_pattern_with_applications_prefix(r"/process_ingresses/default$"),
-        views_enduser.ProcessIngressesViewSet.as_view({"post": "update"}),
-        name="api.process_ingresses.default",
-    ),
-]
+class StaffStatusProvider:
+    """提供员工状态"""
+
+    def is_active(self, username: str) -> bool:
+        """判断员工是否在职"""
+        # 员工状态各个公司不尽相同，这里默认都是在职
+        # 定制化需要通过在 providers_ext 中实现同名类
+        return True
+
+
+try:
+    from .providers_ext import *  # type: ignore
+except ImportError:
+    pass

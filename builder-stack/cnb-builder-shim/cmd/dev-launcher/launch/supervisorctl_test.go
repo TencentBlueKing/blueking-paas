@@ -120,8 +120,8 @@ redirect_stderr = true
 				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
 			},
 			[]appdesc.Env{
-				{"DJANGO_SETTINGS_MODULE", "settings"},
-				{"WHITENOISE_STATIC_PREFIX", "/static/"},
+				{Key: "DJANGO_SETTINGS_MODULE", Value: "settings"},
+				{Key: "WHITENOISE_STATIC_PREFIX", Value: "/static/"},
 			}, fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 

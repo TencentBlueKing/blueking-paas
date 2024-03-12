@@ -31,6 +31,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
+// DefaultAppDir default app dir
 var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")
 
 func main() {

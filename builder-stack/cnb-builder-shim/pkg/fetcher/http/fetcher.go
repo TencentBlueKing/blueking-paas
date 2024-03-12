@@ -20,7 +20,6 @@ package http
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -99,7 +98,7 @@ func downloadBlob(blobURL string) (*os.File, error) {
 		return nil, errors.Errorf("failed to get blob %s", blobURL)
 	}
 
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		return nil, err
 	}

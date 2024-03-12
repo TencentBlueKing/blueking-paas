@@ -2,7 +2,7 @@ import time
 from typing import Callable, List, Optional
 
 from paas_wl.bk_app.applications.models.release import Release
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -14,10 +14,9 @@ def list_proc_types(env: ModuleEnvironment) -> List[str]:
 
 def refresh_services(env: ModuleEnvironment):
     """Refresh the service resource for the given environment."""
-    s_client = get_scheduler_client_by_app(env.wl_app)
     for proc_type in list_proc_types(env):
         # Recreate the service resource to select the new pods
-        svc = s_client.get_default_services(env.wl_app, proc_type)
+        svc = ProcessesHandler.get_default_services(env.wl_app, proc_type)
         svc.remove()
         svc.create_or_patch()
 

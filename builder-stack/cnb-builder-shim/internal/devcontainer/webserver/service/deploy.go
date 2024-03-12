@@ -37,8 +37,8 @@ type deployStepOpts struct {
 	Relaunch bool
 }
 
-// TODO 持久化
 // DeployResult 表示 Deploy 的结果
+// TODO 持久化
 type DeployResult struct {
 	DeployID string
 	Status   dc.ReloadStatus
@@ -226,6 +226,7 @@ var _ DeployServiceHandler = (*DeployManager)(nil)
 // FakeDeployManger 用于测试
 type FakeDeployManger struct{}
 
+// Deploy TODO
 func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
 	return &DeployResult{
 		DeployID: uuid.NewString(),
@@ -234,6 +235,7 @@ func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
 	}, nil
 }
 
+// Result TODO
 func (m FakeDeployManger) Result(deployID string, withLog bool) (*DeployResult, error) {
 	if withLog {
 		return &DeployResult{

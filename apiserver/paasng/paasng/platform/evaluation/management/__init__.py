@@ -16,9 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""service_proxy is a reversed proxy which forward requests to backend services, includes
-"workloads(engine controller)" etc.
-
-service_proxy works like an "API Gateway", it may perform authentication, authorization and
-other actions before forwarding requests.
-"""

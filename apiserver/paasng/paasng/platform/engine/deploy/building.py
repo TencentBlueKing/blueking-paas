@@ -266,7 +266,7 @@ class ApplicationBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            self.handle_app_description(raise_exception=is_cnative_app)
+            self.handle_app_description()
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
@@ -366,7 +366,7 @@ class DockerBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            self.handle_app_description(raise_exception=is_cnative_app)
+            self.handle_app_description()
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)

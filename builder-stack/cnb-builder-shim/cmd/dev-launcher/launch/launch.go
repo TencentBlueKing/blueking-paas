@@ -31,6 +31,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
+// DefaultAppDir is the default build dir
 var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")
 
 // Process is a process to launch

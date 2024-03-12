@@ -16,24 +16,55 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from functools import partial
+
 from paasng.utils.basic import make_app_pattern, re_path
 
-from . import views, views_enduser
+from . import views
+
+# In legacy architecture, all workloads's APIs starts with a fixed prefix "/svc_workloads" and use
+# a slightly different format. While the prefix is not required in the new architecture, we have
+# to keep it to maintain backward-compatibility.
+#
+# This function helps up to build paths with the legacy prefix.
+#
+# TODO: Remove the 'svc_workloads' prefix and clean up the URL paths.
+make_app_pattern_legacy_wl = partial(make_app_pattern, prefix="svc_workloads/api/processes/applications/")
 
 urlpatterns = [
     re_path(
         make_app_pattern(r"/processes/$"),
-        views_enduser.ProcessesViewSet.as_view({"post": "update"}),
+        views.ProcessesViewSet.as_view({"post": "update"}),
         name="api.processes.update",
     ),
+    # Cloud-native type application
     re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/list/$",
-        views.ListAndWatchProcsViewSet.as_view({"get": "list"}),
+        views.CNativeListAndWatchProcsViewSet.as_view({"get": "list"}),
         name="api.list_processes.namespace_scoped",
     ),
     re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/watch/$",
-        views.ListAndWatchProcsViewSet.as_view({"get": "watch"}),
+        views.CNativeListAndWatchProcsViewSet.as_view({"get": "watch"}),
         name="api.watch_processes.namespace_scoped",
+    ),
+    # Below paths using legacy prefix.
+    #
+    # TODO: This path a duplication with "api.processes.update", should be removed in the future.
+    re_path(
+        make_app_pattern_legacy_wl(r"/processes/$"),
+        views.ProcessesViewSet.as_view({"post": "update"}),
+        name="api.processes",
+    ),
+    # Default type application
+    re_path(
+        make_app_pattern_legacy_wl(r"/processes/list/$"),
+        views.ListAndWatchProcsViewSet.as_view({"get": "list"}),
+        name="api.list_processes",
+    ),
+    re_path(
+        make_app_pattern_legacy_wl(r"/processes/watch/$"),
+        views.ListAndWatchProcsViewSet.as_view({"get": "watch"}),
+        name="api.watch_processes",
     ),
 ]

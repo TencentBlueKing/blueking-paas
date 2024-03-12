@@ -27,7 +27,13 @@ from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus, Pol
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.bk_app.cnative.specs.resource import ModelResState
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import AbortedDetails, DeployStatusHandler, WaitAppModelReady
-from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy, create_condition, create_res_with_conds
+from tests.paas_wl.bk_app.cnative.specs.utils import (
+    create_cnative_deploy,
+    create_condition,
+    create_res,
+    with_conds,
+    with_deploy_id,
+)
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -45,30 +51,39 @@ def poller(bk_stag_env, dp):
 
 
 class TestWaitAppModelReady:
-    @patch(
-        "paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster",
-        return_value=create_res_with_conds([]),
-    )
+    @patch("paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster")
     def test_pending(self, mocker, dp, poller):
+        mocker.return_value = create_res(with_deploy_id(deploy_id=str(dp.id), status_deploy_id="0"))
         ret = poller.query()
-        assert ret.status == PollingStatus.DOING
         dp.refresh_from_db()
+        assert ret.status == PollingStatus.DOING
+        assert ret.data["bkapp.status.deployId"] == "0"
+        assert dp.status == DeployStatus.PENDING
+
+        mocker.return_value = create_res(with_deploy_id(deploy_id=str(dp.id)))
+        ret = poller.query()
+        dp.refresh_from_db()
+        assert ret.status == PollingStatus.DOING
+        assert ret.data is None
         assert dp.status == DeployStatus.PENDING
 
     @patch(
         "paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster",
-        return_value=create_res_with_conds([create_condition(MResConditionType.APP_AVAILABLE)]),
     )
     def test_progressing(self, mocker, dp, poller):
+        mocker.return_value = create_res(
+            with_conds([create_condition(MResConditionType.APP_AVAILABLE)]),
+            with_deploy_id(deploy_id=str(dp.id)),
+        )
         ret = poller.query()
-        assert ret.status == PollingStatus.DOING
         dp.refresh_from_db()
+        assert ret.status == PollingStatus.DOING
         assert dp.status == DeployStatus.PROGRESSING
 
     @patch(
         "paasng.platform.engine.deploy.bg_wait.wait_bkapp.get_mres_from_cluster",
-        return_value=create_res_with_conds(
-            [create_condition(MResConditionType.APP_AVAILABLE, "True")], MResPhaseType.AppRunning
+        return_value=create_res(
+            with_conds([create_condition(MResConditionType.APP_AVAILABLE, "True")], MResPhaseType.AppRunning)
         ),
     )
     def test_stable(self, mocker, poller):

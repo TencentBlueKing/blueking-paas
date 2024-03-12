@@ -45,7 +45,7 @@ def make_process(wl_app: WlApp, process_type: str) -> Process:
             args=[],
         ),
     )
-    process.name = AppResVerManager(wl_app).curr_version.deployment(process).name
+    process.name = AppResVerManager(wl_app).curr_version.proc_resources(process).deployment_name
     return process
 
 

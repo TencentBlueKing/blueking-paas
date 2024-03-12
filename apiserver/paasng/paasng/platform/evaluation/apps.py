@@ -16,19 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.urls import path
+from django.apps import AppConfig
 
-from . import views_enduser
 
-urlpatterns = [
-    path(
-        "applications/<str:code>/image_credentials/",
-        views_enduser.AppUserCredentialViewSet.as_view({"get": "list", "post": "create"}),
-        name="api.applications.image_credentials",
-    ),
-    path(
-        "applications/<str:code>/image_credentials/<str:name>",
-        views_enduser.AppUserCredentialViewSet.as_view({"put": "update", "delete": "destroy"}),
-        name="api.applications.image_credentials.detail",
-    ),
-]
+class EvaluationConfig(AppConfig):
+    name = "paasng.platform.evaluation"

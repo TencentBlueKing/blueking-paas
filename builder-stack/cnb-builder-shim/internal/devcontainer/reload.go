@@ -30,7 +30,9 @@ import (
 )
 
 var (
-	ReloadDir    = "/cnb/devcontainer/reload"
+	// ReloadDir TODO
+	ReloadDir = "/cnb/devcontainer/reload"
+	// ReloadLogDir TODO
 	ReloadLogDir = path.Join(ReloadDir, "log")
 )
 
@@ -38,10 +40,14 @@ var (
 type ReloadStatus string
 
 const (
+	// ReloadProcessing TODO
 	ReloadProcessing ReloadStatus = "Processing"
-	ReloadSuccess    ReloadStatus = "Success"
-	ReloadFailed     ReloadStatus = "Failed"
-	ReloadUnknown    ReloadStatus = "Unknown"
+	// ReloadSuccess TODO
+	ReloadSuccess ReloadStatus = "Success"
+	// ReloadFailed TODO
+	ReloadFailed ReloadStatus = "Failed"
+	// ReloadUnknown TODO
+	ReloadUnknown ReloadStatus = "Unknown"
 )
 
 // NewHotReloadManager creates a new instance of HotReloadManager.
@@ -99,6 +105,7 @@ type ReloadResultStorage interface {
 	ResultLogWriter(reloadID string) (io.WriteCloser, error)
 }
 
+// NewReloadResultStorage TODO
 func NewReloadResultStorage() (ReloadResultStorage, error) {
 	// TODO: support other storage
 	s := ReloadResultFile{rootDir: ReloadDir, rootLogDir: ReloadLogDir}

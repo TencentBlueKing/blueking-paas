@@ -102,7 +102,11 @@ func Chownr(filePath string, uid, gid int) error {
 		}
 
 		if err = os.Chown(path, uid, gid); err != nil {
-			return err
+			// ignore error if no such file or directory.
+			// e.g. some source file of symlink may not exist
+			if !strings.Contains(err.Error(), "no such file or directory") {
+				return err
+			}
 		}
 
 		return nil

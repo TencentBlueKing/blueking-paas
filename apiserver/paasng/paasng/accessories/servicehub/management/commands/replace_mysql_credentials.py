@@ -93,7 +93,7 @@ class Command(BaseCommand):
             },
         }
         if options["admin_url"]:
-            config["admin_url"] = options["config"]
+            config["admin_url"] = options["admin_url"]
         if not options["dry_run"]:
             mgr.create(credentials=credentials, config=config)
 

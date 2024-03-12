@@ -20,6 +20,7 @@ from typing import Dict
 
 import cattr
 import pytest
+from blue_krill.web.std_error import APIError
 from django.conf import settings
 from django.utils.translation import gettext as _
 from rest_framework.exceptions import ErrorDetail
@@ -160,9 +161,9 @@ COMMON_DATA = {"source_version_name": "...", "source_version_type": "...", "comm
         ("0.1.2", {"semver_type": "patch", "version": "0.1.3.4", **COMMON_DATA}, False),
     ],
 )
-def test_validate_automatic_semver(pd, previous_version, data, is_valid):
-    pd.release_revision.versionNo = "automatic"
-    slz = serializers.make_create_release_version_slz_class(pd)(
+def test_validate_automatic_semver(plugin, previous_version, data, is_valid):
+    plugin.pd.release_revision.versionNo = "automatic"
+    slz = serializers.make_create_release_version_slz_class(plugin, "prod")(
         data=data, context={"previous_version": previous_version}
     )
     if is_valid:
@@ -178,9 +179,9 @@ def test_validate_automatic_semver(pd, previous_version, data, is_valid):
         ({"version": "1.0.0", **COMMON_DATA, "source_version_name": "2.0.0"}, False),
     ],
 )
-def test_validate_revision_eq_source_revision(pd, data, is_valid):
-    pd.release_revision.versionNo = "revision"
-    slz = serializers.make_create_release_version_slz_class(pd)(data=data)
+def test_validate_revision_eq_source_revision(plugin, data, is_valid):
+    plugin.pd.release_revision.versionNo = "revision"
+    slz = serializers.make_create_release_version_slz_class(plugin, "prod")(data=data)
     if is_valid:
         slz.is_valid(raise_exception=True)
     else:
@@ -202,13 +203,42 @@ def test_validate_revision_eq_source_revision(pd, data, is_valid):
         ),
     ],
 )
-def test_validate_revision_eq_commit_hash(pd, source_hash, data, is_valid):
-    pd.release_revision.versionNo = "commit-hash"
-    slz = serializers.make_create_release_version_slz_class(pd)(data=data, context={"source_hash": source_hash})
+def test_validate_revision_eq_commit_hash(plugin, source_hash, data, is_valid):
+    plugin.pd.release_revision.versionNo = "commit-hash"
+    slz = serializers.make_create_release_version_slz_class(plugin, "prod")(
+        data=data, context={"source_hash": source_hash}
+    )
     if is_valid:
         slz.is_valid(raise_exception=True)
     else:
         assert not slz.is_valid()
+
+
+@pytest.mark.parametrize(
+    ("data", "revision_policy", "is_valid"),
+    [
+        ({"version": "1.0.0", **COMMON_DATA, "source_version_name": "master"}, None, True),
+        (
+            {"version": "1.0.0", **COMMON_DATA, "source_version_name": "master"},
+            "disallow_released_source_version",
+            False,
+        ),
+        (
+            {"version": "1.0.0", **COMMON_DATA, "source_version_name": "master"},
+            "disallow_releasing_source_version",
+            False,
+        ),
+    ],
+)
+def test_validate_release_policy(plugin, release, data, revision_policy, is_valid):
+    plugin.pd.release_revision.versionNo = "self-fill"
+    plugin.pd.release_revision.revisionPolicy = revision_policy
+    slz = serializers.make_create_release_version_slz_class(plugin, "prod")(data=data)
+    if is_valid:
+        slz.is_valid(raise_exception=True)
+    else:
+        with pytest.raises(APIError):
+            slz.is_valid(raise_exception=True)
 
 
 @pytest.mark.parametrize(

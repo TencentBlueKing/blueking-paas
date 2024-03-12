@@ -34,7 +34,7 @@ logger = logging.getLogger("commands")
 
 class Command(BaseCommand):
     help = (
-        "reset mysql credentials with remote services. "
+        "replace mysql credentials with remote services. "
         "This command creates a service_instance object instance "
         "but does not actually allocate resources."
     )
@@ -48,7 +48,7 @@ class Command(BaseCommand):
         parser.add_argument("--mysql_username", required=True, type=str)
         parser.add_argument("--mysql_password", required=True, type=str)
         parser.add_argument("--mysql_name", required=True, type=str)
-        parser.add_argument("--config", required=False, type=str)
+        parser.add_argument("--admin_url", required=False, type=str)
         parser.add_argument("--no-dry-run", dest="dry_run", default=True, action="store_false", help="dry run")
 
     def _get_service(self, mgr: RemoteServiceMgr, name: str) -> Optional[RemoteServiceObj]:
@@ -64,7 +64,7 @@ class Command(BaseCommand):
         store = get_remote_store()
         service_mgr = RemoteServiceMgr(store)
 
-        svc = self._get_service(service_mgr, "gcs_mysql")
+        svc = self._get_service(service_mgr, "mysql")
         if not svc:
             logger.error("Service named gcs_mysql not found, abort.")
             return
@@ -73,6 +73,7 @@ class Command(BaseCommand):
             application__code=options["app_code"], module__name=options["module_name"], environment=options["env"]
         )
         attachment = RemoteServiceEngineAppAttachment.objects.get(service_id=svc.uuid, engine_app=env.engine_app)
+        attachment.service_instance_id = None
         mgr = RemotePlainInstanceMgr(attachment, store)
 
         credentials = {
@@ -82,8 +83,16 @@ class Command(BaseCommand):
             "GCS_MYSQL_USER": options["mysql_user"],
             "GCS_MYSQL_PASSWORD": options["mysql_password"],
         }
-        config = {}
-        if options["config"]:
+        config = {
+            "paas_app_info": {
+                "app_id": str(mgr.db_application.id),
+                "app_code": str(mgr.db_application.code),
+                "app_name": str(mgr.db_application.name),
+                "module": mgr.db_module.name,
+                "environment": mgr.db_env.environment,
+            },
+        }
+        if options["admin_url"]:
             config["admin_url"] = options["config"]
         if not options["dry_run"]:
             mgr.create(credentials=credentials, config=config)

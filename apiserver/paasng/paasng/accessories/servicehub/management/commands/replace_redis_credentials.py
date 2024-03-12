@@ -34,7 +34,7 @@ logger = logging.getLogger("commands")
 
 class Command(BaseCommand):
     help = (
-        "reset reis credentials with remote services. "
+        "replace redis credentials with remote services. "
         "This command creates a service_instance object instance "
         "but does not actually allocate resources."
     )
@@ -46,7 +46,7 @@ class Command(BaseCommand):
         parser.add_argument("--redis_host", required=True, type=str)
         parser.add_argument("--redis_port", required=True, type=str)
         parser.add_argument("--redis_password", required=True, type=str)
-        parser.add_argument("--config", required=False, type=str)
+        parser.add_argument("--admin_url", required=False, type=str)
         parser.add_argument("--no-dry-run", dest="dry_run", default=True, action="store_false", help="dry run")
 
     def _get_service(self, mgr: RemoteServiceMgr, name: str) -> Optional[RemoteServiceObj]:
@@ -71,6 +71,7 @@ class Command(BaseCommand):
             application__code=options["app_code"], module__name=options["module_name"], environment=options["env"]
         )
         attachment = RemoteServiceEngineAppAttachment.objects.get(service_id=svc.uuid, engine_app=env.engine_app)
+        attachment.service_instance_id = None
         mgr = RemotePlainInstanceMgr(attachment, store)
 
         credentials = {
@@ -78,8 +79,16 @@ class Command(BaseCommand):
             "REDIS_PORT": options["redis_port"],
             "REDIS_PASSWORD": options["redis_password"],
         }
-        config = {}
-        if options["config"]:
+        config = {
+            "paas_app_info": {
+                "app_id": str(mgr.db_application.id),
+                "app_code": str(mgr.db_application.code),
+                "app_name": str(mgr.db_application.name),
+                "module": mgr.db_module.name,
+                "environment": mgr.db_env.environment,
+            },
+        }
+        if options["admin_url"]:
             config["admin_url"] = options["config"]
         if not options["dry_run"]:
             mgr.create(credentials=credentials, config=config)

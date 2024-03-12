@@ -971,6 +971,11 @@ SERVICE_PROTECTED_SPEC_NAMES = ["app_zone"]
 # 比如 APP_ZONE_CLUSTER_MAPPINGS = {"main-cluster": "another-zone"}
 APP_ZONE_CLUSTER_MAPPINGS = settings.get("APP_ZONE_CLUSTER_MAPPINGS", {})
 
+# 本地增强服务内置环境变量 KEY
+LOCAL_SERVICE_BUILTIN_ENV_KEYS: Dict[str, List] = settings.get(
+    "LOCAL_SERVICE_BUILTIN_ENV_KEYS", {"redis": ["REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD"]}
+)
+
 # ---------------
 # 应用市场相关配置
 # ---------------

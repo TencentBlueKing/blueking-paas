@@ -97,6 +97,11 @@ urlpatterns = [
         views.ModuleServicesViewSet.as_view({"get": "retrieve", "delete": "unbind"}),
         name="api.services.list_by_application",
     ),
+    re_path(
+        make_app_pattern("/services/env/", include_envs=False),
+        views.ModuleServiceAttachmentsViewSet.as_view({"get": "get_env_keys"}),
+        name="api.modules.services.env",
+    ),
     # Manager service attachments (from services side)
     url(
         r"^api/services/service-attachments/$",

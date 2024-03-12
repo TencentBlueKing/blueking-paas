@@ -17,8 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import Http404
@@ -98,6 +99,52 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         for env in self.get_module_via_path().get_envs():
             services_info[env.environment] = ServicesInfo.get_detail(env.engine_app)["services_info"]
         return Response(data=slzs.ModuleServiceInfoSLZ(services_info).data)
+
+    def _get_visible_service_names(self, application):
+        visible_services = []
+        categories = ServiceCategory.objects.order_by("sort_priority").all()
+        for category in categories:
+            services = mixed_service_mgr.list_by_category(region=application.region, category_id=category.id)
+            for service in services:
+                if service.is_visible:
+                    visible_services.append(service.name)
+        return visible_services
+
+    @swagger_auto_schema(response_serializer=slzs.ServiceEnvKeys)
+    def get_env_keys(self, request, code, module_name):
+        """获取指定模块下增强服务的环境变量 Key，并区分已分配实例生效的环境变量和为生效的环境变量"""
+        # 获取应用所有可见的增强服务
+        application = self.get_application()
+        visible_service_names = self._get_visible_service_names(application)
+
+        svc_env_keys = set()
+        # 远程增强服务内置环境变量
+        for remote_svc in settings.SERVICE_REMOTE_ENDPOINTS:
+            if remote_svc["name"] in visible_service_names:
+                svc_env_keys.update(remote_svc.get("builtin_env_keys", []))
+        # 本地增强服务内置环境变量
+        for local_svc_name, local_svc_env_key in settings.LOCAL_SERVICE_BUILTIN_ENV_KEYS.items():
+            if local_svc_name in visible_service_names:
+                svc_env_keys.update(local_svc_env_key)
+
+        # 获取模块已经生效的增强服务内置环境变量
+        provisioned_env_keys: Set[str] = set()
+        for env in self.get_module_via_path().get_envs():
+            # 获取已分配实例的增强服务的环境变量
+            env_vars = mixed_service_mgr.get_env_vars(env.engine_app)
+            provisioned_env_keys.update(env_vars.keys())
+
+            # 获取已分配实例的共享增强服务的环境变量
+            sharing_vars = ServiceSharingManager(env.module).get_env_variables(env)
+            provisioned_env_keys.update(sharing_vars.keys())
+        return Response(
+            data=slzs.ServiceEnvKeys(
+                {
+                    "active_env_keys": list(provisioned_env_keys),
+                    "inactive_env_keys": list(svc_env_keys - provisioned_env_keys),
+                }
+            ).data
+        )
 
 
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

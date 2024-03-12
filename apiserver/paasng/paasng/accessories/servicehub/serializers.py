@@ -234,3 +234,8 @@ class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
 
     provision_infos = ProvisionInfoSLZ(help_text="共享服务实例分配信息")
     specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())
+
+
+class ServiceEnvKeys(serializers.Serializer):
+    active_env_keys = serializers.ListField(help_text="已生效的环境变量 KEY，即启用并分配了实例的增强服务的环境变量")
+    inactive_env_keys = serializers.ListField(help_text="已生效的环境变量 KEY，即未启用或者未分配实例的增强的环境变量")

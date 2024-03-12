@@ -117,6 +117,7 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
             "key": jwt_key,
         },
         "prefer_async_delete": True,
+        "builtin_env_keys": [],
     }
 
     mysql_ep_url = settings.get("RSVC_BUNDLE_MYSQL_ENDPOINT_URL")
@@ -128,6 +129,7 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                     "name": "mysql_remote",
                     "endpoint_url": mysql_ep_url,
                     "provision_params_tmpl": {"egress_info": "{cluster_info.egress_info_json}"},
+                    "builtin_env_keys": ["MYSQL_HOST", "MYSQL_PORT", "MYSQL_USER", "MYSQL_NAME", "MYSQL_PASSWORD"],
                 },
             )
         )
@@ -143,6 +145,15 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                     "provision_params_tmpl": {
                         "app_developers": "{app_developers}",
                     },
+                    "builtin_env_keys": [
+                        "BKREPO_USERNAME",
+                        "BKREPO_BUCKET",
+                        "BKREPO_PRIVATE_BUCKET",
+                        "BKREPO_PUBLIC_BUCKET",
+                        "BKREPO_ENDPOINT_URL",
+                        "BKREPO_PROJECT",
+                        "BKREPO_PASSWORD",
+                    ],
                 },
             )
         )
@@ -155,6 +166,13 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                 {
                     "name": "svc_rabbitmq",
                     "endpoint_url": rabbitmq_ep_url,
+                    "builtin_env_keys": [
+                        "RABBITMQ_HOST",
+                        "RABBITMQ_PORT",
+                        "RABBITMQ_USER",
+                        "RABBITMQ_VHOST",
+                        "RABBITMQ_PASSWORD",
+                    ],
                 },
             )
         )
@@ -172,6 +190,7 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                         "env": "{env.environment}",
                     },
                     "is_ready": settings.get("RSVC_BUNDLE_OTEL_ENABLED", False),
+                    "builtin_env_keys": ["OTEL_TRACE", "OTEL_SAMPLER", "OTEL_BK_DATA_TOKEN", "OTEL_GRPC_URL"],
                 },
             )
         )

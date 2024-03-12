@@ -391,7 +391,7 @@ class TestMountSourceViewSet:
         assert response.data["storage_size"] == "2Gi"
 
     @pytest.mark.usefixtures("_mount_sources")
-    def test_destroy(self, api_client, bk_app):
+    def test_destroy(self, api_client, bk_app, bk_prod_wl_app, bk_stag_wl_app):
         url = (
             "/api/bkapps/applications/"
             f"{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage&source_name=pvc"

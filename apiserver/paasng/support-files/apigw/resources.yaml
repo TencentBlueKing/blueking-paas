@@ -550,7 +550,7 @@ paths:
         backend:
           type: HTTP
           method: get
-          path: /backend/svc_workloads/api/processes/applications/{app_code}/modules/{module}/envs/{env}/processes/list/
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/processes/list/
           matchSubpath: false
           timeout: 30
           upstreams: {}

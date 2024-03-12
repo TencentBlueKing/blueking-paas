@@ -37,7 +37,8 @@ urlpatterns = [
         views.ProcessesViewSet.as_view({"post": "update"}),
         name="api.processes.update",
     ),
-    # Cloud-native type application
+    # Cloud-native type application, list and watch processes of an environment, the result
+    # include multiple modules.
     re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/envs/(?P<environment>stag|prod)/processes/list/$",
         views.CNativeListAndWatchProcsViewSet.as_view({"get": "list"}),
@@ -50,21 +51,24 @@ urlpatterns = [
     ),
     # Below paths using legacy prefix.
     #
-    # TODO: This path a duplication with "api.processes.update", should be removed in the future.
+    # Default type application, list and watch processes of an environment, the result
+    # only include one module.
     re_path(
-        make_app_pattern_legacy_wl(r"/processes/$"),
-        views.ProcessesViewSet.as_view({"post": "update"}),
-        name="api.processes",
-    ),
-    # Default type application
-    re_path(
-        make_app_pattern_legacy_wl(r"/processes/list/$"),
+        make_app_pattern(r"/processes/list/$"),
         views.ListAndWatchProcsViewSet.as_view({"get": "list"}),
         name="api.list_processes",
     ),
     re_path(
-        make_app_pattern_legacy_wl(r"/processes/watch/$"),
+        make_app_pattern(r"/processes/watch/$"),
         views.ListAndWatchProcsViewSet.as_view({"get": "watch"}),
         name="api.watch_processes",
+    ),
+    # The list API with "/svc_workloads/" prefix has been registered in the API Gateway,
+    # So we will leave it as is until we modify the API Gateway config in the future.
+    # TODO: Remove this API.
+    re_path(
+        make_app_pattern_legacy_wl(r"/processes/list/$"),
+        views.ListAndWatchProcsViewSet.as_view({"get": "list"}),
+        name="api.list_processes",
     ),
 ]

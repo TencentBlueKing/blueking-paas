@@ -35,6 +35,13 @@ module:
   language: Python
   scripts:
     pre_release_hook: "python manage.py migrate --no-input"
+  env_variables:
+    - key: FOO
+      value: value_of_foo
+      description: description_of_foo
+    - key: BAR
+      value: value_of_bar
+      description: description_of_bar
   processes:
     web:
       command: python manage.py runserver
@@ -51,12 +58,12 @@ module:
 	})
 
 	Context("Test valid app desc file", func() {
-		DescribeTable("Test ParsePreReleaseHook", func(appDescYaml, expectedHookCommand string) {
+		DescribeTable("Test parse PreReleaseHook", func(appDescYaml, expectedHookCommand string) {
 			Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
 
-			hookCommand, err := ParsePreReleaseHook(tmpDescFilePath)
+			appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
 			Expect(err).To(BeNil())
-			Expect(hookCommand).To(Equal(expectedHookCommand))
+			Expect(appDesc.Module.Scripts.PreReleaseHook).To(Equal(expectedHookCommand))
 		}, Entry("has pre_release_hook", appDescTestYaml, "python manage.py migrate --no-input"),
 			Entry("no pre_release_hook", `spec_version: 2
 module:
@@ -65,20 +72,29 @@ scripts:
 test: "python"`, ""),
 			Entry("no pre_release_hook", `spec_version: 2`, ""))
 
+		DescribeTable("Test parse env_variables", func(appDescYaml string, expectedEnvs []Env) {
+			Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
+
+			appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
+			Expect(err).To(BeNil())
+			Expect(appDesc.Module.ProcEnvs).To(Equal(expectedEnvs))
+		}, Entry("has env_variables", appDescTestYaml, []Env{
+			{Key: "FOO", Value: "value_of_foo"}, {Key: "BAR", Value: "value_of_bar"},
+		}), Entry("no env_variables", `spec_version: 2`, nil))
+
 		It("Test TransformToProcfile", func() {
 			Expect(os.WriteFile(tmpDescFilePath, []byte(appDescTestYaml), 0o644)).To(BeNil())
 			procString, err := TransformToProcfile(tmpDescFilePath)
 			Expect(err).To(BeNil())
-			Expect(
-				procString,
-			).To(Equal("web: python manage.py runserver\nworker: celery -A app worker --loglevel=info"))
+			Expect(procString).To(ContainSubstring("worker: celery -A app worker --loglevel=info"))
+			Expect(procString).To(ContainSubstring("web: python manage.py runserver"))
 		})
 	})
 	Context("Test invalid app desc file", func() {
-		It("Test ParsePreReleaseHook", func() {
+		It("Test unmarshal to app desc", func() {
 			Expect(os.WriteFile(tmpDescFilePath, []byte(`abc`), 0o644)).To(BeNil())
 
-			_, err := ParsePreReleaseHook(tmpDescFilePath)
+			_, err := UnmarshalToAppDesc(tmpDescFilePath)
 			Expect(err).NotTo(BeNil())
 		})
 

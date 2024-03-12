@@ -458,7 +458,13 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             # 创建或更新 Mount source
             configmap_source = validated_data.get("configmap_source") or {}
             controller = init_volume_source_controller(mount_instance.source_type)
-            controller.create_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
+            controller.create_by_env(
+                app_id=mount_instance.module.application.id,
+                module_id=mount_instance.module.id,
+                env_name=mount_instance.environment_name,
+                source_name=mount_instance.get_source_name,
+                data=configmap_source.get("source_config_data"),
+            )
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -489,7 +495,13 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # 更新 Mount source
         configmap_source = validated_data.get("configmap_source") or {}
-        controller.update_by_mount(mount_instance, data=configmap_source.get("source_config_data"))
+        controller.update_by_env(
+            app_id=mount_instance.module.application.id,
+            module_id=mount_instance.module.id,
+            env_name=mount_instance.environment_name,
+            source_name=mount_instance.get_source_name,
+            data=configmap_source.get("source_config_data"),
+        )
 
         try:
             slz = MountSLZ(mount_instance)
@@ -503,7 +515,12 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
         controller = init_volume_source_controller(mount_instance.source_type)
-        controller.delete_by_mount(mount_instance)
+        controller.delete_by_env(
+            app_id=mount_instance.module.application.id,
+            module_id=mount_instance.module.id,
+            env_name=mount_instance.environment_name,
+            source_name=mount_instance.get_source_name,
+        )
         mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

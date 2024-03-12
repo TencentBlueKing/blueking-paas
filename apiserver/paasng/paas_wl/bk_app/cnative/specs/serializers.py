@@ -180,7 +180,7 @@ class ConfigMapSLZ(serializers.Serializer):
 
 
 class PersistentStorageSLZ(serializers.Serializer):
-    storage = serializers.ChoiceField(choices=PersistentStorageSize.get_choices(), allow_null=True)
+    storage_size = serializers.ChoiceField(choices=PersistentStorageSize.get_choices(), allow_null=True)
 
 
 class UpsertMountSLZ(serializers.Serializer):
@@ -255,7 +255,11 @@ class MountSLZ(serializers.ModelSerializer):
             return None
         try:
             controller = init_volume_source_controller(obj.source_type)
-            source = controller.get_by_mount(obj)
+            source = controller.get_by_env(
+                app_id=obj.module.application.id,
+                env_name=obj.environment_name,
+                source_name=obj.get_source_name,
+            )
         except ValueError as e:
             raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
         return {"source_config_data": source.data}
@@ -265,7 +269,11 @@ class MountSLZ(serializers.ModelSerializer):
             return None
         try:
             controller = init_volume_source_controller(obj.source_type)
-            source = controller.get_by_mount(obj)
+            source = controller.get_by_env(
+                app_id=obj.module.application.id,
+                env_name=obj.environment_name,
+                source_name=obj.get_source_name,
+            )
         except ValueError as e:
             raise GetSourceConfigDataError(_("获取挂载卷内容信息失败")) from e
 
@@ -275,7 +283,7 @@ class MountSLZ(serializers.ModelSerializer):
         bound_modules = [{"module": mount.name, "path": mount.mount_path} for mount in mounts]
         return {
             "name": source.name,
-            "storage": source.storage,
+            "storage_size": source.storage_size,
             "bound_modules": bound_modules,
         }
 
@@ -309,7 +317,7 @@ class MountSourceSLZ(serializers.Serializer):
     source_type = serializers.SerializerMethodField(label=_("挂载卷资源类型"))
     bound_modules = serializers.SerializerMethodField(label=_("已绑定模块信息"))
     data = serializers.JSONField(required=False)
-    storage = serializers.CharField(required=False)
+    storage_size = serializers.CharField(required=False)
     storage_class_name = serializers.CharField(required=False)
 
     def get_source_type(self, obj):

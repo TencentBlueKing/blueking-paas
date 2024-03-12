@@ -38,6 +38,7 @@ from paas_wl.infras.resources.base.kres import KStorageClass
 from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap, configmap_kmodel
 from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.modules.models import Module
 
 
 class BaseVolumeSourceController:
@@ -53,46 +54,35 @@ class BaseVolumeSourceController:
     def get_source_class(cls, volume_source_type: Union[str, VolumeSourceType]) -> Type["BaseVolumeSourceController"]:
         return cls._source_types[VolumeSourceType(volume_source_type)]
 
-    @classmethod
-    def deploy(cls, env: ModuleEnvironment):
-        mount_queryset = Mount.objects.filter(
-            module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
-        )
-        for m in mount_queryset:
-            controller = init_volume_source_controller(m.source_type)
-            source = controller.get_by_mount(m)
-            controller.upsert_k8s_resource(source, env.wl_app)
-
     def build_volume_source(self, name: str) -> VolumeSource:
         """创建对应 VolumeSource 对象"""
         raise NotImplementedError
 
     def list_by_app(self, application_id: str) -> Any:
-        """通过应用 ID 查看对应 django model 对象列表"""
+        """通过应用 ID 查看对应 model 对象列表"""
         raise NotImplementedError
 
     def create_by_app(self, application_id: str, environment_name: str, **kwargs) -> Any:
-        """通过应用 ID 创建对应 django model 对象"""
+        """通过应用 ID 创建对应 model 对象"""
         raise NotImplementedError
 
     def delete_by_app(self, application_id: str, source_name: str) -> None:
-        """通过应用 ID 删除对应 django model 对象"""
+        """通过应用 ID 删除对应 model 对象"""
         raise NotImplementedError
 
-    def get_by_mount(self, mount: Mount) -> Any:
-        """通过 Mount 查看对应 django model 对象"""
+    def get_by_env(self, app_id: str, env_name: str, source_name: str) -> Any:
         raise NotImplementedError
 
-    def delete_by_mount(self, mount: Mount) -> None:
-        """通过 Mount 删除对应 django model 对象"""
+    def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:
+        """通过模块、环境删除对应 model 对象"""
         raise NotImplementedError
 
-    def create_by_mount(self, mount: Mount, **kwargs) -> Any:
-        """通过 Mount 创建/更新对应 django model 对象"""
+    def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> Any:
+        """通过模块、环境创建/更新对应 model 对象"""
         raise NotImplementedError
 
-    def update_by_mount(self, mount: Mount, **kwargs) -> Any:
-        """通过 Mount 创建/更新对应 django model 对象"""
+    def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> Any:
+        """通过模块、环境创建/更新对应 model 对象"""
         raise NotImplementedError
 
     def upsert_k8s_resource(self, source: Union[ConfigMapSource, PersistentStorageSource], wl_app: WlApp) -> None:
@@ -115,56 +105,60 @@ class ConfigMapSourceController(BaseVolumeSourceController):
         return self.model_class.objects.filter(application_id=application_id)
 
     def create_by_app(self, application_id: str, environment_name: str, **kwargs) -> None:
-        """configmap 类型暂不支持单独创建"""
+        """configmap 类型属于模块级别,暂不支持应用级别单独创建"""
         raise NotImplementedError
 
     def delete_by_app(self, application_id: str, source_name: str) -> None:
-        """configmap 类型暂不支持单独删除"""
+        """configmap 类型属于模块级别,暂不支持应用级别单独删除"""
         raise NotImplementedError
 
-    def get_by_mount(self, mount: Mount) -> ConfigMapSource:
-        return self.model_class.objects.get_by_mount(mount)
+    def get_by_env(self, app_id: str, env_name: str, source_name: str) -> ConfigMapSource:
+        return self.model_class.objects.get(
+            application_id=app_id,
+            environment_name=env_name,
+            name=source_name,
+        )
 
-    def create_by_mount(self, mount: Mount, **kwargs) -> ConfigMapSource:
+    def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
         data = kwargs.get("data", {})
-        if not mount.source_config.configMap:
-            raise ValueError(f"Mount {mount.name} is invalid: source_config.configMap is none")
 
         return self.model_class.objects.create(
-            name=mount.source_config.configMap.name,
-            application_id=mount.module.application_id,
-            module_id=mount.module.id,
-            environment_name=mount.environment_name,
+            application_id=app_id,
+            module_id=module_id,
+            environment_name=env_name,
+            name=source_name,
             data=data,
         )
 
-    def update_by_mount(self, mount: Mount, **kwargs) -> ConfigMapSource:
+    def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
         # 需要删除对应的 k8s volume 资源
-        source = self.get_by_mount(mount)
-        if mount.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
-            opposite_env_map = {
-                MountEnvName.STAG.value: MountEnvName.PROD.value,
-                MountEnvName.PROD.value: MountEnvName.STAG.value,
-            }
-            env = mount.module.get_envs(environment=opposite_env_map.get(mount.environment_name))
+        source = self.get_by_env(
+            app_id=app_id,
+            env_name=env_name,
+            source_name=source_name,
+        )
+        # 删除 mount 对应的 source k8s 资源
+        module = Module.objects.get(id=module_id)
+        for env in module.get_envs():
             self.delete_k8s_resource(source, env.wl_app)
 
         # 更新 source 对象
         data = kwargs.get("data", {})
-        if not mount.source_config.configMap:
-            raise ValueError(f"Mount {mount.name} is invalid: source_config.configMap is none")
-
-        source = self.get_by_mount(mount)
-        source.environment_name = mount.environment_name
+        source.environment_name = env_name
         source.data = data
         source.save(update_fields=["environment_name", "data"])
         return source
 
-    def delete_by_mount(self, mount: Mount) -> None:
-        source = self.get_by_mount(mount)
+    def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:
+        source = self.get_by_env(
+            app_id=app_id,
+            env_name=env_name,
+            source_name=source_name,
+        )
 
         # 删除 mount 对应的 source k8s 资源
-        for env in mount.module.get_envs():
+        module = Module.objects.get(id=module_id)
+        for env in module.get_envs():
             self.delete_k8s_resource(source, env.wl_app)
 
         source.delete()
@@ -209,19 +203,23 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
 
         source.delete()
 
-    def get_by_mount(self, mount: Mount) -> PersistentStorageSource:
-        return self.model_class.objects.get_by_mount(mount)
+    def get_by_env(self, app_id: str, env_name: str, source_name: str) -> PersistentStorageSource:
+        return self.model_class.objects.get(
+            application_id=app_id,
+            environment_name=env_name,
+            name=source_name,
+        )
 
-    def create_by_mount(self, mount: Mount, **kwargs) -> None:
-        # pvc 资源独立创建更新，不跟随 mount 资源变化
+    def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> None:
+        """persistent storage 类型属于应用级别,暂不支持模块环境级别创建"""
         return
 
-    def update_by_mount(self, mount: Mount, **kwargs) -> None:
-        # pvc 资源独立创建更新，不跟随 mount 资源变化
+    def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> None:
+        """persistent storage 类型属于应用级别,暂不支持模块环境级别更新"""
         return
 
-    def delete_by_mount(self, mount: Mount) -> None:
-        # pvc 资源独立创建更新，不跟随 mount 资源的消失而消失
+    def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:
+        """persistent storage 类型属于应用级别,暂不支持模块环境级别删除"""
         return
 
     def upsert_k8s_resource(self, source: PersistentStorageSource, wl_app: WlApp) -> None:
@@ -252,6 +250,20 @@ def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceCo
 def generate_source_config_name(app_code: str) -> str:
     """Generate name of the Mount source_config"""
     return f"{app_code}-{uuid.uuid4().hex}"
+
+
+def deploy_volume_source(env: ModuleEnvironment):
+    mount_queryset = Mount.objects.filter(
+        module_id=env.module.id, environment_name__in=[env.environment, MountEnvName.GLOBAL.value]
+    )
+    for m in mount_queryset:
+        controller = init_volume_source_controller(m.source_type)
+        source = controller.get_by_env(
+            app_id=m.module.application.id,
+            env_name=m.environment_name,
+            source_name=m.get_source_name,
+        )
+        controller.upsert_k8s_resource(source, env.wl_app)
 
 
 class MountManager:

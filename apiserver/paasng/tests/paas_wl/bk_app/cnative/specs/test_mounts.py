@@ -92,7 +92,7 @@ class TestVolumeSourceController:
             module_id=bk_module.id,
             name="etcd-pvc",
             environment_name=MountEnvName.STAG,
-            storage="1Gi",
+            storage_size="1Gi",
             storage_class_name="cfs",
         )
 
@@ -113,7 +113,7 @@ class TestVolumeSourceController:
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_deploy(self, bk_stag_env):
-        mounts.BaseVolumeSourceController.deploy(bk_stag_env)
+        mounts.deploy_volume_source(bk_stag_env)
 
     @pytest.fixture()
     def mount_configmap(self, bk_app, bk_module):
@@ -128,14 +128,24 @@ class TestVolumeSourceController:
         )
         source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
         controller = init_volume_source_controller(mount.source_type)
-        controller.create_by_mount(mount, data=source_data)
+        controller.create_by_env(
+            app_id=mount.module.application.id,
+            module_id=mount.module.id,
+            env_name=mount.environment_name,
+            source_name=mount.get_source_name,
+            data=source_data,
+        )
         return mount
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_configmap(self, bk_stag_env, mount_configmap):
-        mounts.BaseVolumeSourceController.deploy(bk_stag_env)
+        mounts.deploy_volume_source(bk_stag_env)
         controller = init_volume_source_controller(mount_configmap.source_type)
-        source = controller.get_by_mount(mount_configmap)
+        source = controller.get_by_env(
+            app_id=mount_configmap.module.application.id,
+            env_name=mount_configmap.environment_name,
+            source_name=mount_configmap.get_source_name,
+        )
         assert configmap_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         controller.delete_k8s_resource(source, bk_stag_env.wl_app)
         with pytest.raises(AppEntityNotFound):
@@ -157,9 +167,13 @@ class TestVolumeSourceController:
 
     @pytest.mark.usefixtures("_create_namespace")
     def test_delete_pvc(self, bk_stag_env, mount_pvc):
-        mounts.BaseVolumeSourceController.deploy(bk_stag_env)
+        mounts.deploy_volume_source(bk_stag_env)
         controller = init_volume_source_controller(mount_pvc.source_type)
-        source = controller.get_by_mount(mount_pvc)
+        source = controller.get_by_env(
+            app_id=mount_pvc.module.application.id,
+            env_name=mount_pvc.environment_name,
+            source_name=mount_pvc.get_source_name,
+        )
         assert pvc_kmodel.get(app=bk_stag_env.wl_app, name=source.name)
         controller.delete_k8s_resource(source, bk_stag_env.wl_app)
         with pytest.raises(AppEntityNotFound):

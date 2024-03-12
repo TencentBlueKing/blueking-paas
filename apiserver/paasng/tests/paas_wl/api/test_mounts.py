@@ -40,7 +40,14 @@ def mount_configmap(bk_app, bk_module, bk_stag_env, bk_stag_wl_app):
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
     controller = init_volume_source_controller(mount.source_type)
-    controller.create_by_mount(mount, data=source_data)
+
+    controller.create_by_env(
+        app_id=mount.module.application.id,
+        module_id=mount.module.id,
+        env_name=mount.environment_name,
+        source_name=mount.get_source_name,
+        data=source_data,
+    )
     return mount
 
 
@@ -51,7 +58,7 @@ def pvc_source(bk_app, bk_module):
         module_id=bk_module.id,
         environment_name=MountEnvName.STAG,
         name="pvc-source-test",
-        storage="1Gi",
+        storage_size="1Gi",
         storage_class_name="storage-class-test",
     )
     return pvc
@@ -64,7 +71,7 @@ def pvc_source_update(bk_app, bk_module):
         module_id=bk_module.id,
         environment_name=MountEnvName.STAG,
         name="pvc-source-test-update",
-        storage="1Gi",
+        storage_size="1Gi",
         storage_class_name="storage-class-test",
     )
     return pvc
@@ -103,7 +110,13 @@ def mounts(bk_app, bk_module):
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
         controller = init_volume_source_controller(mount.source_type)
-        controller.create_by_mount(mount, data=source_data)
+        controller.create_by_env(
+            app_id=mount.module.application.id,
+            module_id=mount.module.id,
+            env_name=mount.environment_name,
+            source_name=mount.get_source_name,
+            data=source_data,
+        )
         mount_list.append(mount)
     return mount_list
 
@@ -142,7 +155,11 @@ class TestVolumeMountViewSet:
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-configmap-test").first()
         controller = init_volume_source_controller(mount.source_type)
-        source = controller.get_by_mount(mount)
+        source = controller.get_by_env(
+            app_id=mount.module.application.id,
+            env_name=mount.environment_name,
+            source_name=mount.get_source_name,
+        )
         assert response.status_code == 201
         assert mount
         assert source.data == {"configmap_z": "configmap_z_data"}
@@ -159,10 +176,14 @@ class TestVolumeMountViewSet:
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-pvc-test").first()
         controller = init_volume_source_controller(mount.source_type)
-        source = controller.get_by_mount(mount)
+        source = controller.get_by_env(
+            app_id=mount.module.application.id,
+            env_name=mount.environment_name,
+            source_name=mount.get_source_name,
+        )
         assert response.status_code == 201
         assert mount
-        assert source.storage == pvc_source.storage
+        assert source.storage_size == pvc_source.storage_size
 
     def test_create_with_source_name(self, api_client, bk_app, bk_module, pvc_source):
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
@@ -260,7 +281,11 @@ class TestVolumeMountViewSet:
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount_configmap.pk)
         controller = init_volume_source_controller(mount_updated.source_type)
-        source = controller.get_by_mount(mount_updated)
+        source = controller.get_by_env(
+            app_id=mount_updated.module.application.id,
+            env_name=mount_updated.environment_name,
+            source_name=mount_updated.get_source_name,
+        )
         assert response.status_code == 200
         assert mount_updated.name == mount_configmap.name
         assert source.data == {"configmap_z": "configmap_z_data_updated"}
@@ -337,7 +362,7 @@ class TestMountSourceViewSet:
             name="pvc",
             environment_name=MountEnvName.GLOBAL.value,
             storage_class_name="cfs",
-            storage="1Gi",
+            storage_size="1Gi",
         )
 
     @pytest.mark.usefixtures("_mount_sources")
@@ -358,12 +383,12 @@ class TestMountSourceViewSet:
         request_body = {
             "environment_name": "stag",
             "source_type": "PersistentStorage",
-            "persistent_storage_source": {"storage": "2Gi"},
+            "persistent_storage_source": {"storage_size": "2Gi"},
         }
         response = api_client.post(url, request_body)
         assert response.status_code == 201
         assert response.data["environment_name"] == "stag"
-        assert response.data["storage"] == "2Gi"
+        assert response.data["storage_size"] == "2Gi"
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_destroy(self, api_client, bk_app):

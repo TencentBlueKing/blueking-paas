@@ -31,24 +31,6 @@ from paasng.utils.models import make_json_field
 SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 
-class ConfigMapSourceManager(models.Manager):
-    def get_by_mount(self, m: "Mount") -> "ConfigMapSource":
-        """
-        根据传入的 Mount 对象查找对应的 configmap 资源
-
-        :param m: Mount object
-        :return ConfigMapSource: 与传入的 Mount 对象对应的 configmap 资源
-        :raises ValueError: 如果未传入 source_config.configMap
-        """
-        if not m.source_config.configMap:
-            raise ValueError(f"Mount {m.name} is invalid: source_config.configMap is none")
-        return self.get(
-            application_id=m.module.application_id,
-            environment_name=m.environment_name,
-            name=m.source_config.configMap.name,
-        )
-
-
 class ConfigMapSource(TimestampedModel):
     """ConfigMap 类型的挂载资源"""
 
@@ -60,29 +42,8 @@ class ConfigMapSource(TimestampedModel):
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     data = models.JSONField(default=dict)
 
-    objects = ConfigMapSourceManager()
-
     class Meta:
         unique_together = ("name", "application_id", "environment_name")
-
-
-class PersistentStorageManager(models.Manager):
-    def get_by_mount(self, m: "Mount") -> "PersistentStorageSource":
-        """
-        根据传入的 Mount 对象查找对应的持久存储资源
-
-        :param m: Mount object
-        :return PersistentStorageSource: 与传入的 Mount 对象对应的持久存储资源
-        :raises ValueError: 如果未传入 source_config.persistentStorage
-        """
-        if not m.source_config.persistentStorage:
-            raise ValueError(f"Mount {m.name} is invalid: source_config.persistentStorage is none")
-
-        return self.get(
-            application_id=m.module.application_id,
-            environment_name=m.environment_name,
-            name=m.source_config.persistentStorage.name,
-        )
 
 
 class PersistentStorageSource(TimestampedModel):
@@ -96,8 +57,6 @@ class PersistentStorageSource(TimestampedModel):
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     storage_size = models.CharField(max_length=63)
     storage_class_name = models.CharField(max_length=63)
-
-    objects = PersistentStorageManager()
 
     class Meta:
         unique_together = ("name", "application_id", "environment_name")
@@ -116,6 +75,14 @@ class Mount(TimestampedModel):
     mount_path = models.CharField(max_length=128)
     source_type = models.CharField(choices=VolumeSourceType.get_choices(), max_length=32)
     source_config: VolumeSource = SourceConfigField()
+
+    @property
+    def get_source_name(self):
+        if self.source_type == VolumeSourceType.ConfigMap and self.source_config.configMap:
+            return self.source_config.configMap.name
+        elif self.source_type == VolumeSourceType.PersistentStorage and self.source_config.persistentStorage:
+            return self.source_config.persistentStorage.name
+        return None
 
     class Meta:
         unique_together = ("module_id", "mount_path", "environment_name")

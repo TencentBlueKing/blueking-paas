@@ -1410,7 +1410,7 @@ export default {
       console.log('this.envEventData', this.envEventData, this.environment);
       if (this.envEventData.includes(this.environment)) return;
       this.serverEvent && this.serverEvent.close();
-      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
       this.cloudServerEvent = new EventSource(url, {
         withCredentials: true,
       });

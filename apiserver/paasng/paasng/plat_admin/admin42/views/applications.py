@@ -32,12 +32,11 @@ from paasng.infras.iam.helpers import (
     fetch_role_members,
     remove_user_all_roles,
 )
-from paasng.misc.monitoring.metrics.models import AppResourceUsageReport
 from paasng.plat_admin.admin42.serializers.application import (
     ApplicationDetailSLZ,
     ApplicationSLZ,
-    AppResourceUsageReportListInputSLZ,
-    AppResourceUsageReportOutputSLZ,
+    AppOperationReportListInputSLZ,
+    AppOperationReportOutputSLZ,
     BindEnvClusterSLZ,
 )
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
@@ -49,6 +48,7 @@ from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, 
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
 from paasng.platform.engine.constants import ClusterType
+from paasng.platform.evaluation.models import AppOperationReport
 from paasng.utils.error_codes import error_codes
 
 
@@ -118,27 +118,30 @@ class ApplicationListView(GenericTemplateView):
         return kwargs
 
 
-class ApplicationResourceUsageListView(GenericTemplateView):
-    name = "资源使用概览"
-    template_name = "admin42/applications/list_resource_usage.html"
+class ApplicationOperationEvaluationListView(GenericTemplateView):
+    name = "应用运营评估"
+    template_name = "admin42/applications/list_evaluations.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
         self.paginator.default_limit = 10
 
-        slz = AppResourceUsageReportListInputSLZ(data=self.request.query_params)
+        slz = AppOperationReportListInputSLZ(data=self.request.query_params)
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
 
-        queryset = AppResourceUsageReport.objects.all()
+        queryset = AppOperationReport.objects.all()
         if search_term := params.get("search_term"):
-            queryset = queryset.filter(Q(app_code__icontains=search_term) | Q(app_name__icontains=search_term))
+            queryset = queryset.filter(Q(app__code__icontains=search_term) | Q(app__name__icontains=search_term))
+
+        if issue_type := params.get("issue_type"):
+            queryset = queryset.filter(issue_type=issue_type)
 
         if order_by := params.get("order_by"):
             queryset = queryset.order_by(order_by)
 
         kwargs = super().get_context_data(**kwargs)
-        kwargs["usage_report_list"] = AppResourceUsageReportOutputSLZ(self.paginate_queryset(queryset), many=True).data
+        kwargs["usage_report_list"] = AppOperationReportOutputSLZ(self.paginate_queryset(queryset), many=True).data
         kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 

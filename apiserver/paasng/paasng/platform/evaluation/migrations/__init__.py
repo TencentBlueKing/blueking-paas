@@ -16,25 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import re_path
-
-from . import views_enduser
-
-urlpatterns = [
-    # [deprecated] use urls.py instead
-    re_path(
-        r"applications/(?P<code>[^/]+)/domains/$",
-        views_enduser.AppDomainsViewSet.as_view({"get": "list", "post": "create"}),
-        name="api.app_domains",
-    ),
-    re_path(
-        r"applications/(?P<code>[^/]+)/domains/(?P<id>\d+)/$",
-        views_enduser.AppDomainsViewSet.as_view({"put": "update", "delete": "destroy"}),
-        name="api.app_domains.singular",
-    ),
-    re_path(
-        r"applications/(?P<code>[^/]+)/domains/configs/$",
-        views_enduser.AppDomainsViewSet.as_view({"get": "list_configs"}),
-        name="api.app_domains.configs",
-    ),
-]

@@ -42,12 +42,12 @@ def build_config(bk_app, bk_module, image_credential):
 
 class TestAppUserCredentialViewSet:
     def test_destroy(self, api_client, bk_app, image_credential):
-        url = f"/svc_workloads/api/credentials/applications/{bk_app.code}/image_credentials/{image_credential.name}"
+        url = f"/api/bkapps/applications/{bk_app.code}/image_credentials/{image_credential.name}"
         response = api_client.delete(url)
         assert response.status_code == 204
 
     def test_destroy_when_used(self, api_client, bk_app, bk_module, image_credential, build_config):
         """测试镜像凭证已被绑定的情况下，删除镜像凭证"""
-        url = f"/svc_workloads/api/credentials/applications/{bk_app.code}/image_credentials/{image_credential.name}"
+        url = f"/api/bkapps/applications/{bk_app.code}/image_credentials/{image_credential.name}"
         response = api_client.delete(url)
         assert response.status_code == 400

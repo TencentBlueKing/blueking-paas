@@ -23,12 +23,19 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
 // Process ...
 type Process struct {
 	Command string `yaml:"command"`
+}
+
+// Env ...
+type Env struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
 }
 
 // AppDesc ...
@@ -39,25 +46,23 @@ type AppDesc struct {
 		Scripts   struct {
 			PreReleaseHook string `yaml:"pre_release_hook"`
 		} `yaml:"scripts"`
+		ProcEnvs []Env `yaml:"env_variables"`
 	} `yaml:"module"`
 }
 
-// ParsePreReleaseHook parses the pre-release hook from the given app_desc.yaml.
-//
-// It takes a `descFilePath` parameter which is the path to the app_desc.yaml.
-// It returns a string which represents the pre-release hook and an error if any occurred.
-func ParsePreReleaseHook(descFilePath string) (string, error) {
+// UnmarshalToAppDesc reads from the given app_desc.yaml and unmarshals it into an AppDesc struct.
+func UnmarshalToAppDesc(descFilePath string) (*AppDesc, error) {
 	yamlFile, err := os.ReadFile(descFilePath)
 	if err != nil {
-		return "", err
+		return nil, errors.Wrap(err, "failed to read app desc file")
 	}
 
-	desc := AppDesc{}
-	if err = yaml.Unmarshal(yamlFile, &desc); err != nil {
-		return "", err
+	desc := new(AppDesc)
+	if err = yaml.Unmarshal(yamlFile, desc); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal app desc")
 	}
 
-	return desc.Module.Scripts.PreReleaseHook, nil
+	return desc, nil
 }
 
 // TransformToProcfile transforms an app_desc.yaml file into a Procfile string.
@@ -65,13 +70,8 @@ func ParsePreReleaseHook(descFilePath string) (string, error) {
 // It takes a path to an app_desc.yaml file as input and returns a string
 // representation of a Procfile.
 func TransformToProcfile(descFilePath string) (string, error) {
-	yamlFile, err := os.ReadFile(descFilePath)
+	desc, err := UnmarshalToAppDesc(descFilePath)
 	if err != nil {
-		return "", err
-	}
-
-	desc := AppDesc{}
-	if err = yaml.Unmarshal(yamlFile, &desc); err != nil {
 		return "", err
 	}
 

@@ -16,16 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+# Functions in this module read event objects from kubernetes, it was used for getting
+# events for cloud-native app in the past but now it is not used anymore.
+#
+# TODO: Remove these code or make better use of it
+
 import datetime
-from typing import List, Optional
+from typing import Optional
 
 import arrow
 from attrs import define
 from kubernetes.dynamic import ResourceInstance
-
-from paas_wl.infras.resources.base.kres import KEvent
-from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paasng.platform.applications.models import ModuleEnvironment
 
 
 @define
@@ -75,19 +76,3 @@ def deserialize(kube_data: ResourceInstance) -> Event:
         first_seen=arrow.get(kube_data["firstTimestamp"]).datetime,
         last_seen=arrow.get(kube_data["lastTimestamp"]).datetime,
     )
-
-
-def list_events(env: ModuleEnvironment, dt: Optional[datetime.datetime]) -> List[Event]:
-    """List all Events in 'env'
-
-    :param env: 模块环境
-    :param dt: datetime, Optional, filter events first seen after dt
-    """
-    all_events = []
-    with get_client_by_app(env.wl_app) as client:
-        ret = KEvent(client).ops_label.list(namespace=env.wl_app.namespace, labels={})
-        for kube_data in ret.items:
-            all_events.append(deserialize(kube_data))
-    if dt:
-        all_events = [e for e in all_events if e.first_seen >= dt]
-    return all_events

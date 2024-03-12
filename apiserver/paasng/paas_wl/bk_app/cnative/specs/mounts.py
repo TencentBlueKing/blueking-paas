@@ -201,6 +201,11 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
                 self.delete_k8s_resource(source, env.wl_app)
             mount.delete()
 
+        app = Application.objects.get(id=application_id)
+        app_envs = app.get_app_envs()
+        for env in app_envs:
+            self.delete_k8s_resource(source, env.wl_app)
+
         source.delete()
 
     def get_by_env(self, app_id: str, env_name: str, source_name: str) -> PersistentStorageSource:

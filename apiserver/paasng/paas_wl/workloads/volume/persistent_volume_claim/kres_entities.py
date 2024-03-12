@@ -50,9 +50,17 @@ class PersistentVolumeClaimManager(AppEntityManager[PersistentVolumeClaim]):
         try:
             existed_one = self.get(app=res.app, name=pvc_name)
         except AppEntityNotFound:
-            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, pvc_name)
+            logger.info("PersistentVolumeClaim<%s/%s> does not exist, will skip delete", namespace, pvc_name)
             return None
         return super().delete(existed_one, non_grace_period)
+
+    def upsert(self, res: PersistentVolumeClaim, update_method="replace"):
+        try:
+            self.get(app=res.app, name=res.name)
+        except AppEntityNotFound:
+            # PersistentVolumeClaim 不存在时执行创建
+            return super().upsert(res, update_method)
+        return None
 
 
 pvc_kmodel = PersistentVolumeClaimManager()

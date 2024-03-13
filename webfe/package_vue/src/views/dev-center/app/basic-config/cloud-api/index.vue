@@ -1,7 +1,7 @@
 <template lang="html">
-  <div :class="[{ 'plugin-cloud-box': isPlugin }, 'cloud-wrapper']">
+  <div class="cloud-wrapper">
     <!-- 云原生应用没有头部导航 -->
-    <div :class="['ps-top-bar','cloud-api-permission', { 'not-shadow': isPlugin }]">
+    <div :class="['ps-top-bar','cloud-api-permission', { 'plugin-top-bar': isPlugin }]">
       <div class="header-title">
         {{ $t('云 API 权限') }}
         <div class="guide-wrapper">
@@ -402,20 +402,6 @@ export default {
   color: #3a84ff;
 }
 
-.plugin-cloud-box {
-  .ps-top-bar {
-    padding: 16px 0 0 0 !important;
-    font-size: 16px;
-    color: #313238;
-    line-height: 24px;
-    letter-spacing: 0;
-    .header-title {
-      border: none;
-      margin: 0 50px;
-    }
-  }
-}
-
 .ps-top-bar.cloud-api-permission {
   box-shadow: 0 3px 4px 0 #0000000a;
 }
@@ -487,8 +473,16 @@ export default {
   }
 }
 
-.not-shadow {
-  box-shadow: none !important;
+.cloud-api-permission.plugin-top-bar {
+  height: 52px;
+  background: #fff;
+  box-shadow: 0 3px 4px 0 #0000000a;
+  position: relative;
+  padding: 0 24px;
+
+  .header-title {
+    margin: 0 !important;
+  }
 }
 
 .guide-wrapper {

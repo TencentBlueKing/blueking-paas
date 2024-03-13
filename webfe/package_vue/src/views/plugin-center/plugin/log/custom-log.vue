@@ -523,7 +523,7 @@ export default {
     initTableBox() {
       setTimeout(() => {
         if (this.$refs.logMain) {
-          const width = this.$refs.logMain.getBoundingClientRect().width - 220;
+          const width = this.$refs.logMain?.getBoundingClientRect().width - 220;
           this.$refs.tableBox.style.width = `${width}px`;
           this.$refs.tableBox.style.maxWidth = `${width}px`;
         }

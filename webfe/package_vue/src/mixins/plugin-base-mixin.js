@@ -20,7 +20,8 @@
  * 插件基础信息
  */
 
-function BKStepsAdaptor (allStages) {
+function BKStepsAdaptor(allStages) {
+  // 添加 invoke_method 字段，用于区分当前步骤需要渲染的内容
   return allStages.map((e, i) => {
     e.stage_id = e.id;
     e.icon = i + 1;
@@ -30,34 +31,34 @@ function BKStepsAdaptor (allStages) {
 }
 
 export default {
-  data () {
+  data() {
     return {
-      winHeight: 300
+      winHeight: 300,
     };
   },
   computed: {
-    pdId () {
+    pdId() {
       return this.$route.params.pluginTypeId;
     },
-    pluginId () {
+    pluginId() {
       return this.$route.params.id;
     },
-    curPluginInfo () {
+    curPluginInfo() {
       return this.$store.state.plugin.curPluginInfo;
     },
-    pluginFeatureFlags () {
+    pluginFeatureFlags() {
       return this.$store.state.plugin.pluginFeatureFlags;
     },
     // 当前页面正在查看的发布版本, 并非 ongoing_release
-    curRelease () {
+    curRelease() {
       return this.$store.state.plugin.curRelease;
     },
     // 当前页面正在查看的发布版本的所有步骤
-    curAllStages () {
+    curAllStages() {
       return BKStepsAdaptor(this.curRelease.all_stages || []);
-    }
+    },
   },
-  mounted () {
+  mounted() {
     this.winHeight = window.innerHeight;
-  }
+  },
 };

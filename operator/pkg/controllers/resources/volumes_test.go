@@ -177,8 +177,10 @@ var _ = Describe("test apply to deployment", func() {
 
 		vm := GenericVolumeMount{
 			Volume: Volume{
-				Name:   mountName,
-				Source: &paasv1alpha2.VolumeSource{PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "nginx-pvc"}},
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "nginx-pvc"},
+				},
 			},
 			MountPath: mountPath,
 		}

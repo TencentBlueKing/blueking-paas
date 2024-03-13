@@ -776,8 +776,16 @@ spec:
                               required:
                               - name
                               type: object
-                          required:
-                          - configMap
+                            persistentVolumeClaim:
+                              description: PersistentVolumeClaimSource represents
+                                a PersistentVolumeClaim that should populate this
+                                volume
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                           type: object
                       required:
                       - envName
@@ -872,8 +880,15 @@ spec:
                           required:
                           - name
                           type: object
-                      required:
-                      - configMap
+                        persistentVolumeClaim:
+                          description: PersistentVolumeClaimSource represents a PersistentVolumeClaim
+                            that should populate this volume
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
                       type: object
                   required:
                   - mountPath

@@ -776,10 +776,9 @@ spec:
                               required:
                               - name
                               type: object
-                            persistentVolumeClaim:
-                              description: PersistentVolumeClaimSource represents
-                                a PersistentVolumeClaim that should populate this
-                                volume
+                            persistentStorage:
+                              description: PersistentStorage represents a PersistentStorage
+                                that should populate this volume
                               properties:
                                 name:
                                   type: string
@@ -880,8 +879,8 @@ spec:
                           required:
                           - name
                           type: object
-                        persistentVolumeClaim:
-                          description: PersistentVolumeClaimSource represents a PersistentVolumeClaim
+                        persistentStorage:
+                          description: PersistentStorage represents a PersistentStorage
                             that should populate this volume
                           properties:
                             name:

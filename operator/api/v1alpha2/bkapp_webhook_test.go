@@ -593,14 +593,14 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
-		It("mountOverlay pvc normal", func() {
+		It("mountOverlay persistentStorage normal", func() {
 			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
 				{
 					Mount: paasv1alpha2.Mount{
 						Name:      "nginx-mount",
 						MountPath: "/path/nginx",
 						Source: &paasv1alpha2.VolumeSource{
-							PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "nginx-pvc"},
+							PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "nginx-pvc"},
 						},
 					},
 					EnvName: paasv1alpha2.ProdEnv,
@@ -610,7 +610,7 @@ var _ = Describe("test webhook.Validator", func() {
 						Name:      "etcd-mount",
 						MountPath: "/path/etcd",
 						Source: &paasv1alpha2.VolumeSource{
-							PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "etcd-pvc"},
+							PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "etcd-pvc"},
 						},
 					},
 					EnvName: paasv1alpha2.ProdEnv,

@@ -25,8 +25,8 @@ import (
 
 // VolumeSource 参考 k8s.io/api/core/v1.VolumeSource
 type VolumeSource struct {
-	ConfigMap             *ConfigMapSource             `json:"configMap,omitempty"`
-	PersistentVolumeClaim *PersistentVolumeClaimSource `json:"persistentVolumeClaim,omitempty"`
+	ConfigMap         *ConfigMapSource   `json:"configMap,omitempty"`
+	PersistentStorage *PersistentStorage `json:"persistentStorage,omitempty"`
 }
 
 // ToValidator 将 volume source 转换成 VolumeSourceValidator
@@ -34,8 +34,8 @@ func (vs *VolumeSource) ToValidator() (VolumeSourceValidator, error) {
 	if vs.ConfigMap != nil {
 		return vs.ConfigMap, nil
 	}
-	if vs.PersistentVolumeClaim != nil {
-		return vs.PersistentVolumeClaim, nil
+	if vs.PersistentStorage != nil {
+		return vs.PersistentStorage, nil
 	}
 	return nil, errors.New("unknown volume source")
 }
@@ -60,15 +60,15 @@ func (c ConfigMapSource) Validate() []string {
 
 var _ VolumeSourceValidator = new(ConfigMapSource)
 
-// PersistentVolumeClaimSource represents a PersistentVolumeClaim that should populate this volume
-type PersistentVolumeClaimSource struct {
+// PersistentStorage represents a PersistentStorage that should populate this volume
+type PersistentStorage struct {
 	Name string `json:"name"`
 }
 
-// Validate PersistentVolumeClaim name
-func (p PersistentVolumeClaimSource) Validate() []string {
+// Validate PersistentStorage name
+func (p PersistentStorage) Validate() []string {
 	// To remain consistent with the validation rules of Kubernetes.
 	return validation.IsDNS1123Subdomain(p.Name)
 }
 
-var _ VolumeSourceValidator = new(PersistentVolumeClaimSource)
+var _ VolumeSourceValidator = new(PersistentStorage)

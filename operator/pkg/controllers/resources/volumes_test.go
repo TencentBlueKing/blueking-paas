@@ -179,7 +179,7 @@ var _ = Describe("test apply to deployment", func() {
 			Volume: Volume{
 				Name: mountName,
 				Source: &paasv1alpha2.VolumeSource{
-					PersistentVolumeClaim: &paasv1alpha2.PersistentVolumeClaimSource{Name: "nginx-pvc"},
+					PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "nginx-pvc"},
 				},
 			},
 			MountPath: mountPath,

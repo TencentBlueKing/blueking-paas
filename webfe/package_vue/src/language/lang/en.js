@@ -2539,4 +2539,6 @@ export default {
   去发布: 'To Release',
   我发起的测试: 'My Initiated Tests',
   '代码分支/代码 Commit/创建人/测试进度': 'Code Branch/Code Commit/Creator/Test Progress',
+  'S-mart 应用请在配置文件中设置并开启增强服务': 'For S-mart applications, please set and enable enhanced services in the configuration file',
+  'S-mart 应用暂不支持删除增强服务': 'S-mart applications do not support the deletion of enhanced services for now',
 };

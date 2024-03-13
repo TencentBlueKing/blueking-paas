@@ -21,7 +21,7 @@
             {{ $t('编辑') }}
           </bk-button>
         </div>
-        <div v-if="!isSaveMarketInfo">
+        <div v-if="!isSaveMarketInfo && !isSmartApp">
           <bk-form
             class="market-info-container"
             ref="baseInfoForm"
@@ -323,28 +323,22 @@
             </bk-form-item>
             <bk-form-item
               :label="$t('应用联系人：')"
-              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
+              v-if="GLOBAL.CONFIG.MARKET_INFO"
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
               <p class="form-text">{{ baseInfo.contactArr.join('; ') || '--' }}</p>
             </bk-form-item>
             <bk-form-item
-              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
+              v-if="GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
               :label="$t('所属业务：')"
             >
               <p class="form-text">{{ businessDetailName || '--' }}</p>
             </bk-form-item>
-            <bk-form-item
-              v-if="!isSmartApp"
-              :label="$t('详细描述：')"
-            >
-              <p class="form-text">{{ baseInfo.description || '--' }}</p>
+            <bk-form-item :label="$t('详细描述：')">
+              <p class="form-text text-ellipsis" v-bk-overflow-tips>{{ baseInfo.description || '--' }}</p>
             </bk-form-item>
-            <bk-form-item
-              v-if="!isSmartApp"
-              :label="$t('打开方式：')"
-            >
+            <bk-form-item :label="$t('打开方式：')">
               <p class="form-text">{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
             </bk-form-item>
             <bk-form-item
@@ -660,10 +654,6 @@ export default {
         this.baseInfo.updated = application.updated;
         this.baseInfo.region_name = application.region_name;
         this.isSaveMarketInfo = res.product;
-        // S-mart 应用只有查看态
-        if (this.isSmartApp) {
-          this.isSaveMarketInfo = true;
-        }
         // 通过product判断应用是否已经保存过
         if (res.product) {
           // 已注册用户判断是否在生产环境发布部署

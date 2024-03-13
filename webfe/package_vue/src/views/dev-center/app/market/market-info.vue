@@ -102,7 +102,7 @@
           {{ curAddress }}
         </div>
         <bk-button
-          class="address-info-btn"
+          :class="{ 'pl24': curAddress }"
           theme="primary"
           text
           :disabled="isEditDisabled"
@@ -742,5 +742,8 @@ export default {
     }
     .form-input-cls{
       position: relative;
+    }
+    .pl24 {
+      padding-left: 24px;
     }
 </style>

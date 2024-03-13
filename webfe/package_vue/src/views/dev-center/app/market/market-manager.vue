@@ -4,17 +4,14 @@
     placeholder="market-visit-loading"
   >
     <section v-show="!isDataLoading" class="market-manager">
-      <div
-        v-if="isSmartApp"
-        class="info mb10 mt10"
-      >
-        {{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}
-      </div>
-      <div class="market-info mb25">
+      <div class="market-info mb25 shadow-card-style">
         <div class="flex-row justify-content-between align-items-center">
-          <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
+          <div class="market-info-title-wrapper">
+            <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
+            <span v-if="isSmartApp">{{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}</span>
+          </div>
           <bk-button
-            v-if="isSaveMarketInfo"
+            v-if="isSaveMarketInfo && !isSmartApp"
             theme="primary"
             outline
             class="mr10  market-info-btn"
@@ -663,6 +660,10 @@ export default {
         this.baseInfo.updated = application.updated;
         this.baseInfo.region_name = application.region_name;
         this.isSaveMarketInfo = res.product;
+        // S-mart 应用只有查看态
+        if (this.isSmartApp) {
+          this.isSaveMarketInfo = true;
+        }
         // 通过product判断应用是否已经保存过
         if (res.product) {
           // 已注册用户判断是否在生产环境发布部署
@@ -712,7 +713,6 @@ export default {
             this.baseInfo.logo = application.logo_url;
           }
         }
-        console.log('this.baseInfo', this.baseInfo);
         if (!product) {
           this.changeNewtab();
         }

@@ -1,6 +1,6 @@
 <template>
   <section v-show="!isDataLoading">
-    <div class="ps-action-header mark-info">
+    <div class="ps-action-header mark-info shadow-card-style">
       <div class="release-info flex-row align-items-center">
         <strong class="release-info-title">{{ $t('发布状态') }}</strong>
         <div class="release-info-status">{{ appMarketConfig.enabled ? $t('已发布') : $t('未发布') }}</div>
@@ -60,7 +60,7 @@
     <template v-if="engineAbled">
       <div
         v-if="!confirmRequiredWhenPublish || isSureRisk || appMarketConfig.enabled"
-        class="address-info mt15 flex-row align-items-center">
+        class="address-info mt15 flex-row align-items-center shadow-card-style">
         <strong class="address-info-title">{{ $t('访问地址') }}</strong>
         <!-- 编辑态 -->
         <div class="address-info-url" v-if="isEditAddress">

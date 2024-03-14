@@ -18,6 +18,17 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+# 注解或标签中存储应用名称的键名
+BKAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/name"
+# 注解中存储应用 ID 的键名
+BKAPP_CODE_ANNO_KEY = "bkapp.paas.bk.tencent.com/code"
+# 注解中存储模块名称的键名
+MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
+# 注解中存储当前部署环境的键名
+ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
+# 注解中存储当前 WlApp 名称的键名
+WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
+
 
 class BkLogConfigType(str, StructuredEnum):
     STD_LOG = EnumField("std_log_config", label="标准输出日志")

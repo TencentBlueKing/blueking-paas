@@ -218,7 +218,7 @@ HostAliasesField = make_json_field("HostAliasesField", List[HostAlias])
 
 
 class SvcDiscConfig(AuditedModel):
-    """ " 服务发现配置"""
+    """服务发现配置"""
 
     application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
 

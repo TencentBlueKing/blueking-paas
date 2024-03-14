@@ -1,64 +1,62 @@
 <template lang="html">
-  <div class="overview-content">
+  <div class="overview-content" :style="{ background: customBackground.includes($route.name) ? '#FFF' : '#F5F7FA' }">
     <template v-if="isPluginFound">
       <div class="wrap">
-        <div class="overview">
+        <div
+          class="overview-main"
+          :style="{ 'min-height': routeNameMap.includes($route.name) ? '0px' : `${minHeight}px` }"
+        >
           <div
-            class="overview-main"
-            :style="{ 'min-height': routeNameMap.includes($route.name) ? '0px' : `${minHeight}px` }"
+            class="overview-fleft overview-fleft-plugin"
+            :style="{ 'top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px` }"
           >
+            <plugin-quick-nav ref="quickNav" />
             <div
-              class="overview-fleft overview-fleft-plugin"
-              :style="{ 'top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px` }"
-            >
-              <plugin-quick-nav ref="quickNav" />
-              <div
-                style="height: 100%"
-                @click="hideQuickNav"
-              >
-                <paas-plugin-nav />
-              </div>
-            </div>
-            <div
-              :class="['overview-fright-plugin',
-                       { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' },
-                       { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' },
-                       { 'plugiun-test-stage': isTestStage },
-                       { 'plugiun-iframe-summary': isSummaryIframe }]"
+              style="height: 100%"
               @click="hideQuickNav"
             >
-              <router-view
-                v-if="userVisitEnable && pluginVisitEnable"
-                :key="$route.path"
-                class="right-main-plugin"
-                @current-plugin-info-updated="pluginInfoUpdatedCallback"
-              />
+              <paas-plugin-nav />
+            </div>
+          </div>
+          <div
+            :class="['overview-fright-plugin',
+                     { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' },
+                     { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' },
+                     { 'plugiun-test-stage': isTestStage },
+                     { 'plugiun-iframe-summary': isSummaryIframe }]"
+            @click="hideQuickNav"
+          >
+            <router-view
+              v-if="userVisitEnable && pluginVisitEnable"
+              :key="$route.path"
+              class="right-main-plugin"
+              @current-plugin-info-updated="pluginInfoUpdatedCallback"
+            />
 
-              <div
-                v-else
-                class="paas-loading-content"
-              >
-                <div class="no-permission">
-                  <img src="/static/images/permissions.png" />
-                  <h2 v-if="errorMessage">
-                    {{ errorMessage }}
-                  </h2>
-                  <h2
-                    v-else-if="deniedMessageType === 'default'"
-                    class="exception-text"
-                  >
-                    <div>
-                      {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
-                      <router-link
-                        class="toRolePage"
-                        :to="{ name: 'pluginRoles', params: { pluginTypeId: pdId, id: pluginId } }"
-                      >
-                        {{ $t('成员管理') }}
-                      </router-link>
-                      {{ $t('页面的应用管理员') }}
-                    </div>
-                  </h2>
-                </div>
+            <div
+              v-else
+              class="paas-loading-content"
+            >
+              <div class="no-permission">
+                <img src="/static/images/permissions.png" />
+                <h2 v-if="errorMessage">
+                  {{ errorMessage }}
+                </h2>
+                <h2
+                  v-else-if="deniedMessageType === 'default'"
+                  class="exception-text"
+                >
+                  <div>
+                    {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
+                    <router-link
+                      class="toRolePage"
+                      :to="{ name: 'pluginRoles', params: { pluginTypeId: pdId, id: pluginId } }"
+                    >
+                      {{ $t('成员管理') }}
+                    </router-link>
+                    {{ $t('页面的应用管理员') }}
+                  </div>
+                </h2>
               </div>
             </div>
           </div>
@@ -85,7 +83,7 @@ import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import store from '@/store';
 
 // 当前路由页面不需要指定的min-height
-const ROUTE_NAME = ['pluginVersionRelease', 'marketInfoEdit'];
+const ROUTE_NAME = ['pluginVersionRelease'];
 
 export default {
   components: {
@@ -114,6 +112,7 @@ export default {
       routeNameMap: ROUTE_NAME,
       // 是否为发布的测试阶段
       isTestStage: false,
+      customBackground: ['pluginVersionRelease'],
     };
   },
   computed: {
@@ -270,6 +269,21 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.overview-content,
+.wrap,
+.overview,
+.overview-main {
+  height: 100%;
+}
+.app-container{
+  padding-top: 0;
+}
+
+.container {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .no-permission {
   margin: 100px 30px 0 30px;
   font-size: 16px;

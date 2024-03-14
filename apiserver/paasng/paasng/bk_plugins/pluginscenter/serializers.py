@@ -22,6 +22,7 @@ import arrow
 import cattr
 import semver
 from bkpaas_auth import get_user_by_user_id
+from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -29,11 +30,15 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.bk_plugins.pluginscenter.constants import (
     LogTimeChoices,
+    PluginReleaseStatus,
+    PluginReleaseStrategy,
+    PluginReleaseType,
     PluginReleaseVersionRule,
     PluginRole,
     SemverAutomaticType,
 )
 from paasng.bk_plugins.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
+from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
@@ -47,6 +52,14 @@ from paasng.bk_plugins.pluginscenter.models import (
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
+
+REVISION_POLICIES = {
+    "disallow_released_source_version": {"error": error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION, "filter": {}},
+    "disallow_releasing_source_version": {
+        "error": error_codes.CANNOT_RELEASE_RELEASING_SOURCE_VERSION,
+        "filter": {"status__in": PluginReleaseStatus.running_status()},
+    },
+}
 
 
 class PluginUniqueValidator:
@@ -136,7 +149,17 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = PluginDefinition
-        exclude = ("uuid", "identifier", "created", "updated", "release_revision", "release_stages", "log_config")
+        exclude = (
+            "uuid",
+            "identifier",
+            "created",
+            "updated",
+            "release_revision",
+            "release_stages",
+            "test_release_revision",
+            "test_release_stages",
+            "log_config",
+        )
 
 
 class PluginDefinitionBasicSLZ(serializers.ModelSerializer):
@@ -208,6 +231,7 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     role = PluginRoleSLZ(required=False)
     overview_page = overviewPageSLZ(source="get_overview_page")
     can_reactivate = serializers.ReadOnlyField()
+    has_test_version = serializers.ReadOnlyField()
 
     def to_representation(self, instance):
         # 注入当前用户的角色信息
@@ -366,7 +390,15 @@ class StubUpdatePluginSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(help_text="额外字段")
 
 
-def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C901
+class ReleaseStrategySLZ(serializers.Serializer):
+    strategy = serializers.ChoiceField(choices=PluginReleaseStrategy.get_choices(), help_text="发布策略")
+    bkci_project = serializers.ListField(required=False, allow_null=True, help_text="蓝盾项目ID")
+    organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
+
+
+def make_release_validator(  # noqa: C901
+    plugin: PluginInstance, version_rule: PluginReleaseVersionRule, release_type: str, revision_policy: Optional[str]
+):
     """make a validator to validate ReleaseVersion object"""
 
     def validate_semver(version: str, previous_version_str: Optional[str], semver_type: SemverAutomaticType):
@@ -391,6 +423,19 @@ def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C90
             )
         return True
 
+    def validate_release_policy(
+        plugin: PluginInstance, release_type: str, revision_policy: str, source_version_name: str
+    ):
+        """Plugin version release rules, e.g., cannot release already published versions."""
+        policy = REVISION_POLICIES.get(revision_policy)
+        if policy:
+            source_version_exists = PluginRelease.objects.filter(
+                plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
+            ).exists()
+            if source_version_exists:
+                raise policy["error"]  # type: ignore[misc]
+        return True
+
     def validator(self, attrs: Dict):
         version = attrs["version"]
         if version_rule == PluginReleaseVersionRule.AUTOMATIC:
@@ -401,27 +446,37 @@ def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C90
         elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:  # noqa: SIM102
             if version != self.context["source_hash"]:
                 raise ValidationError(_("版本号必须与提交哈希一致"))
+        elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP:  # noqa: SIM102
+            if not version.startswith(attrs["source_version_name"]):
+                raise ValidationError(_("版本号必须以代码分支开头"))
+
+        if revision_policy:
+            validate_release_policy(plugin, release_type, revision_policy, attrs["source_version_name"])
         return attrs
 
     return validator
 
 
-def make_create_release_version_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
-    """Generate a Serializer for verifying the creation of "Release" according to the PluginDefinition definition"""
-    if pd.release_revision.revisionPattern:
-        source_version_field = serializers.RegexField(pd.release_revision.revisionPattern, help_text="分支名/tag名")
+def make_create_release_version_slz_class(plugin: PluginInstance, release_type: str) -> Type[serializers.Serializer]:
+    """Generate a Serializer for verifying the creation of "Prod Release" according to the PluginDefinition definition"""
+    release_definition = plugin.pd.get_release_revision_by_type(release_type)
+    if release_definition.revisionPattern:
+        source_version_field = serializers.RegexField(release_definition.revisionPattern, help_text="分支名/tag名")
     else:
         source_version_field = serializers.CharField(help_text="分支名/tag名")
 
     fields = {
-        "type": serializers.CharField(help_text="发布类型(正式/测试)", default="prod"),
+        "type": serializers.ChoiceField(
+            help_text="版本类型", choices=PluginReleaseType.get_choices(), default=release_type
+        ),
         "source_version_type": serializers.CharField(help_text="代码版本类型(branch/tag)"),
         "source_version_name": source_version_field,
         "version": serializers.CharField(help_text="版本号"),
         "comment": serializers.CharField(help_text="版本日志"),
-        "extra_fields": make_extra_fields_slz(pd.release_revision.extraFields)(default=dict),
+        "extra_fields": make_extra_fields_slz(release_definition.extraFields)(default=dict),
+        "release_strategy": ReleaseStrategySLZ(required=False, allow_null=True, help_text="发布策略"),
     }
-    if pd.release_revision.versionNo == PluginReleaseVersionRule.AUTOMATIC:
+    if release_definition.versionNo == PluginReleaseVersionRule.AUTOMATIC:
         fields["semver_type"] = serializers.ChoiceField(
             choices=SemverAutomaticType.get_choices(), help_text="版本类型"
         )
@@ -432,7 +487,12 @@ def make_create_release_version_slz_class(pd: PluginDefinition) -> Type[serializ
         {
             **fields,
             # implement `validate` method of serializers.Serializer
-            "validate": make_release_validator(PluginReleaseVersionRule(pd.release_revision.versionNo)),
+            "validate": make_release_validator(
+                plugin,
+                PluginReleaseVersionRule(release_definition.versionNo),
+                release_type,
+                release_definition.revisionPolicy,
+            ),
         },
     )
 
@@ -683,6 +743,13 @@ class CodeCommitSearchSLZ(serializers.Serializer):
 
 class PluginReleaseFilterSLZ(serializers.Serializer):
     status = serializers.ListField(required=False)
+    type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)
+    creator = serializers.CharField(required=False)
+
+    def validate(self, attrs):
+        if "creator" in attrs:
+            attrs["creator"] = user_id_encoder.encode(settings.USER_TYPE, attrs["creator"])
+        return attrs
 
 
 class PluginListFilterSlZ(serializers.Serializer):
@@ -711,3 +778,9 @@ class MetricsSummarySLZ(serializers.Serializer):
 
     codeCheckInfo = CodeCheckInfoSLZ(required=False)
     qualityInfo = QualityInfoSLZ(required=False)
+
+
+class PluginReleaseTypeSLZ(serializers.Serializer):
+    """插件发布类型"""
+
+    type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)

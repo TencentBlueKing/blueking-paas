@@ -23,6 +23,8 @@ import cattrs
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.monitoring.bklog import constants
 from paas_wl.bk_app.monitoring.bklog.models import LabelSelector, LogFilterCondition
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 
@@ -34,10 +36,17 @@ class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
     api_version = "bk.tencent.com/v1alpha1"
 
     def serialize(self, obj: "BkAppLogConfig", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+        wl_app_metadata = get_metadata(obj.app)
         metadata = {
             "name": obj.name,
             "namespace": obj.app.namespace,
-            "labels": {"app.kubernetes.io/managed-by": "bk-paas3"},
+            "labels": {
+                "app.kubernetes.io/managed-by": "bk-paas3",
+                constants.BKAPP_CODE_ANNO_KEY: wl_app_metadata.get_paas_app_code(),
+                constants.MODULE_NAME_ANNO_KEY: wl_app_metadata.module_name,
+                constants.ENVIRONMENT_ANNO_KEY: wl_app_metadata.environment,
+                constants.WLAPP_NAME_ANNO_KEY: obj.app.name,
+            },
         }
         spec = {
             "addPodLabel": True,

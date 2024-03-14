@@ -60,7 +60,7 @@ func runDevContainerServer() {
 				os.Exit(1)
 			}
 
-			if writeErr := mgr.WriteStatus(event.ID, dc.ReloadProcessing); err != nil {
+			if writeErr := mgr.WriteStatus(event.ID, dc.ReloadProcessing); writeErr != nil {
 				logger.Error(writeErr, "HotReload WriteStatus failed")
 				os.Exit(1)
 			}

@@ -19,6 +19,12 @@
           :list="credentialList"
           @reacquire="getCredentialList"
         ></image-credential>
+        <!-- 上云版添加源码信息 -->
+        <code-source
+          v-if="curAppInfo.feature?.ENABLE_IMAGE_APP_BIND_REPO"
+          :build-method="buildMethod"
+          @close-content-loader="closeContentLoader"
+        />
       </template>
       <template v-else>
         <!-- lesscode/smart应用 源码信息 -->
@@ -33,7 +39,11 @@
           @close-content-loader="closeContentLoader"
         />
         <!-- 镜像信息 -->
-        <mirror @close-content-loader="closeContentLoader" @set-build-method="setBuildMethod" />
+        <mirror
+          v-if="!isSmartApp"
+          @close-content-loader="closeContentLoader"
+          @set-build-method="setBuildMethod"
+        />
       </template>
     </paas-content-loader>
   </div>

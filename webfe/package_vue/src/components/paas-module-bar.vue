@@ -20,7 +20,7 @@
       <div class="module-operate">
         <!-- 新增模块 -->
         <div
-          v-bk-tooltips="{ content: $t('当前应用不允许创建其他模块'), disabled: isCreatedModule }"
+          v-bk-tooltips="{ content: $t(disableTips), disabled: isCreatedModule }"
           class="icon-warapper mr8"
           :class="{ disabled: !isCreatedModule }"
           :title="$t('新增模块')"
@@ -54,7 +54,7 @@
         type="error"
         :title="$t('主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通')"
       ></bk-alert>
-      <span v-bk-tooltips="{ content: $t('当前应用不允许创建其他模块'), disabled: isCreatedModule }">
+      <span v-bk-tooltips="{ content: $t(disableTips), disabled: isCreatedModule }">
         <bk-button
           theme="primary"
           :disabled="!isCreatedModule"
@@ -186,7 +186,7 @@ export default defineComponent({
       visiable: false,
       isLoading: false,
     });
-    const { curAppInfo } = store.state;
+    const { curAppInfo, curAppModule } = store.state;
 
     bus.$on('cloud-change-module', (data) => {
       active.value = data.params.moduleId;
@@ -202,6 +202,11 @@ export default defineComponent({
 
     // 是否展示新建模块入口
     const isCreatedModule = computed(() => curAppInfo.application?.config_info?.can_create_extra_modules);
+
+    const isSmartApp = computed(() => curAppModule.source_origin === vm.proxy.GLOBAL.APP_TYPES.SMART_APP);
+
+    // 新建模块禁用提示
+    const disableTips = computed(() => (isSmartApp.value ? 'S-mart 应用不允许在页面上新建模块' : '当前应用不允许创建其他模块'));
 
     // 切换tab
     const handleTabChange = async () => {
@@ -260,7 +265,6 @@ export default defineComponent({
           appCode: props.appCode,
           moduleName: curAppModuleName.value,
         });
-        console.log('vue', vm);
         bkMessage({
           theme: 'success',
           message: '模块删除成功',
@@ -309,6 +313,7 @@ export default defineComponent({
       formRemoveConfirmCode,
       localLanguage,
       isCreatedModule,
+      disableTips,
     };
   },
 });

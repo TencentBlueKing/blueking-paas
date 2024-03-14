@@ -725,7 +725,7 @@ export default {
 
     // tips数据
     loadDomainConfig() {
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/custom_domains/config/`).then(
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/domains/configs/`).then(
         (res) => {
           this.curIngressIpConfigs = res;
           this.defaultItem = res[0] || { frontend_ingress_ip: '暂无ip地址信息' };

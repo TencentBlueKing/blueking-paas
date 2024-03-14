@@ -60,23 +60,24 @@ class Command(BaseCommand):
             for module in application.modules.all():
                 for env in module.envs.all():
                     cluster = EnvClusterService(env).get_cluster()
-                    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-                        if not dry_run:
-                            _ = setup_bk_log_custom_collector(env.module)
-                            try:
-                                make_bk_log_controller(env).create_or_patch()
-                            except Exception as e:
-                                self.stderr.write(
-                                    f"A exception occurred when creating bk-log custom collector: {e}",
-                                    style_func=self.style.ERROR,
-                                )
-                        self.stdout.write(
-                            f"setup custom collector for "
-                            f"Application<{application.code}> "
-                            f"Module<{module.name}>"
-                            f"Env<{env.environment}>",
-                            style_func=style_func,
-                        )
+                    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+                        continue
+                    if not dry_run:
+                        _ = setup_bk_log_custom_collector(env.module)
+                        try:
+                            make_bk_log_controller(env).create_or_patch()
+                        except Exception as e:
+                            self.stderr.write(
+                                f"A exception occurred when creating bk-log custom collector: {e}",
+                                style_func=self.style.ERROR,
+                            )
+                    self.stdout.write(
+                        f"setup custom collector for "
+                        f"Application<{application.code}> "
+                        f"Module<{module.name}>"
+                        f"Env<{env.environment}>",
+                        style_func=style_func,
+                    )
 
     def validate_params(self, app_code, region, cluster_name, all_clusters) -> QuerySet:
         """Validate all parameter combinations, return the filtered Application QuerySet"""

@@ -7,6 +7,10 @@
         </div>
         <div :class="['select-wrapper', { 'en': localLanguage === 'en' }]">
           <bk-select
+            v-bk-tooltips.top="{
+              content: curSelectedType,
+              disabled: localLanguage !== 'en'
+            }"
             v-model="typeValue"
             :clearable="false"
             @selected="handleSelect"
@@ -41,6 +45,10 @@
         </div>
         <div :class="['select-wrapper', { 'en': localLanguage === 'en' }]">
           <bk-select
+            v-bk-tooltips.top="{
+              content: curSelectedStatus,
+              disabled: localLanguage !== 'en'
+            }"
             v-model="statusValue"
             clearable
             @selected="handleStatusSelect"
@@ -144,7 +152,11 @@
               <template v-if="isComponentApi">
                 {{ props.row.system_name }}
                 <template v-if="!!props.row.tag">
-                  <span :class="[{ inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }]">
+                  <span
+                    :class="[
+                      { inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) },
+                      { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }
+                    ]">
                     {{ props.row.tag }}
                   </span>
                 </template>
@@ -547,6 +559,12 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    curSelectedType() {
+      return this.typeList.find(v => v.id === this.typeValue)?.name;
+    },
+    curSelectedStatus() {
+      return this.statusList.find(v => v.id === this.statusValue)?.name;
+    },
   },
   watch: {
     '$route'() {
@@ -781,7 +799,7 @@ export default {
         .select-wrapper {
             width: 98px;
             &.en {
-              width: 118px;
+              width: 130px;
             }
         }
         .set-ml {

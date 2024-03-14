@@ -1,0 +1,103 @@
+description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, NodeJS, Go, Python, Ruby, Apache HTTPD, NGINX and Procfile"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/go:4.3.3"
+  version = "4.3.3"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/java-native-image:8.3.0"
+  version = "8.3.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/java:9.4.0"
+  version = "9.4.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/nodejs:1.6.0"
+  version = "1.6.0"
+
+[[buildpacks]]
+  uri = "docker://gcr.io/paketo-buildpacks/procfile:5.6.1"
+  version = "5.6.1"
+
+
+[[buildpacks]]
+  uri = "../../buildpacks/bk-buildpack-python/cnb-buildpack"
+  id = "bk-buildpack-python"
+  version = "v213"
+
+[[buildpacks]]
+  uri = "../../buildpacks/bk-buildpack-nodejs/cnb-buildpack"
+  id = "bk-buildpack-nodejs"
+  version = "v163"
+
+[[buildpacks]]
+  uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
+  id = "bk-buildpack-go"
+  version = "v168"
+
+
+[[buildpacks]]
+  uri = "../../buildpacks/bk-buildpack-apt/cnb-buildpack"
+  id = "bk-buildpack-apt"
+  version = "v2"
+
+[lifecycle]
+  version = "0.16.1"
+
+[[order]]
+  [[order.group]]
+    id = "bk-buildpack-apt"
+    version = "v2"
+
+
+[[order]]
+  [[order.group]]
+    id = "paketo-buildpacks/go"
+    version = "4.3.3"
+
+
+[[order]]
+  [[order.group]]
+    id = "bk-buildpack-python"
+    version = "v213"
+
+
+[[order]]
+  [[order.group]]
+    id = "bk-buildpack-nodejs"
+    version = "v163"
+
+
+[[order]]
+  [[order.group]]
+    id = "bk-buildpack-go"
+    version = "v168"
+
+
+[[order]]
+  [[order.group]]
+    id = "paketo-buildpacks/java-native-image"
+    version = "8.3.0"
+
+
+[[order]]
+  [[order.group]]
+    id = "paketo-buildpacks/java"
+    version = "9.4.0"
+
+[[order]]
+  [[order.group]]
+    id = "paketo-buildpacks/nodejs"
+    version = "1.6.0"
+
+
+[[order]]
+  [[order.group]]
+    id = "paketo-buildpacks/procfile"
+    version = "5.6.1"
+
+[stack]
+  id = "heroku-22"
+  run-image = "mirrors.tencent.com/bkpaas/run-heroku-jammy:latest"
+  build-image = "mirrors.tencent.com/bkpaas/build-heroku-jammy:latest"

@@ -166,7 +166,7 @@ class MountSLZ(serializers.ModelSerializer):
         mounts = Mount.objects.filter(
             source_config=controller.build_volume_source(source.name),
         )
-        bound_modules = [{"module": mount.name, "path": mount.mount_path} for mount in mounts]
+        bound_modules = [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]
         return {
             "name": source.name,
             "storage_size": source.storage_size,
@@ -220,4 +220,4 @@ class MountSourceSLZ(serializers.Serializer):
         mounts = Mount.objects.filter(
             source_config=controller.build_volume_source(obj.name),
         )
-        return [{"module": mount.name, "path": mount.mount_path} for mount in mounts]
+        return [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]

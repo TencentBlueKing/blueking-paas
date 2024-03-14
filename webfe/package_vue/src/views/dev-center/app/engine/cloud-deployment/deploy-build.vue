@@ -39,7 +39,11 @@
           @close-content-loader="closeContentLoader"
         />
         <!-- 镜像信息 -->
-        <mirror @close-content-loader="closeContentLoader" @set-build-method="setBuildMethod" />
+        <mirror
+          v-if="!isSmartApp"
+          @close-content-loader="closeContentLoader"
+          @set-build-method="setBuildMethod"
+        />
       </template>
     </paas-content-loader>
   </div>

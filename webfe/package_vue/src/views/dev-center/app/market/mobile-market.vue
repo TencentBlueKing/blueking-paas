@@ -1,7 +1,7 @@
 <template>
   <div class="right-main">
     <paas-content-loader
-      class="app-container middle mobile-market-container"
+      class="app-container middle mobile-market-container shadow-card-style"
       :is-loading="isDataLoading"
       placeholder="market-mobile-loading"
     >

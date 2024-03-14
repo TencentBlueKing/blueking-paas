@@ -69,19 +69,19 @@
           <section
             class="collapse-panel"
             v-for="item in persistentStorageList"
-            :key="item.name"
+            :key="item.display_name"
           >
             <section
               :class="['panel-item', { active: item.isExpanded }]"
               @click="handlerPanelChage(item)"
-              @mouseenter="curHoverPanels = item.name"
+              @mouseenter="curHoverPanels = item.display_name"
               @mouseleave="curHoverPanels = ''"
             >
               <div class="icon-warpper">
                 <i class="paasng-icon paasng-play-shape"></i>
               </div>
               <div class="main">
-                <p class="name">{{ item.name }}</p>
+                <p class="name">{{ item.display_name }}</p>
                 <div class="info">
                   <span>{{ $t('生效环境') }}：{{ item.environment_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
                   <span>{{ $t('容量') }}：{{ item.storage_size }}</span>
@@ -90,7 +90,7 @@
               </div>
               <div
                 class="delete"
-                v-show="curHoverPanels === item.name"
+                v-show="curHoverPanels === item.display_name"
                 @click.stop="handlerDelete(item)"
               >
                 <i class="paasng-icon paasng-delete"></i>
@@ -141,7 +141,7 @@
         theme="primary"
         :width="640"
         :mask-close="false"
-        :title="`${$t('删除持久存储')} ${curDeleteData.name}`"
+        :title="`${$t('删除持久存储')} ${curDeleteData.display_name}`"
         :auto-close="false"
         header-position="left"
       >
@@ -239,7 +239,7 @@ export default {
     async getPersistentStorageList() {
       this.isLoading = true;
       try {
-        let res = await  this.$store.dispatch('persistentStorage/getPersistentStorageList', {
+        let res = await this.$store.dispatch('persistentStorage/getPersistentStorageList', {
           appCode: this.appCode,
           sourceType: defaultSourceType,
         });
@@ -290,7 +290,7 @@ export default {
         await this.$store.dispatch('persistentStorage/deletePersistentStorage', {
           appCode: this.appCode,
           sourceType: defaultSourceType,
-          sourceName: this.curDeleteData.name,
+          sourceName: this.curDeleteData.display_name,
         });
         this.$paasMessage({
           theme: 'success',

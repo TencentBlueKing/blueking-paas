@@ -286,11 +286,11 @@
                 >
                   <bk-option
                     v-for="option in persistentStorageList"
-                    :key="option.name"
-                    :id="option.name"
-                    :name="option.name">
+                    :key="option.display_name"
+                    :id="option.display_name"
+                    :name="option.display_name">
                     <div class="option-content">
-                      <span class="name" :title="option.name">{{ option.name }}</span>
+                      <span class="name" :title="option.display_name">{{ option.display_name }}</span>
                       <span class="info">
                         {{ `(${$t('容量')}：${option.storage_size}，${$t('已绑定模块')}：${option.bound_modules.length})` }}
                       </span>
@@ -632,7 +632,7 @@ export default {
         this.$set(this.volumeFormData, 'sourceConfigArrData', []);
         this.volumeFormData.source_config_data = row.configmap_source?.source_config_data || {};
       } else {
-        this.volumeFormData.source_name = row.persistent_storage_source?.name;
+        this.volumeFormData.source_name = row.persistent_storage_source?.display_name;
         this.getPersistentStorageList();
       }
       this.volumeDefaultSettings.isShow = true;
@@ -711,7 +711,7 @@ export default {
       const data = cloneDeep(this.volumeFormData);
       // 持久存储
       if (this.isPersistentStorage) {
-        const curStorage = this.persistentStorageList.find(v => v.name === this.volumeFormData.source_name);
+        const curStorage = this.persistentStorageList.find(v => v.display_name === this.volumeFormData.source_name);
         data.environment_name = curStorage.environment_name;
         delete data.sourceConfigArrData;
         delete data.source_config_data;

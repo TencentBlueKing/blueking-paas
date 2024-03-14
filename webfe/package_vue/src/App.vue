@@ -205,6 +205,8 @@ export default {
     }
 
     .plugin-min-width {
+        height: 100%;
+        background: #F5F6FA;
         min-width: 1366px;
     }
 

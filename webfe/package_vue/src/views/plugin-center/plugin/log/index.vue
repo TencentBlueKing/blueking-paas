@@ -3,14 +3,15 @@
     :key="pluginId"
     class="right-main"
   >
+    <paas-plugin-title />
     <paas-content-loader
       class="app-container log-middle"
       :is-loading="isLoading"
       placeholder="log-loading"
       :offset-top="60"
+      :is-customize-width="true"
     >
-      <paas-plugin-title />
-      <section>
+      <section class="plugin-log-container card-style">
         <bk-tab
           :active.sync="tabActive"
           type="unborder-card"
@@ -103,9 +104,8 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-  .plugin-top-title {
-      margin-top: 6px;
-  }
+<style lang="scss" scoped>
+.plugin-log-container {
+  padding: 20px;
+}
 </style>

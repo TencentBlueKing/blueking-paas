@@ -1671,7 +1671,7 @@ export default {
 
     watchServerPush() {
       if (this.envEventData.includes(this.environment)) return;
-      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
       this.serverEvent = new EventSource(url, {
         withCredentials: true,
       });

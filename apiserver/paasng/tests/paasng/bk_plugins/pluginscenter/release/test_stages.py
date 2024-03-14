@@ -68,6 +68,6 @@ class TestPipelineStage:
         assert current_stage.stage_id == "pipeline"
 
         stage_ctl = PipelineStage(current_stage)
-        stage_definition = find_stage_by_id(pd.release_stages, current_stage.stage_id)  # type: ignore
+        stage_definition = find_stage_by_id(pd, release, current_stage.stage_id)  # type: ignore
         assert stage_definition
         assert stage_ctl.build_pipeline_params(stage_definition) == expected

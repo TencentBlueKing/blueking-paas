@@ -30,33 +30,33 @@ export default {
     /*
       获取镜像凭证列表
     */
-    getImageCredentialList ({ commit, state }, { appCode }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
+    getImageCredentialList({}, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/image_credentials/`;
       return http.get(url, config);
     },
 
     /*
       新增镜像凭证
     */
-    addImageCredential ({ commit, state }, { appCode, data }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
+    addImageCredential({}, { appCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/image_credentials/`;
       return http.post(url, data, config);
     },
 
     /*
       更新镜像凭证
     */
-    updateImageCredential ({ commit, state }, { appCode, crdlName, data }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${crdlName}`;
+    updateImageCredential({}, { appCode, crdlName, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/image_credentials/${crdlName}`;
       return http.put(url, data, config);
     },
 
     /*
       删除单个镜像凭证
     */
-    deleteImageCredential ({ commit, state }, { appCode, crdlName }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${crdlName}`;
+    deleteImageCredential({}, { appCode, crdlName }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/image_credentials/${crdlName}`;
       return http.delete(url, config);
-    }
-  }
+    },
+  },
 };

@@ -21,6 +21,7 @@ from .definitions import (
     PluginConfigInfoDefinition,
     PluginDefinition,
     PluginMarketInfoDefinition,
+    PluginVisibleRangeDefinition,
 )
 from .instances import (
     ApprovalService,
@@ -30,6 +31,7 @@ from .instances import (
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStage,
+    PluginReleaseStrategy,
 )
 
 __all__ = [
@@ -37,6 +39,7 @@ __all__ = [
     "PluginBasicInfoDefinition",
     "PluginConfigInfoDefinition",
     "PluginMarketInfoDefinition",
+    "PluginVisibleRangeDefinition",
     "PluginInstance",
     "PluginConfig",
     "PluginMarketInfo",
@@ -44,4 +47,5 @@ __all__ = [
     "PluginReleaseStage",
     "ApprovalService",
     "OperationRecord",
+    "PluginReleaseStrategy",
 ]

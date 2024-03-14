@@ -121,8 +121,8 @@ export default {
   },
   methods: {
     /**
-             * 侧导航初始化入口
-             */
+     * 侧导航初始化入口
+     */
     async init(isReload = true) {
       const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
 
@@ -146,8 +146,8 @@ export default {
     },
 
     /**
-             * 根据接口来展示对应的导航项
-             */
+     * 根据接口来展示对应的导航项
+     */
     async initNavByRegion(navTree) {
       try {
         // 初始化属性
@@ -176,8 +176,8 @@ export default {
     },
 
     /**
-             * 根据角色，初始访问权限
-             */
+     * 根据角色，初始访问权限
+     */
     initRouterPermission() {
       this.allowedRouterName = [
         'pluginVersionRelease',
@@ -202,8 +202,8 @@ export default {
     },
 
     /**
-             * 根据当前routeName选中导航
-             */
+     * 根据当前routeName选中导航
+     */
     async selectRouterByName(routeName) {
       try {
         await this.checkPermission(routeName);
@@ -294,10 +294,10 @@ export default {
     },
 
     /**
-             * 返回导航目录对应的Icon
-             * @param {Object} navItem 导航
-             * @return {Array} Classes
-             */
+     * 返回导航目录对应的Icon
+     * @param {Object} navItem 导航
+     * @return {Array} Classes
+     */
     getIconClass(navItem) {
       const classes = ['paasng-icon', 'app-nav-icon'];
       classes.push(`paasng-${navItem.iconfontName || 'gear'}`);
@@ -319,10 +319,10 @@ export default {
     },
 
     /**
-             * 切换展开状态
-             *
-             * @param {Object} category 父导航项
-             */
+     * 切换展开状态
+     *
+     * @param {Object} category 父导航项
+     */
     toggleNavCategory(category) {
       this.navTree.forEach((item) => {
         if (category.name === item.name) {
@@ -334,10 +334,10 @@ export default {
     },
 
     /**
-             * 访问相应路由
-             *
-             * @param {Object} nav 导航对象
-             */
+     * 访问相应路由
+     *
+     * @param {Object} nav 导航对象
+     */
     async goPage(navItem) {
       try {
         await this.checkPermission(navItem.destRoute.name);
@@ -395,120 +395,119 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .app-nav {
-        padding-top: 9px;
-        width: 240px;
-        margin-top: 1px;
+// 插件
+.app-nav {
+  width: 239px;
 
-        > li {
-            width: 100%;
-            position: relative;
+  > li {
+    width: 100%;
+    position: relative;
 
-            &.no-child-actived,
-            &.has-child-selected {
-                .overview-text {
-                    color: #3A84FF !important;
-                    background: #E1ECFF;
-                }
-                .app-nav-icon {
-                    color: #3A84FF !important;
-                }
-            }
-
-            &:hover {
-                .overview-text {
-                    color: #3A84FF;
-                }
-                .app-nav-icon {
-                    color: #3A84FF;
-                }
-            }
-        }
+    &.no-child-actived,
+    &.has-child-selected {
+      .overview-text {
+        color: #3a84ff !important;
+        background: #e1ecff;
+      }
+      .app-nav-icon {
+        color: #3a84ff !important;
+      }
     }
 
-    .overview-text {
-        color: #63656E;
-        padding-left: 50px;
-        z-index: 1;
-        line-height: 42px;
-        font-size: 14px;
-        display: block;
+    &:hover {
+      .overview-text {
+        color: #63656e;
+      }
+      .app-nav-icon {
+        color: #63656e;
+      }
+      background: #f5f7fa;
+    }
+  }
+}
 
-        &:hover {
-            color: #63656E;
-        }
+.overview-text {
+  color: #63656e;
+  padding-left: 50px;
+  z-index: 1;
+  line-height: 42px;
+  font-size: 14px;
+  display: block;
+
+  &:hover {
+    color: #63656e;
+  }
+}
+
+.overview-text-slide {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+
+  > a {
+    width: 240px;
+    display: block;
+    line-height: 42px;
+    height: 42px;
+    display: block;
+    color: #63656e;
+    padding-left: 50px;
+    cursor: pointer;
+    position: relative;
+
+    &:hover,
+    &.on {
+      color: #3a84ff;
+      background: #e1ecff;
+
+      &:after {
+        background-color: #3a84ff;
+      }
     }
 
-    .overview-text-slide {
-        width: 100%;
-        position: relative;
-        overflow: hidden;
+    &:after {
+      content: '';
+      width: 4px;
+      height: 4px;
+      position: absolute;
+      left: 28px;
+      top: 50%;
+      margin-top: -2px;
+      background-color: #dcdee5;
+      border-radius: 50%;
+    }
+  }
+}
 
-        > a {
-            width: 240px;
-            display: block;
-            line-height: 42px;
-            height: 42px;
-            display: block;
-            color: #63656E;
-            padding-left: 50px;
-            cursor: pointer;
-            position: relative;
+.app-nav {
+  .paasng-icon {
+    font-size: 12px;
+    font-weight: bold;
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    color: #979ba5;
+    display: inline-block;
+    transition: all ease 0.3s;
 
-            &:hover,
-            &.on {
-                color: #3A84FF;
-                background: #E1ECFF;
-
-                &:after {
-                    background-color: #3A84FF;
-                }
-            }
-
-            &:after {
-                content: "";
-                width: 4px;
-                height: 4px;
-                position: absolute;
-                left: 28px;
-                top: 50%;
-                margin-top: -2px;
-                background-color: #DCDEE5;
-                border-radius: 50%;
-            }
-        }
+    &.app-nav-icon {
+      position: absolute;
+      font-weight: normal;
+      top: 12px;
+      left: 20px;
+      right: auto;
+      z-index: 2;
+      color: #666;
+      font-size: 18px;
     }
 
-    .app-nav {
-        .paasng-icon {
-            font-size: 12px;
-            font-weight: bold;
-            position: absolute;
-            top: 16px;
-            right: 14px;
-            color: #979BA5;
-            display: inline-block;
-            transition: all ease 0.3s;
-
-            &.app-nav-icon {
-                position: absolute;
-                font-weight: normal;
-                top: 12px;
-                left: 20px;
-                right: auto;
-                z-index: 2;
-                color: #979BA5;
-                font-size: 18px;
-            }
-
-            &.down {
-                transform: rotate(90deg);
-            }
-        }
-
-        li.active i.paasng-icon {
-            color: #313238;
-        }
+    &.down {
+      transform: rotate(90deg);
     }
+  }
 
+  li.active i.paasng-icon {
+    color: #313238;
+  }
+}
 </style>

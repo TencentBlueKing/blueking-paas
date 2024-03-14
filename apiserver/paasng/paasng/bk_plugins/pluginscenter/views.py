@@ -54,6 +54,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginInstance,
     PluginMarketInfo,
     PluginRelease,
+    PluginReleaseStrategy,
 )
 from paasng.bk_plugins.pluginscenter.permissions import IsPluginCreator, PluginCenterFeaturePermission
 from paasng.bk_plugins.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
@@ -495,8 +496,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
+        queryset = queryset.filter(type=query_params["type"])
         if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
+        if creator := query_params.get("creator"):
+            queryset = queryset.filter(creator=creator)
         return queryset
 
     def retrieve(self, request, pd_id, plugin_id, release_id):
@@ -523,14 +527,17 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     )
     def create(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
-        if plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists():
+
+        type = request.data.get("type", constants.PluginReleaseType.PROD)
+        # 有正在发布的正式版本，则无法再新建新的正式版本
+        if type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
         version_type = request.data["source_version_type"]
         version_name = request.data["source_version_name"]
         source_hash = get_plugin_repo_accessor(plugin).extract_smart_revision(f"{version_type}:{version_name}")
 
-        slz = serializers.make_create_release_version_slz_class(plugin.pd)(
+        slz = serializers.make_create_release_version_slz_class(plugin, type)(
             data=request.data,
             context={
                 "source_hash": source_hash,
@@ -540,31 +547,29 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        # 如果插件定义了不允许发布已经发布过的代码分支
-        release_revision = plugin.pd.release_revision
-        is_source_version_exists = PluginRelease.objects.filter(
-            plugin=plugin, source_version_name=data["source_version_name"]
-        ).exists()
-        if not release_revision.allowDuplicateSourVersion and is_source_version_exists:
-            raise error_codes.CANNOT_RELEASE_DUPLICATE_SOURCE_VERSION
-
+        release_strategy = data.pop("release_strategy", None)
         release = PluginRelease.objects.create(
             plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
         )
+        if release_strategy:
+            PluginReleaseStrategy.objects.create(release=release, **release_strategy)
         PluginReleaseExecutor(release).initial(operator=request.user.username)
 
-        # 如果插件的状态不是已发布，则更新为发布中
-        if plugin.status != constants.PluginStatus.RELEASED:
-            plugin.status = constants.PluginStatus.RELEASING
-            plugin.save()
-
         # 操作记录: 新建 xx 版本
+        if type == constants.PluginReleaseType.PROD:
+            subject = constants.SubjectTypes.VERSION
+            # 发布正式版本，如果插件的状态不是已发布，则更新为发布中
+            if plugin.status != constants.PluginStatus.RELEASED:
+                plugin.status = constants.PluginStatus.RELEASING
+                plugin.save()
+        else:
+            subject = constants.SubjectTypes.TEST_VERSION
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
             action=constants.ActionTypes.ADD,
             specific=release.version,
-            subject=constants.SubjectTypes.VERSION,
+            subject=subject,
         )
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data, status=status.HTTP_201_CREATED)
@@ -583,13 +588,12 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def back_to_previous_stage(self, request, pd_id, plugin_id, release_id):
         """返回上一发布步骤, 重置当前步骤和上一步骤的执行状态, 并重新执行上一步。"""
         plugin = self.get_plugin_instance()
-        if (
-            plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status())
-            .exclude(pk=release_id)
-            .exists()
+        release = self.get_queryset().get(pk=release_id)
+        if release.type == constants.PluginReleaseType.PROD and (
+            plugin.prod_releasing_versions.exclude(pk=release_id).exists()
         ):
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
-        release = self.get_queryset().get(pk=release_id)
+
         PluginReleaseExecutor(release).back_to_previous_stage(operator=request.user.username)
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
@@ -598,10 +602,10 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def re_release(self, request, pd_id, plugin_id, release_id):
         """重新发布版本"""
         plugin = self.get_plugin_instance()
-        if plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists():
+        release = self.get_queryset().get(pk=release_id)
+        if release.type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
-        release = self.get_queryset().get(pk=release_id)
         PluginReleaseExecutor(release).reset_release(operator=request.user.username)
 
         # 操作记录: 重新发布 xx 版本
@@ -640,12 +644,17 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})
     def get_release_schema(self, request, pd_id, plugin_id):
+        slz = serializers.PluginReleaseTypeSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+        type = query_params["type"]
+
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance()
-        release_revision = pd.release_revision
-        if release_revision.revisionType == "master":
+        release_definition = pd.get_release_revision_by_type(type)
+        if release_definition.revisionType == "master":
             versions = [build_master_placeholder()]
-        elif release_revision.revisionType == "tag":
+        elif release_definition.revisionType == "tag":
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=False, include_tag=True
             )
@@ -656,29 +665,37 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         semver_choices = None
         current_release = plugin.all_versions.get_latest_succeeded()
-        if release_revision.versionNo == constants.PluginReleaseVersionRule.AUTOMATIC:
+        if release_definition.versionNo == constants.PluginReleaseVersionRule.AUTOMATIC:
             current_version_no = semver.VersionInfo.parse(getattr(current_release, "version", "0.0.0"))
             semver_choices = {
                 constants.SemverAutomaticType.MAJOR: str(current_version_no.bump_major()),
                 constants.SemverAutomaticType.MINOR: str(current_version_no.bump_minor()),
                 constants.SemverAutomaticType.PATCH: str(current_version_no.bump_patch()),
             }
-
-        # 插件可定义：新建版本时是否能选择已经发布过的分支
-        released_source_versions = set(
-            PluginRelease.objects.filter(plugin=plugin).values_list("source_version_name", flat=True)
-        )
+        released_source_versions = releasing_source_versions = set()
+        # 插件可定义：新建版本时是否能选择已经发布过的分支、正在发布的分支
+        if release_definition.revisionPolicy == "disallow_released_source_version":
+            released_source_versions = set(
+                PluginRelease.objects.filter(plugin=plugin, type=type).values_list("source_version_name", flat=True)
+            )
+        elif release_definition.revisionPolicy == "disallow_releasing_source_version":
+            releasing_source_versions = set(
+                PluginRelease.objects.filter(
+                    plugin=plugin, status__in=constants.PluginReleaseStatus.running_status(), type=type
+                ).values_list("source_version_name", flat=True)
+            )
 
         return Response(
             {
-                "docs": release_revision.docs,
-                "source_version_pattern": release_revision.revisionPattern,
-                "version_no": release_revision.versionNo,
-                "version_type": release_revision.revisionType,
-                "extra_fields": cattr.unstructure(release_revision.extraFields),
+                "docs": release_definition.docs,
+                "source_version_pattern": release_definition.revisionPattern,
+                "version_no": release_definition.versionNo,
+                "version_type": release_definition.revisionType,
+                "extra_fields": cattr.unstructure(release_definition.extraFields),
                 "source_versions": cattr.unstructure(versions),
-                "allow_duplicate_source_version": release_revision.allowDuplicateSourVersion,
+                "revision_policy": release_definition.revisionPolicy,
                 "released_source_versions": released_source_versions,
+                "releasing_source_versions": releasing_source_versions,
                 "semver_choices": semver_choices,
                 "current_release": serializers.PlainPluginReleaseVersionSLZ(current_release).data
                 if current_release

@@ -199,7 +199,13 @@ export default {
             break;
           case 'pending':
             item.type = 'primary';
-            item.icon = <round-loading size="small" ext-cls="deploy-round-loading" />;
+            item.icon = this.$createElement('round-loading', {
+              attrs: {
+                size: 'small',
+                'ext-cls': 'deploy-round-loading',
+              },
+            });
+
             break;
         }
         return item;
@@ -213,3 +219,11 @@ export default {
   },
 };
 </script>
+<style lang="scss" scoped>
+.release-warp {
+  padding: 16px 16px 0;
+  box-shadow: 0 2px 4px 0 #1919290d;
+  border-radius: 2px;
+  background: #fff;
+}
+</style>

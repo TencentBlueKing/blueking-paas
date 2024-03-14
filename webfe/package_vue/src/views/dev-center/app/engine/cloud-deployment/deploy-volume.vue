@@ -289,6 +289,12 @@
                     :key="option.name"
                     :id="option.name"
                     :name="option.name">
+                    <div class="option-content">
+                      <span class="name" :title="option.name">{{ option.name }}</span>
+                      <span class="info">
+                        {{ `(${$t('容量')}：${option.storage_size}，${$t('已绑定模块')}：${option.bound_modules.length})` }}
+                      </span>
+                    </div>
                   </bk-option>
                   <div
                     slot="extension"
@@ -459,18 +465,6 @@ export default {
       curValue: '',
       addLoading: false,
       mountPathTip: this.$t('请输入以斜杆(/)开头，且不包含空字符串的路径（不包括根目录 "/"）'),
-      sourceTypeList: [
-        {
-          label: this.$t('文件'),
-          value: 'ConfigMap',
-          tip: this.$t('可用于将用于自定义的配置文件注入到容器中'),
-        },
-        {
-          label: this.$t('持久存储'),
-          value: defaultSourceType,
-          tip: this.$t('由平台分配的持久化存储，可用于多个模块、进程间共享数据'),
-        },
-      ],
       persistentStorageList: [],
       persistentStorageDailogVisible: false,
       isPersistentStorageLoading: false,
@@ -481,6 +475,7 @@ export default {
       },
       maxTags: 0,
       isTableLoaing: false,
+      isShowPersistentStorage: false,
     };
   },
   computed: {
@@ -525,6 +520,24 @@ export default {
     },
     isPersistentStorage() {
       return this.volumeFormData.source_type === defaultSourceType;
+    },
+    sourceTypeList() {
+      const list = [
+        {
+          label: this.$t('文件'),
+          value: 'ConfigMap',
+          tip: this.$t('可用于将用于自定义的配置文件注入到容器中'),
+        },
+        {
+          label: this.$t('持久存储'),
+          value: defaultSourceType,
+          tip: this.$t('由平台分配的持久化存储，可用于多个模块、进程间共享数据'),
+        },
+      ];
+      if (!this.isShowPersistentStorage) {
+        return list.filter(v => v.value === 'ConfigMap');
+      }
+      return list;
     },
   },
   watch: {
@@ -575,6 +588,7 @@ export default {
     init() {
       this.isLoading = true;
       this.getVolumeList();
+      this.getPersistentStorageFeatureToggle();
     },
     // 新增挂载
     handleCreate() {
@@ -941,6 +955,20 @@ export default {
     handleHidden() {
       this.persistentStorageList = [];
     },
+
+    async getPersistentStorageFeatureToggle() {
+      try {
+        const res = await this.$store.dispatch('persistentStorage/getPersistentStorageFeatureToggle', {
+          appCode: this.appCode,
+        });
+        this.isShowPersistentStorage = res || false;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
@@ -1162,6 +1190,18 @@ export default {
         }
       }
     }
+  }
+}
+.store-select-popover-custom .option-content {
+  display: flex;
+  justify-content: space-between;
+  .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .info {
+    flex-shrink: 0;
   }
 }
 </style>

@@ -24,9 +24,10 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      active: 'storage',
+      active: 'market',
       routeIndex: 0,
-      isPersistentStorage: true,
+      isPersistentStorage: false,
+      isRequest: false,
     };
   },
   computed: {
@@ -45,8 +46,8 @@ export default {
       if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
         panels = panels.filter(tab => tab.name !== 'appMobileMarket');
       }
-      if (!this.isCloudNativeApp || !this.isPersistentStorage) {
-        panels = panels.filter(tab => tab.name !== 'storage');
+      if (!this.isPersistentStorage) {
+        return panels.filter(tab => tab.name !== 'storage');
       }
       return panels;
     },
@@ -58,6 +59,13 @@ export default {
       },
       immediate: true,
     },
+    appCode: {
+      handler() {
+        this.isRequest = false;
+        this.getPersistentStorageFeatureToggle();
+      },
+      immediate: true,
+    },
   },
   created() {
     this.getPersistentStorageFeatureToggle();
@@ -65,7 +73,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curEnv = this.panels.find(item => item.name === name);
+      const curEnv = this.panels.find(item => item.name === name) || this.panels[0];
       this.$router.push({
         name: curEnv.routeName,
         params: {
@@ -86,17 +94,23 @@ export default {
     },
 
     async getPersistentStorageFeatureToggle() {
+      if (this.isRequest) {
+        return;
+      }
+      this.isRequest = true;
       try {
         const res = await this.$store.dispatch('persistentStorage/getPersistentStorageFeatureToggle', {
           appCode: this.appCode,
         });
         this.isPersistentStorage = res || false;
-        this.handleTabChange(res ? 'storage' : 'market');
+        this.handleTabChange(res ? 'storage' : this.active);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        this.isRequest = false;
       }
     },
   },

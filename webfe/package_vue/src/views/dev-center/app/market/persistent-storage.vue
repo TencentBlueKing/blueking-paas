@@ -23,6 +23,7 @@
                 theme="primary"
                 text
                 style="font-size: 12px"
+                @click="viewBillingMethod"
               >
                 {{ $t('查看计费方式') }}
               </bk-button>
@@ -82,7 +83,7 @@
               <div class="main">
                 <p class="name">{{ item.name }}</p>
                 <div class="info">
-                  <span>{{ $t('生效环境') }}：{{ item.environment_name }}</span>
+                  <span>{{ $t('生效环境') }}：{{ item.environment_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
                   <span>{{ $t('容量') }}：{{ item.storage_size }}</span>
                   <span>{{ $t('已绑定模块数') }}：{{ item.bound_modules?.length || 0 }}</span>
                 </div>
@@ -98,6 +99,7 @@
             </section>
             <section class="content" v-if="item.isExpanded">
               <bk-table
+                v-if="item.bound_modules?.length"
                 :data="item.bound_modules"
                 :outer-border="false"
                 ext-cls="store-module-table-cls"
@@ -112,6 +114,16 @@
                   prop="path"
                 ></bk-table-column>
               </bk-table>
+              <bk-exception
+                v-else
+                type="empty"
+                scene="part"
+              >
+                <p class="mt10 exception-text">{{ $t('暂无数据') }}</p>
+                <p class="exception-text">
+                  {{ $t('您可在“模块配置-挂载卷”页面将持久存储挂载到指定模块的指定目录中') }}
+                </p>
+              </bk-exception>
             </section>
           </section>
         </template>
@@ -393,6 +405,10 @@ export default {
     .content {
       border: 1px solid #dcdee5;
       border-top: none;
+
+      .bk-exception {
+        height: 180px;
+      }
     }
   }
   .exception-text {
@@ -433,8 +449,5 @@ export default {
 }
 .store-module-table-cls .bk-table-body .bk-table-row-last td {
   border-bottom: none;
-}
-.store-module-table-cls .bk-table-empty-block {
-  height: 180px;
 }
 </style>

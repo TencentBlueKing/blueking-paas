@@ -2557,4 +2557,6 @@ export default {
   申请持久存储: 'Apply for Persistent Storage',
   可用于将用于自定义的配置文件注入到容器中: 'Can be used to inject custom configuration files into the container',
   '由平台分配的持久化存储，可用于多个模块、进程间共享数据': 'Persistent storage allocated by the platform, available for data sharing across multiple modules and processes',
+  已绑定模块: 'Bound Modules',
+  '您可在“模块配置-挂载卷”页面将持久存储挂载到指定模块的指定目录中': 'You can mount persistent storage to a specified directory of a specified module on the "Module Configuration - Mount Volume" page',
 };

@@ -50,7 +50,10 @@
           :required="true"
           :property="'stage'"
         >
-          <bk-radio-group v-model="createPersistentStorageData.stage">
+          <bk-radio-group
+            v-model="createPersistentStorageData.stage"
+            @change="handlerChange"
+          >
             <bk-radio :value="'stag'">{{ $t('预发布环境') }}</bk-radio>
             <bk-radio :value="'prod'">{{ $t('生产环境') }}</bk-radio>
           </bk-radio-group>
@@ -160,6 +163,9 @@ export default {
     viewBillingMethod() {
       const url = 'https://cloud.tencent.com/document/product/582/47378';
       window.open(url, '_blank');
+    },
+    handlerChange() {
+      this.createPersistentStorageData.capacity = '1Gi';
     },
   },
 };

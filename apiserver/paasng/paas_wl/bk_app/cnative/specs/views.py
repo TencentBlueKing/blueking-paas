@@ -334,7 +334,13 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=CreateMountSourceSLZ, responses={201: MountSourceSLZ(many=True)})
     def create(self, request, code):
         app = self.get_application()
-
+        storage_class_exists = check_storage_class_exists(
+            application=app, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
+        )
+        if not storage_class_exists:
+            raise error_codes.CREATE_VOLUME_SOURCE_FAILED.f(
+                _(f"应用集群不支持该存储类 {settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME}")
+            )
         slz = CreateMountSourceSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data

@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
@@ -381,14 +383,32 @@ class TestMountSourceViewSet:
     def test_create(self, api_client, bk_app):
         url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/"
         request_body = {
+            "environment_name": "prod",
+            "source_type": "PersistentStorage",
+            "persistent_storage_source": {"storage_size": "2Gi"},
+        }
+        with mock.patch("paas_wl.bk_app.cnative.specs.views.check_storage_class_exists", return_value=False):
+            response = api_client.post(url, request_body)
+            assert response.status_code == 400
+
+        with mock.patch("paas_wl.bk_app.cnative.specs.views.check_storage_class_exists", return_value=True):
+            response = api_client.post(url, request_body)
+            assert response.status_code == 201
+            assert response.data["environment_name"] == "prod"
+            assert response.data["storage_size"] == "2Gi"
+
+    @pytest.mark.usefixtures("_mount_sources")
+    def test_create_with_invalid_storage_size(self, api_client, bk_app):
+        """验证预发布环境仅支持 1G 的持久存储"""
+        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/"
+        request_body = {
             "environment_name": "stag",
             "source_type": "PersistentStorage",
             "persistent_storage_source": {"storage_size": "2Gi"},
         }
-        response = api_client.post(url, request_body)
-        assert response.status_code == 201
-        assert response.data["environment_name"] == "stag"
-        assert response.data["storage_size"] == "2Gi"
+        with mock.patch("paas_wl.bk_app.cnative.specs.views.check_storage_class_exists", return_value=True):
+            response = api_client.post(url, request_body)
+            assert response.status_code == 400
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_destroy(self, api_client, bk_app, bk_prod_wl_app, bk_stag_wl_app):

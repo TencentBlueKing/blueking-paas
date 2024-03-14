@@ -190,6 +190,14 @@ class CreateMountSourceSLZ(serializers.Serializer):
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
     persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
 
+    def validate(self, attrs):
+        environment_name = attrs["environment_name"]
+        storage_size = attrs.get("persistent_storage_source", {}).get("storage_size")
+
+        if storage_size != PersistentStorageSize.P_1G.value and environment_name == MountEnvName.STAG.value:
+            raise serializers.ValidationError("预发布环境仅支持 1G 的持久存储")
+        return attrs
+
 
 class DeleteMountSourcesSLZ(serializers.Serializer):
     source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
@@ -205,6 +213,7 @@ class MountSourceSLZ(serializers.Serializer):
     data = serializers.JSONField(required=False)
     storage_size = serializers.CharField(required=False)
     storage_class_name = serializers.CharField(required=False)
+    display_name = serializers.SerializerMethodField(label=_("显示名称"))
 
     def get_source_type(self, obj):
         if isinstance(obj, ConfigMapSource):
@@ -221,3 +230,6 @@ class MountSourceSLZ(serializers.Serializer):
             source_config=controller.build_volume_source(obj.name),
         )
         return [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]
+
+    def get_display_name(self, obj):
+        return f"PersistentStorage-{obj.created.strftime('%Y-%m-%d-%H:%M:%S')}"

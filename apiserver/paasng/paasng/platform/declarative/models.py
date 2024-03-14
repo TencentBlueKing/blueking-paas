@@ -63,7 +63,21 @@ class ApplicationDescription(OwnerTimestampedModel):
 
 
 class DeploymentDescription(TimestampedModel):
-    """Config objects which describes deployment objects"""
+    """Config objects which describes deployment objects.
+
+    TODO: 优化云原生应用的描述文件应用逻辑(具体问题详见下文)
+    应用描述文件目前存在 2 类数据, 分别是可在页面上编辑的数据, 以及仅可通过应用描述文件提供的数据.
+
+    对于仅可通过应用描述文件的数据, 在应用部署时会被 import_manifest 存储到实际生效的模型中, 例如
+    - spec.processes -> ModuleProcessSpec
+    - spec.hooks -> ModuleDeployHook
+    - spec.svcDiscovery -> 由 EnvVariablesProviders 负责读取, 直接以环境变量形式注入到 spec.configuration.env.
+        TODO: 目前的实现兼容普通应用, 对于云原生应用应该合并到 BkAppSpec 中的 spec.svcDiscovery 字段, 然后在创建的 configmap 中体现到这些配置？
+
+    对于可在页面编辑的数据, 会在处理到相应资源时, 尝试从 DeploymentDescription 查询是否有在描述文件声明, 再根据业务逻辑做合并, 例如:
+    - spec.configuration.env/spec.envOverlay.envVariables -> 由 EnvVarsReader 负责读取, 再与产品上配置的环境变量做合并.
+        TODO: 由于 EnvVarsReader 丢失了环境属性, 导致云原生应用的拼接 BkAppSpec 时只能将环境变量放在 spec.configuration.env.
+    """
 
     deployment = models.OneToOneField(
         Deployment, on_delete=models.CASCADE, db_constraint=False, related_name="declarative_config"
@@ -87,14 +101,11 @@ class DeploymentDescription(TimestampedModel):
         processes = self.runtime.get("processes", {})
         return {key: process["command"] for key, process in processes.items()}
 
-    def get_processes(self) -> Dict[str, Dict[str, str]]:
-        """get ProcessesTmpl
-
-        ProcessesTmpl is a dict containing a process type and its corresponding ProcessTmpl"""
-        processes = self.runtime.get("processes", {})
-        return dict(processes.items())
-
     def get_deploy_hooks(self) -> HookList:
+        """从 spec 提取 hook 配置, 用于普通应用部署流程.
+
+        > 存量的旧版本数据使用 `scripts` 字段
+        """
         hooks = HookList()
         if self.spec is not None:
             if (_hooks := self.spec.hooks) and (pre_release_hook := _hooks.preRelease):
@@ -115,6 +126,10 @@ class DeploymentDescription(TimestampedModel):
         return hooks
 
     def get_svc_discovery(self) -> Optional[SvcDiscovery]:
+        """从 spec 提取服务发现配置, 用于普通应用部署流程.
+
+        > 存量的旧版本数据使用 `runtime`.`svc_discovery` 字段
+        """
         if self.spec is not None:
             if svc_discovery := self.spec.svcDiscovery:
                 return cattr.structure(
@@ -137,6 +152,10 @@ class DeploymentDescription(TimestampedModel):
             return None
 
     def get_env_variables(self) -> List[Dict]:
+        """从 spec 提供 dict 格式的环境变量给 EnvVariablesReader, 用于普通应用部署流程.
+
+        > 存量的旧版本数据使用 `env_variables` 字段
+        """
         if self.spec is not None:
             env_name = self.deployment.app_environment.environment
             env_variables = []

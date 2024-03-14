@@ -266,7 +266,7 @@ class ApplicationBuilder(BaseBuilder):
             perform_result = self.handle_app_description()
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            proc_data_from_desc = getattr(perform_result, "loaded_processes", None)
+            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
             processes = get_processes(
                 deployment=self.deployment,
                 stream=self.stream,
@@ -368,7 +368,7 @@ class DockerBuilder(BaseBuilder):
             perform_result = self.handle_app_description()
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            proc_data_from_desc = getattr(perform_result, "loaded_processes", None)
+            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
             processes = get_processes(
                 deployment=self.deployment,
                 stream=self.stream,

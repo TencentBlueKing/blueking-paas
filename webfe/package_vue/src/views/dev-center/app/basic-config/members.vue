@@ -2,7 +2,7 @@
   <div class="right-main">
 
     <paas-content-loader
-      class="app-container middle role-container"
+      class="app-container middle role-container shadow-card-style"
       :is-loading="loading"
       placeholder="roles-loading"
     >

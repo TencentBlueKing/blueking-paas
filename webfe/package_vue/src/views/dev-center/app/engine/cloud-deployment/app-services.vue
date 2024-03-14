@@ -106,23 +106,29 @@
               <div
                 class="ps-switcher-wrapper"
                 @click="toggleSwitch(row, $index)"
+                v-bk-tooltips="{
+                  content: $t('S-mart 应用请在配置文件中设置并开启增强服务'),
+                  disabled: !isSmartApp
+                }"
                 v-if="row.isStartUp">
                 <bk-switcher
                   v-model="row.isStartUp"
                   :theme="row.type === 'shared' ? 'success' : 'primary'"
                   class="bk-small-switcher"
+                  :disabled="isSmartApp"
                 />
               </div>
               <div
                 class="ps-switcher-wrapper"
                 v-else
                 @click="toggleSwitch(row, $index)"
-                v-bk-tooltips="switcherTips"
+                v-bk-tooltips="enableTooltipsConfig"
                 :ref="`tooltipsHtml${$index}`"
               >
                 <bk-switcher
                   v-model="row.isStartUp"
                   class="bk-small-switcher"
+                  :disabled="isSmartApp"
                 />
               </div>
               <div id="switcher-tooltip">
@@ -381,6 +387,18 @@ export default {
         return versionData?.value || '';
       };
     },
+    isSmartApp() {
+      return this.curAppInfo.application?.is_smart_app;
+    },
+    enableTooltipsConfig() {
+      this.switcherTips.disabled = this.isSmartApp;
+      if (this.isSmartApp) {
+        return {
+          content: this.$t('S-mart 应用暂不支持删除增强服务'),
+        };
+      }
+      return this.switcherTips;
+    },
   },
   watch: {
     curAppCode() {
@@ -458,6 +476,9 @@ export default {
     },
 
     toggleSwitch(payload, index) {
+      if (this.isSmartApp) {
+        return;
+      }
       this.curData = payload;
       this.curIndex = index;
       if (payload.isStartUp) {    // 已经启动的状态

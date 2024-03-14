@@ -21,6 +21,7 @@ from typing import Dict, List
 from django.db import models
 from translated_fields import TranslatedFieldWithFallback
 
+from paasng.bk_plugins.pluginscenter.constants import PluginReleaseType
 from paasng.bk_plugins.pluginscenter.definitions import (
     FieldSchema,
     PluginBackendAPI,
@@ -67,6 +68,20 @@ class PluginDefinition(UuidAuditedModel):
     release_stages: List[ReleaseStageDefinition] = ReleaseStageDefinitionField()
     log_config: PluginLogConfig = PluginLogConfigField(null=True)
     features: List[PluginFeature] = PluginFeaturesField(default=list)
+
+    # 测试版本
+    test_release_revision: ReleaseRevisionDefinition = ReleaseRevisionDefinitionField(null=True)
+    test_release_stages: List[ReleaseStageDefinition] = ReleaseStageDefinitionField(null=True)
+
+    def get_release_revision_by_type(self, type: str):
+        if type == PluginReleaseType.TEST:
+            return self.test_release_revision
+        return self.release_revision
+
+    def get_release_stage_by_type(self, type: str):
+        if type == PluginReleaseType.TEST:
+            return self.test_release_stages
+        return self.release_stages
 
 
 class PluginBasicInfoDefinition(AuditedModel):
@@ -120,3 +135,11 @@ class PluginConfigInfoDefinition(AuditedModel):
     docs = models.CharField(max_length=255, default="")
     sync_api: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     columns: List[PluginConfigColumnDefinition] = PluginConfigColumnDefinitionField(default=list)
+
+
+class PluginVisibleRangeDefinition(AuditedModel):
+    pd = models.OneToOneField(
+        PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="visible_range_definition"
+    )
+    description = TranslatedFieldWithFallback(models.TextField(default=""))
+    scope = models.JSONField(default=list)

@@ -1,12 +1,11 @@
 <template>
   <div class="code-main">
-    <!-- 查看态 -->
     <section class="source-code-info code-source">
       <div class="header-wrapper mb20">
         <span :class="['build-title', { 'edit': isCodeSourceEdit }]">{{$t('源码信息')}}</span>
         <div
           class="edit-container"
-          v-if="!isCodeSourceEdit"
+          v-if="isShowEdit"
           @click="handleEdit"
         >
           <i class="paasng-icon paasng-edit-2 pl10" />
@@ -14,128 +13,153 @@
         </div>
       </div>
 
-      <!-- 查看态 -->
-      <div class="content" v-if="!isCodeSourceEdit">
-        <div v-if="isCodeQuality" class="code-quality" :style="isInitTemplate ? { height: '158px' } : ''">
-          <div>
-            <span class="fraction">{{codeDetails.rdIndicatorsScore ?? '--'}}</span>
-            {{$t('分')}}
-            <p class="desc">{{$t('代码质量')}}</p>
-            <i class="paasng-icon paasng-process-file" @click="handleToggleSideslider" />
-          </div>
-        </div>
-        <div class="code-detail form-edit">
-          <bk-form :model="sourceCodeData">
-            <bk-form-item :label="`${$t('代码源')}：`">
-              <span class="form-text">{{curAppModule.repo?.display_name || '--'}}</span>
-            </bk-form-item>
-            <bk-form-item :label="`${$t('代码仓库')}：`">
-              <a
-                v-if="curAppModule.repo?.repo_url"
-                class="form-text code-link"
-                :href="curAppModule.repo?.repo_url"
-                target="_blank">
-                {{curAppModule.repo?.repo_url}}
-              </a>
-              <template v-else>
-                --
-              </template>
-            </bk-form-item>
-            <bk-form-item :label="`${$t('构建目录')}：`">
-              <span class="form-text">{{curAppModule.repo?.source_dir || '--'}}</span>
-            </bk-form-item>
-            <bk-form-item :label="`${$t('初始化模板')}：`" v-if="isInitTemplate">
-              <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
-              <a
-                v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc !== '--'"
-                class="download"
-                href="javascript: void(0);"
-                @click="handleDownloadTemplate"
-              > <i class="paasng-icon paasng-download"></i>{{ $t('下载') }} </a>
-            </bk-form-item>
-          </bk-form>
-        </div>
-      </div>
-
-      <!-- 编辑态 -->
-      <div class="content no-border" v-else>
-        <section class="code-depot">
-          <label class="form-label">
-            {{ $t('代码源') }}
-          </label>
-          <div
-            v-for="(item, index) in sourceControlTypes" :key="index"
-            :class="['code-depot-item mr10', { 'on': item.value === sourceControlType },
-                     { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
-            @click="changeSourceControl(item.value)">
-            <img :src="'/static/images/' + item.imgSrc + '.png'">
-            <p class="source-control-title" :title="item.name">
-              {{ item.name }}
-            </p>
-          </div>
-        </section>
-
-        <!-- Git 相关额外代码 start -->
-        <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
-          <div v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
-            <!-- 代码仓库 -->
-            <git-extend
-              :key="sourceControlType"
-              :label-width="150"
-              :git-control-type="sourceControlType"
-              :is-auth="gitExtendConfig[sourceControlType].isAuth"
-              :is-loading="gitExtendConfig[sourceControlType].isLoading"
-              :auth-docs="gitExtendConfig[sourceControlType].authDocs"
-              :alert-text="gitExtendConfig[sourceControlType].alertText"
-              :auth-address="gitExtendConfig[sourceControlType].authAddress"
-              :fetch-method="gitExtendConfig[sourceControlType].fetchMethod"
-              :repo-list="gitExtendConfig[sourceControlType].repoList"
-              :selected-repo-url.sync="gitExtendConfig[sourceControlType].selectedRepoUrl"
-              @change="changeSelectedRepoUrl"
-            />
-            <!-- 构建目录 -->
-            <div class="form-group-dir" style="margin-top: 10px;">
-              <label class="form-label optional">
-                {{ $t('构建目录') }}
-              </label>
-              <div class="form-group-flex">
-                <p>
-                  <bk-input
-                    v-model="sourceControlChangeForm.sourceDir" class="source-dir"
-                    :class="isSourceDirInvalid ? 'error' : ''"
-                    :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')" />
-                  <ul v-if="isSourceDirInvalid" class="parsley-errors-list">
-                    <li class="parsley-pattern">
-                      {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
-                    </li>
-                  </ul>
-                </p>
-              </div>
+      <template v-if="isEmptyData">
+        <!-- 查看态 -->
+        <div class="content" v-if="!isCodeSourceEdit">
+          <div v-if="isCodeQuality" class="code-quality" :style="isInitTemplate ? { height: '158px' } : ''">
+            <div>
+              <span class="fraction">{{codeDetails.rdIndicatorsScore ?? '--'}}</span>
+              {{$t('分')}}
+              <p class="desc">{{$t('代码质量')}}</p>
+              <i class="paasng-icon paasng-process-file" @click="handleToggleSideslider" />
             </div>
           </div>
-          <repo-info
-            v-if="curSourceControl && curSourceControl.auth_method === 'basic'"
-            ref="repoInfo"
-            :key="sourceControlType" :type="sourceControlType"
-            :default-url="curAppModule.repo?.trunk_url"
-            :default-account="curAppModule.repo_auth_info?.username"
-            :default-dir="curAppModule.repo?.source_dir"
-            :deployment-is-show="true"
-            :source-dir-label="'构建目录'"
-            :is-cloud-created="true"
-            @change="handleRepoInfoChange"
-          />
-        </template>
-
-        <div class="footer-operate">
-          <bk-button :theme="'primary'" class="mr10" :loading="switchLoading" @click="sureSwitch">
-            {{$t('保存')}}
-          </bk-button>
-          <bk-button :theme="'default'" type="submit" @click="handleCancel" class="mr10">
-            {{$t('取消')}}
-          </bk-button>
+          <div class="code-detail form-edit">
+            <bk-form :model="sourceCodeData">
+              <bk-form-item :label="`${$t('代码源')}：`">
+                <span class="form-text">{{curAppModule.repo?.display_name || '--'}}</span>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('代码仓库')}：`">
+                <a
+                  v-if="curAppModule.repo?.repo_url"
+                  class="form-text code-link"
+                  :href="curAppModule.repo?.repo_url"
+                  target="_blank">
+                  {{curAppModule.repo?.repo_url}}
+                </a>
+                <template v-else>
+                  --
+                </template>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('构建目录')}：`">
+                <span class="form-text">{{curAppModule.repo?.source_dir || '--'}}</span>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('初始化模板')}：`" v-if="isInitTemplate">
+                <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
+                <a
+                  v-if="!curAppModule.repo?.linked_to_internal_svn && initTemplateDesc !== '--'"
+                  class="download"
+                  href="javascript: void(0);"
+                  @click="handleDownloadTemplate"
+                > <i class="paasng-icon paasng-download"></i>{{ $t('下载') }} </a>
+              </bk-form-item>
+            </bk-form>
+          </div>
         </div>
-      </div>
+
+        <!-- 编辑态 -->
+        <div class="content no-border" v-else>
+          <section class="code-depot">
+            <label class="form-label">
+              {{ $t('代码源') }}
+            </label>
+            <div
+              v-for="(item, index) in sourceControlTypes" :key="index"
+              :class="['code-depot-item mr10', { 'on': item.value === sourceControlType },
+                       { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
+              @click="changeSourceControl(item.value)">
+              <img :src="'/static/images/' + item.imgSrc + '.png'">
+              <p class="source-control-title" :title="item.name">
+                {{ item.name }}
+              </p>
+            </div>
+          </section>
+
+          <!-- Git 相关额外代码 start -->
+          <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
+            <div v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
+              <!-- 代码仓库 -->
+              <git-extend
+                :key="sourceControlType"
+                :label-width="150"
+                :git-control-type="sourceControlType"
+                :is-auth="gitExtendConfig[sourceControlType].isAuth"
+                :is-loading="gitExtendConfig[sourceControlType].isLoading"
+                :auth-docs="gitExtendConfig[sourceControlType].authDocs"
+                :alert-text="gitExtendConfig[sourceControlType].alertText"
+                :auth-address="gitExtendConfig[sourceControlType].authAddress"
+                :fetch-method="gitExtendConfig[sourceControlType].fetchMethod"
+                :repo-list="gitExtendConfig[sourceControlType].repoList"
+                :selected-repo-url.sync="gitExtendConfig[sourceControlType].selectedRepoUrl"
+                @change="changeSelectedRepoUrl"
+              />
+              <!-- 构建目录 -->
+              <div class="form-group-dir" style="margin-top: 10px;">
+                <label class="form-label optional">
+                  {{ $t('构建目录') }}
+                </label>
+                <div class="form-group-flex">
+                  <p>
+                    <bk-input
+                      v-model="sourceControlChangeForm.sourceDir" class="source-dir"
+                      :class="isSourceDirInvalid ? 'error' : ''"
+                      :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')" />
+                    <ul v-if="isSourceDirInvalid" class="parsley-errors-list">
+                      <li class="parsley-pattern">
+                        {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
+                      </li>
+                    </ul>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <repo-info
+              v-if="curSourceControl && curSourceControl.auth_method === 'basic'"
+              ref="repoInfo"
+              :key="sourceControlType"
+              :type="sourceControlType"
+              :default-url="curAppModule.repo?.trunk_url"
+              :default-account="curAppModule.repo_auth_info?.username"
+              :default-dir="curAppModule.repo?.source_dir"
+              :deployment-is-show="true"
+              :source-dir-label="'构建目录'"
+              :is-cloud-created="true"
+              @change="handleRepoInfoChange"
+            />
+          </template>
+
+          <div class="footer-operate">
+            <bk-button :theme="'primary'" class="mr10" :loading="switchLoading" @click="sureSwitch">
+              {{$t('保存')}}
+            </bk-button>
+            <bk-button :theme="'default'" type="submit" @click="handleCancel" class="mr10">
+              {{$t('取消')}}
+            </bk-button>
+          </div>
+        </div>
+      </template>
+
+      <!-- 空数据状态 -->
+      <bk-exception
+        v-if="!isCodeSourceEdit && !curAppModule.repo?.repo_url"
+        class="exception-wrap-item exception-part"
+        type="empty"
+        scene="part"
+      >
+        <p
+          class="mt10"
+          style="color: #63656E;font-size: 14px;"
+        >
+          {{ $t('暂未绑定源码信息') }}
+        </p>
+        <p
+          class="mt10"
+          style="color: #979BA5;font-size: 12px;"
+        >
+          {{ $t('源码仓库仅用于 Homepage 运维开发分数统计，请瑞雪填写') }}
+        </p>
+        <p class="guide-link mt15" @click="handleEdit">{{ $t('立即绑定') }}</p>
+      </bk-exception>
     </section>
 
     <!-- 代码检查 -->
@@ -306,6 +330,12 @@ export default {
     isPluginApp() {
       return this.curAppInfo.application?.is_plugin_app;
     },
+    isEmptyData() {
+      return this.isCodeSourceEdit ? this.isCodeSourceEdit : this.curAppModule.repo?.repo_url;
+    },
+    isShowEdit() {
+      return !this.isCodeSourceEdit ? this.isEmptyData : false;
+    },
   },
 
   created() {
@@ -328,6 +358,10 @@ export default {
       for (const key in this.gitExtendConfig) {
         const config = this.gitExtendConfig[key];
         sourceControlTypes.includes(key) && config.fetchMethod && config.fetchMethod();
+        // 设置默认值
+        if (this.curAppModule.repo?.type === key) {
+          this.changeSourceControl(key);
+        }
       }
       this.$nextTick(() => {
         this.$emit('close-content-loader');
@@ -443,8 +477,8 @@ export default {
         this.sourceControlChangeForm.sourceDir = '';
         return;
       }
-      if (this.curAppModule.source_origin === 1
-      || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+      if (this.curAppModule?.source_origin === 1
+      || this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
         this.sourceControlType = this.curAppModule.repo.type;
         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
         this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
@@ -558,7 +592,7 @@ export default {
           };
         }
 
-        if (this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE) {
+        if (this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.IMAGE) {
           params.data.source_control_type = 'tc_docker';
           params.data.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
           params.data.source_repo_auth_info = {
@@ -611,8 +645,8 @@ export default {
         });
         this.initTemplateType = this.curAppModule.template_display_name;
 
-        if (this.curAppModule.source_origin === 1
-         || this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+        if (this.curAppModule?.source_origin === 1
+         || this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
           const { repo } = this.curAppModule;
           if (repo) {
             this.sourceControlType = repo.type;

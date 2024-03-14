@@ -21,35 +21,39 @@
   </div>
 </template>
 <script>
-  export default {
-    props: {
-      data: {
-        type: Array,
-        default: () => []
-      },
-      title: {
-        type: String,
-        default: ''
-      }
+export default {
+  props: {
+    data: {
+      type: Array,
+      default: () => [],
     },
-    data () {
-      return {
-        itsmData: []
-      };
+    title: {
+      type: String,
+      default: '',
     },
-    methods: {
-      // 判断是否为url
-      isValidURL(url) {
-        var regex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
-        return regex.test(url);
-      }
-    }
-  };
+  },
+  data() {
+    return {
+      itsmData: [],
+    };
+  },
+  methods: {
+    // 判断是否为url
+    isValidURL(url) {
+      const regex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+      return regex.test(url);
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
   .itsm-info-item {
+    padding: 16px;
     margin-top: 20px;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px 0 #1919290d;
+    background: #fff;
 
     .title {
       font-size: 14px;

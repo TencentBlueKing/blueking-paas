@@ -93,7 +93,11 @@
               >
                 <div class="paas-operation-section section1">
                   <template v-if="recordItem.engine_enabled">
-                    <router-link :to="{ name: 'appSummary', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
+                    <router-link
+                      :to="{
+                        name: recordItem.appType === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
+                        params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId }
+                      }">
                       <img
                         :src="recordItem.applogo"
                         width="38px"
@@ -107,7 +111,11 @@
                     </router-link>
                   </template>
                   <template v-else>
-                    <router-link :to="{ name: 'appSummary', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
+                    <router-link
+                      :to="{
+                        name: recordItem.appType === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
+                        params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId }
+                      }">
                       <img
                         :src="recordItem.applogo"
                         width="38px"
@@ -555,6 +563,7 @@ export default {
           appcode: appinfo.code,
           time: item.at,
           type: item.operate,
+          appType: appinfo.type,
           stag: item.represent_info.props.provide_links ? item.represent_info.links.stag : {},
           prod: item.represent_info.props.provide_links ? item.represent_info.links.prod : {},
           engine_enabled: appinfo.config_info.engine_enabled,

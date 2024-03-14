@@ -32,7 +32,7 @@ from django.utils.functional import cached_property
 from pilkit.processors import ResizeToFill
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.bk_plugins.pluginscenter.constants import ActionTypes, PluginReleaseStatus, PluginStatus, SubjectTypes
+from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
 from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
@@ -80,8 +80,8 @@ class PluginInstance(UuidAuditedModel):
     status = models.CharField(
         verbose_name="插件状态",
         max_length=16,
-        choices=PluginStatus.get_choices(),
-        default=PluginStatus.WAITING_APPROVAL,
+        choices=constants.PluginStatus.get_choices(),
+        default=constants.PluginStatus.WAITING_APPROVAL,
     )
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
@@ -122,6 +122,24 @@ class PluginInstance(UuidAuditedModel):
     def can_reactivate(self) -> bool:
         return self.pd.basic_info_definition.api.reactivate is not None
 
+    @property
+    def test_versions(self):
+        return self.all_versions.filter(type=constants.PluginReleaseType.TEST)
+
+    @property
+    def prod_versions(self):
+        return self.all_versions.filter(type=constants.PluginReleaseType.PROD)
+
+    @property
+    def prod_releasing_versions(self):
+        return self.all_versions.filter(
+            type=constants.PluginReleaseType.PROD, status__in=constants.PluginReleaseStatus.running_status()
+        )
+
+    @property
+    def has_test_version(self) -> bool:
+        return self.pd.test_release_revision is not None
+
     class Meta:
         unique_together = ("pd", "id")
 
@@ -140,7 +158,9 @@ class PluginMarketInfo(AuditedModel):
 
 class PluginReleaseVersionManager(models.Manager):
     def get_latest_succeeded(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
-        """获取最后一个成功发布的版本"""
+        """获取最后一个成功发布的正式版本，用于:
+        1.发布正式版本时自动生成版本号
+        """
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
             if hasattr(self, "instance"):
@@ -149,12 +169,17 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(plugin=plugin, status=PluginReleaseStatus.SUCCESSFUL).latest("created")
+            return self.filter(
+                plugin=plugin, status=constants.PluginReleaseStatus.SUCCESSFUL, type=constants.PluginReleaseType.PROD
+            ).latest("created")
         except self.model.DoesNotExist:
             return None
 
     def get_ongoing_release(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
-        """获取正在发布的版本"""
+        """获取正在发布的正式版本，用于:
+        1.更新市场信息时，判断是否将当前发布阶段的状态设置为成功，进入到下一步，目前仅标准运维插件使用
+        2.插件列表页面:最新版本的id，用于拼装路由，TODO：让前端统一用 latest_release
+        """
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
             if hasattr(self, "instance"):
@@ -163,12 +188,18 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_ongoing_release() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(plugin=plugin, status__in=PluginReleaseStatus.running_status()).latest("created")
+            return self.filter(
+                plugin=plugin,
+                status__in=constants.PluginReleaseStatus.running_status(),
+                type=constants.PluginReleaseType.PROD,
+            ).latest("created")
         except self.model.DoesNotExist:
             return None
 
     def get_latest_release(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
-        """获取最新的版本"""
+        """获取最新的正式版本, 用于:
+        1.插件列表页面:展示最新版本的信息和状态
+        """
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
             if hasattr(self, "instance"):
@@ -180,7 +211,7 @@ class PluginReleaseVersionManager(models.Manager):
             return ongoing_release
 
         try:
-            return self.filter(plugin=plugin).latest("created")
+            return self.filter(plugin=plugin, type=constants.PluginReleaseType.PROD).latest("created")
         except self.model.DoesNotExist:
             return None
 
@@ -191,7 +222,9 @@ class PluginRelease(AuditedModel):
     plugin = models.ForeignKey(
         PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="all_versions"
     )
-    type = models.CharField(verbose_name="版本类型(正式/测试)", max_length=16)
+    type = models.CharField(
+        verbose_name="版本类型(正式/测试)", max_length=16, choices=constants.PluginReleaseType.get_choices()
+    )
     version = models.CharField(verbose_name="版本号", max_length=255)
     comment = models.TextField(verbose_name="版本日志")
     extra_fields = models.JSONField(verbose_name="额外字段")
@@ -210,7 +243,7 @@ class PluginRelease(AuditedModel):
     stages_shortcut: List[PlainStageInfo] = StagesShortcutField(
         help_text="发布阶段简易索引(保证顺序可靠)", null=True, default=list
     )
-    status = models.CharField(default=PluginReleaseStatus.INITIAL, max_length=16)
+    status = models.CharField(default=constants.PluginReleaseStatus.INITIAL, max_length=16)
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
     retryable = models.BooleanField(default=True, help_text="失败后是否可重试")
 
@@ -220,13 +253,14 @@ class PluginRelease(AuditedModel):
 
     @property
     def complete_time(self):
-        if self.status not in PluginReleaseStatus.running_status():
+        if self.status not in constants.PluginReleaseStatus.running_status():
             return self.updated
         return None
 
     def initial_stage_set(self, force_refresh: bool = False):
         pd = self.plugin.pd
-        if not pd.release_stages:
+        release_stages = pd.get_release_stage_by_type(self.type)
+        if not release_stages:
             return
 
         if self.all_stages.count() != 0:
@@ -236,7 +270,7 @@ class PluginRelease(AuditedModel):
 
         stages_shortcut = []
         next_stage = None
-        for stage in pd.release_stages[::-1]:
+        for stage in release_stages[::-1]:
             stages_shortcut.append(cattr.structure({"id": stage.id, "name": stage.name}, PlainStageInfo))
             next_stage, _ = PluginReleaseStage.objects.update_or_create(
                 release=self,
@@ -245,12 +279,12 @@ class PluginRelease(AuditedModel):
                 invoke_method=stage.invokeMethod,
                 defaults={
                     "next_stage": next_stage,
-                    "status": PluginReleaseStatus.INITIAL,
+                    "status": constants.PluginReleaseStatus.INITIAL,
                 },
             )
         self.current_stage = next_stage
         self.stages_shortcut = stages_shortcut[::-1]
-        self.status = PluginReleaseStatus.PENDING
+        self.status = constants.PluginReleaseStatus.PENDING
         self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
 
 
@@ -265,7 +299,7 @@ class PluginReleaseStage(AuditedModel):
     stage_name = models.CharField(verbose_name="阶段名称", max_length=16, help_text="冗余字段, 用于减少查询次数")
     invoke_method = models.CharField(verbose_name="触发方式", max_length=16, help_text="冗余字段, 用于减少查询次数")
 
-    status = models.CharField(verbose_name="发布状态", default=PluginReleaseStatus.INITIAL, max_length=16)
+    status = models.CharField(verbose_name="发布状态", default=constants.PluginReleaseStatus.INITIAL, max_length=16)
     fail_message = models.TextField(verbose_name="错误原因")
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     api_detail = models.JSONField(verbose_name="API 详情", null=True, help_text="该字段仅 invoke_method = api 时可用")
@@ -281,13 +315,13 @@ class PluginReleaseStage(AuditedModel):
 
     def reset(self):
         """reset release-stage to not executed state"""
-        self.status = PluginReleaseStatus.INITIAL
+        self.status = constants.PluginReleaseStatus.INITIAL
         self.fail_message = ""
         self.itsm_detail = None
         self.api_detail = None
         self.save(update_fields=["status", "fail_message", "itsm_detail", "api_detail", "updated"])
 
-    def update_status(self, status: PluginReleaseStatus, fail_message: str = ""):
+    def update_status(self, status: constants.PluginReleaseStatus, fail_message: str = ""):
         self.status = status
         if fail_message:
             self.fail_message = fail_message
@@ -295,10 +329,40 @@ class PluginReleaseStage(AuditedModel):
 
     @cached_property
     def has_post_command(self):
-        stage_definition = find_stage_by_id(self.release.plugin.pd.release_stages, self.stage_id)
+        stage_definition = find_stage_by_id(self.release.plugin.pd, self.release, self.stage_id)
         if stage_definition and stage_definition.api and stage_definition.api.postCommand:
             return True
         return False
+
+
+class PluginReleaseStrategy(AuditedModel):
+    """插件版本的发布策略"""
+
+    release = models.ForeignKey(
+        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategy"
+    )
+    strategy = models.CharField(
+        verbose_name="发布策略", max_length=32, choices=constants.PluginReleaseStrategy.get_choices()
+    )
+    bkci_project = models.JSONField(
+        verbose_name="蓝盾项目ID", blank=True, null=True, help_text="格式：['1111', '222222']"
+    )
+    # 项目内目前不消化 organization 的格式，先不单独建模
+    # [
+    #     {
+    #         "id": 1,
+    #         "type": "user",
+    #         "name": "admin",
+    #         "display_name": "admin"
+    #     },
+    #     {
+    #         "id": 3,
+    #         "type": "department",
+    #         "name": "xxxx部门",
+    #         "display_name": null
+    #     }
+    # ]
+    organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
 
 
 class ApprovalService(UuidAuditedModel):
@@ -319,6 +383,14 @@ class PluginConfig(AuditedModel):
         unique_together = ("plugin", "unique_key")
 
 
+class PluginVisibleRange(AuditedModel):
+    """插件可见范围"""
+
+    plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
+    bkci_project = models.JSONField(verbose_name="蓝盾项目ID", default=list)
+    organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+
+
 class OperationRecord(AuditedModel):
     """插件操作记录
     动作 (具体的) 主体
@@ -331,13 +403,13 @@ class OperationRecord(AuditedModel):
 
     plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
     operator = BkUserField()
-    action = models.CharField(max_length=32, choices=ActionTypes.get_choices())
+    action = models.CharField(max_length=32, choices=constants.ActionTypes.get_choices())
     specific = models.CharField(max_length=255, null=True)
-    subject = models.CharField(max_length=32, choices=SubjectTypes.get_choices())
+    subject = models.CharField(max_length=32, choices=constants.SubjectTypes.get_choices())
 
     def get_display_text(self):
-        action_text = ActionTypes.get_choice_label(self.action)
-        subject_text = SubjectTypes.get_choice_label(self.subject)
+        action_text = constants.ActionTypes.get_choice_label(self.action)
+        subject_text = constants.SubjectTypes.get_choice_label(self.subject)
         username = get_user_by_user_id(self.operator).username
 
         if self.specific:

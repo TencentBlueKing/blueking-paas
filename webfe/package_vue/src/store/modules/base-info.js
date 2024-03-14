@@ -25,7 +25,7 @@ import Vue from 'vue';
 // store
 const state = {
   stagGatewayInfos: null,
-  prodGatewayInfos: null
+  prodGatewayInfos: null,
 };
 
 // getters
@@ -46,12 +46,10 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-  getGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
-    const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
+  getGatewayInfos({}, { appCode, env, moduleName }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
 
-    return Vue.http.get(url).then(resp => {
-      return resp;
-    });
+    return Vue.http.get(url).then(resp => resp);
   },
 
   /**
@@ -62,12 +60,10 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-  enableGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
-    const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/`;
+  enableGatewayInfos({}, { appCode, env, moduleName }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/`;
 
-    return Vue.http.post(url).then(resp => {
-      return resp;
-    });
+    return Vue.http.post(url).then(resp => resp);
   },
 
   /**
@@ -78,12 +74,10 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-  clearGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
-    const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
+  clearGatewayInfos({}, { appCode, env, moduleName }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
 
-    return Vue.http.delete(url).then(resp => {
-      return resp;
-    });
+    return Vue.http.delete(url).then(resp => resp);
   },
 
   /**
@@ -94,13 +88,11 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-  gitLessCodeAddress ({ commit, state }, { appCode, moduleName }) {
+  gitLessCodeAddress({}, { appCode, moduleName }) {
     const url = `${BACKEND_URL}/api/bkapps/lesscode/${appCode}/modules/${moduleName}/`;
 
-    return Vue.http.get(url).then(resp => {
-      return resp;
-    });
-  }
+    return Vue.http.get(url).then(resp => resp);
+  },
 };
 
 export default {
@@ -108,5 +100,5 @@ export default {
   state,
   getters,
   mutations,
-  actions
+  actions,
 };

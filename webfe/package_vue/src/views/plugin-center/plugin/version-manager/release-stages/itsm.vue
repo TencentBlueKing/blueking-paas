@@ -144,9 +144,6 @@ export default {
 
 <style lang="scss" scoped>
   .itsm {
-    margin-top: 60px;
-    margin-bottom: 80px;
-
     .wrapper {
       .bk-button.bk-primary.is-outline.detail-btn {
         background: transparent;

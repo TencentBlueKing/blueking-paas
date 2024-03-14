@@ -84,7 +84,7 @@
                 <div class="info">
                   <span>{{ $t('生效环境') }}：{{ item.environment_name }}</span>
                   <span>{{ $t('容量') }}：{{ item.storage_size }}</span>
-                  <span>{{ $t('已绑定模块数') }}：{{ item.binded_modules?.length || 0 }}</span>
+                  <span>{{ $t('已绑定模块数') }}：{{ item.bound_modules?.length || 0 }}</span>
                 </div>
               </div>
               <div
@@ -98,7 +98,7 @@
             </section>
             <section class="content" v-if="item.isExpanded">
               <bk-table
-                :data="item.binded_modules"
+                :data="item.bound_modules"
                 :outer-border="false"
                 ext-cls="store-module-table-cls"
               >
@@ -186,7 +186,7 @@ export default {
       curHoverPanels: '',
       deleteName: '',
       curDeleteData: {
-        binded_modules: [],
+        bound_modules: [],
       },
       persistentStorageDailogVisible: false,
     };
@@ -201,7 +201,7 @@ export default {
     deleteAlertTip() {
       return this.$t(
         '删除持久存储后无法恢复，目前有 {c} 个模块绑定了该存储，请确认影响',
-        { c: this.curDeleteData.binded_modules?.length || 0 },
+        { c: this.curDeleteData.bound_modules?.length || 0 },
       );
     },
   },

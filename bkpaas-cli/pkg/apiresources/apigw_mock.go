@@ -142,8 +142,8 @@ func (r MockedRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch 
 	}, nil
 }
 
-// GetDefaultAppDeployResult ...
-func (r MockedRequester) GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
+// GetAppDeployResult ...
+func (r MockedRequester) GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
 	return map[string]any{
 		"status":       "failed",
 		"logs":         "Can not read Procfile file from repository",
@@ -159,8 +159,8 @@ func (r MockedRequester) GetDefaultAppDeployResult(appCode, appModule, deployID 
 	}, nil
 }
 
-// ListDefaultAppDeployHistory ...
-func (r MockedRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+// ListAppDeployHistory ...
+func (r MockedRequester) ListAppDeployHistory(appCode, appModule string) (map[string]any, error) {
 	return map[string]any{
 		"count": 2,
 		"results": []any{
@@ -208,7 +208,7 @@ func (r MockedRequester) ListDefaultAppDeployHistory(appCode, appModule string) 
 
 // DeployCNativeApp ...
 func (r MockedRequester) DeployCNativeApp(
-	appCode, appModule, deployEnv string, manifest map[string]any,
+	appCode, appModule, deployEnv string, manifest map[string]any, tag string, branch string,
 ) (map[string]any, error) {
 	return manifest, nil
 }

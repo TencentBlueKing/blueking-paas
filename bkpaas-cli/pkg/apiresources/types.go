@@ -43,13 +43,18 @@ type Requester interface {
 
 	// DeployDefaultApp 部署普通应用
 	DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error)
-	// GetDefaultAppDeployResult 获取普通应用部署结果
-	GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error)
-	// ListDefaultAppDeployHistory 获取普通应用部署历史（最近N次）
-	ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error)
+	// GetAppDeployResult 获取应用部署结果
+	GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error)
+	// ListAppDeployHistory 获取普通应用部署历史（最近N次）
+	ListAppDeployHistory(appCode, appModule string) (map[string]any, error)
 
 	// DeployCNativeApp 部署云原生应用
-	DeployCNativeApp(appCode, appModule, deployEnv string, manifest map[string]any) (map[string]any, error)
+	DeployCNativeApp(
+		appCode, appModule, deployEnv string,
+		manifest map[string]any,
+		tag string,
+		branch string,
+	) (map[string]any, error)
 	// GetCNativeAppDeployResult 获取云原生应用部署结果
 	GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error)
 	// ListCNativeAppDeployHistory 获取云原生应用部署历史（最近N次）

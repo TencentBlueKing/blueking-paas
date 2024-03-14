@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import List
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.devcontainer.conf import get_ingress_path_backends
-from paas_wl.bk_app.devcontainer.entities import IngressDomain
-from paas_wl.bk_app.devcontainer.kres_slzs import DevContainerIngressDeserializer, DevContainerIngressSerializer
-from paas_wl.infras.cluster.utils import get_dev_mode_cluster
+from paas_wl.bk_app.dev_sandbox.conf import get_ingress_path_backends
+from paas_wl.bk_app.dev_sandbox.entities import IngressDomain
+from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxIngressDeserializer, DevSandboxIngressSerializer
+from paas_wl.infras.cluster.utils import get_dev_sandbox_cluster
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 from paas_wl.workloads.networking.entrance.utils import to_dns_safe
@@ -32,22 +32,22 @@ from .service import get_service_name
 
 
 @dataclass
-class DevContainerIngress(AppEntity):
+class DevSandboxIngress(AppEntity):
     """Ingress entity to expose DevContainerService"""
 
     domains: List[IngressDomain]
 
     class Meta:
         kres_class = kres.KIngress
-        serializer = DevContainerIngressSerializer
-        deserializer = DevContainerIngressDeserializer
+        serializer = DevSandboxIngressSerializer
+        deserializer = DevSandboxIngressDeserializer
 
     def __post_init__(self):
         self.rewrite_to_root = True
         self.set_header_x_script_name = True
 
     @classmethod
-    def create(cls, dev_wl_app: WlApp, app_code: str) -> "DevContainerIngress":
+    def create(cls, dev_wl_app: WlApp, app_code: str) -> "DevSandboxIngress":
         service_name = get_service_name(dev_wl_app)
         sub_domain = IngressDomain(
             host=get_sub_domain_host(app_code, dev_wl_app, dev_wl_app.module_name),
@@ -61,7 +61,7 @@ def get_ingress_name(dev_wl_app: WlApp) -> str:
 
 
 def get_sub_domain_host(app_code: str, wl_app: WlApp, module_name: str) -> str:
-    cluster = get_dev_mode_cluster(wl_app)
+    cluster = get_dev_sandbox_cluster(wl_app)
     root_domain = cluster.ingress_config.default_root_domain.name
     safe_parts = [to_dns_safe(s) for s in ["dev", module_name, app_code]]
     return ("-dot-".join(safe_parts) + "." + root_domain).lower()

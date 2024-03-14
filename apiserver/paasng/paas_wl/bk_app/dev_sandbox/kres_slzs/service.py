@@ -23,14 +23,14 @@ from kubernetes.dynamic import ResourceInstance
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 
-from .container import get_devcontainer_labels
+from .sandbox import get_dev_sandbox_labels
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.devcontainer.kres_entities import DevContainerService
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandboxService
 
 
-class DevContainerServiceSerializer(AppEntitySerializer["DevContainerService"]):
-    def serialize(self, obj: "DevContainerService", original_obj: Optional[ResourceInstance] = None, **kwargs):
+class DevSandboxServiceSerializer(AppEntitySerializer["DevSandboxService"]):
+    def serialize(self, obj: "DevSandboxService", original_obj: Optional[ResourceInstance] = None, **kwargs):
         body: Dict[str, Any] = {
             "metadata": {
                 # TODO 增加必要的 service labels
@@ -41,7 +41,7 @@ class DevContainerServiceSerializer(AppEntitySerializer["DevContainerService"]):
                     {"name": p.name, "port": p.port, "targetPort": p.target_port, "protocol": p.protocol}
                     for p in obj.ports
                 ],
-                "selector": get_devcontainer_labels(obj.app),
+                "selector": get_dev_sandbox_labels(obj.app),
             },
             "apiVersion": "v1",
             "kind": "Service",
@@ -52,8 +52,8 @@ class DevContainerServiceSerializer(AppEntitySerializer["DevContainerService"]):
         return body
 
 
-class DevContainerServiceDeserializer(AppEntityDeserializer["DevContainerService"]):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevContainerService":
+class DevSandboxServiceDeserializer(AppEntityDeserializer["DevSandboxService"]):
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandboxService":
         return self.entity_type(
             app=app,
             name=kube_data.metadata.name,

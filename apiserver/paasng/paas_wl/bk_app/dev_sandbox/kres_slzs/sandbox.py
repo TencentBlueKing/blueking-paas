@@ -23,21 +23,21 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.devcontainer.conf import DEVCONTAINER_SVC_PORT_PAIRS
-from paas_wl.bk_app.devcontainer.entities import Resources, Runtime, Status
+from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_SVC_PORT_PAIRS
+from paas_wl.bk_app.dev_sandbox.entities import Resources, Runtime, Status
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.devcontainer.kres_entities import DevContainer
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
 
 
-_CONTAINER_NAME = "devcontainer"
+_CONTAINER_NAME = "dev-sandbox"
 
 
-class DevContainerSerializer(AppEntitySerializer["DevContainer"]):
-    def serialize(self, obj: "DevContainer", original_obj: Optional[ResourceInstance] = None, **kwargs):
-        labels = get_devcontainer_labels(obj.app)
+class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
+    def serialize(self, obj: "DevSandbox", original_obj: Optional[ResourceInstance] = None, **kwargs):
+        labels = get_dev_sandbox_labels(obj.app)
         deployment_body = {
             "apiVersion": self.get_apiversion(),
             "kind": "Deployment",
@@ -54,13 +54,13 @@ class DevContainerSerializer(AppEntitySerializer["DevContainer"]):
         }
         return deployment_body
 
-    def _construct_pod_spec(self, obj: "DevContainer") -> Dict:
+    def _construct_pod_spec(self, obj: "DevSandbox") -> Dict:
         main_container = {
             "name": _CONTAINER_NAME,
             "image": obj.runtime.image,
             "env": [{"name": str(key), "value": str(value)} for key, value in obj.runtime.envs.items()],
             "imagePullPolicy": obj.runtime.image_pull_policy,
-            "ports": [{"containerPort": port_pair.target_port} for port_pair in DEVCONTAINER_SVC_PORT_PAIRS],
+            "ports": [{"containerPort": port_pair.target_port} for port_pair in DEV_SANDBOX_SVC_PORT_PAIRS],
         }
 
         if obj.resources:
@@ -69,8 +69,8 @@ class DevContainerSerializer(AppEntitySerializer["DevContainer"]):
         return {"containers": [main_container]}
 
 
-class DevContainerDeserializer(AppEntityDeserializer["DevContainer"]):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevContainer":
+class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandbox":
         main_container = self._get_main_container(kube_data)
         runtime = cattr.structure(
             {
@@ -94,9 +94,9 @@ class DevContainerDeserializer(AppEntityDeserializer["DevContainer"]):
             if c.name == _CONTAINER_NAME:
                 return c
 
-        raise RuntimeError("No main container found in resource")
+        raise RuntimeError(f"No {_CONTAINER_NAME} container found in resource")
 
 
-def get_devcontainer_labels(app: WlApp) -> Dict[str, str]:
-    """get deployment labels for devcontainer by WlApp"""
+def get_dev_sandbox_labels(app: WlApp) -> Dict[str, str]:
+    """get deployment labels for dev_sandbox by WlApp"""
     return {"env": "dev", "category": "bkapp", "app": app.scheduler_safe_name}

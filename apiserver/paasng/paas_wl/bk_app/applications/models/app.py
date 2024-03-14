@@ -78,7 +78,7 @@ class App(UuidAuditedModel):
         return self.config_set.latest()
 
     @property
-    def run_dev_mode(self) -> bool:
+    def use_dev_sandbox(self) -> bool:
         if self.name.endswith("-dev"):
             return True
         return False

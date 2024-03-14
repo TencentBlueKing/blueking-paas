@@ -19,20 +19,20 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.devcontainer.kres_entities import DevContainer, DevContainerIngress, DevContainerService
-from paas_wl.bk_app.devcontainer.kres_entities.service import get_service_name
-from paas_wl.bk_app.devcontainer.kres_slzs import (
-    DevContainerIngressSerializer,
-    DevContainerSerializer,
-    DevContainerServiceSerializer,
+from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
+from paas_wl.bk_app.dev_sandbox.kres_entities.service import get_service_name
+from paas_wl.bk_app.dev_sandbox.kres_slzs import (
+    DevSandboxIngressSerializer,
+    DevSandboxSerializer,
+    DevSandboxServiceSerializer,
 )
-from paas_wl.bk_app.devcontainer.kres_slzs.container import get_devcontainer_labels
+from paas_wl.bk_app.dev_sandbox.kres_slzs.sandbox import get_dev_sandbox_labels
 from paas_wl.infras.resources.kube_res.base import GVKConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestDevContainerSLZ:
+class TestDevSandboxSLZ:
     @pytest.fixture()
     def gvk_config(self):
         return GVKConfig(
@@ -42,17 +42,17 @@ class TestDevContainerSLZ:
             available_apiversions=["apps/v1"],
         )
 
-    def test_serialize(self, gvk_config, devcontainer_entity):
-        slz = DevContainerSerializer(DevContainer, gvk_config)
-        manifest = slz.serialize(devcontainer_entity)
+    def test_serialize(self, gvk_config, dev_sandbox_entity):
+        slz = DevSandboxSerializer(DevSandbox, gvk_config)
+        manifest = slz.serialize(dev_sandbox_entity)
 
-        labels = get_devcontainer_labels(devcontainer_entity.app)
+        labels = get_dev_sandbox_labels(dev_sandbox_entity.app)
         assert manifest == {
             "apiVersion": "apps/v1",
             "kind": "Deployment",
             "metadata": {
-                "labels": get_devcontainer_labels(devcontainer_entity.app),
-                "name": devcontainer_entity.name,
+                "labels": labels,
+                "name": dev_sandbox_entity.name,
             },
             "spec": {
                 "replicas": 1,
@@ -63,12 +63,12 @@ class TestDevContainerSLZ:
                     "spec": {
                         "containers": [
                             {
-                                "name": "devcontainer",
-                                "image": devcontainer_entity.runtime.image,
-                                "imagePullPolicy": devcontainer_entity.runtime.image_pull_policy,
+                                "name": "dev-sandbox",
+                                "image": dev_sandbox_entity.runtime.image,
+                                "imagePullPolicy": dev_sandbox_entity.runtime.image_pull_policy,
                                 "env": [{"name": "FOO", "value": "test"}],
                                 "ports": [
-                                    {"containerPort": settings.DEVSERVER_PORT},
+                                    {"containerPort": settings.DEV_SANDBOX_DEVSERVER_PORT},
                                     {"containerPort": settings.CONTAINER_PORT},
                                 ],
                                 "resources": {
@@ -83,7 +83,7 @@ class TestDevContainerSLZ:
         }
 
 
-class TestDevContainerServiceSLZ:
+class TestDevSandboxServiceSLZ:
     @pytest.fixture()
     def gvk_config(self):
         return GVKConfig(
@@ -93,27 +93,32 @@ class TestDevContainerServiceSLZ:
             available_apiversions=["v1"],
         )
 
-    def test_serialize(self, gvk_config, devcontainer_service_entity):
-        slz = DevContainerServiceSerializer(DevContainerService, gvk_config)
-        manifest = slz.serialize(devcontainer_service_entity)
+    def test_serialize(self, gvk_config, dev_sandbox_service_entity):
+        slz = DevSandboxServiceSerializer(DevSandboxService, gvk_config)
+        manifest = slz.serialize(dev_sandbox_service_entity)
 
         assert manifest == {
             "apiVersion": "v1",
             "kind": "Service",
             "metadata": {
-                "name": get_service_name(devcontainer_service_entity.app),
+                "name": get_service_name(dev_sandbox_service_entity.app),
             },
             "spec": {
-                "selector": get_devcontainer_labels(devcontainer_service_entity.app),
+                "selector": get_dev_sandbox_labels(dev_sandbox_service_entity.app),
                 "ports": [
-                    {"name": "devserver", "port": 8000, "targetPort": settings.DEVSERVER_PORT, "protocol": "TCP"},
+                    {
+                        "name": "devserver",
+                        "port": 8000,
+                        "targetPort": settings.DEV_SANDBOX_DEVSERVER_PORT,
+                        "protocol": "TCP",
+                    },
                     {"name": "app", "port": 80, "targetPort": settings.CONTAINER_PORT, "protocol": "TCP"},
                 ],
             },
         }
 
 
-class TestDevContainerIngressSerializer:
+class TestDevSandboxIngressSerializer:
     @pytest.fixture()
     def gvk_config(self):
         return GVKConfig(
@@ -123,14 +128,14 @@ class TestDevContainerIngressSerializer:
             available_apiversions=["networking.k8s.io/v1"],
         )
 
-    def test_serialize(self, gvk_config, devcontainer_ingress_entity, bk_app, module_name, default_cluster):
-        slz = DevContainerIngressSerializer(DevContainerIngress, gvk_config)
-        manifest = slz.serialize(devcontainer_ingress_entity)
+    def test_serialize(self, gvk_config, dev_sandbox_ingress_entity, bk_app, module_name, default_dev_sandbox_cluster):
+        slz = DevSandboxIngressSerializer(DevSandboxIngress, gvk_config)
+        manifest = slz.serialize(dev_sandbox_ingress_entity)
 
-        service_name = get_service_name(devcontainer_ingress_entity.app)
+        service_name = get_service_name(dev_sandbox_ingress_entity.app)
         assert manifest["apiVersion"] == "networking.k8s.io/v1"
         assert manifest["metadata"] == {
-            "name": devcontainer_ingress_entity.name,
+            "name": dev_sandbox_ingress_entity.name,
             "annotations": {
                 "bkbcs.tencent.com/skip-filter-clb": "true",
                 "nginx.ingress.kubernetes.io/ssl-redirect": "false",
@@ -139,11 +144,11 @@ class TestDevContainerIngressSerializer:
             },
         }
         assert manifest["spec"]["rules"][0] == {
-            "host": f"dev-dot-{module_name}-dot-{bk_app.code}.{default_cluster.ingress_config.default_root_domain.name}",
+            "host": f"dev-dot-{module_name}-dot-{bk_app.code}.{default_dev_sandbox_cluster.ingress_config.default_root_domain.name}",
             "http": {
                 "paths": [
                     {
-                        "path": "/(devcontainer)/(.*)()",
+                        "path": "/(devserver)/(.*)()",
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {

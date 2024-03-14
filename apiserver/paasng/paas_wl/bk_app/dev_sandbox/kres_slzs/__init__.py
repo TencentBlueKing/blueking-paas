@@ -16,13 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.basic import make_app_pattern, re_path
-
-from .views import DevContainerViewSet
-
-urlpatterns = [
-    re_path(
-        make_app_pattern(r"/devcontainers/$", include_envs=False),
-        DevContainerViewSet.as_view({"post": "deploy", "delete": "delete", "get": "get_container_detail"}),
-    ),
-]
+from .ingress import DevSandboxIngressDeserializer, DevSandboxIngressSerializer  # noqa: F401
+from .sandbox import DevSandboxDeserializer, DevSandboxSerializer  # noqa: F401
+from .service import DevSandboxServiceDeserializer, DevSandboxServiceSerializer  # noqa: F401

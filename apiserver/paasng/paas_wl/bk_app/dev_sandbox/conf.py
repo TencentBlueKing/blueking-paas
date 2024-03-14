@@ -22,32 +22,32 @@ from django.conf import settings
 
 from .entities import IngressPathBackend, ServicePortPair
 
-INGRESS_SERVICE_CONF = [
-    # devcontainer 中 devserver 的路径与端口映射
+_ingress_service_conf = [
+    # dev sandbox 中 devserver 的路径与端口映射
     {
-        "path_prefix": "devcontainer/",
+        "path_prefix": "devserver/",
         "service_port_name": "devserver",
         "port": 8000,
-        "target_port": settings.DEVSERVER_PORT,
+        "target_port": settings.DEV_SANDBOX_DEVSERVER_PORT,
     },
-    # devcontainer 中 saas 应用的路径与端口映射
+    # dev sandbox 中 saas 应用的路径与端口映射
     {"path_prefix": "/", "service_port_name": "app", "port": 80, "target_port": settings.CONTAINER_PORT},
 ]
 
 
-DEVCONTAINER_SVC_PORT_PAIRS: List[ServicePortPair] = [
+DEV_SANDBOX_SVC_PORT_PAIRS: List[ServicePortPair] = [
     ServicePortPair(name=conf["service_port_name"], port=conf["port"], target_port=conf["target_port"])
-    for conf in INGRESS_SERVICE_CONF
+    for conf in _ingress_service_conf
 ]
 
 
 def get_ingress_path_backends(service_name: str) -> List[IngressPathBackend]:
-    """get ingress path backends from INGRESS_SERVICE_CONF with service_name"""
+    """get ingress path backends from _ingress_service_conf with service_name"""
     return [
         IngressPathBackend(
             path_prefix=conf["path_prefix"],
             service_name=service_name,
             service_port_name=conf["service_port_name"],
         )
-        for conf in INGRESS_SERVICE_CONF
+        for conf in _ingress_service_conf
     ]

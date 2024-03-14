@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django.conf import settings
 
-from paasng.accessories.devcontainer.config_var import generate_envs
+from paasng.accessories.dev_sandbox.config_var import generate_envs
 from paasng.platform.engine.configurations.building import SlugbuilderInfo
 from paasng.platform.engine.constants import AppInfoBuiltinEnv
 

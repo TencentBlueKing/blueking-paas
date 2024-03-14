@@ -37,7 +37,7 @@ class Runtime:
 
     envs: Dict[str, str]
     image: str
-    image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
+    image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.ALWAYS)
 
 
 @dataclass
@@ -112,7 +112,7 @@ class IngressDomain:
 
 
 @dataclass
-class ContainerDetail:
+class DevSandboxDetail:
     url: str
     envs: Dict[str, str]
     status: str

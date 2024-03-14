@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.devcontainer.controller import _DevWlAppCreator
-from paas_wl.bk_app.devcontainer.entities import Resources, ResourceSpec, Runtime
-from paas_wl.bk_app.devcontainer.kres_entities import DevContainer, DevContainerIngress, DevContainerService
+from paas_wl.bk_app.dev_sandbox.controller import _DevWlAppCreator
+from paas_wl.bk_app.dev_sandbox.entities import Resources, ResourceSpec, Runtime
+from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
 from paas_wl.infras.cluster.models import Cluster
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
@@ -31,7 +31,7 @@ def _set_default_cluster(settings):
 
 
 @pytest.fixture()
-def default_cluster():
+def default_dev_sandbox_cluster():
     return Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
 
 
@@ -52,8 +52,8 @@ def dev_wl_app(bk_app, module_name):
 
 
 @pytest.fixture()
-def devcontainer_entity(dev_wl_app, dev_runtime):
-    return DevContainer.create(
+def dev_sandbox_entity(dev_wl_app, dev_runtime):
+    return DevSandbox.create(
         dev_wl_app,
         dev_runtime,
         resources=Resources(
@@ -64,10 +64,10 @@ def devcontainer_entity(dev_wl_app, dev_runtime):
 
 
 @pytest.fixture()
-def devcontainer_service_entity(dev_wl_app):
-    return DevContainerService.create(dev_wl_app)
+def dev_sandbox_service_entity(dev_wl_app):
+    return DevSandboxService.create(dev_wl_app)
 
 
 @pytest.fixture()
-def devcontainer_ingress_entity(bk_app, dev_wl_app, module_name):
-    return DevContainerIngress.create(dev_wl_app, bk_app.code)
+def dev_sandbox_ingress_entity(bk_app, dev_wl_app, module_name):
+    return DevSandboxIngress.create(dev_wl_app, bk_app.code)

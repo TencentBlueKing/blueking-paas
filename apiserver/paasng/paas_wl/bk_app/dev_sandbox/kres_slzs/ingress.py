@@ -23,7 +23,7 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.devcontainer.entities import IngressDomain, IngressPathBackend
+from paas_wl.bk_app.dev_sandbox.entities import IngressDomain, IngressPathBackend
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.networking.ingress.kres_entities.ingress import (
     ANNOT_CONFIGURATION_SNIPPET,
@@ -34,10 +34,10 @@ from paas_wl.workloads.networking.ingress.kres_entities.ingress import (
 from paas_wl.workloads.networking.ingress.kres_entities.utils import NginxRegexRewrittenProvider
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.devcontainer.kres_entities import DevContainerIngress
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandboxIngress
 
 
-class DevContainerIngressSerializer(AppEntitySerializer["DevContainerIngress"]):
+class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
     """Serializer for DevContainerIngress in ApiVersion networking.k8s.io/v1, which is available in k8s 1.19+
 
     IMPORTANT: This class is not compatible with ingress-nginx < 1.0
@@ -50,7 +50,7 @@ class DevContainerIngressSerializer(AppEntitySerializer["DevContainerIngress"]):
     def get_api_version_from_gvk(gvk_config):
         return "networking.k8s.io/v1"
 
-    def serialize(self, obj: "DevContainerIngress", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+    def serialize(self, obj: "DevSandboxIngress", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         """serialize obj into Ingress(networking.k8s.io/v1)"""
         nginx_adaptor = NginxRegexRewrittenProvider()
         annotations = {
@@ -108,8 +108,8 @@ class DevContainerIngressSerializer(AppEntitySerializer["DevContainerIngress"]):
         return body
 
 
-class DevContainerIngressDeserializer(AppEntityDeserializer["DevContainerIngress"]):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevContainerIngress":
+class DevSandboxIngressDeserializer(AppEntityDeserializer["DevSandboxIngress"]):
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandboxIngress":
         spec = kube_data.spec
         rules = spec.get("rules") or []
         tls = spec.get("tls") or []

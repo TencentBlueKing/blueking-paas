@@ -16,6 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .container import DevContainer  # noqa: F401
-from .ingress import DevContainerIngress  # noqa: F401
-from .service import DevContainerService  # noqa: F401
+from .ingress import DevSandboxIngress  # noqa: F401
+from .sandbox import DevSandbox  # noqa: F401
+from .service import DevSandboxService  # noqa: F401

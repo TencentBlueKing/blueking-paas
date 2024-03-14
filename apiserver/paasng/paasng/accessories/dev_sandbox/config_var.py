@@ -77,5 +77,5 @@ def _get_devserver_env() -> Dict[str, str]:
     """获取 devserver 的运行环境变量"""
     return {
         CONTAINER_TOKEN_ENV: get_random_string(length=8),
-        "DEV_SERVER_ADDR": f":{settings.DEVSERVER_PORT}",
+        "DEV_SERVER_ADDR": f":{settings.DEV_SANDBOX_DEVSERVER_PORT}",
     }

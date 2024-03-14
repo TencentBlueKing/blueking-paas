@@ -16,11 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from rest_framework import serializers
+
+from paas_wl.bk_app.dev_sandbox.entities import HealthPhase
 
 
-class DevContainerAlreadyExists(Exception):
-    """devcontainer already exists exception"""
+class DevSandboxDetailSLZ(serializers.Serializer):
+    """Serializer for dev sandbox detail"""
 
-
-class DevContainerResourceNotFound(Exception):
-    """resource of devcontainer not found exception"""
+    url = serializers.CharField(help_text="dev sandbox 服务地址")
+    token = serializers.CharField(help_text="访问 dev sandbox 中 devserver 服务的 token")
+    status = serializers.ChoiceField(choices=HealthPhase.get_django_choices(), help_text="dev sandbox 的运行状态")

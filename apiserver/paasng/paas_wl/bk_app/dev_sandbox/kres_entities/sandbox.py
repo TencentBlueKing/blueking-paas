@@ -20,15 +20,15 @@ from dataclasses import dataclass
 from typing import Optional
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.devcontainer.entities import Resources, Runtime, Status
-from paas_wl.bk_app.devcontainer.kres_slzs import DevContainerDeserializer, DevContainerSerializer
+from paas_wl.bk_app.dev_sandbox.entities import Resources, Runtime, Status
+from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxDeserializer, DevSandboxSerializer
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 
 
 @dataclass
-class DevContainer(AppEntity):
-    """DevContainer entity"""
+class DevSandbox(AppEntity):
+    """DevSandbox entity"""
 
     runtime: Runtime
     resources: Optional[Resources] = None
@@ -37,13 +37,13 @@ class DevContainer(AppEntity):
 
     class Meta:
         kres_class = kres.KDeployment
-        serializer = DevContainerSerializer
-        deserializer = DevContainerDeserializer
+        serializer = DevSandboxSerializer
+        deserializer = DevSandboxDeserializer
 
     @classmethod
-    def create(cls, dev_wl_app: WlApp, runtime: Runtime, resources: Optional[Resources] = None) -> "DevContainer":
-        return cls(app=dev_wl_app, name=get_container_name(dev_wl_app), runtime=runtime, resources=resources)
+    def create(cls, dev_wl_app: WlApp, runtime: Runtime, resources: Optional[Resources] = None) -> "DevSandbox":
+        return cls(app=dev_wl_app, name=get_dev_sandbox_name(dev_wl_app), runtime=runtime, resources=resources)
 
 
-def get_container_name(dev_wl_app: WlApp) -> str:
+def get_dev_sandbox_name(dev_wl_app: WlApp) -> str:
     return dev_wl_app.scheduler_safe_name

@@ -20,6 +20,7 @@ package apiresources
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/levigross/grequests"
 	"github.com/pkg/errors"
@@ -87,8 +88,8 @@ func (r apigwRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch s
 	return r.handlePaaSApiRequest(grequests.Post, url, opts)
 }
 
-// GetDefaultAppDeployResult 获取普通应用部署结果
-func (r apigwRequester) GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
+// GetAppDeployResult 获取应用部署结果
+func (r apigwRequester) GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/deployments/%s/result/",
 		config.G.PaaSApigwUrl, appCode, appModule, deployID,
@@ -96,7 +97,7 @@ func (r apigwRequester) GetDefaultAppDeployResult(appCode, appModule, deployID s
 	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
 }
 
-func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+func (r apigwRequester) ListAppDeployHistory(appCode, appModule string) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/deployments/lists/",
 		config.G.PaaSApigwUrl, appCode, appModule,
@@ -107,14 +108,55 @@ func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (
 
 // DeployCNativeApp 部署云原生应用
 func (r apigwRequester) DeployCNativeApp(
-	appCode, appModule, deployEnv string, manifest map[string]any,
+	appCode, appModule, deployEnv string, manifest map[string]any, tag string, branch string,
 ) (map[string]any, error) {
+	if manifest != nil {
+		// 导入 manifest
+		_, err := r.ImportManifest(appCode, appModule, manifest)
+		if err != nil {
+			return nil, err
+		}
+		if tag == "" {
+			tag = "latest"
+		}
+		// 从 manifest 中提取 tag 信息
+		if spec, ok := manifest["spec"].(map[string]any); ok {
+			if build, ok := spec["build"].(map[string]any); ok {
+				if image, ok := build["image"].(string); ok {
+					// 从 image 中提取 tag 信息
+					if pos := strings.LastIndex(image, ":"); pos != -1 {
+						tag = image[pos+1:]
+					}
+				}
+			}
+		}
+	}
+	var data map[string]any
+	if manifest != nil || tag != "" {
+		data = map[string]any{"version_type": "image", "version_name": tag}
+	} else if branch != "" {
+		data = map[string]any{"version_type": "branch", "version_name": branch}
+	} else {
+		return nil, errors.New("branch or manifest or tag is required")
+	}
+
 	url := fmt.Sprintf(
-		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/deployments/",
+		"%s/bkapps/applications/%s/modules/%s/envs/%s/deployments/",
 		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
 	)
-	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]any{"manifest": manifest}}
+	opts := grequests.RequestOptions{Headers: r.headers(), JSON: data}
 	return r.handlePaaSApiRequest(grequests.Post, url, opts)
+}
+
+func (r apigwRequester) ImportManifest(
+	appCode, appModule string, manifest map[string]any,
+) ([]map[string]any, error) {
+	url := fmt.Sprintf(
+		"%s/bkapps/applications/%s/modules/%s/bkapp_model/manifests/current/",
+		config.G.PaaSApigwUrl, appCode, appModule,
+	)
+	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]any{"manifest": manifest}}
+	return r.handleListPaaSApiRequest(grequests.Put, url, opts)
 }
 
 // GetCNativeAppDeployResult 获取云原生应用部署结果
@@ -155,6 +197,30 @@ func (r apigwRequester) handlePaaSApiRequest(
 	}
 
 	respData := map[string]any{}
+	if err = resp.JSON(&respData); err != nil {
+		return nil, ApiRespDecodeErr
+	}
+	return respData, nil
+}
+
+// 处理 PaaS API 调用请求(返回值为 list )
+func (r apigwRequester) handleListPaaSApiRequest(
+	reqFunc gReqFunc, url string, opts grequests.RequestOptions,
+) ([]map[string]any, error) {
+	console.Debug("Request Url: %s, Headers: %v, Params: %v, Body: %v", url, opts.Headers, opts.Params, opts.JSON)
+
+	resp, err := reqFunc(url, &opts)
+	if err != nil {
+		return nil, PaaSApiErr
+	}
+
+	console.Debug("Response %d -> %s", resp.StatusCode, resp.String())
+
+	if !resp.Ok {
+		return nil, errors.Errorf("%d -> %s", resp.StatusCode, resp.String())
+	}
+
+	var respData []map[string]any
 	if err = resp.JSON(&respData); err != nil {
 		return nil, ApiRespDecodeErr
 	}

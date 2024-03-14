@@ -98,6 +98,7 @@
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
           class="variable-table-cls mt20"
+          @sort-change="handleSortChange"
         >
           <!-- 新建环境变量 -->
           <template slot="append" v-if="!isPageEdit">
@@ -113,6 +114,7 @@
             class-name="table-colum-module-cls"
             :sortable="!isPageEdit"
             :show-overflow-tooltip="true"
+            prop="key"
           >
             <template slot-scope="{ row, $index }">
               <div
@@ -1349,6 +1351,13 @@ export default {
         return;
       }
       this.envVarList = this.envLocalVarList.filter(v => v.environment_name === value);
+    },
+
+    handleSortChange({ order, prop }) {
+      if (prop === 'key') {
+        this.curSortKey = order === 'ascending' ? 'created' : '-created';
+        this.getEnvVarList();
+      }
     },
   },
 };

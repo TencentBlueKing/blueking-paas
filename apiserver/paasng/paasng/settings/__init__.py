@@ -200,6 +200,9 @@ MIDDLEWARE = [
     # API Gateway related
     "apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware",  # JWT 认证
     "apigw_manager.apigw.authentication.ApiGatewayJWTAppMiddleware",  # JWT 透传的应用信息
+    # TODO 在 JWT 透传应用信息的基础上, header 带 bk_username. 非推荐做法, 后续考虑移除
+    # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
+    "paasng.infras.accounts.middlewares.WrapUsernameAsUserMiddleware",
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
     "paasng.infras.accounts.middlewares.AuthenticatedAppAsUserMiddleware",

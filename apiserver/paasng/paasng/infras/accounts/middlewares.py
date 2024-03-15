@@ -16,12 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 from typing import Callable, Optional
 
 from bkpaas_auth.models import DatabaseUser
 from blue_krill.auth.utils import validate_jwt_token
 from django.conf import settings
+from django.contrib import auth
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
@@ -227,6 +229,40 @@ class RequestIDProvider:
 
         local.release()
         return response
+
+
+class WrapUsernameAsUserMiddleware:
+    """用于免用户认证的 apigw 接口, 将头部获取的 bk_username 包装成 request 的 user 对象.
+
+    Note: 配置在 apigw_manager.apigw.authentication.ApiGatewayJWTAppMiddleware 后面
+    """
+
+    BKPAASAPI_AUTHORIZATION_META_KEY = "HTTP_X_BKPAASAPI_AUTHORIZATION"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def get_user(self, request, api_name=None, bk_username=None, verified=False, **credentials):
+        return auth.authenticate(request, api_name=api_name, bk_username=bk_username, verified=verified, **credentials)
+
+    def __call__(self, request):
+        jwt_info = getattr(request, "jwt", None)
+        if not jwt_info:
+            return self.get_response(request)
+
+        req_app = getattr(request, "app", None)
+        if not req_app:
+            return self.get_response(request)
+
+        if user_data := request.META.get(self.BKPAASAPI_AUTHORIZATION_META_KEY):
+            # TODO 增加 api_name 和 app_code 的白名单校验?
+            request.user = self.get_user(
+                request,
+                api_name=jwt_info.api_name,
+                bk_username=json.loads(user_data).get("bk_username"),
+                verified=req_app.verified,
+            )
+        return self.get_response(request)
 
 
 def set_database_user(request: HttpRequest, user: User, set_non_cookies: bool = True):

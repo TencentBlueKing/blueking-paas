@@ -177,12 +177,13 @@
     <bk-dialog
       v-model="offlineAppDialog.visiable"
       width="450"
-      :title="`${$t('是否')}${$t('下架')}${curModuleId}模块`"
+      :title="disableModuleTitle"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
       :loading="offlineAppDialog.isLoading"
       :ok-text="$t('下架')"
+      :cancel-text="$t('取消')"
       @confirm="confirmOfflineApp"
       @cancel="cancelOfflineApp"
     >
@@ -283,6 +284,9 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    disableModuleTitle() {
+      return this.$t('是否下架 {n} 模块', { n: this.curModuleId });
     },
   },
 

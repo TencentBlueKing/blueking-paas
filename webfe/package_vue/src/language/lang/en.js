@@ -2564,4 +2564,5 @@ export default {
   文件: 'File',
   '请先在左侧添加文件后，再编辑文件内容': 'Please add a file on the left before editing its content',
   '暂不支持持久存储, 如有需要请联系管理员开启': 'Persistent storage is not supported at the moment, if needed, please contact the administrator to enable it',
+  '是否下架 {n} 模块': 'Archive the {n} module',
 };

@@ -47,7 +47,7 @@ type BaseDeployer struct{}
 
 // GetResult 获取部署结果
 func (b BaseDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, error) {
-	// 普通应用需要根据 deployment_id 查询，因此先从历史记录获取最新记录的 deployment_id
+	// 需要根据 deployment_id 查询，因此先从历史记录获取最新记录的 deployment_id
 	history, err := b.GetHistory(opts)
 	if err != nil {
 		return nil, err

@@ -448,53 +448,6 @@ const actions = {
   },
 
   /**
-     * 提交发送云原生模块信息
-     *
-     * @param {Object} params 请求参数：appCode, moduleId, env
-     */
-  sumbitCloudApp({}, { appCode, moduleId, env, params }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/`;
-    return http.post(url, params, config);
-  },
-
-  /**
-     * 获取二次确认信息
-     *
-     * @param {Object} params 请求参数：appCode, moduleId, env
-     */
-  getCloudAppInfo({}, { appCode, moduleId, env, params }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deploy_preps/`;
-    return http.post(url, params, config);
-  },
-
-  /**
-     * 查看应用模型资源当前状态
-     *
-     * @param {Object} params 请求参数：appCode, moduleId, env
-     */
-  getCloudAppStatus({}, { appCode, moduleId, env }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/status/`;
-    return http.get(url, config);
-  },
-
-  /**
-     * 查看应用模型状态YAML
-     *
-     * @param {Object} params 请求参数：appCode, moduleId, env
-     */
-  getCloudAppDeployYaml({}, { appCode, moduleId, env, deployId }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/${deployId}/`;
-    return http.get(url, config);
-  },
-  /**
-     * 获取应用模型部署记录
-     * @param {Object} params 请求参数：appCode, moduleId, env
-     */
-  getCloudAppDeployHistory({}, { appCode, moduleId, env, pageParams }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/?${json2Query(pageParams)}`;
-    return http.get(url, config);
-  },
-  /**
      * 获取云原生应用ext
      *
      * @param {Object} params 请求参数：appCode, moduleId
@@ -511,16 +464,6 @@ const actions = {
   getAutoScalFlagWithEnv({}, { appCode, moduleId, env }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/feature_flags/${appCode}/modules/${moduleId}/env/${env}/`;
     return http.get(url, config);
-  },
-
-  /**
-   * 保存信息
-   *
-   * @param {Object} params 请求参数：appCode, moduleId, env
-   */
-  saveCloudAppInfo({}, { appCode, moduleId, params }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
-    return http.put(url, params, config);
   },
 
   /**

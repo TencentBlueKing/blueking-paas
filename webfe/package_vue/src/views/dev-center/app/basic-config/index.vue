@@ -67,9 +67,6 @@ export default {
       immediate: true,
     },
   },
-  created() {
-    this.getPersistentStorageFeatureToggle();
-  },
   methods: {
     handleTabChange(name) {
       this.active = name;
@@ -94,6 +91,7 @@ export default {
     },
 
     async getPersistentStorageFeatureToggle() {
+      this.isPersistentStorage = false;
       if (this.isRequest) {
         return;
       }

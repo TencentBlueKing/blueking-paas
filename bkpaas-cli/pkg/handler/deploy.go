@@ -35,16 +35,95 @@ func NewAppDeployer(appCode string) (Deployer, error) {
 	appType := helper.FetchAppType(appCode)
 	switch appType {
 	case model.AppTypeDefault:
-		return DefaultAppDeployer{}, nil
+		return DefaultAppDeployer{BaseDeployer{}}, nil
 	case model.AppTypeCNative:
-		return CNativeAppDeployer{}, nil
+		return CNativeAppDeployer{BaseDeployer{}}, nil
 	default:
 		return nil, errors.Errorf("unsupported app type: '%s'", appType)
 	}
 }
 
+type BaseDeployer struct{}
+
+// GetResult 获取部署结果
+func (b BaseDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, error) {
+	// 普通应用需要根据 deployment_id 查询，因此先从历史记录获取最新记录的 deployment_id
+	history, err := b.GetHistory(opts)
+	if err != nil {
+		return nil, err
+	}
+	latestRecord := history.Latest()
+	if latestRecord == nil {
+		return nil, errors.New("no deploy result found")
+	}
+	// 调用 api 获取部署结果
+	respData, err := apiresources.DefaultRequester.GetAppDeployResult(
+		opts.AppCode, opts.Module, latestRecord.ID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	errDetail, _ := respData["error_detail"].(string)
+	errTips := []model.ErrTip{}
+	for _, tip := range mapx.GetList(respData, "error_tips.helpers") {
+		t, _ := tip.(map[string]any)
+		errTips = append(errTips, model.ErrTip{Text: t["text"].(string), Link: t["link"].(string)})
+	}
+	return model.DefaultAppDeployResult{
+		AppCode:   opts.AppCode,
+		Module:    opts.Module,
+		DeployEnv: opts.DeployEnv,
+		DeployID:  latestRecord.ID,
+		Status:    mapx.GetStr(respData, "status"),
+		Logs:      mapx.GetStr(respData, "logs"),
+		ErrDetail: errDetail,
+		ErrTips:   errTips,
+	}, nil
+}
+
+// GetHistory 获取部署历史
+func (b BaseDeployer) GetHistory(opts model.DeployOptions) (model.DeployHistory, error) {
+	respData, err := apiresources.DefaultRequester.ListAppDeployHistory(opts.AppCode, opts.Module)
+	if err != nil {
+		return nil, err
+	}
+	records := []model.AppDeployRecord{}
+	for _, deploy := range mapx.GetList(respData, "results") {
+		dp, _ := deploy.(map[string]any)
+
+		environment := mapx.GetStr(dp, "environment")
+		// 如果已指定部署环境，需要进行检查过滤不属于该环境的记录
+		if opts.DeployEnv != "" && environment != opts.DeployEnv {
+			continue
+		}
+		revision := mapx.GetStr(dp, "repo.revision")
+		startTime, _ := dp["start_time"].(string)
+		endTime, _ := dp["complete_time"].(string)
+
+		records = append(records, model.AppDeployRecord{
+			ID:       mapx.GetStr(dp, "id"),
+			Branch:   mapx.GetStr(dp, "repo.name"),
+			Version:  revision[:lo.Min([]int{ShortRevisionLength, len(revision)})],
+			Operator: mapx.GetStr(dp, "operator.username"),
+			CostTime: timex.CalcDuration(startTime, endTime),
+			Status:   mapx.GetStr(dp, "status"),
+			StartAt:  mapx.GetStr(dp, "created"),
+		})
+	}
+	return model.DefaultAppDeployHistory{
+		AppCode:   opts.AppCode,
+		Module:    opts.Module,
+		DeployEnv: opts.DeployEnv,
+		Total:     cast.ToInt(respData["count"]),
+		Records:   records,
+	}, nil
+}
+
 // DefaultAppDeployer 普通应用部署器
-type DefaultAppDeployer struct{}
+type DefaultAppDeployer struct {
+	BaseDeployer
+}
 
 // Deploy 执行部署操作
 func (d DefaultAppDeployer) Deploy(opts model.DeployOptions) error {
@@ -54,85 +133,12 @@ func (d DefaultAppDeployer) Deploy(opts model.DeployOptions) error {
 	return err
 }
 
-// GetResult 获取部署结果
-func (d DefaultAppDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, error) {
-	// 普通应用需要根据 deployment_id 查询，因此先从历史记录获取最新记录的 deployment_id
-	history, err := d.GetHistory(opts)
-	if err != nil {
-		return nil, err
-	}
-	latestRecord := history.Latest()
-	if latestRecord == nil {
-		return nil, errors.New("no deploy result found")
-	}
-	// 调用 api 获取部署结果
-	respData, err := apiresources.DefaultRequester.GetAppDeployResult(
-		opts.AppCode, opts.Module, latestRecord.ID,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	errDetail, _ := respData["error_detail"].(string)
-	errTips := []model.ErrTip{}
-	for _, tip := range mapx.GetList(respData, "error_tips.helpers") {
-		t, _ := tip.(map[string]any)
-		errTips = append(errTips, model.ErrTip{Text: t["text"].(string), Link: t["link"].(string)})
-	}
-	return model.DefaultAppDeployResult{
-		AppCode:   opts.AppCode,
-		Module:    opts.Module,
-		DeployEnv: opts.DeployEnv,
-		DeployID:  latestRecord.ID,
-		Status:    mapx.GetStr(respData, "status"),
-		Logs:      mapx.GetStr(respData, "logs"),
-		ErrDetail: errDetail,
-		ErrTips:   errTips,
-	}, nil
-}
-
-// GetHistory 获取部署历史
-func (d DefaultAppDeployer) GetHistory(opts model.DeployOptions) (model.DeployHistory, error) {
-	respData, err := apiresources.DefaultRequester.ListAppDeployHistory(opts.AppCode, opts.Module)
-	if err != nil {
-		return nil, err
-	}
-	records := []model.AppDeployRecord{}
-	for _, deploy := range mapx.GetList(respData, "results") {
-		dp, _ := deploy.(map[string]any)
-
-		environment := mapx.GetStr(dp, "environment")
-		// 如果已指定部署环境，需要进行检查过滤不属于该环境的记录
-		if opts.DeployEnv != "" && environment != opts.DeployEnv {
-			continue
-		}
-		revision := mapx.GetStr(dp, "repo.revision")
-		startTime, _ := dp["start_time"].(string)
-		endTime, _ := dp["complete_time"].(string)
-
-		records = append(records, model.AppDeployRecord{
-			ID:       mapx.GetStr(dp, "id"),
-			Branch:   mapx.GetStr(dp, "repo.name"),
-			Version:  revision[:lo.Min([]int{ShortRevisionLength, len(revision)})],
-			Operator: mapx.GetStr(dp, "operator.username"),
-			CostTime: timex.CalcDuration(startTime, endTime),
-			Status:   mapx.GetStr(dp, "status"),
-			StartAt:  mapx.GetStr(dp, "created"),
-		})
-	}
-	return model.DefaultAppDeployHistory{
-		AppCode:   opts.AppCode,
-		Module:    opts.Module,
-		DeployEnv: opts.DeployEnv,
-		Total:     cast.ToInt(respData["count"]),
-		Records:   records,
-	}, nil
-}
-
 var _ Deployer = DefaultAppDeployer{}
 
 // CNativeAppDeployer 云原生应用部署器
-type CNativeAppDeployer struct{}
+type CNativeAppDeployer struct {
+	BaseDeployer
+}
 
 // Deploy 执行部署操作
 func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) error {
@@ -140,81 +146,6 @@ func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) error {
 		opts.AppCode, opts.Module, opts.DeployEnv, opts.BkAppManifest, opts.Tag, opts.Branch,
 	)
 	return err
-}
-
-// GetResult 获取部署结果
-func (d CNativeAppDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, error) {
-	// 需要根据 deployment_id 查询，因此先从历史记录获取最新记录的 deployment_id
-	history, err := d.GetHistory(opts)
-	if err != nil {
-		return nil, err
-	}
-	latestRecord := history.Latest()
-	if latestRecord == nil {
-		return nil, errors.New("no deploy result found")
-	}
-	// 调用 api 获取部署结果
-	respData, err := apiresources.DefaultRequester.GetAppDeployResult(
-		opts.AppCode, opts.Module, latestRecord.ID,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	errDetail, _ := respData["error_detail"].(string)
-	errTips := []model.ErrTip{}
-	for _, tip := range mapx.GetList(respData, "error_tips.helpers") {
-		t, _ := tip.(map[string]any)
-		errTips = append(errTips, model.ErrTip{Text: t["text"].(string), Link: t["link"].(string)})
-	}
-	return model.DefaultAppDeployResult{
-		AppCode:   opts.AppCode,
-		Module:    opts.Module,
-		DeployEnv: opts.DeployEnv,
-		DeployID:  latestRecord.ID,
-		Status:    mapx.GetStr(respData, "status"),
-		Logs:      mapx.GetStr(respData, "logs"),
-		ErrDetail: errDetail,
-		ErrTips:   errTips,
-	}, nil
-}
-
-// GetHistory 获取部署历史
-func (d CNativeAppDeployer) GetHistory(opts model.DeployOptions) (model.DeployHistory, error) {
-	respData, err := apiresources.DefaultRequester.ListAppDeployHistory(opts.AppCode, opts.Module)
-	if err != nil {
-		return nil, err
-	}
-	records := []model.AppDeployRecord{}
-	for _, deploy := range mapx.GetList(respData, "results") {
-		dp, _ := deploy.(map[string]any)
-
-		environment := mapx.GetStr(dp, "environment")
-		// 如果已指定部署环境，需要进行检查过滤不属于该环境的记录
-		if opts.DeployEnv != "" && environment != opts.DeployEnv {
-			continue
-		}
-		revision := mapx.GetStr(dp, "repo.revision")
-		startTime, _ := dp["start_time"].(string)
-		endTime, _ := dp["complete_time"].(string)
-
-		records = append(records, model.AppDeployRecord{
-			ID:       mapx.GetStr(dp, "id"),
-			Branch:   mapx.GetStr(dp, "repo.name"),
-			Version:  revision[:lo.Min([]int{ShortRevisionLength, len(revision)})],
-			Operator: mapx.GetStr(dp, "operator.username"),
-			CostTime: timex.CalcDuration(startTime, endTime),
-			Status:   mapx.GetStr(dp, "status"),
-			StartAt:  mapx.GetStr(dp, "created"),
-		})
-	}
-	return model.DefaultAppDeployHistory{
-		AppCode:   opts.AppCode,
-		Module:    opts.Module,
-		DeployEnv: opts.DeployEnv,
-		Total:     cast.ToInt(respData["count"]),
-		Records:   records,
-	}, nil
 }
 
 var _ Deployer = CNativeAppDeployer{}

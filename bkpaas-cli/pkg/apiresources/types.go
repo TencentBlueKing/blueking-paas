@@ -55,8 +55,4 @@ type Requester interface {
 		tag string,
 		branch string,
 	) (map[string]any, error)
-	// GetCNativeAppDeployResult 获取云原生应用部署结果
-	GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error)
-	// ListCNativeAppDeployHistory 获取云原生应用部署历史（最近N次）
-	ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error)
 }

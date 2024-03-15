@@ -159,24 +159,6 @@ func (r apigwRequester) ImportManifest(
 	return r.handleListPaaSApiRequest(grequests.Put, url, opts)
 }
 
-// GetCNativeAppDeployResult 获取云原生应用部署结果
-func (r apigwRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error) {
-	url := fmt.Sprintf(
-		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/status/",
-		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
-	)
-	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
-}
-
-func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error) {
-	url := fmt.Sprintf(
-		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/deployments/",
-		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
-	)
-	opts := grequests.RequestOptions{Headers: r.headers(), Params: map[string]string{"limit": "5"}}
-	return r.handlePaaSApiRequest(grequests.Get, url, opts)
-}
-
 type gReqFunc func(string, *grequests.RequestOptions) (*grequests.Response, error)
 
 // 处理 PaaS API 调用请求

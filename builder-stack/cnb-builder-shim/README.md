@@ -62,8 +62,6 @@ tar -czvf /tmp/source.tgz -C examples/python-flask .
 ```bash
 # BUILDER_SHIM_IMAGE：构建工具镜像地址
 export BUILDER_SHIM_IMAGE='mirrors.tencent.com/bkpaas/bk-builder-heroku-bionic:latest'
-# REGISTRY_AUTH：在前面的“准备工作”中生成的凭证信息
-export REGISTRY_AUTH='{"mirros.tencent.com": "Basic ..."}'
 # OUTPUT_IMAGE：镜像推送的目标地址
 export OUTPUT_IMAGE='mirrors.tencent.com/your_namespace/example-flask:latest'
 # CNB_RUN_IMAGE：用于运行应用的基础镜像，需要可读权限
@@ -77,8 +75,9 @@ docker run --rm \
     -e REQUIRED_BUILDPACKS="tgz bk-buildpack-apt ... v2;tgz bk-buildpack-python ... v213" \
     -e OUTPUT_IMAGE=$OUTPUT_IMAGE \
     -e CNB_RUN_IMAGE=$CNB_RUN_IMAGE \
-    -e CNB_REGISTRY_AUTH="$REGISTRY_AUTH" \
     -e SOURCE_GET_URL="file:///tmp/source.tgz" \
+    -e USE_DOCKER_DAEMON=true \
+    --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     --mount type=bind,source=/tmp/source.tgz,target=/tmp/source.tgz \
     $BUILDER_SHIM_IMAGE 
 ```

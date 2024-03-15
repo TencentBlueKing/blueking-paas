@@ -274,6 +274,7 @@ export default {
       yamlLoading: false,
       curDeployItemIndex: '',
       isDialogShowSideslider: false,  // 部署的侧边栏
+      currentAllExpandedItems: [],
     };
   },
 
@@ -320,10 +321,6 @@ export default {
     // },
   },
 
-  created() {
-    // this.isExpand = this.isDeploy;
-  },
-
   beforeDestroy() {
     bus.$off('get-release-info');
   },
@@ -341,19 +338,16 @@ export default {
       this.getModuleReleaseInfo();
     },
     handleChangePanel(payload) {
-      this.deploymentInfoData.forEach((e) => {
-        if (e.module_name !== payload.module_name) {
-          e.isExpand = false;
-        }
-      });
+      if (payload.isExpand) { // 收起
+        this.currentAllExpandedItems = this.currentAllExpandedItems.filter(name => name !== payload.module_name);
+      } else {
+        this.currentAllExpandedItems.push(payload.module_name);
+      }
       payload.isExpand = !payload.isExpand;
       if (payload.isExpand) {
         this.handleRefresh();
       }
-      // this.$set(this, 'deploymentInfoData', res.data);
-      //   this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
       this.curDeploymentInfoItem = payload || {};
-      // this.isExpand = !this.isExpand;
     },
 
     // 部署
@@ -419,10 +413,14 @@ export default {
         });
         // this.deploymentInfoData = res.data;
         res.data = res.data.map((e) => {
-          if (e.module_name === this.curDeploymentInfoItem.module_name) {
-            e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+          if (this.currentAllExpandedItems.length) {
+            e.isExpand = this.currentAllExpandedItems.includes(e.module_name);
           } else {
-            e.isExpand = false;
+            if (e.module_name === this.curDeploymentInfoItem.module_name) {
+              e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+            } else {
+              e.isExpand = false;
+            }
           }
           return e;
         });
@@ -530,7 +528,6 @@ export default {
 
     // dialog里的slider关闭
     handleListRefresh() {
-      console.log('this.curDeploymentInfoItem.isExpand', this.curDeploymentInfoItem.isExpand);
       this.isDialogShowSideslider = false;
       this.handleRefresh();
     },

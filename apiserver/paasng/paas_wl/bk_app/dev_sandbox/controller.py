@@ -23,9 +23,13 @@ from django.conf import settings
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.bk_app.dev_sandbox.entities import DevSandboxDetail, HealthPhase, Resources, ResourceSpec, Runtime
-from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
-from paas_wl.bk_app.dev_sandbox.kres_entities.ingress import get_ingress_name
-from paas_wl.bk_app.dev_sandbox.kres_entities.sandbox import get_dev_sandbox_name
+from paas_wl.bk_app.dev_sandbox.kres_entities import (
+    DevSandbox,
+    DevSandboxIngress,
+    DevSandboxService,
+    get_dev_sandbox_name,
+    get_ingress_name,
+)
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.models import Application
@@ -126,7 +130,7 @@ class _DevWlAppCreator:
         dev_wl_app = WlApp(region=self.app.region, name=self._make_dev_wl_app_name(), type=self.app.type)
 
         # 因为 dev_wl_app 不是查询集结果, 所以需要覆盖 namespace 和 module_name, 以保证 AppEntityManager 模式能够正常工作
-        # TODO 考虑更规范的方式处理这两个 cached_property 属性
+        # TODO 考虑更规范的方式处理这两个 cached_property 属性. 如考虑使用 WlAppProtocol 满足 AppEntityManager 模式
         setattr(dev_wl_app, "namespace", f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev".replace("_", "0us0"))
         setattr(dev_wl_app, "module_name", self.module_name)
 

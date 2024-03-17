@@ -21,8 +21,7 @@ from kubernetes.client.apis import VersionApi
 
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists
-from paas_wl.bk_app.dev_sandbox.kres_entities.ingress import get_ingress_name, get_sub_domain_host
-from paas_wl.bk_app.dev_sandbox.kres_entities.service import get_service_name
+from paas_wl.bk_app.dev_sandbox.kres_entities import get_ingress_name, get_service_name, get_sub_domain_host
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 

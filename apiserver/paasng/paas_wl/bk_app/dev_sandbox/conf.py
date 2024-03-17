@@ -25,7 +25,7 @@ from .entities import IngressPathBackend, ServicePortPair
 _ingress_service_conf = [
     # dev sandbox 中 devserver 的路径与端口映射
     {
-        "path_prefix": "devserver/",
+        "path_prefix": "/devserver/",
         "service_port_name": "devserver",
         "port": 8000,
         "target_port": settings.DEV_SANDBOX_DEVSERVER_PORT,

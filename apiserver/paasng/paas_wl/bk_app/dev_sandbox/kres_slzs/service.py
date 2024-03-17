@@ -32,10 +32,7 @@ if TYPE_CHECKING:
 class DevSandboxServiceSerializer(AppEntitySerializer["DevSandboxService"]):
     def serialize(self, obj: "DevSandboxService", original_obj: Optional[ResourceInstance] = None, **kwargs):
         body: Dict[str, Any] = {
-            "metadata": {
-                # TODO 增加必要的 service labels
-                "name": obj.name,
-            },
+            "metadata": {"name": obj.name, "labels": {"env": "dev"}},
             "spec": {
                 "ports": [
                     {"name": p.name, "port": p.port, "targetPort": p.target_port, "protocol": p.protocol}

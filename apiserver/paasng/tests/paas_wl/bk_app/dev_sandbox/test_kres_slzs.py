@@ -19,14 +19,13 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
-from paas_wl.bk_app.dev_sandbox.kres_entities.service import get_service_name
+from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService, get_service_name
 from paas_wl.bk_app.dev_sandbox.kres_slzs import (
     DevSandboxIngressSerializer,
     DevSandboxSerializer,
     DevSandboxServiceSerializer,
+    get_dev_sandbox_labels,
 )
-from paas_wl.bk_app.dev_sandbox.kres_slzs.sandbox import get_dev_sandbox_labels
 from paas_wl.infras.resources.kube_res.base import GVKConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -102,6 +101,7 @@ class TestDevSandboxServiceSLZ:
             "kind": "Service",
             "metadata": {
                 "name": get_service_name(dev_sandbox_service_entity.app),
+                "labels": {"env": "dev"},
             },
             "spec": {
                 "selector": get_dev_sandbox_labels(dev_sandbox_service_entity.app),
@@ -142,6 +142,7 @@ class TestDevSandboxIngressSerializer:
                 "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
                 "nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Script-Name /$1$3;",
             },
+            "labels": {"env": "dev"},
         }
         assert manifest["spec"]["rules"][0] == {
             "host": f"dev-dot-{module_name}-dot-{bk_app.code}.{default_dev_sandbox_cluster.ingress_config.default_root_domain.name}",

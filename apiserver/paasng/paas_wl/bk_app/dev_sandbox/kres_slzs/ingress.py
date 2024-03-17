@@ -97,6 +97,7 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
             "metadata": {
                 "name": obj.name,
                 "annotations": annotations,
+                "labels": {"env": "dev"},
             },
             "spec": {"rules": rules, "tls": tls},
             "apiVersion": self.get_api_version_from_gvk(self.gvk_config),

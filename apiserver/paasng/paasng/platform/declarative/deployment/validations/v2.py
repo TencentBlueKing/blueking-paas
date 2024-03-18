@@ -165,6 +165,9 @@ class DeploymentDescSLZ(serializers.Serializer):
                     "command": None,
                     "args": shlex.split(process["command"]),
                     "probes": process.get("probes"),
+                    # proc_command 用于向后兼容普通应用部署场景
+                    # (shlex.split + shlex.join 难以保证正确性)
+                    "proc_command": process["command"],
                 }
             )
         # scripts -> BkAppHooks

@@ -18,10 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 import yaml
+from blue_krill.contextlib import nullcontext as does_not_raise
 
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
 from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.controllers.package import PackageController
+from paasng.platform.sourcectl.exceptions import GetProcfileError
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, SPStoragePolicy, VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar, gen_zip
@@ -40,7 +42,7 @@ def package_module(bk_module):
 class TestPackageRepoController:
     @pytest.mark.parametrize(("engine", "archive_maker"), [("TarClient", gen_tar), ("ZipClient", gen_zip)])
     @pytest.mark.parametrize(
-        ("contents", "expected"),
+        ("contents", "expected_ctx"),
         [
             (
                 {
@@ -58,9 +60,10 @@ class TestPackageRepoController:
                         }
                     )
                 },
-                {"web": "npm run dev"},
+                does_not_raise({"web": "npm run dev"}),
             ),
-            # get_procfile 不会进行格式化.
+            # 从应用文件读取进程信息会校验大小写(因为 validations 规则中已经检查过大小写)
+            # p.s. 一般情况不会触发该异常(因为源码包在保存时已经校验过一次应用描述文件)
             (
                 {
                     "app_desc.yaml": yaml.dump(
@@ -77,14 +80,14 @@ class TestPackageRepoController:
                         }
                     )
                 },
-                {"Web": "npm run dev"},
+                pytest.raises(GetProcfileError),
             ),
             # 测试 SourcePackage 没有记录 metadata 的情况
-            ({"Procfile": "web: npm run dev\n"}, {"web": "npm run dev"}),
-            ({"Procfile": "Web: npm run dev\n"}, {"Web": "npm run dev"}),
+            ({"Procfile": "web: npm run dev\n"}, does_not_raise({"web": "npm run dev"})),
+            ({"Procfile": "Web: npm run dev\n"}, does_not_raise({"Web": "npm run dev"})),
         ],
     )
-    def test_read_file(self, bk_user, package_module, engine, archive_maker, contents, expected):
+    def test_read_file(self, bk_user, package_module, engine, archive_maker, contents, expected_ctx):
         version_info = VersionInfo(revision="v1", version_type="package", version_name="")
         with generate_temp_file() as file_path:
             archive_maker(file_path, contents)
@@ -97,7 +100,8 @@ class TestPackageRepoController:
             )
 
             controller = get_metadata_reader(package_module)
-            assert controller.get_procfile(version_info) == expected
+            with expected_ctx as expected:
+                assert controller.get_procfile(version_info) == expected
 
     @pytest.mark.parametrize(("engine", "archive_maker"), [("TarClient", gen_tar), ("ZipClient", gen_zip)])
     @pytest.mark.parametrize(

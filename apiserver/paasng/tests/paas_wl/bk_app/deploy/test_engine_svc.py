@@ -31,7 +31,7 @@ pytestmark = [
 class TestEngineDeployClient:
     def test_create_build(self, bk_stag_env):
         c = EngineDeployClient(bk_stag_env.get_engine_app())
-        build_id = c.create_build("nginx:latest", {}, {})
+        build_id = c.create_build("nginx:latest", {})
         assert build_id is not None
         assert Build.objects.get(pk=build_id).image == "nginx:latest"
 

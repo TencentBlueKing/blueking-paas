@@ -286,8 +286,8 @@
                 >
                   <bk-option
                     v-for="option in persistentStorageList"
-                    :key="option.display_name"
-                    :id="option.display_name"
+                    :key="option.name"
+                    :id="option.name"
                     :name="option.display_name">
                     <div class="option-content">
                       <span class="name" :title="option.display_name">{{ option.display_name }}</span>
@@ -496,9 +496,8 @@ export default {
       return function (data) {
         // 持久存储
         if (data.source_type === defaultSourceType) {
-          const persistentStorage = data.source_config.filter(item => item[0] === 'persistentStorage');
-          const storageData = persistentStorage[0][1];
-          return Array.isArray(storageData) ? [storageData[0][1]] : [];
+          const displayName = data.persistent_storage_source?.display_name;
+          return displayName ? [displayName] : [];
         }
         // 文件
         let totalTagWidth = 0;
@@ -632,7 +631,7 @@ export default {
         this.$set(this.volumeFormData, 'sourceConfigArrData', []);
         this.volumeFormData.source_config_data = row.configmap_source?.source_config_data || {};
       } else {
-        this.volumeFormData.source_name = row.persistent_storage_source?.display_name;
+        this.volumeFormData.source_name = row.persistent_storage_source?.name;
         this.getPersistentStorageList();
       }
       this.volumeDefaultSettings.isShow = true;
@@ -711,7 +710,7 @@ export default {
       const data = cloneDeep(this.volumeFormData);
       // 持久存储
       if (this.isPersistentStorage) {
-        const curStorage = this.persistentStorageList.find(v => v.display_name === this.volumeFormData.source_name);
+        const curStorage = this.persistentStorageList.find(v => v.name === this.volumeFormData.source_name);
         data.environment_name = curStorage.environment_name;
         delete data.sourceConfigArrData;
         delete data.source_config_data;

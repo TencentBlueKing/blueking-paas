@@ -290,7 +290,7 @@ export default {
         await this.$store.dispatch('persistentStorage/deletePersistentStorage', {
           appCode: this.appCode,
           sourceType: defaultSourceType,
-          sourceName: this.curDeleteData.display_name,
+          sourceName: this.curDeleteData.name,
         });
         this.$paasMessage({
           theme: 'success',

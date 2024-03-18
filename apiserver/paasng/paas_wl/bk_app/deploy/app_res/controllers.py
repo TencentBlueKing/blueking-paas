@@ -161,16 +161,26 @@ class ProcessesHandler(ResourceHandlerBase):
 class NamespacesHandler(ResourceHandlerBase):
     """Handler for namespace resources"""
 
-    def delete(self, namespace):
+    def ensure_namespace(self, namespace: str, max_wait_seconds: int = 15):
+        """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
+
+        :param namespace: 需要确保存在的 namespace
+        :param max_wait_seconds: 等待 ServiceAccount 就绪的时间
+        """
+        self.create(namespace)
+        self.check_service_account_secret(namespace, max_wait_seconds=max_wait_seconds)
+
+    def delete(self, namespace: str):
+        """k8s 直接删除 namespace 将清除其下所有资源"""
         KNamespace(self.client).delete(namespace)
 
-    def create(self, namespace):
+    def create(self, namespace: str):
         """
         :return: instance of namespace, created
         """
         return KNamespace(self.client).get_or_create(namespace)
 
-    def check_service_account_secret(self, namespace, max_wait_seconds=15):
+    def check_service_account_secret(self, namespace: str, max_wait_seconds=15):
         try:
             KNamespace(self.client).wait_for_default_sa(namespace, timeout=max_wait_seconds)
         except CreateServiceAccountTimeout:

@@ -256,12 +256,18 @@ class WrapUsernameAsUserMiddleware:
 
         if user_data := request.META.get(self.BKPAASAPI_AUTHORIZATION_META_KEY):
             # TODO 增加 api_name 和 app_code 的白名单校验?
-            request.user = self.get_user(
-                request,
-                api_name=jwt_info.api_name,
-                bk_username=json.loads(user_data).get("bk_username"),
-                verified=req_app.verified,
-            )
+            try:
+                bk_username = json.loads(user_data).get("bk_username")
+            except json.decoder.JSONDecodeError:
+                logger.warning(f"Invalid auth header: {user_data}")
+            else:
+                if bk_username:
+                    request.user = self.get_user(
+                        request,
+                        api_name=jwt_info.api_name,
+                        bk_username=bk_username,
+                        verified=req_app.verified,
+                    )
         return self.get_response(request)
 
 

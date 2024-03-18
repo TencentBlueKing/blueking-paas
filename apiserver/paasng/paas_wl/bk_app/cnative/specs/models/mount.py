@@ -42,6 +42,10 @@ class ConfigMapSource(TimestampedModel):
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     data = models.JSONField(default=dict)
 
+    @property
+    def display_name(self):
+        return f"ConfigMap-{self.created.strftime('%Y-%m-%d-%H:%M:%S')}"
+
     class Meta:
         unique_together = ("name", "application_id", "environment_name")
 
@@ -57,6 +61,10 @@ class PersistentStorageSource(TimestampedModel):
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     storage_size = models.CharField(max_length=63)
     storage_class_name = models.CharField(max_length=63)
+
+    @property
+    def display_name(self):
+        return f"PersistentStorage-{self.created.strftime('%Y-%m-%d-%H:%M:%S')}"
 
     class Meta:
         unique_together = ("name", "application_id", "environment_name")

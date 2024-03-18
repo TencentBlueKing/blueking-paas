@@ -171,6 +171,7 @@ class MountSLZ(serializers.ModelSerializer):
             "name": source.name,
             "storage_size": source.storage_size,
             "bound_modules": bound_modules,
+            "display_name": source.display_name,
         }
 
 
@@ -232,4 +233,4 @@ class MountSourceSLZ(serializers.Serializer):
         return [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]
 
     def get_display_name(self, obj):
-        return f"PersistentStorage-{obj.created.strftime('%Y-%m-%d-%H:%M:%S')}"
+        return obj.display_name

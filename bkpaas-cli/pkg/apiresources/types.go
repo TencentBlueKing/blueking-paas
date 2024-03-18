@@ -45,7 +45,7 @@ type Requester interface {
 	DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error)
 	// GetAppDeployResult 获取应用部署结果
 	GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error)
-	// ListAppDeployHistory 获取普通应用部署历史（最近N次）
+	// ListAppDeployHistory 获取应用部署历史（最近N次）
 	ListAppDeployHistory(appCode, appModule string) (map[string]any, error)
 
 	// DeployCNativeApp 部署云原生应用

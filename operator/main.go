@@ -50,8 +50,9 @@ import (
 	"bk.tencent.com/paas-app-operator/controllers"
 	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
+
 	//+kubebuilder:scaffold:imports
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -210,14 +211,14 @@ func initIngressPlugins() {
 	pluginCfg := cfgObj.IngressPlugin
 	if pluginCfg.AccessControl != nil {
 		setupLog.Info("[IngressPlugin] access control plugin enabled.")
-		resources.RegistryPlugin(&resources.AccessControlPlugin{Config: pluginCfg.AccessControl})
+		dgmingress.RegistryPlugin(&dgmingress.AccessControlPlugin{Config: pluginCfg.AccessControl})
 	} else {
 		setupLog.Info("[IngressPlugin] Missing access control config, disable access control feature.")
 	}
 	if pluginCfg.PaaSAnalysis != nil && pluginCfg.PaaSAnalysis.Enabled {
 		// PA 无需额外配置, 可以总是启用该插件
 		setupLog.Info("[IngressPlugin] PA(paas-analysis) plugin enabled.")
-		resources.RegistryPlugin(&resources.PaasAnalysisPlugin{})
+		dgmingress.RegistryPlugin(&dgmingress.PaasAnalysisPlugin{})
 	} else {
 		setupLog.Info("[IngressPlugin] Missing paas-analysis config or this cluster is not supported, disable PA feature.")
 	}

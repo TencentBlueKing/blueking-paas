@@ -16,17 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import datetime
+
+import arrow
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import QuerySet
 
 from paas_wl.bk_app.applications.models import Config
-from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
+from paas_wl.bk_app.monitoring.bklog.constants import WLAPP_NAME_ANNO_KEY
+from paas_wl.bk_app.monitoring.bklog.entities import bklog_config_kmodel
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
-from paasng.accessories.log.shim.setup_bklog import setup_bk_log_custom_collector
 from paasng.core.region.models import get_all_regions
+from paasng.platform.applications.constants import AppFeatureFlag as AppFeatureFlagConst
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ModuleEnvironment
 
 
 class Command(BaseCommand):
@@ -57,27 +61,34 @@ class Command(BaseCommand):
         style_func = self.style.SUCCESS if not dry_run else self.style.NOTICE
         qs = self.validate_params(app_code, region, cluster_name, all_clusters)
         for application in qs:
+            can_use_bklog = True
             for module in application.modules.all():
-                for env in module.envs.all():
-                    cluster = EnvClusterService(env).get_cluster()
-                    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-                        continue
-                    if not dry_run:
-                        _ = setup_bk_log_custom_collector(env.module)
-                        try:
-                            make_bk_log_controller(env).create_or_patch()
-                        except Exception as e:
-                            self.stderr.write(
-                                f"A exception occurred when creating bk-log custom collector: {e}",
-                                style_func=self.style.ERROR,
-                            )
-                    self.stdout.write(
-                        f"setup custom collector for "
-                        f"Application<{application.code}> "
-                        f"Module<{module.name}>"
-                        f"Env<{env.environment}>",
-                        style_func=style_func,
-                    )
+                for env in module.envs.all():  # type: ModuleEnvironment
+                    env_can_use_bklog = self.check_env_status(env)
+                    if env_can_use_bklog:
+                        if not dry_run:
+                            # 日志平台采集配置已下发大于 14 天, 可停用平台日志采集链路
+                            # Note: 需等待用户下次触发配置时，才会真正生效
+                            wl_app = env.wl_app
+                            wl_app.latest_config.mount_log_to_host = False
+                            wl_app.latest_config.save(update_fields=["mount_log_to_host", "updated"])
+                        self.stdout.write(
+                            "disable hostpath log collector for "
+                            f"Application<{application.code}> "
+                            f"Module<{module.name}>"
+                            f"Env<{env.environment}>",
+                            style_func=style_func,
+                        )
+                    # 必须所有环境都满足条件, 才允许使用日志平台查询
+                    can_use_bklog = can_use_bklog and env_can_use_bklog
+            if can_use_bklog:
+                if not dry_run:
+                    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
+
+                self.stdout.write(
+                    f"switch log query to bk-log index for Application<{application.code}>",
+                    style_func=style_func,
+                )
 
     def validate_params(self, app_code, region, cluster_name, all_clusters) -> QuerySet:
         """Validate all parameter combinations, return the filtered Application QuerySet"""
@@ -97,3 +108,20 @@ class Command(BaseCommand):
             return Application.objects.exclude(type=ApplicationType.ENGINELESS_APP)
         else:
             return Application.objects.filter(code=app_code)
+
+    def check_env_status(self, env: ModuleEnvironment) -> bool:
+        cluster = EnvClusterService(env).get_cluster()
+        if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+            # 其中一个环境的集群不支持 BK-LOG 采集器, 不能使用 BK-LOG 查询链路
+            return False
+        wl_app = env.wl_app
+        one_of_bklogconfig = next(
+            iter(bklog_config_kmodel.list_by_app(app=env.wl_app, labels={WLAPP_NAME_ANNO_KEY: wl_app.name})),
+            None,
+        )
+        if not one_of_bklogconfig:
+            # 该环境未下发 BK-LOG 配置, 不能使用 BK-LOG 查询链路
+            return False
+        # 如果该环境的 BK-LOG 配置下发时间小于 14 天, 切换日志查询链路有可能丢失日志, 故暂不能切换 BK-LOG 查询链路
+        creation_timestamp = arrow.get(one_of_bklogconfig._kube_data["metadata"]["creationTimestamp"])
+        return arrow.now() - creation_timestamp > datetime.timedelta(days=14)

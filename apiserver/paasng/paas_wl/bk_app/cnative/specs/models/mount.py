@@ -44,7 +44,7 @@ class ConfigMapSource(TimestampedModel):
 
     @property
     def display_name(self):
-        return f"ConfigMap-{self.created.strftime('%Y-%m-%d-%H:%M:%S')}"
+        return f"ConfigMap-{self.created.strftime('%y%m%d%H%M')}"
 
     class Meta:
         unique_together = ("name", "application_id", "environment_name")
@@ -64,7 +64,7 @@ class PersistentStorageSource(TimestampedModel):
 
     @property
     def display_name(self):
-        return f"PersistentStorage-{self.created.strftime('%Y-%m-%d-%H:%M:%S')}"
+        return f"PersistentStorage-{self.created.strftime('%y%m%d%H%M')}"
 
     class Meta:
         unique_together = ("name", "application_id", "environment_name")

@@ -364,7 +364,7 @@ export default {
       this.isLoading = true;
       this.loadData();
 
-      const winHeight = document.body.scrollHeight || window.innerHeight;
+      const winHeight = document.body?.scrollHeight || window.innerHeight;
       const height = winHeight - 400;
       if (height > 400) {
         this.contentHeight = height;

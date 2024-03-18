@@ -1,9 +1,9 @@
 <template>
   <div class="more-info-edit">
+    <paas-plugin-title />
     <div class="app-container middle">
-      <paas-plugin-title />
       <BkSchemaForm
-        class="mt20 bk-form-warp"
+        class="bk-form-warp"
         v-model="schemaFormData"
         ref="bkForm"
         :http-adapter="{ request }"

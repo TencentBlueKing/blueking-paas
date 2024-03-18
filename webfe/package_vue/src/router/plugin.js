@@ -8,6 +8,10 @@ const createPlugin = () => import(/* webpackChunkName: 'create-plugin' */'@/view
   window.showDeployTip(error);
 });
 
+const createPluginSuccess = () => import(/* webpackChunkName: 'create-plugin' */'@/views/plugin-center/create-plugin/success.vue').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const pluginIndex = () => import(/* webpackChunkName: 'plugin-index' */'@/views/plugin-center/plugin/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -78,6 +82,15 @@ export const pluginRouter = [
     path: '/plugin-center/create',
     name: 'createPlugin',
     component: createPlugin,
+    meta: {
+      pathName: i18n.t('创建插件'),
+      supportBack: true,
+    },
+  },
+  {
+    path: '/plugin-center/:pluginTypeId/:id/create-success',
+    name: 'createPluginSuccess',
+    component: createPluginSuccess,
     meta: {
       pathName: i18n.t('创建插件'),
       supportBack: true,

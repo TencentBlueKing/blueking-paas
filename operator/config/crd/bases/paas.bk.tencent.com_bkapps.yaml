@@ -776,8 +776,15 @@ spec:
                               required:
                               - name
                               type: object
-                          required:
-                          - configMap
+                            persistentStorage:
+                              description: PersistentStorage represents a PersistentStorage
+                                that should populate this volume
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                           type: object
                       required:
                       - envName
@@ -872,8 +879,15 @@ spec:
                           required:
                           - name
                           type: object
-                      required:
-                      - configMap
+                        persistentStorage:
+                          description: PersistentStorage represents a PersistentStorage
+                            that should populate this volume
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
                       type: object
                   required:
                   - mountPath

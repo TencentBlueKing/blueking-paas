@@ -224,9 +224,6 @@ class BuildProcessExecutor(DeployStep):
 
         :param dict metadata: Metadata to be stored in Build instance, such as `procfile`
         """
-        procfile = {}
-        if "procfile" in metadata:
-            procfile = metadata["procfile"]
         if "image" not in metadata:
             raise KeyError("'image' is required")
         image = metadata["image"]
@@ -248,7 +245,6 @@ class BuildProcessExecutor(DeployStep):
             image=image,
             branch=self.bp.branch,
             revision=self.bp.revision,
-            procfile=procfile,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
             bkapp_revision_id=bkapp_revision_id,
             artifact_type=artifact_type,

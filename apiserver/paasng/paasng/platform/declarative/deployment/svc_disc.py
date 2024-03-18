@@ -50,6 +50,8 @@ def get_services_as_env_variables(deployment: Deployment) -> Dict[str, str]:
         return {}
 
     svc_discovery = deploy_desc.get_svc_discovery()
+    if not svc_discovery:
+        return {}
     return BkSaaSEnvVariableFactory(svc_discovery.bk_saas).make()
 
 

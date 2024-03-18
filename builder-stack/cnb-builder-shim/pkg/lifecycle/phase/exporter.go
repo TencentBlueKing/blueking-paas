@@ -25,13 +25,13 @@ import (
 	"path/filepath"
 )
 
-// MakeExporterCmd build the exporter cmd
+// MakeExporterStep build the exporter step
 // exporter will push the app image and cache image to container image registry
-func MakeExporterCmd(
-	ctx context.Context,
+func MakeExporterStep(ctx context.Context,
 	lifecycleDir, outputImage, appDir, analyzedPath, cacheImage, groupPath, layersDir, logLevel string,
-	uid, gid uint32,
-) *exec.Cmd {
+	useDaemon bool,
+	uid, gid uint32) Step {
+	var opts []CmdOptsProvider
 	args := []string{
 		"-app", appDir,
 		"-analyzed", analyzedPath,
@@ -44,7 +44,16 @@ func MakeExporterCmd(
 	// export cache when cacheImage is set
 	if cacheImage != "" {
 		args = append(args, "-cache-image", cacheImage)
+
+	}
+	if useDaemon {
+		args = append(args, "-daemon")
+		opts = append(opts, WithRoot())
+	} else {
+		opts = append(opts, WithUser(uid, gid))
 	}
 	args = append(args, outputImage)
-	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "exporter"), args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "exporter"), args...)
+
+	return makeStep("Export", "Exporting image...", cmd, opts...)
 }

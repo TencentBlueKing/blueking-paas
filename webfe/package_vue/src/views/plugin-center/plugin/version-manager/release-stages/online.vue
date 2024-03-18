@@ -57,11 +57,21 @@ export default {
 
 <style lang="scss" scoped>
   .successful-container {
+    text-align: center;
+    padding: 24px 0;
+    .success-cls {
+      font-size: 50px;
+      line-height: 50px;
+      border-radius: 50%;
+      color: #fff;
+      background-color: #2dcb56;
+    }
     .title {
       font-size: 20px;
       font-weight: 400;
       color: #313238;
       line-height: 28px;
+      margin: 20px 0 12px;
     }
     .tips-link {
       font-size: 14px;

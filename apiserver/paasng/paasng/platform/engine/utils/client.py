@@ -44,14 +44,12 @@ class EngineDeployClient:
         self,
         image: str,
         extra_envs: Dict[str, str],
-        procfile: Dict[str, str],
         artifact_type: ArtifactType = ArtifactType.NONE,
     ) -> str:
         """Create the **fake** build for Image Type App"""
         build = Build.objects.create(
             app=self.wl_app,
             env_variables=extra_envs,
-            procfile=procfile,
             image=image,
             artifact_type=artifact_type,
         )

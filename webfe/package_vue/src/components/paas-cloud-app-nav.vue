@@ -84,7 +84,6 @@ export default {
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
         'cloudAppServiceInnerWithModule',
-        'cloudAppEventQuery',
         'cloudAppImageManage',
         'cloudAppImageList',
         'cloudAppBuildHistory',
@@ -118,8 +117,6 @@ export default {
           'cloudAppDeployManageProd',
           // 部署管理 - 部署历史
           'cloudAppDeployHistory',
-          // 部署状态
-          'appStatus',
           // 可观测性
           'appObservability',
           // 访问入口
@@ -144,8 +141,6 @@ export default {
           'basicConfig',
           // 访问统计
           'cloudAppAnalysis',
-          // 事件查询
-          'cloudAppEventQuery',
           // 镜像管理
           'cloudAppImageManage',
           // 镜像列表
@@ -182,8 +177,6 @@ export default {
           'cloudAppDeployManageProd',
           // 部署管理 - 部署历史
           'cloudAppDeployHistory',
-          // 部署状态
-          'appStatus',
           // 可观测性
           'appObservability',
           // 访问入口
@@ -206,8 +199,6 @@ export default {
           'basicConfig',
           // 访问统计
           'cloudAppAnalysis',
-          // 事件查询
-          'cloudAppEventQuery',
           // 镜像管理
           'cloudAppImageManage',
           // 镜像列表
@@ -435,7 +426,6 @@ export default {
         'cloudAppServiceInnerShared',
         'cloudAppServiceInner',
         'cloudAppServiceInnerWithModule',
-        'cloudAppEventQuery',
         'cloudAppImageManage',
         'cloudAppImageList',
         'cloudAppBuildHistory',

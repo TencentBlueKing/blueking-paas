@@ -17,4 +17,5 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 # legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
+# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]

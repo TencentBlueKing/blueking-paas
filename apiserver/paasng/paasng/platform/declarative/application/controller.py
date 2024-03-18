@@ -236,7 +236,7 @@ class AppDeclarativeController:
         if not market_desc:
             return
 
-        # TODO Fields: logo / state
+        # TODO Fields: state
         product_defaults = remove_omitted(
             dict(
                 code=application.code,

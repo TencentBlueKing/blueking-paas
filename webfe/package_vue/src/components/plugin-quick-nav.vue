@@ -13,7 +13,7 @@
           <img
             :src="curPluginInfo.logo"
             onerror="this.src='/static/images/plugin-default.svg'"
-          >
+          />
           <div class="pl10">
             <div
               v-bk-overflow-tips
@@ -48,9 +48,7 @@
             @enter="searchPlugin"
           />
         </div>
-        <div
-          class="plugin-list"
-        >
+        <div class="plugin-list">
           <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
             <template v-if="viewPluinList.length">
               <div
@@ -63,8 +61,11 @@
                 <img
                   :src="item.logo"
                   onerror="this.src='/static/images/plugin-default.svg'"
+                />
+                <div
+                  class="plugin-name ft12 pl10"
+                  :title="`${item.name_zh_cn}(${item.id})`"
                 >
-                <div class="plugin-name ft12 pl10" :title="`${item.name_zh_cn}(${item.id})`">
                   {{ item.name_zh_cn }}
                   ( {{ item.id }} )
                 </div>
@@ -100,10 +101,8 @@
 </template>
 <script>
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-import _ from 'lodash';
+import { debounce } from 'lodash';
 export default {
-  components: {
-  },
   mixins: [pluginBaseMixin],
   data() {
     return {
@@ -121,7 +120,7 @@ export default {
     },
   },
   watch: {
-    searchValue(newVal, oldVal) {
+    searchValue() {
       this.searchPlugin();
     },
     showSelectData(val) {
@@ -146,7 +145,7 @@ export default {
         this.pluginList = res.results;
         this.viewPluinList = res.results;
         // 根据id排序
-        this.viewPluinList.sort((a, b) => (`${a.id}`).localeCompare(b.id));
+        this.viewPluinList.sort((a, b) => `${a.id}`.localeCompare(b.id));
       } catch (e) {
         this.$paasMessage({
           limit: 1,
@@ -174,7 +173,7 @@ export default {
       this.hideSelectData();
       this.$router.push(parmas);
     },
-    searchPlugin: _.debounce(function () {
+    searchPlugin: debounce(function () {
       if (this.searchValue === '') {
         this.viewPluinList = this.pluginList;
       }
@@ -201,133 +200,138 @@ export default {
 </script>
 <style lang="scss" scoped>
 @import '~@/assets/css/mixins/ellipsis.scss';
-.quick-nav{
-    border-bottom: 2px solid #F5F7FA;
-    cursor: pointer;
-    position: relative;
-    .plugin-info{
-        padding: 6px 16px;
-        .cur-plugin{
-            img{
-                width: 44px;
-                height: 44px;
-            }
-            .plugin-name{
-                font-weight: bold;
-                &.ellipsis {
-                    line-height: 24px;
-                    @include ellipsis(130px);
-                }
-            }
-            .right-icon{
-                font-size: 12px;
-                font-weight: bold;
-                color: #63656E;
-                transition: all ease 0.3s;
-                transform: scale(0.9);
-            }
-            .right-icon-up{
-                transform: rotate(-180deg);
-            }
+.quick-nav {
+  height: 60px;
+  border-bottom: 1px solid #e6e9ea;
+  cursor: pointer;
+  position: relative;
+  .plugin-info {
+    height: 100%;
+    padding: 6px 16px;
+    .cur-plugin {
+      img {
+        width: 44px;
+        height: 44px;
+      }
+      .plugin-name {
+        font-size: 12px;
+        font-weight: bold;
+        &.ellipsis {
+          line-height: 24px;
+          @include ellipsis(130px);
         }
-        .plugin-dropdown{
-            width: 320px;
-            position: absolute;
-            left: 0;
-            top: 58px;
-            background: #FFFFFF;
-            border: 1px solid #DCDEE5;
-            box-shadow: 0 2px 6px 0 rgba(0,0,0,0.10);
-            border-radius: 2px;
-            z-index: 1000;
-            user-select: none;
-            .plugin-list{
-                padding-top: 5px;
-                max-height: 200px;
-                overflow-y: auto;
-                color: #63656E;
-                .item {
-                    padding: 10px 20px;
-                    img{
-                        width: 16px;
-                        height: 16px;
-                    }
-                    .ft12{
-                        font-size: 12px;
-                    }
-                    .plugin-name{
-                        width: 100%;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                    }
-                }
-                .item:hover{
-                    background: #E1ECFF;
-                    color: #3A84FF;
-                }
-            }
-            .serch-box {
-                padding: 0 7px;
-                height: 36px;
-                line-height: 36px;
-            }
-            .dropdown-footer{
-                color: #63656E;
-                font-size: 12px;
-                height: 40px;
-                background: #FAFBFD;
-                border-top: 1px solid #DCDEE5;
-                border-radius: 0 0 2px 2px;
-                .item {
-                    flex: 1;
-                    text-align: center;
-                    height: 40px;
-                    line-height: 40px;
-                    i {
-                        font-size: 16px;
-                        color: #979BA5;
-                        transform: translateY(0px);
-                    }
-                }
-                .footer-left::after {
-                    position: absolute;
-                    content: '';
-                    width: 1px;
-                    height: 16px;
-                    background: #DCDEE5;
-                    bottom: 12px;
-                    left: 158px;
-                }
-                .item:hover{
-                    background: #eeeff3;
-                }
-            }
-        }
-        .guide-plugin-desc {
-            @include ellipsis(130px);
-        }
+      }
+      .right-icon {
+        font-size: 12px;
+        font-weight: bold;
+        color: #63656e;
+        transition: all ease 0.3s;
+        transform: scale(0.9);
+      }
+      .right-icon-up {
+        transform: rotate(-180deg);
+      }
     }
+    .plugin-dropdown {
+      width: 320px;
+      position: absolute;
+      left: 0;
+      top: 58px;
+      background: #ffffff;
+      border: 1px solid #dcdee5;
+      box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
+      z-index: 1000;
+      user-select: none;
+      .plugin-list {
+        padding-top: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        color: #63656e;
+        .item {
+          padding: 10px 20px;
+          img {
+            width: 16px;
+            height: 16px;
+          }
+          .ft12 {
+            font-size: 12px;
+          }
+          .plugin-name {
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+        }
+        .item:hover {
+          background: #e1ecff;
+          color: #3a84ff;
+        }
+      }
+      .serch-box {
+        padding: 0 7px;
+        height: 36px;
+        line-height: 36px;
+      }
+      .dropdown-footer {
+        color: #63656e;
+        font-size: 12px;
+        height: 40px;
+        background: #fafbfd;
+        border-top: 1px solid #dcdee5;
+        border-radius: 0 0 2px 2px;
+        .item {
+          flex: 1;
+          text-align: center;
+          height: 40px;
+          line-height: 40px;
+          i {
+            font-size: 16px;
+            color: #979ba5;
+            transform: translateY(0px);
+          }
+        }
+        .footer-left::after {
+          position: absolute;
+          content: '';
+          width: 1px;
+          height: 16px;
+          background: #dcdee5;
+          bottom: 12px;
+          left: 158px;
+        }
+        .item:hover {
+          background: #eeeff3;
+        }
+      }
+    }
+    .guide-plugin-desc {
+      @include ellipsis(130px);
+      font-size: 12px;
+      color: #979ba5;
+    }
+  }
 }
 .quick-hover-bg {
-    background: #F5F7FA;
+  background: #f5f7fa;
 }
 .not-data-tips {
-    height: 64px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #666;
+  height: 64px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #666;
 }
 .plugin-active {
-    background: #F5F7FA;
+  background: #f5f7fa;
 }
 </style>
 <style>
-  .quick-nav .plugin-info .plugin-dropdown .left-icon {
-      color: #979BA5;
-  }
-  .quick-nav .plugin-info .plugin-dropdown .bk-input-text input {
-      border-color: transparent transparent #EAEBF0 !important;
-  }
+.quick-nav .plugin-info .plugin-dropdown .left-icon {
+  color: #979ba5;
+}
+.quick-nav .plugin-info .plugin-dropdown .bk-input-text input {
+  border-color: transparent transparent #eaebf0 !important;
+}
 </style>

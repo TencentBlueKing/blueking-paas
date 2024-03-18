@@ -2,7 +2,7 @@
   <div class="release-timeline-warp">
     <bk-timeline
       ext-cls="timeline-cls"
-      :list="lineList"
+      :list="list"
     />
   </div>
 </template>
@@ -15,21 +15,6 @@ export default {
         return [];
       },
     },
-  },
-  data() {
-    return {
-      lineList: [],
-    };
-  },
-  watch: {
-    list(val) {
-      if (val.length) {
-        this.lineList = val;
-      }
-    },
-  },
-  created() {
-    this.lineList = this.list;
   },
 };
 </script>

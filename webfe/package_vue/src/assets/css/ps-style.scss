@@ -866,7 +866,13 @@ span.ellipsis {
 }
 
 .overview-fright-plugin .app-container {
-    max-width: calc(100% - 100px) !important;
+    max-width: calc(100% - 50px) !important;
+}
+
+.card-style {
+    background: #fff;
+    box-shadow: 0 2px 4px 0 #1919290d;
+    border-radius: 2px;
 }
 
 .info-special-form.bk-form.bk-inline-form {
@@ -1150,4 +1156,9 @@ span.ellipsis {
         color: #000;
         margin-left: 10px;
     }
+}
+
+.shadow-card-style {
+    box-shadow: 0 2px 4px 0 #1919290d;
+    border-radius: 2px;
 }

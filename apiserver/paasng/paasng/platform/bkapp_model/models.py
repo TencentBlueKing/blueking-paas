@@ -152,7 +152,9 @@ class ModuleDeployHookManager(models.Manager):
             )
         elif not (command is None and args is None):
             hook, _ = self.update_or_create(
-                module=module, type=type_, defaults={"command": command, "args": args, "enabled": True}
+                module=module,
+                type=type_,
+                defaults={"command": command, "args": args, "enabled": True, "proc_command": None},
             )
         else:
             raise ValueError("invalid value to upsert ModuleDeployHook")

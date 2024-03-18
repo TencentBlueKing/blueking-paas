@@ -1,5 +1,5 @@
 <template>
-  <div class="build-stage">
+  <div :class="['build-stage', { 'build-hide-button-group': !bottomActionBar }]">
     <build-timeline
       :list="timeLineList"
       :disabled="true"
@@ -55,6 +55,7 @@ export default {
       timeLineList: [],
       curBuilLog: '',
       isShowDate: false,
+      bottomActionBar: null,
     };
   },
   computed: {
@@ -75,10 +76,12 @@ export default {
       // 重新格式化数据
       this.formatBuildLineData();
       this.formatLogs();
+      this.setBottomActionBar();
     },
   },
   created() {
     this.init();
+    this.setBottomActionBar();
   },
   methods: {
     init() {
@@ -129,15 +132,25 @@ export default {
         this.$refs.bkLog.changeShowTime(this.isShowDate);
       });
     },
+    setBottomActionBar() {
+      this.bottomActionBar = document.querySelector('.footer-btn-warp');
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+// 高度问题
 .build-stage {
-  height: calc(100vh - 218px);
-  margin-top: 60px;
+  height: calc(100vh - 216px);
+  // margin-top: 60px;
   display: flex;
+  padding: 16px 16px 0;
+
+  // 无按钮组
+  &.build-hide-button-group {
+    height: calc(100vh - 184px);
+  }
   .right-log-wrapper {
     padding-top: 40px;
     margin-left: 16px;
@@ -149,7 +162,7 @@ export default {
     position: relative;
     overflow: hidden;
     padding: 0;
-    height: calc(100vh - 258px);
+    height: calc(100vh - 255px);
   }
 }
 .log-header {

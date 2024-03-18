@@ -24,12 +24,13 @@ import (
 	"path/filepath"
 )
 
-// MakeBuilderCmd build the builder cmd
+// MakeBuilderStep build the builder step
 // builder will build the app(in appDir) based on group.toml(in groupPath) and plan.toml(in planPath)
-func MakeBuilderCmd(
+func MakeBuilderStep(
 	ctx context.Context,
 	lifecycleDir, appDir, groupPath, planPath, layersDir, logLevel string,
-) *exec.Cmd {
+	uid, gid uint32,
+) Step {
 	args := []string{
 		"-app", appDir,
 		"-group", groupPath,
@@ -37,5 +38,6 @@ func MakeBuilderCmd(
 		"-layers", layersDir,
 		"-log-level", logLevel,
 	}
-	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "builder"), args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "builder"), args...)
+	return makeStep("Build", "Building application...", cmd, WithUser(uid, gid))
 }

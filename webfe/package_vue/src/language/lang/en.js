@@ -2559,4 +2559,7 @@ export default {
   '由平台分配的持久化存储，可用于多个模块、进程间共享数据': 'Persistent storage allocated by the platform, available for data sharing across multiple modules and processes',
   已绑定模块: 'Bound Modules',
   '您可在“模块配置-挂载卷”页面将持久存储挂载到指定模块的指定目录中': 'You can mount persistent storage to a specified directory of a specified module on the "Module Configuration - Mount Volume" page',
+  '请选择{e}环境下的持久存储资源': 'Please select the persistent storage resources under the {e} environment',
+  资源类型: 'Resource Type',
+  文件: 'File',
 };

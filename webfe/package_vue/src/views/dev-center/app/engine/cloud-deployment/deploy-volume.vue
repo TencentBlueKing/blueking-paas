@@ -38,7 +38,13 @@
               <div>{{ $t(envEnums[row.environment_name]) || $t('所有环境') }}</div>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('资源类型')" prop="source_type">
+          <bk-table-column
+            :label="$t('资源类型')"
+            :filters="resourceTypeFilterList"
+            :filter-method="resourceTypeFilterMethod"
+            :filter-multiple="false"
+            prop="source_type"
+          >
             <template slot-scope="{ row }">
               {{ row.source_type === 'PersistentStorage' ? $t('持久存储') : $t('文件') }}
             </template>
@@ -180,96 +186,104 @@
               <bk-radio-group v-model="volumeFormData.source_type">
                 <div
                   v-for="item in sourceTypeList"
-                  :class="['radio-style-wrapper', { active: volumeFormData.source_type === item.value }]"
+                  :class="[
+                    'radio-style-wrapper',
+                    { active: volumeFormData.source_type === item.value },
+                    { disabled: isInEditMode }
+                  ]"
                   @click="handleChangeSourceType(item.value)"
                   :key="item.value"
                 >
-                  <bk-radio :value="item.value">{{ item.label }}</bk-radio>
+                  <bk-radio :value="item.value" :disabled="isInEditMode">{{ item.label }}</bk-radio>
                   <span class="tip">{{ item.tip }}</span>
                 </div>
               </bk-radio-group>
             </bk-form-item>
-            <template v-if="volumeFormData.source_type === 'ConfigMap'">
-              <bk-form-item
-                :label="$t('生效环境')"
-                :required="true"
-                style="margin-top: 27px"
-                :property="'environment_name'"
-              >
-                <bk-radio-group v-model="volumeFormData.environment_name">
-                  <bk-radio :value="'stag'">{{ $t('仅预发布环境') }} </bk-radio>
-                  <bk-radio :value="'prod'">{{ $t('仅生产环境') }} </bk-radio>
-                  <bk-radio :value="'_global_'">{{ $t('所有环境') }} </bk-radio>
-                </bk-radio-group>
-              </bk-form-item>
-              <bk-form-item
-                :label="$t('文件内容')"
-                :required="true"
-                style="margin-top: 15px"
-                :property="'source_config_data'"
-                ext-cls="volume-file-content"
-              >
-                <div class="file-container flex-row">
-                  <div class="label-container">
-                    <div class="addFile">
-                      <div class="addFileText" v-if="!isAddFile" @click="handleAddFile">
-                        <i class="icon paasng-icon paasng-plus-circle-shape pr10" />{{ $t('添加文件') }}
-                      </div>
-                      <div class="addFileInput" v-else>
-                        <bk-input
-                          ref="addFileInputRef"
-                          :placeholder="$t('请输入')"
-                          v-model="addFileInput"
-                          @blur="handlerAddConfirm"
-                          @enter="handleEnter('add')"
-                        ></bk-input>
-                      </div>
+            <bk-form-item
+              :label="$t('生效环境')"
+              :required="true"
+              style="margin-top: 27px"
+              :property="'environment_name'"
+            >
+              <bk-radio-group v-model="volumeFormData.environment_name" @change="handleEnvironmentChange">
+                <bk-radio :value="'stag'" :disabled="isInEditMode && isPersistentStorage">{{ $t('仅预发布环境') }} </bk-radio>
+                <bk-radio :value="'prod'" :disabled="isInEditMode && isPersistentStorage">{{ $t('仅生产环境') }} </bk-radio>
+                <bk-radio
+                  v-if="!isPersistentStorage"
+                  :value="'_global_'"
+                >
+                  {{ $t('所有环境') }}
+                </bk-radio>
+              </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              v-if="!isPersistentStorage"
+              :label="$t('文件内容')"
+              :required="true"
+              style="margin-top: 15px"
+              :property="'source_config_data'"
+              ext-cls="volume-file-content"
+            >
+              <div class="file-container flex-row">
+                <div class="label-container">
+                  <div class="addFile">
+                    <div class="addFileText" v-if="!isAddFile" @click="handleAddFile">
+                      <i class="icon paasng-icon paasng-plus-circle-shape pr10" />{{ $t('添加文件') }}
+                    </div>
+                    <div class="addFileInput" v-else>
+                      <bk-input
+                        ref="addFileInputRef"
+                        :placeholder="$t('请输入')"
+                        v-model="addFileInput"
+                        @blur="handlerAddConfirm"
+                        @enter="handleEnter('add')"
+                      ></bk-input>
+                    </div>
+                  </div>
+                  <div
+                    class="label-container flex-row justify-content-between"
+                    v-for="(item, index) in volumeFormData.sourceConfigArrData"
+                    :key="index"
+                    @mouseenter="hoverKey = item.value"
+                    @mouseleave="hoverKey = ''"
+                    :class="[activeIndex === index ? 'active' : '', item.isEdit ? 'is-edit' : '']">
+                    <div class="label-item flex-row justify-content-between align-items-center" v-if="item.isEdit">
+                      <bk-input
+                        ref="editFileInputRef"
+                        :placeholder="$t('请输入')"
+                        v-model="item.value"
+                        @blur="handleBlur(item, index)"
+                        @enter="handleEnter('edit')"
+                      ></bk-input>
                     </div>
                     <div
-                      class="label-container flex-row justify-content-between"
-                      v-for="(item, index) in volumeFormData.sourceConfigArrData"
-                      :key="index"
-                      @mouseenter="hoverKey = item.value"
-                      @mouseleave="hoverKey = ''"
-                      :class="[activeIndex === index ? 'active' : '', item.isEdit ? 'is-edit' : '']">
-                      <div class="label-item flex-row justify-content-between align-items-center" v-if="item.isEdit">
-                        <bk-input
-                          ref="editFileInputRef"
-                          :placeholder="$t('请输入')"
-                          v-model="item.value"
-                          @blur="handleBlur(item, index)"
-                          @enter="handleEnter('edit')"
-                        ></bk-input>
+                      class="label-item flex-row justify-content-between"
+                      @click.stop="handleClickLabelItem(index, item.value)" v-else>
+                      <div class="label-text flex-1">
+                        {{item.value}}
+                        <i
+                          v-if="!volumeFormData.source_config_data[item.value]"
+                          class="icon paasng-icon paasng-paas-remind-fill tips-icon"
+                          v-bk-tooltips="$t('文件内容不能为空')"></i>
                       </div>
-                      <div
-                        class="label-item flex-row justify-content-between"
-                        @click.stop="handleClickLabelItem(index, item.value)" v-else>
-                        <div class="label-text flex-1">
-                          {{item.value}}
-                          <i
-                            v-if="!volumeFormData.source_config_data[item.value]"
-                            class="icon paasng-icon paasng-paas-remind-fill tips-icon"
-                            v-bk-tooltips="$t('文件内容不能为空')"></i>
-                        </div>
-                        <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
-                          <i class="paasng-icon paasng-edit-2 mr5" @click="handleEditLabel(item)" />
-                          <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(item.value, index)" />
-                        </div>
+                      <div class="label-icon flex-row align-items-center" v-if="hoverKey === item.value">
+                        <i class="paasng-icon paasng-edit-2 mr5" @click="handleEditLabel(item)" />
+                        <i class="icon paasng-icon paasng-icon-close" @click="handleDeleteLabel(item.value, index)" />
                       </div>
                     </div>
                   </div>
-                  <div class="editor flex-1">
-                    <resource-editor
-                      ref="editorRefSlider"
-                      key="editor"
-                      v-model="sliderEditordetail"
-                      v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
-                      :height="fullScreen ? clientHeight : fileSliderConfig.height"
-                    />
-                  </div>
                 </div>
-              </bk-form-item>
-            </template>
+                <div class="editor flex-1">
+                  <resource-editor
+                    ref="editorRefSlider"
+                    key="editor"
+                    v-model="sliderEditordetail"
+                    v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
+                    :height="fullScreen ? clientHeight : fileSliderConfig.height"
+                  />
+                </div>
+              </div>
+            </bk-form-item>
             <template v-else>
               <bk-form-item
                 :label="$t('持久存储')"
@@ -282,10 +296,11 @@
                   v-model="volumeFormData.source_name"
                   style="width: 560px;"
                   searchable
+                  :placeholder="persistentStorageTips"
                   ext-popover-cls="store-select-popover-custom"
                 >
                   <bk-option
-                    v-for="option in persistentStorageList"
+                    v-for="option in curEnvPersistentStorageList"
                     :key="option.name"
                     :id="option.name"
                     :name="option.display_name">
@@ -455,9 +470,13 @@ export default {
         source_name: '',
       },
       envSelectList: [
-        { value: '_global_', text: this.$t('所有环境') },
         { value: 'stag', text: this.$t('仅预发布环境') },
         { value: 'prod', text: this.$t('仅生产环境') },
+      ],
+      // 资源类型筛选列表
+      resourceTypeFilterList: [
+        { value: 'ConfigMap', text: this.$t('文件') },
+        { value: 'PersistentStorage', text: this.$t('持久存储') },
       ],
       envEnums: ENV_ENUM,
       activeIndex: 0,
@@ -476,6 +495,7 @@ export default {
       maxTags: 0,
       isTableLoaing: false,
       isShowPersistentStorage: false,
+      isInEditMode: false,
     };
   },
   computed: {
@@ -537,6 +557,13 @@ export default {
         return list.filter(v => v.value === 'ConfigMap');
       }
       return list;
+    },
+    persistentStorageTips() {
+      return this.$t('请选择{e}环境下的持久存储资源', { e: this.volumeFormData.environment_name === 'stag' ? this.$t('预发布') : this.$t('生产') });
+    },
+    // 当前环境
+    curEnvPersistentStorageList() {
+      return this.persistentStorageList.filter(v => v.environment_name === this.volumeFormData.environment_name);
     },
   },
   watch: {
@@ -600,6 +627,7 @@ export default {
         sourceConfigArrData: [],
         source_name: '',
       };
+      this.isInEditMode = false;
       this.volumeDefaultSettings.isShow = true;
       this.initSidebarFormData(this.volumeFormData);
     },
@@ -634,6 +662,7 @@ export default {
         this.volumeFormData.source_name = row.persistent_storage_source?.name;
         this.getPersistentStorageList();
       }
+      this.isInEditMode = true;
       this.volumeDefaultSettings.isShow = true;
       await this.getPersistentStorageList();
       this.initSidebarFormData(this.volumeFormData);
@@ -702,6 +731,10 @@ export default {
     },
     // 筛选生效环境
     sourceFilterMethod(value, row, column) {
+      const { property } = column;
+      return row[property] === value;
+    },
+    resourceTypeFilterMethod(value, row, column) {
       const { property } = column;
       return row[property] === value;
     },
@@ -945,6 +978,7 @@ export default {
 
     // 切换资源类型
     handleChangeSourceType(value) {
+      if (this.isInEditMode) return;
       this.volumeFormData.source_type = value;
       if (value === defaultSourceType && !this.persistentStorageList.length) {
         this.getPersistentStorageList();
@@ -952,6 +986,7 @@ export default {
     },
 
     handleHidden() {
+      this.isInEditMode = false;
       this.persistentStorageList = [];
     },
 
@@ -967,6 +1002,13 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+
+    // 切换生效环境
+    handleEnvironmentChange() {
+      if (this.isPersistentStorage) {
+        this.volumeFormData.source_name = '';
+      };
     },
   },
 };
@@ -1039,11 +1081,15 @@ export default {
 .radio-style-wrapper {
   display: flex;
   align-items: center;
-  height: 40px;
+  min-height: 40px;
   padding: 0 24px;
   background: #FFFFFF;
   border: 1px solid #C4C6CC;
   border-radius: 2px;
+
+  label {
+    flex-shrink: 0;
+  }
 
   .tip {
     margin-left: 24px;
@@ -1054,6 +1100,12 @@ export default {
   &.active {
     background: #E1ECFF;
     border: 1px solid #3A84FF;
+  }
+
+  &.disabled {
+    span {
+      color: #c4c6cc;
+    }
   }
 
   &:last-child {

@@ -12,12 +12,12 @@
 
 执行以下命令构建新镜像：
 
-    make heroku-builder
+    make heroku-builder-bionic
 
 其将使用默认的“云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest`，你也可以传递环境变量修改该默认名：
 
 
-    BUILDER_IMAGE_NAME="my-builder-heroku-bionic" BUILDER_IMAGE_TAG="my-tag" IMAGE_NAME="bk-builder-heroku-bionic" IMAGE_TAG="latest" make heroku-builder
+    BUILDER_IMAGE_NAME="my-builder-heroku-bionic" BUILDER_IMAGE_TAG="my-tag" IMAGE_NAME="bk-builder-heroku-bionic" IMAGE_TAG="latest" make heroku-builder-bionic
 
 - `BUILDER_IMAGE_*`：将要使用的“构建 builder 镜像”名称
 - `IMAGE_*`：最终生成的镜像名称

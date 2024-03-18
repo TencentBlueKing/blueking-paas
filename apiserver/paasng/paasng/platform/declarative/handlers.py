@@ -26,14 +26,16 @@ from typing_extensions import Protocol
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.application.constants import APP_CODE_FIELD
+from paasng.platform.declarative.application.constants import APP_CODE_FIELD, CNATIVE_APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
-from paasng.platform.declarative.application.validations import AppDescriptionSLZ
+from paasng.platform.declarative.application.validations import v2 as app_spec_v2
+from paasng.platform.declarative.application.validations import v3 as app_spec_v3
 from paasng.platform.declarative.constants import AppSpecVersion
-from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
+from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController, PerformResult
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
-from paasng.platform.declarative.deployment.validations import DeploymentDescSLZ
+from paasng.platform.declarative.deployment.validations import v2 as deploy_spec_v2
+from paasng.platform.declarative.deployment.validations import v3 as deploy_spec_v3
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import SMartV1DescriptionSLZ, UniConfigSLZ, validate_desc
 from paasng.platform.engine.models.deployment import Deployment
@@ -47,12 +49,16 @@ def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
     # TODO 删除 SMartDescriptionHandler 分支. VER_1 存量版本基本不再支持
     if spec_version == AppSpecVersion.VER_1:
         return SMartDescriptionHandler(json_data)
-    else:
+    elif spec_version == AppSpecVersion.VER_2:
         return AppDescriptionHandler(json_data)
+    else:
+        return CNativeAppDescriptionHandler(json_data)
 
 
 def detect_spec_version(json_data: Dict) -> AppSpecVersion:
-    return AppSpecVersion(json_data.get("spec_version", AppSpecVersion.VER_1.value))
+    if spec_version := json_data.get("spec_version") or json_data.get("specVersion"):
+        return AppSpecVersion(spec_version)
+    return AppSpecVersion.VER_1
 
 
 class DescriptionHandler(Protocol):
@@ -63,17 +69,81 @@ class DescriptionHandler(Protocol):
     def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
         ...
 
-    def handle_app(self, user: User) -> Application:
+    def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
 
         :param user: User to perform actions as
+        :param source_origin: 源码来源
         """
 
-    def handle_deployment(self, deployment: Deployment):
+    def handle_deployment(self, deployment: Deployment) -> PerformResult:
         """Handle a YAML config file for a deployment
 
         :param deployment: The related deployment object
         """
+
+
+class CNativeAppDescriptionHandler:
+    """A handler to process cnative application's YAML description file(named app_desc.yaml)"""
+
+    @classmethod
+    def from_file(cls, fp: TextIO):
+        return cls(yaml.safe_load(fp))
+
+    def __init__(self, json_data: Dict):
+        """The app_desc.yml json data"""
+        self.json_data = json_data
+
+    @property
+    def app_desc(self) -> ApplicationDesc:
+        """Turn json data into application description object
+
+        :raises: DescriptionValidationError when input is invalid
+        """
+        app_desc_json = copy.deepcopy(self.json_data.get("app", {}))
+        app_desc_json["modules"] = self.json_data.get("modules", {})
+        # 根据约定, 我们允许在 app_desc.yaml 同级目录下, 以 logo.png 存储当前 S-Mart 的 logo, 该文件的内容会被读取到 meta_info.logo_b64data
+        # 为了保证后续逻辑只需遵循 app_desc 规范, 在正式解析 app_desc 之前, 我们需要重命名 logo_b64data 字段为 market.logo_b64data
+        if logo_b64data := self.json_data.get("logoB64data"):
+            app_desc_json.setdefault("market", {}).setdefault("logoB64data", logo_b64data)
+
+        instance = get_application(app_desc_json, CNATIVE_APP_CODE_FIELD)
+        app_desc = validate_desc(
+            app_spec_v3.AppDescriptionSLZ,
+            app_desc_json,
+            instance,
+            context={"app_version": self.json_data.get("app_version"), "spec_version": AppSpecVersion.VER_2},
+        )
+        return app_desc
+
+    def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
+        module_desc = self.json_data.get("module")
+        if "modules" in self.json_data:
+            found = next(filter(lambda x: x["name"] == module_name, self.json_data["modules"]), None)
+            if module_desc is not None:
+                logger.warning("Duplicate definition of module information !")
+            module_desc = found
+        if not module_desc:
+            logger.info("Skip running deployment controller because not content was provided")
+            raise DescriptionValidationError({"module": _("内容不能为空")})
+        desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, module_desc)
+        return desc
+
+    def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
+        """Handle a YAML config for application initialization
+
+        :param user: User to perform actions as
+        """
+        controller = AppDeclarativeController(user, source_origin)
+        return controller.perform_action(self.app_desc)
+
+    def handle_deployment(self, deployment: Deployment) -> PerformResult:
+        """Handle a YAML config file for a deployment
+
+        :param deployment: The related deployment object
+        """
+        controller = DeploymentDeclarativeController(deployment)
+        return controller.perform_action(self.get_deploy_desc(deployment.app_environment.module.name))
 
 
 class AppDescriptionHandler:
@@ -103,7 +173,7 @@ class AppDescriptionHandler:
         instance = get_application(app_desc_json, APP_CODE_FIELD)
         # TODO: 兼容获取非源码包部署的应用的版本
         app_desc = validate_desc(
-            AppDescriptionSLZ,
+            app_spec_v2.AppDescriptionSLZ,
             app_desc_json,
             instance,
             context={"app_version": self.json_data.get("app_version"), "spec_version": AppSpecVersion.VER_2},
@@ -119,7 +189,7 @@ class AppDescriptionHandler:
         if not module_desc:
             logger.info("Skip running deployment controller because not content was provided")
             raise DescriptionValidationError({"module": _("内容不能为空")})
-        desc = validate_desc(DeploymentDescSLZ, module_desc)
+        desc = validate_desc(deploy_spec_v2.DeploymentDescSLZ, module_desc)
         return desc
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
@@ -136,7 +206,7 @@ class AppDescriptionHandler:
         controller = AppDeclarativeController(user, source_origin)
         return controller.perform_action(self.app_desc)
 
-    def handle_deployment(self, deployment: Deployment):
+    def handle_deployment(self, deployment: Deployment) -> PerformResult:
         """Handle a YAML config file for a deployment
 
         :param deployment: The related deployment object
@@ -144,7 +214,7 @@ class AppDescriptionHandler:
         validate_desc(UniConfigSLZ, self.json_data)
 
         controller = DeploymentDeclarativeController(deployment)
-        controller.perform_action(self.get_deploy_desc(deployment.app_environment.module.name))
+        return controller.perform_action(self.get_deploy_desc(deployment.app_environment.module.name))
 
 
 class SMartDescriptionHandler:
@@ -174,7 +244,7 @@ class SMartDescriptionHandler:
         _, deploy_desc = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
         return deploy_desc
 
-    def handle_app(self, user: User) -> Application:
+    def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a app config
 
         :param user: User to perform actions as
@@ -182,10 +252,10 @@ class SMartDescriptionHandler:
         controller = AppDeclarativeController(user)
         return controller.perform_action(self.app_desc)
 
-    def handle_deployment(self, deployment: Deployment):
+    def handle_deployment(self, deployment: Deployment) -> PerformResult:
         """Handle a deployment config
 
         :param deployment: The related deployment object
         """
         controller = DeploymentDeclarativeController(deployment)
-        controller.perform_action(self.get_deploy_desc(None))
+        return controller.perform_action(self.get_deploy_desc(None))

@@ -41,5 +41,5 @@ class EnvVariablesReader:
 
     def read_as_dict(self) -> Dict[str, str]:
         """Read current env variables as dict"""
-        result = {obj["key"]: obj["value"] for obj in self.desc_obj.env_variables}
+        result = {obj["key"]: obj["value"] for obj in self.desc_obj.get_env_variables()}
         return result

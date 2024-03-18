@@ -46,11 +46,14 @@ from paasng.platform.sourcectl.exceptions import DoesNotExistsOnServer
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
     return cattr.structure(obj, TypeProcesses)
+
+
+EXPECTED_WEB_PROCESS = WEB_PROCESS.replace(":$PORT", "':$PORT'")
 
 
 @pytest.mark.usefixtures("_init_tmpls")
@@ -102,14 +105,14 @@ class TestGetProcesses:
         [
             (
                 {},
-                cast_to_processes({"web": {"name": "web", "command": WEB_PROCESS}}),
+                cast_to_processes({"web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1}}),
             ),
             (
                 {"is_use_celery": True},
                 cast_to_processes(
                     {
-                        "web": {"name": "web", "command": WEB_PROCESS},
-                        "celery": {"name": "celery", "command": CELERY_PROCESS},
+                        "web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1},
+                        "celery": {"name": "celery", "command": CELERY_PROCESS, "replicas": 1},
                     }
                 ),
             ),
@@ -117,15 +120,9 @@ class TestGetProcesses:
                 {"is_use_celery": True, "is_use_celery_beat": True},
                 cast_to_processes(
                     {
-                        "web": {
-                            "name": "web",
-                            "command": WEB_PROCESS,
-                        },
-                        "celery": {
-                            "name": "celery",
-                            "command": CELERY_PROCESS,
-                        },
-                        "beat": {"name": "beat", "command": CELERY_BEAT_PROCESS},
+                        "web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1},
+                        "celery": {"name": "celery", "command": CELERY_PROCESS, "replicas": 1},
+                        "beat": {"name": "beat", "command": CELERY_BEAT_PROCESS, "replicas": 1},
                     }
                 ),
             ),
@@ -142,26 +139,26 @@ class TestGetProcesses:
             "env": [],
             **extra_info,
         }
-        get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
-        processes = get_processes(deployment=bk_deployment_full)
+        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
+        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
         assert processes == expected
 
     @pytest.mark.parametrize(
         ("processes_desc", "expected"),
         [
             (
-                {"web": {"command": "start web;"}},
-                cast_to_processes({"web": {"name": "web", "command": "start web;"}}),
+                {"web": {"command": "start web"}},
+                cast_to_processes({"web": {"name": "web", "command": "start web", "replicas": 1}}),
             ),
             (
                 {
-                    "web": {"command": "start web;", "replicas": 5, "plan": "1C2G5R"},
-                    "celery": {"command": "start celery;", "replicas": 5},
+                    "web": {"command": "start web", "replicas": 5, "plan": "4C2G5R"},
+                    "celery": {"command": "start celery", "replicas": 5},
                 },
                 cast_to_processes(
                     {
-                        "web": {"name": "web", "command": "start web;", "replicas": 5, "plan": "1C2G5R"},
-                        "celery": {"name": "celery", "command": "start celery;", "replicas": 5},
+                        "web": {"name": "web", "command": "start web", "replicas": 5, "plan": "4C2G"},
+                        "celery": {"name": "celery", "command": "start celery", "replicas": 5},
                     }
                 ),
             ),
@@ -176,8 +173,8 @@ class TestGetProcesses:
             "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
             "module": {"is_default": True, "processes": processes_desc, "language": "python"},
         }
-        get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
-        processes = get_processes(deployment=bk_deployment_full)
+        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
+        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
         assert processes == expected
 
     def test_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
@@ -207,9 +204,9 @@ class TestGetProcesses:
             module=bk_module_full, operator=bk_module_full.owner, version_info=bk_deployment_full.version_info
         )
         assert handler is not None
-        handler.handle_deployment(bk_deployment_full)
+        perform_result = handler.handle_deployment(bk_deployment_full)
 
-        processes = get_processes(deployment=bk_deployment_full)
+        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
         assert processes == cast_to_processes(
             {"web": {"name": "web", "command": "start web", "plan": "default", "replicas": 5}}
         )
@@ -254,7 +251,7 @@ class TestGetProcesses:
                 "language": "python",
             },
         }
-        get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
+        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
 
         def fake_read_file(key, version):
             if "Procfile" in key:
@@ -264,7 +261,9 @@ class TestGetProcesses:
         with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
             mocked_read_file.side_effect = fake_read_file
 
-            processes = get_processes(deployment=bk_deployment_full)
+            processes = get_processes(
+                deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes
+            )
 
         assert processes == cast_to_processes(
             {

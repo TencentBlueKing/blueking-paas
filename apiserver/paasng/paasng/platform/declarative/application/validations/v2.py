@@ -39,6 +39,7 @@ from paasng.utils.serializers import Base64FileField
 from paasng.utils.validators import ReservedWordValidator
 
 module_name_field = ModuleNameField()
+ModuleNamePlaceholder = "should-set-by-parent-slz"
 
 
 class DisplayOptionsSLZ(serializers.Serializer):
@@ -100,8 +101,16 @@ class ModuleDescriptionSLZ(serializers.Serializer):
     source_dir = serializers.CharField(help_text="源码目录", required=False, default="")
 
     def to_internal_value(self, data) -> ModuleDesc:
+        """convert to cnative module desc format"""
         attrs = super().to_internal_value(data)
-        return ModuleDesc(**attrs)
+
+        return ModuleDesc(
+            name=ModuleNamePlaceholder,
+            language=attrs["language"],
+            is_default=attrs["is_default"],
+            source_dir=attrs.get("source_dir") or "",
+            services=attrs.get("services", []),
+        )
 
 
 class AppDescriptionSLZ(serializers.Serializer):
@@ -122,13 +131,16 @@ class AppDescriptionSLZ(serializers.Serializer):
     modules = serializers.DictField(child=ModuleDescriptionSLZ())
 
     def validate_modules(self, modules: Dict[str, ModuleDesc]):
-        for module_name in modules:
+        # validate module name, and fill it into module_desc
+        for module_name, module_desc in modules.items():
             module_name_field.run_validation(module_name)
+            module_desc.name = module_name
         return modules
 
     def to_internal_value(self, data: Dict) -> ApplicationDesc:
         attrs = super().to_internal_value(data)
         attrs["name_en"] = attrs.get("name_en") or attrs["name_zh_cn"]
+
         # 验证至少有一个主模块
         has_default = False
         for module_desc in attrs["modules"].values():
@@ -140,10 +152,12 @@ class AppDescriptionSLZ(serializers.Serializer):
             raise serializers.ValidationError({"modules": _("一个应用必须有一个主模块")})
 
         # 校验 shared_from 的模块是否存在
-        for module_desc in attrs["modules"].values():
+        for module_name, module_desc in attrs["modules"].items():
             for svc in module_desc.services:
                 if svc.shared_from and svc.shared_from not in attrs["modules"]:
-                    raise serializers.ValidationError({"modules.services": _("提供共享增强服务的模块不存在")})
+                    raise serializers.ValidationError(
+                        {f"modules[{module_name}].services": _("提供共享增强服务的模块不存在")}
+                    )
 
         attrs.setdefault("plugins", [])
         if self.context.get("app_version"):

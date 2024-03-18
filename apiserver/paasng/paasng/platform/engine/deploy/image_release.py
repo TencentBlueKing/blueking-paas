@@ -29,6 +29,7 @@ from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -199,7 +200,7 @@ class ImageReleaseMgr(DeployStep):
             result = self._handle_app_description()
         except FileNotFoundError:
             logger.debug("App description file not defined, do not process.")
-        except DescriptionValidationError as e:
+        except (DescriptionValidationError, ManifestImportError) as e:
             self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
             logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:

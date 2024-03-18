@@ -30,6 +30,7 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.declarative.deployment.controller import PerformResult
@@ -150,11 +151,9 @@ class BaseBuilder(DeployStep):
         """
         try:
             return self._handle_app_description()
-        except AppDescriptionNotFoundError as e:
-            if raise_exception:
-                raise HandleAppDescriptionError("App description file(app_desc.yaml) is not defined") from e
+        except AppDescriptionNotFoundError:
             logger.debug("App description file(app_desc.yaml) is not defined, skip.")
-        except DescriptionValidationError as e:
+        except (DescriptionValidationError, ManifestImportError) as e:
             if raise_exception:
                 raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
             logger.exception("Exception while parsing app description file, skip.")
@@ -263,7 +262,7 @@ class ApplicationBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            perform_result = self.handle_app_description()
+            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
             proc_data_from_desc = perform_result.loaded_processes if perform_result else None
@@ -365,7 +364,7 @@ class DockerBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            perform_result = self.handle_app_description()
+            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
             proc_data_from_desc = perform_result.loaded_processes if perform_result else None

@@ -173,8 +173,14 @@ class ConfigMapSource(BaseModel):
 
 
 @register
+class PersistentStorage(BaseModel):
+    name: str
+
+
+@register
 class VolumeSource(BaseModel):
-    configMap: Optional[ConfigMapSource]
+    configMap: Optional[ConfigMapSource] = None
+    persistentStorage: Optional[PersistentStorage] = None
 
 
 class Mount(BaseModel):

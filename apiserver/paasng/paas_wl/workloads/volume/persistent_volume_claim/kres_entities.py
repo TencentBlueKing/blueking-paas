@@ -19,39 +19,48 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from dataclasses import dataclass
 
-from paas_wl.infras.resources.base.kres import KConfigMap
+from paas_wl.infras.resources.base.kres import KPersistentVolumeClaim
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
-from .kres_slzs import ConfigMapDeserializer, ConfigMapSerializer
+from .kres_slzs import PersistentVolumeClaimDeserializer, PersistentVolumeClaimSerializer
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ConfigMap(AppEntity):
-    data: str
+class PersistentVolumeClaim(AppEntity):
+    storage: str
+    storage_class_name: str
 
     class Meta:
-        kres_class = KConfigMap
-        deserializer = ConfigMapDeserializer
-        serializer = ConfigMapSerializer
+        kres_class = KPersistentVolumeClaim
+        deserializer = PersistentVolumeClaimDeserializer
+        serializer = PersistentVolumeClaimSerializer
 
 
-class ConfigMapManager(AppEntityManager[ConfigMap]):
+class PersistentVolumeClaimManager(AppEntityManager[PersistentVolumeClaim]):
     def __init__(self):
-        super().__init__(ConfigMap)
+        super().__init__(PersistentVolumeClaim)
 
-    def delete(self, res: ConfigMap, non_grace_period: bool = False):
+    def delete(self, res: PersistentVolumeClaim, non_grace_period: bool = False):
         namespace = res.app.namespace
-        config_name = res.name
+        pvc_name = res.name
 
         try:
-            existed_one = self.get(app=res.app, name=config_name)
+            existed_one = self.get(app=res.app, name=pvc_name)
         except AppEntityNotFound:
-            logger.info("ConfigMap<%s/%s> does not exist, will skip delete", namespace, config_name)
+            logger.info("PersistentVolumeClaim<%s/%s> does not exist, will skip delete", namespace, pvc_name)
             return None
         return super().delete(existed_one, non_grace_period)
 
+    def upsert(self, res: PersistentVolumeClaim, update_method="replace"):
+        try:
+            self.get(app=res.app, name=res.name)
+        except AppEntityNotFound:
+            # PersistentVolumeClaim 不存在时执行创建
+            return super().upsert(res, update_method)
+        return None
 
-configmap_kmodel = ConfigMapManager()
+
+pvc_kmodel = PersistentVolumeClaimManager()

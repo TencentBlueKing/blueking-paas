@@ -1309,3 +1309,14 @@ for key in dir(workloads_settings):
         raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
     locals()[key] = getattr(workloads_settings, key)
 # fmt: on
+
+
+# ---------------------------------------------
+#  挂载卷相关配置
+# ---------------------------------------------
+
+# 持久存储默认存储类型
+DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE_CLASS_NAME", "cfs")
+
+# 持久存储默认存储大小
+DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")

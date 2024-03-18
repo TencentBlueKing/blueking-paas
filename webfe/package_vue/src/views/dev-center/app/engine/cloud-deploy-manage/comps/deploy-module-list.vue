@@ -515,6 +515,7 @@ export default {
 
     // 点击访问链接
     handleOpenUrl(url) {
+      if (!url) return;
       window.open(url);
     },
 

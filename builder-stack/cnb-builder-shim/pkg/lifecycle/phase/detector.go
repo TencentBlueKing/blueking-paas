@@ -24,12 +24,12 @@ import (
 	"path/filepath"
 )
 
-// MakeDetectorCmd build the detector cmd
+// MakeDetectorStep build the detector step
 // detector will generate group.toml(to groupPath) and plan.toml(to planPath) based on order.toml(in orderPath) and source code(in appDir)
-func MakeDetectorCmd(
+func MakeDetectorStep(
 	ctx context.Context,
-	lifecycleDir, appDir, orderPath, groupPath, planPath, layersDir, logLevel string,
-) *exec.Cmd {
+	lifecycleDir, appDir, orderPath, groupPath, planPath, layersDir, logLevel string, uid, gid uint32,
+) Step {
 	args := []string{
 		"-app", appDir,
 		"-order", orderPath,
@@ -38,5 +38,6 @@ func MakeDetectorCmd(
 		"-layers", layersDir,
 		"-log-level", logLevel,
 	}
-	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "detector"), args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "detector"), args...)
+	return makeStep("Detect", "Detecting Buildpacks...", cmd, WithUser(uid, gid))
 }

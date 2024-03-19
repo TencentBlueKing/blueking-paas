@@ -19,11 +19,12 @@
 package handler
 
 import (
+	"strings"
+
 	"github.com/TencentBlueKing/gopkg/mapx"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cast"
-	"strings"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/helper"
@@ -144,7 +145,8 @@ type CNativeAppDeployer struct {
 
 // Deploy 执行部署操作
 func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) error {
-	appCode, appModule, deployEnv, manifest, tag, branch := opts.AppCode, opts.Module, opts.DeployEnv, opts.BkAppManifest, opts.Tag, opts.Branch
+	appCode, appModule, deployEnv := opts.AppCode, opts.Module, opts.DeployEnv
+	manifest, tag, branch := opts.BkAppManifest, opts.Tag, opts.Branch
 	if manifest != nil {
 		// 导入 manifest
 		_, err := apiresources.DefaultRequester.UpdataBkappModel(appCode, appModule, manifest)

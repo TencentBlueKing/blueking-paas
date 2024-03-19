@@ -20,6 +20,7 @@ package apiresources
 
 import (
 	"fmt"
+
 	"github.com/levigross/grequests"
 	"github.com/pkg/errors"
 
@@ -93,6 +94,7 @@ func (r apigwRequester) GetAppDeployResult(appCode, appModule, deployID string) 
 	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
 }
 
+// ListAppDeployHistory ...
 func (r apigwRequester) ListAppDeployHistory(appCode, appModule string) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/deployments/lists/",
@@ -102,6 +104,7 @@ func (r apigwRequester) ListAppDeployHistory(appCode, appModule string) (map[str
 	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
+// UpdataBkappModel ...
 func (r apigwRequester) UpdataBkappModel(
 	appCode, appModule string, manifest map[string]any,
 ) ([]map[string]any, error) {

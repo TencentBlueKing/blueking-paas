@@ -93,7 +93,7 @@ class ModuleProcessSpec(TimestampedModel):
     def get_proc_command(self) -> str:
         """获取 Procfile 形式的命令
         使用场景:
-        -  views 数据展示
+        - views 数据展示
         - 旧镜像应用启动进程
         """
         if self.proc_command:

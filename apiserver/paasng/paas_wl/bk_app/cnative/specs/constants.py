@@ -162,3 +162,10 @@ class MountEnvName(str, StructuredEnum):
 
 class VolumeSourceType(str, StructuredEnum):
     ConfigMap = EnumField("ConfigMap")
+    PersistentStorage = EnumField("PersistentStorage")
+
+
+class PersistentStorageSize(str, StructuredEnum):
+    P_1G = EnumField("1Gi")
+    P_2G = EnumField("2Gi")
+    P_4G = EnumField("4Gi")

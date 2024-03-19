@@ -171,6 +171,26 @@ var _ = Describe("test apply to deployment", func() {
 
 		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
 	})
+
+	It("pvc source", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "nginx-pvc"},
+				},
+			},
+			MountPath: mountPath,
+		}
+		_ = vm.ApplyToDeployment(nil, deployment)
+
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
+
+		Expect(deployment.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal("nginx-pvc"))
+	})
 })
 
 var _ = Describe("test builtin logs", func() {

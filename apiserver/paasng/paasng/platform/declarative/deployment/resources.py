@@ -21,7 +21,10 @@ from typing import Dict, List, Optional
 import cattr
 from attrs import define, field, validators
 
+from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.declarative.constants import AppSpecVersion
+from paasng.platform.declarative.utils import camel_to_snake_case
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
@@ -174,27 +177,31 @@ class DeploymentDesc:
 
     :param language: 应用开发语言
     :param source_dir: 源码目录
-    :param env_variables: 部署时使用的环境变量
-    :param processes: 启动进程
-    :param scripts: 部署钩子
-    :param svc_discovery: 服务发现
-    :param monitor: SaaS 监控采集配置
+    :param bk_monitor: SaaS 监控采集配置
+    :param spec_version: 描述文件版本
+    :param spec: BkAppSpec
     """
 
     language: AppLanguage
+    spec: bk_app.BkAppSpec
     source_dir: str = ""
-    env_variables: List[EnvVariable] = field(factory=list)
-    processes: Dict[str, Process] = field(factory=dict)
-    scripts: Scripts = field(factory=Scripts)
-    svc_discovery: SvcDiscovery = field(factory=SvcDiscovery)
+    # TODO: BkAppSpec 支持该配置
     bk_monitor: Optional[BluekingMonitor] = None
+    spec_version: AppSpecVersion = AppSpecVersion.VER_2
 
     def get_procfile(self) -> Dict[str, str]:
-        return {key: process.command for key, process in self.processes.items()}
+        return {proc_type: process.command for proc_type, process in self.get_processes().items()}
 
-    def get_env_variables(self, environment_name: Optional[ConfigVarEnvName] = None):
-        if environment_name is None or environment_name == ConfigVarEnvName.GLOBAL:
-            return cattr.unstructure(self.env_variables)
-        return cattr.unstructure(
-            [env_var for env_var in self.env_variables if env_var.is_within_scope(environment_name)]
+    def get_processes(self) -> Dict[str, Process]:
+        return cattr.structure(
+            {
+                process.name: {
+                    "command": process.get_proc_command(),
+                    "replicas": process.replicas,
+                    "plan": process.resQuotaPlan,
+                    "probes": camel_to_snake_case(process.probes.dict()) if process.probes else None,
+                }
+                for process in self.spec.processes
+            },
+            Dict[str, Process],
         )

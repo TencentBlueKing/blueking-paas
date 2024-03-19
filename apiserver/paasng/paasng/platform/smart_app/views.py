@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import List, cast
 
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError, UploadFailedError
 from django.db.transaction import atomic
@@ -32,7 +33,7 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -108,13 +109,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
 
         logger.debug("[S-Mart] fetching remote services by region.")
         supported_services = list(mixed_service_mgr.list_by_region(get_region(app_desc=app_desc)))
-        # 更新 display_name
-        for module_desc in app_desc.modules.values():
-            for svc in module_desc.services:
-                try:
-                    svc.display_name = next(item.display_name for item in supported_services if item.name == svc.name)
-                except StopIteration:
-                    pass
+        supported_services = cast(List[ServiceObj], supported_services)
 
         return Response(
             data=PackageStashResponseSLZ(

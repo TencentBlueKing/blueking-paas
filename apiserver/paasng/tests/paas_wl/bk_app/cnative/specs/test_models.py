@@ -59,6 +59,8 @@ class TestCreateAppResource:
                         "memory": None,
                         "image": None,
                         "imagePullPolicy": None,
+                        "probes": None,
+                        "proc_command": None,
                     }
                 ],
                 "hooks": None,

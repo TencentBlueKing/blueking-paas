@@ -1,12 +1,12 @@
 <template lang="html">
   <div class="right-main plugin-base-info">
+    <paas-plugin-title />
     <paas-content-loader
-      class="app-container middle"
+      class="app-container"
       :is-loading="isLoading"
       placeholder="plugin-base-info-loading"
     >
-      <paas-plugin-title />
-      <section>
+      <section class="basic-info-container card-style">
         <div class="basic-info-item">
           <div class="title">
             {{ $t('基本信息-title') }}
@@ -924,6 +924,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.basic-info-container {
+  padding: 24px;
+}
 .desc-flex {
   display: flex;
   justify-content: flex-start;
@@ -1261,9 +1264,6 @@ export default {
 .user-select-wrapper.user-cls .user-mask-layer {
   border-bottom: none;
 }
-.plugin-top-title {
-  margin-top: 6px;
-}
 .market-edit,
 .plugin-name-icon-cls {
   cursor: pointer;
@@ -1383,9 +1383,6 @@ export default {
   }
 }
 .right-main {
-  section {
-    margin-top: 20px;
-  }
   .cls-bk-input {
     input {
       padding-right: 85px !important;

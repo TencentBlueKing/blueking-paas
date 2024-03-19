@@ -21,7 +21,8 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
-from typing import Any, Dict, List, Literal, Optional
+import shlex
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
@@ -49,6 +50,67 @@ class AutoscalingSpec(BaseModel):
     policy: str = Field(..., min_length=1)
 
 
+class ExecAction(BaseModel):
+    """ExecAction describes a "run in container" action."""
+
+    command: List[str]
+
+
+class HTTPHeader(BaseModel):
+    """HTTPHeader describes a custom header to be used in HTTP probes"""
+
+    name: str
+    value: str
+
+
+class HTTPGetAction(BaseModel):
+    """HTTPGetAction describes an action based on HTTP Get requests."""
+
+    port: Union[str, int]
+    host: Optional[str] = None
+    path: Optional[str] = None
+    httpHeaders: List[HTTPHeader] = Field(default_factory=list)
+    scheme: Optional[Literal["HTTP", "HTTPS"]] = None
+
+
+class TCPSocketAction(BaseModel):
+    """TCPSocketAction describes an action based on opening a socket"""
+
+    port: Union[str, int]
+    host: Optional[str] = None
+
+
+class Probe(BaseModel):
+    """Resource: Probe
+
+    :param exec:命令行探活检测机制
+    :param httpGet:http 请求探活检测机制
+    :param tcpSocket:tcp 请求探活检测机制
+
+    :param initialDelaySeconds: 容器启动后等待时间
+    :param timeoutSeconds: 探针执行超时时间
+    :param periodSeconds: 探针执行间隔时间
+    :param successThreshold: 连续几次检测成功后，判定容器是健康的
+    :param failureThreshold: 连续几次检测失败后，判定容器是不健康
+    """
+
+    exec: Optional[ExecAction] = None
+    httpGet: Optional[HTTPGetAction] = None
+    tcpSocket: Optional[TCPSocketAction] = None
+
+    initialDelaySeconds: Optional[int] = 0
+    timeoutSeconds: Optional[int] = 1
+    periodSeconds: Optional[int] = 10
+    successThreshold: Optional[int] = 1
+    failureThreshold: Optional[int] = 3
+
+
+class ProbeSet(BaseModel):
+    liveness: Optional[Probe] = None
+    readiness: Optional[Probe] = None
+    startup: Optional[Probe] = None
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -60,6 +122,9 @@ class BkAppProcess(BaseModel):
     resQuotaPlan: Optional[ResQuotaPlan] = None
     autoscaling: Optional[AutoscalingSpec] = None
 
+    # TODO: `probes` is NOT supported by operator now.
+    probes: Optional[ProbeSet] = None
+
     # Deprecated: use resQuotaPlan instead in v1alpha2
     cpu: Optional[str] = None
     # Deprecated: use resQuotaPlan instead in v1alpha2
@@ -68,6 +133,38 @@ class BkAppProcess(BaseModel):
     image: Optional[str] = None
     # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
     imagePullPolicy: Optional[str] = None
+    # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
+    proc_command: Optional[str] = Field(None)
+
+    def get_proc_command(self) -> str:
+        """get_proc_command: Procfile 风格的命令
+        使用场景:
+        - buildpacks 构建方案使用该方法生成 Procfile 文件
+        """
+        if self.proc_command:
+            return self.proc_command
+        # Warning: 已知 shlex.join 不支持环境变量, 对于 buildpack 构建的应用, 使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
+        # 例如会报错: Error: '${PORT:-5000}' is not a valid port number.
+        return self._sanitize_proc_command(
+            (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
+        )
+
+    @staticmethod
+    def _sanitize_proc_command(proc_command: str) -> str:
+        """Sanitize the command and arg list, replace some special expressions which can't
+        be interpreted by the operator.
+        """
+        # '${PORT:-5000}' is massively used by the app framework, while it can not work well with shlex.join,
+        # here remove the single quote added by shlex.join.
+        known_cases = [
+            ("':$PORT'", ":$PORT"),
+            ("':${PORT:-5000}'", ":${PORT}"),
+            ("'[::]:${PORT}'", "[::]:${PORT}"),
+            ("'[::]:${PORT:-5000}'", "[::]:${PORT}"),
+        ]
+        for old, new in known_cases:
+            proc_command = proc_command.replace(old, new)
+        return proc_command
 
 
 class Hook(BaseModel):
@@ -102,8 +199,14 @@ class ConfigMapSource(BaseModel):
 
 
 @register
+class PersistentStorage(BaseModel):
+    name: str
+
+
+@register
 class VolumeSource(BaseModel):
-    configMap: Optional[ConfigMapSource]
+    configMap: Optional[ConfigMapSource] = None
+    persistentStorage: Optional[PersistentStorage] = None
 
 
 class Mount(BaseModel):
@@ -201,6 +304,7 @@ class BkAppAddon(BaseModel):
 
     name: str
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
+    sharedFrom: Optional[str] = None
 
 
 @register

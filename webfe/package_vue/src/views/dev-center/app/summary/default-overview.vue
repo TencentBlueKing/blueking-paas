@@ -238,15 +238,6 @@
                       :class="activeResource.length ? 'paasng-down-shape' : 'paasng-right-shape'"
                     />
                     <span class="header-title">{{ $t('资源用量') }}</span>
-                    <span
-                      v-if="curEnvName"
-                      class="text ml5"
-                    >
-                      <a
-                        href="javascript: void(0);"
-                        @click="goProcessDetail"
-                      > {{ $t('查看详情') }} </a>
-                    </span>
                   </div>
                 </div>
                 <div
@@ -896,23 +887,6 @@ export default {
         cpuRef && cpuRef.mergeOptions(this.cpuLine);
         memRef && memRef.mergeOptions(this.memLine);
       });
-    },
-
-    /**
-             * 跳转到进程详情页面
-             */
-    goProcessDetail() {
-      const query = {
-        name: this.isCloudApp ? 'appStatus' : 'appProcess',
-        params: {
-          id: this.appCode,
-          moduleId: this.curModuleId,
-        },
-        query: {
-          env: this.curEnvName,
-        },
-      };
-      this.$router.push(query);
     },
 
     // 概览数据接口

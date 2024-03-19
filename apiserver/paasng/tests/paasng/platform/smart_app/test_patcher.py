@@ -33,6 +33,7 @@ from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML
 
 pytestmark = pytest.mark.django_db
+EXPECTED_WEB_PROCESS = constants.WEB_PROCESS
 
 
 class TestSourcePackagePatcher:
@@ -98,7 +99,7 @@ class TestSourcePackagePatcher:
                 {"app.yaml": yaml.dump(EXAMPLE_APP_YAML)},
                 "./Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS},
+                {"web": EXPECTED_WEB_PROCESS},
             ),
             # 测试 ./Procfile not found
             ({"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, "./Procfile", pytest.raises(KeyError), None),
@@ -106,7 +107,7 @@ class TestSourcePackagePatcher:
                 {"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)},
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS},
+                {"web": EXPECTED_WEB_PROCESS},
             ),
             (
                 {
@@ -119,7 +120,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS, "celery": constants.CELERY_PROCESS},
+                {"web": EXPECTED_WEB_PROCESS, "celery": constants.CELERY_PROCESS},
             ),
             (
                 {
@@ -132,7 +133,10 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS, "celery": constants.CELERY_PROCESS_WITH_GEVENT},
+                {
+                    "web": EXPECTED_WEB_PROCESS,
+                    "celery": constants.CELERY_PROCESS_WITH_GEVENT,
+                },
             ),
             (
                 {
@@ -142,14 +146,14 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"web": constants.WEB_PROCESS, "celery": constants.CELERY_PROCESS},
+                {"web": EXPECTED_WEB_PROCESS, "celery": constants.CELERY_PROCESS},
             ),
             (
                 {"foo/app.yaml": yaml.dump({**EXAMPLE_APP_YAML, "is_use_celery": True, "is_use_celery_beat": True})},
                 "./foo/Procfile",
                 does_not_raise(),
                 {
-                    "web": constants.WEB_PROCESS,
+                    "web": EXPECTED_WEB_PROCESS,
                     "celery": constants.CELERY_PROCESS,
                     "beat": constants.CELERY_BEAT_PROCESS,
                 },
@@ -173,6 +177,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
+                # shlex 在某些情况会出现稍微偏差(这里的 ; 号位置变了)
                 {"hello": "echo 'hello world!';"},
             ),
             # 测试 Procfile 不会被覆盖
@@ -207,12 +212,12 @@ class TestSourcePackagePatcher:
                             "modules": {
                                 "bar": {
                                     "is_default": True,
-                                    "processes": {"hello": {"command": "echo 'Hello Foo, i am Bar!';"}},
+                                    "processes": {"hello": {"command": "echo 'Hello Foo, i am Bar!'"}},
                                     "source_dir": "./src/bar",
                                     "language": "python",
                                 },
                                 "foo": {
-                                    "processes": {"hello": {"command": "echo 'Hello Bar, i am Foo!';"}},
+                                    "processes": {"hello": {"command": "echo 'Hello Bar, i am Foo!'"}},
                                     "source_dir": "./src/foo",
                                     "language": "python",
                                 },
@@ -222,7 +227,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/src/bar/Procfile",
                 does_not_raise(),
-                {"hello": "echo 'Hello Foo, i am Bar!';"},
+                {"hello": "echo 'Hello Foo, i am Bar!'"},
             ),
             # 测试多模块(已加密)
             (
@@ -233,13 +238,13 @@ class TestSourcePackagePatcher:
                             "app": {"bk_app_code": "foo", "bk_app_name": "foo"},
                             "modules": {
                                 "bar": {
-                                    "processes": {"hello": {"command": "echo 'Hello Foo, i am Bar!';"}},
+                                    "processes": {"hello": {"command": "echo 'Hello Foo, i am Bar!'"}},
                                     "source_dir": "./src/bar",
                                     "language": "python",
                                 },
                                 "foo": {
                                     "is_default": True,
-                                    "processes": {"hello": {"command": "echo 'Hello Bar, i am Foo!';"}},
+                                    "processes": {"hello": {"command": "echo 'Hello Bar, i am Foo!'"}},
                                     "source_dir": "./src/foo",
                                     "language": "python",
                                 },
@@ -250,7 +255,7 @@ class TestSourcePackagePatcher:
                 },
                 "./foo/Procfile",
                 does_not_raise(),
-                {"hello": "echo 'Hello Foo, i am Bar!';"},
+                {"hello": "echo 'Hello Foo, i am Bar!'"},
             ),
         ],
     )
@@ -259,7 +264,8 @@ class TestSourcePackagePatcher:
         with tarfile.open(patched_tar) as tar, ctx:
             fp = tar.extractfile(target)
             assert fp
-            assert yaml.load(fp.read()) == expected
+            data = yaml.load(fp.read())
+            assert data == expected
 
     @pytest.mark.parametrize(
         ("contents", "target", "ctx", "expected"),

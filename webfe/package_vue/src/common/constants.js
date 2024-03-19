@@ -73,10 +73,25 @@ export const PLUGIN_STATUS = {
   archived: '已下架',
 };
 
+
+/**
+ * 正式版本状态
+ */
 export const PLUGIN_VERSION_STATUS = {
   successful: '成功',
   failed: '失败',
   pending: '等待',
+  initial: '初始化',
+  interrupted: '已中断',
+};
+
+/**
+ * 测试版状态
+ */
+export const PLUGIN_TEST_VERSION_STATUS = {
+  successful: '测试成功',
+  failed: '测试失败',
+  pending: '测试中',
   initial: '初始化',
   interrupted: '已中断',
 };
@@ -227,4 +242,13 @@ export const PLUGIN_VERSION_MAP = {
   deployAPI: 'deploy',
   subpage: 'test',
   itsm: 'itsm',
+};
+
+/**
+ * 版本号类型
+ */
+export const VERSION_NUMBER_TYPE = {
+  major: '重大版本',
+  minor: '次版本',
+  patch: '修正版本',
 };

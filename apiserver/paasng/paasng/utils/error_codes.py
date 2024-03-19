@@ -176,6 +176,10 @@ class ErrorCodes:
     # Manifest
     IMPORT_MANIFEST_FAILED = ErrorCode(_("导入应用模型失败"))
 
+    # dev sandbox
+    DEV_SANDBOX_ALREADY_EXISTS = ErrorCode("dev sandbox already exists", status_code=409)
+    DEV_SANDBOX_NOT_FOUND = ErrorCode("dev sandbox not found")
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

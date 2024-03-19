@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
@@ -35,6 +36,39 @@ from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
+
+
+class TestProcessesField:
+    def test_python_framework_case(self, bk_module, bk_deployment):
+        command = """gunicorn wsgi -w 4 -b [::]:${PORT:-5000} --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'"""
+        json_data = {"language": "python", "processes": {"web": {"command": command}}}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        web = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert web.get_proc_command() == command
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "celery worker -A blueapps.core.celery -P threads -Q er_execute_${BKFLOW_MODULE_CODE} -n er_e_worker@%h -c 100 -l info",
+            "go-admin server -c ${HOME}/config/settings.${BKPAAS_ENVIRONMENT}.yml",
+            "./group-bot -c app.conf -o console -p $PORT",
+            'nginx -g "daemon off;"',
+            "celery-prometheus-exporter --broker amqp://$RABBITMQ_USER:$RABBITMQ_PASSWORD@$RABBITMQ_HOST:$RABBITMQ_PORT/$RABBITMQ_VHOST --addr :$PORT --queue-list $CELERY_EXPORTER_QUEUE",
+            "python -m gunicorn -w 4 -b [::]:${PORT} 'app:app'",
+            "bash -c \"if [[ $(cat config/default.py | grep 'IS_USE_DOCKERFILE' | cut -d'=' -f2) == 'True' ]]; then python manage.py collectstatic --noinput; fi && gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s \\\"%(r)s\\\" %(s)s %(D)s %(b)s \\\"%(f)s\\\" \\\"%(a)s\\\"'\"",
+        ],
+    )
+    def test_known_cases(self, bk_module, bk_deployment, command):
+        json_data = {"language": "python", "processes": {"web": {"command": command}}}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        web = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert web.get_proc_command() == command
+        assert web.command is None
+        assert web.args is None
 
 
 class TestEnvVariablesField:

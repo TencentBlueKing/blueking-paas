@@ -44,6 +44,7 @@ class TestGetDefaultFeatureFlags:
                     "MODIFY_ENVIRONMENT_VARIABLE": True,
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
+                    "ENABLE_PERSISTENT_STORAGE": False,
                 },
             ),
             (
@@ -62,6 +63,7 @@ class TestGetDefaultFeatureFlags:
                     "MODIFY_ENVIRONMENT_VARIABLE": True,
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
+                    "ENABLE_PERSISTENT_STORAGE": False,
                 },
             ),
             (
@@ -80,6 +82,7 @@ class TestGetDefaultFeatureFlags:
                     "MODIFY_ENVIRONMENT_VARIABLE": True,
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
+                    "ENABLE_PERSISTENT_STORAGE": False,
                 },
             ),
             (
@@ -98,6 +101,7 @@ class TestGetDefaultFeatureFlags:
                     "MODIFY_ENVIRONMENT_VARIABLE": True,
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
+                    "ENABLE_PERSISTENT_STORAGE": False,
                 },
             ),
             (
@@ -111,6 +115,7 @@ class TestGetDefaultFeatureFlags:
                     "PA_CUSTOM_EVENT_ANALYTICS",
                     "PA_INGRESS_ANALYTICS",
                     "PA_USER_DIMENSION_SHOW_DEPT",
+                    "ENABLE_PERSISTENT_STORAGE",
                 ],
                 {
                     "RELEASE_TO_BLUEKING_MARKET": True,
@@ -125,6 +130,7 @@ class TestGetDefaultFeatureFlags:
                     "MODIFY_ENVIRONMENT_VARIABLE": True,
                     "ENABLE_BK_LOG_COLLECTOR": False,
                     "TOGGLE_EGRESS_BINDING": False,
+                    "ENABLE_PERSISTENT_STORAGE": True,
                 },
             ),
         ],

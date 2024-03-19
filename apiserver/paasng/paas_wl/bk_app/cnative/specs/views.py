@@ -44,7 +44,7 @@ from paas_wl.bk_app.cnative.specs.models import (
 )
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
-    check_storage_class_exists,
+    enable_persistent_storage,
     init_volume_source_controller,
 )
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -334,12 +334,10 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=CreateMountSourceSLZ, responses={201: MountSourceSLZ(many=True)})
     def create(self, request, code):
         app = self.get_application()
-        storage_class_exists = check_storage_class_exists(
-            application=app, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
-        )
-        if not storage_class_exists:
+        enabled = enable_persistent_storage(application=app)
+        if not enabled:
             raise error_codes.CREATE_VOLUME_SOURCE_FAILED.f(
-                _(f"应用集群不支持该存储类 {settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME}")
+                _(f"应用未开启持久存储特性或应用集群不支持该存储类 {settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME}")
             )
         slz = CreateMountSourceSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -376,13 +374,11 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class StorageClassViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class PersistentStorageFeatureSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def check(self, request, code):
-        """确认部署集群是否开启了默认 StorageClass"""
+        """检查应用是否支持持久化存储"""
         app = self.get_application()
-        exists = check_storage_class_exists(
-            application=app, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
-        )
-        return Response(exists)
+        enabled = enable_persistent_storage(application=app)
+        return Response(enabled)

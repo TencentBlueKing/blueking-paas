@@ -103,6 +103,9 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案查询日志"), default=False)
     TOGGLE_EGRESS_BINDING = FeatureFlagField(label=_("开启出口 IP 管理"), default=False)
 
+    # 持久存储挂载卷相关的 feature flag
+    ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label="开启持久存储挂载卷", default=False)
+
 
 class LightApplicationViewSetErrorCode(str, StructuredEnum):
     SUCCESS = 0

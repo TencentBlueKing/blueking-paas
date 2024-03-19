@@ -176,4 +176,8 @@ export default {
     line-height: 22px;
   }
 }
+.capacity-tips {
+  color: #979BA5;
+  font-size: 12px;
+}
 </style>

@@ -573,7 +573,7 @@ export default {
       return this.persistentStorageList.filter(v => v.environment_name === this.volumeFormData.environment_name);
     },
     readonly() {
-      return this.volumeFormData.sourceConfigArrData.length <= 0;
+      return this.volumeFormData.sourceConfigArrData?.length <= 0;
     },
   },
   watch: {
@@ -780,7 +780,14 @@ export default {
     },
     handleConfirm() {
       this.$refs.formRef?.validate().then(() => {
-        if (!Object.keys(this.volumeFormData.source_config_data)?.length && !this.isPersistentStorage) {
+        if (!this.isPersistentStorage) {
+          if (!Object.keys(this.volumeFormData?.source_config_data || {})?.length) {
+            this.$paasMessage({
+              theme: 'error',
+              message: this.$t('请填写文件名'),
+            });
+            return;
+          }
           if (!this.sliderEditordetail) {
             this.$paasMessage({
               theme: 'error',
@@ -788,11 +795,6 @@ export default {
             });
             return;
           }
-          this.$paasMessage({
-            theme: 'error',
-            message: this.$t('请填写文件名'),
-          });
-          return;
         }
         this.handleConfirmVolume();
       })

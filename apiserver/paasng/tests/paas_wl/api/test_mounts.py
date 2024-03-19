@@ -24,6 +24,8 @@ from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceTyp
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
 from paas_wl.bk_app.cnative.specs.mounts import MountManager, init_volume_source_controller
 from paas_wl.bk_app.cnative.specs.serializers import MountSLZ
+from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.applications.models import ApplicationFeatureFlag
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -362,7 +364,7 @@ class TestMountSourceViewSet:
             application_id=bk_app.id,
             module_id=bk_module.id,
             name="pvc",
-            environment_name=MountEnvName.GLOBAL.value,
+            environment_name=MountEnvName.STAG.value,
             storage_class_name="cfs",
             storage_size="1Gi",
         )
@@ -387,11 +389,15 @@ class TestMountSourceViewSet:
             "source_type": "PersistentStorage",
             "persistent_storage_source": {"storage_size": "2Gi"},
         }
-        with mock.patch("paas_wl.bk_app.cnative.specs.views.check_storage_class_exists", return_value=False):
+        with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=False):
             response = api_client.post(url, request_body)
             assert response.status_code == 400
 
-        with mock.patch("paas_wl.bk_app.cnative.specs.views.check_storage_class_exists", return_value=True):
+        with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=True):
+            response = api_client.post(url, request_body)
+            assert response.status_code == 400
+
+            ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, True, bk_app)
             response = api_client.post(url, request_body)
             assert response.status_code == 201
             assert response.data["environment_name"] == "prod"
@@ -406,7 +412,8 @@ class TestMountSourceViewSet:
             "source_type": "PersistentStorage",
             "persistent_storage_source": {"storage_size": "2Gi"},
         }
-        with mock.patch("paas_wl.bk_app.cnative.specs.views.check_storage_class_exists", return_value=True):
+        with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=True):
+            ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, True, bk_app)
             response = api_client.post(url, request_body)
             assert response.status_code == 400
 
@@ -418,3 +425,23 @@ class TestMountSourceViewSet:
         )
         response = api_client.delete(url)
         assert response.status_code == 204
+
+    @pytest.mark.usefixtures("_mount_sources")
+    def test_destroy_with_bound(self, api_client, bk_module, bk_app, bk_prod_wl_app, bk_stag_wl_app):
+        """验证不能删除已经被挂载卷绑定的资源"""
+        url = (
+            "/api/bkapps/applications/"
+            f"{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage&source_name=pvc"
+        )
+        MountManager.new(
+            app_code=bk_app.code,
+            module_id=bk_module.id,
+            mount_path="/path/",
+            environment_name=MountEnvName.STAG,
+            name="mount-pvc",
+            source_type=VolumeSourceType.PersistentStorage.value,
+            region=bk_app.region,
+            source_name="pvc",
+        )
+        response = api_client.delete(url)
+        assert response.status_code == 400

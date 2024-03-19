@@ -53,7 +53,7 @@ def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
     return cattr.structure(obj, TypeProcesses)
 
 
-EXPECTED_WEB_PROCESS = WEB_PROCESS.replace(":$PORT", "':$PORT'")
+EXPECTED_WEB_PROCESS = WEB_PROCESS
 
 
 @pytest.mark.usefixtures("_init_tmpls")

@@ -33,7 +33,7 @@ from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML
 
 pytestmark = pytest.mark.django_db
-EXPECTED_WEB_PROCESS = constants.WEB_PROCESS.replace(":$PORT", "':$PORT'")
+EXPECTED_WEB_PROCESS = constants.WEB_PROCESS
 
 
 class TestSourcePackagePatcher:
@@ -178,7 +178,7 @@ class TestSourcePackagePatcher:
                 "./foo/Procfile",
                 does_not_raise(),
                 # shlex 在某些情况会出现稍微偏差(这里的 ; 号位置变了)
-                {"hello": "echo 'hello world!;'"},
+                {"hello": "echo 'hello world!';"},
             ),
             # 测试 Procfile 不会被覆盖
             (

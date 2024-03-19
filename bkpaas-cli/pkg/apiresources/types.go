@@ -50,9 +50,6 @@ type Requester interface {
 
 	// DeployCNativeApp 部署云原生应用
 	DeployCNativeApp(
-		appCode, appModule, deployEnv string,
-		manifest map[string]any,
-		tag string,
-		branch string,
+		appCode, appModule, deployEnv string, manifest map[string]any, tag string, branch string,
 	) (map[string]any, error)
 }

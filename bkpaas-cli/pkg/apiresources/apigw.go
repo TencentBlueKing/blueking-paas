@@ -20,6 +20,7 @@ package apiresources
 
 import (
 	"fmt"
+	"github.com/TencentBlueKing/gopkg/mapx"
 	"strings"
 
 	"github.com/levigross/grequests"
@@ -112,23 +113,18 @@ func (r apigwRequester) DeployCNativeApp(
 ) (map[string]any, error) {
 	if manifest != nil {
 		// 导入 manifest
-		_, err := r.ImportManifest(appCode, appModule, manifest)
+		_, err := r.updataBkappModel(appCode, appModule, manifest)
 		if err != nil {
 			return nil, err
 		}
 		if tag == "" {
 			tag = "latest"
 		}
-		// 从 manifest 中提取 tag 信息
-		if spec, ok := manifest["spec"].(map[string]any); ok {
-			if build, ok := spec["build"].(map[string]any); ok {
-				if image, ok := build["image"].(string); ok {
-					// 从 image 中提取 tag 信息
-					if pos := strings.LastIndex(image, ":"); pos != -1 {
-						tag = image[pos+1:]
-					}
-				}
-			}
+		// 从 manifest 中提取 image 信息
+		image := mapx.GetStr(manifest, "spec.build.image")
+		// 从 image 中提取 tag 信息
+		if pos := strings.LastIndex(image, ":"); pos != -1 {
+			tag = image[pos+1:]
 		}
 	}
 	var data map[string]any
@@ -148,7 +144,7 @@ func (r apigwRequester) DeployCNativeApp(
 	return r.handlePaaSApiRequest(grequests.Post, url, opts)
 }
 
-func (r apigwRequester) ImportManifest(
+func (r apigwRequester) updataBkappModel(
 	appCode, appModule string, manifest map[string]any,
 ) ([]map[string]any, error) {
 	url := fmt.Sprintf(
@@ -156,7 +152,7 @@ func (r apigwRequester) ImportManifest(
 		config.G.PaaSApigwUrl, appCode, appModule,
 	)
 	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]any{"manifest": manifest}}
-	return r.handleListPaaSApiRequest(grequests.Put, url, opts)
+	return r.handlePaaSListApiRequest(grequests.Put, url, opts)
 }
 
 type gReqFunc func(string, *grequests.RequestOptions) (*grequests.Response, error)
@@ -185,8 +181,8 @@ func (r apigwRequester) handlePaaSApiRequest(
 	return respData, nil
 }
 
-// 处理 PaaS API 调用请求(返回值为 list )
-func (r apigwRequester) handleListPaaSApiRequest(
+// 处理 PaaS API 调用请求(返回值为 list)
+func (r apigwRequester) handlePaaSListApiRequest(
 	reqFunc gReqFunc, url string, opts grequests.RequestOptions,
 ) ([]map[string]any, error) {
 	console.Debug("Request Url: %s, Headers: %v, Params: %v, Body: %v", url, opts.Headers, opts.Params, opts.JSON)

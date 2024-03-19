@@ -46,9 +46,9 @@ func NewAppDeployer(appCode string) (Deployer, error) {
 type BaseDeployer struct{}
 
 // GetResult 获取部署结果
-func (b BaseDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, error) {
+func (d BaseDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, error) {
 	// 需要根据 deployment_id 查询，因此先从历史记录获取最新记录的 deployment_id
-	history, err := b.GetHistory(opts)
+	history, err := d.GetHistory(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (b BaseDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, e
 }
 
 // GetHistory 获取部署历史
-func (b BaseDeployer) GetHistory(opts model.DeployOptions) (model.DeployHistory, error) {
+func (d BaseDeployer) GetHistory(opts model.DeployOptions) (model.DeployHistory, error) {
 	respData, err := apiresources.DefaultRequester.ListAppDeployHistory(opts.AppCode, opts.Module)
 	if err != nil {
 		return nil, err

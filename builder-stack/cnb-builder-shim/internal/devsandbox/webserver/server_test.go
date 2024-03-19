@@ -33,8 +33,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer/webserver/service"
+	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 

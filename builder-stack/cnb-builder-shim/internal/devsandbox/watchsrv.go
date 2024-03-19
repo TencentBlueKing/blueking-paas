@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package devcontainer
+package devsandbox
 
 import (
 	"os"
@@ -38,7 +38,7 @@ type AppReloadEvent struct {
 	Relaunch bool
 }
 
-// DevWatchServer 是 devcontainer 中常驻 WatchServer 的接口协议
+// DevWatchServer 是 dev sandbox 中常驻 WatchServer 的接口协议
 type DevWatchServer interface {
 	// ReadReloadEvent blocking read on AppReloadEvent
 	ReadReloadEvent() (AppReloadEvent, error)

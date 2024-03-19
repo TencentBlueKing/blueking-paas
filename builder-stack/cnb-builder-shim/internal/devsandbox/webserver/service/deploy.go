@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/uuid"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
+	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -226,7 +226,7 @@ var _ DeployServiceHandler = (*DeployManager)(nil)
 // FakeDeployManger 用于测试
 type FakeDeployManger struct{}
 
-// Deploy TODO
+// Deploy fake deploy for unit test
 func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
 	return &DeployResult{
 		DeployID: uuid.NewString(),
@@ -235,7 +235,7 @@ func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
 	}, nil
 }
 
-// Result TODO
+// Result fake result for unit test
 func (m FakeDeployManger) Result(deployID string, withLog bool) (*DeployResult, error) {
 	if withLog {
 		return &DeployResult{

@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package devcontainer
+package devsandbox
 
 import (
 	"io"
@@ -26,13 +26,13 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer/phase"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/phase"
 )
 
 var (
-	// ReloadDir TODO
-	ReloadDir = "/cnb/devcontainer/reload"
-	// ReloadLogDir TODO
+	// ReloadDir used to store reload result
+	ReloadDir = "/cnb/devsandbox/reload"
+	// ReloadLogDir used to store reload log
 	ReloadLogDir = path.Join(ReloadDir, "log")
 )
 
@@ -40,13 +40,13 @@ var (
 type ReloadStatus string
 
 const (
-	// ReloadProcessing TODO
+	// ReloadProcessing represents a reload is in progress.
 	ReloadProcessing ReloadStatus = "Processing"
-	// ReloadSuccess TODO
+	// ReloadSuccess represents a reload is successful.
 	ReloadSuccess ReloadStatus = "Success"
-	// ReloadFailed TODO
+	// ReloadFailed represents a reload is failed.
 	ReloadFailed ReloadStatus = "Failed"
-	// ReloadUnknown TODO
+	// ReloadUnknown represents a reload is unknown.
 	ReloadUnknown ReloadStatus = "Unknown"
 )
 
@@ -105,7 +105,7 @@ type ReloadResultStorage interface {
 	ResultLogWriter(reloadID string) (io.WriteCloser, error)
 }
 
-// NewReloadResultStorage TODO
+// NewReloadResultStorage makes an instance of ReloadResultStorage.
 func NewReloadResultStorage() (ReloadResultStorage, error) {
 	// TODO: support other storage
 	s := ReloadResultFile{rootDir: ReloadDir, rootLogDir: ReloadLogDir}

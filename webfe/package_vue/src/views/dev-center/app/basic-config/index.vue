@@ -26,8 +26,6 @@ export default {
     return {
       active: 'market',
       routeIndex: 0,
-      isPersistentStorage: false,
-      isRequest: false,
     };
   },
   computed: {
@@ -36,8 +34,8 @@ export default {
     },
     panels() {
       let panels = [
-        { name: 'storage', label: this.$t('持久存储'), routeName: 'appPersistentStorage' },
         { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
+        { name: 'storage', label: this.$t('持久存储'), routeName: 'appPersistentStorage' },
         { name: 'appMobileMarket', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
         { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
         { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
@@ -46,9 +44,6 @@ export default {
       if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
         panels = panels.filter(tab => tab.name !== 'appMobileMarket');
       }
-      if (!this.isPersistentStorage) {
-        return panels.filter(tab => tab.name !== 'storage');
-      }
       return panels;
     },
   },
@@ -56,13 +51,6 @@ export default {
     $route: {
       handler(v) {
         this.active = v.meta.module;
-      },
-      immediate: true,
-    },
-    appCode: {
-      handler() {
-        this.isRequest = false;
-        this.getPersistentStorageFeatureToggle();
       },
       immediate: true,
     },
@@ -88,28 +76,6 @@ export default {
 
     goBack() {
       this.$router.go(-1);
-    },
-
-    async getPersistentStorageFeatureToggle() {
-      this.isPersistentStorage = false;
-      if (this.isRequest) {
-        return;
-      }
-      this.isRequest = true;
-      try {
-        const res = await this.$store.dispatch('persistentStorage/getPersistentStorageFeatureToggle', {
-          appCode: this.appCode,
-        });
-        this.isPersistentStorage = res || false;
-        this.handleTabChange(res ? 'storage' : this.active);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.isRequest = false;
-      }
     },
   },
 };

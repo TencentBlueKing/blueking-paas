@@ -3,6 +3,7 @@
   <div
     ref="editorRef"
     class="resource-editor"
+    :class="{ 'readonly-cls': readonly }"
     :style="style"
   />
 </template>
@@ -242,7 +243,7 @@ export default defineComponent({
   },
 });
 </script>
-<style scoped>
+<style lang="scss" scoped>
 .resource-editor {
     width: 100%;
     height: 100%;
@@ -250,5 +251,11 @@ export default defineComponent({
     background: #1a1a1a;
     padding: 10px 0;
     overflow: hidden;
+}
+.resource-editor.readonly-cls {
+    overflow: unset;
+    :deep(.monaco-editor) .view-line .mtk31 {
+      color: #c4c6cc !important;
+    }
 }
 </style>

@@ -6,126 +6,138 @@
       placeholder="persistent-storage-loading"
     >
       <section class="storage-container">
-        <!-- 无数据 -->
-        <section
-          v-if="!persistentStorageList.length"
-          style="margin-top: 38px"
-        >
+        <!-- 不支持持久存储 -->
+        <section v-if="!isShowPersistentStorage">
           <bk-exception
             class="exception-wrap-item exception-part"
             type="empty"
             scene="part"
           >
-            <p class="mt10 exception-text">{{ $t('暂无持久存储资源') }}</p>
-            <p class="exception-text">
-              {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。') }}
-              <bk-button
-                theme="primary"
-                text
-                style="font-size: 12px"
-                @click="viewBillingMethod"
-              >
-                {{ $t('查看计费方式') }}
-              </bk-button>
-            </p>
-            <p class="guide-link mt15">
-              <bk-button
-                theme="primary"
-                text
-                style="font-size: 12px"
-                @click="handlerPersistentStorage"
-              >
-                {{ $t('申请持久存储') }}
-              </bk-button>
-            </p>
+            <p class="mt10 exception-text">{{ $t('暂不支持持久存储, 如有需要请联系管理员开启') }}</p>
           </bk-exception>
         </section>
         <template v-else>
-          <div class="top">
-            <bk-button
-              theme="primary"
-              class="mr10"
-              @click="handlerPersistentStorage"
+          <!-- 无数据 -->
+          <section
+            v-if="!persistentStorageList.length"
+            style="margin-top: 38px"
+          >
+            <bk-exception
+              class="exception-wrap-item exception-part"
+              type="empty"
+              scene="part"
             >
-              <i class="paasng-icon paasng-plus mr5 plus" />
-              {{ $t('新增持久存储') }}
-            </bk-button>
-            <span class="tips">
-              <i class="paasng-icon paasng-info-line tips-line" />
-              <span>
-                {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。持久存储申请后就会产生实际的费用，请按需申请，不用的资源请及时删除。') }}
-              </span>
+              <p class="mt10 exception-text">{{ $t('暂无持久存储资源') }}</p>
+              <p class="exception-text">
+                {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。') }}
+                <bk-button
+                  theme="primary"
+                  text
+                  style="font-size: 12px"
+                  @click="viewBillingMethod"
+                >
+                  {{ $t('查看计费方式') }}
+                </bk-button>
+              </p>
+              <p class="guide-link mt15">
+                <bk-button
+                  theme="primary"
+                  text
+                  style="font-size: 12px"
+                  @click="handlerPersistentStorage"
+                >
+                  {{ $t('申请持久存储') }}
+                </bk-button>
+              </p>
+            </bk-exception>
+          </section>
+          <template v-else>
+            <div class="top">
               <bk-button
                 theme="primary"
-                text
-                style="font-size: 12px"
-                @click="viewBillingMethod"
+                class="mr10"
+                @click="handlerPersistentStorage"
               >
-                {{ $t('查看计费方式') }}
+                <i class="paasng-icon paasng-plus mr5 plus" />
+                {{ $t('新增持久存储') }}
               </bk-button>
-            </span>
-          </div>
-          <!-- 存储列表 -->
-          <section
-            class="collapse-panel"
-            v-for="item in persistentStorageList"
-            :key="item.display_name"
-          >
+              <span class="tips">
+                <i class="paasng-icon paasng-info-line tips-line" />
+                <span>
+                  {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。持久存储申请后就会产生实际的费用，请按需申请，不用的资源请及时删除。') }}
+                </span>
+                <bk-button
+                  theme="primary"
+                  text
+                  style="font-size: 12px"
+                  @click="viewBillingMethod"
+                >
+                  {{ $t('查看计费方式') }}
+                </bk-button>
+              </span>
+            </div>
+            <!-- 存储列表 -->
             <section
-              :class="['panel-item', { active: item.isExpanded }]"
-              @click="handlerPanelChage(item)"
-              @mouseenter="curHoverPanels = item.display_name"
-              @mouseleave="curHoverPanels = ''"
+              class="collapse-panel"
+              v-for="item in persistentStorageList"
+              :key="item.display_name"
             >
-              <div class="icon-warpper">
-                <i class="paasng-icon paasng-play-shape"></i>
-              </div>
-              <div class="main">
-                <p class="name">{{ item.display_name }}</p>
-                <div class="info">
-                  <span>{{ $t('生效环境') }}：{{ item.environment_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
-                  <span>{{ $t('容量') }}：{{ item.storage_size }}</span>
-                  <span>{{ $t('已绑定模块数') }}：{{ item.bound_modules?.length || 0 }}</span>
+              <section
+                :class="['panel-item', { active: item.isExpanded }]"
+                @click="handlerPanelChage(item)"
+                @mouseenter="curHoverPanels = item.display_name"
+                @mouseleave="curHoverPanels = ''"
+              >
+                <div class="icon-warpper">
+                  <i class="paasng-icon paasng-play-shape"></i>
                 </div>
-              </div>
-              <div
-                class="delete"
-                v-show="curHoverPanels === item.display_name"
-                @click.stop="handlerDelete(item)"
-              >
-                <i class="paasng-icon paasng-delete"></i>
-                {{ $t('删除') }}
-              </div>
+                <div class="main">
+                  <p class="name">{{ item.display_name }}</p>
+                  <div class="info">
+                    <span>{{ $t('生效环境') }}：{{ item.environment_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
+                    <span>{{ $t('容量') }}：{{ item.storage_size }}</span>
+                    <span>{{ $t('已绑定模块数') }}：{{ item.bound_modules?.length || 0 }}</span>
+                  </div>
+                </div>
+                <div
+                  class="delete"
+                  v-show="curHoverPanels === item.display_name"
+                  @click.stop="handlerDelete(item)"
+                >
+                  <i class="paasng-icon paasng-delete"></i>
+                  {{ $t('删除') }}
+                </div>
+              </section>
+              <section class="content" v-if="item.isExpanded">
+                <bk-table
+                  v-if="item.bound_modules?.length"
+                  :data="item.bound_modules"
+                  :outer-border="false"
+                  ext-cls="store-module-table-cls"
+                >
+                  <bk-table-column
+                    :label="$t('绑定模块')"
+                    prop="module"
+                    :width="150"
+                  ></bk-table-column>
+                  <bk-table-column
+                    :label="$t('挂载目录')"
+                    prop="path"
+                  ></bk-table-column>
+                </bk-table>
+                <bk-exception
+                  v-else
+                  type="empty"
+                  scene="part"
+                >
+                  <p class="mt10 exception-text">{{ $t('暂无数据') }}</p>
+                  <p class="exception-text">
+                    {{ $t('您可在“模块配置-挂载卷”页面将持久存储挂载到指定模块的指定目录中') }}
+                  </p>
+                </bk-exception>
+              </section>
             </section>
-            <section class="content" v-if="item.isExpanded">
-              <bk-table
-                v-if="item.bound_modules?.length"
-                :data="item.bound_modules"
-                :outer-border="false"
-                ext-cls="store-module-table-cls"
-              >
-                <bk-table-column
-                  :label="$t('绑定模块')"
-                  prop="module"
-                  :width="150"
-                ></bk-table-column>
-                <bk-table-column
-                  :label="$t('挂载目录')"
-                  prop="path"
-                ></bk-table-column>
-              </bk-table>
-              <bk-exception
-                v-else
-                type="empty"
-                scene="part"
-              >
-                <p class="mt10 exception-text">{{ $t('暂无数据') }}</p>
-                <p class="exception-text">
-                  {{ $t('您可在“模块配置-挂载卷”页面将持久存储挂载到指定模块的指定目录中') }}
-                </p>
-              </bk-exception>
-            </section>
-          </section>
+          </template>
         </template>
       </section>
 
@@ -201,6 +213,7 @@ export default {
         bound_modules: [],
       },
       persistentStorageDailogVisible: false,
+      isShowPersistentStorage: false,
     };
   },
   computed: {
@@ -232,12 +245,14 @@ export default {
   },
   methods: {
     init() {
-      this.getPersistentStorageList();
+      this.isLoading = true;
+      Promise.all([this.getpersistentStorageFeature(), this.getPersistentStorageList()]).finally(() => {
+        this.isLoading = false;
+      });
     },
 
     // 获取持久化存储列表
     async getPersistentStorageList() {
-      this.isLoading = true;
       try {
         let res = await this.$store.dispatch('persistentStorage/getPersistentStorageList', {
           appCode: this.appCode,
@@ -257,10 +272,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 200);
       }
     },
     handlerPanelChage(data) {
@@ -307,6 +318,19 @@ export default {
         this.delteDialogConfig.isLoading = false;
       }
     },
+    async getpersistentStorageFeature() {
+      try {
+        const res = await this.$store.dispatch('persistentStorage/getpersistentStorageFeature', {
+          appCode: this.appCode,
+        });
+        this.isShowPersistentStorage = res || false;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
     //  取消删除
     handlerDeleteCancel() {
       this.delteDialogConfig.visible = false;
@@ -335,8 +359,7 @@ export default {
     }
     .tips {
       i.tips-line {
-        width: 14px;
-        height: 14px;
+        font-size: 14px;
         color: #979ba5;
       }
       span {

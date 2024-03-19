@@ -9,9 +9,9 @@
       class="middle"
     >
       <section v-show="!isLoading">
-        <bk-alert type="info" closable>
+        <bk-alert type="info">
           <span slot="title">
-            {{ $t('可以通过挂载文件的方式，向容器中注入配置信息。') }}
+            {{ $t('平台支持将自定义配置文件注入进程内的文件系统，还提供了持久存储功能以实现应用中所有模块和进程的数据共享。') }}
           </span>
         </bk-alert>
         <bk-button theme="primary" class="mb15 mt20" @click="handleCreate">
@@ -151,7 +151,7 @@
       </div>
       <div slot="content">
         <div class="slider-volume-content">
-          <bk-alert type="error" class="mb10" :title="$t('挂载卷新增、编辑后，需要重新部署应用才能生效。')"></bk-alert>
+          <bk-alert type="info" class="mb10" :title="$t('挂载卷新增、编辑后，需要重新部署应用才能生效。')"></bk-alert>
           <bk-form :label-width="200" form-type="vertical" :model="volumeFormData" ref="formRef">
             <bk-form-item
               :label="$t('名称')"
@@ -186,15 +186,19 @@
               <bk-radio-group v-model="volumeFormData.source_type">
                 <div
                   v-for="item in sourceTypeList"
+                  v-bk-tooltips.bottom="{
+                    content: $t('暂不支持持久存储, 如有需要请联系管理员开启'),
+                    disabled: !item.disabled,
+                  }"
                   :class="[
                     'radio-style-wrapper',
                     { active: volumeFormData.source_type === item.value },
-                    { disabled: isInEditMode }
+                    { disabled: item.disabled || isInEditMode }
                   ]"
-                  @click="handleChangeSourceType(item.value)"
+                  @click="handleChangeSourceType(item.value, item)"
                   :key="item.value"
                 >
-                  <bk-radio :value="item.value" :disabled="isInEditMode">{{ item.label }}</bk-radio>
+                  <bk-radio :value="item.value" :disabled="item.disabled || isInEditMode">{{ item.label }}</bk-radio>
                   <span class="tip">{{ item.tip }}</span>
                 </div>
               </bk-radio-group>
@@ -274,7 +278,15 @@
                   </div>
                 </div>
                 <div class="editor flex-1">
+                  <!-- 禁用状态 -->
                   <resource-editor
+                    v-if="readonly"
+                    v-model="readonlyEditorTips"
+                    :readonly="true"
+                    :height="fullScreen ? clientHeight : fileSliderConfig.height"
+                  />
+                  <resource-editor
+                    v-else
                     ref="editorRefSlider"
                     key="editor"
                     v-model="sliderEditordetail"
@@ -318,6 +330,10 @@
                     <div class="content" @click="createPersistentStorage">
                       <i class="bk-icon icon-plus-circle mr5"></i> {{ $t('新增持久存储') }}
                     </div>
+                    <div class="content" @click="viewPersistentStorage">
+                      <i class="paasng-icon paasng-jump-link mr5"></i>
+                      {{ $t('查看持久存储') }}
+                    </div>
                     <div class="refresh" @click.stop="getPersistentStorageList">
                       <i class="paasng-icon paasng-refresh-line" v-if="!isPersistentStorageLoading" />
                       <round-loading class="round-loading-cls" v-else />
@@ -330,7 +346,7 @@
         </div>
       </div>
       <div slot="footer" class="ml30">
-        <bk-button class="mr10" theme="primary" @click="handleConfirmVolume" :loading="addLoading">
+        <bk-button class="mr10" theme="primary" @click="handleConfirm" :loading="addLoading">
           {{ $t('确定') }}
         </bk-button>
         <bk-button theme="default" @click="handleCancelVolume()">{{ $t('取消') }}</bk-button>
@@ -496,6 +512,7 @@ export default {
       isTableLoaing: false,
       isShowPersistentStorage: false,
       isInEditMode: false,
+      readonlyEditorTips: this.$t('请先在左侧添加文件后，再编辑文件内容'),
     };
   },
   computed: {
@@ -541,22 +558,20 @@ export default {
       return this.volumeFormData.source_type === defaultSourceType;
     },
     sourceTypeList() {
-      const list = [
+      return [
         {
           label: this.$t('文件'),
           value: 'ConfigMap',
-          tip: this.$t('可用于将用于自定义的配置文件注入到容器中'),
+          tip: this.$t('可用于将自定义的配置文件注入到进程内文件系统中'),
+          disabled: false,
         },
         {
           label: this.$t('持久存储'),
           value: defaultSourceType,
-          tip: this.$t('由平台分配的持久化存储，可用于多个模块、进程间共享数据'),
+          tip: this.$t('由平台分配的持久存储，可用于模块和进程间共享数据'),
+          disabled: !this.isShowPersistentStorage,
         },
       ];
-      if (!this.isShowPersistentStorage) {
-        return list.filter(v => v.value === 'ConfigMap');
-      }
-      return list;
     },
     persistentStorageTips() {
       return this.$t('请选择{e}环境下的持久存储资源', { e: this.volumeFormData.environment_name === 'stag' ? this.$t('预发布') : this.$t('生产') });
@@ -564,6 +579,9 @@ export default {
     // 当前环境
     curEnvPersistentStorageList() {
       return this.persistentStorageList.filter(v => v.environment_name === this.volumeFormData.environment_name);
+    },
+    readonly() {
+      return this.volumeFormData.sourceConfigArrData.length <= 0;
     },
   },
   watch: {
@@ -601,6 +619,9 @@ export default {
   },
   mounted() {
     this.init();
+    setTimeout(() => {
+      console.log('sourceTypeList', this.sourceTypeList);
+    }, 2000);
   },
   methods: {
     // 重置数据
@@ -614,7 +635,7 @@ export default {
     init() {
       this.isLoading = true;
       this.getVolumeList();
-      this.getPersistentStorageFeatureToggle();
+      this.getpersistentStorageFeature();
     },
     // 新增挂载
     handleCreate() {
@@ -765,9 +786,30 @@ export default {
       }
       return params;
     },
+    handleConfirm() {
+      this.$refs.formRef?.validate().then(() => {
+        if (!Object.keys(this.volumeFormData.source_config_data)?.length && !this.isPersistentStorage) {
+          if (!this.sliderEditordetail) {
+            this.$paasMessage({
+              theme: 'error',
+              message: this.$t('挂载卷内容不可为空'),
+            });
+            return;
+          }
+          this.$paasMessage({
+            theme: 'error',
+            message: this.$t('请填写文件名'),
+          });
+          return;
+        }
+        this.handleConfirmVolume();
+      })
+        .catch((e) => {
+          console.error(e);
+        });
+    },
     // 确定新增或编辑挂载券
     async handleConfirmVolume() {
-      await this.$refs.formRef?.validate();
       try {
         this.addLoading = true;
         const fetchUrl = this.volumeFormData.id ? 'deploy/updateVolumeData' : 'deploy/createVolumeData';
@@ -976,9 +1018,15 @@ export default {
       this.persistentStorageDailogVisible = true;
     },
 
+    viewPersistentStorage() {
+      this.$router.push({
+        name: 'appPersistentStorage',
+      });
+    },
+
     // 切换资源类型
-    handleChangeSourceType(value) {
-      if (this.isInEditMode) return;
+    handleChangeSourceType(value, item) {
+      if (this.isInEditMode || item.disabled) return;
       this.volumeFormData.source_type = value;
       if (value === defaultSourceType && !this.persistentStorageList.length) {
         this.getPersistentStorageList();
@@ -990,9 +1038,9 @@ export default {
       this.persistentStorageList = [];
     },
 
-    async getPersistentStorageFeatureToggle() {
+    async getpersistentStorageFeature() {
       try {
-        const res = await this.$store.dispatch('persistentStorage/getPersistentStorageFeatureToggle', {
+        const res = await this.$store.dispatch('persistentStorage/getpersistentStorageFeature', {
           appCode: this.appCode,
         });
         this.isShowPersistentStorage = res || false;
@@ -1117,6 +1165,7 @@ export default {
   display: flex;
   align-items: center;
   .content {
+    position: relative;
     flex: 1;
     display: flex;
     justify-content: center;
@@ -1126,8 +1175,20 @@ export default {
     cursor: pointer;
     i {
       font-size: 14px;
-      transform: translateY(-1px);
+      transform: translateY(0px);
       color: #979BA5;
+    }
+    &:nth-child(2) {
+      &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 1px;
+        height: 23px;
+        background: #DCDEE5;
+        transform: translateY(-50%);
+      }
     }
   }
   .refresh {
@@ -1139,7 +1200,7 @@ export default {
       content: '';
       position: absolute;
       top: 50%;
-      left: -10px;
+      left: -9px;
       width: 1px;
       height: 23px;
       background: #DCDEE5;

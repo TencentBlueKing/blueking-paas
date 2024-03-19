@@ -25,9 +25,8 @@
       </bk-button>
     </div>
     <section class="storage-dialog-content">
-      <bk-alert type="error" :show-icon="false">
+      <bk-alert type="info">
         <div slot="title">
-          <i class="paasng-icon paasng-remind remind-cls"></i>
           {{ $t('持久存储会申请对应容量的腾讯云 CFS，新建后就会产生实际的费用，请按需申请。') }}
           <bk-button
             theme="primary"
@@ -172,4 +171,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.storage-dialog-content {
+  :deep(.icon-info) {
+    line-height: 22px;
+  }
+}
 </style>

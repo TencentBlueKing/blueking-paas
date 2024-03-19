@@ -473,7 +473,7 @@ const router = new Router({
           component: appConfigs,
           name: 'appConfigs',
           redirect: {
-            name: 'appPersistentStorage',
+            name: 'appMarket',
           },
           children: [
             {

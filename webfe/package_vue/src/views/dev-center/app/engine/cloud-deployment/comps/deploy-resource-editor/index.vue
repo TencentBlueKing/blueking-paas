@@ -89,6 +89,11 @@ export default defineComponent({
       }
     });
 
+    // 手动设置readOnly模式
+    watch(readonly, (value) => {
+      editor.updateOptions({ readOnly: value });
+    });
+
     watch(language, () => {
       if (!editor) return;
       if (diffEditor.value) {

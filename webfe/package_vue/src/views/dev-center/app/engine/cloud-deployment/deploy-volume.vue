@@ -278,18 +278,11 @@
                   </div>
                 </div>
                 <div class="editor flex-1">
-                  <!-- 禁用状态 -->
                   <resource-editor
-                    v-if="readonly"
-                    v-model="readonlyEditorTips"
-                    :readonly="true"
-                    :height="fullScreen ? clientHeight : fileSliderConfig.height"
-                  />
-                  <resource-editor
-                    v-else
                     ref="editorRefSlider"
                     key="editor"
                     v-model="sliderEditordetail"
+                    :readonly="readonly"
                     v-bkloading="{ isDiaLoading, opacity: 1, color: '#1a1a1a' }"
                     :height="fullScreen ? clientHeight : fileSliderConfig.height"
                   />
@@ -512,7 +505,6 @@ export default {
       isTableLoaing: false,
       isShowPersistentStorage: false,
       isInEditMode: false,
-      readonlyEditorTips: this.$t('请先在左侧添加文件后，再编辑文件内容'),
     };
   },
   computed: {
@@ -587,7 +579,7 @@ export default {
   watch: {
     'volumeDefaultSettings.isShow'(v) {
       if (v) {
-        this.sliderEditordetail = '';
+        this.sliderEditordetail = this.readonly ? this.$t('请先在左侧添加文件后，再编辑文件内容') : '';
         this.isAddFile = false;
         this.curValue = '';
         if (this.volumeFormData.source_type === defaultSourceType) {

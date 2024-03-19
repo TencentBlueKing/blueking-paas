@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/TencentBlueKing/gopkg v1.1.0
+	github.com/TencentBlueKing/gopkg v1.2.0
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/fatih/color v1.15.0
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b

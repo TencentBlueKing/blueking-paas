@@ -119,7 +119,8 @@ Application List
 ##### 云原生应用
 
 ```shell
-# 首先你需要准备一份 BkApp 的 manifest，可以在 云原生应用 -> 应用编排 -> YAML 页面获取
+# 云原生应用有两种部署方式，一种是通过导入 BkApp 的 manifest，一种是通过指定代码分支或者镜像标签
+# 方式一：首先你需要准备一份 BkApp 的 manifest，可以在 云原生应用 -> 模块配置 -> 查看 YAML
 >>> cat > ./bkapp.yaml << EOF
 apiVersion: paas.bk.tencent.com/v1alpha1
 kind: BkApp
@@ -138,6 +139,13 @@ EOF
 
 # 执行以下命令以部署云原生应用
 >>> bkpaas-cli app deploy --bk-app-code=cnative-demo --env=stag -f ./bkapp.yaml
+
+# 方式二：通过指定代码分支或者镜像标签
+>>> bkpaas-cli app deploy --bk-app-code=cnative-demo --env=stag --branch=master
+or 
+>>> bkpaas-cli app deploy --bk-app-code=cnative-demo --env=stag --tag=latest
+
+# 部署输出
 Application cnative-demo deploying...
 
 # 轮询获取部署结果，直到部署成功 / 失败

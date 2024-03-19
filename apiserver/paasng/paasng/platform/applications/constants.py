@@ -104,7 +104,7 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     TOGGLE_EGRESS_BINDING = FeatureFlagField(label=_("开启出口 IP 管理"), default=False)
 
     # 持久存储挂载卷相关的 feature flag
-    ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label="开启持久存储挂载卷", default=False)
+    ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label=_("开启持久存储挂载卷"), default=False)
 
 
 class LightApplicationViewSetErrorCode(str, StructuredEnum):

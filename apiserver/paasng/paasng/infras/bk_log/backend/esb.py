@@ -51,7 +51,7 @@ class Group(OperationGroup):
         path="/api/c/compapi/v2/bk_log/databus_list_collectors/",
     )
 
-    # ES-DSL查询接口
+    # ES-DSL 查询接口
     esquery_dsl = bind_property(
         Operation, name="esquery_dsl", method="POST", path="/api/c/compapi/v2/bk_log/esquery_dsl/"
     )

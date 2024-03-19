@@ -37,7 +37,7 @@ from paasng.accessories.log.filters import (
     parse_properties_filters,
 )
 from paasng.accessories.log.models import BKLogConfig, ElasticSearchConfig, ElasticSearchHost
-from paasng.infras.bk_log.client import make_bk_log_esquery_client
+from paasng.infras.bk_log.client import _APIGWOperationStub, make_bk_log_esquery_client
 from paasng.utils.es_log.misc import filter_indexes_by_time_range
 from paasng.utils.es_log.search import SmartSearch, SmartTimeRange
 
@@ -171,7 +171,7 @@ class BKLogClient:
         docs_mappings: Dict = first_mapping["mappings"]["properties"]
         return docs_mappings
 
-    def _call_api(self, method, data, timeout: int):
+    def _call_api(self, method: _APIGWOperationStub, data: Dict, timeout: int):
         if self.config.bkdataAuthenticationMethod:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
         if self.config.bkdataDataToken:

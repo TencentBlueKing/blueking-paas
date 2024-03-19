@@ -41,7 +41,7 @@ class Group(OperationGroup):
         Operation, name="databus_list_collectors", method="GET", path="/databus_list_collectors/"
     )
 
-    # ES-DSL查询接口
+    # ES-DSL 查询接口
     esquery_dsl = bind_property(Operation, name="esquery_dsl", method="POST", path="/esquery_dsl/")
     # ES-SCROLL 查询接口
     esquery_scroll = bind_property(Operation, name="esquery_scroll", method="POST", path="/esquery_scroll/")

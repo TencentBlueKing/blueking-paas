@@ -26,6 +26,9 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
+// DefaultLayersDir is the default dir to store bp layers
+var DefaultLayersDir = "/layers"
+
 // DefaultAppDir is the default build dir
 var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")
 

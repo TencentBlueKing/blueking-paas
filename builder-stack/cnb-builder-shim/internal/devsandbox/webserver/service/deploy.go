@@ -195,7 +195,7 @@ func (m DeployManager) generateProcfile(appDir string) error {
 //	oldDir string - the directory where old build dependent files are located
 //	newDir string - the directory where new build dependent files are located
 func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
-	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt"}
+	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt", "Procfile"}
 	rebuild := false
 
 	for _, fileName := range buildDependentFiles {
@@ -216,6 +216,12 @@ func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 			break
 		}
 
+	}
+
+	// 如果 metadata.toml 不存在, 说明上次构建失败, 需要重新构建
+	_, err := os.Stat(path.Join(dc.DefaultLayersDir, "config", "metadata.toml"))
+	if os.IsNotExist(err) {
+		rebuild = true
 	}
 
 	return &deployStepOpts{Rebuild: rebuild, Relaunch: true}

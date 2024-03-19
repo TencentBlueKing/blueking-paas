@@ -246,6 +246,7 @@ class TestProcessesManifestConstructor:
                     "memory": None,
                     "image": None,
                     "imagePullPolicy": None,
+                    "proc_command": None,
                 }
             ],
             "envOverlay": {

@@ -191,7 +191,14 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
 
         package_plan = get_quota_plan(attrs.get("package_plan")) if attrs.get("package_plan") else None
         addons = [bk_app.BkAppAddon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
-        processes = [{"name": "web", "args": shlex.split(constants.WEB_PROCESS), "resQuotaPlan": package_plan}]
+        processes = [
+            {
+                "name": "web",
+                "args": shlex.split(constants.WEB_PROCESS),
+                "resQuotaPlan": package_plan,
+                "proc_command": constants.WEB_PROCESS,
+            }
+        ]
         is_use_celery = False
         if attrs["is_use_celery"]:
             is_use_celery = True
@@ -201,6 +208,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                     "name": "celery",
                     "args": shlex.split(constants.CELERY_PROCESS),
                     "resQuotaPlan": package_plan,
+                    "proc_command": constants.CELERY_PROCESS,
                 }
             )
         elif attrs["is_use_celery_with_gevent"]:
@@ -211,6 +219,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                     "name": "celery",
                     "args": shlex.split(constants.CELERY_PROCESS_WITH_GEVENT),
                     "resQuotaPlan": package_plan,
+                    "proc_command": constants.CELERY_PROCESS_WITH_GEVENT,
                 }
             )
 

@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
@@ -36,6 +37,44 @@ from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder 
 from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
+
+
+class TestProcessesField:
+    def test_python_framework_case(self, bk_module, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "processes": [
+                    {
+                        "name": "web",
+                        "command": ["gunicorn"],
+                        "args": [
+                            "wsgi",
+                            "-w",
+                            "4",
+                            "-b",
+                            "[::]:${PORT:-5000}",
+                            "--access-logfile",
+                            "-",
+                            "--error-logfile",
+                            "-",
+                            "--access-logformat",
+                            '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"',
+                        ],
+                        "replicas": 1,
+                    }
+                ]
+            },
+        )
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        web = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert (
+            web.get_proc_command()
+            == 'gunicorn wsgi -w 4 -b [::]:${PORT} --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
+        )
 
 
 class TestEnvVariablesField:

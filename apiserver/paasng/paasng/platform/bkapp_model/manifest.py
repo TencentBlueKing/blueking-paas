@@ -80,11 +80,12 @@ from paasng.platform.bkapp_model.models import (
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
-from paasng.platform.bkapp_model.utils import merge_env_vars, override_env_vars_overlay
+from paasng.platform.bkapp_model.utils import MergeStrategy, merge_env_vars, merge_env_vars_overlay
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.constants import AppEnvName, RuntimeType
+from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
+from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
-from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
@@ -454,6 +455,8 @@ def get_bkapp_resource_for_deploy(
     :param deploy_id: The ID of the AppModelDeploy object.
     :param force_image: If given, set the image of the application to this value.
     :param image_pull_policy: If given, set the imagePullPolicy to this value.
+    :param use_cnb: A bool flag describe if the bkapp image is built with cnb
+    :param deployment: The related deployment instance
     :returns: The BkApp resource that is ready for deploying.
     """
     model_res = get_bkapp_resource(env.module)
@@ -479,9 +482,11 @@ def get_bkapp_resource_for_deploy(
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
-    apply_builtin_env_vars(model_res, env, deployment)
+    apply_builtin_env_vars(model_res, env)
+    if deployment is not None:
+        apply_deploy_desc(model_res, deployment)
 
-    # TODO: Missing parts: "build", "hooks", "service-disc"
+    # TODO: Missing parts: "build"
     return model_res
 
 
@@ -504,7 +509,7 @@ def apply_env_annots(model_res: BkAppResource, env: ModuleEnvironment, deploy_id
         model_res.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
 
-def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, deployment: Optional[Deployment] = None):
+def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     """Apply the builtin environment vars to the resource object. These vars are hidden from
     the default manifest view and should only be used in the deploying procedure.
 
@@ -516,14 +521,52 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, dep
     environment = env.environment
     builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
 
-    for name, value in get_env_variables(env, True, deployment).items():
+    # deployment=None 意味着云原生应用不通过 get_env_variables 注入描述文件产生的环境变量
+    for name, value in get_env_variables(env, True, deployment=None).items():
         env_vars.append(EnvVar(name=name, value=value))
         builtin_env_vars_overlay.append(EnvVarOverlay(envName=environment, name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones
     model_res.spec.configuration.env = merge_env_vars(model_res.spec.configuration.env, env_vars)
 
-    if model_res.spec.envOverlay and model_res.spec.envOverlay.envVariables:
-        model_res.spec.envOverlay.envVariables = override_env_vars_overlay(
-            model_res.spec.envOverlay.envVariables, builtin_env_vars_overlay
+    if builtin_env_vars_overlay:
+        overlay = model_res.spec.envOverlay
+        if not overlay:
+            overlay = model_res.spec.envOverlay = EnvOverlay(envVariables=[])
+        overlay.envVariables = merge_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay)
+
+
+def apply_deploy_desc(model_res: BkAppResource, deployment: Deployment):
+    """Apply extra infos definded in app_desc.yaml to the resource object.
+    extra infos includes:
+    - config vars, for which are in conflict with those in model_res, will be ignored
+
+    # TODO: 描述文件里已经声明了一份 BkAppSpec, 是否可以将这逻辑左移到 ManifestConstructor 中?
+    """
+    try:
+        deploy_desc = DeploymentDescription.objects.get(deployment=deployment)
+    except DeploymentDescription.DoesNotExist:
+        return
+
+    global_env_vars = []
+    overlay_env_vars = []
+    for env_var in deploy_desc.get_env_variables():
+        if env_var["environment_name"] == ConfigVarEnvName.GLOBAL:
+            global_env_vars.append(EnvVar(name=env_var["key"], value=env_var["value"]))
+        else:
+            overlay_env_vars.append(
+                EnvVarOverlay(name=env_var["key"], value=env_var["value"], envName=env_var["environment_name"])
+            )
+
+    if global_env_vars:
+        model_res.spec.configuration.env = merge_env_vars(
+            model_res.spec.configuration.env, global_env_vars, strategy=MergeStrategy.IGNORE
+        )
+
+    if overlay_env_vars:
+        overlay = model_res.spec.envOverlay
+        if not overlay:
+            overlay = model_res.spec.envOverlay = EnvOverlay(envVariables=[])
+        overlay.envVariables = merge_env_vars_overlay(
+            overlay.envVariables or [], overlay_env_vars, strategy=MergeStrategy.IGNORE
         )

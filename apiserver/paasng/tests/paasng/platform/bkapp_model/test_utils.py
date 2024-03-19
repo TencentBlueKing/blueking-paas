@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
-from paasng.platform.bkapp_model.utils import MergeStrategy, merge_env_vars, override_env_vars_overlay
+from paasng.platform.bkapp_model.utils import MergeStrategy, merge_env_vars, merge_env_vars_overlay
 
 
 @pytest.mark.parametrize(
@@ -111,4 +111,4 @@ def test_merge_env_vars(x, y, strategy, z):
     ],
 )
 def test_override_env_vars_overlay(x, y, expected):
-    assert override_env_vars_overlay(x, y) == expected
+    assert merge_env_vars_overlay(x, y) == expected

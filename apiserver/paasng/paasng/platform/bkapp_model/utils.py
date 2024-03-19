@@ -48,6 +48,29 @@ def override_env_vars_overlay(x: List[EnvVarOverlay], y: List[EnvVarOverlay]):
     return merged
 
 
+def merge_env_vars_overlay(
+    x: List[EnvVarOverlay], y: List[EnvVarOverlay], strategy: MergeStrategy = MergeStrategy.OVERRIDE
+):
+    """Merge two env variable list, if a conflict was found, will resolve it by the given strategy.
+
+    Supported strategies:
+
+    - MergeStrategy.OVERRIDE: will use the one in y if x and y have same name EnvVar
+    - MergeStrategy.IGNORE: will ignore the EnvVar in y if x and y have same name EnvVar
+    """
+    merged = copy.deepcopy(x)
+    y_vars = {(var.name, var.envName): var.value for var in y}
+    for var in merged:
+        if (var.name, var.envName) in y_vars:
+            value = y_vars.pop((var.name, var.envName))
+            if strategy == MergeStrategy.OVERRIDE:
+                var.value = value
+
+    for (name, env_name), value in y_vars.items():
+        merged.append(EnvVarOverlay(name=name, value=value, envName=env_name))
+    return merged
+
+
 def merge_env_vars(x: List[EnvVar], y: List[EnvVar], strategy: MergeStrategy = MergeStrategy.OVERRIDE):
     """Merge two env variable list, if a conflict was found, will resolve it by the given strategy.
 

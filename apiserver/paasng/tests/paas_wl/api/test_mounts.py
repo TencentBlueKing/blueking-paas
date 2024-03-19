@@ -412,7 +412,8 @@ class TestMountSourceViewSet:
             "source_type": "PersistentStorage",
             "persistent_storage_source": {"storage_size": "2Gi"},
         }
-        with mock.patch("paas_wl.bk_app.cnative.specs.views.check_storage_class_exists", return_value=True):
+        with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=True):
+            ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, True, bk_app)
             response = api_client.post(url, request_body)
             assert response.status_code == 400
 

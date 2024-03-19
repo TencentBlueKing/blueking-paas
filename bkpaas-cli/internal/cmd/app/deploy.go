@@ -108,6 +108,10 @@ func deployApp(appCode, appModule, appEnv, branch, filePath, tag string) error {
 		return errors.New("branch is required when deploy default app")
 	}
 
+	if appType == model.AppTypeCNative && filePath == "" && tag == "" && branch == "" {
+		return errors.New("manifest tag or branch is required when deploy cloud native app")
+	}
+
 	// 加载文件中的 bkapp manifest 内容
 	if appType == model.AppTypeCNative && filePath != "" {
 		yamlFile, err := os.ReadFile(filePath)
@@ -119,10 +123,6 @@ func deployApp(appCode, appModule, appEnv, branch, filePath, tag string) error {
 			return errors.Wrap(err, "failed to load bkapp manifest")
 		}
 		opts.BkAppManifest = manifest
-	}
-
-	if appType == model.AppTypeCNative && filePath == "" && tag == "" && branch == "" {
-		return errors.New("manifest、tag or branch is required when deploy cloud native app")
 	}
 
 	deployer, err := handler.NewAppDeployer(appCode)

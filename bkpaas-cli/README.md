@@ -120,7 +120,7 @@ Application List
 
 ```shell
 # 云原生应用有两种部署方式，一种是通过导入 BkApp 的 manifest，一种是通过指定代码分支或者镜像标签
-# 方式一：首先你需要准备一份 BkApp 的 manifest，可以在 云原生应用 -> 应用编排 -> YAML 页面获取
+# 方式一：首先你需要准备一份 BkApp 的 manifest，可以在 云原生应用 -> 模块配置 -> 查看 YAML
 >>> cat > ./bkapp.yaml << EOF
 apiVersion: paas.bk.tencent.com/v1alpha1
 kind: BkApp

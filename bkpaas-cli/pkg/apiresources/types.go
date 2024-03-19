@@ -41,15 +41,12 @@ type Requester interface {
 	// GetAppInfo 获取应用基础信息
 	GetAppInfo(appCode string) (map[string]any, error)
 
-	// DeployDefaultApp 部署普通应用
-	DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error)
+	// DeployApp 部署应用
+	DeployApp(appCode, appModule, deployEnv string, data map[string]any) (map[string]any, error)
 	// GetAppDeployResult 获取应用部署结果
 	GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error)
 	// ListAppDeployHistory 获取应用部署历史（最近N次）
 	ListAppDeployHistory(appCode, appModule string) (map[string]any, error)
-
-	// DeployCNativeApp 部署云原生应用
-	DeployCNativeApp(
-		appCode, appModule, deployEnv string, manifest map[string]any, tag string, branch string,
-	) (map[string]any, error)
+	// UpdataBkappModel 导入 manifest 更新 BkappModel
+	UpdataBkappModel(appCode, appModule string, manifest map[string]any) ([]map[string]any, error)
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cast"
+	"strings"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/helper"
@@ -127,8 +128,9 @@ type DefaultAppDeployer struct {
 
 // Deploy 执行部署操作
 func (d DefaultAppDeployer) Deploy(opts model.DeployOptions) error {
-	_, err := apiresources.DefaultRequester.DeployDefaultApp(
-		opts.AppCode, opts.Module, opts.DeployEnv, opts.Branch,
+	data := map[string]any{"version_type": "branch", "version_name": opts.Branch}
+	_, err := apiresources.DefaultRequester.DeployApp(
+		opts.AppCode, opts.Module, opts.DeployEnv, data,
 	)
 	return err
 }
@@ -142,8 +144,33 @@ type CNativeAppDeployer struct {
 
 // Deploy 执行部署操作
 func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) error {
-	_, err := apiresources.DefaultRequester.DeployCNativeApp(
-		opts.AppCode, opts.Module, opts.DeployEnv, opts.BkAppManifest, opts.Tag, opts.Branch,
+	appCode, appModule, deployEnv, manifest, tag, branch := opts.AppCode, opts.Module, opts.DeployEnv, opts.BkAppManifest, opts.Tag, opts.Branch
+	if manifest != nil {
+		// 导入 manifest
+		_, err := apiresources.DefaultRequester.UpdataBkappModel(appCode, appModule, manifest)
+		if err != nil {
+			return err
+		}
+		if tag == "" {
+			tag = "latest"
+		}
+		// 从 manifest 中提取 image 信息
+		image := mapx.GetStr(manifest, "spec.build.image")
+		// 从 image 中提取 tag 信息
+		if pos := strings.LastIndex(image, ":"); pos != -1 {
+			tag = image[pos+1:]
+		}
+	}
+	var data map[string]any
+	if manifest != nil || tag != "" {
+		data = map[string]any{"version_type": "image", "version_name": tag}
+	} else if branch != "" {
+		data = map[string]any{"version_type": "branch", "version_name": branch}
+	} else {
+		return errors.New("branch or manifest or tag is required")
+	}
+	_, err := apiresources.DefaultRequester.DeployApp(
+		appCode, appModule, deployEnv, data,
 	)
 	return err
 }

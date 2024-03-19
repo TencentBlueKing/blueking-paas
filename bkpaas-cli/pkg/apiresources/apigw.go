@@ -20,9 +20,6 @@ package apiresources
 
 import (
 	"fmt"
-	"github.com/TencentBlueKing/gopkg/mapx"
-	"strings"
-
 	"github.com/levigross/grequests"
 	"github.com/pkg/errors"
 
@@ -77,15 +74,13 @@ func (r apigwRequester) GetAppInfo(appCode string) (map[string]any, error) {
 	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
 }
 
-// DeployDefaultApp 部署普通应用
-func (r apigwRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error) {
+// DeployApp 部署应用
+func (r apigwRequester) DeployApp(appCode, appModule, deployEnv string, data map[string]any) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/envs/%s/deployments/",
 		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
 	)
-	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]string{
-		"version_type": "branch", "version_name": branch, "revision": branch, // 暂不支持按 commit_id 拉取代码
-	}}
+	opts := grequests.RequestOptions{Headers: r.headers(), JSON: data}
 	return r.handlePaaSApiRequest(grequests.Post, url, opts)
 }
 
@@ -107,44 +102,7 @@ func (r apigwRequester) ListAppDeployHistory(appCode, appModule string) (map[str
 	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
-// DeployCNativeApp 部署云原生应用
-func (r apigwRequester) DeployCNativeApp(
-	appCode, appModule, deployEnv string, manifest map[string]any, tag string, branch string,
-) (map[string]any, error) {
-	if manifest != nil {
-		// 导入 manifest
-		_, err := r.updataBkappModel(appCode, appModule, manifest)
-		if err != nil {
-			return nil, err
-		}
-		if tag == "" {
-			tag = "latest"
-		}
-		// 从 manifest 中提取 image 信息
-		image := mapx.GetStr(manifest, "spec.build.image")
-		// 从 image 中提取 tag 信息
-		if pos := strings.LastIndex(image, ":"); pos != -1 {
-			tag = image[pos+1:]
-		}
-	}
-	var data map[string]any
-	if manifest != nil || tag != "" {
-		data = map[string]any{"version_type": "image", "version_name": tag}
-	} else if branch != "" {
-		data = map[string]any{"version_type": "branch", "version_name": branch}
-	} else {
-		return nil, errors.New("branch or manifest or tag is required")
-	}
-
-	url := fmt.Sprintf(
-		"%s/bkapps/applications/%s/modules/%s/envs/%s/deployments/",
-		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
-	)
-	opts := grequests.RequestOptions{Headers: r.headers(), JSON: data}
-	return r.handlePaaSApiRequest(grequests.Post, url, opts)
-}
-
-func (r apigwRequester) updataBkappModel(
+func (r apigwRequester) UpdataBkappModel(
 	appCode, appModule string, manifest map[string]any,
 ) ([]map[string]any, error) {
 	url := fmt.Sprintf(

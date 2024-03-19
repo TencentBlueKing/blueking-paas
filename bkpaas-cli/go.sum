@@ -7,8 +7,6 @@ github.com/Masterminds/semver/v3 v3.2.0 h1:3MEsd0SM6jqZojhjLWWeBY+Kcjy9i6MQAeY7Y
 github.com/Masterminds/semver/v3 v3.2.0/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/Masterminds/sprig/v3 v3.2.3 h1:eL2fZNezLomi0uOLqjQoN6BfsDD+fyLtgbJMAj9n6YA=
 github.com/Masterminds/sprig/v3 v3.2.3/go.mod h1:rXcFaZ2zZbLRJv/xSysmlgIM1u11eBaRMhvYXJNkGuM=
-github.com/TencentBlueKing/gopkg v1.1.0 h1:/89NOzIbqEqVRQoPYf0ZEB9J0BgHeLZVIZt3XsSvaoU=
-github.com/TencentBlueKing/gopkg v1.1.0/go.mod h1:C8xV79ap0bF2pR10YfhsxO5w5LtJlPakrRunkRbl2yw=
 github.com/TencentBlueKing/gopkg v1.2.0 h1:gtqlJU1IbBgnUzb4OILKnwpiZ71ybYQ+VW8heQm5QYE=
 github.com/TencentBlueKing/gopkg v1.2.0/go.mod h1:C8xV79ap0bF2pR10YfhsxO5w5LtJlPakrRunkRbl2yw=
 github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de h1:FxWPpzIjnTlhPwqqXc4/vE0f7GvRjuAsbW+HOIe8KnA=

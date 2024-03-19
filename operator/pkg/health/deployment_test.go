@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubestatus
+package health
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var _ = Describe("Test kubestatus/deployment", func() {
+var _ = Describe("Test deployment", func() {
 	var deployment *appsv1.Deployment
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme

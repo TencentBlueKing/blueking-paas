@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubestatus
+package health
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -26,7 +26,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
-var _ = Describe("Test kubestatus/pod", func() {
+var _ = Describe("Test pod", func() {
 	DescribeTable(
 		"test CheckPodHealthStatus",
 		func(pod *corev1.Pod, phase paasv1alpha2.HealthPhase, reason, message string) {
@@ -125,7 +125,7 @@ var _ = Describe("Test kubestatus/pod", func() {
 	DescribeTable(
 		"test GetContainerFailMessage",
 		func(ctr corev1.ContainerStatus, expected string) {
-			Expect(GetContainerFailMessage(ctr)).To(Equal(expected))
+			Expect(getContainerFailMessage(ctr)).To(Equal(expected))
 		},
 		Entry(
 			"terminated container with message",

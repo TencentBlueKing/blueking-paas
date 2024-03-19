@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubestatus_test
+package health_test
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestKubeStatus(t *testing.T) {
+func TestHealth(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "utils/kubestatus Suite")
+	RunSpecs(t, "pkg/health Suite")
 }

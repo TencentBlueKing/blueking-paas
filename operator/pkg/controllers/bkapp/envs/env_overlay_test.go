@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 var _ = Describe("Environment overlay related functions", func() {
@@ -236,7 +236,7 @@ var _ = Describe("Environment overlay related functions", func() {
 		})
 
 		It("Get Legacy", func() {
-			_ = kubetypes.SetJsonAnnotation(
+			_ = kubeutil.SetJsonAnnotation(
 				bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
 					"web": {"cpu": "2", "memory": "2Gi"},
 				},

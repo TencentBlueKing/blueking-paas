@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package client
+package kubeutil
 
 import (
 	"context"
@@ -29,54 +29,54 @@ import (
 
 // stackTraceClient wrap client.Client error with stack
 type stackTraceClient struct {
-	cli client.Client
+	client client.Client
 }
 
 var _ client.Client = &stackTraceClient{}
 
-// New stackTraceClient
-func New(cli client.Client) client.Client {
-	return &stackTraceClient{cli: cli}
+// NewTracedClient creates a new client object with stack trace enabled
+func NewTracedClient(client client.Client) client.Client {
+	return &stackTraceClient{client: client}
 }
 
 // Scheme returns the scheme this client is using.
 func (c *stackTraceClient) Scheme() *runtime.Scheme {
-	return c.cli.Scheme()
+	return c.client.Scheme()
 }
 
 // RESTMapper returns the rest this client is using.
 func (c *stackTraceClient) RESTMapper() apimeta.RESTMapper {
-	return c.cli.RESTMapper()
+	return c.client.RESTMapper()
 }
 
 // Get retrieves an obj for the given object key from the Kubernetes Cluster.
 // obj must be a struct pointer so that obj can be updated with the response
 // returned by the Server.
 func (c *stackTraceClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-	return errors.WithStack(c.cli.Get(ctx, key, obj))
+	return errors.WithStack(c.client.Get(ctx, key, obj))
 }
 
 // List retrieves list of objects for a given namespace and list options. On a
 // successful call, Items field in the list will be populated with the
 // result returned from the server.
 func (c *stackTraceClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	return errors.WithStack(c.cli.List(ctx, list, opts...))
+	return errors.WithStack(c.client.List(ctx, list, opts...))
 }
 
 // Create saves the object obj in the Kubernetes cluster.
 func (c *stackTraceClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-	return errors.WithStack(c.cli.Create(ctx, obj, opts...))
+	return errors.WithStack(c.client.Create(ctx, obj, opts...))
 }
 
 // Delete deletes the given obj from Kubernetes cluster.
 func (c *stackTraceClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-	return errors.WithStack(c.cli.Delete(ctx, obj, opts...))
+	return errors.WithStack(c.client.Delete(ctx, obj, opts...))
 }
 
 // Update updates the given obj in the Kubernetes cluster. obj must be a
 // struct pointer so that obj can be updated with the content returned by the Server.
 func (c *stackTraceClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-	return errors.WithStack(c.cli.Update(ctx, obj, opts...))
+	return errors.WithStack(c.client.Update(ctx, obj, opts...))
 }
 
 // Patch patches the given obj in the Kubernetes cluster. obj must be a
@@ -84,19 +84,19 @@ func (c *stackTraceClient) Update(ctx context.Context, obj client.Object, opts .
 func (c *stackTraceClient) Patch(
 	ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption,
 ) error {
-	return errors.WithStack(c.cli.Patch(ctx, obj, patch, opts...))
+	return errors.WithStack(c.client.Patch(ctx, obj, patch, opts...))
 }
 
 // DeleteAllOf deletes all objects of the given type matching the given options.
 func (c *stackTraceClient) DeleteAllOf(
 	ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption,
 ) error {
-	return errors.WithStack(c.cli.DeleteAllOf(ctx, obj, opts...))
+	return errors.WithStack(c.client.DeleteAllOf(ctx, obj, opts...))
 }
 
 // StatusClient knows how to create a client which can update status subresource for kubernetes objects.
 func (c *stackTraceClient) Status() client.StatusWriter {
-	return &stackTraceStatusWriter{sw: c.cli.Status()}
+	return &stackTraceStatusWriter{sw: c.client.Status()}
 }
 
 // stackTraceStatusWriter wrap client.StatusWriter error with stack

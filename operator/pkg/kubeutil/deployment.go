@@ -15,36 +15,21 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-
-package kubestatus
+package kubeutil
 
 import (
-	corev1 "k8s.io/api/core/v1"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-
-	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
-// GenGPAHealthStatus check if the GPA is healthy
-// For a deployment:
-//
-//	healthy means the GPA is available, ready to scale workloads with policy.
-//	unhealthy means the GPA is failed when reconciled.
-func GenGPAHealthStatus(gpa *autoscaling.GeneralPodAutoscaler) *HealthStatus {
-	for _, condition := range gpa.Status.Conditions {
-		if condition.Status == corev1.ConditionFalse {
-			return &HealthStatus{
-				Phase:   paasv1alpha2.HealthUnhealthy,
-				Reason:  condition.Reason,
-				Message: condition.Message,
-			}
+// FindDeploymentStatusCondition finds the conditionType in conditions.
+func FindDeploymentStatusCondition(
+	conditions []appsv1.DeploymentCondition,
+	conditionType appsv1.DeploymentConditionType,
+) *appsv1.DeploymentCondition {
+	for i := range conditions {
+		if conditions[i].Type == conditionType {
+			return &conditions[i]
 		}
 	}
-
-	return &HealthStatus{
-		Phase:   paasv1alpha2.HealthHealthy,
-		Reason:  paasv1alpha2.AutoscalingAvailable,
-		Message: "",
-	}
+	return nil
 }

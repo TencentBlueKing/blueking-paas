@@ -122,3 +122,99 @@ var _ = Describe("GPAResources", func() {
 		})
 	})
 })
+
+var _ = Describe("Test gpa", func() {
+	var gpa *autoscaling.GeneralPodAutoscaler
+	var builder *fake.ClientBuilder
+	var scheme *runtime.Scheme
+
+	BeforeEach(func() {
+		gpa = &autoscaling.GeneralPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "autoscaling.tkex.tencent.com/v1alpha1",
+				Kind:       "GeneralPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default-web-gpa",
+			},
+			Spec: autoscaling.GeneralPodAutoscalerSpec{
+				MinReplicas: lo.ToPtr(int32(2)),
+				MaxReplicas: int32(5),
+				ScaleTargetRef: autoscaling.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "default-web",
+				},
+				AutoScalingDrivenMode: autoscaling.AutoScalingDrivenMode{
+					MetricMode: &autoscaling.MetricMode{
+						Metrics: []autoscaling.MetricSpec{},
+					},
+				},
+			},
+		}
+
+		builder = fake.NewClientBuilder()
+		scheme = runtime.NewScheme()
+		Expect(autoscaling.AddToScheme(scheme)).NotTo(HaveOccurred())
+		builder.WithScheme(scheme)
+	})
+
+	Context("test GenGPAHealthStatus", func() {
+		It("test healthy", func() {
+			gpa.Status.Conditions = []autoscaling.GeneralPodAutoscalerCondition{
+				{
+					Type:    autoscaling.AbleToScale,
+					Status:  v1.ConditionTrue,
+					Reason:  "ReadyForNewScale",
+					Message: "recommended size matches current size.",
+				},
+				{
+					Type:    autoscaling.ScalingActive,
+					Status:  v1.ConditionTrue,
+					Reason:  "ValidMetricFound",
+					Message: "the GPA was able to successfully calculate a replica count from.",
+				},
+			}
+			status := GenGPAHealthStatus(gpa)
+			Expect(status.Phase).To(Equal(paasv1alpha2.HealthHealthy))
+			Expect(status.Reason).To(Equal("AutoscalingAvailable"))
+		})
+		It("test ScalingActive unhealthy", func() {
+			gpa.Status.Conditions = []autoscaling.GeneralPodAutoscalerCondition{
+				{
+					Type:    autoscaling.AbleToScale,
+					Status:  v1.ConditionTrue,
+					Reason:  "ReadyForNewScale",
+					Message: "recommended size matches current size.",
+				},
+				{
+					Type:    autoscaling.ScalingActive,
+					Status:  v1.ConditionFalse,
+					Reason:  "FailedGetResourceMetric",
+					Message: "the GPA was unable to compute the replica count: unable to get metrics for resource cpu.",
+				},
+			}
+			status := GenGPAHealthStatus(gpa)
+			Expect(status.Phase).To(Equal(paasv1alpha2.HealthUnhealthy))
+			Expect(status.Reason).To(Equal("FailedGetResourceMetric"))
+		})
+		It("test AbleToScale unhealthy", func() {
+			gpa.Status.Conditions = []autoscaling.GeneralPodAutoscalerCondition{
+				{
+					Type:   autoscaling.AbleToScale,
+					Status: v1.ConditionFalse,
+					Reason: "FailedGetScale",
+				},
+				{
+					Type:    autoscaling.ScalingActive,
+					Status:  v1.ConditionTrue,
+					Reason:  "ValidMetricFound",
+					Message: "the GPA was able to successfully calculate a replica count from.",
+				},
+			}
+			status := GenGPAHealthStatus(gpa)
+			Expect(status.Phase).To(Equal(paasv1alpha2.HealthUnhealthy))
+			Expect(status.Reason).To(Equal("FailedGetScale"))
+		})
+	})
+})

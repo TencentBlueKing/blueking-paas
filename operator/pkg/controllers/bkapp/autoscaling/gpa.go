@@ -27,6 +27,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/envs"
+	"bk.tencent.com/paas-app-operator/pkg/health"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
@@ -98,4 +99,27 @@ func buildMetricSpecs(policy paasv1alpha2.ScalingPolicy) (metrics []autoscaling.
 	}
 
 	return metrics
+}
+
+// GenGPAHealthStatus check if the GPA is healthy
+// For a deployment:
+//
+//	healthy means the GPA is available, ready to scale workloads with policy.
+//	unhealthy means the GPA is failed when reconciled.
+func GenGPAHealthStatus(gpa *autoscaling.GeneralPodAutoscaler) *health.HealthStatus {
+	for _, condition := range gpa.Status.Conditions {
+		if condition.Status == v1.ConditionFalse {
+			return &health.HealthStatus{
+				Phase:   paasv1alpha2.HealthUnhealthy,
+				Reason:  condition.Reason,
+				Message: condition.Message,
+			}
+		}
+	}
+
+	return &health.HealthStatus{
+		Phase:   paasv1alpha2.HealthHealthy,
+		Reason:  paasv1alpha2.AutoscalingAvailable,
+		Message: "",
+	}
 }

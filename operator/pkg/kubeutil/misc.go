@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubetypes
+package kubeutil
 
 import (
 	"encoding/json"
@@ -24,9 +24,29 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type nameAccessor interface {
+	GetName() string
+}
+
+// FindExtraByName filter the `input` slice, take items whose "name(by GetName()
+// method)" can't be found in base slice.
+func FindExtraByName[T nameAccessor](input []T, base []T) []T {
+	// Make an index
+	names := make(map[string]struct{})
+	for _, obj := range base {
+		names[obj.GetName()] = struct{}{}
+	}
+
+	return lo.Filter(input, func(item T, _ int) bool {
+		_, ok := names[item.GetName()]
+		return !ok
+	})
+}
 
 // GetJsonAnnotation gets the value of given key in the annotations, the data will be unmarshaled
 // to the given type provided by the type parameter.

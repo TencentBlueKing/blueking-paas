@@ -32,7 +32,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
@@ -140,7 +139,7 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paas
 	}
 
 	for _, gpa := range current {
-		healthStatus := kubestatus.GenGPAHealthStatus(gpa)
+		healthStatus := GenGPAHealthStatus(gpa)
 		if healthStatus.Phase != paasv1alpha2.HealthHealthy {
 			apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 				Type:               paasv1alpha2.AutoscalingAvailable,

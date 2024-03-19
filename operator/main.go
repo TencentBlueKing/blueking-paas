@@ -48,9 +48,9 @@ import (
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/controllers"
-	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 
 	//+kubebuilder:scaffold:imports
@@ -136,7 +136,7 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	mgrCli := client.New(mgr.GetClient())
+	mgrCli := kubeutil.NewTracedClient(mgr.GetClient())
 	mgrScheme := mgr.GetScheme()
 
 	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf.Controller)

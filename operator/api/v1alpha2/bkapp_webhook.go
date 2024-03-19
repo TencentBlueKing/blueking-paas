@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
@@ -184,7 +184,7 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	}
 
 	// 通过注解配置的进程资源信息，也需要校验是否合法
-	legacyProcResConfig, err := kubetypes.GetJsonAnnotation[LegacyProcConfig](
+	legacyProcResConfig, err := kubeutil.GetJsonAnnotation[LegacyProcConfig](
 		r, LegacyProcResAnnoKey,
 	)
 	// 获取进程中的资源配额注解成功，才需要进行检查

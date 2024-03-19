@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubestatus
+package health
 
 import (
 	"fmt"
@@ -61,13 +61,13 @@ func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 		switch pod.Spec.RestartPolicy {
 		case corev1.RestartPolicyAlways:
 			// if pod is ready, k8s will set PodReady to True
-			condReady := FindPodStatusCondition(pod.Status.Conditions, corev1.PodReady)
+			condReady := findPodStatusCondition(pod.Status.Conditions, corev1.PodReady)
 			if condReady != nil && condReady.Status == corev1.ConditionTrue {
 				return healthyStatus
 			}
 			// if it's not ready, check to see if any container terminated, if so, it's unhealthy
 			for _, ctr := range pod.Status.ContainerStatuses {
-				if failMessage := GetContainerFailMessage(ctr); failMessage != "" && failMessage != ContainerCreating {
+				if failMessage := getContainerFailMessage(ctr); failMessage != "" && failMessage != ContainerCreating {
 					return unhealthyStatus.withMessage(failMessage)
 				}
 			}
@@ -88,7 +88,7 @@ func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 		}
 		// try to get fail message from ContainerStatuses
 		for _, ctr := range pod.Status.ContainerStatuses {
-			if failMessage := GetContainerFailMessage(ctr); failMessage != "" {
+			if failMessage := getContainerFailMessage(ctr); failMessage != "" {
 				return unhealthyStatus.withMessage(failMessage)
 			}
 		}
@@ -97,7 +97,7 @@ func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 	case corev1.PodPending:
 		// check if failed to start container
 		for _, ctr := range pod.Status.ContainerStatuses {
-			if failMessage := GetContainerFailMessage(ctr); failMessage != "" && failMessage != ContainerCreating {
+			if failMessage := getContainerFailMessage(ctr); failMessage != "" && failMessage != ContainerCreating {
 				return unhealthyStatus.withMessage(failMessage)
 			}
 		}
@@ -113,8 +113,8 @@ func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 	}
 }
 
-// GetContainerFailMessage 获取容器的失败信息
-func GetContainerFailMessage(ctr corev1.ContainerStatus) string {
+// getContainerFailMessage 获取容器的失败信息
+func getContainerFailMessage(ctr corev1.ContainerStatus) string {
 	if failMessage := getContainerFailedMessageFromState(ctr.LastTerminationState); failMessage != "" {
 		return failMessage
 	}
@@ -146,8 +146,8 @@ func getContainerFailedMessageFromState(state corev1.ContainerState) string {
 	return ""
 }
 
-// FindPodStatusCondition finds the conditionType in conditions.
-func FindPodStatusCondition(
+// findPodStatusCondition finds the conditionType in conditions.
+func findPodStatusCondition(
 	conditions []corev1.PodCondition,
 	conditionType corev1.PodConditionType,
 ) *corev1.PodCondition {

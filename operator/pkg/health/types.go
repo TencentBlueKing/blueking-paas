@@ -16,16 +16,18 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubetypes
+package health
 
-import (
-	"testing"
+import paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
+// HealthStatus the resource health status
+type HealthStatus struct {
+	Phase   paasv1alpha2.HealthPhase
+	Reason  string
+	Message string
+}
 
-func TestKubetypes(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "utils/kubetypes Suite")
+func (s *HealthStatus) withMessage(message string) *HealthStatus {
+	s.Message = message
+	return s
 }

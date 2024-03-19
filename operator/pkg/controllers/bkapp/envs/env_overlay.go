@@ -24,7 +24,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 )
 
@@ -217,7 +217,7 @@ func (r *ProcResourcesGetter) Default() corev1.ResourceRequirements {
 // - return: <resources requirements>, <error>
 func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequirements, err error) {
 	// Legacy version: try to read resources configs from legacy annotation
-	legacyProcResourcesConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
+	legacyProcResourcesConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
 		r.bkapp,
 		paasv1alpha2.LegacyProcResAnnoKey,
 	)

@@ -39,9 +39,9 @@ import (
 	"bk.tencent.com/paas-app-operator/controllers/base"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/svcdisc"
+	"bk.tencent.com/paas-app-operator/pkg/health"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
 // NewDeploymentReconciler will return a DeploymentReconciler with given k8s client
@@ -226,14 +226,14 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 	availableCount := 0
 	anyFailed := false
 	for _, deployment := range current {
-		healthStatus := kubestatus.CheckDeploymentHealthStatus(deployment)
+		healthStatus := health.CheckDeploymentHealthStatus(deployment)
 		if healthStatus.Phase == paasv1alpha2.HealthHealthy {
 			availableCount += 1
 			continue
 		}
 
-		failMessage, err := kubestatus.GetDeploymentDirectFailMessage(ctx, r.Client, deployment)
-		if errors.Is(err, kubestatus.ErrDeploymentStillProgressing) {
+		failMessage, err := health.GetDeploymentDirectFailMessage(ctx, r.Client, deployment)
+		if errors.Is(err, health.ErrDeploymentStillProgressing) {
 			continue
 		}
 		if healthStatus.Phase == paasv1alpha2.HealthUnhealthy {

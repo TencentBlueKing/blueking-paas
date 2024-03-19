@@ -30,7 +30,7 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 var _ = Describe("Test build deployments from BkApp", func() {
@@ -175,7 +175,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		})
 
 		It("legacy version", func() {
-			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcImageAnnoKey, paasv1alpha2.LegacyProcConfig{
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcImageAnnoKey, paasv1alpha2.LegacyProcConfig{
 				"web":    {"image": "busybox:1.0.0", "policy": "Never"},
 				"worker": {"image": "busybox:2.0.0", "policy": "Always"},
 			})
@@ -237,7 +237,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		})
 
 		It("legacy version", func() {
-			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
 				"web":    {"cpu": "1", "memory": "1Gi"},
 				"worker": {"cpu": "2", "memory": "2Gi"},
 			})

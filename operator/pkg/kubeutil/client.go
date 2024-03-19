@@ -22,35 +22,15 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type nameAccessor interface {
-	GetName() string
-}
+// UpdateHandler should implement the object update policy
+type UpdateHandler[T client.Object] func(ctx context.Context, cli client.Client, current T, want T) error
 
-// FindExtraByName filter the `input` slice, take items whose "name(by GetName()
-// method)" can't be found in base slice.
-func FindExtraByName[T nameAccessor](input []T, base []T) []T {
-	// Make an index
-	names := make(map[string]struct{})
-	for _, obj := range base {
-		names[obj.GetName()] = struct{}{}
-	}
-
-	return lo.Filter(input, func(item T, _ int) bool {
-		_, ok := names[item.GetName()]
-		return !ok
-	})
-}
-
-// updateHandler should implement the object update policy
-type updateHandler[T client.Object] func(ctx context.Context, cli client.Client, current T, want T) error
-
-// alwaysUpdate will always update the current object
-func alwaysUpdate[T client.Object](ctx context.Context, cli client.Client, current T, want T) error {
+// AlwaysUpdate will always update the current object
+func AlwaysUpdate[T client.Object](ctx context.Context, cli client.Client, current T, want T) error {
 	if err := cli.Update(ctx, want); err != nil {
 		return errors.Wrapf(
 			err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
@@ -71,7 +51,7 @@ func UpsertObject[T any, PT interface {
 	ctx context.Context,
 	cli client.Client,
 	obj PT,
-	updateHandler updateHandler[PT],
+	updateHandler UpdateHandler[PT],
 ) error {
 	exists := PT(new(T))
 	if err := cli.Get(ctx, client.ObjectKeyFromObject(obj), exists); err != nil {
@@ -87,7 +67,7 @@ func UpsertObject[T any, PT interface {
 		}
 	} else {
 		if updateHandler == nil {
-			updateHandler = alwaysUpdate[PT]
+			updateHandler = AlwaysUpdate[PT]
 		}
 		// 集群资源存在, 且命中更新策略时, 更新资源
 		return updateHandler(ctx, cli, exists, obj)

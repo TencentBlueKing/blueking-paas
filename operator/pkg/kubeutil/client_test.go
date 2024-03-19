@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubeutil
+package kubeutil_test
 
 import (
 	"context"
@@ -37,6 +37,7 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	procres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/resources"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 var _ = Describe("Test utils", func() {
@@ -109,7 +110,7 @@ var _ = Describe("Test utils", func() {
 		webDeploy, _ := procres.BuildProcDeployment(bkapp, "web")
 		want := []*appsv1.Deployment{webDeploy}
 
-		outdated := FindExtraByName(current, want)
+		outdated := kubeutil.FindExtraByName(current, want)
 		Expect(len(outdated)).To(Equal(1))
 		Expect(outdated[0].Name).To(Equal("bkapp-sample--foo"))
 	})
@@ -117,7 +118,7 @@ var _ = Describe("Test utils", func() {
 	Context("test UpsertObject", func() {
 		DescribeTable(
 			"test update with different handleUpdate",
-			func(strategy updateHandler[*appsv1.Deployment], updated bool) {
+			func(strategy kubeutil.UpdateHandler[*appsv1.Deployment], updated bool) {
 				a := fakeDeploy
 				b := fakeDeploy.DeepCopy()
 				got := appsv1.Deployment{}
@@ -125,13 +126,13 @@ var _ = Describe("Test utils", func() {
 				b.Labels["foo"] = "bar"
 				cli := builder.WithObjects(bkapp, &a).Build()
 
-				Expect(UpsertObject(ctx, cli, b, strategy)).NotTo(HaveOccurred())
+				Expect(kubeutil.UpsertObject(ctx, cli, b, strategy)).NotTo(HaveOccurred())
 
 				_ = cli.Get(ctx, client.ObjectKeyFromObject(&a), &got)
 
 				Expect(equality.Semantic.DeepEqual(got.Labels, b.Labels)).To(Equal(updated))
 			},
-			Entry("always update", alwaysUpdate[*appsv1.Deployment], true),
+			Entry("always update", kubeutil.AlwaysUpdate[*appsv1.Deployment], true),
 			Entry(
 				"always forbid update",
 				func(ctx context.Context, cli client.Client, current *appsv1.Deployment, want *appsv1.Deployment) error {
@@ -146,7 +147,7 @@ var _ = Describe("Test utils", func() {
 			cli := builder.WithObjects(bkapp).Build()
 
 			Expect(apierrors.IsNotFound(cli.Get(ctx, client.ObjectKeyFromObject(&fakeDeploy), &got))).To(BeTrue())
-			Expect(UpsertObject(ctx, cli, &fakeDeploy, nil)).NotTo(HaveOccurred())
+			Expect(kubeutil.UpsertObject(ctx, cli, &fakeDeploy, nil)).NotTo(HaveOccurred())
 
 			_ = cli.Get(ctx, client.ObjectKeyFromObject(&fakeDeploy), &got)
 

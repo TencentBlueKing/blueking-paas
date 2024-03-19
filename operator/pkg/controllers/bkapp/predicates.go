@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
+	"bk.tencent.com/paas-app-operator/pkg/health"
 )
 
 // NewHookSuccessPredicate create an GenericHookPredicate instance which will handle hook run successful event.
@@ -22,8 +22,8 @@ func NewHookSuccessPredicate() predicate.Predicate {
 	return &GenericHookPredicate{
 		Logger: logf.Log,
 		updateFunc: func(oldPod, newPod *corev1.Pod) bool {
-			oldHealthStatus := kubestatus.CheckPodHealthStatus(oldPod)
-			newHealthStatus := kubestatus.CheckPodHealthStatus(newPod)
+			oldHealthStatus := health.CheckPodHealthStatus(oldPod)
+			newHealthStatus := health.CheckPodHealthStatus(newPod)
 
 			// the pod state is changing to ready
 			return (oldHealthStatus.Phase != paasv1alpha2.HealthHealthy) &&
@@ -43,8 +43,8 @@ func NewHookFailedPredicate() predicate.Predicate {
 	return &GenericHookPredicate{
 		Logger: logf.Log,
 		updateFunc: func(oldPod, newPod *corev1.Pod) bool {
-			oldHealthStatus := kubestatus.CheckPodHealthStatus(oldPod)
-			newHealthStatus := kubestatus.CheckPodHealthStatus(newPod)
+			oldHealthStatus := health.CheckPodHealthStatus(oldPod)
+			newHealthStatus := health.CheckPodHealthStatus(newPod)
 
 			// the pod state is changing to not-ready
 			return (oldHealthStatus.Phase != paasv1alpha2.HealthUnhealthy) &&

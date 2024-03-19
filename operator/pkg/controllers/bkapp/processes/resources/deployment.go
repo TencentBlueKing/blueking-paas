@@ -38,7 +38,7 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/envs"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/volumes"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 const (
@@ -187,8 +187,8 @@ func buildContainers(
 		Resources:       resRequirements,
 		ImagePullPolicy: pullPolicy,
 		Env:             envs,
-		Command:         kubetypes.ReplaceCommandEnvVariables(command),
-		Args:            kubetypes.ReplaceCommandEnvVariables(args),
+		Command:         kubeutil.ReplaceCommandEnvVariables(command),
+		Args:            kubeutil.ReplaceCommandEnvVariables(args),
 	}
 	if proc.TargetPort != 0 {
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}

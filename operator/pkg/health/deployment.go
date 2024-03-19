@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package kubestatus
+package health
 
 import (
 	"context"
@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 // ErrDeploymentStillProgressing indicates the deployment is progressing
@@ -48,14 +49,14 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 			Message: "Waiting for rollout to finish: observed deployment generation less then desired generation",
 		}
 	} else {
-		failureCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentReplicaFailure)
+		failureCond := kubeutil.FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentReplicaFailure)
 		if failureCond != nil && failureCond.Status == corev1.ConditionTrue {
 			return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, failureCond)
 		}
 
 		replicas := *deployment.Spec.Replicas
 
-		progressingCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentProgressing)
+		progressingCond := kubeutil.FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentProgressing)
 		if progressingCond != nil {
 			if progressingCond.Status == corev1.ConditionFalse {
 				return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, progressingCond)
@@ -67,7 +68,7 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 		}
 
 		if deployment.Status.UpdatedReplicas == replicas {
-			availableCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentAvailable)
+			availableCond := kubeutil.FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentAvailable)
 			if availableCond != nil {
 				if availableCond.Status != corev1.ConditionTrue {
 					return makeStatusFromDeploymentCondition(paasv1alpha2.HealthUnhealthy, availableCond)
@@ -128,19 +129,6 @@ func GetDeploymentDirectFailMessage(
 		}
 	}
 	return "", errors.WithStack(ErrDeploymentStillProgressing)
-}
-
-// FindDeploymentStatusCondition finds the conditionType in conditions.
-func FindDeploymentStatusCondition(
-	conditions []appsv1.DeploymentCondition,
-	conditionType appsv1.DeploymentConditionType,
-) *appsv1.DeploymentCondition {
-	for i := range conditions {
-		if conditions[i].Type == conditionType {
-			return &conditions[i]
-		}
-	}
-	return nil
 }
 
 // a shortcut for making a HealthStatus with given status and condition

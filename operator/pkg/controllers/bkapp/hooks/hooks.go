@@ -39,8 +39,8 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	hookres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks/resources"
+	"bk.tencent.com/paas-app-operator/pkg/health"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
 // HookPodsHistoryLimit 最大保留的 Hook Pod 数量（单种类型）
@@ -159,7 +159,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 		})
 	}
 
-	healthStatus := kubestatus.CheckPodHealthStatus(&pod)
+	healthStatus := health.CheckPodHealthStatus(&pod)
 	return hookres.HookInstance{
 		Pod: &pod,
 		Status: &paasv1alpha2.HookStatus{

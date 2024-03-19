@@ -211,7 +211,7 @@ class TestSourcePackageStatReader:
             ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, EXAMPLE_APP_YAML, EXAMPLE_APP_YAML["version"]),
             (
                 {"app.yaml": yaml.dump(EXAMPLE_APP_YAML), "logo.png": "dummy"},
-                {"logo_b64data": "base64,ZHVtbXk=", **EXAMPLE_APP_YAML},
+                {"logo_b64data": "base64,ZHVtbXk=", "logoB64data": "base64,ZHVtbXk=", **EXAMPLE_APP_YAML},
                 EXAMPLE_APP_YAML["version"],
             ),
         ],

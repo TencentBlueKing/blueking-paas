@@ -21,6 +21,7 @@ from typing import Any, Dict
 import cattrs
 import pytest
 
+from paas_wl.bk_app.monitoring.bklog import constants
 from paas_wl.bk_app.monitoring.bklog.entities import BkAppLogConfig
 from paas_wl.bk_app.monitoring.bklog.models import LabelSelector
 from paas_wl.bk_app.monitoring.bklog.serializers import BKLogConfigSerializer
@@ -41,14 +42,20 @@ def gvk_config():
 
 
 @pytest.fixture()
-def bklog_manifest(wl_app) -> Dict[str, Any]:
+def bklog_manifest(wl_app, bk_stag_env) -> Dict[str, Any]:
     return {
         "apiVersion": "bk.tencent.com/v1alpha1",
         "kind": "BkLogConfig",
         "metadata": {
             "name": "test",
             "namespace": wl_app.namespace,
-            "labels": {"app.kubernetes.io/managed-by": "bk-paas3"},
+            "labels": {
+                "app.kubernetes.io/managed-by": "bk-paas3",
+                constants.BKAPP_CODE_ANNO_KEY: bk_stag_env.application.code,
+                constants.MODULE_NAME_ANNO_KEY: bk_stag_env.module.name,
+                constants.ENVIRONMENT_ANNO_KEY: bk_stag_env.environment,
+                constants.WLAPP_NAME_ANNO_KEY: wl_app.name,
+            },
         },
         "spec": {
             "addPodLabel": True,

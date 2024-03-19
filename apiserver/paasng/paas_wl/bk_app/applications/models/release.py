@@ -142,6 +142,7 @@ class Release(UuidAuditedModel):
         """获取与这个发布对象关联的 procfile"""
         if self.procfile:
             return self.procfile
+        # deprecated: `build.procfile` will be remove in next version, just use Release.procfile
         return self.build.procfile
 
     def get_envs(self) -> Dict:

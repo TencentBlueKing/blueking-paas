@@ -45,6 +45,10 @@ class RegionClusterService:
             return qs[0]
         raise Cluster.DoesNotExist(f"Default cluster not found for {self.region}")
 
+    def get_cnative_app_default_cluster(self) -> Cluster:
+        default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", self.region)
+        return self.get_cluster_by_name(default_cluster_name)
+
     def get_cluster_by_name(self, cluster_name: str) -> Cluster:
         return Cluster.objects.get(region=self.region, name=cluster_name)
 
@@ -97,8 +101,7 @@ class EnvClusterService:
         _bind_cluster_to_wl_app(wl_app, cluster)
 
     def _get_cnative_app_default_cluster(self, region):
-        default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
-        return RegionClusterService(region).get_cluster_by_name(default_cluster_name)
+        return RegionClusterService(region).get_cnative_app_default_cluster()
 
 
 def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):

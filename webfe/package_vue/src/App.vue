@@ -88,6 +88,9 @@ export default {
       },
       immediate: true,
     },
+    isPlugin() {
+      this.setGlobalBodyStyle();
+    },
   },
   created() {
     bus.$on('show-login-modal', () => {
@@ -107,6 +110,10 @@ export default {
       // 更新store数据
       const isShowNotice = isShow && this.isBkNotice;
       await this.$store.commit('updataNoticeStatus', isShowNotice);
+    },
+    // 插件开发者中心设置全局底色
+    setGlobalBodyStyle() {
+      document.body.style.backgroundColor = this.isPlugin ? '#F5F6FA' : '';
     },
   },
 };

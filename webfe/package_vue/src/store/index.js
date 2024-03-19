@@ -85,6 +85,7 @@ const state = {
   errorDetail: {},
   // 是否显示通知中心
   isShowNotice: false,
+  curUserInfo: {},
 };
 
 const getters = {};
@@ -234,6 +235,9 @@ const mutations = {
   },
   updataNoticeStatus(state, data) {
     state.isShowNotice = data;
+  },
+  updataUserInfo(state, data) {
+    state.curUserInfo = data;
   },
 };
 

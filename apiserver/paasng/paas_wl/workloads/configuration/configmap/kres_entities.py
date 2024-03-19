@@ -49,7 +49,7 @@ class ConfigMapManager(AppEntityManager[ConfigMap]):
         try:
             existed_one = self.get(app=res.app, name=config_name)
         except AppEntityNotFound:
-            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, config_name)
+            logger.info("ConfigMap<%s/%s> does not exist, will skip delete", namespace, config_name)
             return None
         return super().delete(existed_one, non_grace_period)
 

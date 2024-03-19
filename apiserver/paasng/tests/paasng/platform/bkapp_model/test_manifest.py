@@ -167,10 +167,9 @@ class TestBuiltinAnnotsManifestConstructor:
         BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
 
         annots = blank_resource.metadata.annotations
-        assert (
-            annots["bkapp.paas.bk.tencent.com/image-credentials"]
-            == f"{CNativeBkAppNameGenerator.generate(bk_module)}--dockerconfigjson"
-        )
+        assert annots[
+            "bkapp.paas.bk.tencent.com/image-credentials"
+        ] == f"{CNativeBkAppNameGenerator.generate(bk_module)}--dockerconfigjson"
         assert annots["bkapp.paas.bk.tencent.com/module-name"] == bk_module.name
         assert annots["bkapp.paas.bk.tencent.com/name"] == app.name
         assert annots["bkapp.paas.bk.tencent.com/region"] == app.region
@@ -242,10 +241,12 @@ class TestProcessesManifestConstructor:
                     "targetPort": 8000,
                     "resQuotaPlan": "default",
                     "autoscaling": None,
+                    "probes": None,
                     "cpu": None,
                     "memory": None,
                     "image": None,
                     "imagePullPolicy": None,
+                    "proc_command": None,
                 }
             ],
             "envOverlay": {

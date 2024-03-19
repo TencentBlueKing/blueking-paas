@@ -25,13 +25,15 @@ import (
 	"path/filepath"
 )
 
-// MakeRestorerCmd build the restorer cmd
+// MakeRestorerStep build the restorer step
 // restorer will restore last build cache based on cacheImage and group.toml(in groupPath)
-func MakeRestorerCmd(
+func MakeRestorerStep(
 	ctx context.Context,
 	lifecycleDir, cacheImage, groupPath, layersDir, logLevel string,
+	useDaemon bool,
 	uid, gid uint32,
-) *exec.Cmd {
+) Step {
+	var opts []CmdOptsProvider
 	args := []string{
 		"-cache-image", cacheImage,
 		"-group", groupPath,
@@ -40,5 +42,12 @@ func MakeRestorerCmd(
 		"-uid", fmt.Sprintf("%d", uid),
 		"-gid", fmt.Sprintf("%d", gid),
 	}
-	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "restorer"), args...)
+	if useDaemon {
+		args = append(args, "-daemon")
+		opts = append(opts, WithRoot())
+	} else {
+		opts = append(opts, WithUser(uid, gid))
+	}
+	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "restorer"), args...)
+	return makeStep("Restore", "Restoring layers from the cache...", cmd, opts...)
 }

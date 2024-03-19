@@ -1,7 +1,7 @@
 <template lang="html">
   <div class="right-main">
     <paas-content-loader
-      class="app-container middle base-info-container"
+      class="app-container middle base-info-container shadow-card-style"
       :is-loading="isLoading"
       placeholder="base-info-loading"
     >

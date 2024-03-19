@@ -20,7 +20,7 @@ import logging
 
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import APP_NAME_FIELD
-from paasng.platform.declarative.application.validations import ApplicationDesc
+from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 
 logger = logging.getLogger(__name__)

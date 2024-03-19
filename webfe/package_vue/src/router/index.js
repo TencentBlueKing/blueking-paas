@@ -142,10 +142,6 @@ const appProcesses = () => import(/* webpackChunkName: 'app-engine' */'@/views/d
   window.showDeployTip(error);
 });
 
-const appStatus = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/app-status').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const appEntryConfig = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/entry-config').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -334,10 +330,6 @@ const cloudAppDeployHistory = () => import(/* webpackChunkName: 'cloud-deploy-ma
   window.showDeployTip(error);
 });
 
-const cloudAppEventQuery = () => import(/* webpackChunkName: 'cloud-event-query' */'@/views/dev-center/app/engine/cloud-event-query/index').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const cloudAppImageManage = () => import(/* webpackChunkName: 'cloud-image-manage' */'@/views/dev-center/app/engine/clound-image-manage/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -512,11 +504,6 @@ const router = new Router({
               },
             },
           ],
-        },
-        {
-          path: ':id/:moduleId/events',
-          component: cloudAppEventQuery,
-          name: 'cloudAppEventQuery',
         },
         // 云原生访问统计
         {
@@ -788,11 +775,6 @@ const router = new Router({
               },
             },
           ],
-        },
-        {
-          path: ':id/:moduleId/status',
-          component: appStatus,
-          name: 'appStatus',
         },
         {
           path: ':id/process',

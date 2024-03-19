@@ -47,7 +47,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
         pre_phase_start.send(self, phase=DeployPhaseTypes.RELEASE)
 
         hook = self.deployment.get_deploy_hooks().get_hook(type_=DeployHookType.PRE_RELEASE_HOOK)
-        if hook is None or not (hook.enabled and hook.command):
+        if hook is None or not (hook.enabled and hook.get_proc_command()):
             self.stream.write_message(
                 Style.Warning(_("The Pre-release command is not configured, skip the Pre-release phase."))
             )
@@ -63,7 +63,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
                 self.engine_app.env,
                 command_template=CommandTemplate(
                     build_id=str(self.deployment.build_id),
-                    command=hook.command,
+                    command=hook.get_proc_command(),
                     type=CommandType(hook.type),
                 ),
                 operator=str(self.deployment.operator),

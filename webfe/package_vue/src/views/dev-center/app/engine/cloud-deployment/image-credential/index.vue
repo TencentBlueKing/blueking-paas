@@ -1,7 +1,7 @@
 <template>
   <div class="image-container">
     <paas-content-loader
-      class="image-content"
+      :class="['image-content', { 'bottom-line': curAppInfo?.feature?.ENABLE_IMAGE_APP_BIND_REPO }]"
       :is-loading="isLoading"
       :is-transition="false"
       :offset-top="0"
@@ -130,9 +130,12 @@ export default {
     curAppCode() {
       return this.$store.state.curAppCode;
     },
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
   },
   watch: {
-    curAppCode() {
+    appCode() {
       this.getCredentialList();
       // this.isLoading = true;
     },
@@ -140,6 +143,9 @@ export default {
       // 镜像凭证初始化
       this.credentialList = value;
     },
+  },
+  created() {
+    this.getCredentialList();
   },
   methods: {
 
@@ -293,6 +299,10 @@ export default {
   .image-content {
     background: #fff;
     padding-top: 0;
+    &.bottom-line {
+      margin-bottom: 24px;
+      border-bottom: 1px solid #eaebf0;
+    }
   }
 }
 .header-title {

@@ -3,6 +3,14 @@
     width: 200px;
 }
 
+.market-info-title-wrapper {
+    span {
+        font-size: 12px;
+        color: #979ba5;
+        margin-left: 18px;
+    }
+}
+
 .logo-uploader {
     padding: 18px 0 24px 16px;
 
@@ -185,6 +193,12 @@
             color: #313238;
             word-wrap: break-word;
             width: 290px;
+
+            &.text-ellipsis  {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
         }
         /deep/ .bk-form-item .bk-label{
             width: 140px !important;

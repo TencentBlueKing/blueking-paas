@@ -458,6 +458,18 @@ var _ = Describe("test webhook.Validator", func() {
 						},
 					},
 				},
+				Mounts: []paasv1alpha2.MountOverlay{
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      "nginx-mount",
+							MountPath: "/path/nginx",
+							Source: &paasv1alpha2.VolumeSource{
+								ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmag"},
+							},
+						},
+						EnvName: paasv1alpha2.ProdEnv,
+					},
+				},
 			}
 
 			err := bkapp.ValidateCreate()
@@ -554,6 +566,80 @@ var _ = Describe("test webhook.Validator", func() {
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
+		})
+		It("mountOverlay configMap normal", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmag"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("mountOverlay persistentStorage normal", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "nginx-pvc"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "etcd-pvc"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("mountOverlay invalid", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/nginx",
+						Source:    &paasv1alpha2.VolumeSource{},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/etcd",
+						Source:    &paasv1alpha2.VolumeSource{},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("unknown volume source"))
 		})
 	})
 

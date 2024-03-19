@@ -132,10 +132,9 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
     def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
         # 需要删除对应的 k8s volume 资源
-        source = self.get_by_env(
-            app_id=app_id,
-            env_name=env_name,
-            source_name=source_name,
+        source = self.model_class.objects.get(
+            application_id=app_id,
+            name=source_name,
         )
         # 删除 mount 对应的 source k8s 资源
         module = Module.objects.get(id=module_id)

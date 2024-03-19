@@ -278,7 +278,7 @@ class TestVolumeMountViewSet:
         )
         body = MountSLZ(mount_configmap).data
         body["configmap_source"] = {"source_config_data": {"configmap_z": "configmap_z_data_updated"}}
-        body["environment_name"] = "stag"
+        body["environment_name"] = "prod"
 
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount_configmap.pk)
@@ -291,7 +291,7 @@ class TestVolumeMountViewSet:
         assert response.status_code == 200
         assert mount_updated.name == mount_configmap.name
         assert source.data == {"configmap_z": "configmap_z_data_updated"}
-        assert source.environment_name == "stag"
+        assert source.environment_name == "prod"
 
         body["name"] = "mount-configmap-test"
         response = api_client.put(url, body)

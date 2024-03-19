@@ -139,7 +139,6 @@ class BkAppProcess(BaseModel):
     def get_proc_command(self) -> str:
         """get_proc_command: Procfile 风格的命令
         使用场景:
-        - 普通应用启动 hook 使用该方法获取启动命令 -> ApplicationPreReleaseExecutor
         - buildpacks 构建方案使用该方法生成 Procfile 文件
         """
         if self.proc_command:

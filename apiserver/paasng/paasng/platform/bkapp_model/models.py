@@ -91,7 +91,11 @@ class ModuleProcessSpec(TimestampedModel):
         ordering = ["id"]
 
     def get_proc_command(self) -> str:
-        """获取 Procfile 形式的命令, 该方法目前应该只用于数据展示"""
+        """获取 Procfile 形式的命令
+        使用场景:
+        -  views 数据展示
+        - 旧镜像应用启动进程
+        """
         if self.proc_command:
             return self.proc_command
         # Warning: 已知 shlex.join 不支持环境变量, 如果普通应用使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题

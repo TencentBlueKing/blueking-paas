@@ -21,8 +21,8 @@ package main
 import (
 	"os"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer/webserver"
+	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 

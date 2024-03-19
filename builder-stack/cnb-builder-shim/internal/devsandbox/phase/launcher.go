@@ -23,12 +23,12 @@ import (
 	"os/exec"
 )
 
-// DefaultLifecycleDriverPath TODO
-const DefaultLifecycleDriverPath = "/cnb/devcontainer/bin/lifecycle-driver"
+// DefaultDevLauncherPath default dev launcher path
+const DefaultDevLauncherPath = "/cnb/devsandbox/bin/dev-launcher"
 
-// MakeBuilderCmd TODO
-func MakeBuilderCmd() *exec.Cmd {
-	cmd := exec.Command(DefaultLifecycleDriverPath)
+// MakeLauncherCmd make launcher cmd
+func MakeLauncherCmd() *exec.Cmd {
+	cmd := exec.Command(DefaultDevLauncherPath)
 	cmd.Env = os.Environ()
 	return cmd
 }

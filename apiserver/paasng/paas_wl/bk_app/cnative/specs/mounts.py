@@ -21,6 +21,8 @@ from typing import Any, Dict, Optional, Type, Union
 
 from django.conf import settings
 from django.db.models import QuerySet
+from django.utils.translation import gettext_lazy as _
+from rest_framework.serializers import ValidationError
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.constants import (
@@ -37,7 +39,8 @@ from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KStorageClass
 from paas_wl.workloads.configuration.configmap.kres_entities import ConfigMap, configmap_kmodel
 from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
-from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.applications.models import Application, ApplicationFeatureFlag, ModuleEnvironment
 from paasng.platform.modules.models import Module
 
 
@@ -190,18 +193,13 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
         )
 
     def delete_by_app(self, application_id: str, source_name: str) -> None:
-        # 删除 k8s 资源
-        mounts = Mount.objects.filter(
-            source_config=self.build_volume_source(source_name),
-        )
-        source = self.model_class.objects.get(application_id=application_id, name=source_name)
-        for mount in mounts:
-            for env in mount.module.get_envs():
-                self.delete_k8s_resource(source, env.wl_app)
-            mount.delete()
+        # 删除持久存储资源前，需要确保对应挂载卷资源已被删除
+        if Mount.objects.filter(source_config=self.build_volume_source(source_name)).exists():
+            raise ValidationError(_("删除持久存储资源失败,请先删除相应挂载卷资源"))
 
         app = Application.objects.get(id=application_id)
         app_envs = app.get_app_envs()
+        source = self.model_class.objects.get(application_id=application_id, name=source_name)
         for env in app_envs:
             self.delete_k8s_resource(source, env.wl_app)
 
@@ -314,3 +312,14 @@ def check_storage_class_exists(application: Application, storage_class_name: str
             return False
         else:
             return True
+
+
+def check_persistent_storage_enabled(application: Application) -> bool:
+    """判断应用是否支持持久存储特性"""
+    # 若应用没有开启持久存储应用特性, 则不支持
+    if not ApplicationFeatureFlag.objects.has_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, application):
+        return False
+    # 若集群不支持配置的 StorageClass, 则不支持
+    return check_storage_class_exists(
+        application=application, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
+    )

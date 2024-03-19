@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
+	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 )
 
 var _ = Describe("Test DeployManager", func() {

@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/uuid"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
+	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -195,7 +195,7 @@ func (m DeployManager) generateProcfile(appDir string) error {
 //	oldDir string - the directory where old build dependent files are located
 //	newDir string - the directory where new build dependent files are located
 func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
-	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt"}
+	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt", "Procfile"}
 	rebuild := false
 
 	for _, fileName := range buildDependentFiles {
@@ -218,6 +218,12 @@ func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 
 	}
 
+	// 如果 metadata.toml 不存在, 说明上次构建失败, 需要重新构建
+	_, err := os.Stat(path.Join(dc.DefaultLayersDir, "config", "metadata.toml"))
+	if os.IsNotExist(err) {
+		rebuild = true
+	}
+
 	return &deployStepOpts{Rebuild: rebuild, Relaunch: true}
 }
 
@@ -226,7 +232,7 @@ var _ DeployServiceHandler = (*DeployManager)(nil)
 // FakeDeployManger 用于测试
 type FakeDeployManger struct{}
 
-// Deploy TODO
+// Deploy fake deploy for unit test
 func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
 	return &DeployResult{
 		DeployID: uuid.NewString(),
@@ -235,7 +241,7 @@ func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
 	}, nil
 }
 
-// Result TODO
+// Result fake result for unit test
 func (m FakeDeployManger) Result(deployID string, withLog bool) (*DeployResult, error) {
 	if withLog {
 		return &DeployResult{

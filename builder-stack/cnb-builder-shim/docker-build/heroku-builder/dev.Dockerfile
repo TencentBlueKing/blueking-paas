@@ -24,6 +24,6 @@ ENV DEV_MODE=true
 
 RUN apt-get clean && apt-get update && apt-get -y install supervisor
 
-COPY --from=binary-builder /src/bin/* /cnb/devcontainer/bin/
+COPY --from=binary-builder /src/bin/* /cnb/devsandbox/bin/
 
-ENTRYPOINT /cnb/devcontainer/bin/dev-entrypoint
+ENTRYPOINT /cnb/devsandbox/bin/dev-entrypoint

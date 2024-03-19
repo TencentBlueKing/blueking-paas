@@ -51,7 +51,7 @@ heroku-builder-jammy:  ## Build builder image which is based on `cloudnative-bui
 
 
 .PHONY: heroku-dev
-heroku-dev:  ## Build devcontainer image which is based on `cloudnative-buildpacks/builders/heroku-builder`
+heroku-dev:  ## Build dev sandbox image which is based on `cloudnative-buildpacks/builders/heroku-builder`
 	docker buildx bake heroku-dev -f docker-build/heroku-builder/docker-bake.hcl
 
 

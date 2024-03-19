@@ -314,12 +314,12 @@ def check_storage_class_exists(application: Application, storage_class_name: str
             return True
 
 
-def enable_persistent_storage(application: Application) -> bool:
+def check_persistent_storage_enabled(application: Application) -> bool:
     """判断应用是否支持持久存储特性"""
-    # 若应用没有开启持久存储应用特性,则不支持
+    # 若应用没有开启持久存储应用特性, 则不支持
     if not ApplicationFeatureFlag.objects.has_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, application):
         return False
-    # 若集群不支持配置的 StorageClass,则不支持
+    # 若集群不支持配置的 StorageClass, 则不支持
     return check_storage_class_exists(
         application=application, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
     )

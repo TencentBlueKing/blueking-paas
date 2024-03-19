@@ -30,14 +30,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer/webserver/service"
+	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 )
 
 type envConfig struct {
 	DevServerAddr string `env:"DEV_SERVER_ADDR" envDefault:":8000"`
 	Token         string `env:"TOKEN" envDefault:"jwram1lpbnuugmcv"`
-	UploadDir     string `env:"UPLOAD_DIR" envDefault:"/cnb/devcontainer/src"`
+	UploadDir     string `env:"UPLOAD_DIR" envDefault:"/cnb/devsandbox/src"`
 }
 
 // WebServer 实现了 DevWatchServer 接口, 提供 Web 服务

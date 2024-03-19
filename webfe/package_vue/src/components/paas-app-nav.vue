@@ -304,6 +304,7 @@ export default {
         'appMobileMarket', // 应用市场(移动端)
         'appBasicInfo', // 基本信息
         'appMembers', // 成员管理
+        'appPersistentStorage', // 持久存储
       ];
 
       this.navTree.forEach((nav) => {

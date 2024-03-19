@@ -701,6 +701,7 @@ export const PAAS_STATIC_CONFIG = {
                             'appMarket',
                             'appBasicInfo',
                             'appMembers',
+                            'appPersistentStorage',
                         ],
                         "destRoute": {
                           "name": "appConfigs"

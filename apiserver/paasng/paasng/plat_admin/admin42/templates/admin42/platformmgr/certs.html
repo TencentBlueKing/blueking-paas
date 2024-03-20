@@ -80,7 +80,7 @@ const regionList = {{ region_list | to_json }}
 const URLRouter = {
     create: decodeURI("{% url 'wl_api.shared_app_certs' %}"),
     list: decodeURI("{% url 'wl_api.shared_app_certs' %}"),
-    detail: decodeURI("{% url 'wl_api.shared_app_certs_by_name' '${cert_name}' %}"),
+    detail: decodeURI("{% url 'wl_api.shared_app_cert_by_name' '${cert_name}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {

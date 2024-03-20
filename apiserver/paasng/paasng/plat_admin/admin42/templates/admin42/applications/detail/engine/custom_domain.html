@@ -76,7 +76,7 @@
         list: decodeURI("{% url 'wl_api.application.domains' application.code %}"),
         create: decodeURI("{% url 'wl_api.application.domains' application.code %}"),
         {# Use an integer "65535" as the ID placeholder in order to call url #}
-        detail: decodeURI("{% url 'wl_api.domain_by_id' application.code 65535 %}"),
+        detail: decodeURI("{% url 'wl_api.application.domain_by_id' application.code 65535 %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {

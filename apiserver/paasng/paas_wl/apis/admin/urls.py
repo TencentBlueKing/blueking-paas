@@ -60,7 +60,7 @@ urlpatterns = [
     path(
         "wl_api/applications/<str:code>/domains/<int:id>/",
         domain.AppDomainsViewSet.as_view({"put": "update", "delete": "destroy"}),
-        name="wl_api.domain_by_id",
+        name="wl_api.application.domain_by_id",
     ),
     # Shared certificates
     path(
@@ -71,7 +71,7 @@ urlpatterns = [
     path(
         "wl_api/platform/app_certs/shared/<str:name>",
         certs.AppDomainSharedCertsViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
-        name="wl_api.shared_app_certs_by_name",
+        name="wl_api.shared_app_cert_by_name",
     ),
     # 日志采集管理
     path(

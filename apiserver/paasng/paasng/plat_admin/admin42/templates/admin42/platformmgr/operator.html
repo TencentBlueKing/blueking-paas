@@ -75,8 +75,8 @@
     const cnativeDefaultCluster = {{ cnative_default_cluster | to_json }}
 
     const URLRouter = {
-        listClusters: decodeURI("{{ '/admin42/wl_api/platform/clusters/' }}"),
-        getOperatorInfo: decodeURI("{{ '/admin42/wl_api/platform/clusters/${cluster_name}/operator_info/' }}"),
+        listClusters: decodeURI("{% url 'wl_api.clusters' %}"),
+        getOperatorInfo: decodeURI("{% url 'wl_api.cluster.operator_info' '${cluster_name}' %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {

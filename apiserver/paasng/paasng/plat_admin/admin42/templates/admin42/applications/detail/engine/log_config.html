@@ -29,8 +29,8 @@
     const envChoices = {{ env_choices | to_json }}
 
     const URLRouter = {
-        list: decodeURI("{{ '/admin42/wl_api/applications/${code}/log_config/' }}"),
-        detail: decodeURI("{{ '/admin42/wl_api/applications/${code}/log_config/' }}"),
+        list: decodeURI("{% url 'wl_api.application.log_config' application.code %}"),
+        detail: decodeURI("{% url 'wl_api.application.log_config' application.code %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -57,7 +57,7 @@
                         el = this.$bkLoading({title: '加载中'})
                     }
                     try {
-                        await this.$http.get(URLRouter.list.replace("${code}", this.application.code)).then(res => {
+                        await this.$http.get(URLRouter.list).then(res => {
                             this.data = res
                         })
                     } finally {
@@ -66,7 +66,7 @@
                 },
                 handleChange: async function(row) {
                     const el = this.$bkLoading({title: '加载中'})
-                    this.$http.post(URLRouter.detail.replace("${code}", this.application.code),
+                    this.$http.post(URLRouter.detail,
                         {
                             module_name: row.module_name,
                             environment: row.environment,

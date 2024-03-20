@@ -18,10 +18,11 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer.importer import import_manifest
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, SvcDiscConfig
 from paasng.platform.engine.models.config_var import ConfigVar
 from paasng.platform.engine.models.deployment import AutoscalingConfig
 
@@ -179,3 +180,25 @@ class TestAutoscaling:
         assert proc_spec.get_scaling_config("stag") == AutoscalingConfig(
             min_replicas=1, max_replicas=1, policy=ScalingPolicy.DEFAULT
         )
+
+
+class TestSvcDiscConfig:
+    def test_normal(self, bk_app, bk_module, base_manifest):
+        base_manifest["spec"]["svcDiscovery"] = {
+            "bkSaaS": [
+                {
+                    "bkAppCode": "foo",
+                },
+                {"bkAppCode": "bar", "moduleName": "default"},
+                {"bkAppCode": "bar", "moduleName": "opps"},
+            ]
+        }
+
+        import_manifest(bk_module, base_manifest)
+        cfg = SvcDiscConfig.objects.get(application=bk_app)
+
+        assert cfg.bk_saas == [
+            SvcDiscEntryBkSaaS(bkAppCode="foo"),
+            SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
+            SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
+        ]

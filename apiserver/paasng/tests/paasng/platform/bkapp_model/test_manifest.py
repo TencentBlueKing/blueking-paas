@@ -62,6 +62,7 @@ from paasng.platform.bkapp_model.manifest import (
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
     apply_builtin_env_vars,
+    apply_deploy_desc,
     apply_env_annots,
     get_manifest,
 )
@@ -302,7 +303,8 @@ class TestProcessesManifestConstructor:
 class TestMountsManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
         create_mount = functools.partial(
-            Mount.objects.create,
+            G,
+            model=Mount,
             module_id=bk_module.id,
             name="nginx",
             source_type=VolumeSourceType.ConfigMap,
@@ -362,31 +364,33 @@ class TestHooksManifestConstructor:
 
 
 class TestSvcDiscoveryManifestConstructor:
-    def test_normal(self, bk_module, blank_resource):
-        create_svc_disc = functools.partial(SvcDiscConfig.objects.create, application=bk_module.application)
-        # Create svc_disc object
-        create_svc_disc(
+    def test_normal(self, bk_app, bk_module, blank_resource):
+        G(
+            SvcDiscConfig,
+            application=bk_app,
             bk_saas=[
-                {
-                    "bkAppCode": "bk_app_code_test",
-                    "moduleName": "module_name_test",
-                }
-            ]
+                {"bkAppCode": "foo"},
+                {"bkAppCode": "bar", "moduleName": "default"},
+                {"bkAppCode": "bar", "moduleName": "opps"},
+            ],
         )
 
         SvcDiscoveryManifestConstructor().apply_to(blank_resource, bk_module)
         assert blank_resource.spec.svcDiscovery == SvcDiscConfigSpec(
-            bkSaaS=[SvcDiscEntryBkSaaS(bkAppCode="bk_app_code_test", moduleName="module_name_test")],
+            bkSaaS=[
+                SvcDiscEntryBkSaaS(bkAppCode="foo"),
+                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
+                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
+            ],
         )
 
 
 class TestDomainResolutionManifestConstructor:
-    def test_normal(self, bk_module, blank_resource):
-        create_domain_resolution = functools.partial(
-            DomainResolution.objects.create, application=bk_module.application
-        )
+    def test_normal(self, bk_app, bk_module, blank_resource):
         # Create domain_resolution object
-        create_domain_resolution(
+        G(
+            DomainResolution,
+            application=bk_app,
             nameservers=["192.168.1.3", "192.168.1.4"],
             host_aliases=[
                 {
@@ -490,3 +494,19 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
 
         assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
         assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
+
+
+def test_apply_deploy_desc_spec_v2(blank_resource, bk_deployment):
+    G(
+        DeploymentDescription,
+        deployment=bk_deployment,
+        env_variables=[
+            {"key": "FOO", "value": "1", "environment_name": "_global_"},
+            {"key": "BAR", "value": "2", "environment_name": "stag"},
+            {"key": "BAZ", "value": "3", "environment_name": "prod"},
+        ],
+    )
+    apply_deploy_desc(blank_resource, bk_deployment)
+    assert {item.name for item in blank_resource.spec.configuration.env} == {"FOO"}
+    assert {item.name for item in blank_resource.spec.envOverlay.envVariables if item.envName == "stag"} == {"BAR"}
+    assert {item.name for item in blank_resource.spec.envOverlay.envVariables if item.envName == "prod"} == {"BAZ"}

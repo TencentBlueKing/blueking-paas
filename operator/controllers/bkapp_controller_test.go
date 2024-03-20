@@ -41,10 +41,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
 var _ = Describe("", func() {
@@ -222,7 +222,7 @@ var _ = Describe("", func() {
 				createdDeployment.Status.ObservedGeneration = createdDeployment.Generation
 				createdDeployment.Status.Replicas = *createdDeployment.Spec.Replicas
 				createdDeployment.Status.UpdatedReplicas = *createdDeployment.Spec.Replicas
-				cond := kubestatus.FindDeploymentStatusCondition(
+				cond := kubeutil.FindDeploymentStatusCondition(
 					createdDeployment.Status.Conditions,
 					appsv1.DeploymentAvailable,
 				)

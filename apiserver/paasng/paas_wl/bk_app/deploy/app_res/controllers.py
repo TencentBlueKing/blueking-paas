@@ -53,6 +53,7 @@ from paas_wl.utils.kubestatus import (
     parse_pod,
 )
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
+from paas_wl.workloads.images.kres_entities import ImageCredentials, credentials_kmodel
 from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultServices
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
 
@@ -65,6 +66,23 @@ logger = logging.getLogger(__name__)
 
 # Set the default timeout
 set_default_options({"request_timeout": (settings.K8S_DEFAULT_CONNECT_TIMEOUT, settings.K8S_DEFAULT_READ_TIMEOUT)})
+
+
+def run_command(command: Command) -> str:
+    """Run a command, it create the namespace and image credentials automatically.
+
+    :param command: The command object.
+    :return: The name of the command.
+    """
+    NamespacesHandler.new_by_app(command.app).ensure_namespace(command.app.namespace)
+    ensure_image_credentials_secret(command.app)
+    return CommandHandler.new_by_app(command.app).run_command(command)
+
+
+def ensure_image_credentials_secret(app: "WlApp"):
+    """确保应用镜像的访问凭证存在。"""
+    credentials = ImageCredentials.load_from_app(app)
+    credentials_kmodel.upsert(credentials, update_method="patch")
 
 
 class ResourceHandlerBase:
@@ -462,10 +480,8 @@ class BuildHandler(PodScheduleHandler):
 class CommandHandler(PodScheduleHandler):
     """Handler for running command"""
 
-    def run_command(
-        self,
-        command: Command,
-    ):
+    def run_command(self, command: Command) -> str:
+        """Run a command."""
         namespace = command.app.namespace
         pod_name = command.name
 

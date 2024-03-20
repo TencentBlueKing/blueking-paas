@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command as CommandKModel
 from paas_wl.workloads.release_controller.hooks.models import Command as CommandModel
 
@@ -29,5 +29,5 @@ def interrupt_command(command: "CommandModel") -> bool:
     command.set_int_requested_at()
     app = command.app
     kmodel = CommandKModel.from_db_obj(command)
-    result = get_scheduler_client_by_app(app).interrupt_command(kmodel)
+    result = CommandHandler.new_by_app(app).interrupt_command(kmodel)
     return result

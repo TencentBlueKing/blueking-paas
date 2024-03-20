@@ -23,7 +23,7 @@ from attr import define, field
 from six import ensure_text
 
 from paas_wl.bk_app.deploy.actions.exceptions import BuildMissingError, CommandRerunError
-from paas_wl.bk_app.deploy.app_res.utils import K8sScheduler, get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler, run_command
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
@@ -44,8 +44,8 @@ class AppCommandExecutor:
     stream: "DeployStream"
     extra_envs: Dict = field(factory=dict)
 
-    scheduler_client: K8sScheduler = field(init=False)
     kmodel: CommandKModel = field(init=False)
+    command_handler: CommandHandler = field(init=False)
     STEP_NAME: str = field(init=False)
 
     def __attrs_post_init__(self):
@@ -56,24 +56,24 @@ class AppCommandExecutor:
         if self.command.status != CommandStatus.PENDING.value:
             raise CommandRerunError("Can't re-run command, please create another one.")
 
-        self.scheduler_client = get_scheduler_client_by_app(self.command.app)
         self.kmodel = CommandKModel.from_db_obj(self.command, extra_envs=self.extra_envs)
+        self.command_handler = CommandHandler.new_by_app(self.command.app)
         self.STEP_NAME = CommandType(self.command.type).get_step_name()
 
     def perform(self):
         self.command.update_status(CommandStatus.SCHEDULED)
         try:
             self.stream.write_message(Style.Warning(f"Starting {self.STEP_NAME}"))
-            self.scheduler_client.run_command(self.kmodel)
+            run_command(self.kmodel)
 
-            self.scheduler_client.wait_command_logs_readiness(self.kmodel, timeout=_WAIT_FOR_READINESS_TIMEOUT)
+            self.command_handler.wait_for_logs_readiness(self.kmodel, timeout=_WAIT_FOR_READINESS_TIMEOUT)
             self.command.set_logs_was_ready()
 
             self.stream.write_title("executing...")
             # User interruption was allowed when first log message was received — which means the Pod
             # has entered "Running" status.
 
-            for raw_line in self.scheduler_client.get_command_logs(
+            for raw_line in self.command_handler.get_command_logs(
                 command=self.kmodel, timeout=_FOLLOWING_LOGS_TIMEOUT, follow=True
             ):
                 line = ensure_text(raw_line)
@@ -116,11 +116,11 @@ class AppCommandExecutor:
             self.command.update_status(CommandStatus.SUCCESSFUL, exit_code=0)
         finally:
             self.stream.write_title(f"Cleaning up {self.STEP_NAME} container")
-            self.scheduler_client.delete_command(self.kmodel)
+            self.command_handler.delete_command(self.kmodel)
 
     def wait_for_succeeded(self):
         """Wait for pod to become succeeded"""
         # The phase of a kubernetes pod was managed in a fully async way, there is not guarantee
         # it will transfer into "success/failed" immediately after "get_command_logs"
         # call finishes. So we will wait a reasonable long period such as 60 seconds.
-        self.scheduler_client.wait_command_succeeded(command=self.kmodel, timeout=60)
+        self.command_handler.wait_for_succeeded(command=self.kmodel, timeout=60)

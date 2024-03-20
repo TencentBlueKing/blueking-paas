@@ -28,8 +28,7 @@ from paas_wl.bk_app.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
 from paas_wl.bk_app.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
-from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, NamespacesHandler, ensure_image_credentials_secret
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.kubestatus import check_pod_health_status
 from paasng.core.core.storages.redisdb import get_default_redis
@@ -116,7 +115,7 @@ class BuildProcessExecutor(DeployStep):
             with self.procedure("准备构建环境"):
                 # 初始化 k8s 调度器
                 self.build_handler = BuildHandler.new_by_app(self.wl_app)
-                self.scheduler_client = get_scheduler_client_by_app(self.wl_app)
+                self.ns_handler = NamespacesHandler.new_by_app(self.wl_app)
 
             with self.procedure("构建环境变量"):
                 env_vars = generate_builder_env_vars(self.bp, metadata)
@@ -208,8 +207,8 @@ class BuildProcessExecutor(DeployStep):
         """Start a slugbuilder from pod_template
 
         :return slug_builder_name"""
-        self.scheduler_client.ensure_namespace(pod_template.namespace)
-        self.scheduler_client.ensure_image_credentials_secret(self.wl_app)
+        self.ns_handler.ensure_namespace(pod_template.namespace)
+        ensure_image_credentials_secret(self.wl_app)
 
         try:
             slug_builder_name = self.build_handler.build_slug(template=pod_template)

@@ -53,7 +53,7 @@
 
       <div
         v-show="isDropdownShow"
-        @click.stop="dropOpen"
+        @click.stop
         class="nav-dropdown overview-slidedown"
       >
         <div class="quick-access border-box">
@@ -143,7 +143,7 @@
           </div>
           <searchAppList
             ref="searchAppList"
-            :filter-key="propsfilterKey"
+            :filter-key="filterKey"
             :search-apps-router-name="'customed'"
             :params="{ include_inactive: true }"
             @selectAppCallback="selectAppCallback"
@@ -175,7 +175,6 @@ export default {
         stag: '',
         prod: '',
       },
-      propsfilterKey: '',
       customDomainEntrances: {},
       isDropdownShow: false,
     };
@@ -214,12 +213,15 @@ export default {
     },
     filterKey(newVal, oldVal) {
       if (newVal === '' && oldVal !== '') {
-        this.propsfilterKey = '';
         this.$refs.searchAppList.enterSelect();
       }
     },
     appCode() {
       this.getAppLinks();
+      this.fetchAppCustomDomainEntrance();
+    },
+    isDropdownShow() {
+      this.filterKey = '';
     },
   },
   mounted() {
@@ -236,10 +238,8 @@ export default {
   },
   methods: {
     searchApp() {
-      this.propsfilterKey = this.filterKey;
       this.$refs.searchAppList.enterSelect();
     },
-
     searchAppKeyDown() {
       this.$refs.searchAppList.onKeyDown();
     },
@@ -274,7 +274,6 @@ export default {
     clearInputValue() {
       this.isFocused = false;
       this.filterKey = '';
-      this.propsfilterKey = '';
     },
     focusInput(isFocus) {
       this.isFocused = isFocus;
@@ -299,7 +298,6 @@ export default {
     },
     handlerClose() {
       this.filterKey = '';
-      this.propsfilterKey = '';
       const addressDom = document.querySelectorAll('.address-link');
       for (const item of addressDom) {
         if (item._tippy) {
@@ -315,7 +313,6 @@ export default {
       this.$refs.searchAppList.fetchObj();
     },
     handlerSearchReady(list) {
-      this.fetchAppCustomDomainEntrance();
       this.appList = list;
     },
     // 标记应用
@@ -344,7 +341,6 @@ export default {
       }
     },
 
-
     dropdownShow() {
       this.filterKey = '';
       this.isDropdownShow = !this.isDropdownShow;
@@ -359,9 +355,6 @@ export default {
       } else {
         document.getElementsByTagName('body')[0].className = 'ps-app-detail';
       }
-    },
-    dropOpen() {
-      console.log('stop bubbling');
     },
   },
 };

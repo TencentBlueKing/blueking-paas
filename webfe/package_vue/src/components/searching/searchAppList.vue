@@ -21,7 +21,7 @@
       </li>
       <!-- 在顶部导航是需要控制显示应用的个数 -->
       <li
-        v-for="(item, index) in appList"
+        v-for="(item, index) in curDisplayedAppList"
         :key="index"
         :class="{ 'on': curActiveIndex === index }"
       >
@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import _ from 'lodash';
+import { debounce, cloneDeep } from 'lodash';
 import selectEventMixin from '@/components/searching/selectEventMixin';
 
 export default {
@@ -74,13 +74,14 @@ export default {
     return {
       isLoading: false,
       appList: [],
+      curDisplayedAppList: [],
     };
   },
   watch: {
     filterKey() {
       this.curActiveIndex = -1;
       if (this.$route.path.indexOf('/plugin-center') === -1) {
-        this.fetchObj();
+        this.keywordSearch();
       }
     },
   },
@@ -111,14 +112,13 @@ export default {
       return target;
     },
     init() {
-      this.fetchObj();
+      this.getApplicationList();
     },
     getSelectListLength() {
-      return this.appList.length;
+      return this.curDisplayedAppList.length;
     },
     handlerSelectApp(app) {
       const params = this.getTarget(app.code, app.moduleId);
-      console.log('app-quick-search', params);
       // 更新nav
       this.$store.commit('updateNavType', app);
       // 刷新左侧导航(applogo\appname\appcode)
@@ -126,29 +126,46 @@ export default {
       this.$router.push(params);
     },
     enterSelect() {
-      if (this.appList.length === 0 || this.curActiveIndex < 0) {
+      if (this.curDisplayedAppList.length === 0 || this.curActiveIndex < 0) {
         return;
       }
-      const app = this.appList[this.curActiveIndex];
+      const app = this.curDisplayedAppList[this.curActiveIndex];
       // 切换应用后的操作
       this.handlerSelectApp(app);
     },
     handleFetch(res) {
       return this.max ? res.splice(0, this.max) : res;
     },
-    fetchObj: _.debounce(function () {
+    // 获取所有应用列表
+    getApplicationList() {
       this.isLoading = true;
       this.$store.dispatch('search/fetchSearchApp', {
-        filterKey: this.filterKey,
+        filterKey: '',
         params: this.params,
       }).then((appList) => {
-        this.appList = this.max ? appList.splice(0, this.max) : appList;
+        this.appList = appList;
+        this.curDisplayedAppList = appList;
+        this.$emit('app-filter', this.curDisplayedAppList.length);
       })
         .finally(() => {
           this.isLoading = false;
           this.$emit('search-ready', this.appList);
         });
-    }, 350),
+    },
+    keywordSearch: debounce(function () {
+      if (!this.filterKey) {
+        this.curDisplayedAppList = cloneDeep(this.appList);
+      }
+      const keyword = this.filterKey.toLocaleLowerCase();
+      this.curDisplayedAppList = this.appList.filter((app) => {
+        const code = app.code.toLocaleLowerCase();
+        const name = app.name.toLocaleLowerCase();
+        if (code.includes(keyword) || name.includes(keyword)) {
+          return true;
+        }
+      });
+      this.$emit('search-ready', this.curDisplayedAppList);
+    }, 300),
   },
 };
 </script>

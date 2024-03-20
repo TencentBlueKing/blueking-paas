@@ -310,7 +310,7 @@ export default {
     },
     // init AppList
     initAppList() {
-      this.$refs.searchAppList.fetchObj();
+      this.$refs.searchAppList.getApplicationList();
     },
     handlerSearchReady(list) {
       this.appList = list;

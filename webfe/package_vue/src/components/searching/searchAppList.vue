@@ -14,10 +14,10 @@
     </template>
     <template v-else>
       <li
-        v-if="appList.length === 0"
+        v-if="curDisplayedAppList.length === 0"
         class="no-data"
       >
-        <span> {{ $t('无应用') }} </span>
+        <span> {{ filterKey ? $t('无匹配数据'): $t('无应用') }}</span>
       </li>
       <!-- 在顶部导航是需要控制显示应用的个数 -->
       <li

@@ -88,8 +88,8 @@ docker run --rm \
 - 命令利用了 mount 将源码包 `/tmp/source.tgz` 挂载到了容器中并读取
 
 
-## DevContainer 的开发说明
-基于 cnb-builder 框架，项目内提供了一种支持源码 hot-reload 的 devcontainer 方案。
+## DevSandbox 的开发说明
+基于 cnb-builder 框架，项目内提供了一种支持源码 hot-reload 的 dev sandbox 方案。
 
 ### 1. 构建镜像
 
@@ -130,8 +130,8 @@ docker run -d --net=host \
 
 请求命令
 ```
-# devcontainer_ip 替换成容器实际可访问的主机 IP
-curl --location 'http://{devcontainer_ip}:8000/deploys' \
+# devsandbox_ip 替换成容器实际可访问的主机 IP
+curl --location 'http://{devsandbox_ip}:8000/deploys' \
 --header 'Authorization: Bearer xxx' \
 --form 'file=@"django-helloworld.zip"'
 ```
@@ -146,9 +146,9 @@ curl --location 'http://{devcontainer_ip}:8000/deploys' \
 
 请求命令
 ```
-# devcontainer_ip 替换成容器实际可访问的主机 IP
+# devsandbox_ip 替换成容器实际可访问的主机 IP
 # deployID 是上一步请求部署时返回的 deployID
-curl --location 'http://{devcontainer_ip}:8000/deploys/{deployID}/results?log=true' \
+curl --location 'http://{devsandbox_ip}:8000/deploys/{deployID}/results?log=true' \
 --header 'Authorization: Bearer xxx'
 ```
 结果示例

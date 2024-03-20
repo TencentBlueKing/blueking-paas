@@ -88,6 +88,7 @@ import DeployModuleInfoLoading from './loading/deploy-module-info.vue';
 import ImageManageLoading from './loading/image-manage.vue';
 import ProcessServiceLoading from './loading/process-service.vue';
 import PluinVersionListLoading from './loading/pluin-version-list.vue';
+import PersistentStorageLoading from './loading/persistent-storage.vue';
 export default {
   components: {
     ByUserLoading,
@@ -152,6 +153,7 @@ export default {
     ImageManageLoading,
     ProcessServiceLoading,
     PluinVersionListLoading,
+    PersistentStorageLoading,
   },
   props: {
     isLoading: {

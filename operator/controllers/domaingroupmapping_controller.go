@@ -42,7 +42,7 @@ import (
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping"
-	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
+	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
 )
 
 // NewDomainGroupMappingReconciler will return a DomainGroupMappingReconciler with given k8s client and scheme
@@ -245,7 +245,7 @@ func (r *DomainGroupMappingReconciler) syncProcessedStatus(
 	ctx context.Context,
 	bkapp *paasv1alpha2.BkApp,
 	dgmapping *paasv1alpha1.DomainGroupMapping,
-	domainGroups []res.DomainGroup,
+	domainGroups []dgmingress.DomainGroup,
 ) error {
 	// Update mapping obj's conditions
 	apimeta.SetStatusCondition(&dgmapping.Status.Conditions, metav1.Condition{
@@ -323,7 +323,7 @@ func getDGMappingOwnerNames(rawObj client.Object) []string {
 
 // ToAddressableStatus receives a list of DomainGroups, turns them into
 // addressable objects which can be used for BkApp's status field
-func ToAddressableStatus(groups []res.DomainGroup) []paasv1alpha2.Addressable {
+func ToAddressableStatus(groups []dgmingress.DomainGroup) []paasv1alpha2.Addressable {
 	var results []paasv1alpha2.Addressable
 	for _, group := range groups {
 		for _, d := range group.Domains {

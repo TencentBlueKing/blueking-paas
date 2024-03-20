@@ -91,9 +91,35 @@ class ModuleProcessSpec(TimestampedModel):
         ordering = ["id"]
 
     def get_proc_command(self) -> str:
+        """获取 Procfile 形式的命令
+        使用场景:
+        -  views 数据展示
+        - 旧镜像应用启动进程
+        """
         if self.proc_command:
             return self.proc_command
-        return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
+        # Warning: 已知 shlex.join 不支持环境变量, 如果普通应用使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
+        # 例如会报错: Error: '${PORT:-5000}' is not a valid port number.
+        return self._sanitize_proc_command(
+            (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
+        )
+
+    @staticmethod
+    def _sanitize_proc_command(proc_command: str) -> str:
+        """Sanitize the command and arg list, replace some special expressions which can't
+        be interpreted by the operator.
+        """
+        # '${PORT:-5000}' is massively used by the app framework, while it can not work well with shlex.join,
+        # here remove the single quote added by shlex.join.
+        known_cases = [
+            ("':$PORT'", ":$PORT"),
+            ("':${PORT:-5000}'", ":${PORT}"),
+            ("'[::]:${PORT}'", "[::]:${PORT}"),
+            ("'[::]:${PORT:-5000}'", "[::]:${PORT}"),
+        ]
+        for old, new in known_cases:
+            proc_command = proc_command.replace(old, new)
+        return proc_command
 
     get_target_replicas = env_overlay_getter_factory("target_replicas")  # type: Callable[[str], int]
     get_plan_name = env_overlay_getter_factory("plan_name")  # type: Callable[[str], str]

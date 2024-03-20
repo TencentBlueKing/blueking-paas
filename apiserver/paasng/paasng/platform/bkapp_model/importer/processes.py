@@ -49,6 +49,8 @@ def import_processes(module: Module, processes: List[BkAppProcess], annotations:
             "port": process.targetPort,
             "target_replicas": process.replicas,
             "plan_name": process.resQuotaPlan or ResQuotaPlan.P_DEFAULT,
+            # 为了兼容普通应用从 app_desc v2 升级到 app_desc v3, 导入时需要清空 proc_command 字段
+            "proc_command": None,
         }
         if autoscaling := process.autoscaling:
             defaults["autoscaling"] = True

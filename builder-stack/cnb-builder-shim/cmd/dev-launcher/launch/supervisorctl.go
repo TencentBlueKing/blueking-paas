@@ -30,7 +30,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
-var supervisorDir = "/cnb/devcontainer/supervisor"
+var supervisorDir = "/cnb/devsandbox/supervisor"
 
 var confFilePath = filepath.Join(supervisorDir, "dev.conf")
 

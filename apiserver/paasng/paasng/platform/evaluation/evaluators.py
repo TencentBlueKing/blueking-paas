@@ -70,10 +70,11 @@ class AppOperationEvaluator:
 
     def _evaluate_by_user_activity(self, metrics: Dict[str, Any]) -> List[str]:
         """根据用户活跃度评估应用"""
-        issues = []
+        # 有访问记录，说明是活跃应用，不需要参与后面的操作评估
+        if metrics["pv"] and metrics["uv"]:
+            return []
 
-        if not (metrics["pv"] and metrics["uv"]):
-            issues.append("应用最近 30 天没有访问记录")
+        issues = ["应用最近 30 天没有访问记录"]
 
         if not metrics["latest_deployed_at"]:
             issues.append("应用未部署过")

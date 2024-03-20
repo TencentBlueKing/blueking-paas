@@ -97,187 +97,187 @@
 </template>
 
 <script>
-    import { marked } from 'marked';
+import { marked } from 'marked';
 
-    export default {
-        name: '',
-        props: {
-            list: {
-                type: Array,
-                default: () => []
-            },
-            value: {
-                type: Array,
-                default: () => []
-            },
-            enableLoading: {
-                type: Boolean,
-                default: false
-            },
-            saveLoading: {
-                type: Boolean,
-                default: false
-            },
-            // '' 表示正常启用态，'edit'表示编辑态
-            mode: {
-                type: String,
-                default: '',
-                validator (value) {
-                    if (['', 'edit'].indexOf(value) < 0) {
-                        console.error(`mode is not valid: '${value}'`);
-                        return false;
-                    }
-                    return true;
-                }
-            },
-            guide: {
-                type: String,
-                default: ''
-            }
-        },
-        data () {
-            return {
-                listDisplay: this.list,
-                valuesMap: [],
-                enableLoadingUse: this.enableLoading,
-                saveLoadingUse: this.saveLoading,
-                isShow: false
-            };
-        },
-        computed: {
-            isShowPage () {
-                return this.listDisplay.length > 0;
-            },
-            compiledMarkdown: function () {
-                this.$nextTick(() => {
-                    $('#markdown').find('a').each(function () {
-                        $(this).attr('target', '_blank');
-                    });
-                });
-                console.log('marked', marked, this.guide)
-                return marked(this.guide, { sanitize: true });
-            }
-        },
-        watch: {
-            list (value) {
-                this.listDisplay = [...value];
-                this.handleSetData();
-            },
-            enableLoading (value) {
-                this.enableLoadingUse = !!value;
-            },
-            saveLoading (value) {
-                this.saveLoadingUse = !!value;
-            }
-        },
-        mounted () {
-            this.handleSetData();
-        },
-        methods: {
-            handleOpenGuide () {
-                this.isShow = true;
-            },
-            handleEnabled () {
-                let flag = false;
-                const params = {};
-                this.listDisplay.forEach(item => {
-                    params[item.name] = item.active;
-                    if (item.active === '') {
-                        item.showError = true;
-                        flag = true;
-                    }
-                });
-                if (flag) {
-                    return;
-                }
-                this.$emit('on-change', 'enabled', params);
-            },
-            handleSave () {
-                let flag = false;
-                const params = {};
-                this.listDisplay.forEach(item => {
-                    params[item.name] = item.active;
-                    if (item.active === '') {
-                        item.showError = true;
-                        flag = true;
-                    }
-                });
-                if (flag) {
-                    return;
-                }
-                this.$emit('on-change', 'save', params);
-            },
-            handleCancel () {
-                this.$emit('on-change', 'cancel', {});
-            },
-            handleSetData () {
-                if (this.listDisplay.length === 1) {
-                    this.valuesMap = [];
-                    return;
-                }
-                const checkedArr = this.listDisplay.map(item => item.active).filter(Boolean);
-                const tempArr = [];
-                checkedArr.forEach(arrItem => {
-                    tempArr.push(...this.value.filter(valItem => valItem.includes(arrItem)));
-                });
-                if (!tempArr.length) {
-                    const valueArr = [];
-                    this.listDisplay.forEach(item => {
-                        valueArr.push(item.children);
-                    });
-                    this.valuesMap = [...valueArr];
-                    return;
-                }
-                let currentVal = [];
-                const subLen = tempArr[0].length;
-                const len = tempArr.length;
-                for (let i = 0; i < len; i++) {
-                    for (let j = 0; j < subLen; j++) {
-                        if (currentVal[j]) {
-                            currentVal[j].push(tempArr[i][j]);
-                        } else {
-                            currentVal.push([tempArr[i][j]]);
-                        }
-                    }
-                }
-                // 此时有未选择的项
-                if (checkedArr.length < this.listDisplay.length) {
-                    const valueIndexs = [];
-                    checkedArr.forEach(item => {
-                        valueIndexs.push(this.listDisplay.findIndex(val => val.active === item));
-                    });
-                    valueIndexs.forEach(val => {
-                        if (currentVal[val]) {
-                            currentVal[val].push(...this.listDisplay[val].children);
-                        }
-                    });
-                }
-                currentVal = currentVal.map(item => {
-                    return [...new Set(item)];
-                });
-                this.valuesMap = [...currentVal];
-            },
-            handleSelected (item, index, subItem) {
-                item.showError = false;
-                if (item.active === subItem) {
-                    if (item.active) {
-                        item.active = '';
-                    } else {
-                        item.active = subItem;
-                    }
-                } else {
-                    item.active = subItem;
-                }
-                this.handleSetData();
-            },
-            computedDisabled (item, index, subItem) {
-                if (!this.valuesMap.length) {
-                    return false;
-                }
-                return !this.valuesMap[index].includes(subItem);
-            }
+export default {
+  name: '',
+  props: {
+    list: {
+      type: Array,
+      default: () => [],
+    },
+    value: {
+      type: Array,
+      default: () => [],
+    },
+    enableLoading: {
+      type: Boolean,
+      default: false,
+    },
+    saveLoading: {
+      type: Boolean,
+      default: false,
+    },
+    // '' 表示正常启用态，'edit'表示编辑态
+    mode: {
+      type: String,
+      default: '',
+      validator(value) {
+        if (['', 'edit'].indexOf(value) < 0) {
+          console.error(`mode is not valid: '${value}'`);
+          return false;
         }
+        return true;
+      },
+    },
+    guide: {
+      type: String,
+      default: '',
+    },
+  },
+  data() {
+    return {
+      listDisplay: this.list,
+      valuesMap: [],
+      enableLoadingUse: this.enableLoading,
+      saveLoadingUse: this.saveLoading,
+      isShow: false,
     };
+  },
+  computed: {
+    isShowPage() {
+      return this.listDisplay.length > 0;
+    },
+    compiledMarkdown() {
+      // eslint-disable-next-line vue/no-async-in-computed-properties
+      this.$nextTick(() => {
+        $('#markdown').find('a')
+          .each(function () {
+            $(this).attr('target', '_blank');
+          });
+      });
+      console.log('marked', marked, this.guide);
+      return marked(this.guide, { sanitize: true });
+    },
+  },
+  watch: {
+    list(value) {
+      this.listDisplay = [...value];
+      this.handleSetData();
+    },
+    enableLoading(value) {
+      this.enableLoadingUse = !!value;
+    },
+    saveLoading(value) {
+      this.saveLoadingUse = !!value;
+    },
+  },
+  mounted() {
+    this.handleSetData();
+  },
+  methods: {
+    handleOpenGuide() {
+      this.isShow = true;
+    },
+    handleEnabled() {
+      let flag = false;
+      const params = {};
+      this.listDisplay.forEach((item) => {
+        params[item.name] = item.active;
+        if (item.active === '') {
+          item.showError = true;
+          flag = true;
+        }
+      });
+      if (flag) {
+        return;
+      }
+      this.$emit('on-change', 'enabled', params);
+    },
+    handleSave() {
+      let flag = false;
+      const params = {};
+      this.listDisplay.forEach((item) => {
+        params[item.name] = item.active;
+        if (item.active === '') {
+          item.showError = true;
+          flag = true;
+        }
+      });
+      if (flag) {
+        return;
+      }
+      this.$emit('on-change', 'save', params);
+    },
+    handleCancel() {
+      this.$emit('on-change', 'cancel', {});
+    },
+    handleSetData() {
+      if (this.listDisplay.length === 1) {
+        this.valuesMap = [];
+        return;
+      }
+      const checkedArr = this.listDisplay.map(item => item.active).filter(Boolean);
+      const tempArr = [];
+      checkedArr.forEach((arrItem) => {
+        tempArr.push(...this.value.filter(valItem => valItem.includes(arrItem)));
+      });
+      if (!tempArr.length) {
+        const valueArr = [];
+        this.listDisplay.forEach((item) => {
+          valueArr.push(item.children);
+        });
+        this.valuesMap = [...valueArr];
+        return;
+      }
+      let currentVal = [];
+      const subLen = tempArr[0].length;
+      const len = tempArr.length;
+      for (let i = 0; i < len; i++) {
+        for (let j = 0; j < subLen; j++) {
+          if (currentVal[j]) {
+            currentVal[j].push(tempArr[i][j]);
+          } else {
+            currentVal.push([tempArr[i][j]]);
+          }
+        }
+      }
+      // 此时有未选择的项
+      if (checkedArr.length < this.listDisplay.length) {
+        const valueIndexs = [];
+        checkedArr.forEach((item) => {
+          valueIndexs.push(this.listDisplay.findIndex(val => val.active === item));
+        });
+        valueIndexs.forEach((val) => {
+          if (currentVal[val]) {
+            currentVal[val].push(...this.listDisplay[val].children);
+          }
+        });
+      }
+      currentVal = currentVal.map(item => [...new Set(item)]);
+      this.valuesMap = [...currentVal];
+    },
+    handleSelected(item, index, subItem) {
+      item.showError = false;
+      if (item.active === subItem) {
+        if (item.active) {
+          item.active = '';
+        } else {
+          item.active = subItem;
+        }
+      } else {
+        item.active = subItem;
+      }
+      this.handleSetData();
+    },
+    computedDisabled(item, index, subItem) {
+      if (!this.valuesMap.length) {
+        return false;
+      }
+      return !this.valuesMap[index].includes(subItem);
+    },
+  },
+};
 
 </script>
 
@@ -336,6 +336,10 @@
         min-width: 200px;
         margin: 0 auto;
         padding: 5px 20px;
+
+        h2 {
+            color: var(--color-fg-default);
+        }
     }
 </style>
 <style lang="scss">
@@ -352,7 +356,7 @@
     }
 
     #markdown h3 {
-        color: #333;
+        color: var(--color-fg-default);
         line-height: 52px;
         font-size: 14px;
         position: relative;
@@ -426,7 +430,7 @@
         overflow: auto;
         font-size: 85%;
         line-height: 1.45;
-        background-color: #f6f8fa;
+        background-color: var(--color-canvas-subtle);
         border-radius: 3px;
     }
 

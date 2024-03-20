@@ -22,13 +22,13 @@ to the current version of the project delivered to anyone in the future.
 Examples:
 
     # 仅采集指定的应用（支持列表）
-    python manage.py collect_app_res_usage_report --codes app-code-1 app-code-2
+    python manage.py collect_app_operation_report --codes app-code-1 app-code-2
 
     # 采集全量应用（性能不会很好）
-    python manage.py collect_app_res_usage_report --all
+    python manage.py collect_app_operation_report --all
 
     # 采集全量应用 + 异步执行
-    python manage.py collect_app_res_usage_report --all --async
+    python manage.py collect_app_operation_report --all --async
 """
 from django.core.management.base import BaseCommand
 

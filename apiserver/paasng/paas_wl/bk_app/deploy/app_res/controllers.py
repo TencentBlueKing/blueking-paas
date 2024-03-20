@@ -325,10 +325,11 @@ class PodScheduleHandler(ResourceHandlerBase):
 class BuildHandler(PodScheduleHandler):
     """Handler for slugbuilder pod."""
 
-    def build_slug(self, template: "SlugBuilderTemplate"):
+    def build_slug(self, template: "SlugBuilderTemplate") -> str:
         """Start a Pod for building slug
 
         :param template: the template to run builder
+        :returns: The name of slug build pod
         """
         pod_name = self.normalize_builder_name(template.name)
         try:

@@ -21,11 +21,9 @@ from typing import TYPE_CHECKING
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import (
-    BuildHandler,
     CommandHandler,
     NamespacesHandler,
     ProcAutoscalingHandler,
-    ProcessesHandler,
 )
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
@@ -34,7 +32,6 @@ from paas_wl.workloads.release_controller.hooks.kres_entities import Command
 
 if TYPE_CHECKING:
     from paas_wl.infras.resources.base.base import EnhancedApiClient
-    from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -53,40 +50,10 @@ class K8sScheduler:
     def _initial_controllers(self, client: "EnhancedApiClient"):
         # scheduler will not operate k8s resource directly, but
         # assigning the task to several controllers
-        self.processes_handler = ProcessesHandler(client)
-        self.build_handler = BuildHandler(client)
         self.namespace_handler = NamespacesHandler(client)
         self.command_handler = CommandHandler(client)
         self.credential_handler = credentials_kmodel
         self.autoscaling_handler = ProcAutoscalingHandler(client)
-
-    #############
-    # build API #
-    #############
-
-    def build_slug(self, template: "SlugBuilderTemplate") -> str:
-        """Build a default slug in NeverRestart Pod, called by Builder
-        used to build on Job, but job doesn't meet our needs
-
-        :returns: name of slug build pod
-        """
-        return self.build_handler.build_slug(template=template)
-
-    def get_build_log(self, namespace, name, timeout, **kwargs):
-        return self.build_handler.get_build_log(namespace, name, timeout=timeout, **kwargs)
-
-    def wait_build_succeeded(self, *args, **kwargs):
-        return self.build_handler.wait_for_succeeded(*args, **kwargs)
-
-    def wait_build_logs_readiness(self, *args, **kwargs):
-        return self.build_handler.wait_for_logs_readiness(*args, **kwargs)
-
-    def delete_builder(self, namespace, name):
-        """Recycle an existing slug-builder pod unless it's running"""
-        return self.build_handler.delete_slug(namespace=namespace, name=name)
-
-    def interrupt_builder(self, namespace, name):
-        return self.build_handler.interrupt_builder(namespace=namespace, name=name)
 
     ###############
     # command API #

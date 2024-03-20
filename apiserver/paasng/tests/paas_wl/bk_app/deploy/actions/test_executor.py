@@ -24,7 +24,7 @@ import pytest
 from django.test.utils import override_settings
 
 from paas_wl.bk_app.applications.models.config import Config
-from paas_wl.bk_app.deploy.actions.exec import AppCommandExecutor
+from paas_wl.bk_app.deploy.actions.executor import AppCommandExecutor
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType
@@ -84,7 +84,7 @@ class TestAppCommandExecutor:
         hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
-        with mock.patch("paas_wl.bk_app.deploy.actions.exec._WAIT_FOR_READINESS_TIMEOUT", 1):
+        with mock.patch("paas_wl.bk_app.deploy.actions.executor._WAIT_FOR_READINESS_TIMEOUT", 1):
             executor.perform()
 
         out, err = capsys.readouterr()

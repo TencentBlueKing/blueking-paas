@@ -27,7 +27,7 @@ from enum import Enum
 from django.core.management.base import BaseCommand
 
 from paas_wl.bk_app.applications.api import get_latest_build_id
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata, update_metadata
+from paas_wl.bk_app.applications.managers import get_metadata, update_metadata
 from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest

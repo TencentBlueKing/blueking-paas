@@ -22,7 +22,7 @@ from typing import Dict, Optional
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
-from paas_wl.bk_app.deploy.actions.exec import AppCommandExecutor
+from paas_wl.bk_app.deploy.actions.executor import AppCommandExecutor
 from paas_wl.workloads.release_controller.hooks.entities import CommandTemplate
 from paas_wl.workloads.release_controller.hooks.models import Command
 from paasng.core.core.storages.redisdb import get_default_redis

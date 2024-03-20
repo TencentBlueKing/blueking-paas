@@ -16,11 +16,66 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
+from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from blue_krill.text import remove_prefix, remove_suffix
 from django.conf import settings
+from kubernetes.dynamic import ResourceInstance
+
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.models import Cluster
+
+
+class IngressNginxAdaptor:
+    """An Adaptor shield different versions(0.20.0 ~ 0.51.0) of the ingress-nginx-controller implementation
+    Note: IngressNginxAdaptor only work for Ingress api version in ["extensions/v1beta1", "networking.k8s.io/v1beta1"]
+
+    :param cluster: The k8s cluster where the ingress will be applied to
+    """
+
+    def __init__(self, cluster: "Cluster"):
+        self.cluster = cluster
+        self.use_regex = self.cluster.has_feature_flag(ClusterFeatureFlag.INGRESS_USE_REGEX)
+
+    def make_configuration_snippet(self, fallback_script_name: Optional[str] = "") -> str:
+        """Make configuration snippet which set X-Script-Name as the sub-path provided by platform or custom domain
+
+        Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
+        directive will stop working because it already can be found in location block.
+        """
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().make_configuration_snippet(fallback_script_name)
+        return NginxRegexRewrittenProvider().make_configuration_snippet()
+
+    def build_http_path(self, path_str: str) -> str:
+        """build the http path, which is compatible with `rewrite-target` for all version nginx-ingress-controller
+
+        To be compatible with `rewrite-target` nginx-ingress-controller >=0.22, the http path should be a pattern
+        Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
+        """
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().make_location_path(path_str)
+        return NginxRegexRewrittenProvider().make_location_path(path_str)
+
+    def build_rewrite_target(self) -> str:
+        """build the rewrite target which will rewrite all request to sub-path provided by platform or custom domain
+
+        In Version 0.22.0 +, any substrings within the request URI that need to be passed to the rewritten path
+        must explicitly be defined in a capture group.
+        Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
+        """
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().make_rewrite_target()
+        return NginxRegexRewrittenProvider().make_rewrite_target()
+
+    def parse_http_path(self, pattern_or_path: str) -> str:
+        """parse path_str from path pattern(which is return by build_http_path)"""
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().parse_location_path(pattern_or_path)
+        return NginxRegexRewrittenProvider().parse_location_path(pattern_or_path)
 
 
 class LegacyNginxRewrittenProvider:
@@ -177,3 +232,61 @@ class NginxRegexRewrittenProvider:
         # 处理规则 "/(foo)/(.*)|/(foo)"
         # 从子字符串 "/(.*)|" 截断, 再去掉 "/(" 和 ")" 即可提取出 path_str
         return "/" + path_pattern[: path_pattern.index("/(.*)|")][2:-1]
+
+
+class ConfigurationSnippetPatcher:
+    START_MARK = "# WARNING: BLOCK FOR IngressNginxAdaptor BEGIN"
+    END_MARK = "# WARNING: BLOCK FOR IngressNginxAdaptor END"
+    REGEX = f"{START_MARK}.+?{END_MARK}"
+
+    @dataclass
+    class PatchResult:
+        """
+        :param changed: whether the given configuration_snippet is changed by ConfigurationSnippetPatcher
+        :param configuration_snippet: the new(or unchanged if changed is False) configuration_snippet
+        """
+
+        changed: bool
+        configuration_snippet: str
+
+    def patch(self, base: str, extend: str) -> PatchResult:
+        """patch base configuration_snippet with extend if unpatched
+
+        :return: PatchResult
+        """
+        if not re.findall(self.REGEX, base, re.M | re.S):
+            return self.PatchResult(True, "\n".join([base, self.START_MARK, extend, self.END_MARK]))
+        return self.PatchResult(False, base)
+
+    def unpatch(self, snippet: str) -> PatchResult:
+        """reverse patch_configuration_snippet
+
+        :return: PatchResult
+        """
+        if re.findall(self.REGEX, snippet, re.M | re.S):
+            return self.PatchResult(True, re.sub(self.REGEX, "", snippet, count=0, flags=re.M | re.S).strip())
+        return self.PatchResult(False, snippet)
+
+    def parse_service_info_from_rules(self, rules: List[ResourceInstance]) -> Tuple[str, str]:
+        """parse Tuple[service_name, service_port_name] from List[IngressRule]
+
+        :raise ValueError: if not ingress backend can be found or different backends found
+        """
+        svc_info_pairs = set()
+        for rule in rules:
+            if not rule.get("http"):
+                continue
+            for ingress_path in rule.http.paths:
+                if not ingress_path.backend.get("service"):
+                    continue
+                service_name = ingress_path.backend.service.name
+                service_port_name = ingress_path.backend.service.port.name
+                if not service_port_name:
+                    raise ValueError(f"Only support ingress with port name, detail: {ingress_path.backend}")
+                svc_info_pairs.add((service_name, service_port_name))
+
+        if not svc_info_pairs:
+            raise ValueError("No ingress backend can be found in ingress rules")
+        elif len(svc_info_pairs) != 1:
+            raise ValueError(f"different backends found: {svc_info_pairs}")
+        return svc_info_pairs.pop()

@@ -21,7 +21,7 @@ from django.test import override_settings
 
 from paas_wl.bk_app.processes.constants import ProbeType
 from paas_wl.bk_app.processes.models import ProcessProbe
-from paas_wl.infras.resource_templates.utils import ProcessProbeManager
+from paas_wl.infras.resource_templates.managers import ProcessProbeManager
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

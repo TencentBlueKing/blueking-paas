@@ -27,7 +27,8 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import DNS_SAFE_PATTERN
-from paas_wl.workloads.networking.ingress.kres_entities.service import PServicePortPair, service_kmodel
+from paas_wl.workloads.networking.ingress.entities import PServicePortPair
+from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
 from paas_wl.workloads.networking.ingress.models import AppDomainSharedCert
 
 

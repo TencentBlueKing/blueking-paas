@@ -47,40 +47,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				Annotations: map[string]string{},
 			},
 			Spec: paasv1alpha2.AppSpec{
-				Build: paasv1alpha2.BuildConfig{
-					Image: "nginx:latest",
-				},
-				Processes: []paasv1alpha2.Process{
-					{
-						Name:         "web",
-						Replicas:     paasv1alpha2.ReplicasTwo,
-						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
-						TargetPort:   80,
-					},
-					{
-						Name:         "hi",
-						Replicas:     paasv1alpha2.ReplicasTwo,
-						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
-						Command:      []string{"/bin/sh"},
-						Args:         []string{"-c", "echo hi"},
-					},
-				},
-				Configuration: paasv1alpha2.AppConfig{
-					Env: []paasv1alpha2.AppEnvVar{
-						{Name: "ENV_NAME_1", Value: "env_value_1"},
-						{Name: "ENV_NAME_2", Value: "env_value_2"},
-					},
-				},
-				// Add some overlay configs
-				EnvOverlay: &paasv1alpha2.AppEnvOverlay{
-					Replicas: []paasv1alpha2.ReplicasOverlay{
-						{EnvName: "stag", Process: "web", Count: 10},
-					},
-					EnvVariables: []paasv1alpha2.EnvVarOverlay{
-						{EnvName: "stag", Name: "ENV_NAME_3", Value: "env_value_3"},
-						{EnvName: "prod", Name: "ENV_NAME_1", Value: "env_value_1_prod"},
-					},
-				},
+				Build: paasv1alpha2.BuildConfig{Image: "nginx:latest"},
 			},
 		}
 

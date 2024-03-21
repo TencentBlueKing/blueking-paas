@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from django.conf import settings
 from django.dispatch import receiver
 
 from paasng.platform.applications.models import ApplicationEnvironment
@@ -36,17 +35,9 @@ def create_rules_after_deploy(sender: ApplicationEnvironment, deployment: Deploy
     if not deployment.has_succeeded():
         return
 
-    if not settings.ENABLE_BK_MONITOR:
-        logger.warning("bkmonitor in this edition not enabled, skip create bkmonitor rules")
-        return
-
     tasks.create_rules.delay(sender.application.code, sender.module.name, sender.environment)
 
 
 @receiver(application_member_updated)
 def update_notice_group(sender, application, **kwargs):
-    if not settings.ENABLE_BK_MONITOR:
-        logger.warning("bkmonitor in this edition not enabled, skip update bkmonitor notice group")
-        return
-
     tasks.update_notice_group.delay(application.code)

@@ -41,13 +41,17 @@ dev-launcher:
 
 
 ##@ Build Image
-.PHONY: heroku-builder
-heroku-builder:  ## Build builder image which is based on `cloudnative-buildpacks/builders/heroku-builder`
-	docker buildx bake heroku-builder -f docker-build/heroku-builder/docker-bake.hcl
+.PHONY: heroku-builder-bionic
+heroku-builder-bionic:  ## Build builder image which is based on `cloudnative-buildpacks/builders/heroku-builder`
+	docker buildx bake heroku-builder-bionic -f docker-build/heroku-builder/docker-bake.hcl
+
+.PHONY: heroku-builder-jammy
+heroku-builder-jammy:  ## Build builder image which is based on `cloudnative-buildpacks/builders/heroku-builder` **experimental**
+	IMAGE_NAME=mirrors.tencent.com/bkpaas/bk-builder-heroku-jammy docker buildx bake heroku-builder-jammy -f docker-build/heroku-builder/docker-bake.hcl
 
 
 .PHONY: heroku-dev
-heroku-dev:  ## Build devcontainer image which is based on `cloudnative-buildpacks/builders/heroku-builder`
+heroku-dev:  ## Build dev sandbox image which is based on `cloudnative-buildpacks/builders/heroku-builder`
 	docker buildx bake heroku-dev -f docker-build/heroku-builder/docker-bake.hcl
 
 

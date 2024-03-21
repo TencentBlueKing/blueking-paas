@@ -41,6 +41,7 @@ from paasng.platform.modules.models.build_cfg import BuildConfig
 from paasng.platform.sourcectl.models import VersionInfo
 
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
+# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
 
@@ -82,6 +83,7 @@ class Build(UuidAuditedModel):
     revision = models.CharField(max_length=128, null=True, help_text="unique version, such as sha256")
 
     # Metadata
+    # deprecated: `procfile` will be remove in next version, just use Release.procfile
     procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
     env_variables = JSONField(default=dict, blank=True)
     bkapp_revision_id = models.IntegerField(help_text="与本次构建关联的 BkApp Revision id", null=True)

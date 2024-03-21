@@ -96,7 +96,7 @@ def _update_or_create_operation_report(app: Application):
         "mem_limits": mem_limits,
         "cpu_usage_avg": round(cpu_usage_avg_val / cpu_limits, 4) if cpu_limits else 0,
         "mem_usage_avg": round(mem_usage_avg_val / mem_limits, 4) if mem_limits else 0,
-        "res_summary": asdict(summary),
+        "res_summary": summary,
         "pv": total_pv,
         "uv": total_uv,
         "latest_deployed_at": latest_deployment.created if latest_deployment else None,
@@ -107,7 +107,8 @@ def _update_or_create_operation_report(app: Application):
         "collected_at": timezone.now(),
     }
     issue_type, issues = AppOperationEvaluator(app).evaluate(defaults)
-    defaults.update({"issue_type": issue_type, "issues": issues})
+    # 注：用于评估时 res_summary 为 AppSummary 对象，便于处理，但是入库前需要做 asdict 转换
+    defaults.update({"issue_type": issue_type, "issues": issues, "res_summary": asdict(summary)})
     AppOperationReport.objects.update_or_create(app=app, defaults=defaults)
 
 

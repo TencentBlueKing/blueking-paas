@@ -21,7 +21,7 @@ import re
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paasng.platform.declarative.application.validations import MarketSLZ, ModuleDescriptionSLZ
+from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ
 from paasng.platform.declarative.constants import DiffType
 from paasng.utils.i18n.serializers import TranslatedCharField
 
@@ -65,5 +65,6 @@ class DescriptionDiffResultSLZ(serializers.Serializer):
     services = serializers.ListField(child=DiffItemSLZ())
 
 
+# TODO: 前端重构后未再使用 `diffs` 字段展示差异, 是否可以移除相关实现？
 class PackageStashResponseWithDiffSLZ(PackageStashResponseSLZ):
     diffs = serializers.DictField(child=DescriptionDiffResultSLZ())

@@ -20,6 +20,7 @@ import logging
 from contextlib import suppress
 from urllib.parse import quote
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -32,7 +33,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.cnative.specs.constants import MountEnvName, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
@@ -41,11 +42,19 @@ from paas_wl.bk_app.cnative.specs.models import (
     AppModelRevision,
     Mount,
 )
-from paas_wl.bk_app.cnative.specs.mounts import VolumeSourceManager
+from paas_wl.bk_app.cnative.specs.mounts import (
+    MountManager,
+    check_persistent_storage_enabled,
+    init_volume_source_controller,
+)
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelRevisionSerializer,
+    CreateMountSourceSLZ,
+    DeleteMountSourcesSLZ,
     MountSLZ,
+    MountSourceSLZ,
+    QueryMountSourcesSLZ,
     QueryMountsSLZ,
     ResQuotaPlanSLZ,
     UpsertMountSLZ,
@@ -214,7 +223,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # 创建 Mount
         try:
-            mount_instance = Mount.objects.new(
+            mount_instance = MountManager.new(
                 module_id=module.id,
                 app_code=application.code,
                 name=validated_data["name"],
@@ -222,13 +231,22 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 mount_path=validated_data["mount_path"],
                 source_type=validated_data["source_type"],
                 region=application.region,
+                source_name=validated_data.get("source_name"),
             )
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
-        # 创建或更新 Mount source
-        Mount.objects.upsert_source(mount_instance, validated_data["source_config_data"])
-
+        if not validated_data.get("source_name"):
+            # 创建或更新 Mount source
+            configmap_source = validated_data.get("configmap_source") or {}
+            controller = init_volume_source_controller(mount_instance.source_type)
+            controller.create_by_env(
+                app_id=mount_instance.module.application.id,
+                module_id=mount_instance.module.id,
+                env_name=mount_instance.environment_name,
+                source_name=mount_instance.get_source_name,
+                data=configmap_source.get("source_config_data"),
+            )
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -244,27 +262,28 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id, "mount_id": mount_instance.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
+        controller = init_volume_source_controller(mount_instance.source_type)
 
         # 更新 Mount
         mount_instance.name = validated_data["name"]
         mount_instance.environment_name = validated_data["environment_name"]
         mount_instance.mount_path = validated_data["mount_path"]
+        if source_name := validated_data.get("source_name"):
+            mount_instance.source_config = controller.build_volume_source(source_name)
         try:
-            mount_instance.save(update_fields=["name", "environment_name", "mount_path"])
+            mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
-        # 创建或更新 Mount source
-        Mount.objects.upsert_source(mount_instance, validated_data["source_config_data"])
-
-        # 需要删除对应的 k8s volume 资源
-        if mount_instance.environment_name in (MountEnvName.PROD.value, MountEnvName.STAG.value):
-            opposite_env_map = {
-                MountEnvName.STAG.value: MountEnvName.PROD.value,
-                MountEnvName.PROD.value: MountEnvName.STAG.value,
-            }
-            env = module.get_envs(environment=opposite_env_map.get(mount_instance.environment_name))
-            VolumeSourceManager(env).delete_source_config(mount_instance)
+        # 更新 Mount source
+        configmap_source = validated_data.get("configmap_source") or {}
+        controller.update_by_env(
+            app_id=mount_instance.module.application.id,
+            module_id=mount_instance.module.id,
+            env_name=mount_instance.environment_name,
+            source_name=mount_instance.get_source_name,
+            data=configmap_source.get("source_config_data"),
+        )
 
         try:
             slz = MountSLZ(mount_instance)
@@ -277,11 +296,87 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
 
-        # 需要删除对应的 k8s volume 资源
-        for env in module.get_envs():
-            VolumeSourceManager(env).delete_source_config(mount_instance)
-
-        mount_instance.source.delete()
+        controller = init_volume_source_controller(mount_instance.source_type)
+        controller.delete_by_env(
+            app_id=mount_instance.module.application.id,
+            module_id=mount_instance.module.id,
+            env_name=mount_instance.environment_name,
+            source_name=mount_instance.get_source_name,
+        )
         mount_instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(query_serializer=QueryMountSourcesSLZ, responses={200: MountSourceSLZ(many=True)})
+    def list(self, request, code):
+        app = self.get_application()
+
+        slz = QueryMountSourcesSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        environment_name = params.get("environment_name")
+        source_type = params.get("source_type")
+
+        controller = init_volume_source_controller(source_type)
+        queryset = controller.list_by_app(application_id=app.id)
+
+        if environment_name:
+            queryset = queryset.filter(environment_name=environment_name)
+
+        slz = MountSourceSLZ(queryset, many=True)
+        return Response(data=slz.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(request_body=CreateMountSourceSLZ, responses={201: MountSourceSLZ(many=True)})
+    def create(self, request, code):
+        app = self.get_application()
+        enabled = check_persistent_storage_enabled(application=app)
+        if not enabled:
+            raise error_codes.CREATE_VOLUME_SOURCE_FAILED.f(_("当前应用暂不支持持久存储功能，请联系管理员"))
+        slz = CreateMountSourceSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        environment_name = validated_data.get("environment_name")
+        source_type = validated_data.get("source_type")
+        storage_size = (
+            validated_data.get("persistent_storage_source", {}).get("storage_size")
+            or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
+        )
+
+        controller = init_volume_source_controller(source_type)
+        source = controller.create_by_app(
+            application_id=app.id, environment_name=environment_name, storage_size=storage_size
+        )
+
+        slz = MountSourceSLZ(source)
+        return Response(data=slz.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, code):
+        app = self.get_application()
+
+        slz = DeleteMountSourcesSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        source_type = params.get("source_type")
+        source_name = params.get("source_name")
+
+        controller = init_volume_source_controller(source_type)
+        controller.delete_by_app(application_id=app.id, source_name=source_name)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PersistentStorageFeatureViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def check(self, request, code):
+        """检查应用是否支持持久化存储"""
+        app = self.get_application()
+        enabled = check_persistent_storage_enabled(application=app)
+        return Response(enabled)

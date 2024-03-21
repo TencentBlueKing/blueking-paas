@@ -24,7 +24,7 @@ from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
 from paas_wl.bk_app.applications.models.build import BuildProcess
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.deploy.bg_build.executors import (
     DevopsPipelineBuildProcessExecutor,
@@ -90,5 +90,5 @@ def interrupt_build_proc(bp_id: UUID) -> bool:
 
     bp.set_int_requested_at()
     app = bp.app
-    result = get_scheduler_client_by_app(app).interrupt_builder(app.namespace, name=generate_builder_name(app))
+    result = BuildHandler.new_by_app(app).interrupt_builder(app.namespace, name=generate_builder_name(app))
     return result

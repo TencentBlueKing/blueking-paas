@@ -200,6 +200,9 @@ MIDDLEWARE = [
     # API Gateway related
     "apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware",  # JWT 认证
     "apigw_manager.apigw.authentication.ApiGatewayJWTAppMiddleware",  # JWT 透传的应用信息
+    # TODO 在 JWT 透传应用信息的基础上, header 带 bk_username. 非推荐做法, 后续考虑移除
+    # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
+    "paasng.infras.accounts.middlewares.WrapUsernameAsUserMiddleware",
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
     "paasng.infras.accounts.middlewares.AuthenticatedAppAsUserMiddleware",
@@ -1314,3 +1317,14 @@ for key in dir(workloads_settings):
         raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
     locals()[key] = getattr(workloads_settings, key)
 # fmt: on
+
+
+# ---------------------------------------------
+#  挂载卷相关配置
+# ---------------------------------------------
+
+# 持久存储默认存储类型
+DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE_CLASS_NAME", "cfs")
+
+# 持久存储默认存储大小
+DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")

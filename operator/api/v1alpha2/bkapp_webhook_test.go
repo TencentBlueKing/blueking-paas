@@ -32,7 +32,7 @@ import (
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
@@ -458,6 +458,18 @@ var _ = Describe("test webhook.Validator", func() {
 						},
 					},
 				},
+				Mounts: []paasv1alpha2.MountOverlay{
+					{
+						Mount: paasv1alpha2.Mount{
+							Name:      "nginx-mount",
+							MountPath: "/path/nginx",
+							Source: &paasv1alpha2.VolumeSource{
+								ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+							},
+						},
+						EnvName: paasv1alpha2.ProdEnv,
+					},
+				},
 			}
 
 			err := bkapp.ValidateCreate()
@@ -555,13 +567,191 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
 		})
+		It("[mountOverlay] configMap normal", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmag"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("[mountOverlay] persistentStorage normal", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "nginx-pvc"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "etcd-pvc"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("[mountOverlay] invalid source", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/nginx",
+						Source:    &paasv1alpha2.VolumeSource{},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/etcd",
+						Source:    &paasv1alpha2.VolumeSource{},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("unknown volume source"))
+		})
+		It("[mountOverlay] duplicate name", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+		It("[mountOverlay] duplicate mountPath", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+		It("[mountOverlay] duplicate name in different environments", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.StagEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("[mountOverlay] duplicate mountPath in different environments", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.StagEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
 	})
 
 	Context("Test resQuota in annotations", func() {
 		It("Normal", func() {
 			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
 			legacyProcResConfig["web"] = map[string]string{"cpu": "2", "memory": "2G"}
-			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
@@ -569,7 +759,7 @@ var _ = Describe("test webhook.Validator", func() {
 		It("Invalid unset", func() {
 			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
 			legacyProcResConfig["web"] = map[string]string{"cpu": "", "memory": "2G"}
-			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
@@ -577,7 +767,7 @@ var _ = Describe("test webhook.Validator", func() {
 		It("Invalid exceed cpu max limit", func() {
 			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
 			legacyProcResConfig["web"] = map[string]string{"cpu": "6", "memory": "2G"}
-			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
@@ -585,7 +775,7 @@ var _ = Describe("test webhook.Validator", func() {
 		It("Invalid exceed memory max limit", func() {
 			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
 			legacyProcResConfig["web"] = map[string]string{"cpu": "2", "memory": "8G"}
-			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())

@@ -4,19 +4,34 @@ BUILDER_IMAGE_NAME ?= mirrors.tencent.com/bkpaas/builder-heroku-bionic
 BUILDER_TAG ?= latest
 
 ##@ Build
-.PHONY: stack-image
-stack-image:  ## Build builder/runner image 
-	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-build -f docker-bake.hcl
-	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-run -f docker-bake.hcl
+.PHONY: stack-bionic
+stack-bionic:  ## Build builder/runner stack (base on heroku-18)
+	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-build-bionic -f docker-bake.hcl
+	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-run-bionic -f docker-bake.hcl
 
 
-.PHONY: builder
-builder: stack-image ## Build cnb builder
+.PHONY: stack-jammy
+stack-jammy:  ## Build builder/runner stack (base on heroku-22) **experimental**
+	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-build-jammy -f docker-bake.hcl
+	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-run-jammy -f docker-bake.hcl
+
+
+.PHONY: builder-bionic
+builder-bionic: stack-bionic buildpacks ## Build cnb builder (base on heroku-18)
+	pack builder create $(BUILDER_IMAGE_NAME):$(BUILDER_TAG) --config ./heroku-18.toml --pull-policy=if-not-present
+
+
+.PHONY: builder-jammy
+builder-jammy: stack-jammy buildpacks ## Build cnb builder (base on heroku-22) **experimental**
+	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-jammy:$(BUILDER_TAG) --config ./heroku-22.toml --pull-policy=if-not-present
+
+
+.PHONY: buildpacks
+buildpacks: ## Build cnb buildpacks
 	cd ../../buildpacks/bk-buildpack-python && make package
 	cd ../../buildpacks/bk-buildpack-nodejs && make package
 	cd ../../buildpacks/bk-buildpack-go && make package
 	cd ../../buildpacks/bk-buildpack-apt && make package
-	pack builder create $(BUILDER_IMAGE_NAME):$(BUILDER_TAG) --config ./builder.toml --pull-policy=if-not-present
 
 
 ##@ Test 

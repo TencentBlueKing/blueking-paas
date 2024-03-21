@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
@@ -184,7 +184,7 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	}
 
 	// 通过注解配置的进程资源信息，也需要校验是否合法
-	legacyProcResConfig, err := kubetypes.GetJsonAnnotation[LegacyProcConfig](
+	legacyProcResConfig, err := kubeutil.GetJsonAnnotation[LegacyProcConfig](
 		r, LegacyProcResAnnoKey,
 	)
 	// 获取进程中的资源配额注解成功，才需要进行检查
@@ -530,26 +530,31 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "mounts"
-	mountPoints, mountNames := sets.String{}, sets.String{}
+	mountNamesWithEnv, mountPointsWithEnv := sets.String{}, sets.String{}
 	for i, mount := range r.Spec.EnvOverlay.Mounts {
 		mField := f.Child("mounts").Index(i)
 		if !mount.EnvName.IsValid() {
 			return field.Invalid(mField.Child("envName"), mount.EnvName, "envName is invalid")
 		}
 
+		mountNameWithEnv := fmt.Sprintf("%s:%s", mount.EnvName, mount.Mount.Name)
+		mountPointWithEnv := fmt.Sprintf("%s:%s", mount.EnvName, mount.Mount.MountPath)
+
 		if err := r.validateMount(mField, mount.Mount); err != nil {
 			return err
 		}
 
-		if mountNames.Has(mount.Mount.Name) {
+		// 检查相同环境下 Mount.Name 是否重复
+		if mountNamesWithEnv.Has(mountNameWithEnv) {
 			return field.Duplicate(mField.Child("name"), mount.Mount.Name)
 		}
-		mountNames.Insert(mount.Mount.Name)
+		mountNamesWithEnv.Insert(mountNameWithEnv)
 
-		if mountPoints.Has(mount.Mount.MountPath) {
+		// 检测相同环境下 Mount.MountPath 是否重复
+		if mountPointsWithEnv.Has(mountPointWithEnv) {
 			return field.Duplicate(mField.Child("mountPath"), mount.Mount.MountPath)
 		}
-		mountPoints.Insert(mount.Mount.MountPath)
+		mountPointsWithEnv.Insert(mountPointWithEnv)
 	}
 
 	return nil

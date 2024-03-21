@@ -36,7 +36,7 @@ import (
 
 // NewCmdDeploy returns a Command instance for 'app deploy' sub command
 func NewCmdDeploy() *cobra.Command {
-	var appCode, appModule, appEnv, branch, filePath string
+	var appCode, appModule, appEnv, branch, filePath, tag string
 	var noWatch bool
 
 	cmd := cobra.Command{
@@ -50,7 +50,7 @@ func NewCmdDeploy() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			console.Info("Application %s deploying...", appCode)
-			if err := deployApp(appCode, appModule, appEnv, branch, filePath); err != nil {
+			if err := deployApp(appCode, appModule, appEnv, branch, filePath, tag); err != nil {
 				return errors.Wrapf(err, "Failed to deploy application %s", appCode)
 			}
 			if noWatch {
@@ -83,13 +83,14 @@ func NewCmdDeploy() *cobra.Command {
 	cmd.Flags().StringVar(&appModule, "module", "default", "module name")
 	cmd.Flags().StringVar(&appEnv, "env", "stag", "environment (stag/prod)")
 	cmd.Flags().StringVar(&branch, "branch", "", "git repo branch")
+	cmd.Flags().StringVar(&tag, "tag", "", "image tag")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "bkapp manifest file path")
 	cmd.Flags().BoolVar(&noWatch, "no-watch", false, "watch deploy process")
 	return &cmd
 }
 
 // 应用部署
-func deployApp(appCode, appModule, appEnv, branch, filePath string) error {
+func deployApp(appCode, appModule, appEnv, branch, filePath, tag string) error {
 	appType := helper.FetchAppType(appCode)
 
 	opts := model.DeployOptions{
@@ -98,6 +99,7 @@ func deployApp(appCode, appModule, appEnv, branch, filePath string) error {
 		Module:    appModule,
 		DeployEnv: appEnv,
 		Branch:    branch,
+		Tag:       tag,
 	}
 
 	// TODO 参数检查是不是可以作为 DeployOptions 的方法？
@@ -106,11 +108,12 @@ func deployApp(appCode, appModule, appEnv, branch, filePath string) error {
 		return errors.New("branch is required when deploy default app")
 	}
 
+	if appType == model.AppTypeCNative && filePath == "" && tag == "" && branch == "" {
+		return errors.New("manifest tag or branch is required when deploy cloud native app")
+	}
+
 	// 加载文件中的 bkapp manifest 内容
-	if appType == model.AppTypeCNative {
-		if filePath == "" {
-			return errors.New("manifest file path is required when deploy cnative app")
-		}
+	if appType == model.AppTypeCNative && filePath != "" {
 		yamlFile, err := os.ReadFile(filePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to load bkapp manifest")

@@ -17,12 +17,12 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """
-validations.py 负责从 app_desc.yaml 转换出 ApplicationDesc 对象.
+validations/*.py 负责从 app_desc.yaml 转换出 ApplicationDesc 对象.
 serializers.py 负责序列化/反序列化 ApplicationDesc 对象
 """
 from rest_framework import serializers
 
-from paasng.platform.declarative.application.validations import MarketSLZ, ModuleDescriptionSLZ
+from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 

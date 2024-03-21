@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 // ProcImageGetter help getting container image from bkapp
@@ -44,7 +44,7 @@ func NewProcImageGetter(bkapp *BkApp) *ProcImageGetter {
 // - return: <image>, <imagePullPolicy>, <error>
 func (r *ProcImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
 	// Legacy API version: read image configs from annotations
-	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[LegacyProcConfig](
+	legacyProcImageConfig, _ := kubeutil.GetJsonAnnotation[LegacyProcConfig](
 		r.bkapp,
 		LegacyProcImageAnnoKey,
 	)

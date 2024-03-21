@@ -20,7 +20,6 @@ import base64
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.workloads.release_controller.entities import ContainerRuntimeSpec
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -91,17 +90,6 @@ class SlugbuilderInfo:
     def from_engine_app(cls, app: "EngineApp") -> "SlugbuilderInfo":
         """根据 engine app 获取支持的构建环境"""
         return cls.from_module(app.env.module)
-
-
-def get_processes_by_build(build_id: str) -> Dict[str, str]:
-    """Get processes by build id
-
-    :raise: RuntimeError when build not found
-    """
-    processes = Build.objects.get(pk=build_id).procfile
-    if not processes:
-        raise RuntimeError("can't find processes in engine")
-    return processes
 
 
 @dataclass

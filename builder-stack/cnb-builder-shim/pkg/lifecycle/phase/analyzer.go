@@ -25,13 +25,15 @@ import (
 	"path/filepath"
 )
 
-// MakeAnalyzerCmd build the analyzer cmd
+// MakeAnalyzerStep build the analyzer step
 // analyzer will generate analyzed.toml(to analyzedPath) based on cacheImage
-func MakeAnalyzerCmd(
+func MakeAnalyzerStep(
 	ctx context.Context,
 	lifecycleDir, outputImage, analyzedPath, cacheImage, layersDir, logLevel string,
+	useDaemon bool,
 	uid, gid uint32,
-) *exec.Cmd {
+) Step {
+	var opts []CmdOptsProvider
 	args := []string{
 		"-analyzed", analyzedPath,
 		"-layers", layersDir,
@@ -43,6 +45,14 @@ func MakeAnalyzerCmd(
 	if cacheImage != "" {
 		args = append(args, "-cache-image", cacheImage)
 	}
+	if useDaemon {
+		args = append(args, "-daemon")
+		opts = append(opts, WithRoot())
+	} else {
+		opts = append(opts, WithUser(uid, gid))
+	}
 	args = append(args, outputImage)
-	return exec.CommandContext(ctx, filepath.Join(lifecycleDir, "analyzer"), args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "analyzer"), args...)
+	return makeStep("Analyze", "Analyzing optimization plan...", cmd, opts...)
+
 }

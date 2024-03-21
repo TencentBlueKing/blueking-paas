@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 var _ = Describe("test compat", func() {
@@ -67,7 +67,7 @@ var _ = Describe("test compat", func() {
 
 	Context("Test ProcImageGetter", func() {
 		It("Get Legacy", func() {
-			_ = kubetypes.SetJsonAnnotation(
+			_ = kubeutil.SetJsonAnnotation(
 				bkapp, paasv1alpha2.LegacyProcImageAnnoKey, paasv1alpha2.LegacyProcConfig{
 					"web": {"image": "busybox:1.0.0", "policy": "Never"},
 				},

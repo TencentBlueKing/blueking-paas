@@ -622,12 +622,6 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     },
                     {
-                        "name": staticI18n.$t("事件查询"),
-                        "destRoute": {
-                            "name": "cloudAppEventQuery"
-                        }
-                    },
-                    {
                         "name": staticI18n.$t("告警记录"),
                         "destRoute": {
                             "name": "monitorAlarm"
@@ -707,6 +701,7 @@ export const PAAS_STATIC_CONFIG = {
                             'appMarket',
                             'appBasicInfo',
                             'appMembers',
+                            'appPersistentStorage',
                         ],
                         "destRoute": {
                           "name": "appConfigs"

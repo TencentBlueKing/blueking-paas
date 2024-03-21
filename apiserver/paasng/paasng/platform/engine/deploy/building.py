@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
@@ -30,14 +30,16 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
+from paasng.platform.declarative.deployment.controller import PerformResult
 from paasng.platform.declarative.exceptions import (
     AppDescriptionNotFoundError,
     ControllerError,
     DescriptionValidationError,
 )
-from paasng.platform.declarative.handlers import AppDescriptionHandler
+from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler
 from paasng.platform.engine.configurations.building import (
     SlugbuilderInfo,
     get_build_args,
@@ -146,19 +148,17 @@ class BaseBuilder(DeployStep):
                     package_path, source_destination_path
                 )
 
-    def handle_app_description(self, raise_exception: bool = False):
+    def handle_app_description(self, raise_exception: bool = False) -> Optional[PerformResult]:
         """Handle application description for deployment
 
         :param raise_exception: bool, will ignore all exception raise from _handle_app_description
                                       if raise_exception is False
         """
         try:
-            self._handle_app_description()
-        except AppDescriptionNotFoundError as e:
-            if raise_exception:
-                raise HandleAppDescriptionError("App description file(app_desc.yaml) is not defined") from e
+            return self._handle_app_description()
+        except AppDescriptionNotFoundError:
             logger.debug("App description file(app_desc.yaml) is not defined, skip.")
-        except DescriptionValidationError as e:
+        except (DescriptionValidationError, ManifestImportError) as e:
             if raise_exception:
                 raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
             logger.exception("Exception while parsing app description file, skip.")
@@ -170,8 +170,9 @@ class BaseBuilder(DeployStep):
             if raise_exception:
                 raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
             logger.exception("Exception while processing app description file, skip.")
+        return None
 
-    def _handle_app_description(self):
+    def _handle_app_description(self) -> Optional[PerformResult]:
         """Handle application description for deployment"""
         module = self.deployment.app_environment.module
         application = module.application
@@ -183,13 +184,13 @@ class BaseBuilder(DeployStep):
         # 仅非云原生应用可以禁用应用描述文件
         if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION) and not is_cnative_app:
             logger.debug("App description disabled.")
-            return
+            return None
 
         handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
-        if handler is None or not isinstance(handler, AppDescriptionHandler):
+        if handler is None or not isinstance(handler, (AppDescriptionHandler, CNativeAppDescriptionHandler)):
             raise AppDescriptionNotFoundError("No valid app description file found.")
 
-        handler.handle_deployment(self.deployment)
+        return handler.handle_deployment(self.deployment)
 
     def create_bkapp_revision(self) -> int:
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
@@ -235,22 +236,17 @@ class BaseBuilder(DeployStep):
             ).format(unbound_service_names=unbound_service_names)
             self.stream.write_message(Style.Warning(message))
 
-    def async_start_build_process(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def async_start_build_process(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         """Start a new build process and check the status periodically"""
         build_process_id = self.launch_build_processes(
             source_tar_path,
-            procfile,
             bkapp_revision_id,
         )
         self.state_mgr.update(build_process_id=build_process_id)
         params = {"build_process_id": build_process_id, "deployment_id": self.deployment.id}
         BuildProcessPoller.start(params, BuildProcessResultHandler)
 
-    def launch_build_processes(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def launch_build_processes(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         raise NotImplementedError
 
 
@@ -271,13 +267,19 @@ class ApplicationBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            self.handle_app_description()
+            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            processes = get_processes(deployment=self.deployment, stream=self.stream)
+            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
+            processes = get_processes(
+                deployment=self.deployment,
+                stream=self.stream,
+                proc_data_from_desc=proc_data_from_desc,
+            )
             self.deployment.update_fields(processes=processes)
-            # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-            sync_to_bkapp_model(module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks())
+            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
+            if proc_data_from_desc != processes:
+                sync_to_bkapp_model(module, processes=list(processes.values()))
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -299,13 +301,10 @@ class ApplicationBuilder(BaseBuilder):
         with self.procedure("启动应用构建任务"):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
-                procfile={p.name: p.command for p in processes.values()},
                 bkapp_revision_id=bkapp_revision_id,
             )
 
-    def launch_build_processes(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def launch_build_processes(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         """Start a new build process[using Buildpack], this will start a celery task in the background without
         blocking current process.
         """
@@ -341,7 +340,6 @@ class ApplicationBuilder(BaseBuilder):
             self.deployment.id,
             build_process.uuid,
             metadata={
-                "procfile": procfile,
                 "extra_envs": extra_envs,
                 # TODO: 不传递 image_repository
                 "image_repository": app_image_repository,
@@ -372,13 +370,19 @@ class DockerBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            self.handle_app_description()
+            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
 
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            processes = get_processes(deployment=self.deployment, stream=self.stream)
+            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
+            processes = get_processes(
+                deployment=self.deployment,
+                stream=self.stream,
+                proc_data_from_desc=proc_data_from_desc,
+            )
             self.deployment.update_fields(processes=processes)
-            # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-            sync_to_bkapp_model(module, processes=list(processes.values()), hooks=self.deployment.get_deploy_hooks())
+            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
+            if proc_data_from_desc != processes:
+                sync_to_bkapp_model(module, processes=list(processes.values()))
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -407,13 +411,10 @@ class DockerBuilder(BaseBuilder):
         with self.procedure("启动应用构建任务"):
             self.async_start_build_process(
                 source_tar_path=source_destination_path,
-                procfile={p.name: p.command for p in processes.values()},
                 bkapp_revision_id=bkapp_revision_id,
             )
 
-    def launch_build_processes(
-        self, source_tar_path: str, procfile: Dict[str, str], bkapp_revision_id: Optional[int] = None
-    ):
+    def launch_build_processes(self, source_tar_path: str, bkapp_revision_id: Optional[int] = None):
         """Start a new build process[using Dockerfile], this will start a celery task in the background without
         blocking current process.
         """
@@ -445,7 +446,6 @@ class DockerBuilder(BaseBuilder):
             self.deployment.id,
             build_process.uuid,
             metadata={
-                "procfile": procfile,
                 "extra_envs": extra_envs or {},
                 # TODO: 不传递 image_repository
                 "image_repository": app_image_repository,

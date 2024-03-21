@@ -293,7 +293,7 @@ def sync_hooks(module: Module, hooks: HookList):
 
     for hook in hooks:
         if hook.enabled:
-            module.deploy_hooks.enable_hook(type_=hook.type, proc_command=hook.command)
+            module.deploy_hooks.enable_hook(type_=hook.type, proc_command=hook.get_proc_command())
             # Move out from the index
             existing_index.pop(hook.type, None)
 
@@ -301,10 +301,11 @@ def sync_hooks(module: Module, hooks: HookList):
     module.deploy_hooks.filter(id__in=existing_index.values()).delete()
 
 
-def sync_to_bkapp_model(module, processes: List[ProcessTmpl], hooks: HookList):
+def sync_to_bkapp_model(module, processes: List[ProcessTmpl], hooks: Optional[HookList] = None):
     """保存应用描述文件记录的信息到 bkapp_models
     - Processes
     - Hooks
     """
     ModuleProcessSpecManager(module).sync_from_desc(processes=processes)
-    sync_hooks(module, hooks)
+    if hooks is not None:
+        sync_hooks(module, hooks)

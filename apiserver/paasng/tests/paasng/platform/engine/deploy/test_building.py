@@ -130,11 +130,9 @@ class TestNormalApp:
             assert launch_build_processes.called
             (
                 source_tar_path,
-                procfile,
                 bkapp_revision_id,
             ) = launch_build_processes.call_args[0]
             assert source_tar_path != ""
-            assert procfile == {"web": "gunicorn"}
             assert bkapp_revision_id is None
 
             # Validate other arguments
@@ -192,11 +190,9 @@ class TestCloudNative:
             assert launch_build_processes.called
             (
                 source_tar_path,
-                procfile,
                 bkapp_revision_id,
             ) = launch_build_processes.call_args[0]
             assert source_tar_path != ""
-            assert procfile == {}
             assert bkapp_revision_id is not None
 
             # Validate other arguments

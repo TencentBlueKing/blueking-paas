@@ -144,6 +144,24 @@ class ConsoleStream(DeployStream):
         return cls()
 
 
+class NullStream(DeployStream):
+    def write_title(self, title: str):
+        pass
+
+    def write_message(self, message: str, stream: Optional[StreamType] = None):
+        pass
+
+    def write_event(self, event_name: str, data: dict):
+        pass
+
+    def close(self):
+        pass
+
+    @classmethod
+    def from_deployment_id(cls, deployment_id: str):
+        return cls()
+
+
 class MessageWriter(Protocol):
     """A protocol for types which has output_stream field"""
 

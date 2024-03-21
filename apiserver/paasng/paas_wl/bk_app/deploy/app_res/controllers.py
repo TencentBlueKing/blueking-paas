@@ -53,6 +53,7 @@ from paas_wl.utils.kubestatus import (
     parse_pod,
 )
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
+from paas_wl.workloads.images.kres_entities import ImageCredentials, credentials_kmodel
 from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultServices
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
 
@@ -65,6 +66,12 @@ logger = logging.getLogger(__name__)
 
 # Set the default timeout
 set_default_options({"request_timeout": (settings.K8S_DEFAULT_CONNECT_TIMEOUT, settings.K8S_DEFAULT_READ_TIMEOUT)})
+
+
+def ensure_image_credentials_secret(app: "WlApp"):
+    """确保应用镜像的访问凭证存在。"""
+    credentials = ImageCredentials.load_from_app(app)
+    credentials_kmodel.upsert(credentials, update_method="patch")
 
 
 class ResourceHandlerBase:
@@ -161,16 +168,26 @@ class ProcessesHandler(ResourceHandlerBase):
 class NamespacesHandler(ResourceHandlerBase):
     """Handler for namespace resources"""
 
-    def delete(self, namespace):
+    def ensure_namespace(self, namespace: str, max_wait_seconds: int = 15):
+        """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
+
+        :param namespace: 需要确保存在的 namespace
+        :param max_wait_seconds: 等待 ServiceAccount 就绪的时间
+        """
+        self.create(namespace)
+        self.check_service_account_secret(namespace, max_wait_seconds=max_wait_seconds)
+
+    def delete(self, namespace: str):
+        """k8s 直接删除 namespace 将清除其下所有资源"""
         KNamespace(self.client).delete(namespace)
 
-    def create(self, namespace):
+    def create(self, namespace: str):
         """
         :return: instance of namespace, created
         """
         return KNamespace(self.client).get_or_create(namespace)
 
-    def check_service_account_secret(self, namespace, max_wait_seconds=15):
+    def check_service_account_secret(self, namespace: str, max_wait_seconds=15):
         try:
             KNamespace(self.client).wait_for_default_sa(namespace, timeout=max_wait_seconds)
         except CreateServiceAccountTimeout:
@@ -315,10 +332,11 @@ class PodScheduleHandler(ResourceHandlerBase):
 class BuildHandler(PodScheduleHandler):
     """Handler for slugbuilder pod."""
 
-    def build_slug(self, template: "SlugBuilderTemplate"):
+    def build_slug(self, template: "SlugBuilderTemplate") -> str:
         """Start a Pod for building slug
 
         :param template: the template to run builder
+        :returns: The name of slug build pod
         """
         pod_name = self.normalize_builder_name(template.name)
         try:
@@ -378,8 +396,8 @@ class BuildHandler(PodScheduleHandler):
         )
         return pod_info.metadata.name
 
-    def delete_slug(self, namespace: str, name: str):
-        """Force delete slugbuilder pod unless it's in "running" phase"""
+    def delete_builder(self, namespace: str, name: str):
+        """Force delete a slug builder pod unless it's in "running" phase."""
         pod_name = self.normalize_builder_name(name)
         return self._delete_finished_pod(namespace=namespace, pod_name=pod_name, force=False)
 
@@ -451,10 +469,18 @@ class BuildHandler(PodScheduleHandler):
 class CommandHandler(PodScheduleHandler):
     """Handler for running command"""
 
-    def run_command(
-        self,
-        command: Command,
-    ):
+    def run(self, command: Command) -> str:
+        """Run a command, it create the namespace and image credentials automatically.
+
+        :param command: The command object.
+        :return: The name of the command.
+        """
+        NamespacesHandler.new_by_app(command.app).ensure_namespace(command.app.namespace)
+        ensure_image_credentials_secret(command.app)
+        return self.run_command(command)
+
+    def run_command(self, command: Command) -> str:
+        """Run a command."""
         namespace = command.app.namespace
         pod_name = command.name
 

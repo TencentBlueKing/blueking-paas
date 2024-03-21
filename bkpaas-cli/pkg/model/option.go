@@ -26,4 +26,5 @@ type DeployOptions struct {
 	DeployEnv     string
 	Branch        string
 	BkAppManifest map[string]any
+	Tag           string
 }

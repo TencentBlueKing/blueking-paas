@@ -21,8 +21,8 @@ package main
 import (
 	"os"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devcontainer/webserver"
+	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 
@@ -49,14 +49,14 @@ func runDevContainerServer() {
 	go func() {
 		mgr, mgrErr := dc.NewHotReloadManager()
 		if mgrErr != nil {
-			logger.Error(err, "New HotReloadManager failed")
+			logger.Error(mgrErr, "New HotReloadManager failed")
 			os.Exit(1)
 		}
 
 		for {
 			event, readErr := srv.ReadReloadEvent()
 			if readErr != nil {
-				logger.Error(err, "wait for reload event failed")
+				logger.Error(readErr, "wait for reload event failed")
 				os.Exit(1)
 			}
 
@@ -66,14 +66,14 @@ func runDevContainerServer() {
 			}
 
 			if event.Rebuild {
-				if innerErr := mgr.Rebuild(event.ID); err != nil {
+				if innerErr := mgr.Rebuild(event.ID); innerErr != nil {
 					_ = mgr.WriteStatus(event.ID, dc.ReloadFailed)
 					logger.Error(innerErr, "HotReload Rebuild failed")
 					continue
 				}
 			}
 			if event.Relaunch {
-				if innerErr := mgr.Relaunch(event.ID); err != nil {
+				if innerErr := mgr.Relaunch(event.ID); innerErr != nil {
 					_ = mgr.WriteStatus(event.ID, dc.ReloadFailed)
 					logger.Error(innerErr, "HotReload Relaunch failed")
 					continue

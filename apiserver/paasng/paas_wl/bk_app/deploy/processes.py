@@ -22,8 +22,7 @@ from typing import Optional
 
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import BkAppProcScaler
-from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import ProcAutoscalingHandler, ProcessesHandler
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import ProcControllerHub
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ScaleProcessError
@@ -55,8 +54,8 @@ class AppProcessesController:
     def __init__(self, env: ModuleEnvironment):
         self.app = env.wl_app
         self.env = env
-        self.client = get_scheduler_client_by_app(self.app)
         self.handler = ProcessesHandler.new_by_app(self.app)
+        self.autoscaling_handler = ProcAutoscalingHandler.new_by_app(self.app)
 
     def start(self, proc_type: str):
         """Start a process, WILL update the service if necessary
@@ -144,7 +143,7 @@ class AppProcessesController:
         )
         proc_spec.save(update_fields=["autoscaling", "scaling_config", "updated"])
 
-        self.client.deploy_autoscaling(scaling)
+        self.autoscaling_handler.deploy(scaling)
 
     def _disable_autoscaling(self, scaling: ProcAutoscaling):
         """Remove process's autoscaling policy"""
@@ -153,7 +152,7 @@ class AppProcessesController:
         proc_spec.autoscaling = False
         proc_spec.save(update_fields=["autoscaling", "updated"])
 
-        self.client.disable_autoscaling(scaling)
+        self.autoscaling_handler.delete(scaling)
 
     def _get_spec(self, proc_type: str) -> ProcessSpec:
         try:

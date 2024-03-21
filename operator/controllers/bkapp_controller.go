@@ -43,9 +43,13 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/controllers/base"
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/predicates"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
+	bkappctrl "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/addons"
+	autoscalingctrl "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/autoscaling"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
 
@@ -132,34 +136,34 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
-	var ret reconcilers.Result
-	for _, reconciler := range []reconcilers.Reconciler{
+	var ret base.Result
+	for _, reconciler := range []base.Reconciler{
 		// NOTE: The order of these reconcilers is important.
-		reconcilers.NewBkappFinalizer(r.client),
+		bkappctrl.NewBkappFinalizer(r.client),
 		// Check if a new deploy action has been issued.
-		reconcilers.NewDeployActionReconciler(r.client),
+		bkappctrl.NewDeployActionReconciler(r.client),
 		// Make sure the "pre-release" hook has been finished if specified.
-		reconcilers.NewHookReconciler(r.client),
+		hooks.NewHookReconciler(r.client),
 
 		// Other reconcilers related with workloads
-		reconcilers.NewAddonReconciler(r.client),
-		reconcilers.NewDeploymentReconciler(r.client),
-		reconcilers.NewServiceReconciler(r.client),
-		reconcilers.NewAutoscalingReconciler(r.client),
+		addons.NewAddonReconciler(r.client),
+		processes.NewDeploymentReconciler(r.client),
+		processes.NewServiceReconciler(r.client),
+		autoscalingctrl.NewAutoscalingReconciler(r.client),
 	} {
 		if reflect2.IsNil(reconciler) {
 			continue
 		}
 		ret = reconciler.Reconcile(ctx, bkapp)
 		if ret.ShouldAbort() {
-			if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.GetError()); err != nil {
+			if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.Error()); err != nil {
 				ret = ret.WithError(err)
 			}
 			return ret.ToRepresentation()
 		}
 	}
 
-	if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.GetError()); err != nil {
+	if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.Error()); err != nil {
 		ret = ret.WithError(err)
 	}
 	return ret.End().ToRepresentation()
@@ -210,8 +214,8 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		Owns(&appsv1.Deployment{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{},
 			predicate.AnnotationChangedPredicate{}))).
 		// trigger when pod run success or failed
-		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(predicates.NewHookSuccessPredicate(),
-			predicates.NewHookFailedPredicate())))
+		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(bkappctrl.NewHookSuccessPredicate(),
+			bkappctrl.NewHookFailedPredicate())))
 
 	if config.Global.IsAutoscalingEnabled() {
 		if err = mgr.GetFieldIndexer().IndexField(

@@ -243,7 +243,7 @@
             width="100"
             class-name="table-colum-module-cls"
           >
-            <template slot-scope="{ $index, row }">
+            <template slot-scope="{ row }">
               <!-- 批量编辑 -->
               <div
                 v-if="isPageEdit"
@@ -251,17 +251,17 @@
               >
                 <i
                   class="icon paasng-icon paasng-plus-circle-shape"
-                  @click="handleEnvTableListData('add', $index)"
+                  @click="handleEnvTableListData('add', row)"
                 ></i>
                 <i
                   class="icon paasng-icon paasng-minus-circle-shape ml10"
-                  @click="handleEnvTableListData('reduce', $index)"
+                  @click="handleEnvTableListData('reduce', row)"
                 ></i>
               </div>
               <!-- 单个编辑 -->
               <div v-else>
                 <template v-if="!row.isEdit">
-                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleEdit($index)">
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleEdit(row)">
                     {{ $t('编辑') }}
                   </bk-button>
                   <bk-popconfirm
@@ -281,10 +281,10 @@
                   </bk-popconfirm>
                 </template>
                 <template v-else>
-                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleSave($index)">
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleSave(row)">
                     {{ $t('保存') }}
                   </bk-button>
-                  <bk-button :text="true" title="primary" @click="handleSingleCancel($index)">
+                  <bk-button :text="true" title="primary" @click="handleSingleCancel(row)">
                     {{ $t('取消') }}
                   </bk-button>
                 </template>
@@ -965,7 +965,8 @@ export default {
     },
 
     // 新增一条数据
-    handleEnvTableListData(v, i) {
+    handleEnvTableListData(v, row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       if (v === 'add') {
         this.envVarList.push({
           key: '',
@@ -975,7 +976,7 @@ export default {
           isEdit: true,
         });
       } else {
-        this.envVarList.splice(i, 1);
+        this.envVarList.splice(index, 1);
       }
     },
 
@@ -1276,7 +1277,8 @@ export default {
     },
 
     // 单个环境编辑
-    handleSingleEdit(index) {
+    handleSingleEdit(row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       this.envVarList[index].isEdit = true;
     },
 
@@ -1304,7 +1306,8 @@ export default {
     },
 
     // 单个环境编辑保存
-    handleSingleSave(index) {
+    handleSingleSave(row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       if (this.envVarList[index].isAdd) { // 新建
         this.singleValidate(index, 'add');
       } else { // 编辑
@@ -1328,7 +1331,8 @@ export default {
     },
 
     // 单个环境编辑取消
-    handleSingleCancel(index) {
+    handleSingleCancel(row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       this.envVarList[index].isEdit = false;
       // 添加数据未保存，点击取消直接删除
       if (!this.envLocalVarList[index]) {

@@ -194,7 +194,7 @@
           </bk-form-item>
         </bk-form>
       </section>
-      <section class="info-container card-style mt16 mb60" v-if="Object.keys(extraFields).length">
+      <section class="info-container card-style mt16" v-if="Object.keys(extraFields).length">
         <div class="base-info-tit">
           {{ $t('更多信息') }}
         </div>
@@ -215,7 +215,7 @@
         </bk-form>
       </section>
 
-      <div class="button-warp">
+      <div :class="['create-button-warp', { 'sticky': isSticky }]">
         <bk-button
           :theme="'primary'"
           :title="$t('提交')"
@@ -237,18 +237,17 @@
   </div>
 </template>
 <script>import http from '@/api';
-import { quillEditor } from 'vue-quill-editor';
 import 'quill/dist/quill.core.css';
 import 'quill/dist/quill.snow.css';
 import 'quill/dist/quill.bubble.css';
 import paasPluginTitle from '@/components/pass-plugin-title';
 import createForm from '@blueking/bkui-form';
+import { throttle } from 'lodash';
 
 const BkSchemaForm = createForm();
 
 export default {
   components: {
-    quillEditor,
     paasPluginTitle,
     BkSchemaForm,
   },
@@ -342,6 +341,7 @@ export default {
           gridGap: '0',
         },
       },
+      isSticky: false,
     };
   },
   computed: {
@@ -374,6 +374,10 @@ export default {
   },
   mounted() {
     this.fetchPluginTypeList();
+    window.addEventListener('resize', this.handleBottomAdsorption);
+    this.$once('hook:beforeDestroy', () => {
+      window.removeEventListener('resize', this.handleBottomAdsorption);
+    });
   },
   methods: {
     // 获取插件类型数据
@@ -411,6 +415,7 @@ export default {
       } finally {
         setTimeout(() => {
           this.isLoading = false;
+          this.handleBottomAdsorption();
         }, 200);
       }
     },
@@ -517,6 +522,9 @@ export default {
       const properties = this.sortdSchema(extraFieldsOrder, this.pluginTypeData.properties);
       // 根据数据添加必填字段
       this.schema = { type: 'object', required: this.getRequiredFields(properties), properties };
+      this.$nextTick(() => {
+        this.handleBottomAdsorption();
+      });
     },
     // 切换插件重置参数
     resetPluinParams() {
@@ -613,6 +621,14 @@ export default {
       if (guideDom) return -(guideDom?.offsetWidth + 15) || -78;
       return -78;
     },
+
+    // 处理 footer 是否吸附
+    handleBottomAdsorption: throttle(function () {
+      const contentHeight = document.querySelector('.bk-create-plugin-warp')?.offsetHeight;
+      const reserveHeight = this.isShowNotice ? 70 : 110;
+      const viewportHeight = window.innerHeight - reserveHeight;
+      this.isSticky = contentHeight > viewportHeight;
+    }, 220),
   },
 };
 </script>
@@ -656,19 +672,21 @@ export default {
     }
   }
 }
-.button-warp {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 48px;
-  line-height: 48px;
-  padding-left: 183px;
-  background: #FAFBFD;
-  box-shadow: 0 -1px 0 0 #DCDEE5;
+.create-button-warp {
+  margin-top: 32px;
+  margin-bottom: 28px;
 
-  button {
-    width: 88px;
+  &.sticky {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 48px;
+    line-height: 48px;
+    padding-left: 183px;
+    background: #FAFBFD;
+    box-shadow: 0 -1px 0 0 #DCDEE5;
+    margin: 0;
   }
 }
 .guide-container {

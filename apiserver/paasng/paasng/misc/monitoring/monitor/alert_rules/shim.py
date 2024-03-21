@@ -18,30 +18,17 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from celery import shared_task
+from django.conf import settings
 
-from paasng.misc.monitoring.monitor.alert_rules.shim import make_alert_rule_manager
+from paasng.misc.monitoring.monitor.alert_rules.manager import AlertRuleManager, NullManager
 from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task
-def create_rules(app_code: str, module_name: str, run_env: str):
-    try:
-        rule_mgr = make_alert_rule_manager(Application.objects.get(code=app_code))
-        rule_mgr.create_rules(module_name, run_env)
-    except Exception:
-        logger.exception(
-            f"Unable to create alert rules after release app"
-            f"(code: {app_code}, module: {module_name}, run_env: {run_env})"
-        )
-
-
-@shared_task
-def update_notice_group(app_code: str):
-    try:
-        rule_mgr = make_alert_rule_manager(Application.objects.get(code=app_code))
-        rule_mgr.update_notice_group()
-    except Exception:
-        logger.exception(f"Unable to update notice group (code: {app_code})")
+def make_alert_rule_manager(application: Application):
+    if not settings.ENABLE_BK_MONITOR:
+        logger.warning("bkmonitor in this edition not enabled, skip apply Monitor Rules")
+        return NullManager()
+    else:
+        return AlertRuleManager(application)

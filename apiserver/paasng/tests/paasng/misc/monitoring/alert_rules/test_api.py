@@ -17,9 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import pytest
+from django.test.utils import override_settings
 
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
-from paasng.misc.monitoring.monitor.alert_rules.manager import AlertRuleManager
+from paasng.misc.monitoring.monitor.alert_rules.shim import make_alert_rule_manager
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -27,7 +28,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestAlertRulesView:
     @pytest.fixture(autouse=True)
     def _init_rules(self, bk_app, wl_namespaces):
-        manager = AlertRuleManager(bk_app)
+        with override_settings(ENABLE_BK_MONITOR=True):
+            manager = make_alert_rule_manager(bk_app)
         manager.init_rules()
 
     def test_list_rules(self, api_client, bk_app, bk_module):

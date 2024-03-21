@@ -118,3 +118,14 @@ class AlertRuleManager:
                     "receivers": r.receivers,
                 },
             )
+
+
+class NullManager:
+    def init_rules(self):
+        ...
+
+    def create_rules(self, module_name: str, run_env: str):
+        ...
+
+    def update_notice_group(self):
+        ...

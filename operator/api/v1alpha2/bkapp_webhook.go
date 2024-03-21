@@ -530,26 +530,37 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "mounts"
-	mountPoints, mountNames := sets.String{}, sets.String{}
+	mountNames := map[EnvName]sets.String{}
+	mountPoints := map[EnvName]sets.String{}
 	for i, mount := range r.Spec.EnvOverlay.Mounts {
 		mField := f.Child("mounts").Index(i)
 		if !mount.EnvName.IsValid() {
 			return field.Invalid(mField.Child("envName"), mount.EnvName, "envName is invalid")
 		}
 
+		// 对于每个不同的 EnvName， 初始化 set
+		if _, ok := mountNames[mount.EnvName]; !ok {
+			mountNames[mount.EnvName] = sets.NewString()
+		}
+		if _, ok := mountPoints[mount.EnvName]; !ok {
+			mountPoints[mount.EnvName] = sets.NewString()
+		}
+
 		if err := r.validateMount(mField, mount.Mount); err != nil {
 			return err
 		}
 
-		if mountNames.Has(mount.Mount.Name) {
+		// 检查相同环境下 Mount.Name 是否重复
+		if mountNames[mount.EnvName].Has(mount.Mount.Name) {
 			return field.Duplicate(mField.Child("name"), mount.Mount.Name)
 		}
-		mountNames.Insert(mount.Mount.Name)
+		mountNames[mount.EnvName].Insert(mount.Mount.Name)
 
-		if mountPoints.Has(mount.Mount.MountPath) {
+		// 检测相同环境下 Mount.Name 是否重复
+		if mountPoints[mount.EnvName].Has(mount.Mount.MountPath) {
 			return field.Duplicate(mField.Child("mountPath"), mount.Mount.MountPath)
 		}
-		mountPoints.Insert(mount.Mount.MountPath)
+		mountPoints[mount.EnvName].Insert(mount.Mount.MountPath)
 	}
 
 	return nil

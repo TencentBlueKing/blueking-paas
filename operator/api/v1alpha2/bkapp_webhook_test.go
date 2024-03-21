@@ -567,7 +567,7 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
 		})
-		It("mountOverlay configMap normal", func() {
+		It("[mountOverlay] configMap normal", func() {
 			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
 				{
 					Mount: paasv1alpha2.Mount{
@@ -593,7 +593,7 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
-		It("mountOverlay persistentStorage normal", func() {
+		It("[mountOverlay] persistentStorage normal", func() {
 			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
 				{
 					Mount: paasv1alpha2.Mount{
@@ -619,7 +619,7 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
-		It("mountOverlay invalid", func() {
+		It("[mountOverlay] invalid source", func() {
 			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
 				{
 					Mount: paasv1alpha2.Mount{
@@ -640,6 +640,110 @@ var _ = Describe("test webhook.Validator", func() {
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("unknown volume source"))
+		})
+		It("[mountOverlay] duplicate name", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+		It("[mountOverlay] duplicate mountPath", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+		})
+		It("[mountOverlay] duplicate name in different environments", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "mount",
+						MountPath: "/path/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.StagEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+		It("[mountOverlay] duplicate mountPath in different environments", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-mount",
+						MountPath: "/path/",
+						Source: &paasv1alpha2.VolumeSource{
+							ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "etcd-configmap"},
+						},
+					},
+					EnvName: paasv1alpha2.StagEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
 		})
 	})
 

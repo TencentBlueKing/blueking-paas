@@ -19,10 +19,11 @@
       </bk-form-item>
       <div class="pt5">
         <div
-          class="ps-switcher-wrapper"
+          :class="['ps-switcher-wrapper', 'start-command-cls', { disabled: isPreDeployCommandDisabled }]"
           @click="togglePermission"
         >
           <bk-switcher
+            :disabled="isPreDeployCommandDisabled"
             v-model="configInfo.loaclEnabled"
           />
         </div>
@@ -90,7 +91,7 @@
       class="info-special-form pt20"
       form-type="inline"
     >
-      <bk-form-item style="width: 140px;">
+      <bk-form-item style="width: 165px;">
         <label class="title-label"> {{ $t('部署命令') }} </label>
       </bk-form-item>
       <bk-form-item>
@@ -317,6 +318,23 @@ export default {
     isDockerApp() {
       return this.curAppModule.source_origin === 4;
     },
+    curApplicationData() {
+      return this.curAppInfo.application;
+    },
+    isDefaultApp() {
+      return this.curApplicationData.type === 'default';
+    },
+    isDefaultAppFeature() {
+      return this.isDefaultApp && !this.isSmartApp && !this.isDockerApp;
+    },
+    isPreDeployCommandDisabled() {
+      if (!this.isDefaultApp) return true;
+      // S-mart 应用：只展示查看态
+      if (this.isDefaultApp && this.curApplicationData?.is_smart_app) return true;
+      // 普通应用 ：只能停用
+      if (this.isDefaultAppFeature && !this.configInfo.loaclEnabled) return true;
+      return false;
+    },
   },
   watch: {
     '$route'(newVal, oldVal) {
@@ -329,6 +347,16 @@ export default {
     this.isLoading = true;
     this.init();
     this.inputFocusFun();
+    console.log('curAppType', this.curApplicationData);
+    console.log('this.curAppModule', this.curAppModule);
+    // 查看态
+    // isDefaultApp && isSmartApp
+
+    // 普通应用-镜像应用
+    // isDefaultApp && isDockerApp
+
+    // 普通应用
+    // isDefaultApp && !isSmartApp && !isDockerApp
   },
   methods: {
     async init() {
@@ -444,6 +472,7 @@ export default {
     },
 
     togglePermission() {
+      if (this.isPreDeployCommandDisabled) return;
       if (!this.configInfo.enabled) {
         this.configInfo.loaclEnabled = !this.configInfo.loaclEnabled;
         this.$nextTick(() => {
@@ -543,6 +572,14 @@ export default {
 };
 </script>
 <style lang="scss">
+    .ps-switcher-wrapper {
+      &.disabled::before {
+        cursor: not-allowed;
+      }
+      &.start-command-cls {
+        margin-left: 0;
+      }
+    }
     .config-warp {
         padding: 20px;
         .info{

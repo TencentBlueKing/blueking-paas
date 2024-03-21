@@ -22,7 +22,7 @@ from typing import List, Literal
 from django.db.transaction import atomic
 
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
-from paasng.infras.bk_log.client import make_bk_log_management_client
+from paasng.infras.bk_log.client import make_bk_log_client
 from paasng.infras.bk_log.definitions import CustomCollectorConfig
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.platform.modules.models import Module
@@ -39,7 +39,7 @@ def get_or_create_custom_collector_config(
     :return: CustomCollectorConfigModel
     """
     monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-    client = make_bk_log_management_client()
+    client = make_bk_log_client()
     collector_config_in_bk_log = client.get_custom_collector_config_by_name_en(
         biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=collector_config.name_en
     )
@@ -82,7 +82,7 @@ def update_or_create_custom_collector_config(
     :return: CustomCollectorConfigModel
     """
     monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-    client = make_bk_log_management_client()
+    client = make_bk_log_client()
     if not collector_config.id and not skip_query_bk_log:
         collector_config_in_bk_log = client.get_custom_collector_config_by_name_en(
             biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=collector_config.name_en

@@ -14,6 +14,6 @@ relations:
   - bkauth^0.0.13
 - rationale: "为SaaS提供监控及日志服务"
   suggests:
-  - bk_log_search^4.7.2
+  - bk_log_search^4.7.0
   - bk_monitorv3^3.9.0
 bkimports:

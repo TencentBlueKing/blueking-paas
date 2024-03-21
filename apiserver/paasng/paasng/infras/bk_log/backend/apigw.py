@@ -41,13 +41,6 @@ class Group(OperationGroup):
         Operation, name="databus_list_collectors", method="GET", path="/databus_list_collectors/"
     )
 
-    # ES-DSL 查询接口
-    esquery_dsl = bind_property(Operation, name="esquery_dsl", method="POST", path="/esquery_dsl/")
-    # ES-SCROLL 查询接口
-    esquery_scroll = bind_property(Operation, name="esquery_scroll", method="POST", path="/esquery_scroll/")
-    # ES_MAPPING 查询接口
-    esquery_mapping = bind_property(Operation, name="esquery_mapping", method="POST", path="/esquery_mapping/")
-
 
 class Client(APIGatewayClient):
     """bk-log日志平台 API"""

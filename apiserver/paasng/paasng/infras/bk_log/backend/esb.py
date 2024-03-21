@@ -51,19 +51,6 @@ class Group(OperationGroup):
         path="/api/c/compapi/v2/bk_log/databus_list_collectors/",
     )
 
-    # ES-DSL 查询接口
-    esquery_dsl = bind_property(
-        Operation, name="esquery_dsl", method="POST", path="/api/c/compapi/v2/bk_log/esquery_dsl/"
-    )
-    # ES-SCROLL 查询接口
-    esquery_scroll = bind_property(
-        Operation, name="esquery_scroll", method="POST", path="/api/c/compapi/v2/bk_log/esquery_scroll/"
-    )
-    # ES_MAPPING 查询接口
-    esquery_mapping = bind_property(
-        Operation, name="esquery_mapping", method="POST", path="/api/c/compapi/v2/bk_log/esquery_mapping/"
-    )
-
 
 class Client(ESBClient):
     """ESB Components"""

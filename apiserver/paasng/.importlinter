@@ -29,6 +29,7 @@ ignore_imports =
     # Other ignores
     paas_wl.bk_app.processes.models -> paasng.platform.declarative.deployment.resources
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
+    paasng.accessories.log.client -> paasng.bk_plugins.pluginscenter.**
     # legacydb
     paasng.infras.legacydb.adaptors -> paasng.accessories.publish.sync_market.*
     paasng.infras.legacydb.adaptors -> paasng.platform.mgrlegacy.constants

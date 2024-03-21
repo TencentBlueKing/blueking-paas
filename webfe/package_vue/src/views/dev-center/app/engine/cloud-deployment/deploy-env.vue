@@ -112,7 +112,7 @@
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
-            :sortable="!isPageEdit"
+            :sortable="isPageEdit ? false : 'custom'"
             :show-overflow-tooltip="true"
             prop="key"
           >
@@ -529,7 +529,7 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
@@ -626,7 +626,7 @@ export default {
         { value: 'stag', text: this.$t('预发布环境') },
         { value: 'prod', text: this.$t('生产环境') },
       ],
-      curSortKey: '-created',
+      curSortKey: '',
       exportDialog: {
         visiable: false,
         width: 480,
@@ -683,7 +683,7 @@ export default {
         this.envVarList.forEach((v) => {
           this.$set(v, 'isEdit', false);
         });
-        this.envLocalVarList = _.cloneDeep(this.envVarList);
+        this.envLocalVarList = cloneDeep(this.envVarList);
         this.handleFilterEnv(this.activeEnvValue);
       }, (errRes) => {
         const errorMsg = errRes.message;
@@ -759,7 +759,7 @@ export default {
         if (this.envVarList[i]?.description) {
           await this.$refs[`envRefDescription${i}`].validate();
         }
-        const data = _.cloneDeep(this.envVarList[i]);
+        const data = cloneDeep(this.envVarList[i]);
         // 单条新建编辑操作
         type === 'add' ? this.createdEnvVariable(data, i) : this.updateEnvVariable(data, i);
       } catch (error) {
@@ -823,7 +823,7 @@ export default {
     // 保存
     async save() {
       try {
-        const params = _.cloneDeep(this.envVarList);
+        const params = cloneDeep(this.envVarList);
 
         // 保存环境变，无需传递 is_global
         params.forEach((v) => {
@@ -845,7 +845,7 @@ export default {
           this.$set(v, 'isEdit', false);
         });
         // 更新本地数据
-        this.envLocalVarList = _.cloneDeep(this.envVarList);
+        this.envLocalVarList = cloneDeep(this.envVarList);
         this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (error) {
         const errorMsg = error.message;
@@ -1243,7 +1243,7 @@ export default {
 
     // 取消
     handleCancel() {
-      this.envVarList = _.cloneDeep(this.envLocalVarList);
+      this.envVarList = cloneDeep(this.envLocalVarList);
       this.isBatchEdit = false;
     },
 
@@ -1322,7 +1322,7 @@ export default {
         this.envVarList.push({
           key: '',
           value: '',
-          environment_name: 'stag',
+          environment_name: this.activeEnvValue === 'all' ? 'stag' : this.activeEnvValue,
           description: '',
           isEdit: true,
           isAdd: true,
@@ -1351,7 +1351,7 @@ export default {
       this.activeEnvValue = value;
       // 过滤
       if (value === 'all') {
-        this.envVarList = _.cloneDeep(this.envLocalVarList);
+        this.envVarList = cloneDeep(this.envLocalVarList);
         return;
       }
       this.envVarList = this.envLocalVarList.filter(v => v.environment_name === value);
@@ -1359,7 +1359,7 @@ export default {
 
     handleSortChange({ order, prop }) {
       if (prop === 'key') {
-        this.curSortKey = order === 'ascending' ? 'created' : '-created';
+        this.curSortKey = order === 'ascending' ? 'key' : '-key';
         this.getEnvVarList();
       }
     },

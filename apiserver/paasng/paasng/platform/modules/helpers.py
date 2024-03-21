@@ -75,13 +75,15 @@ def update_build_config_with_method(
 
     :param data.image_repository: 镜像仓库, 仅 build_method == CUSTOM_IMAGE 时需要该字段
     :param data.image_credential_name: 镜像凭证, 仅 build_method == CUSTOM_IMAGE 时需要该字段
+
+    :param data.use_devops_pipeline: bool, 是否使用蓝盾流水线进行构建
     """
 
     update_fields = ["build_method", "updated"]
     build_config.build_method = build_method
     if tag_options := data.get("tag_options"):
         build_config.tag_options = tag_options
-        update_fields.extend(["tag_options"])
+        update_fields.append("tag_options")
 
     # 基于 buildpack 的构建方式
     if build_method == RuntimeType.BUILDPACK:
@@ -94,13 +96,18 @@ def update_build_config_with_method(
     elif build_method == RuntimeType.DOCKERFILE:
         build_config.dockerfile_path = data["dockerfile_path"]
         build_config.docker_build_args = data["docker_build_args"]
-        update_fields.extend(["dockerfile_path", "docker_build_args"])
+        update_fields += ["dockerfile_path", "docker_build_args"]
 
     # 仅托管镜像
     elif build_method == RuntimeType.CUSTOM_IMAGE:
         build_config.image_repository = data["image_repository"]
         build_config.image_credential_name = data["image_credential_name"]
-        update_fields.extend(["image_repository", "image_credential_name"])
+        update_fields += ["image_repository", "image_credential_name"]
+
+    # 高级选项：通过蓝盾流水线构建
+    if "use_devops_pipeline" in data:
+        build_config.use_devops_pipeline = data["use_devops_pipeline"]
+        update_fields.append("use_devops_pipeline")
 
     build_config.save(update_fields=update_fields)
 

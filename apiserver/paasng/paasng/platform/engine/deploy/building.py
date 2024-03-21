@@ -38,12 +38,17 @@ from paasng.platform.declarative.exceptions import (
     DescriptionValidationError,
 )
 from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
+from paasng.platform.engine.configurations.building import (
+    SlugbuilderInfo,
+    get_build_args,
+    get_dockerfile_path,
+    get_use_devops_pipeline,
+)
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
-from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
+from paasng.platform.engine.deploy.bg_build.shims import start_bg_build_process
 from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import HandleAppDescriptionError
 from paasng.platform.engine.models import Deployment
@@ -335,7 +340,6 @@ class ApplicationBuilder(BaseBuilder):
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            stream_channel_id=str(self.deployment.id),
             metadata={
                 "procfile": procfile,
                 "extra_envs": extra_envs,
@@ -346,6 +350,8 @@ class ApplicationBuilder(BaseBuilder):
                 "use_cnb": build_info.use_cnb,
                 "bkapp_revision_id": bkapp_revision_id,
             },
+            stream_channel_id=str(self.deployment.id),
+            use_devops_pipeline=get_use_devops_pipeline(env.module),
         )
         return str(build_process.uuid)
 
@@ -438,7 +444,6 @@ class DockerBuilder(BaseBuilder):
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            stream_channel_id=str(self.deployment.id),
             metadata={
                 "procfile": procfile,
                 "extra_envs": extra_envs or {},
@@ -448,6 +453,8 @@ class DockerBuilder(BaseBuilder):
                 "use_dockerfile": True,
                 "bkapp_revision_id": bkapp_revision_id,
             },
+            stream_channel_id=str(self.deployment.id),
+            use_devops_pipeline=get_use_devops_pipeline(env.module),
         )
         return str(build_process.uuid)
 

@@ -21,18 +21,18 @@ from unittest import mock
 import pytest
 
 from paasng.platform.engine.constants import BuildStatus
-from paasng.platform.engine.deploy.bg_build.bg_build import BuildProcessExecutor
+from paasng.platform.engine.deploy.bg_build.shims import K8sBuildProcessExecutor
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.utils.output import ConsoleStream
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestBuildProcessExecutor:
+class TestK8sBuildProcessExecutor:
     def test_create_and_bind_build_instance(self, bk_deployment_full, build_proc):
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
-        bpe = BuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
+        bpe = K8sBuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
         build_instance = bpe.create_and_bind_build_instance(dict(procfile=["sth"], image=""))
         assert str(build_proc.build_id) == str(build_instance.uuid), "绑定 build instance 失败"
         assert build_instance.owner == bk_deployment_full.operator, "build instance 绑定 owner 异常"
@@ -42,11 +42,11 @@ class TestBuildProcessExecutor:
     def test_execute(self, bk_deployment_full, build_proc):
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
-        bpe = BuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
+        bpe = K8sBuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
         # TODO: Too much mocks, both tests and codes need refactor
         with mock.patch(
-            "paasng.platform.engine.deploy.bg_build.bg_build.BuildProcessExecutor.start_slugbuilder"
-        ), mock.patch("paasng.platform.engine.deploy.bg_build.bg_build.get_scheduler_client_by_app"), mock.patch(
+            "paasng.platform.engine.deploy.bg_build.shims.K8sBuildProcessExecutor.start_slugbuilder"
+        ), mock.patch("paasng.platform.engine.deploy.bg_build.shims.get_scheduler_client_by_app"), mock.patch(
             "paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"
         ):
             bpe.execute({"image": ""})

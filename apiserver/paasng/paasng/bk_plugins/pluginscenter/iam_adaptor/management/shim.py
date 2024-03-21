@@ -69,7 +69,7 @@ def fetch_grade_manager_members(plugin: PluginInstance) -> List[str]:
     :param plugin: 蓝鲸插件
     """
     iam_grade_manager = PluginGradeManager.objects.filter_by_plugin(plugin).get()
-    return lazy_iam_client.fetch_grade_manager_members(iam_grade_manager)
+    return lazy_iam_client.fetch_grade_manager_members(iam_grade_manager.grade_manager_id)
 
 
 @transform_api_error

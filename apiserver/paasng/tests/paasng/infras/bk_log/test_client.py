@@ -20,7 +20,7 @@ from unittest import mock
 
 import pytest
 
-from paasng.infras.bk_log.client import BKLogAPIProtocol, BkLogClient
+from paasng.infras.bk_log.client import BkLogManagementAPIProtocol, BkLogManagementClient
 from paasng.infras.bk_log.constatns import ETLType, FieldType
 from paasng.infras.bk_log.definitions import CustomCollectorConfig, ETLConfig, ETLField, ETLParams, StorageConfig
 from paasng.infras.bk_log.exceptions import CollectorConfigNotPersisted
@@ -29,11 +29,13 @@ from paasng.infras.bk_log.exceptions import CollectorConfigNotPersisted
 class TestBkLogClient:
     @pytest.fixture()
     def mocked_api(self):
-        return mock.MagicMock(spec=type(BKLogAPIProtocol.__name__, (), BKLogAPIProtocol.__annotations__))
+        return mock.MagicMock(
+            spec=type(BkLogManagementAPIProtocol.__name__, (), BkLogManagementAPIProtocol.__annotations__)
+        )
 
     @pytest.fixture()
     def client(self, mocked_api):
-        return BkLogClient(mocked_api)
+        return BkLogManagementClient(mocked_api)
 
     @pytest.mark.parametrize(
         ("config", "expected_data"),

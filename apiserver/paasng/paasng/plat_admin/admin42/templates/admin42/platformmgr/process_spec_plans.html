@@ -126,8 +126,9 @@ const pagination = {{ pagination | to_json }}
 const data = {{ process_spec_plan_list | to_json }}
 
 const URLRouter = {
-    create: decodeURI("{{ '/admin42/wl_api/platform/process_spec_plan/' }}"),
-    detail: decodeURI("{{ '/admin42/wl_api/platform/process_spec_plan/id/${id}/' }}"),
+    create: decodeURI("{% url 'wl_api.process_spec_plan' %}"),
+    {# Use an integer "65535" as the ID placeholder in order to call url #}
+    detail: decodeURI("{% url 'wl_api.process_spec_plan_by_id' 65535 %}"),
 }
 
 const ResourceSchema = {
@@ -299,7 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return 'json-view'
             },
             fillUrlTemplate: function (url_template, {form}) {
-              return url_template.replace("${id}", form.id)
+              // Replace the placeholder in the tail of the URL
+              return url_template.replace(/\/65535\/$/, `/${form.id}/`)
             },
             submitCallback: function () {
                 this.dialog.row.name = this.dialog.form.name

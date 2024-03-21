@@ -97,7 +97,7 @@ export const pluginRouter = [
     },
   },
   {
-    path: '/plugin-centerr/plugin/:pluginTypeId/:id/403',
+    path: '/plugin-center/plugin/:pluginTypeId/:id/403',
     name: 'plugin403',
     component: plugin403,
     meta: {

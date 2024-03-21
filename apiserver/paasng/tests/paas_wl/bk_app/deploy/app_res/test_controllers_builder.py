@@ -118,7 +118,7 @@ class TestBuildHandler:
             with pytest.raises(ResourceDuplicate):
                 build_handler.build_slug(template=pod_template)
 
-    def test_delete_slug_pod(self, build_handler):
+    def test_delete_builder_pod(self, build_handler):
         pod_body = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Completed"}})
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
@@ -126,7 +126,7 @@ class TestBuildHandler:
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
             "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
         ):
-            build_handler.delete_slug(namespace="bkapp-foo-stag", name="slug-builder")
+            build_handler.delete_builder(namespace="bkapp-foo-stag", name="slug-builder")
 
             assert kpod_get.called
             assert kpod_delete.called
@@ -134,19 +134,19 @@ class TestBuildHandler:
             assert args[0] == "slug-builder"
             assert kwargs.get("namespace") == "bkapp-foo-stag"
 
-    def test_delete_slug_pod_missing(self, build_handler):
+    def test_delete_builder_pod_missing(self, build_handler):
         kpod_get = Mock(side_effect=ResourceMissing("bkapp-foo-stag-slug-pod", "bkapp-foo-stag"))
         kpod_delete = Mock(return_value=None)
 
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
             "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
         ):
-            build_handler.delete_slug(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
+            build_handler.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
             assert kpod_get.called
             assert not kpod_delete.called
 
-    def test_delete_slug_pod_running(self, build_handler):
+    def test_delete_builder_pod_running(self, build_handler):
         pod_body = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Running"}})
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
@@ -154,7 +154,7 @@ class TestBuildHandler:
         with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
             "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
         ):
-            build_handler.delete_slug(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
+            build_handler.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
             assert kpod_get.called
             assert not kpod_delete.called

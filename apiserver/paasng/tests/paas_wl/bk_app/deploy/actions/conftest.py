@@ -23,5 +23,5 @@ import pytest
 
 @pytest.fixture()
 def _mock_run_command():
-    with mock.patch("paas_wl.bk_app.deploy.actions.exec.run_command"):
+    with mock.patch("paas_wl.bk_app.deploy.actions.exec.CommandHandler.run"):
         yield

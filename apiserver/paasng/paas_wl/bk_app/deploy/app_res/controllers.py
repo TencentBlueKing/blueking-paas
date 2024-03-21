@@ -68,17 +68,6 @@ logger = logging.getLogger(__name__)
 set_default_options({"request_timeout": (settings.K8S_DEFAULT_CONNECT_TIMEOUT, settings.K8S_DEFAULT_READ_TIMEOUT)})
 
 
-def run_command(command: Command) -> str:
-    """Run a command, it create the namespace and image credentials automatically.
-
-    :param command: The command object.
-    :return: The name of the command.
-    """
-    NamespacesHandler.new_by_app(command.app).ensure_namespace(command.app.namespace)
-    ensure_image_credentials_secret(command.app)
-    return CommandHandler.new_by_app(command.app).run_command(command)
-
-
 def ensure_image_credentials_secret(app: "WlApp"):
     """确保应用镜像的访问凭证存在。"""
     credentials = ImageCredentials.load_from_app(app)
@@ -407,8 +396,8 @@ class BuildHandler(PodScheduleHandler):
         )
         return pod_info.metadata.name
 
-    def delete_slug(self, namespace: str, name: str):
-        """Force delete slugbuilder pod unless it's in "running" phase"""
+    def delete_builder(self, namespace: str, name: str):
+        """Force delete a slug builder pod unless it's in "running" phase."""
         pod_name = self.normalize_builder_name(name)
         return self._delete_finished_pod(namespace=namespace, pod_name=pod_name, force=False)
 
@@ -479,6 +468,16 @@ class BuildHandler(PodScheduleHandler):
 
 class CommandHandler(PodScheduleHandler):
     """Handler for running command"""
+
+    def run(self, command: Command) -> str:
+        """Run a command, it create the namespace and image credentials automatically.
+
+        :param command: The command object.
+        :return: The name of the command.
+        """
+        NamespacesHandler.new_by_app(command.app).ensure_namespace(command.app.namespace)
+        ensure_image_credentials_secret(command.app)
+        return self.run_command(command)
 
     def run_command(self, command: Command) -> str:
         """Run a command."""

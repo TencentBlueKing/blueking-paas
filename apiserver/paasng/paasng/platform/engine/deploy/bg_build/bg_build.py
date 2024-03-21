@@ -261,7 +261,7 @@ class BuildProcessExecutor(DeployStep):
 
     def clean_slugbuilder(self):
         try:
-            self.build_handler.delete_slug(namespace=self.wl_app.namespace, name=self._builder_name)
+            self.build_handler.delete_builder(namespace=self.wl_app.namespace, name=self._builder_name)
         except Exception as e:
             # cleaning should not influence main process
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)

@@ -23,7 +23,7 @@ from attr import define, field
 from six import ensure_text
 
 from paas_wl.bk_app.deploy.actions.exceptions import BuildMissingError, CommandRerunError
-from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler, run_command
+from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
@@ -64,7 +64,7 @@ class AppCommandExecutor:
         self.command.update_status(CommandStatus.SCHEDULED)
         try:
             self.stream.write_message(Style.Warning(f"Starting {self.STEP_NAME}"))
-            run_command(self.kmodel)
+            self.command_handler.run(self.kmodel)
 
             self.command_handler.wait_for_logs_readiness(self.kmodel, timeout=_WAIT_FOR_READINESS_TIMEOUT)
             self.command.set_logs_was_ready()

@@ -920,6 +920,9 @@ export default {
     shrinkLimit() {
       return `${((this.curTargetReplicas - 1) / this.curTargetReplicas * 85).toFixed(1)}%`;
     },
+    isCloudNative() {
+      return this.curAppInfo.application?.type === 'cloud_native';
+    },
   },
   watch: {
     curLogTimeRange(val) {
@@ -1566,7 +1569,7 @@ export default {
 
       // 遍历进行数据组装
       const extraInfos = processesData.processes.extra_infos;
-      const packages = processesData.process_packages;
+      const packages = this.isCloudNative ? processesData.cnative_proc_specs : processesData.process_packages;
       const instances = processesData.instances.items;
 
       processesData.processes.items.forEach((processItem) => {

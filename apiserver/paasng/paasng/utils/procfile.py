@@ -31,6 +31,13 @@ def generate_bash_command_with_tokens(command: List[str], args: List[str]) -> st
         After token evaluation, the process will run as a Procfile like: 'python -m http.server ${PORT:-9999}'
 
     ref: https://github.com/buildpacks/lifecycle/blob/435d226f1ed54b0bec806716ba79e14a2a093736/launch/bash.go#L55
+
+    Q: Why not use `shlex.join`?
+    A: `shlex.join` will quote all unsafe string, such as `$`, `"`, `'` and so on.
+    For example, `shlex.join(["python", "-m", "http.server","${PORT:-9999}"])` will return:
+      'python -m http.server \'${PORT:-9999}\''
+    But we want:
+      'python -m http.server ${PORT:-9999}'
     """
     token_size = len(command) + len(args)
     script = r'"$(eval echo \"$0\")"'

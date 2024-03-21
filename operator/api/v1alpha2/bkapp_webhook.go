@@ -530,8 +530,8 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "mounts"
-	mountNames := map[EnvName]sets.String{}
-	mountPoints := map[EnvName]sets.String{}
+	mountNames := make(map[EnvName]sets.String)
+	mountPoints := make(map[EnvName]sets.String)
 	for i, mount := range r.Spec.EnvOverlay.Mounts {
 		mField := f.Child("mounts").Index(i)
 		if !mount.EnvName.IsValid() {

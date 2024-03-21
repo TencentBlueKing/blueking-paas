@@ -2412,7 +2412,7 @@ export default {
   '主模块不能删除，删除操作无法撤回，请在删除前与应用其他成员沟通': 'The main module cannot be deleted, and the deletion operation cannot be undone. Please communicate with other members of the application before deleting it.',
   从源码构建: 'Build from source',
   已构建镜像: 'Built image',
-  展示实例详情: 'Display instance details',
+  展开实例详情: 'Expand instance details',
   构建历史: 'Build History',
   '查看 YAML': 'View YAML',
   '详细使用说明-simple': 'Details',

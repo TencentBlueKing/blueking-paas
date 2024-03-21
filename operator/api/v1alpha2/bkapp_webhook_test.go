@@ -464,7 +464,7 @@ var _ = Describe("test webhook.Validator", func() {
 							Name:      "nginx-mount",
 							MountPath: "/path/nginx",
 							Source: &paasv1alpha2.VolumeSource{
-								ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmag"},
+								ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
 							},
 						},
 						EnvName: paasv1alpha2.ProdEnv,

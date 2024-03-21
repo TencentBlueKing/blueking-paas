@@ -556,7 +556,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		}
 		mountNames[mount.EnvName].Insert(mount.Mount.Name)
 
-		// 检测相同环境下 Mount.Name 是否重复
+		// 检测相同环境下 Mount.MountPath 是否重复
 		if mountPoints[mount.EnvName].Has(mount.Mount.MountPath) {
 			return field.Duplicate(mField.Child("mountPath"), mount.Mount.MountPath)
 		}

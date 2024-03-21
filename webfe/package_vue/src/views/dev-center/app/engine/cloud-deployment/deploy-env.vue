@@ -240,7 +240,7 @@
 
           <bk-table-column
             :label="$t('操作')"
-            width="100"
+            width="120"
             class-name="table-colum-module-cls"
           >
             <template slot-scope="{ row }">

@@ -11,7 +11,7 @@
       <section v-show="!isLoading">
         <bk-alert type="info">
           <span slot="title">
-            {{ $t('平台支持将自定义配置文件注入进程内的文件系统，还提供了持久存储功能以实现应用中所有模块和进程的数据共享。') }}
+            {{ $t('挂载负责将内容挂载到进程文件系统中，当前支持“文件”和“持久存储”两种类型；文件常用于存储模块配置文件；持久存储提供一个持久化的存储空间，可跨模块和进程共享数据。') }}
           </span>
         </bk-alert>
         <bk-button theme="primary" class="mb15 mt20" @click="handleCreate">
@@ -144,14 +144,14 @@
       @hidden="handleHidden"
     >
       <div slot="header">
-        {{volumeFormData.id ? $t('编辑') : $t('新增')}}{{ $t('挂载卷') }}
+        {{ volumeFormData.id ? $t('编辑') : $t('新增')}}{{ $t('挂载') }}
         <span class="header-sub-name pl5">
           {{ volumeFormData.name }}
         </span>
       </div>
       <div slot="content">
         <div class="slider-volume-content">
-          <bk-alert type="info" class="mb10" :title="$t('挂载卷新增、编辑后，需要重新部署应用才能生效。')"></bk-alert>
+          <bk-alert type="info" class="mb10" :title="$t('新增或修改挂载后，需重新部署对应环境才能生效。')"></bk-alert>
           <bk-form :label-width="200" form-type="vertical" :model="volumeFormData" ref="formRef">
             <bk-form-item
               :label="$t('名称')"
@@ -312,7 +312,8 @@
                     <div class="option-content">
                       <span class="name" :title="option.display_name">{{ option.display_name }}</span>
                       <span class="info">
-                        {{ `(${$t('容量')}：${option.storage_size}，${$t('已绑定模块')}：${option.bound_modules.length})` }}
+                        {{ `(${$t('容量')}：${persistentStorageSizeMap[option.storage_size]}，
+                        ${$t('已绑定模块')}：${option.bound_modules.length})` }}
                       </span>
                     </div>
                   </bk-option>
@@ -382,13 +383,41 @@
       v-model="persistentStorageDailogVisible"
       @get-list="getPersistentStorageList"
     />
+
+    <!-- 删除挂载弹窗 -->
+    <bk-dialog
+      v-model="deleteMountConfig.visible"
+      header-position="left"
+      theme="primary"
+      :width="620"
+      :loading="true"
+      :mask-close="false"
+      :auto-close="false"
+      :title="$t('确认删除挂载：') + deleteMountConfig.data.name">
+      <p>{{ $t('挂载删除后，需要重新部署应用才能生效。') }}</p>
+      <bk-alert class="mt15" type="warning" :title="$t('请注意，此操作不会影响持久存储内的数据。如需删除数据请在“应用配置-持久存储”页面操作。')"></bk-alert>
+      <section slot="footer">
+        <bk-button
+          :theme="'primary'"
+          :loading="deleteMountConfig.loading"
+          @click="deleteVolume(deleteMountConfig.data)">
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          :theme="'default'"
+          class="mr10"
+          @click="deleteMountConfig.visible = false">
+          {{ $t('取消') }}
+        </bk-button>
+      </section>
+    </bk-dialog>
   </div>
 </template>
 
 <script>import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import ResourceEditor from './comps/deploy-resource-editor';
-import { ENV_ENUM } from '@/common/constants';
+import { ENV_ENUM, PERSISTENT_STORAGE_SIZE_MAP } from '@/common/constants';
 import { isJsonString } from '@/common/utils';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import createPersistentStorageDailog from '@/components/create-persistent-storage-dailog';
@@ -505,6 +534,12 @@ export default {
       isTableLoaing: false,
       isShowPersistentStorage: false,
       isInEditMode: false,
+      persistentStorageSizeMap: PERSISTENT_STORAGE_SIZE_MAP,
+      deleteMountConfig: {
+        visible: false,
+        loading: false,
+        data: {},
+      },
     };
   },
   computed: {
@@ -644,7 +679,7 @@ export default {
       this.volumeDefaultSettings.isShow = true;
       this.initSidebarFormData(this.volumeFormData);
     },
-    // 获取挂载卷list
+    // 获取挂载list
     getVolumeList() {
       this.isTableLoaing = true;
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/`;
@@ -682,6 +717,7 @@ export default {
     },
     // 确认删除挂载券
     deleteVolume(row) {
+      this.deleteMountConfig.loading = true;
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/mres/volume_mounts/${row.id}`;
       this.$http
         .delete(url)
@@ -698,15 +734,25 @@ export default {
           });
         })
         .finally(() => {
+          this.deleteMountConfig.loading = false;
+          this.deleteMountConfig.visible = false;
           this.getVolumeList();
         });
     },
-    // 删除挂载卷
+    // 删除挂载
     handleDelete(row) {
+      if (row.source_type === defaultSourceType) {
+        this.deleteMountConfig.visible = true;
+        this.deleteMountConfig.data = row;
+        return;
+      }
+
       this.$bkInfo({
         extCls: 'delete-volume-info-cls',
-        title: this.$t('确认删除挂载卷：') + row.name,
-        subTitle: this.$t('挂载卷删除后，需要重新部署应用才能生效。'),
+        okText: this.$t('确定'),
+        cancelText: this.$t('取消'),
+        title: this.$t('确认删除挂载：') + row.name,
+        subTitle: this.$t('挂载删除后，需要重新部署应用才能生效。'),
         confirmFn: () => {
           this.deleteVolume(row);
         },
@@ -791,7 +837,7 @@ export default {
           if (!this.sliderEditordetail) {
             this.$paasMessage({
               theme: 'error',
-              message: this.$t('挂载卷内容不可为空'),
+              message: this.$t('挂载内容不可为空'),
             });
             return;
           }

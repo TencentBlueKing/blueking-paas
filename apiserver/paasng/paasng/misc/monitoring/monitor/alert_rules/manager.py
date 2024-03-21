@@ -16,13 +16,32 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List
+import logging
+from typing import List, Protocol, Type
+
+from django.conf import settings
 
 from paasng.misc.monitoring.monitor.models import AppAlertRule
 from paasng.platform.applications.models import Application
 
 from .ascode.client import AsCodeClient
 from .config import AppRuleConfigGenerator, RuleConfig, get_supported_alert_codes
+
+logger = logging.getLogger(__name__)
+
+
+class ManagerProtocol(Protocol):
+    def __init__(self, application: Application):
+        ...
+
+    def init_rules(self):
+        ...
+
+    def create_rules(self, module_name: str, run_env: str):
+        ...
+
+    def update_notice_group(self):
+        ...
 
 
 class AlertRuleManager:
@@ -121,6 +140,9 @@ class AlertRuleManager:
 
 
 class NullManager:
+    def __init__(self, application: Application):
+        ...
+
     def init_rules(self):
         ...
 
@@ -129,3 +151,14 @@ class NullManager:
 
     def update_notice_group(self):
         ...
+
+
+def get_alert_rule_manager_cls() -> Type[ManagerProtocol]:
+    if not settings.ENABLE_BK_MONITOR:
+        logger.warning("bkmonitor in this edition not enabled, skip apply Monitor Rules")
+        return NullManager
+    else:
+        return AlertRuleManager
+
+
+alert_rule_manager_cls = get_alert_rule_manager_cls()

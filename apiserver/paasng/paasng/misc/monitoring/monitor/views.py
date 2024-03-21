@@ -33,7 +33,7 @@ from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, B
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
-from paasng.misc.monitoring.monitor.alert_rules.shim import make_alert_rule_manager
+from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manager_cls
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
@@ -240,7 +240,7 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
 
         try:
-            make_alert_rule_manager(application).init_rules()
+            alert_rule_manager_cls(application).init_rules()
         except BKMonitorNotSupportedError as e:
             raise error_codes.INIT_ALERT_RULES_FAILED.f(str(e))
         except AsCodeAPIError:

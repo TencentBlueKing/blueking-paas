@@ -256,6 +256,9 @@ class ModuleProcessSpecManager:
         """Set the replicas for the given process and environment."""
         proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
         if proc_spec.target_replicas != replicas:
+            proc_spec.target_replicas = replicas
+            proc_spec.save(update_fields=["target_replicas"])
+
             ProcessSpecEnvOverlay.objects.update_or_create(
                 proc_spec=proc_spec,
                 environment_name=AppEnvName(env_name).value,

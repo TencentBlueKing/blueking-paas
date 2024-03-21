@@ -22,7 +22,7 @@ from django.db import models, transaction
 
 from paas_wl.bk_app.applications.models import BuildProcess, WlApp
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.core.env import env_is_running
 from paas_wl.workloads.networking.ingress.models import Domain
@@ -38,8 +38,7 @@ def delete_env_resources(env: "ModuleEnvironment"):
         return
 
     wl_app = env.wl_app
-    scheduler_client = get_scheduler_client_by_app(app=wl_app)
-    scheduler_client.delete_all_under_namespace(namespace=wl_app.namespace)
+    NamespacesHandler.new_by_app(wl_app).delete(namespace=wl_app.namespace)
     return
 
 

@@ -45,7 +45,13 @@ class _APIGWOperationStub(Protocol):
         ...
 
 
-class BKLogAPIProtocol(Protocol):
+class BKLogQueryAPIProtocol(Protocol):
+    esquery_dsl: _APIGWOperationStub
+    esquery_scroll: _APIGWOperationStub
+    esquery_mapping: _APIGWOperationStub
+
+
+class BkLogManagementAPIProtocol(Protocol):
     """bk-log api protocol"""
 
     databus_custom_create: _APIGWOperationStub
@@ -53,8 +59,8 @@ class BKLogAPIProtocol(Protocol):
     databus_list_collectors: _APIGWOperationStub
 
 
-class BkLogClient:
-    def __init__(self, client: BKLogAPIProtocol):
+class BkLogManagementClient:
+    def __init__(self, client: BkLogManagementAPIProtocol):
         self.client = client
 
     def list_custom_collector_config(
@@ -196,7 +202,7 @@ class BkLogClient:
             raise BkLogApiError(resp["message"])
 
 
-def make_bk_log_client() -> BkLogClient:
+def make_bk_log_management_client() -> BkLogManagementClient:
     if settings.ENABLE_BK_LOG_APIGW:
         apigw_client = APIGWClient(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_LOG_APIGW_SERVICE_STAGE)
         apigw_client.update_bkapi_authorization(
@@ -205,8 +211,24 @@ def make_bk_log_client() -> BkLogClient:
             bk_app_secret=settings.BK_APP_SECRET,
             bk_username="admin",
         )
-        return BkLogClient(apigw_client.api)
+        return BkLogManagementClient(apigw_client.api)
 
     # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
     esb_client = get_client_by_username("admin")
-    return BkLogClient(esb_client.api)
+    return BkLogManagementClient(esb_client.api)
+
+
+def make_bk_log_esquery_client() -> BKLogQueryAPIProtocol:
+    if settings.ENABLE_BK_LOG_APIGW:
+        apigw_client = APIGWClient(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_LOG_APIGW_SERVICE_STAGE)
+        apigw_client.update_bkapi_authorization(
+            # 日志平台必须要 bk_username 这个参数
+            bk_app_code=settings.BK_APP_CODE,
+            bk_app_secret=settings.BK_APP_SECRET,
+            bk_username="admin",
+        )
+        return apigw_client.api
+
+    # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
+    esb_client = get_client_by_username("admin")
+    return esb_client.api

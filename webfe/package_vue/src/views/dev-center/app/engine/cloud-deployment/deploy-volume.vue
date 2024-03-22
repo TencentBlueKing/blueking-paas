@@ -394,7 +394,7 @@
       :mask-close="false"
       :auto-close="false"
       :title="$t('确认删除挂载：') + deleteMountConfig.data.name">
-      <p>{{ $t('挂载删除后，需要重新部署应用才能生效。') }}</p>
+      <p>{{ $t('挂载删除后，需要重新部署对应环境才能生效。') }}</p>
       <bk-alert class="mt15" type="warning" :title="$t('请注意，此操作不会影响持久存储内的数据。如需删除数据请在“应用配置-持久存储”页面操作。')"></bk-alert>
       <section slot="footer">
         <bk-button
@@ -752,7 +752,7 @@ export default {
         okText: this.$t('确定'),
         cancelText: this.$t('取消'),
         title: this.$t('确认删除挂载：') + row.name,
-        subTitle: this.$t('挂载删除后，需要重新部署应用才能生效。'),
+        subTitle: this.$t('挂载删除后，需要重新部署对应环境才能生效。'),
         confirmFn: () => {
           this.deleteVolume(row);
         },

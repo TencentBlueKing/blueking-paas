@@ -2484,7 +2484,7 @@ export default {
   共享实例: 'Shared',
   独占实例: 'Exclusive',
   '新增或修改挂载后，需重新部署对应环境才能生效。': 'After adding or modifying a mount, it is necessary to redeploy the corresponding environment for the changes to take effect.',
-  '挂载删除后，需要重新部署应用才能生效。': 'After the mount is deleted, redeployment of the application is required for the changes to take effect.',
+  '挂载删除后，需要重新部署对应环境才能生效。': 'After the mount is deleted, redeployment of the corresponding environment is required for the changes to take effect.',
   '当前模块直接提供镜像部署，无构建历史': 'The current module is deployed directly from the image, with no build history',
   暂未启用告警策略: 'Warning policy not enabled yet',
   '在应用部署成功后，才会配置相应环境的告警策略': 'A warning policy for the respective environment will be configured only after the application is successfully deployed',

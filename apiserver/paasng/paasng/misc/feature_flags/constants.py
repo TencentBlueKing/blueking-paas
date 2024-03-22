@@ -37,7 +37,12 @@ class PlatformFeatureFlag(FeatureFlag):  # type: ignore
         label="创建与使用“蓝鲸插件”类型应用", default=settings.IS_ALLOW_CREATE_BK_PLUGIN_APP
     )
     BK_NOTICE = FeatureFlagField(label="蓝鲸通知公告服务", default=settings.ENABLE_BK_NOTICE)
-    # 是否允许镜像应用绑定源码仓库，目前绑定仅用于 Hompage
+    # 是否允许镜像应用绑定源码仓库，目前绑定仅用于 Homepage
     ENABLE_IMAGE_APP_BIND_REPO = FeatureFlagField(
-        label="镜像应用绑定源码仓库", default=settings.ENABLE_IMAGE_APP_BIND_REPO
+        label="镜像应用绑定源码仓库",
+        default=settings.ENABLE_IMAGE_APP_BIND_REPO,
+    )
+    DEVOPS_PIPELINE_CNB = FeatureFlagField(
+        label="蓝盾流水线-云原生应用镜像构建",
+        default=bool(settings.BKPAAS_DEVOPS_PROJECT_ID and settings.BKPAAS_CNB_PIPELINE_ID),
     )

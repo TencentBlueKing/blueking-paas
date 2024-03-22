@@ -23,3 +23,7 @@ class DevopsPipelineBuildUnsupported(Exception):
 
 class DevopsPipelineBuildNotSuccess(Exception):
     """蓝盾流水线构建未成功（失败/被取消）"""
+
+
+class TooManyEnvironmentVariables(Exception):
+    """环境变量过多"""

@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import base64
 import json
 import logging
+import math
 import re
 import time
 from typing import TYPE_CHECKING, Dict
@@ -39,6 +40,7 @@ from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.exceptions import (
     DevopsPipelineBuildNotSuccess,
     DevopsPipelineBuildUnsupported,
+    TooManyEnvironmentVariables,
 )
 from paasng.platform.engine.deploy.bg_build.utils import (
     SlugBuilderTemplate,
@@ -246,6 +248,10 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
     PHASE_TYPE = DeployPhaseTypes.BUILD
     FOLLOWING_LOGS_INTERVAL = 2
     DEVOPS_LOG_LEVEL_TAG_REGEX = re.compile("##\\[\\w+\\]")
+    # 目前只支持最多把环境变量分五块，理论上是够用的
+    MAX_ENV_VAR_BLOCK_NUM = 5
+    # 环境变量字符串单块最大长度
+    MAX_ENV_VAR_BLOCK_LENGTH = 2000
 
     def __init__(self, deployment: Deployment, bp: BuildProcess, stream: DeployStream):
         super().__init__(deployment, stream)
@@ -255,9 +261,6 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
         # 注：蓝盾只提供了正式环境的 API
         bk_username = get_username_by_bkpaas_user_id(bp.owner)
         self.ctl = PipelineController(bk_username=bk_username)
-
-        if not (settings.BKPAAS_DEVOPS_PROJECT_ID and settings.BKPAAS_CNB_PIPELINE_ID):
-            raise DevopsPipelineBuildUnsupported("build image with devops pipeline unsupported")
 
     def execute(self, metadata: Dict):
         """Execute the build process"""
@@ -286,6 +289,15 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
             logger.exception(f"call devops pipeline failed during deploy[{self.bp}]")
             self.stream.write_message(Style.Error("Call devops pipeline failed, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
+        except DevopsPipelineBuildUnsupported:
+            self.stream.write_message(Style.Error("build image with devops pipeline unsupported"))
+            self.bp.update_status(BuildStatus.FAILED)
+        except DevopsPipelineBuildNotSuccess:
+            self.stream.write_message(Style.Error("build image with devops pipeline not success"))
+            self.bp.update_status(BuildStatus.FAILED)
+        except TooManyEnvironmentVariables:
+            self.stream.write_message(Style.Error("too many environment variables, please contact the administrator"))
+            self.bp.update_status(BuildStatus.FAILED)
         except Exception:
             logger.exception(f"critical error happened during deploy[{self.bp}]")
             self.bp.update_status(BuildStatus.FAILED)
@@ -295,6 +307,9 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
 
     def _start_devops_pipeline(self, env_vars: Dict[str, str]) -> definitions.PipelineBuild:
         """启动蓝盾流水线以构建镜像"""
+        if not (settings.BKPAAS_DEVOPS_PROJECT_ID and settings.BKPAAS_CNB_PIPELINE_ID):
+            raise DevopsPipelineBuildUnsupported("build image with devops pipeline unsupported")
+
         pipeline = definitions.Pipeline(
             projectId=settings.BKPAAS_DEVOPS_PROJECT_ID, pipelineId=settings.BKPAAS_CNB_PIPELINE_ID
         )
@@ -302,10 +317,24 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
             pipeline,
             {
                 "BUILDER_IMAGE": self.bp.image,
-                # 使用 base64 编码的 JSON 字符串，避免出现特殊符号传递失败的问题
-                "ENV_VARS": base64.b64encode(json.dumps(env_vars).encode("utf-8")).decode("utf-8"),
+                **self._build_env_vars_params(env_vars),
             },
         )
+
+    def _build_env_vars_params(self, env_vars: Dict[str, str]) -> Dict[str, str]:
+        # 使用 base64 编码的 JSON 字符串，避免出现特殊符号传递失败的问题
+        env_vars_str = base64.b64encode(json.dumps(env_vars).encode("utf-8")).decode("utf-8")
+        # 由于蓝盾流水线变量长度超过 4000 会被丢弃，因此我们需要通过分块限制长度
+        block_num = math.ceil(len(env_vars_str) / self.MAX_ENV_VAR_BLOCK_LENGTH)
+        if block_num > self.MAX_ENV_VAR_BLOCK_NUM:
+            raise TooManyEnvironmentVariables("too many environment variables")
+
+        env_vars_params = {"ENV_VARS_BLOCK_NUM": str(block_num)}
+        for idx in range(block_num):
+            start = idx * self.MAX_ENV_VAR_BLOCK_LENGTH
+            env_vars_params[f"ENV_VARS_BLOCK_{idx}"] = env_vars_str[start : start + self.MAX_ENV_VAR_BLOCK_LENGTH]
+
+        return env_vars_params
 
     def _start_following_logs(self, pb: definitions.PipelineBuild):
         """通过轮询，检查流水线是否执行完成，并逐批获取执行日志"""

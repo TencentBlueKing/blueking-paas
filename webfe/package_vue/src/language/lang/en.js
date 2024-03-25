@@ -862,6 +862,9 @@ export default {
   '蓝鲸运维开发平台的应用 ID 只能由小写字母组成, 所属应用': 'The APP ID of the BlueKing visualization development platform can only be composed of lowercase letters, and the APP belongs to',
   '的应用 ID 为': 'APP ID is',
   '故无法在当前应用下创建蓝鲸运维开发平台的模块。': 'Therefore, it is impossible to create modules of the BlueKing visualization development platform under the current APP.',
+  蓝盾流水线构建: 'Build by devops pipeline',
+  '使用 DevCloud 构建机，支持从工蜂、GitHub 等拉取依赖（如应用使用 go.mod，请勾选此选项）。更多说明请参考：':
+    'Use DevCloud machine to support pull dependencies from TC git, GitHub, etc. (If the application uses go.mod, please check this option). For more instructions please refer to:',
   构建方式: 'Deploy methods',
   提供源码: 'From a source repository',
   提供镜像: 'From a container image',

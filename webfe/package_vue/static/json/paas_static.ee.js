@@ -283,6 +283,9 @@ export const PLATFORM_CONFIG = {
 
         // 构建阶段钩子
         BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks',
+
+        // 蓝盾流水线构建
+        DEVOPS_PIPELINE_CNB: DOCS_URL_PREFIX + '/topics/paas/devops_pipeline_cnb',
     },
 
     CONFIG: {

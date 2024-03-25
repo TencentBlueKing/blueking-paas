@@ -25,11 +25,12 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
-from paas_wl.bk_app.cnative.specs.apis import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
+
+from .metadata import ObjectMetadata
 
 
 class MetaV1Condition(BaseModel):

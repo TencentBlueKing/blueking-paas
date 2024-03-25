@@ -23,7 +23,8 @@ from django.conf import settings
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessService, PServicePortPair, service_kmodel
+from paas_wl.workloads.networking.ingress.entities import PServicePortPair
+from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessService, service_kmodel
 from paas_wl.workloads.networking.ingress.managers import AppDefaultIngresses
 from paas_wl.workloads.networking.ingress.utils import make_service_name
 

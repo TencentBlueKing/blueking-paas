@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.bk_app.processes.serializers import HumanizeDateTimeField, InstanceForDisplaySLZ
 

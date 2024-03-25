@@ -26,7 +26,7 @@ from django.db import models
 from jsonfield import JSONField
 
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProbeType, ProcessTargetStatus

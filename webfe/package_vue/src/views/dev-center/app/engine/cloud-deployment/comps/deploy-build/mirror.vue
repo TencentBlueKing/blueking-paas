@@ -27,6 +27,14 @@
                 {{ $t(methodType[mirrorData.build_method]) || '--' }}
               </span>
             </bk-form-item>
+            <bk-form-item
+              :label="`${$t('蓝盾流水线构建')}：`"
+              v-if="curAppInfo.feature?.DEVOPS_PIPELINE_CNB"
+            >
+              <span class="form-text">
+                {{ mirrorData.use_devops_pipeline ? $t('已启用') : $t('未启用') }}
+              </span>
+            </bk-form-item>
             <!-- 蓝鲸 Buildpack -->
             <template v-if="mirrorData.build_method === 'buildpack'">
               <bk-form-item :label="`${$t('基础镜像')}：`">
@@ -110,6 +118,16 @@
                 >{{ $t(item.name) }}
                 </bk-radio>
               </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('蓝盾流水线构建')"
+              :property="'use_devops_pipeline'"
+              v-if="curAppInfo.feature?.DEVOPS_PIPELINE_CNB"
+            >
+              <bk-switcher
+                v-model="mirrorData.use_devops_pipeline"
+                theme="primary"
+              />
             </bk-form-item>
             <template v-if="mirrorData.build_method === 'buildpack'">
               <bk-form-item
@@ -272,6 +290,7 @@ const defaultMirrorData = {
     with_commit_id: false,
   },
   docker_build_args: {},
+  use_devops_pipeline: false,
 };
 
 export default {

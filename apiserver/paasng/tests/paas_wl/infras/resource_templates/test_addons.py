@@ -23,7 +23,7 @@ import pytest
 
 from paas_wl.infras.resource_templates.components.probe import get_default_readiness_probe
 from paas_wl.infras.resource_templates.components.sidecar import Container
-from paas_wl.infras.resource_templates.utils import AddonManager
+from paas_wl.infras.resource_templates.managers import AddonManager
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

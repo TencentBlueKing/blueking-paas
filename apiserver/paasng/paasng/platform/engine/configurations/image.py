@@ -23,7 +23,7 @@ from django.conf import settings
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs.credentials import split_image
-from paas_wl.bk_app.processes.services import refresh_res_reqs
+from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -207,6 +207,9 @@ def update_image_runtime_config(deployment: Deployment):
     wl_app = engine_app.to_wl_obj()
     config = wl_app.latest_config
     config.runtime = runtime_dict
-    config.save(update_fields=["runtime", "updated"])
+
     # Refresh resource requirements
-    refresh_res_reqs(config)
+    config.resource_requirements = {
+        pack.name: pack.plan.get_resource_summary() for pack in ProcessSpec.objects.filter(engine_app_id=config.app.pk)
+    }
+    config.save(update_fields=["runtime", "updated", "resource_requirements"])

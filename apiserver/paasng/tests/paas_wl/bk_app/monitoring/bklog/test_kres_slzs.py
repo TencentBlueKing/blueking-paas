@@ -22,9 +22,9 @@ import cattrs
 import pytest
 
 from paas_wl.bk_app.monitoring.bklog import constants
-from paas_wl.bk_app.monitoring.bklog.entities import BkAppLogConfig
-from paas_wl.bk_app.monitoring.bklog.models import LabelSelector
-from paas_wl.bk_app.monitoring.bklog.serializers import BKLogConfigSerializer
+from paas_wl.bk_app.monitoring.bklog.entities import LabelSelector
+from paas_wl.bk_app.monitoring.bklog.kres_entities import BkAppLogConfig
+from paas_wl.bk_app.monitoring.bklog.kres_slzs import BKLogConfigSerializer
 from paas_wl.infras.resources.base import crd
 from paas_wl.infras.resources.kube_res.base import GVKConfig
 

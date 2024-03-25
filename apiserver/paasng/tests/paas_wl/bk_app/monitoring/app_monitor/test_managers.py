@@ -26,7 +26,7 @@ from django_dynamic_fixture import G
 from dynaconf.utils.parse_conf import parse_conf_data
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.monitoring.app_monitor import constants
 from paas_wl.bk_app.monitoring.app_monitor.managers import build_service_monitor, service_monitor_kmodel
 from paas_wl.bk_app.monitoring.app_monitor.models import AppMetricsMonitor

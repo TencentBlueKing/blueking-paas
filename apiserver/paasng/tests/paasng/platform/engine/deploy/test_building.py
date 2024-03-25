@@ -22,7 +22,8 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
+from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
+from paas_wl.core.resource import generate_bkapp_name
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler, DockerBuilder
 from paasng.platform.engine.handlers import attach_all_phases

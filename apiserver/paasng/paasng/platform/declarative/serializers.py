@@ -231,6 +231,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                     "name": "beat",
                     "args": shlex.split(constants.CELERY_BEAT_PROCESS),
                     "resQuotaPlan": package_plan,
+                    "proc_command": constants.CELERY_BEAT_PROCESS,
                 }
             )
 

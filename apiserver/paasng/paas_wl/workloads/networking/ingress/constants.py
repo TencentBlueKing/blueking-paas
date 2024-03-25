@@ -18,6 +18,25 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import StructuredEnum
 
+ANNOT_SERVER_SNIPPET = "nginx.ingress.kubernetes.io/server-snippet"
+ANNOT_CONFIGURATION_SNIPPET = "nginx.ingress.kubernetes.io/configuration-snippet"
+ANNOT_REWRITE_TARGET = "nginx.ingress.kubernetes.io/rewrite-target"
+ANNOT_SSL_REDIRECT = "nginx.ingress.kubernetes.io/ssl-redirect"
+# 由于 tke 集群默认会为没有绑定 CLB 的 Ingress 创建并绑定公网 CLB 的危险行为，
+# bcs-webhook 会对下发/更新配置时没有指定 clb 的 Ingress 进行拦截，在关闭 tke 集群的 l7-lb-controller 组件后
+# 可以在下发 Ingress 时候添加注解 bkbcs.tencent.com/skip-filter-clb: "true" 以跳过 bcs-webhook 的拦截
+# l7-lb-controller 状态查询：kubectl get deploy l7-lb-controller -n kube-system
+ANNOT_SKIP_FILTER_CLB = "bkbcs.tencent.com/skip-filter-clb"
+
+# Annotations managed by system
+reserved_annotations = {
+    ANNOT_SERVER_SNIPPET,
+    ANNOT_CONFIGURATION_SNIPPET,
+    ANNOT_REWRITE_TARGET,
+    ANNOT_SSL_REDIRECT,
+    ANNOT_SKIP_FILTER_CLB,
+}
+
 
 class AppDomainSource(int, StructuredEnum):
     # "BUILT_IN" is reserved for the default ingress's domain, it looks like '{engine_app_name}.apps.com'

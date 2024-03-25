@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,

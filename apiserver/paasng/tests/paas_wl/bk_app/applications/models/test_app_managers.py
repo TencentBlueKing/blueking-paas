@@ -19,8 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.applications.models.managers import AppConfigVarManager
-from paas_wl.bk_app.applications.models.managers.app_metadata import WlAppMetadata
+from paas_wl.bk_app.applications.managers import AppConfigVarManager, WlAppMetadata
 from tests.paas_wl.utils.wl_app import create_wl_app
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])

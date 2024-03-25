@@ -45,8 +45,8 @@ class TestBuildProcessExecutor:
         # TODO: Too much mocks, both tests and codes need refactor
         with mock.patch(
             "paasng.platform.engine.deploy.bg_build.bg_build.BuildProcessExecutor.start_slugbuilder"
-        ), mock.patch("paasng.platform.engine.deploy.bg_build.bg_build.get_scheduler_client_by_app"), mock.patch(
-            "paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"
-        ):
+        ), mock.patch("paasng.platform.engine.deploy.bg_build.bg_build.BuildHandler"), mock.patch(
+            "paasng.platform.engine.deploy.bg_build.bg_build.NamespacesHandler"
+        ), mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"):
             bpe.execute({"image": ""})
         assert build_proc.status == BuildStatus.SUCCESSFUL.value, "部署失败"

@@ -29,7 +29,7 @@ from django.core.management.base import BaseCommand
 from paas_wl.bk_app.applications.api import get_latest_build_id
 from paas_wl.bk_app.applications.managers import get_metadata, update_metadata
 from paas_wl.bk_app.applications.models.release import Release
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paasng.plat_admin.admin_cli.cmd_utils import CommandBasicMixin
 from paasng.plat_admin.admin_cli.deploy import list_proc_types, refresh_services, wait_for_release
@@ -125,11 +125,11 @@ class Command(BaseCommand, CommandBasicMixin):
         wl_app = env.wl_app
 
         self.print("Remove the workloads deployed using mapper v2.")
-        s_client = get_scheduler_client_by_app(env.wl_app)
+        proc_handler = ProcessesHandler.new_by_app(env.wl_app)
         for proc_type in list_proc_types(env):
             self.print(f"Deleting process: {proc_type}...")
             proc_config = get_mapper_proc_config_latest(wl_app, proc_type)
-            s_client.processes_handler.delete_gracefully(proc_config)
+            proc_handler.processes_handler.delete_gracefully(proc_config)
 
         # TODO: Check if v1 workload resources are still there, if not, report error and quit.
         self.print("Refreshing service resources, requests will be forwarded to older workloads...")
@@ -146,10 +146,10 @@ class Command(BaseCommand, CommandBasicMixin):
         update_metadata(wl_app, mapper_version="v1")
         self.print("Remove the workloads deployed using mapper v1.")
         try:
-            s_client = get_scheduler_client_by_app(env.wl_app)
+            proc_handler = ProcessesHandler.new_by_app(env.wl_app)
             for proc_type in list_proc_types(env):
                 self.print(f"Deleting process: {proc_type}...")
                 proc_config = get_mapper_proc_config_latest(wl_app, proc_type)
-                s_client.processes_handler.delete_gracefully(proc_config)
+                proc_handler.delete_gracefully(proc_config)
         finally:
             update_metadata(wl_app, mapper_version=old_version)

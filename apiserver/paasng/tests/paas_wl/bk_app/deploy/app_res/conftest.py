@@ -18,17 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional
 
-import pytest
-
-from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
-
-
-@pytest.fixture()
-def scheduler_client() -> "K8sScheduler":
-    """Scheduler client connecting to testing cluster"""
-    return K8sScheduler.from_cluster_name(CLUSTER_NAME_FOR_TESTING)
-
 
 def construct_foo_pod(name: str, labels: Optional[Dict] = None, restart_policy: str = "Always") -> Dict:
     return {

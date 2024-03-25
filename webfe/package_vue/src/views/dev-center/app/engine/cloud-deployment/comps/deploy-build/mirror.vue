@@ -124,13 +124,17 @@
               :property="'use_devops_pipeline'"
               v-if="curAppInfo.feature?.DEVOPS_PIPELINE_CNB"
             >
-              <bk-checkbox v-model="mirrorData.use_devops_pipeline"></bk-checkbox>  
+              <bk-switcher
+                v-model="mirrorData.use_devops_pipeline"
+                theme="primary"
+                size="small"
+              />
               <span class="tips" @click.stop>
                 <bk-icon type="info-circle" />
-                {{ $t('使用 DevCloud 构建机，支持从工蜂、GitHub 等拉取依赖（如应用使用 go.mod，请勾选此选项）。更多说明请参考：') }} <a
+                {{ $t('使用 Devcloud 构建机，支持从工蜂、Github 等平台拉取依赖，启用后需要调整代码添加凭证') }} <a
                   target="_blank"
                   :href="GLOBAL.DOC.DEVOPS_PIPELINE_CNB"
-                > {{ $t('蓝盾流水线构建') }} </a>
+                > {{ $t('查看使用指南') }} </a>
               </span>
             </bk-form-item>
             <template v-if="mirrorData.build_method === 'buildpack'">

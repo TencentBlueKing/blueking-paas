@@ -863,8 +863,8 @@ export default {
   '的应用 ID 为': 'APP ID is',
   '故无法在当前应用下创建蓝鲸运维开发平台的模块。': 'Therefore, it is impossible to create modules of the BlueKing visualization development platform under the current APP.',
   蓝盾流水线构建: 'Build by devops pipeline',
-  '使用 DevCloud 构建机，支持从工蜂、GitHub 等拉取依赖（如应用使用 go.mod，请勾选此选项）。更多说明请参考：':
-    'Use DevCloud machine to support pull dependencies from TC git, GitHub, etc. (If the application uses go.mod, please check this option). For more instructions please refer to:',
+  '使用 Devcloud 构建机，支持从工蜂、Github 等平台拉取依赖，启用后需要调整代码添加凭证':
+    'Use Devcloud machine to support pull dependencies from TC git or Github. After enabling it, you need to adjust the code and add credentials.',
   构建方式: 'Deploy methods',
   提供源码: 'From a source repository',
   提供镜像: 'From a container image',

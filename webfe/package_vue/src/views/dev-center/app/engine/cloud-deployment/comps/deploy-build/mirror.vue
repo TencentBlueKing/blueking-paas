@@ -131,7 +131,7 @@
               />
               <span class="tips" @click.stop>
                 <bk-icon type="info-circle" />
-                {{ $t('使用 Devcloud 构建机，支持从工蜂、Github 等平台拉取依赖，启用后需要调整代码添加凭证') }} <a
+                {{ $t('支持从工蜂、Github 等平台拉取依赖，启用后需要调整代码添加凭证') }} <a
                   target="_blank"
                   :href="GLOBAL.DOC.DEVOPS_PIPELINE_CNB"
                 > {{ $t('查看使用指南') }} </a>
@@ -774,6 +774,15 @@ export default {
         margin-top: 0 !important;
       }
     }
+  }
+}
+
+.tips {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #979ba5;
+  i {
+    font-size: 14px !important;
   }
 }
 

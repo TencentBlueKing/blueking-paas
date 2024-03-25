@@ -53,7 +53,6 @@ class ProcessServiceSerializer(AppEntitySerializer["ProcessService"]):
 
         :param original_obj: if given, will update resource_version and other necessary fields
         """
-        assert isinstance(obj, ProcessService), 'obj must be "ProcessService" type'
         service = obj
         kube_selector = get_process_selector(service.app, service.process_type)
         body: Dict[str, Any] = {

@@ -57,6 +57,7 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     QueryMountSourcesSLZ,
     QueryMountsSLZ,
     ResQuotaPlanSLZ,
+    UpdateMountSourceSLZ,
     UpsertMountSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
@@ -337,7 +338,7 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         enabled = check_persistent_storage_enabled(application=app)
         if not enabled:
             raise error_codes.CREATE_VOLUME_SOURCE_FAILED.f(_("当前应用暂不支持持久存储功能，请联系管理员"))
-        slz = CreateMountSourceSLZ(data=request.data)
+        slz = CreateMountSourceSLZ(data=request.data, context={"application_id": app.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
@@ -348,13 +349,31 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
         )
 
+        params = {"application_id": app.id, "environment_name": environment_name, "storage_size": storage_size}
+        if display_name := validated_data.get("display_name"):
+            params["display_name"] = display_name
+
         controller = init_volume_source_controller(source_type)
-        source = controller.create_by_app(
-            application_id=app.id, environment_name=environment_name, storage_size=storage_size
-        )
+        source = controller.create_by_app(**params)
 
         slz = MountSourceSLZ(source)
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(request_body=UpdateMountSourceSLZ, responses={200: MountSourceSLZ})
+    def update(self, request, code):
+        app = self.get_application()
+
+        slz = UpdateMountSourceSLZ(data=request.data, context={"application_id": app.id})
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        controller = init_volume_source_controller(data.get("source_type"))
+        source = controller.model_class.objects.get(application_id=app.id, name=data.get("source_name"))
+        source.display_name = data.get("display_name")
+        source.save(update_fields=["display_name"])
+
+        slz = MountSourceSLZ(source)
+        return Response(data=slz.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, code):
         app = self.get_application()

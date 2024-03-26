@@ -190,6 +190,7 @@ class CreateMountSourceSLZ(serializers.Serializer):
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
     persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
+    display_name = serializers.CharField(max_length=63, required=False)
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -197,12 +198,37 @@ class CreateMountSourceSLZ(serializers.Serializer):
 
         if storage_size != PersistentStorageSize.P_1G.value and environment_name == MountEnvName.STAG.value:
             raise serializers.ValidationError("预发布环境仅支持 1G 的持久存储")
+
+        # 检查挂载资源 display_name 是否存在
+        application_id = self.context.get("application_id")
+        source_type = attrs["source_type"]
+        display_name = attrs.get("display_name")
+        controller = init_volume_source_controller(source_type)
+        if controller.list_by_app(application_id).filter(display_name=display_name):
+            raise serializers.ValidationError(_("已存在同名挂载资源"))
         return attrs
 
 
 class DeleteMountSourcesSLZ(serializers.Serializer):
     source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+
+
+class UpdateMountSourceSLZ(serializers.Serializer):
+    source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+    display_name = serializers.CharField(max_length=63, required=True)
+
+    def validate(self, attrs):
+        # 检查挂载资源 display_name 是否存在
+        application_id = self.context.get("application_id")
+        source_type = attrs["source_type"]
+        display_name = attrs.get("display_name")
+        controller = init_volume_source_controller(source_type)
+        query_set = controller.list_by_app(application_id).exclude(name=attrs["source_name"])
+        if query_set.filter(display_name=display_name).exists():
+            raise serializers.ValidationError(_("该名称已存在"))
+        return attrs
 
 
 class MountSourceSLZ(serializers.Serializer):
@@ -233,4 +259,8 @@ class MountSourceSLZ(serializers.Serializer):
         return [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]
 
     def get_display_name(self, obj):
-        return obj.display_name
+        if obj.display_name:
+            return obj.display_name
+        else:
+            source_type = self.get_source_type(obj)
+            return f"{source_type}-{obj.created.strftime('%y%m%d%H%M')}"

@@ -56,6 +56,7 @@ def start_bg_build_process(
     :param deploy_id: The ID of the deployment object.
     :param bp_id: The ID of the build process object.
     """
+    deployment = Deployment.objects.get(pk=deploy_id)
     build_process = BuildProcess.objects.get(pk=bp_id)
     # Make a new channel if stream_channel_id is given
 
@@ -69,12 +70,10 @@ def start_bg_build_process(
 
     if use_devops_pipeline:
         logger.info("deployment %s, build process %s use devops pipeline to build image", deploy_id, bp_id)
-        devops_pipeline_bp_executor = DevopsPipelineBuildProcessExecutor(
-            Deployment.objects.get(pk=deploy_id), build_process, stream
-        )
+        devops_pipeline_bp_executor = DevopsPipelineBuildProcessExecutor(deployment, build_process, stream)
         devops_pipeline_bp_executor.execute(metadata=metadata)
     else:
-        k8s_bp_executor = K8sBuildProcessExecutor(Deployment.objects.get(pk=deploy_id), build_process, stream)
+        k8s_bp_executor = K8sBuildProcessExecutor(deployment, build_process, stream)
         k8s_bp_executor.execute(metadata=metadata)
 
 

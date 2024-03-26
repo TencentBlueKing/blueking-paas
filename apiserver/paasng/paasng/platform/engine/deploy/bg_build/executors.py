@@ -379,12 +379,10 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
 
         注：蓝盾流水线构建只支持镜像制品，不支持 slug 包
         """
-        procfile = {}
-        if "procfile" in metadata:
-            procfile = metadata["procfile"]
-
-        if "image" not in metadata:
+        if not metadata.get("image"):
             raise KeyError("metadata.image is required")
+
+        procfile = metadata.get("procfile") or {}
 
         build_inst = Build.objects.create(
             owner=self.deployment.operator,

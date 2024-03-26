@@ -294,7 +294,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     image_credential_name = serializers.CharField(help_text="镜像凭证名称", required=False, allow_null=True)
 
     # 高级选项：通过蓝盾流水线构建
-    use_devops_pipeline = serializers.BooleanField(help_text="是否使用蓝盾流水线构建", required=False, default=False)
+    use_devops_pipeline = serializers.BooleanField(help_text="是否使用蓝盾流水线构建", default=False)
 
     def validate(self, attrs):
         build_method = RuntimeType(attrs["build_method"])

@@ -29,7 +29,7 @@ from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -144,3 +144,29 @@ class TestCNativeProcController:
         # Turn off the autoscaling
         CNativeProcController(bk_stag_env).scale("web", False, None)
         assert BkAppProcScaler(bk_stag_env).get_autoscaling("web") is None
+
+    @pytest.mark.usefixtures("_deploy_stag_env")
+    def test_scale_down_to_one(self, bk_stag_env, web_proc_factory):
+        web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web")
+        assert proc_spec.target_replicas == 1
+
+        # Scale the process
+        CNativeProcController(bk_stag_env).scale("web", False, 2)
+        assert ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web").target_replicas == 1
+        assert (
+            ProcessSpecEnvOverlay.objects.get(
+                proc_spec=proc_spec,
+                environment_name=bk_stag_env.environment,
+            ).target_replicas
+            == 2
+        )
+
+        # Stop the process
+        CNativeProcController(bk_stag_env).scale("web", False, 1)
+        assert ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web").target_replicas == 1
+        assert not ProcessSpecEnvOverlay.objects.filter(
+            proc_spec=proc_spec,
+            environment_name=bk_stag_env.environment,
+        ).exists()

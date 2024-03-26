@@ -67,13 +67,14 @@ from paasng.platform.bkapp_model.manifest import (
     get_manifest,
 )
 from paasng.platform.bkapp_model.models import (
+    DeclarativeEnvironVar,
     DomainResolution,
     ModuleProcessSpec,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
@@ -161,6 +162,41 @@ class TestEnvVarsManifestConstructor:
             EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
         ]
 
+    def test_declarative(self, bk_module, bk_stag_env, blank_resource):
+        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+
+        EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="1")]
+        assert blank_resource.spec.envOverlay.envVariables == [
+            EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            EnvVarOverlay(envName="stag", name="STAG", value="1"),
+        ]
+
+    def test_override(self, bk_module, bk_stag_env, blank_resource):
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG", value="2")
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG_XX", value="2")
+        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+        # case: 是否覆盖与顺序无关.
+        ConfigVar.objects.create(
+            module=bk_module,
+            environment_id=ENVIRONMENT_ID_FOR_GLOBAL,
+            key="GLOBAL",
+            value="2",
+            is_global=True,
+        )
+
+        EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="2")]
+        assert blank_resource.spec.envOverlay.envVariables == [
+            EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            EnvVarOverlay(envName="stag", name="STAG", value="2"),
+            EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
+        ]
+
 
 class TestBuiltinAnnotsManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
@@ -168,10 +204,9 @@ class TestBuiltinAnnotsManifestConstructor:
         BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
 
         annots = blank_resource.metadata.annotations
-        assert (
-            annots["bkapp.paas.bk.tencent.com/image-credentials"]
-            == f"{generate_bkapp_name(bk_module)}--dockerconfigjson"
-        )
+        assert annots[
+            "bkapp.paas.bk.tencent.com/image-credentials"
+        ] == f"{generate_bkapp_name(bk_module)}--dockerconfigjson"
         assert annots["bkapp.paas.bk.tencent.com/module-name"] == bk_module.name
         assert annots["bkapp.paas.bk.tencent.com/name"] == app.name
         assert annots["bkapp.paas.bk.tencent.com/region"] == app.region

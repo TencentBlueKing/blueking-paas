@@ -75,6 +75,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
 from paasng.platform.bkapp_model.models import (
+    DeclarativeEnvironVar,
     DomainResolution,
     ModuleProcessSpec,
     ProcessSpecEnvOverlay,
@@ -87,9 +88,9 @@ from paasng.platform.bkapp_model.utils import (
     override_env_vars_overlay,
 )
 from paasng.platform.declarative.models import DeploymentDescription
+from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
-from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -327,19 +328,41 @@ class EnvVarsManifestConstructor(ManifestConstructor):
     """Construct the env variables part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        # The global variables
-        for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by("key"):
-            model_res.spec.configuration.env.append(EnvVar(name=var.key, value=var.value))
+        g_declarative_vars = [
+            EnvVar(name=var.key, value=var.value, environment_name=ConfigVarEnvName.GLOBAL)
+            for var in DeclarativeEnvironVar.objects.filter(
+                module=module, environment_name=ConfigVarEnvName.GLOBAL
+            ).order_by("key")
+        ]
+        g_ui_vars = [
+            EnvVar(name=var.key, value=var.value)
+            for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by(
+                "key"
+            )
+        ]
+        model_res.spec.configuration.env = merge_env_vars(
+            g_declarative_vars, g_ui_vars, strategy=MergeStrategy.OVERRIDE
+        )
 
         # The environment specific variables
         overlay = model_res.spec.envOverlay
         if not overlay:
-            overlay = EnvOverlay()
-        for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
-            for var in ConfigVar.objects.filter(module=module, environment=module.get_envs(env)).order_by("key"):
-                overlay.append_item("envVariables", EnvVarOverlay(envName=env, name=var.key, value=var.value))
-
-        model_res.spec.envOverlay = overlay
+            overlay = model_res.spec.envOverlay = EnvOverlay()
+        scoped_declarative_vars = [
+            EnvVarOverlay(envName=var.environment_name, name=var.key, value=var.value)
+            for var in DeclarativeEnvironVar.objects.filter(module=module)
+            .exclude(environment_name=ConfigVarEnvName.GLOBAL)
+            .order_by("key")
+        ]
+        scoped_ui_vars = [
+            EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.value)
+            for var in ConfigVar.objects.filter(module=module)
+            .exclude(is_global=True)
+            .order_by("environment__environment", "key")
+        ]
+        overlay.envVariables = merge_env_vars_overlay(
+            scoped_declarative_vars, scoped_ui_vars, strategy=MergeStrategy.OVERRIDE
+        )
 
 
 class HooksManifestConstructor(ManifestConstructor):

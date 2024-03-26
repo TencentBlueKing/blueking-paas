@@ -57,7 +57,6 @@ def merge_env_vars_overlay(
     """Merge two env variable list, if a conflict was found, will resolve it by the given strategy.
 
     Supported strategies:
-
     - MergeStrategy.OVERRIDE: will use the one in y if x and y have same name EnvVar
     - MergeStrategy.IGNORE: will ignore the EnvVar in y if x and y have same name EnvVar
     """

@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Any, Dict, Mapping, Optional, Union
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 import cattr
 from attrs import define, fields
@@ -26,7 +26,7 @@ from django.db.transaction import atomic
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.importer import import_manifest
+from paasng.platform.bkapp_model.importer import env_vars, import_manifest
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
@@ -77,6 +77,14 @@ def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
     }
 
 
+def get_declarative_env_vars(spec: bk_app.BkAppSpec) -> Tuple[List[bk_app.EnvVar], List[bk_app.EnvVarOverlay]]:
+    # 应用描述文件中的环境变量不展示到产品页面
+    overlay_env_vars: List[bk_app.EnvVarOverlay] = []
+    if spec.envOverlay:
+        overlay_env_vars = spec.envOverlay.envVariables or []
+    return spec.configuration.env, overlay_env_vars
+
+
 class DeploymentDeclarativeController:
     """A controller which process deployment descriptions"""
 
@@ -116,6 +124,7 @@ class DeploymentDeclarativeController:
                 module,
                 input_data=convert_bkapp_spec_to_manifest(deploy_desc.spec),
             )
+            env_vars.import_declarative_env_vars(module, *get_declarative_env_vars(desc.spec))
             if hooks := deploy_desc.get_deploy_hooks():
                 self.deployment.update_fields(hooks=hooks)
         else:

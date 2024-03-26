@@ -16,13 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.core.resource import generate_bkapp_name
+from .app_build import mark_as_latest_artifact
+from .app_configvar import AppConfigVarManager
+from .app_metadata import WlAppMetadata, get_metadata, update_metadata
 
-
-def make_image_pull_secret_name(wl_app: WlApp) -> str:
-    """Return the secret name for image pull credentials"""
-    if wl_app.type == WlAppType.CLOUD_NATIVE:
-        return f"{generate_bkapp_name(wl_app)}--dockerconfigjson"
-    return f"{wl_app.scheduler_safe_name}--dockerconfigjson"
+__all__ = ["AppConfigVarManager", "WlAppMetadata", "get_metadata", "update_metadata", "mark_as_latest_artifact"]

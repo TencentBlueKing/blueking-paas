@@ -24,7 +24,7 @@ import pytest
 import urllib3
 from django.conf import settings
 
-from paas_wl.bk_app.applications.models.managers.app_configvar import AppConfigVarManager
+from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paasng.platform.engine.deploy.bg_build.utils import (
     generate_builder_env_vars,
     generate_slug_path,

@@ -16,6 +16,31 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .app_configvar import AppConfigVarManager
+import logging
+from dataclasses import dataclass
+from typing import List
 
-__all__ = ["AppConfigVarManager"]
+from paas_wl.infras.resources.base.crd import KServiceMonitor
+from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
+
+from .entities import Endpoint, ServiceSelector
+from .kres_slzs import ServiceMonitorDeserializer, ServiceMonitorSerializer
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ServiceMonitor(AppEntity):
+    """ServiceMonitor 通过 selector 过滤需要监控的 Service, 并通过访问 endpoint 描述的端口进行数据采集"""
+
+    endpoint: Endpoint
+    selector: ServiceSelector
+    match_namespaces: List[str]
+
+    class Meta:
+        kres_class = KServiceMonitor
+        deserializer = ServiceMonitorDeserializer
+        serializer = ServiceMonitorSerializer
+
+
+service_monitor_kmodel: AppEntityManager[ServiceMonitor] = AppEntityManager(ServiceMonitor)

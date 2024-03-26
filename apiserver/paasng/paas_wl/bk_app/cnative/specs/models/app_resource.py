@@ -22,7 +22,6 @@ import yaml
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pydantic import ValidationError as PDValidationError
-from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
@@ -35,7 +34,8 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     ObjectMetadata,
 )
 from paas_wl.core.env import EnvIsRunningHub
-from paas_wl.core.resource import CNativeBkAppNameGenerator
+from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.utils.basic import to_error_string
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -254,15 +254,6 @@ def update_app_resource(app: Application, module: Module, payload: Dict):
         raise ValueError(f"{app.id} not initialized")
 
     model_resource.use_resource(obj)
-
-
-def to_error_string(exc: PDValidationError) -> str:
-    """Transform a pydantic Exception object to a one-line string"""
-    # TODO: Improve error message format
-    return display_errors(exc.errors()).replace("\n", " ")
-
-
-generate_bkapp_name = CNativeBkAppNameGenerator.generate
 
 
 # Register env_is_running implementations

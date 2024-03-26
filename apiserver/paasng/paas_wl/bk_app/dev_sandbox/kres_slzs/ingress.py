@@ -25,13 +25,13 @@ from kubernetes.dynamic import ResourceInstance
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.dev_sandbox.entities import IngressDomain, IngressPathBackend
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
-from paas_wl.workloads.networking.ingress.kres_entities.ingress import (
+from paas_wl.workloads.networking.ingress.constants import (
     ANNOT_CONFIGURATION_SNIPPET,
     ANNOT_REWRITE_TARGET,
     ANNOT_SKIP_FILTER_CLB,
     ANNOT_SSL_REDIRECT,
 )
-from paas_wl.workloads.networking.ingress.kres_entities.utils import NginxRegexRewrittenProvider
+from paas_wl.workloads.networking.ingress.kres_slzs.utils import NginxRegexRewrittenProvider
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandboxIngress
@@ -43,7 +43,7 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
     IMPORTANT: This class is not compatible with ingress-nginx < 1.0
     Ref: https://kubernetes.github.io/ingress-nginx/deploy/#running-on-kubernetes-versions-older-than-119
 
-    参考 paas_wl.workloads.networking.ingress.kres_entities.ingress.IngressV1Serializer 实现
+    参考 paas_wl.workloads.networking.ingress.kres_slzs.ingress.IngressV1Serializer 实现
     """
 
     @staticmethod

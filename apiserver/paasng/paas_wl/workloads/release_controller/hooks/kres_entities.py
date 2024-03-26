@@ -27,11 +27,11 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 from typing_extensions import Literal
 
+from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
-from paas_wl.infras.resource_templates.utils import AddonManager
+from paas_wl.infras.resource_templates.managers import AddonManager
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import (
     AppEntity,

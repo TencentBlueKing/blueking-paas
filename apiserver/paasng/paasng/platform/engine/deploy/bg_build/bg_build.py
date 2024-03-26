@@ -27,7 +27,8 @@ from django.utils.encoding import force_text
 from paas_wl.bk_app.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
-from paas_wl.bk_app.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
+from paas_wl.bk_app.applications.managers import mark_as_latest_artifact
+from paas_wl.bk_app.applications.models.build import Build, BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, NamespacesHandler, ensure_image_credentials_secret
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.kubestatus import check_pod_health_status

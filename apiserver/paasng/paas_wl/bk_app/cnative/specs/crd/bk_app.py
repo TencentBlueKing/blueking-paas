@@ -21,15 +21,16 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
-import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
-from paas_wl.bk_app.cnative.specs.apis import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
+
+from .metadata import ObjectMetadata
 
 
 class MetaV1Condition(BaseModel):
@@ -137,34 +138,10 @@ class BkAppProcess(BaseModel):
     proc_command: Optional[str] = Field(None)
 
     def get_proc_command(self) -> str:
-        """get_proc_command: Procfile 风格的命令
-        使用场景:
-        - buildpacks 构建方案使用该方法生成 Procfile 文件
-        """
+        """get_proc_command: 生成 Procfile 文件中对应的命令行"""
         if self.proc_command:
             return self.proc_command
-        # Warning: 已知 shlex.join 不支持环境变量, 对于 buildpack 构建的应用, 使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
-        # 例如会报错: Error: '${PORT:-5000}' is not a valid port number.
-        return self._sanitize_proc_command(
-            (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
-        )
-
-    @staticmethod
-    def _sanitize_proc_command(proc_command: str) -> str:
-        """Sanitize the command and arg list, replace some special expressions which can't
-        be interpreted by the operator.
-        """
-        # '${PORT:-5000}' is massively used by the app framework, while it can not work well with shlex.join,
-        # here remove the single quote added by shlex.join.
-        known_cases = [
-            ("':$PORT'", ":$PORT"),
-            ("':${PORT:-5000}'", ":${PORT}"),
-            ("'[::]:${PORT}'", "[::]:${PORT}"),
-            ("'[::]:${PORT:-5000}'", "[::]:${PORT}"),
-        ]
-        for old, new in known_cases:
-            proc_command = proc_command.replace(old, new)
-        return proc_command
+        return generate_bash_command_with_tokens(self.command or [], self.args or [])
 
 
 class Hook(BaseModel):

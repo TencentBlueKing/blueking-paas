@@ -297,5 +297,5 @@ class LogClientAdaptor:
         self, index: str, search: SmartSearch, timeout: int, fields: List[str]
     ) -> List[FieldFilter]:
         """Aggregate fields filters"""
-        # TODO: fields 转成 mappings
-        return self.client.aggregate_fields_filters(index, search, mappings={}, timeout=timeout)
+        mappings = self.client.get_mappings(index, search.time_range, timeout)
+        return self.client.aggregate_fields_filters(index, search, mappings=mappings, timeout=timeout)

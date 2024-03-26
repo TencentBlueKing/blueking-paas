@@ -19,6 +19,8 @@
 package envs
 
 import (
+	"os"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
@@ -272,11 +274,25 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 	if memQuota.Cmp(*medMemQuota) == -1 {
 		divisor = 4
 	}
+	minMemQuota := quota.Div(memQuota, divisor)
+
+	// 当环境变量设置了 CPU_REQUESTS_OVERLAY，优先使用该值作为 CPU Requests 配额
+	cpuRequestsOverlayEnv, exists := os.LookupEnv("CPU_REQUESTS_OVERLAY")
+	if exists {
+		cpuRequestsOverlay, _ := quota.NewQuantity(cpuRequestsOverlayEnv, quota.CPU)
+		minCpuQuota = cpuRequestsOverlay
+	}
+	// 当环境变量设置了 MEMORY_REQUESTS_OVERLAY，优先使用该值作为 Memory Requests 配额
+	memoryRequestsOverlayEnv, exists := os.LookupEnv("MEMORY_REQUESTS_OVERLAY")
+	if exists {
+		memoryRequestsOverlay, _ := quota.NewQuantity(memoryRequestsOverlayEnv, quota.Memory)
+		minMemQuota = memoryRequestsOverlay
+	}
 
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    *minCpuQuota,
-			corev1.ResourceMemory: *quota.Div(memQuota, divisor),
+			corev1.ResourceMemory: *minMemQuota,
 		},
 		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:    *cpuQuota,

@@ -19,11 +19,14 @@
 package envs
 
 import (
+	"os"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -261,6 +264,32 @@ var _ = Describe("Environment overlay related functions", func() {
 			resReq, _ := getter.GetByProc("web")
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+		})
+
+		It("Get Requests Overlay", func() {
+			// 设置环境变量
+			_ = os.Setenv("CPU_REQUESTS_OVERLAY", "100m")
+			_ = os.Setenv("MEMORY_REQUESTS_OVERLAY", "128Mi")
+
+			// 使用DeferCleanup来保证在测试结束后清理环境变量
+			DeferCleanup(func() {
+				_ = os.Unsetenv("CPU_REQUESTS_OVERLAY")
+				_ = os.Unsetenv("MEMORY_REQUESTS_OVERLAY")
+			})
+
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C1G},
+				},
+			}
+			getter := NewProcResourcesGetter(bkapp)
+
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("100m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("128Mi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 		})

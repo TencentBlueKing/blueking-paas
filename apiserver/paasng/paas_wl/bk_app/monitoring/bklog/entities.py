@@ -16,67 +16,39 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional
 
-from paas_wl.bk_app.monitoring.bklog.constants import BkLogConfigType
-from paas_wl.bk_app.monitoring.bklog.models import LabelSelector, LogFilterCondition
-from paas_wl.bk_app.monitoring.bklog.serializers import BKLogConfigDeserializer, BKLogConfigSerializer
-from paas_wl.infras.resources.base import crd
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
-logger = logging.getLogger(__name__)
+@dataclass
+class MatchExpression:
+    key: str
+    operator: Literal["IN", "NotIN", "Exists", "DoesNotExist"]
+    values: Optional[List[str]] = None
 
 
 @dataclass
-class BkAppLogConfig(AppEntity):
-    """BkAppLogConfig 蓝鲸日志采集项配置
+class LabelSelector:
+    """K8S LabelSelector is a label query over a set of resources.
+    The result of matchLabels and matchExpressions are ANDed. An empty
+    label selector matches all objects. A null label selector matches
+    no objects.
 
-    :param data_id: 采集项ID
-    :param paths: 日志采集路径(s)
-    :param filters: bkunifylogbeat filter rule
-    :param encoding: 日志编码
-
-    ---
-    以下字段由平台控制, 暂不允许用户修改
-    :param ext_meta: 日志附带的额外元信息, 例如 {bk_bcs_cluster_id: BCS-K8S-00000}
-    :param label_selector: 标签选择器
-    :param workload_type: 负载类型, 目前只支持 Deployment
-    :
+    :param matchExpressions: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+    :param matchLabels: matchLabels is a map of {key,value} pairs.
+            A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions,
+            whose key field is "key", the operator is "In", and the values array contains only "value".
+            The requirements are ANDed.
     """
 
-    data_id: int
-    paths: List[str]
-    filters: Optional[List[LogFilterCondition]] = None
-    encoding: str = "utf-8"
-
-    ext_meta: Dict[str, str] = field(default_factory=dict)
-    label_selector: LabelSelector = field(default_factory=LabelSelector)
-    workload_type: Literal["Deployment"] = "Deployment"
-    config_type: BkLogConfigType = BkLogConfigType.CONTAINER_LOG
-
-    class Meta:
-        kres_class = crd.BKLogConfig
-        deserializer = BKLogConfigDeserializer
-        serializer = BKLogConfigSerializer
+    matchExpressions: List[MatchExpression] = field(default_factory=list)
+    matchLabels: Dict[str, str] = field(default_factory=dict)
 
 
-class BkAppLogConfigManager(AppEntityManager[BkAppLogConfig]):
-    def __init__(self):
-        super().__init__(BkAppLogConfig)
+@dataclass
+class LogFilterCondition:
+    """Condition is bkunifylogbeat filter rule"""
 
-    def delete(self, res: BkAppLogConfig, non_grace_period: bool = False):
-        namespace = res.app.namespace
-        config_name = res.name
-
-        try:
-            existed_one = self.get(app=res.app, name=config_name)
-        except AppEntityNotFound:
-            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, config_name)
-            return None
-        return super().delete(existed_one, non_grace_period)
-
-
-bklog_config_kmodel = BkAppLogConfigManager()
+    index: int
+    key: str
+    op: str

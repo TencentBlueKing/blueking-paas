@@ -23,7 +23,7 @@ from pydantic import ValidationError as PDValidationError
 from rest_framework import exceptions, serializers
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paas_wl.bk_app.cnative.specs.models import to_error_string
+from paas_wl.utils.basic import to_error_string
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
 from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField

@@ -34,8 +34,9 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
-from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource, generate_bkapp_name
+from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
+from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr

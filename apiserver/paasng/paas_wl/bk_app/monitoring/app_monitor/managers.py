@@ -20,10 +20,10 @@ from typing import Optional
 
 from django.conf import settings
 
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.monitoring.app_monitor import constants
-from paas_wl.bk_app.monitoring.app_monitor.entities import (
+from paas_wl.bk_app.monitoring.app_monitor.kres_entities import (
     Endpoint,
     ServiceMonitor,
     ServiceSelector,

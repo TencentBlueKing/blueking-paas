@@ -18,10 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.cnative.specs.models import create_app_resource, generate_bkapp_name
+from paas_wl.bk_app.cnative.specs.models import create_app_resource
 from paas_wl.bk_app.cnative.specs.procs.exceptions import ProcNotDeployed, ProcNotFoundInRes
 from paas_wl.bk_app.cnative.specs.procs.replicas import BkAppProcScaler
 from paas_wl.bk_app.cnative.specs.resource import deploy
+from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

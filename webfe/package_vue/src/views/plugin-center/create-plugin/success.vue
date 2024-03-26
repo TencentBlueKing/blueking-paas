@@ -7,7 +7,7 @@
           <p>
             <i class="paasng-icon paasng-check-1 text-success" />
           </p>
-          <p>{{ $t('恭喜，插件') }} - {{ extraInfo.name }} "{{ pluginId }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>{{ $t('恭喜，插件') }} - {{ extraInfo.name }} "{{ extraInfo.pluginName }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
           <p>
             <bk-button
               :theme="'primary'"

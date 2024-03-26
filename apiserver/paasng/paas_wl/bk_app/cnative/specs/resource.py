@@ -35,7 +35,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
-from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
+from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.resources.base import base, crd
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app

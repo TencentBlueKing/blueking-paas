@@ -57,10 +57,10 @@ class TestApplicationPermission:
         assert not app_permission_obj.can_delete_application(perm_ctx, raise_exception=False)
 
         # 无权限抛出异常
-        with pytest.raises(PermissionDeniedError) as exec:
+        with pytest.raises(PermissionDeniedError) as exc:
             app_permission_obj.can_delete_application(perm_ctx)
-        assert exec.value.code == PermissionDeniedError.code
-        assert exec.value.data["perms"]["apply_url"] == generate_apply_url(
+        assert exc.value.code == PermissionDeniedError.code
+        assert exc.value.data["perms"]["apply_url"] == generate_apply_url(
             roles.APP_OPERATE_USER,
             action_request_list=[
                 ActionResourcesRequest(

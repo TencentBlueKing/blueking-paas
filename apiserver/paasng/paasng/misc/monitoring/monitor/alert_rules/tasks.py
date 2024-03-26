@@ -20,9 +20,8 @@ import logging
 
 from celery import shared_task
 
+from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manager_cls
 from paasng.platform.applications.models import Application
-
-from .manager import AlertRuleManager
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 @shared_task
 def create_rules(app_code: str, module_name: str, run_env: str):
     try:
-        rule_mgr = AlertRuleManager(Application.objects.get(code=app_code))
+        rule_mgr = alert_rule_manager_cls(Application.objects.get(code=app_code))
         rule_mgr.create_rules(module_name, run_env)
     except Exception:
         logger.exception(
@@ -42,7 +41,7 @@ def create_rules(app_code: str, module_name: str, run_env: str):
 @shared_task
 def update_notice_group(app_code: str):
     try:
-        rule_mgr = AlertRuleManager(Application.objects.get(code=app_code))
+        rule_mgr = alert_rule_manager_cls(Application.objects.get(code=app_code))
         rule_mgr.update_notice_group()
     except Exception:
         logger.exception(f"Unable to update notice group (code: {app_code})")

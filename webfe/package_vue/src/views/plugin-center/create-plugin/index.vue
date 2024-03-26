@@ -194,7 +194,10 @@
           </bk-form-item>
         </bk-form>
       </section>
-      <section class="info-container card-style mt16" v-if="Object.keys(extraFields).length">
+      <section
+        v-if="Object.keys(extraFields).length"
+        :class="['info-container', 'card-style', 'mt16', { mb75: isSticky }]"
+      >
         <div class="base-info-tit">
           {{ $t('更多信息') }}
         </div>
@@ -578,6 +581,7 @@ export default {
         const data = {
           name: this.curPluginItem.name,
           docs: this.curPluginItem.plugin_type.docs,
+          pluginName: params.name,
         };
         localStorage.setItem(pluginDataKey, JSON.stringify(data));
         // 插件引导页
@@ -638,6 +642,10 @@ export default {
   margin: 0 auto;
   .info-container {
     padding: 12px 130px 24px 24px;
+
+    &.mb75 {
+      margin-bottom: 75px;
+    }
   }
   .base-info-tit {
     font-weight: Bold;
@@ -687,6 +695,7 @@ export default {
     background: #FAFBFD;
     box-shadow: 0 -1px 0 0 #DCDEE5;
     margin: 0;
+    z-index: 99;
   }
 }
 .guide-container {

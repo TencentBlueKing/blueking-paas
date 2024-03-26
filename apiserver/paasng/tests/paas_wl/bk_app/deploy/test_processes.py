@@ -157,8 +157,7 @@ class TestCNativeProcController:
         assert ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web").target_replicas == 1
         assert (
             ProcessSpecEnvOverlay.objects.get(
-                proc_spec=proc_spec,
-                environment_name=bk_stag_env.environment,
+                proc_spec=proc_spec, environment_name=bk_stag_env.environment
             ).target_replicas
             == 2
         )
@@ -168,8 +167,7 @@ class TestCNativeProcController:
         assert ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web").target_replicas == 1
         assert (
             ProcessSpecEnvOverlay.objects.get(
-                proc_spec=proc_spec,
-                environment_name=bk_stag_env.environment,
+                proc_spec=proc_spec, environment_name=bk_stag_env.environment
             ).target_replicas
             == 1
         )

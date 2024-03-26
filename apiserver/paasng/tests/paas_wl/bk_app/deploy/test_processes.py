@@ -166,7 +166,10 @@ class TestCNativeProcController:
         # Stop the process
         CNativeProcController(bk_stag_env).scale("web", False, 1)
         assert ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web").target_replicas == 1
-        assert not ProcessSpecEnvOverlay.objects.filter(
-            proc_spec=proc_spec,
-            environment_name=bk_stag_env.environment,
-        ).exists()
+        assert (
+            ProcessSpecEnvOverlay.objects.get(
+                proc_spec=proc_spec,
+                environment_name=bk_stag_env.environment,
+            ).target_replicas
+            == 1
+        )

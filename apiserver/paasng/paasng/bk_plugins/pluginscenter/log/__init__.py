@@ -25,7 +25,7 @@ import cattr
 from paasng.accessories.log.constants import LogType
 from paasng.accessories.log.models import ProcessLogQueryConfig
 from paasng.bk_plugins.pluginscenter.definitions import ElasticSearchParams
-from paasng.bk_plugins.pluginscenter.log.client import LogClientProtocol, instantiate_log_client
+from paasng.bk_plugins.pluginscenter.log.client import LogClientProtocol, PluginLogConfig, instantiate_log_client
 from paasng.bk_plugins.pluginscenter.log.filters import ElasticSearchFilter
 from paasng.bk_plugins.pluginscenter.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.bk_plugins.pluginscenter.log.utils import clean_logs
@@ -252,7 +252,12 @@ def _instantiate_log_client(
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
     # Note: log_config.search_params 返回的是 paasng.accessories.log.models.ElasticSearchParams
     # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致,
-    return instantiate_log_client(log_config, operator), log_config.search_params
+    cfg = PluginLogConfig(
+        backendType=log_config.backend_type,
+        elasticSearchHosts=log_config.elastic_search_host,
+        bkLogConfig=log_config.bk_log_config,
+    )
+    return instantiate_log_client(cfg, operator), log_config.search_params
 
 
 def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:

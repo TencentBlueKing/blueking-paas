@@ -440,10 +440,6 @@ def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env):
     assert blank_resource.metadata.annotations["bkapp.paas.bk.tencent.com/bkpaas-deploy-id"] == "foo-id"
 
 
-def test_apply_app_desc():
-    ...
-
-
 def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
     G(
         DeploymentDescription,

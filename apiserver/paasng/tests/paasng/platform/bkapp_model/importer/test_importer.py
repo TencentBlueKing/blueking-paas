@@ -186,9 +186,7 @@ class TestSvcDiscConfig:
     def test_normal(self, bk_app, bk_module, base_manifest):
         base_manifest["spec"]["svcDiscovery"] = {
             "bkSaaS": [
-                {
-                    "bkAppCode": "foo",
-                },
+                {"bkAppCode": "foo"},
                 {"bkAppCode": "bar", "moduleName": "default"},
                 {"bkAppCode": "bar", "moduleName": "opps"},
             ]

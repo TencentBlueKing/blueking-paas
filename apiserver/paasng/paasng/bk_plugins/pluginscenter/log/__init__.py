@@ -250,13 +250,16 @@ def _instantiate_log_client(
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
     else:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
+
     # Note: log_config.search_params 返回的是 paasng.accessories.log.models.ElasticSearchParams
     # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致,
-    cfg = PluginLogConfig(
-        backendType=log_config.backend_type,
-        elasticSearchHosts=log_config.elastic_search_host,
-        bkLogConfig=log_config.bk_log_config,
-    )
+    class Dummy:
+        backendType = log_config.backend_type
+        elasticSearchHosts = [] if not log_config.elastic_search_host else [log_config.elastic_search_host]
+        bkLogConfig = log_config.bk_log_config
+
+    # 伪造 PluginLogConfig 类型, 欺骗 mypy.
+    cfg = cast(PluginLogConfig, Dummy)
     return instantiate_log_client(cfg, operator), log_config.search_params
 
 

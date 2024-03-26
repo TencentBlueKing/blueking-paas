@@ -29,7 +29,7 @@ from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -146,28 +146,18 @@ class TestCNativeProcController:
         assert BkAppProcScaler(bk_stag_env).get_autoscaling("web") is None
 
     @pytest.mark.usefixtures("_deploy_stag_env")
-    def test_scale_down_to_one(self, bk_stag_env, web_proc_factory):
+    def test_scale_down_to_module_target_replicas(self, bk_stag_env, web_proc_factory):
+        """测试 scale down 目标副本数与模块目标副本数 (ModuleProcessSpec.target_replicas) 一致时,会成功scale down"""
         web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web")
-        assert proc_spec.target_replicas == 1
+        module_target_replicas = proc_spec.target_replicas
+        assert proc_spec.get_target_replicas(bk_stag_env.environment) == module_target_replicas
 
-        # Scale the process
-        CNativeProcController(bk_stag_env).scale("web", False, 2)
-        assert ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web").target_replicas == 1
-        assert (
-            ProcessSpecEnvOverlay.objects.get(
-                proc_spec=proc_spec, environment_name=bk_stag_env.environment
-            ).target_replicas
-            == 2
-        )
+        # Scale up process
+        CNativeProcController(bk_stag_env).scale("web", False, module_target_replicas + 1)
+        assert proc_spec.get_target_replicas(bk_stag_env.environment) == module_target_replicas + 1
 
-        # Stop the process
-        CNativeProcController(bk_stag_env).scale("web", False, 1)
-        assert ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web").target_replicas == 1
-        assert (
-            ProcessSpecEnvOverlay.objects.get(
-                proc_spec=proc_spec, environment_name=bk_stag_env.environment
-            ).target_replicas
-            == 1
-        )
+        # Scale down process
+        CNativeProcController(bk_stag_env).scale("web", False, module_target_replicas)
+        assert proc_spec.get_target_replicas(bk_stag_env.environment) == module_target_replicas

@@ -147,7 +147,7 @@ class TestCNativeProcController:
 
     @pytest.mark.usefixtures("_deploy_stag_env")
     def test_scale_down_to_module_target_replicas(self, bk_stag_env, web_proc_factory):
-        """测试 scale down 目标副本数与模块目标副本数 (ModuleProcessSpec.target_replicas) 一致时,会成功scale down"""
+        """测试 scale down 目标副本数与模块目标副本数( ModuleProcessSpec.target_replicas ) 一致时, 会成功 scale down"""
         web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web")

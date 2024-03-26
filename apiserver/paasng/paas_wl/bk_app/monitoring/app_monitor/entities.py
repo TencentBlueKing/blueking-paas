@@ -16,69 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from kubernetes.dynamic import ResourceInstance
-
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.monitoring.app_monitor import constants
-from paas_wl.infras.resources.base.crd import KServiceMonitor
-from paas_wl.infras.resources.kube_res.base import (
-    AppEntity,
-    AppEntityDeserializer,
-    AppEntityManager,
-    AppEntitySerializer,
-)
-
-logger = logging.getLogger(__name__)
-
-
-class ServiceMonitorDeserializer(AppEntityDeserializer["ServiceMonitor"]):
-    api_version = "monitoring.coreos.com/v1"
-
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ServiceMonitor":
-        spec = kube_data.to_dict()["spec"]
-        endpoint = spec["endpoints"][0]
-        return ServiceMonitor(
-            app=app,
-            name=kube_data["metadata"]["name"],
-            endpoint=Endpoint(
-                interval=endpoint["interval"],
-                path=endpoint["path"],
-                port=endpoint["port"],
-                metric_relabelings=endpoint["metricRelabelings"],
-            ),
-            selector=ServiceSelector(matchLabels=spec["selector"]["matchLabels"]),
-            match_namespaces=spec["namespaceSelector"]["matchNames"],
-        )
-
-
-class ServiceMonitorSerializer(AppEntitySerializer["ServiceMonitor"]):
-    api_version = "monitoring.coreos.com/v1"
-
-    def serialize(self, obj: "ServiceMonitor", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
-        endpoint = obj.endpoint
-        return {
-            "apiVersion": self.get_apiversion(),
-            "kind": "ServiceMonitor",
-            "metadata": {
-                "name": obj.name,
-            },
-            "spec": {
-                "namespaceSelector": {"matchNames": obj.match_namespaces},
-                "endpoints": [
-                    {
-                        "interval": endpoint.interval,
-                        "path": endpoint.path,
-                        "port": endpoint.port,
-                        "metricRelabelings": endpoint.metric_relabelings,
-                    }
-                ],
-                "selector": {"matchLabels": obj.selector.matchLabels},
-            },
-        }
+from . import constants
 
 
 @dataclass
@@ -97,20 +38,3 @@ class Endpoint:
 class ServiceSelector:
     # matchLabels 用于过滤蓝鲸监控 ServiceMonitor 监听的 Service
     matchLabels: Dict[str, str]
-
-
-@dataclass
-class ServiceMonitor(AppEntity):
-    """ServiceMonitor 通过 selector 过滤需要监控的 Service, 并通过访问 endpoint 描述的端口进行数据采集"""
-
-    endpoint: Endpoint
-    selector: ServiceSelector
-    match_namespaces: List[str]
-
-    class Meta:
-        kres_class = KServiceMonitor
-        deserializer = ServiceMonitorDeserializer
-        serializer = ServiceMonitorSerializer
-
-
-service_monitor_kmodel: AppEntityManager[ServiceMonitor] = AppEntityManager(ServiceMonitor)

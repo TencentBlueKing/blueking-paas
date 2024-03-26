@@ -16,13 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
-
-from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
-
-
-@pytest.fixture()
-def scheduler_client() -> "K8sScheduler":
-    """Scheduler client connecting to testing cluster"""
-    return K8sScheduler.from_cluster_name(CLUSTER_NAME_FOR_TESTING)

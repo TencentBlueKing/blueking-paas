@@ -20,7 +20,7 @@ from unittest import mock
 
 import pytest
 
-from paas_wl.bk_app.applications.models.managers.app_metadata import WlAppMetadata
+from paas_wl.bk_app.applications.managers import WlAppMetadata
 from paasng.accessories.paas_analysis.clients import SiteMetricsClient
 from paasng.accessories.paas_analysis.constants import MetricsDimensionType, MetricsInterval, MetricSourceType
 from paasng.accessories.paas_analysis.services import (

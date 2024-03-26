@@ -23,8 +23,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.bk_app.deploy.actions.exceptions import BuildMissingError
-from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.deploy.app_res.controllers import (
+    NamespacesHandler,
+    ProcessesHandler,
+    ensure_image_credentials_secret,
+)
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.bk_app.processes.constants import ProcessTargetStatus
@@ -50,15 +53,15 @@ class DeployAction:
         if not self.release.build:
             raise BuildMissingError(f"no build related to release, app_name={self.wl_app.name}")
 
-        self.scheduler_client = get_scheduler_client_by_app(self.wl_app)
+        self.ns_handler = NamespacesHandler.new_by_app(self.wl_app)
 
     def perform(self):
         # update ProcessSpec.target_status to resume the process for those archived app
         self.wl_app.process_specs.update(target_status=ProcessTargetStatus.START.value)
 
         # create namespace and image credentials secret before deploy for image app.
-        self.scheduler_client.ensure_namespace(self.wl_app.namespace)
-        self.scheduler_client.ensure_image_credentials_secret(self.wl_app)
+        self.ns_handler.ensure_namespace(self.wl_app.namespace)
+        ensure_image_credentials_secret(self.wl_app)
         # update deploy info in scheduler module
         processes = AppProcessManager(app=self.wl_app).assemble_processes(extra_envs=self.extra_envs)
         handler = ProcessesHandler.new_by_app(self.wl_app)

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
 
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.applications.managers.app_metadata import get_metadata
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp

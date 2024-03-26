@@ -75,6 +75,10 @@ class TestProcessesField:
             web.get_proc_command()
             == 'gunicorn wsgi -w 4 -b [::]:${PORT} --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
+        assert (
+            bk_deployment.declarative_config.spec.processes[0].get_proc_command()
+            == 'bash -c \'"$(eval echo \\"$0\\")" "$(eval echo \\"${1}\\")" "$(eval echo \\"${2}\\")" "$(eval echo \\"${3}\\")" "$(eval echo \\"${4}\\")" "$(eval echo \\"${5}\\")" "$(eval echo \\"${6}\\")" "$(eval echo \\"${7}\\")" "$(eval echo \\"${8}\\")" "$(eval echo \\"${9}\\")" "$(eval echo \\"${10}\\")" "$(eval echo \\"${11}\\")"\' gunicorn wsgi -w 4 -b \'[::]:${PORT:-5000}\' --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
+        )
 
 
 class TestEnvVariablesField:

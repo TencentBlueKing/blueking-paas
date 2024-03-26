@@ -24,7 +24,7 @@ from django.db.models import QuerySet
 
 from paas_wl.bk_app.applications.models import Config
 from paas_wl.bk_app.monitoring.bklog.constants import WLAPP_NAME_ANNO_KEY
-from paas_wl.bk_app.monitoring.bklog.entities import bklog_config_kmodel
+from paas_wl.bk_app.monitoring.bklog.kres_entities import bklog_config_kmodel
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.core.region.models import get_all_regions

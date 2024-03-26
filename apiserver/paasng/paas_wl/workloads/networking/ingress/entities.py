@@ -16,7 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
+
+from attrs import define
 
 
 @dataclass
@@ -25,3 +28,31 @@ class AutoGenDomain:
 
     host: str
     https_enabled: bool = False
+
+
+@dataclass
+class PIngressDomain:
+    """Ingress Domain object
+
+    :param path_prefix_list: Accessable paths for current domain, default value: ['/']
+    """
+
+    host: str
+
+    tls_enabled: bool = False
+    tls_secret_name: str = ""
+    path_prefix_list: List[str] = field(default_factory=lambda: ["/"])
+
+    @property
+    def primary_prefix_path(self) -> str:
+        return self.path_prefix_list[0]
+
+
+@define
+class PServicePortPair:
+    """Service port pair"""
+
+    name: str
+    port: int
+    target_port: int
+    protocol: str = "TCP"

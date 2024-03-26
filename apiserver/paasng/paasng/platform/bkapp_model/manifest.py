@@ -25,7 +25,7 @@ from typing import Dict, List, Optional, Tuple
 from django.conf import settings
 from kubernetes.utils.quantity import parse_quantity
 
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import (
     ACCESS_CONTROL_ANNO_KEY,
     BKAPP_CODE_ANNO_KEY,
@@ -66,9 +66,10 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
-from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
+from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
+from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment

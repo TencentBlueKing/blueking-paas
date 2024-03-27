@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import DeclarativeEnvironVar, ModuleProcessSpec
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
@@ -31,6 +31,7 @@ from paasng.platform.declarative.deployment.validations.v2 import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.declarative.serializers import validate_desc
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.utils.mocks.engine import mock_cluster_service
@@ -79,7 +80,7 @@ class TestEnvVariablesField:
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
         assert "env_variables" in str(exc_info.value)
 
-    def test_spec(self, bk_deployment):
+    def test_spec(self, bk_module, bk_deployment):
         json_data = {
             "env_variables": [
                 {"key": "FOO", "value": "1"},
@@ -92,6 +93,22 @@ class TestEnvVariablesField:
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert len(desc_obj.get_env_variables()) == 2
+        assert DeclarativeEnvironVar.objects.filter(module=bk_module).count() == 2
+
+    def test_declarative_environ_vars(self, bk_module, bk_deployment):
+        json_data = {
+            "language": "python",
+            "env_variables": [
+                {"key": "A", "value": "a"},
+                {"key": "A", "value": "a", "environment_name": ConfigVarEnvName.STAG.value},
+                {"key": "A", "value": "a", "environment_name": ConfigVarEnvName.PROD.value},
+                {"key": "B", "value": "b", "environment_name": ConfigVarEnvName.GLOBAL.value},
+            ],
+        }
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert DeclarativeEnvironVar.objects.filter(module=bk_module).count() == 4
 
 
 class TestEnvVariablesReader:

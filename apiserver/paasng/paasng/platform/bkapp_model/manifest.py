@@ -87,10 +87,9 @@ from paasng.platform.bkapp_model.utils import (
     merge_env_vars_overlay,
     override_env_vars_overlay,
 )
-from paasng.platform.declarative.models import DeploymentDescription
-from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
+from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -511,8 +510,6 @@ def get_bkapp_resource_for_deploy(
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
     apply_builtin_env_vars(model_res, env)
-    if deployment is not None:
-        apply_deploy_desc(model_res, deployment)
 
     # TODO: Missing parts: "build"
     return model_res
@@ -562,39 +559,3 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
         if not overlay:
             overlay = model_res.spec.envOverlay = EnvOverlay(envVariables=[])
         overlay.envVariables = override_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay)
-
-
-def apply_deploy_desc(model_res: BkAppResource, deployment: Deployment):
-    """Apply extra infos definded in app_desc.yaml to the resource object.
-    extra infos includes:
-    - config vars, for which are in conflict with those in model_res, will be ignored
-
-    # TODO: 描述文件里已经声明了一份 BkAppSpec, 是否可以将这逻辑左移到 ManifestConstructor 中?
-    """
-    try:
-        deploy_desc = DeploymentDescription.objects.get(deployment=deployment)
-    except DeploymentDescription.DoesNotExist:
-        return
-
-    global_env_vars = []
-    overlay_env_vars = []
-    for env_var in deploy_desc.get_env_variables():
-        if env_var["environment_name"] == ConfigVarEnvName.GLOBAL:
-            global_env_vars.append(EnvVar(name=env_var["key"], value=env_var["value"]))
-        else:
-            overlay_env_vars.append(
-                EnvVarOverlay(name=env_var["key"], value=env_var["value"], envName=env_var["environment_name"])
-            )
-
-    if global_env_vars:
-        model_res.spec.configuration.env = merge_env_vars(
-            model_res.spec.configuration.env, global_env_vars, strategy=MergeStrategy.IGNORE
-        )
-
-    if overlay_env_vars:
-        overlay = model_res.spec.envOverlay
-        if not overlay:
-            overlay = model_res.spec.envOverlay = EnvOverlay(envVariables=[])
-        overlay.envVariables = merge_env_vars_overlay(
-            overlay.envVariables or [], overlay_env_vars, strategy=MergeStrategy.IGNORE
-        )

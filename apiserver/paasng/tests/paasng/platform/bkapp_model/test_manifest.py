@@ -62,7 +62,6 @@ from paasng.platform.bkapp_model.manifest import (
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
     apply_builtin_env_vars,
-    apply_deploy_desc,
     apply_env_annots,
     get_manifest,
 )
@@ -174,7 +173,7 @@ class TestEnvVarsManifestConstructor:
             EnvVarOverlay(envName="stag", name="STAG", value="1"),
         ]
 
-    def test_override(self, bk_module, bk_stag_env, blank_resource):
+    def test_override_declaratived(self, bk_module, bk_stag_env, blank_resource):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG", value="2")
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG_XX", value="2")
         G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
@@ -525,19 +524,3 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
 
         assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
         assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
-
-
-def test_apply_deploy_desc_spec_v2(blank_resource, bk_deployment):
-    G(
-        DeploymentDescription,
-        deployment=bk_deployment,
-        env_variables=[
-            {"key": "FOO", "value": "1", "environment_name": "_global_"},
-            {"key": "BAR", "value": "2", "environment_name": "stag"},
-            {"key": "BAZ", "value": "3", "environment_name": "prod"},
-        ],
-    )
-    apply_deploy_desc(blank_resource, bk_deployment)
-    assert {item.name for item in blank_resource.spec.configuration.env} == {"FOO"}
-    assert {item.name for item in blank_resource.spec.envOverlay.envVariables if item.envName == "stag"} == {"BAR"}
-    assert {item.name for item in blank_resource.spec.envOverlay.envVariables if item.envName == "prod"} == {"BAZ"}

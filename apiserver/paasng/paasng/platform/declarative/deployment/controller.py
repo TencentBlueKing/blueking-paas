@@ -124,7 +124,6 @@ class DeploymentDeclarativeController:
                 module,
                 input_data=convert_bkapp_spec_to_manifest(deploy_desc.spec),
             )
-            env_vars.import_declarative_env_vars(module, *get_declarative_env_vars(desc.spec))
             if hooks := deploy_desc.get_deploy_hooks():
                 self.deployment.update_fields(hooks=hooks)
         else:
@@ -138,6 +137,8 @@ class DeploymentDeclarativeController:
             if hooks := deploy_desc.get_deploy_hooks():
                 sync_hooks(module, hooks)
                 self.deployment.update_fields(hooks=hooks)
+        # 导入描述性环境变量
+        env_vars.import_declarative_env_vars(module, *get_declarative_env_vars(desc.spec))
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)

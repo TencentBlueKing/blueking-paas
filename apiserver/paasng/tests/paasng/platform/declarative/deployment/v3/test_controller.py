@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import DeclarativeEnvironVar, ModuleProcessSpec
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
@@ -31,6 +31,7 @@ from paasng.platform.declarative.deployment.validations.v3 import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.declarative.serializers import validate_desc
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
@@ -117,6 +118,36 @@ class TestEnvVariablesField:
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert len(desc_obj.get_env_variables()) == 3
+
+    def test_declarative_environ_vars(self, bk_module, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "configuration": {"env": [{"name": "FOO", "value": "1"}, {"name": "BAR", "value": "2"}]},
+                "envOverlay": {
+                    "envVariables": [
+                        {"name": "BAZ", "value": "stag", "envName": "stag"},
+                        {"name": "BAZ", "value": "prod", "envName": "prod"},
+                    ]
+                },
+            },
+        )
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert DeclarativeEnvironVar.objects.filter(module=bk_module).count() == 4
+        assert (
+            DeclarativeEnvironVar.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.GLOBAL).count()
+            == 2
+        )
+        assert (
+            DeclarativeEnvironVar.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.STAG).get().value
+            == "stag"
+        )
+        assert (
+            DeclarativeEnvironVar.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.PROD).get().value
+            == "prod"
+        )
 
 
 class TestEnvVariablesReader:

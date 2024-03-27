@@ -16,20 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.bk_app.cnative.specs.models import AppModelResource
-from paas_wl.utils.error_codes import error_codes
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.models import Module
+from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.models import Build
 
 
-def get_bkapp(application: Application, module: Module) -> BkAppResource:
-    """shortcut for getting AppModelResource from db and parsed it to BkAppResource"""
-    try:
-        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
-    except AppModelResource.DoesNotExist:
-        raise error_codes.BKAPP_NOT_SET
-    try:
-        return BkAppResource(**model_resource.revision.json_value)
-    except ValueError:
-        raise error_codes.INVALID_MRES
+def mark_as_latest_artifact(build: "Build"):
+    """mark the given build as latest artifact"""
+    if build.artifact_type != ArtifactType.IMAGE:
+        return
+    # 旧的同名镜像会被覆盖, 则标记为已删除
+    qs = Build.objects.filter(module_id=build.module_id, image=build.image).exclude(uuid=build.uuid)
+    qs.update(artifact_deleted=True)
+    return

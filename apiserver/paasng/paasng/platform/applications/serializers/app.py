@@ -105,6 +105,7 @@ class UpdateApplicationSLZ(serializers.Serializer):
     """Serializer for update application"""
 
     name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
+    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
 
     def _validate_duplicated_field(self, data):
         """Universal validate method for code and name"""

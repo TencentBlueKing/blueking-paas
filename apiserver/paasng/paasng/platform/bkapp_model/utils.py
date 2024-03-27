@@ -37,7 +37,10 @@ class MergeStrategy(str, StructuredEnum):
 
 
 def override_env_vars_overlay(x: List[EnvVarOverlay], y: List[EnvVarOverlay]):
-    """Use env variable in y to override x, if y have the same (name, envName)"""
+    """Use env variable in y to override x, if y have the same (name, envName)
+
+    if the var only in y but not in x, will never add into result
+    """
     merged = copy.deepcopy(x)
     y_vars = {(var.name, var.envName): var.value for var in y}
     for var in merged:

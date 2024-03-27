@@ -75,10 +75,6 @@ def get_env_variables(
     # Because Config Vars, unlike ServiceInstance, is not bind to EngineApp. It
     # has application global type which shares under every engine_app/environment of an
     # application.
-    #
-    # Q: Why cnative application doesn't add user defined env vars
-    #
-    # Because user defined env vars have been added into BkAppSpec
     if include_config_var:
         result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
 

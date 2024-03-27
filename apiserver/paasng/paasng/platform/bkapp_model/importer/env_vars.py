@@ -73,7 +73,7 @@ def import_env_vars(
 def import_declarative_env_vars(
     module: Module, global_env_vars: List[EnvVar], overlay_env_vars: List[EnvVarOverlay]
 ) -> CommonImportResult:
-    """Import environment variables to , existing data that is not in the input list may be removed.
+    """Import environment variables from app_desc.yaml, existing data that is not in the input list may be removed.
 
     :param global_env_vars: The default variables.
     :param overlay_env_vars: The environment-specified variables.

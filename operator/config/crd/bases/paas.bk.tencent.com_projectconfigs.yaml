@@ -226,6 +226,19 @@ spec:
             - procDefaultCPULimits
             - procDefaultMemLimits
             type: object
+          resRequest:
+            description: ResRequestConfig contains bkapp resource request
+            properties:
+              procDefaultCPURequests:
+                description: ProcDefaultMemRequests is process's default cpu request
+                type: string
+              procDefaultMemRequests:
+                description: ProcDefaultMemRequests is process's default memory request
+                type: string
+            required:
+            - procDefaultCPURequests
+            - procDefaultMemRequests
+            type: object
           syncPeriod:
             description: SyncPeriod determines the minimum frequency at which watched
               resources are reconciled. A lower period will correct entropy more quickly,
@@ -260,6 +273,7 @@ spec:
         - maxProcesses
         - platform
         - resLimit
+        - resRequest
         type: object
     served: true
     storage: true

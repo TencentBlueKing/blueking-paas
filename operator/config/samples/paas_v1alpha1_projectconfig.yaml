@@ -22,6 +22,9 @@ resLimitConfig:
   procDefaultCPULimits: "500m"
   procDefaultMemLimits: "256Mi"
   maxReplicas: 5
+resRequestConfig:
+  procDefaultCPURequests: ""
+  procDefaultMemRequests: ""
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume
 ## when the Manager ends. This requires the binary to immediately end when the

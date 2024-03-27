@@ -19,8 +19,6 @@
 package envs
 
 import (
-	"os"
-
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
@@ -275,17 +273,16 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 		divisor = 4
 	}
 	minMemQuota := quota.Div(memQuota, divisor)
-
-	// 当环境变量设置了 CPU_REQUESTS_OVERLAY，优先使用该值作为 CPU Requests 配额
-	cpuRequestsOverlayEnv, exists := os.LookupEnv("CPU_REQUESTS_OVERLAY")
-	if exists {
-		cpuRequestsOverlay, _ := quota.NewQuantity(cpuRequestsOverlayEnv, quota.CPU)
+	// 当配置了 ProcDefaultCpuRequests ，优先使用该值作为 CPU Requests 配额
+	procDefaultCpuRequests := config.Global.GetProcDefaultCpuRequests()
+	if procDefaultCpuRequests != "" {
+		cpuRequestsOverlay, _ := quota.NewQuantity(procDefaultCpuRequests, quota.CPU)
 		minCpuQuota = cpuRequestsOverlay
 	}
-	// 当环境变量设置了 MEMORY_REQUESTS_OVERLAY，优先使用该值作为 Memory Requests 配额
-	memoryRequestsOverlayEnv, exists := os.LookupEnv("MEMORY_REQUESTS_OVERLAY")
-	if exists {
-		memoryRequestsOverlay, _ := quota.NewQuantity(memoryRequestsOverlayEnv, quota.Memory)
+	// 当配置了 ProcDefaultMemLimits，优先使用该值作为 Memory Requests 配额
+	procDefaultMemRequests := config.Global.GetProcDefaultMemRequests()
+	if procDefaultCpuRequests != "" {
+		memoryRequestsOverlay, _ := quota.NewQuantity(procDefaultMemRequests, quota.Memory)
 		minMemQuota = memoryRequestsOverlay
 	}
 

@@ -66,6 +66,15 @@ type ResLimitConfig struct {
 	MaxReplicas int32 `json:"maxReplicas"`
 }
 
+// ResRequestConfig contains bkapp resource request
+type ResRequestConfig struct {
+	// ProcDefaultMemRequests is process's default cpu request
+	ProcDefaultCPURequests string `json:"procDefaultCPURequests"`
+
+	// ProcDefaultMemRequests is process's default memory request
+	ProcDefaultMemRequests string `json:"procDefaultMemRequests"`
+}
+
 // AutoscalingConfig contains the config for autoscaling
 type AutoscalingConfig struct {
 	// Enabled indicates whether autoscaling is enabled
@@ -85,6 +94,7 @@ type ProjectConfig struct {
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
 	ResLimit      ResLimitConfig      `json:"resLimit"`
+	ResRequest    ResRequestConfig    `json:"resRequest"`
 	Autoscaling   AutoscalingConfig   `json:"autoscaling"`
 	MaxProcesses  int32               `json:"maxProcesses"`
 }
@@ -105,6 +115,10 @@ func NewProjectConfig() *ProjectConfig {
 	conf.ResLimit.ProcDefaultCPULimits = "4000m"
 	conf.ResLimit.ProcDefaultMemLimits = "1024Mi"
 	conf.ResLimit.MaxReplicas = 5
+
+	// 资源请求默认值
+	conf.ResRequest.ProcDefaultMemRequests = ""
+	conf.ResRequest.ProcDefaultCPURequests = ""
 
 	conf.MaxProcesses = 8
 
@@ -135,6 +149,14 @@ func (p *ProjectConfig) GetProcDefaultCpuLimits() string {
 // GetProcDefaultMemLimits returns the default memory limits of a process
 func (p *ProjectConfig) GetProcDefaultMemLimits() string {
 	return p.ResLimit.ProcDefaultMemLimits
+}
+
+func (p *ProjectConfig) GetProcDefaultCpuRequests() string {
+	return p.ResRequest.ProcDefaultCPURequests
+}
+
+func (p *ProjectConfig) GetProcDefaultMemRequests() string {
+	return p.ResRequest.ProcDefaultMemRequests
 }
 
 // GetIngressClassName returns the ingress class name

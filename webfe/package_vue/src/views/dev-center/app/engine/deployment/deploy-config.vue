@@ -6,6 +6,26 @@
     :offset-left="-8"
     class="config-warp"
   >
+    <!-- smart 应用 -->
+    <bk-alert
+      v-if="curApplicationData?.is_smart_app"
+      class="mb16"
+      type="info"
+      :title="$t('S-mart 应用的部署前置命令请在描述文件 app_desc.yaml 中配置。')">
+    </bk-alert>
+    <!-- 普通应用 -->
+    <bk-alert
+      v-else-if="isDefaultAppFeature"
+      class="mb16"
+      type="error">
+      <div slot="title" class="deploy-pre-commands">
+        <div>{{ $t('请将部署前置命令放在部署目录下的 `bin/post-compile` 文件中，并在页面上停用部署前置命令。') }}</div>
+        <a
+          class="right-link"
+          target="_blank"
+          href="https://github.com/TencentBlueKing/bk-chatbot/blob/master/bin/post-compile">{{ $t('查看使用示例') }}</a>
+      </div>
+    </bk-alert>
     <bk-form
       class="info-special-form"
       form-type="inline"
@@ -33,61 +53,58 @@
         class="pt20"
         style="width: calc(100% - 260px); position:relative"
       >
-        <bk-input
-          v-if="configInfo.loaclEnabled"
-          ref="nameInput"
-          v-model="configInfo.command"
-          :placeholder="$t('请输入')"
-          :readonly="!isEdited"
-          ext-cls="paas-info-app-name-cls"
-          :clearable="false"
-        />
-        <!-- <bk-button
-                    class="config-button"
-                    theme="primary"
-                    :disabled="isEdited"
-                    text
-                    @click.stop.prevent="handlerCommand">
-                    {{configInfo.enabled ? '确认禁用' : '确认启用'}}
-                </bk-button> -->
-        <span class="info">
-          {{ $t('复杂命令可封装在一个脚本中，放在代码仓库的 bin 目录下(bin/pre-task.sh)，并将部署前置命令配置为:') }}
-          "bash ./bin/pre-task.sh"</span>
+        <!-- text 展示 -->
+        <p v-if="curApplicationData?.is_smart_app || isDefaultAppFeature">{{ configInfo.command }}</p>
+        <template v-else>
+          <bk-input
+            v-if="configInfo.loaclEnabled"
+            ref="nameInput"
+            v-model="configInfo.command"
+            :placeholder="$t('请输入')"
+            :readonly="!isEdited"
+            ext-cls="paas-info-app-name-cls"
+            :clearable="false"
+          />
+          <span class="info">
+            {{ $t('复杂命令可封装在一个脚本中，放在代码仓库的 bin 目录下(bin/pre-task.sh)，并将部署前置命令配置为:') }}
+            "bash ./bin/pre-task.sh"</span>
 
-        <div class="action-box">
-          <template v-if="!isEdited">
-            <a
-              v-if="configInfo.loaclEnabled"
-              v-bk-tooltips="$t('编辑')"
-              class="paasng-icon paasng-edit2"
-              @click="showEdit"
-            />
-          </template>
-          <template v-else>
-            <bk-button
-              v-if="configInfo.loaclEnabled"
-              style="margin-right: 6px;"
-              theme="primary"
-              :disabled="configInfo.command === ''"
-              text
-              @click.stop.prevent="saveCommand"
-            >
-              {{ $t('确认启用-button') }}
-            </bk-button>
-            <bk-button
-              v-if="configInfo.loaclEnabled"
-              theme="primary"
-              text
-              @click.stop.prevent="cancelCommand"
-            >
-              {{ $t('取消') }}
-            </bk-button>
-          </template>
-        </div>
+
+          <div class="action-box">
+            <template v-if="!isEdited">
+              <a
+                v-if="configInfo.loaclEnabled"
+                v-bk-tooltips="$t('编辑')"
+                class="paasng-icon paasng-edit2"
+                @click="showEdit"
+              />
+            </template>
+            <template v-else>
+              <bk-button
+                v-if="configInfo.loaclEnabled"
+                style="margin-right: 6px;"
+                theme="primary"
+                :disabled="configInfo.command === ''"
+                text
+                @click.stop.prevent="saveCommand"
+              >
+                {{ $t('确认启用-button') }}
+              </bk-button>
+              <bk-button
+                v-if="configInfo.loaclEnabled"
+                theme="primary"
+                text
+                @click.stop.prevent="cancelCommand"
+              >
+                {{ $t('取消') }}
+              </bk-button>
+            </template>
+          </div>
+        </template>
       </bk-form-item>
     </bk-form>
     <bk-form
-      v-if="curAppModule.web_config.runtime_type !== 'custom_image'"
+      v-if="isDeployCommandShown"
       class="info-special-form pt20"
       form-type="inline"
     >
@@ -230,7 +247,7 @@
                     :clearable="false"
                   />
                 </bk-form-item>
-                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px; margin-top: 5px;">
+                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
                   <bk-button
                     theme="primary"
                     :outline="true"
@@ -335,10 +352,12 @@ export default {
       if (this.isDefaultAppFeature && !this.configInfo.loaclEnabled) return true;
       return false;
     },
+    isDeployCommandShown() {
+      return this.curAppModule.web_config.runtime_type !== 'custom_image' && !this.curApplicationData?.is_smart_app && !this.isDefaultAppFeature;
+    },
   },
   watch: {
-    '$route'(newVal, oldVal) {
-      console.log(newVal, oldVal);
+    '$route'() {
       this.isLoading = true;
       this.init();
     },
@@ -347,16 +366,6 @@ export default {
     this.isLoading = true;
     this.init();
     this.inputFocusFun();
-    console.log('curAppType', this.curApplicationData);
-    console.log('this.curAppModule', this.curAppModule);
-    // 查看态
-    // isDefaultApp && isSmartApp
-
-    // 普通应用-镜像应用
-    // isDefaultApp && isDockerApp
-
-    // 普通应用
-    // isDefaultApp && !isSmartApp && !isDockerApp
   },
   methods: {
     async init() {
@@ -531,7 +540,10 @@ export default {
         params.procfile.unshift({ name, command });
         this.$refs.validate2.validate().then(() => {
           this.requestCommand(this.$t('添加'), params);
-        });
+        })
+          .catch((e) => {
+            console.error(e);
+          });
       } else {
         this.$paasMessage({
           theme: 'error',
@@ -611,6 +623,7 @@ export default {
     .mt-minus {
         margin-top: -10px;
         color: #979ba5;
+        font-size: 12px;
         span {
             color: #3A84FF;
             &:hover {
@@ -620,5 +633,22 @@ export default {
     }
     .paas-info-app-name-cls input {
         padding-right: 130px !important;
+    }
+    .mb16 {
+      margin-bottom: 16px;
+    }
+    .deploy-pre-commands {
+      display: flex;
+      justify-content: space-between;
+      .right-link {
+        font-size: 12px;
+        color: #3A84FF;
+        cursor: pointer;
+      }
+    }
+    .config-warp .info-special-form.bk-form.bk-inline-form .bk-form-input {
+      height: 32px;
+      border-radius: 2;
+      font-size: 12px;
     }
 </style>

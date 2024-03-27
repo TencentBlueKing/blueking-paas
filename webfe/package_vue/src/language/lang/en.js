@@ -2568,4 +2568,7 @@ export default {
   '请注意，此操作不会影响持久存储内的数据。如需删除数据请在“应用配置-持久存储”页面操作。': 'Please note, this operation will not affect the data within the persistent storage. To delete data, please proceed on the "Application Configuration-Persistent Storage" page.',
   '当前存在{n}个模块已绑定该持久存储。请先前往“模块配置”下的“挂载卷”页面，删除相关挂载项，之后才可以删除持久存储。': 'There are currently {n} modules bound to this persistent storage. Please go to the "Mount Volume" page under "Module Configuration" to delete the related mount items before you can delete the persistent storage.',
   '持久化存储可用于多个模块、进程间共享数据。持久存储申请后就会产生资源成本，请按需申请，不用的资源请及时删除。': 'Persistent storage can be used to share data among multiple modules and processes. Once persistent storage is applied for, it will incur resource costs. Please apply as needed, and promptly delete resources that are not in use.',
+  'S-mart 应用的部署前置命令请在描述文件 app_desc.yaml 中配置。': 'Please configure the pre-deployment commands for the S-mart application in the descriptor file app_desc.yaml.',
+  '请将部署前置命令放在部署目录下的 `bin/post-compile` 文件中，并在页面上停用部署前置命令。': 'Please place the pre-deployment commands in the `bin/post-compile` file within the deployment directory, and disable the pre-deployment commands on the webpage.',
+  查看使用示例: 'View usage examples',
 };

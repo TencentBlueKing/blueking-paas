@@ -28,6 +28,7 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import HookList
@@ -164,6 +165,7 @@ class DeploymentDescription(TimestampedModel):
                     {
                         "key": global_var.name,
                         "value": global_var.value,
+                        "environment_name": ConfigVarEnvName.GLOBAL,
                     }
                 )
             if (env_overlay := self.spec.envOverlay) and (overlays := env_overlay.envVariables):
@@ -173,6 +175,7 @@ class DeploymentDescription(TimestampedModel):
                             {
                                 "key": overlay.name,
                                 "value": overlay.value,
+                                "environment_name": env_name,
                             }
                         )
             return env_variables

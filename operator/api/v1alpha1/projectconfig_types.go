@@ -68,7 +68,7 @@ type ResLimitConfig struct {
 
 // ResRequestConfig contains bkapp resource request
 type ResRequestConfig struct {
-	// ProcDefaultMemRequests is process's default cpu request
+	// ProcDefaultCPURequests is process's default cpu request
 	ProcDefaultCPURequests string `json:"procDefaultCPURequests"`
 
 	// ProcDefaultMemRequests is process's default memory request

@@ -281,7 +281,7 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 	}
 	// 当配置了 ProcDefaultMemLimits，优先使用该值作为 Memory Requests 配额
 	procDefaultMemRequests := config.Global.GetProcDefaultMemRequests()
-	if procDefaultCpuRequests != "" {
+	if procDefaultMemRequests != "" {
 		memoryRequestsOverlay, _ := quota.NewQuantity(procDefaultMemRequests, quota.Memory)
 		minMemQuota = memoryRequestsOverlay
 	}

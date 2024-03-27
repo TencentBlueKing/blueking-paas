@@ -270,8 +270,8 @@ var _ = Describe("Environment overlay related functions", func() {
 		It("Get Default Requests", func() {
 			originalConfig := config.Global
 			projConf := paasv1alpha1.NewProjectConfig()
-			projConf.ResRequest.ProcDefaultCPURequests = "100m"
-			projConf.ResRequest.ProcDefaultMemRequests = "128Mi"
+			projConf.ResRequests.ProcDefaultCPURequest = "100m"
+			projConf.ResRequests.ProcDefaultMemRequest = "128Mi"
 			config.SetConfig(projConf)
 			defer config.SetConfig(originalConfig)
 
@@ -283,7 +283,6 @@ var _ = Describe("Environment overlay related functions", func() {
 			}
 			getter := NewProcResourcesGetter(bkapp)
 			resReq, _ := getter.GetByProc("web")
-			println(resReq.Requests.Cpu().String(), resReq.Requests.Memory().String(), "result")
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("100m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("128Mi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())

@@ -208,8 +208,8 @@ spec:
             - ingressClassName
             - sentryDSN
             type: object
-          resLimit:
-            description: ResLimitConfig contains bkapp resource limit
+          resLimits:
+            description: ResLimitsConfig contains bkapp resource limits
             properties:
               maxReplicas:
                 description: MaxReplicas is single instance max replica num
@@ -226,11 +226,11 @@ spec:
             - procDefaultCPULimits
             - procDefaultMemLimits
             type: object
-          resRequest:
-            description: ResRequestConfig contains bkapp resource request
+          resRequests:
+            description: ResRequestsConfig contains bkapp resource requests
             properties:
               procDefaultCPURequests:
-                description: ProcDefaultMemRequests is process's default cpu request
+                description: ProcDefaultCPURequests is process's default cpu request
                 type: string
               procDefaultMemRequests:
                 description: ProcDefaultMemRequests is process's default memory request
@@ -272,8 +272,8 @@ spec:
         - ingressPlugin
         - maxProcesses
         - platform
-        - resLimit
-        - resRequest
+        - resLimits
+        - resRequests
         type: object
     served: true
     storage: true

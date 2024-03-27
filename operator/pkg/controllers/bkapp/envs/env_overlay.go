@@ -21,12 +21,15 @@ package envs
 import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 )
+
+var log = logf.Log.WithName("env_overlay")
 
 // ReplicasGetter get replicas from BkApp object
 type ReplicasGetter struct {
@@ -253,7 +256,7 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 	case paasv1alpha2.ResQuotaPlan4C4G:
 		cpuRaw, memRaw = "4000m", "4096Mi"
 	default:
-		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimits(), config.Global.GetProcDefaultMemLimits()
+		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimit(), config.Global.GetProcDefaultMemLimit()
 	}
 	return r.calculateResources(cpuRaw, memRaw)
 }
@@ -265,25 +268,36 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
 	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
 
+	// 配置 cpu request
+	// 当配置了 ProcDefaultCpuRequest（默认 200m）， 优先使用该值作为 CPU Request 配额
+	// 如果错误的配置了 ""， 那么将使用 200m
 	minCpuQuota, _ := quota.NewQuantity("200m", quota.CPU)
+	procDefaultCpuRequest := config.Global.GetProcDefaultCpuRequest()
+	if procDefaultCpuRequest != "" {
+		cpuRequestOverlay, err := quota.NewQuantity(procDefaultCpuRequest, quota.CPU)
+		if err != nil {
+			log.Error(err, "Fail to set cpu request", "DefaultCpuRequest", procDefaultCpuRequest)
+		} else {
+			minCpuQuota = cpuRequestOverlay
+		}
+	}
 
+	// 配置 mem request
 	var divisor int64 = 2
 	medMemQuota, _ := quota.NewQuantity("2048Mi", quota.Memory)
 	if memQuota.Cmp(*medMemQuota) == -1 {
 		divisor = 4
 	}
 	minMemQuota := quota.Div(memQuota, divisor)
-	// 当配置了 ProcDefaultCpuRequests ，优先使用该值作为 CPU Requests 配额
-	procDefaultCpuRequests := config.Global.GetProcDefaultCpuRequests()
-	if procDefaultCpuRequests != "" {
-		cpuRequestsOverlay, _ := quota.NewQuantity(procDefaultCpuRequests, quota.CPU)
-		minCpuQuota = cpuRequestsOverlay
-	}
-	// 当配置了 ProcDefaultMemLimits，优先使用该值作为 Memory Requests 配额
-	procDefaultMemRequests := config.Global.GetProcDefaultMemRequests()
-	if procDefaultMemRequests != "" {
-		memoryRequestsOverlay, _ := quota.NewQuantity(procDefaultMemRequests, quota.Memory)
-		minMemQuota = memoryRequestsOverlay
+	// 当配置了 ProcDefaultMemLimit，优先使用该值作为 Memory Request 配额
+	procDefaultMemRequest := config.Global.GetProcDefaultMemRequest()
+	if procDefaultMemRequest != "" {
+		memoryRequestOverlay, err := quota.NewQuantity(procDefaultMemRequest, quota.Memory)
+		if err != nil {
+			log.Error(err, "Fail to set memory request", "DefaultMemRequest", procDefaultMemRequest)
+		} else {
+			minMemQuota = memoryRequestOverlay
+		}
 	}
 
 	return corev1.ResourceRequirements{

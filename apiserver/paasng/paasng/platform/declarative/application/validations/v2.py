@@ -107,7 +107,7 @@ class ModuleDescriptionSLZ(serializers.Serializer):
         return ModuleDesc(
             name=ModuleNamePlaceholder,
             language=attrs["language"],
-            is_default=attrs["is_default"],
+            is_default=attrs.get("is_default", False),
             source_dir=attrs.get("source_dir") or "",
             services=attrs.get("services", []),
         )

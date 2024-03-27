@@ -173,7 +173,7 @@ class TestEnvVarsManifestConstructor:
             EnvVarOverlay(envName="stag", name="STAG", value="1"),
         ]
 
-    def test_override_declaratived(self, bk_module, bk_stag_env, blank_resource):
+    def test_override_declarative(self, bk_module, bk_stag_env, blank_resource):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG", value="2")
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG_XX", value="2")
         G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")

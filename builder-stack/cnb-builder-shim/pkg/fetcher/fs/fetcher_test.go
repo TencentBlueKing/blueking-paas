@@ -18,7 +18,6 @@
 package fs_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -40,7 +39,7 @@ var _ = Describe("FileSystem", func() {
 
 	BeforeEach(func() {
 		var err error
-		destDir, err = ioutil.TempDir("", "fetch_test")
+		destDir, err = os.MkdirTemp("", "fetch_test")
 		Expect(err).To(BeNil())
 
 	})
@@ -53,7 +52,7 @@ var _ = Describe("FileSystem", func() {
 		err := fetcher.NewFetcher(logging.Default()).Fetch(sourcePath, destDir)
 		Expect(err).To(BeNil())
 
-		content, err := ioutil.ReadFile(filepath.Join(destDir, "Procfile"))
+		content, err := os.ReadFile(filepath.Join(destDir, "Procfile"))
 		Expect(err).To(BeNil())
 		Expect(string(content)).To(Equal(expected))
 	},

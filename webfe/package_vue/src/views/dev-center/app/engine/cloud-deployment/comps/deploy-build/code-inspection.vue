@@ -12,10 +12,14 @@
       <div class="quality-right">
         <p>
           {{$t('最近检查时间：')}}{{codeDetails.lastAnalysisTime || '--'}}
-          <i class="paasng-icon paasng-process-file ml5"
+          <span
+            class="code-detail-icon"
             v-if="codeDetails.detailUrl"
             @click="handleToDetail(codeDetails.detailUrl)"
-          />
+          >
+            <i class="paasng-icon paasng-process-file ml5" />
+            {{ $t('查看详情') }}
+          </span>
         </p>
       </div>
     </section>
@@ -48,8 +52,7 @@
         <li
           v-for="(item, index) in codeDetails.lastAnalysisResultList"
           :key="index"
-          class="item"
-          @click="handleToDetail(item.defectUrl)">
+          class="item">
           <p>{{item.displayName}}</p>
           <div class="container">
             <span class="number">{{item.defectCount}}</span>
@@ -74,8 +77,8 @@ export default {
   props: {
     codeDetails: {
       type: Object,
-      default: () => {}
-    }
+      default: () => {},
+    },
   },
 
   computed: {
@@ -101,7 +104,7 @@ export default {
     margin-right: 8px !important;
   }
 }
-  
+
 .code-inspection {
   .card-item {
     display: flex;
@@ -140,6 +143,14 @@ export default {
 
   .empty-wrapper {
     margin: 24px 0;
+  }
+
+  .code-detail-icon {
+    cursor: pointer;
+    color: #3a84ff;
+    i {
+      font-size: 14px;
+    }
   }
 
   .quality-star {
@@ -194,7 +205,6 @@ export default {
       border-radius: 2px;
       margin-right: 8px;
       margin-bottom: 8px;
-      cursor: pointer;
 
       &:nth-child(3n) {
         margin-right: 0;

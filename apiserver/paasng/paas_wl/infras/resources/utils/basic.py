@@ -112,6 +112,8 @@ def get_full_tolerations(app: WlApp, config: Optional["Config"] = None) -> List:
 
 def get_client_by_app(app: WlApp) -> EnhancedApiClient:
     """Get kubernetes client by given app"""
+    # TODO 增加一个带过期的缓存?
+    # 可参考 https://stackoverflow.com/questions/31771286/python-in-memory-cache-with-time-to-live
     cluster = get_cluster_by_app(app)
     return get_client_by_cluster_name(cluster.name)
 

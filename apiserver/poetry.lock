@@ -397,20 +397,19 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "bkstorages"
-version = "1.0.8"
+version = "1.1.0"
 description = "File storage backends for blueking PaaS platform"
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<3.11"
 files = [
-    {file = "bkstorages-1.0.8-py3-none-any.whl", hash = "sha256:8875c6dc8e7ead8ec59d0433d0ab8db7f74d6d972c7171f527879319eb8cb7d8"},
-    {file = "bkstorages-1.0.8.tar.gz", hash = "sha256:e9279c148b0785675e642145cba6df47ba8932ab45d79bd4a43655fa05c3d704"},
+    {file = "bkstorages-1.1.0-py3-none-any.whl", hash = "sha256:24bd939e9e7c0073b23b5fb5a54fd936f50d20dd0e3be2b37cf693ec9b0d3a13"},
+    {file = "bkstorages-1.1.0.tar.gz", hash = "sha256:7af8a440520a218c634b6ef0cf3dadcc37016c7db3ea690a146c45970e8be707"},
 ]
 
 [package.dependencies]
 boto3 = ">=1.4.1"
 curlify = ">=2.2.1,<3.0.0"
-pyyaml = "<6.0"
 requests = "*"
 six = "*"
 
@@ -2416,14 +2415,14 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "moby-distribution"
-version = "0.5.5"
+version = "0.5.11"
 description = "Yet another moby(docker) distribution implement by python."
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<4"
 files = [
-    {file = "moby_distribution-0.5.5-py3-none-any.whl", hash = "sha256:87610a875a9dc591771eba3a0e7eb2c54483e0751c289e36290d23d911fa2c15"},
-    {file = "moby_distribution-0.5.5.tar.gz", hash = "sha256:1c82866e8887ebe24f13ac34d7f736387e5df9c85a748d3c23a67d4e912faee3"},
+    {file = "moby_distribution-0.5.11-py3-none-any.whl", hash = "sha256:842ea827a6ad4480340e4bddc54e56c0064a3b2c96e23b20d1fc191bc6b65317"},
+    {file = "moby_distribution-0.5.11.tar.gz", hash = "sha256:f19520f5a5212c70320085450a8ebff4168c2af9fb91d3941ae3353169d9919c"},
 ]
 
 [package.dependencies]
@@ -3488,23 +3487,6 @@ files = [
 crypto = ["cryptography (>=1.4)"]
 flake8 = ["flake8", "flake8-import-order", "pep8-naming"]
 test = ["pytest (>=4.0.1,<5.0.0)", "pytest-cov (>=2.6.0,<3.0.0)", "pytest-runner (>=4.2,<5.0.0)"]
-
-[package.source]
-type = "legacy"
-url = "https://mirrors.tencent.com/pypi/simple"
-reference = "tencent-mirror"
-
-[[package]]
-name = "pymysql"
-version = "0.6.7"
-description = "Pure-Python MySQL Driver"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "PyMySQL-0.6.7-py2.py3-none-any.whl", hash = "sha256:9d9449dbdcf20cec015ee2692eef791547e44de527e8fdeb7211d7c1fc178104"},
-    {file = "PyMySQL-0.6.7.tar.gz", hash = "sha256:e549649db3b1a9317c6027175197458bfb4f55357828410ed4f768fc6ce35f0f"},
-]
 
 [package.source]
 type = "legacy"
@@ -5008,4 +4990,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "5ca6aaba06dc53545f09e21289f5d483efd9ca54934c3f09b8d10e39b4b66796"
+content-hash = "5005ff0e90141150e7704bec2197e867112b379819667d38d4b07a7a1637a487"

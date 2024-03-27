@@ -17,8 +17,13 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar
-from paasng.platform.bkapp_model.utils import MergeStrategy, merge_env_vars
+from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
+from paasng.platform.bkapp_model.utils import (
+    MergeStrategy,
+    merge_env_vars,
+    merge_env_vars_overlay,
+    override_env_vars_overlay,
+)
 
 
 @pytest.mark.parametrize(
@@ -50,3 +55,117 @@ from paasng.platform.bkapp_model.utils import MergeStrategy, merge_env_vars
 )
 def test_merge_env_vars(x, y, strategy, z):
     assert merge_env_vars(x, y, strategy) == z
+
+
+@pytest.mark.parametrize(
+    ("x", "y", "strategy", "z"),
+    [
+        ([], [], MergeStrategy.OVERRIDE, []),
+        (
+            [],
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+            MergeStrategy.OVERRIDE,
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+        ),
+        (
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+            [],
+            MergeStrategy.OVERRIDE,
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+        ),
+        (
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+            [EnvVarOverlay(name="a", value="A", envName="stag")],
+            MergeStrategy.OVERRIDE,
+            [EnvVarOverlay(name="a", value="A", envName="stag")],
+        ),
+        (
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+            [EnvVarOverlay(name="a", value="A", envName="stag")],
+            MergeStrategy.IGNORE,
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+        ),
+        # override 在原来的位置修改, 然后再 append
+        (
+            [EnvVarOverlay(name="a", value="a", envName="stag"), EnvVarOverlay(name="b", value="b", envName="stag")],
+            [EnvVarOverlay(name="B", value="B", envName="stag"), EnvVarOverlay(name="a", value="A", envName="stag")],
+            MergeStrategy.OVERRIDE,
+            [
+                EnvVarOverlay(name="a", value="A", envName="stag"),
+                EnvVarOverlay(name="b", value="b", envName="stag"),
+                EnvVarOverlay(name="B", value="B", envName="stag"),
+            ],
+        ),
+        # 不同环境
+        (
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+            [EnvVarOverlay(name="a", value="A", envName="prod")],
+            MergeStrategy.OVERRIDE,
+            [EnvVarOverlay(name="a", value="a", envName="stag"), EnvVarOverlay(name="a", value="A", envName="prod")],
+        ),
+    ],
+)
+def test_merge_env_vars_overlay(x, y, strategy, z):
+    assert merge_env_vars_overlay(x, y, strategy) == z
+
+
+@pytest.mark.parametrize(
+    ("x", "y", "expected"),
+    [
+        ([], [], []),
+        (
+            [],
+            [EnvVarOverlay(name="a", value="a", envName="stag")],
+            [],
+        ),
+        (
+            [EnvVarOverlay(name="a", value="b", envName="stag")],
+            [EnvVarOverlay(name="a", value="c", envName="stag")],
+            [EnvVarOverlay(name="a", value="c", envName="stag")],
+        ),
+        (
+            [EnvVarOverlay(name="a", value="b", envName="stag")],
+            [EnvVarOverlay(name="a", value="c", envName="prod")],
+            [EnvVarOverlay(name="a", value="b", envName="stag")],
+        ),
+        (
+            [EnvVarOverlay(name="a", value="b", envName="stag")],
+            [
+                EnvVarOverlay(name="a", value="d", envName="prod"),
+                EnvVarOverlay(name="a", value="dddd", envName="stag"),
+            ],
+            [
+                EnvVarOverlay(name="a", value="dddd", envName="stag"),
+            ],
+        ),
+        (
+            [
+                EnvVarOverlay(name="a", value="b", envName="stag"),
+                EnvVarOverlay(name="a", value="cccc", envName="prod"),
+            ],
+            [
+                EnvVarOverlay(name="a", value="d", envName="prod"),
+            ],
+            [
+                EnvVarOverlay(name="a", value="b", envName="stag"),
+                EnvVarOverlay(name="a", value="d", envName="prod"),
+            ],
+        ),
+        (
+            [
+                EnvVarOverlay(name="a", value="b", envName="stag"),
+                EnvVarOverlay(name="a", value="cccc", envName="prod"),
+            ],
+            [
+                EnvVarOverlay(name="a", value="d", envName="prod"),
+                EnvVarOverlay(name="b", value="qqq", envName="stag"),
+            ],
+            [
+                EnvVarOverlay(name="a", value="b", envName="stag"),
+                EnvVarOverlay(name="a", value="d", envName="prod"),
+            ],
+        ),
+    ],
+)
+def test_override_env_vars_overlay(x, y, expected):
+    assert override_env_vars_overlay(x, y) == expected

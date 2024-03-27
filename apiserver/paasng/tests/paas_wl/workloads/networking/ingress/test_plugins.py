@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.applications.models.managers.app_metadata import update_metadata
+from paas_wl.bk_app.applications.managers import update_metadata
 from paas_wl.workloads.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.workloads.networking.ingress.plugins.ingress import AccessControlPlugin, PaasAnalysisPlugin
 

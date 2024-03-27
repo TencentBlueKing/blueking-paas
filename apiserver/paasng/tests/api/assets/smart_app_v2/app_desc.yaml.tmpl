@@ -26,3 +26,17 @@ modules:
       web:
         command: gunicorn wsgi -b :5000 --access-logfile - --error-logfile -
         replicas: 1
+  sidecar:
+    language: Python
+    source_dir: main
+    # is_default: False
+    services:
+      - name: mysql
+    env_variables:
+      - key: BKAPP_DEMO
+        value: demo_value
+        description: "Demo env variable"
+    processes:
+      web:
+        command: gunicorn wsgi -b :5000 --access-logfile - --error-logfile -
+        replicas: 1

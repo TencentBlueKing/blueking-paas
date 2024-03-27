@@ -21,13 +21,8 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import TYPE_CHECKING
 
-from django.conf import settings
-
-from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
-from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.infras.resources.utils.basic import (
-    get_client_by_app,
     get_cluster_by_app,
     get_full_node_selector,
     get_full_tolerations,
@@ -37,21 +32,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
-
-
-def get_scheduler_client(cluster_name: str):
-    """get scheduler by settings"""
-    return K8sScheduler.from_cluster_name(cluster_name)
-
-
-def get_scheduler_client_by_app(app: "WlApp") -> "K8sScheduler":
-    """A wrapper function to make K8sSchedulerClient from a raw client object"""
-    return K8sScheduler(
-        get_client_by_app(app),
-        settings.K8S_DEFAULT_CONNECT_TIMEOUT,
-        settings.K8S_DEFAULT_READ_TIMEOUT,
-        AppResVerManager(app).curr_version,
-    )
 
 
 def get_schedule_config(app: "WlApp") -> "Schedule":

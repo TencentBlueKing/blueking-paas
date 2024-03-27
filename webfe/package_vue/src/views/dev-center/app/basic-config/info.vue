@@ -1,7 +1,7 @@
 <template lang="html">
   <div class="right-main">
     <paas-content-loader
-      class="app-container middle base-info-container"
+      class="app-container middle base-info-container shadow-card-style"
       :is-loading="isLoading"
       placeholder="base-info-loading"
     >
@@ -223,7 +223,7 @@
                       theme="primary"
                       :disabled="localeAppInfo.name === ''"
                       text
-                      @click.stop.prevent="submitPluginBasicInfo('')"
+                      @click.stop.prevent="submitPluginBasicInfo()"
                     >
                       {{ $t('保存') }}
                     </bk-button>
@@ -316,11 +316,11 @@
               <bk-form-item style="width: calc(100% - 180px);">
                 <div
                   ref="refPluginType"
-                  :class="['item-content', 'plugin-type', { 'custom-active': !isPluginTypeSelect && isFocus }]"
+                  :class="['item-content', 'plugin-type', { 'custom-active': !isPluginCategoryFocus && isFocus }]"
                 >
                   <bk-select
                     v-model="pluginTypeValue"
-                    :disabled="isPluginTypeSelect"
+                    :disabled="isPluginCategoryFocus"
                     clearable
                     ext-cls="select-custom"
                     searchable
@@ -334,7 +334,7 @@
                   </bk-select>
                 </div>
                 <div class="action-box">
-                  <template v-if="isPluginTypeSelect">
+                  <template v-if="isPluginCategoryFocus">
                     <a
                       v-bk-tooltips="$t('编辑')"
                       class="paasng-icon paasng-edit2"
@@ -354,7 +354,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      @click.stop.prevent="cancelPluginType"
+                      @click.stop.prevent="handlerPluginCategoryCancel"
                     >
                       {{ $t('取消') }}
                     </bk-button>
@@ -581,7 +581,7 @@ export default {
       tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。'),
       pluginTypeList: [],
       pluginTypeValue: '',
-      isPluginTypeSelect: true,
+      isPluginCategoryFocus: true,
       isFocus: true,
     };
   },
@@ -735,7 +735,7 @@ export default {
       } else {
         params = { ...data };
       }
-      const url = `${BACKEND_URL}//api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
+      const url = `${BACKEND_URL}/api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
       this.$http.patch(url, params).then(
         (res) => {
           this.$paasMessage({
@@ -761,7 +761,7 @@ export default {
             this.pluginIntroDuction = false;
             this.pluginPlaceholder = this.$t('无');
           }
-          this.isPluginTypeSelect = true;
+          this.handlerPluginCategoryCancel();
         });
     },
 
@@ -1137,22 +1137,23 @@ export default {
       window.addEventListener('click', this.isCustomActive);
     },
 
-    cancelPluginType() {
-      this.isPluginTypeSelect = true;
+    handlerPluginCategoryCancel() {
       window.removeEventListener('click', this.isCustomActive);
+      this.isPluginCategoryFocus = true;
+      this.isFocus = true;
     },
     isCustomActive(ev) {
-      if (!this.isPluginTypeSelect) {
+      if (!this.isPluginCategoryFocus) {
         this.isFocus = this.isParent(ev.target, document.querySelector('.plugin-type'));
       }
-      this.isPluginTypeSelect = false;
+      this.isPluginCategoryFocus = false;
     },
-    isParent(obj, parentObj) {
-      while (obj !== undefined && obj !== null && obj.tagName.toUpperCase() !== 'BODY') {
-        if (obj === parentObj) {
+    isParent(target, parentObj) {
+      while (target !== undefined && target !== null && target.tagName.toUpperCase() !== 'BODY') {
+        if (target === parentObj) {
           return true;
         }
-        obj = obj.parentNode;
+        target = target.parentNode;
       }
       return false;
     },

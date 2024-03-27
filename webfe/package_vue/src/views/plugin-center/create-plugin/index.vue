@@ -1,211 +1,203 @@
 <template>
-  <div class="bk-create-plugin-warp mt30">
+  <div
+    class="bk-create-plugin-warp"
+    :style="{ paddingTop: `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px` }"
+  >
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="create-plugin-loading"
     >
-      <paas-plugin-title />
-      <!-- 返回 -->
-      <div class="base-info-tit">
-        {{ $t('基本信息') }}
-      </div>
-      <bk-form
-        ref="pluginForm"
-        style="width: 730px"
-        :label-width="170"
-        :model="form"
-        :rules="rules"
-      >
-        <bk-form-item
-          :label="$t('插件类型')"
-          :required="true"
-          :icon-offset="105"
-          :property="'pd_id'"
+      <paas-plugin-title :no-shadow="true" />
+      <section class="info-container card-style">
+        <div class="base-info-tit">
+          {{ $t('基本信息') }}
+        </div>
+        <bk-form
+          ref="pluginForm"
+          :label-width="170"
+          :model="form"
+          :rules="rules"
         >
-          <div class="flex-row">
-            <bk-select
-              v-model="form.pd_id"
-              class="w480"
-              ext-popover-cls="plugin-type-custom"
-              searchable
-              :clearable="false"
-              :placeholder="$t('插件类型')"
-              @change="changePluginType"
-            >
-              <bk-option
-                v-for="option in pluginTypeList"
-                :id="option.plugin_type.id"
-                :key="option.plugin_type.id"
-                v-bind="option"
+          <bk-form-item
+            :label="$t('插件类型')"
+            :required="true"
+            :property="'pd_id'"
+          >
+            <div class="plugin-type">
+              <bk-select
+                v-model="form.pd_id"
+                ext-popover-cls="plugin-type-custom"
+                searchable
+                :clearable="false"
+                :placeholder="$t('插件类型')"
+                @change="changePluginType"
               >
-                <div
-                  id="guide-wrap"
-                  class="guide-container"
+                <bk-option
+                  v-for="option in pluginTypeList"
+                  :id="option.plugin_type.id"
+                  :key="option.plugin_type.id"
+                  v-bind="option"
                 >
-                  <div class="flex-row align-items-center guide-item">
-                    <img
-                      :src="option.plugin_type.logo"
-                      onerror="this.src='/static/images/plugin-default.svg'"
-                    />
-                    <div class="guide-right pl10">
-                      <div class="guide-plugin-name">
-                        {{ option.plugin_type.name }}
-                      </div>
-                      <div
-                        v-bk-overflow-tips="option.plugin_type.description"
-                        class="guide-plugin-desc"
-                      >
-                        {{ option.plugin_type.description }}
+                  <div
+                    id="guide-wrap"
+                    class="guide-container"
+                  >
+                    <div class="flex-row align-items-center guide-item">
+                      <img
+                        :src="option.plugin_type.logo"
+                        onerror="this.src='/static/images/plugin-default.svg'"
+                      />
+                      <div class="guide-right pl10">
+                        <div class="guide-plugin-name">
+                          {{ option.plugin_type.name }}
+                        </div>
+                        <div
+                          v-bk-overflow-tips="option.plugin_type.description"
+                          class="guide-plugin-desc"
+                        >
+                          {{ option.plugin_type.description }}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </bk-option>
-            </bk-select>
+                </bk-option>
+              </bk-select>
 
-            <a
-              v-if="curPluginItem.plugin_type"
-              target="_blank"
-              :href="curPluginItem.plugin_type.docs"
-              class="plugin-guide"
-              :style="{ right: `${localLanguage === 'en' ? -14 : 7}px`}"
+              <a
+                v-if="curPluginItem.plugin_type"
+                target="_blank"
+                :href="curPluginItem.plugin_type.docs"
+                class="plugin-guide"
+                :style="{ right: `${getGuideOffset()}px`}"
+              >
+                <i class="paasng-icon paasng-question-circle" />
+                {{ $t('插件指引') }}
+              </a>
+            </div>
+            <div
+              v-if="
+                curPluginItem.plugin_type &&
+                  curPluginItem.plugin_type.approval_config &&
+                  curPluginItem.plugin_type.approval_config.enabled
+              "
+              class="plugin-info mt15"
             >
-              <i class="paasng-icon paasng-question-circle" />
-              {{ $t('插件指引') }}
-            </a>
-          </div>
-          <div
-            v-if="
-              curPluginItem.plugin_type &&
-                curPluginItem.plugin_type.approval_config &&
-                curPluginItem.plugin_type.approval_config.enabled
-            "
-            class="plugin-info w480 mt15"
+              <i
+                style="color: #3a84ff"
+                class="paasng-icon paasng-info-circle"
+              />
+              {{ curPluginItem.plugin_type.approval_config.tips }}
+              <a
+                target="_blank"
+                :href="curPluginItem.plugin_type.approval_config.docs"
+              >
+                {{ $t('详见文档') }}
+              </a>
+            </div>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('插件 ID')"
+            :required="true"
+            :property="'plugin_id'"
+            error-display-type="normal"
           >
-            <i
-              style="color: #3a84ff"
-              class="paasng-icon paasng-info-circle"
+            <bk-input
+              v-model="form.plugin_id"
+              :placeholder="$t(pdIdPlaceholder)"
+              :maxlength="pdIdMaxLength"
+              :show-word-limit="true"
             />
-            {{ curPluginItem.plugin_type.approval_config.tips }}
-            <a
-              target="_blank"
-              :href="curPluginItem.plugin_type.approval_config.docs"
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('插件名称')"
+            :required="true"
+            :property="'name'"
+            :rules="rules.name"
+            error-display-type="normal"
+          >
+            <bk-input
+              v-model="form.name"
+              :placeholder="$t(namePlaceholder)"
+              :maxlength="nameMaxLength"
+              :show-word-limit="true"
+            />
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('开发语言')"
+            :required="true"
+            :property="'language'"
+          >
+            <bk-select
+              v-model="form.language"
+              :clearable="false"
+              :placeholder="$t('开发语言')"
+              @change="changePluginLanguage"
             >
-              {{ $t('详见文档') }}
-            </a>
-          </div>
-        </bk-form-item>
-        <bk-form-item
-          :label="$t('插件 ID')"
-          :required="true"
-          :icon-offset="105"
-          :property="'plugin_id'"
-          error-display-type="normal"
-        >
-          <bk-input
-            v-model="form.plugin_id"
-            class="w480"
-            :placeholder="$t(pdIdPlaceholder)"
-            :maxlength="pdIdMaxLength"
-            :show-word-limit="true"
-          />
-        </bk-form-item>
-        <bk-form-item
-          :label="$t('插件名称')"
-          :required="true"
-          :icon-offset="105"
-          :property="'name'"
-          :rules="rules.name"
-          error-display-type="normal"
-        >
-          <bk-input
-            v-model="form.name"
-            class="w480"
-            :placeholder="$t(namePlaceholder)"
-            :maxlength="nameMaxLength"
-            :show-word-limit="true"
-          />
-        </bk-form-item>
-        <bk-form-item
-          :label="$t('开发语言')"
-          :required="true"
-          :icon-offset="105"
-          :property="'language'"
-        >
-          <bk-select
-            v-model="form.language"
-            class="w480"
-            :clearable="false"
-            :placeholder="$t('开发语言')"
-            @change="changePluginLanguage"
+              <bk-option
+                v-for="option in pluginLanguage"
+                :id="option.id"
+                :key="option.id"
+                :name="option.language"
+              />
+            </bk-select>
+          </bk-form-item>
+          <bk-form-item
+            v-if="languageData.applicableLanguage"
+            :label="$t('适用语言')"
+            :required="true"
+            :property="'applicableLanguage'"
           >
-            <bk-option
-              v-for="option in pluginLanguage"
-              :id="option.id"
-              :key="option.id"
-              :name="option.language"
-            />
-          </bk-select>
-        </bk-form-item>
-        <bk-form-item
-          v-if="languageData.applicableLanguage"
-          :label="$t('适用语言')"
-          :required="true"
-          :icon-offset="105"
-          :property="'applicableLanguage'"
-        >
-          <bk-select
-            v-model="form.applicableLanguage"
-            class="w480"
-            :clearable="false"
-            :placeholder="$t('适用语言')"
+            <bk-select
+              v-model="form.applicableLanguage"
+              :clearable="false"
+              :placeholder="$t('适用语言')"
+            >
+              <bk-option
+                v-for="option in applicableLanguageList"
+                :id="option.id"
+                :key="option.id"
+                :name="option.text"
+              />
+            </bk-select>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('初始化模板')"
+            :required="true"
+            :property="'templateName'"
           >
-            <bk-option
-              v-for="option in applicableLanguageList"
-              :id="option.id"
-              :key="option.id"
-              :name="option.text"
-            />
-          </bk-select>
-        </bk-form-item>
-        <bk-form-item
-          :label="$t('初始化模板')"
-          :required="true"
-          :icon-offset="105"
-          :property="'templateName'"
-        >
-          <bk-select
-            v-model="form.templateName"
-            class="w480"
-            :clearable="false"
-            :placeholder="$t('初始化模板')"
+            <bk-select
+              v-model="form.templateName"
+              :clearable="false"
+              :placeholder="$t('初始化模板')"
+            >
+              <bk-option
+                v-for="option in pluginTemplateList"
+                :id="option.id"
+                :key="option.id"
+                :name="option.name"
+              />
+            </bk-select>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('代码仓库')"
+            :required="true"
+            :property="'repositoryTemplateUrl'"
           >
-            <bk-option
-              v-for="option in pluginTemplateList"
-              :id="option.id"
-              :key="option.id"
-              :name="option.name"
+            <bk-input
+              v-model="form.repositoryTemplateUrl"
+              disabled
+              :placeholder="$t('代码仓库')"
             />
-          </bk-select>
-        </bk-form-item>
-        <bk-form-item
-          :label="$t('代码仓库')"
-          :required="true"
-          :icon-offset="105"
-          :property="'repositoryTemplateUrl'"
-        >
-          <bk-input
-            v-model="form.repositoryTemplateUrl"
-            class="w480"
-            disabled
-            :placeholder="$t('代码仓库')"
-          />
-          <div class="tips">
-            {{ $t('将自动创建该开源仓库，将模板代码初始化到仓库中，并将创建者初始化为仓库管理员') }}
-          </div>
-        </bk-form-item>
-      </bk-form>
-      <template v-if="Object.keys(extraFields).length">
+            <div class="tips">
+              {{ $t('将自动创建该开源仓库，将模板代码初始化到仓库中，并将创建者初始化为仓库管理员') }}
+            </div>
+          </bk-form-item>
+        </bk-form>
+      </section>
+      <section
+        v-if="Object.keys(extraFields).length"
+        :class="['info-container', 'card-style', 'mt16', { mb75: isSticky }]"
+      >
         <div class="base-info-tit">
           {{ $t('更多信息') }}
         </div>
@@ -224,13 +216,13 @@
             :layout="layout"
           ></BkSchemaForm>
         </bk-form>
-      </template>
+      </section>
 
-      <div class="button-warp">
+      <div :class="['create-button-warp', { 'sticky': isSticky }]">
         <bk-button
           :theme="'primary'"
           :title="$t('提交')"
-          class="mr10"
+          class="mr8"
           :loading="buttonLoading"
           @click="submitPluginForm"
         >
@@ -239,7 +231,6 @@
         <bk-button
           :theme="'default'"
           :title="$t('取消')"
-          class="mr10"
           @click="back"
         >
           {{ $t('取消') }}
@@ -249,18 +240,17 @@
   </div>
 </template>
 <script>import http from '@/api';
-import { quillEditor } from 'vue-quill-editor';
 import 'quill/dist/quill.core.css';
 import 'quill/dist/quill.snow.css';
 import 'quill/dist/quill.bubble.css';
 import paasPluginTitle from '@/components/pass-plugin-title';
 import createForm from '@blueking/bkui-form';
+import { throttle } from 'lodash';
 
 const BkSchemaForm = createForm();
 
 export default {
   components: {
-    quillEditor,
     paasPluginTitle,
     BkSchemaForm,
   },
@@ -354,6 +344,7 @@ export default {
           gridGap: '0',
         },
       },
+      isSticky: false,
     };
   },
   computed: {
@@ -366,6 +357,9 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    isShowNotice() {
+      return this.$store.state.isShowNotice;
     },
   },
   watch: {
@@ -383,6 +377,10 @@ export default {
   },
   mounted() {
     this.fetchPluginTypeList();
+    window.addEventListener('resize', this.handleBottomAdsorption);
+    this.$once('hook:beforeDestroy', () => {
+      window.removeEventListener('resize', this.handleBottomAdsorption);
+    });
   },
   methods: {
     // 获取插件类型数据
@@ -420,6 +418,7 @@ export default {
       } finally {
         setTimeout(() => {
           this.isLoading = false;
+          this.handleBottomAdsorption();
         }, 200);
       }
     },
@@ -526,6 +525,9 @@ export default {
       const properties = this.sortdSchema(extraFieldsOrder, this.pluginTypeData.properties);
       // 根据数据添加必填字段
       this.schema = { type: 'object', required: this.getRequiredFields(properties), properties };
+      this.$nextTick(() => {
+        this.handleBottomAdsorption();
+      });
     },
     // 切换插件重置参数
     resetPluinParams() {
@@ -575,10 +577,20 @@ export default {
           theme: 'success',
           message: this.$t('插件创建成功！'),
         });
-        // 版本管理
+        const pluginDataKey = `pluginInfo${Math.random().toString(36)}`;
+        const data = {
+          name: this.curPluginItem.name,
+          docs: this.curPluginItem.plugin_type.docs,
+          pluginName: params.name,
+        };
+        localStorage.setItem(pluginDataKey, JSON.stringify(data));
+        // 插件引导页
         this.$router.push({
-          name: 'pluginVersionManager',
+          name: 'createPluginSuccess',
           params: { pluginTypeId: res.pd_id, id: res.id },
+          query: {
+            key: pluginDataKey,
+          },
         });
       } catch (e) {
         this.$paasMessage({
@@ -606,22 +618,45 @@ export default {
         console.warn(error);
       }
     },
+
+    // 获取插件指引偏移量
+    getGuideOffset() {
+      const guideDom = document.querySelector('.plugin-guide');
+      if (guideDom) return -(guideDom?.offsetWidth + 15) || -78;
+      return -78;
+    },
+
+    // 处理 footer 是否吸附
+    handleBottomAdsorption: throttle(function () {
+      const contentHeight = document.querySelector('.bk-create-plugin-warp')?.offsetHeight;
+      const reserveHeight = this.isShowNotice ? 70 : 110;
+      const viewportHeight = window.innerHeight - reserveHeight;
+      this.isSticky = contentHeight > viewportHeight;
+    }, 220),
   },
 };
 </script>
 <style lang="scss" scoped>
 .bk-create-plugin-warp {
-  padding: 28px 0 44px;
-  width: calc(100% - 120px);
+  width: calc(100% - 366px);
   margin: 0 auto;
-  min-height: calc(100vh - 120px);
+  .info-container {
+    padding: 12px 130px 24px 24px;
+
+    &.mb75 {
+      margin-bottom: 75px;
+    }
+  }
   .base-info-tit {
-    margin: 5px 0 20px;
     font-weight: Bold;
-    color: #63656e;
-    padding: 5px 16px;
-    background: #f5f7fa;
-    border-radius: 2px;
+    color: #313238;
+    font-size: 14px;
+  }
+  .mt16 {
+    margin-top: 16px;
+  }
+  .mb60 {
+    margin-bottom: 60px;
   }
   .w480 {
     width: 480px;
@@ -645,8 +680,23 @@ export default {
     }
   }
 }
-.button-warp {
-  margin: 30px 0 0 170px;
+.create-button-warp {
+  margin-top: 32px;
+  margin-bottom: 28px;
+
+  &.sticky {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 48px;
+    line-height: 48px;
+    padding-left: 183px;
+    background: #FAFBFD;
+    box-shadow: 0 -1px 0 0 #DCDEE5;
+    margin: 0;
+    z-index: 99;
+  }
 }
 .guide-container {
   background: #fff;
@@ -683,6 +733,7 @@ export default {
   cursor: pointer;
   margin-left: 10px;
   position: absolute;
+  top: 0;
 }
 .plugin-top-title {
   margin: 12px 0 14px;
@@ -695,11 +746,14 @@ export default {
     color: #f5222d;
   }
 }
+.plugin-type {
+  position: relative;
+}
+.mr8 {
+  margin-right: 8px;
+}
 </style>
 <style lang="scss">
-.bk-form-warp {
-  width: 630px !important;
-}
 .guide-input input {
   border: none;
   border-bottom: 1px solid #c4c6cc;

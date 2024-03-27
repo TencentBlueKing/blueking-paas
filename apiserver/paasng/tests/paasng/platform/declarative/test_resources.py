@@ -52,7 +52,7 @@ def diff_result(param) -> ModuleDiffResult:
 
 
 def make_modules(services: List[ServiceSpec], module_name: str = "default"):
-    return {"modules": {module_name: {"is_default": True, "services": services}}}
+    return {"modules": {module_name: {"name": module_name, "isDefault": True, "services": services}}}
 
 
 class TestApplicationDescDiffDog:

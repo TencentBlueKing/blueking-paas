@@ -46,14 +46,14 @@ class ErrorCodes:
 
     # cnative
     BKAPP_NOT_SET = ErrorCode(_("未设置部署信息"))
-    DEPLOY_BKAPP_FAILED = ErrorCode(_("Failed to deploy bkapp"))
-    GET_MRES_FAILED = ErrorCode(_("Failed to find bkapp in Kubernetes"))
     INVALID_MRES = ErrorCode(_("The bkapp is invalid"))
     GET_DEPLOYMENT_FAILED = ErrorCode(_("Failed to find deployed version"))
     LIST_TAGS_FAILED = ErrorCode(_("Failed to list tag from image repository"))
     CREATE_VOLUME_MOUNT_FAILED = ErrorCode(_("Failed to create volume mount"))
     LIST_VOLUME_MOUNTS_FAILED = ErrorCode(_("Failed to list volume mount"))
     UPDATE_VOLUME_MOUNT_FAILED = ErrorCode(_("Failed to update volume mount"))
+    LIST_VOLUME_SOURCES_FAILED = ErrorCode(_("Failed to list volume mount sources"))
+    CREATE_VOLUME_SOURCE_FAILED = ErrorCode(_("Failed to create volume mount source"))
 
     # Credentials
     CREATE_CREDENTIALS_FAILED = ErrorCode(_("Failed to create credentials"))
@@ -61,6 +61,7 @@ class ErrorCodes:
     DELETE_CREDENTIALS_FAILED = ErrorCode(_("Failed to delete credentials"))
 
     # 集群组件相关
+    SWITCH_DEFAULT_CLUSTER_FAILED = ErrorCode(_("Failed to switch default cluster"))
     CLUSTER_COMPONENT_NOT_EXIST = ErrorCode(_("Cluster component not exist"))
 
 

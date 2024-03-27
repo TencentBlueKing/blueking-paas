@@ -123,7 +123,6 @@ class SourceCodePatcher:
         if key.exists():
             logger.warning("Procfile already exists, skip the injection process")
             return
-
         procfile = self.deploy_description.get_procfile()
         if not procfile:
             logger.warning("Procfile not defined, skip injection process")

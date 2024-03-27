@@ -9,29 +9,11 @@
   <body>
     <div id="app"></div>
     <script>
-      // 以下变量由后端服务输出填充
-      // var process = {}
-      // process.env = {
-      //   'BK_PAAS3_URL': '<%= process.env.BK_PAAS3_URL %>' || '', // 蓝鲸 PaaS3.0 平台访问地址
-      //   'BK_LOGIN_URL': '$BK_LOGIN_URL' || '', // 登录跳转地址
-      //   'BK_PAAS2_URL': '$BK_PAAS2_URL' || '', // 蓝鲸 PaaS2.0 平台访问地址，用于平台访问链接拼接
-      //   'BK_DOCS_URL_PREFIX': '$BK_DOCS_URL_PREFIX' || '', // 中心前缀，用于拼接文档地址
-      //   'BK_APIGW_URL': '$BK_APIGW_URL' || '', // API GW 访问地址
-      //   'BK_APIGW_DOC_URL': '$BK_APIGW_DOC_URL' || '', // API GW 文档中心地址
-      //   'BK_LESSCODE_URL': '$BK_LESSCODE_URL' || '', // 用于拼接 lesscode 的访问地址，bk_leescode 作为 Smart 应用部署到 PaaS3.0上
-      //   'BK_COMPONENT_API_URL': '$BK_COMPONENT_API_URL' || '', // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
-      //   'BK_ANALYSIS_JS': '$BK_ANALYSIS_JS' || '',  // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
-      //   'BK_PAAS_VERSION': '$BK_PAAS_VERSION' || ''
-      // }
-    </script>
-    <!-- <script src="/static/runtime/runtime.js?version=<%= RELEASE_VERSION %>"></script> -->
-    <script>
-      // 以下变量由webpack构建工具填充
-      // var RELEASE_VERSION = '<%= htmlWebpackPlugin.options.RELEASE_VERSION %>'
-
+      // 以下变量由 webpack 构建工具填充
+      // var RELEASE_VERSION = '<%= JSON.stringify(htmlWebpackPlugin.options) %>'
 
       // 环境变量
-      var APP_VERSION = '<%= process.env.BK_APP_VERSION %>' 
+      var APP_VERSION = '<%= process.env.BK_APP_VERSION %>'
       var BACKEND_URL = `<%= process.env.BK_PAAS3_BACKEND_URL %>` || `<%= process.env.BK_PAAS3_URL %>/backend`
       var NODE_ENV = '<%= process.env.NODE_ENV %>'
       var BK_LESSCODE_URL = '<%= process.env.BK_LESSCODE_URL %>' || ''
@@ -41,7 +23,7 @@
       var BK_APIGW_DOC_URL = '<%= process.env.BK_APIGW_DOC_URL %>' || ''
       var BK_COMPONENT_API_URL = '<%= process.env.BK_COMPONENT_API_URL %>' || ''
       var BK_ANALYSIS_JS = '<%= process.env.BK_ANALYSIS_JS %>' || ''
-      var DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/PaaS3.0`
+      var DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/PaaS/DevelopTools/BaseGuide`
       var BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>' || ''
       var BK_PAAS_VERSION = '<%= process.env.BK_PAAS_VERSION %>' || ''
       var GLOBAL_CONFIG = {
@@ -49,12 +31,28 @@
         LOGIN_SERVICE_URL: '<%= process.env.BK_LOGIN_URL %>',
         USERS_URL: `<%= process.env.BK_COMPONENT_API_URL %>/api/c/compapi/v2/usermanage/fs_list_users/` || '',
       }
+      var BKPAAS_BUILD_VERSION = decodeURIComponent('<%= process.env.BK_PAAS_BUILD_VERSION %>' || '')
+
+      // 控制台输出版本信息
+      if (BKPAAS_BUILD_VERSION !== '') {
+        console.log(
+          `%c版本信息%c${ BKPAAS_BUILD_VERSION }%c >> ${new Date().toString().slice(0, 16)}<<`,
+          'padding: 2px 5px; background: #ea3636; color: #fff; border-radius: 3px 0 0 3px;',
+          'padding: 2px 5px; background: #42c02e; color: #fff; border-radius: 0 3px 3px 0; font-weight: bold;',
+          'background-color: #3A84FF; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold;margin-left: 16px;',
+        );
+      }
     </script>
     <% if (process.env.BK_APP_VERSION === 'te'){ %>
     <!-- BK Analytics start -->
     <!-- start及end之间的内部代码会在企业版本出包时删除 -->
     <script>
       document.write('<scr'+'ipt src="'+BK_ANALYSIS_JS+'"></scr'+'ipt>');
+      document.addEventListener('DOMContentLoaded', () => {
+        const analysisScript = document.createElement('script');
+        analysisScript.src = BK_ANALYSIS_JS;
+        document.body.appendChild(analysisScript);
+      });
       GLOBAL_CONFIG.USERS_URL = ''
     </script>
     <% if (process.env.NODE_ENV !== 'development') { %>
@@ -62,7 +60,7 @@
         if (window.NODE_ENV !== 'development') {
           if(BKANALYSIS) {
             BKANALYSIS.init({
-              // siteName 是网站的唯一标识，请不要修改
+              // siteName 是网站的唯一标识，请不要修改
               siteName: 'custom:paasv3cli:default:default',
             })
           }

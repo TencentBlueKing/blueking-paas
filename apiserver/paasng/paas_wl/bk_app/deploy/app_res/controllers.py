@@ -20,14 +20,14 @@ import datetime
 import logging
 import os
 import time
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arrow
 from django.conf import settings
 from django.utils.timezone import localtime
 from kubernetes.client.rest import ApiException
 
+from paas_wl.bk_app.monitoring.app_monitor.utils import build_monitor_port
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
@@ -38,8 +38,9 @@ from paas_wl.infras.resources.base.exceptions import (
     ResourceDuplicate,
     ResourceMissing,
 )
-from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod
-from paas_wl.infras.resources.generation.version import get_proc_deployment_name
+from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod, KReplicaSet, set_default_options
+from paas_wl.infras.resources.generation.mapper import MapperProcConfig, ResourceIdentifiers
+from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -52,75 +53,141 @@ from paas_wl.utils.kubestatus import (
     parse_pod,
 )
 from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
+from paas_wl.workloads.images.kres_entities import ImageCredentials, credentials_kmodel
+from paas_wl.workloads.networking.ingress.managers.service import ProcDefaultServices
 from paas_wl.workloads.release_controller.hooks.kres_entities import Command, command_kmodel
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
     from paas_wl.infras.resources.base.base import EnhancedApiClient
-    from paas_wl.infras.resources.generation.mapper import MapperPack
     from paasng.platform.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
 
+# Set the default timeout
+set_default_options({"request_timeout": (settings.K8S_DEFAULT_CONNECT_TIMEOUT, settings.K8S_DEFAULT_READ_TIMEOUT)})
 
-@dataclass
+
+def ensure_image_credentials_secret(app: "WlApp"):
+    """确保应用镜像的访问凭证存在。"""
+    credentials = ImageCredentials.load_from_app(app)
+    credentials_kmodel.upsert(credentials, update_method="patch")
+
+
 class ResourceHandlerBase:
-    client: "EnhancedApiClient"
-    default_connect_timeout: int
-    default_request_timeout: tuple
-    mapper_version: "MapperPack"
+    """The base class for handling resources."""
+
+    def __init__(self, client: "EnhancedApiClient"):
+        self.client = client
+
+    @classmethod
+    def new_by_app(cls, app: "WlApp"):
+        """Create a handler object by app object."""
+        client = get_client_by_app(app)
+        return cls(client)
 
 
 class ProcessesHandler(ResourceHandlerBase):
+    """Process handler."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.process_manager = AppEntityManager(Process)
 
-    def deploy(self, process: Process):
-        try:
-            self.process_manager.update(
-                process, "replace", mapper_version=self.mapper_version, allow_not_concrete=True
-            )
-        except AppEntityNotFound:
-            self.process_manager.create(process, mapper_version=self.mapper_version)
+    def deploy(self, processes: List[Process]):
+        """Deploy a list process objects.
 
-    def delete(self, process: Process):
-        self.mapper_version.deployment(process=process).delete(non_grace_period=True)
+        :param processes: The process list.
+        """
+        for process in processes:
+            mapper_ver = AppResVerManager(process.app).curr_version
+            try:
+                self.process_manager.update(process, "replace", mapper_version=mapper_ver, allow_not_concrete=True)
+            except AppEntityNotFound:
+                self.process_manager.create(process, mapper_version=mapper_ver)
+            self.get_default_services(process.app, process.type).create_or_patch()
 
-        # we have to delete rs & pod manually
-        self.mapper_version.replica_set(process=process).delete_collection()
-        self.mapper_version.pod(process=process).delete_individual()
+    def shutdown(self, config: MapperProcConfig):
+        """Shutdown a process.
 
-    def delete_gracefully(self, app: "WlApp", process_type: str):
-        """Delete a process gracefully."""
-        res_name = get_proc_deployment_name(app, process_type)
-        KDeployment(self.client).delete(res_name, namespace=app.namespace)
+        :param config: The mapper proc config object.
+        """
+        self.scale(config, 0)
 
-    def scale(self, app: "WlApp", process_type: str, replicas: int):
+    def scale(self, config: MapperProcConfig, replicas: int):
         """Scale a process's replicas to given value.
 
-        :param app: The application object.
-        :param process_type: The type of process, such as "web".
+        :param config: The mapper proc config object.
         :param replicas: The replicas value, such as 2.
         """
+        self.get_default_services(config.app, config.type).create_or_patch()
+
+        # Send patch request
         patch_body = {"spec": {"replicas": replicas}}
-        res_name = get_proc_deployment_name(app, process_type)
-        KDeployment(self.client).patch(res_name, namespace=app.namespace, body=patch_body)
+        KDeployment(self.client).patch(
+            self.res_identifiers(config).deployment_name, namespace=config.app.namespace, body=patch_body
+        )
+
+    def delete(self, config: MapperProcConfig, remove_svc: bool):
+        """Delete a process by the config object.
+
+        :param config: The mapper proc config object.
+        :param remove_svc: Whether to remove the related default service.
+        """
+        app = config.app
+        if remove_svc:
+            self.get_default_services(app, config.type).remove()
+
+        # Delete the resources
+        res = self.res_identifiers(config)
+        KDeployment(self.client).delete(res.deployment_name, namespace=app.namespace, non_grace_period=True)
+        # Delete ReplicaSet and Pods manually
+        KReplicaSet(self.client).ops_label.delete_collection(labels=res.match_labels, namespace=app.namespace)
+        KPod(self.client).ops_label.delete_individual(labels=res.match_labels, namespace=app.namespace)
+
+    def delete_gracefully(self, config: MapperProcConfig):
+        """Delete a process gracefully by the config object.
+
+        :param config: The mapper proc config object.
+        """
+        res = self.res_identifiers(config)
+        KDeployment(self.client).delete(res.deployment_name, namespace=config.app.namespace)
+
+    @staticmethod
+    def res_identifiers(config: MapperProcConfig) -> ResourceIdentifiers:
+        """Get the resource identifiers of a process."""
+        mapper_version = AppResVerManager(config.app).curr_version
+        return mapper_version.proc_resources(config)
+
+    @staticmethod
+    def get_default_services(app: "WlApp", process_type: str) -> ProcDefaultServices:
+        monitor_port = build_monitor_port(app)
+        return ProcDefaultServices(app, process_type, monitor_port=monitor_port)
 
 
 class NamespacesHandler(ResourceHandlerBase):
     """Handler for namespace resources"""
 
-    def delete(self, namespace):
+    def ensure_namespace(self, namespace: str, max_wait_seconds: int = 15):
+        """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
+
+        :param namespace: 需要确保存在的 namespace
+        :param max_wait_seconds: 等待 ServiceAccount 就绪的时间
+        """
+        self.create(namespace)
+        self.check_service_account_secret(namespace, max_wait_seconds=max_wait_seconds)
+
+    def delete(self, namespace: str):
+        """k8s 直接删除 namespace 将清除其下所有资源"""
         KNamespace(self.client).delete(namespace)
 
-    def create(self, namespace):
+    def create(self, namespace: str):
         """
         :return: instance of namespace, created
         """
         return KNamespace(self.client).get_or_create(namespace)
 
-    def check_service_account_secret(self, namespace, max_wait_seconds=15):
+    def check_service_account_secret(self, namespace: str, max_wait_seconds=15):
         try:
             KNamespace(self.client).wait_for_default_sa(namespace, timeout=max_wait_seconds)
         except CreateServiceAccountTimeout:
@@ -265,10 +332,11 @@ class PodScheduleHandler(ResourceHandlerBase):
 class BuildHandler(PodScheduleHandler):
     """Handler for slugbuilder pod."""
 
-    def build_slug(self, template: "SlugBuilderTemplate"):
+    def build_slug(self, template: "SlugBuilderTemplate") -> str:
         """Start a Pod for building slug
 
         :param template: the template to run builder
+        :returns: The name of slug build pod
         """
         pod_name = self.normalize_builder_name(template.name)
         try:
@@ -328,8 +396,8 @@ class BuildHandler(PodScheduleHandler):
         )
         return pod_info.metadata.name
 
-    def delete_slug(self, namespace: str, name: str):
-        """Force delete slugbuilder pod unless it's in "running" phase"""
+    def delete_builder(self, namespace: str, name: str):
+        """Force delete a slug builder pod unless it's in "running" phase."""
         pod_name = self.normalize_builder_name(name)
         return self._delete_finished_pod(namespace=namespace, pod_name=pod_name, force=False)
 
@@ -401,10 +469,18 @@ class BuildHandler(PodScheduleHandler):
 class CommandHandler(PodScheduleHandler):
     """Handler for running command"""
 
-    def run_command(
-        self,
-        command: Command,
-    ):
+    def run(self, command: Command) -> str:
+        """Run a command, it create the namespace and image credentials automatically.
+
+        :param command: The command object.
+        :return: The name of the command.
+        """
+        NamespacesHandler.new_by_app(command.app).ensure_namespace(command.app.namespace)
+        ensure_image_credentials_secret(command.app)
+        return self.run_command(command)
+
+    def run_command(self, command: Command) -> str:
+        """Run a command."""
         namespace = command.app.namespace
         pod_name = command.name
 

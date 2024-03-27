@@ -33,7 +33,6 @@ from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.configurations.building import get_processes_by_build
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import update_image_runtime_config
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
@@ -167,12 +166,12 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
 
     deployment_id: Optional[str]
     if deployment:
-        procfile = deployment.procfile
+        procfile = {p.name: p.command for p in deployment.get_processes()}
         deployment_id = str(deployment.id)
     else:
         # NOTE: 更新环境变量时的 Pod 滚动时没有 deployment, 需要从 engine 中查询 procfile
-        # TODO: 直接使用上一次成功的 deployment 中记录的 procfile
-        procfile = get_processes_by_build(build_id)
+        previous_deployment: Deployment = Deployment.objects.filter(build_id=build_id).latest_succeeded()
+        procfile = {p.name: p.command for p in previous_deployment.get_processes()}
         deployment_id = None
 
     extra_envs = get_env_variables(env, deployment=deployment)

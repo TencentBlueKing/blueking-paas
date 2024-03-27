@@ -21,7 +21,7 @@ import json
 import pytest
 from django.utils.crypto import get_random_string
 
-from paas_wl.bk_app.deploy.app_res.client import K8sScheduler
+from paas_wl.bk_app.deploy.app_res.controllers import ensure_image_credentials_secret
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import b64decode, b64encode
 from paas_wl.workloads.images import constants
@@ -42,21 +42,21 @@ class TestImageCredentialsHandler:
     def _clear_builtin_auth(self, settings):
         settings.APP_DOCKER_REGISTRY_HOST = ""
 
-    def test_create_empty(self, wl_app, kube_res_name, scheduler_client: K8sScheduler):
-        scheduler_client.ensure_image_credentials_secret(wl_app)
+    def test_create_empty(self, wl_app, kube_res_name):
+        ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 0
         assert obj.name == kube_res_name
         assert obj._kube_data.data[constants.KUBE_DATA_KEY] == b64encode('{"auths": {}}')
 
-    def test_create(self, wl_app, kube_res_name, scheduler_client: K8sScheduler):
+    def test_create(self, wl_app, kube_res_name):
         registry = get_random_string()
         username = get_random_string()
         password = get_random_string()
 
         AppImageCredential.objects.create(app=wl_app, registry=registry, username=username, password=password)
 
-        scheduler_client.ensure_image_credentials_secret(wl_app)
+        ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 1
         assert obj.name == kube_res_name
@@ -66,13 +66,13 @@ class TestImageCredentialsHandler:
             }
         }
 
-    def test_update(self, wl_app, kube_res_name, scheduler_client: K8sScheduler):
-        scheduler_client.ensure_image_credentials_secret(wl_app)
+    def test_update(self, wl_app, kube_res_name):
+        ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 0
 
         AppImageCredential.objects.create(app=wl_app, registry="foo", username="bar", password="baz")
-        scheduler_client.ensure_image_credentials_secret(wl_app)
+        ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 1
 

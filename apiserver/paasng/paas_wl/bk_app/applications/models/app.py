@@ -69,13 +69,19 @@ class App(UuidAuditedModel):
 
     @cached_property
     def module_name(self):
-        from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+        from paas_wl.bk_app.applications.managers import get_metadata
 
         return get_metadata(self).module_name
 
     @property
     def latest_config(self):
         return self.config_set.latest()
+
+    @property
+    def use_dev_sandbox(self) -> bool:
+        if self.name.endswith("-dev"):
+            return True
+        return False
 
     def __str__(self) -> str:
         return f"<{self.name}, region: {self.region}, type: {self.type}>"

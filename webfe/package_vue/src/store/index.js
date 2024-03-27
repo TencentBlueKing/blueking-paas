@@ -48,6 +48,7 @@ import plugin from './modules/plugin';
 import pluginMembers from './modules/plugin-members';
 import imageManage from './modules/image-manage';
 import observability from './modules/observability';
+import persistentStorage from './modules/persistent-storage';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -85,6 +86,7 @@ const state = {
   errorDetail: {},
   // 是否显示通知中心
   isShowNotice: false,
+  curUserInfo: {},
 };
 
 const getters = {};
@@ -112,7 +114,9 @@ const mutations = {
   updatePlatformFeature(state, data) {
     state.platformFeature = data;
     // 将平台功能合并到用户功能
-    state.userFeature = { ...state.userFeature, ...data };
+    for (const key in data) {
+      state.userFeature[key] = data[key];
+    }
 
     const appCode = state.curAppCode;
     if (appCode && state.appInfo[appCode]) {
@@ -232,6 +236,9 @@ const mutations = {
   },
   updataNoticeStatus(state, data) {
     state.isShowNotice = data;
+  },
+  updataUserInfo(state, data) {
+    state.curUserInfo = data;
   },
 };
 
@@ -417,6 +424,7 @@ export default new Vuex.Store({
     pluginMembers,
     imageManage,
     observability,
+    persistentStorage,
   },
   state,
   getters,

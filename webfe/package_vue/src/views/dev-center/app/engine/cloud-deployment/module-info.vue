@@ -57,7 +57,7 @@
               :theme="'default'"
               title="取消"
               class="mt20"
-              @click="handleCancel">
+              @click="handleCancel('deploy-permissions')">
               {{ $t('取消') }}
             </bk-button>
           </div>
@@ -259,6 +259,7 @@
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
 import moment from 'moment';
 import deployNetwork from './deploy-network';
+import { cloneDeep } from 'lodash';
 export default {
   components: {
     deployNetwork,
@@ -288,6 +289,7 @@ export default {
       pageLoading: true,
       isNetworkLoading: true,
       envs: [],
+      backupDeployLimit: {},
     };
   },
   computed: {
@@ -347,7 +349,11 @@ export default {
       });
     },
 
-    handleCancel() {
+    handleCancel(key) {
+      if (key === 'deploy-permissions') {
+        // 部署限制还原
+        this.deployLimit = cloneDeep(this.backupDeployLimit);
+      }
       this.isDeployLimitEdit = false;
       this.isIpInfoEdit = false;
       this.$refs.baseInfoRef?.clearError();
@@ -395,6 +401,7 @@ export default {
             prod: false,
           };
         }
+        this.backupDeployLimit = cloneDeep(this.deployLimit);
       } catch (e) {
         this.$paasMessage({
           limit: 1,
@@ -407,7 +414,6 @@ export default {
     // 设置部署限制环境
     async fetchSetDeployLimit() {
       try {
-        this.pageLoading = true;
         await this.$store.dispatch('module/setDeployLimitBatch', {
           appCode: this.appCode,
           modelName: this.curModuleId,

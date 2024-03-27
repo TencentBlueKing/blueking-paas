@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest import mock
-
 import pytest
 
 from paas_wl.infras.cluster.models import Cluster
@@ -52,15 +50,6 @@ class TestGetClusterByApp:
         ]
         for cluster in clusters:
             Cluster.objects.register_cluster(**cluster)
-
-        # 由于注册集群到 DB 后，未能刷新 _k8s_global_configuration_pool_map，
-        # 导致创建 WlApp 后触发的信号处理逻辑中，无法获取到集群的 context，因此抛出 ValueError
-        # 考虑到本处不获取集群 client，并不影响当前测试，因此通过 mock 处理
-        with mock.patch(
-            "paas_wl.infras.resources.generation.version.get_client_by_app",
-            return_value=None,
-        ):
-            yield
 
     def test_get_cluster_by_app_normal(self):
         app = create_wl_app(force_app_info={"region": "region-2"})

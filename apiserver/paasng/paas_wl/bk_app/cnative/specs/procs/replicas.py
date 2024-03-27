@@ -23,7 +23,7 @@ from typing import Dict, List, Optional, Tuple
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.crd.bk_app import AutoscalingOverlay, BkAppResource, ReplicasOverlay
-from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
+from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.resources.base import crd
 from paas_wl.infras.resources.base.base import EnhancedApiClient
 from paas_wl.infras.resources.base.exceptions import ResourceMissing

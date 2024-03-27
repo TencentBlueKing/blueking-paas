@@ -84,7 +84,8 @@ class TemplateRuntimeManager:
         """获取构建模板代码需要的构建工具"""
         try:
             required_buildpacks = self.get_template_required_buildpacks(bp_stack_name=bp_stack_name)
-        except Template.DoesNotExist:
+        # django_legacy 等迁移模板未配 region
+        except (Template.DoesNotExist, TmplRegionNotSupported):
             required_buildpacks = []
         language_bp = self.get_language_buildpack(bp_stack_name=bp_stack_name)
         if language_bp:

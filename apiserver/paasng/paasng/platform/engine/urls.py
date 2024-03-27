@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.workloads.networking.entrance.views_enduser import AppDomainsViewSet
 from paasng.utils.basic import make_app_pattern, make_app_pattern_with_global_envs, re_path
 
 from . import views
@@ -141,12 +140,6 @@ urlpatterns = [
         make_app_pattern(r"/deploy_operations/lists/$", include_envs=False),
         views.OperationsViewset.as_view({"get": "list"}),
         name="api.deploy_operation.lists",
-    ),
-    # Deprecated: use `api.app_domains.configs` instead
-    re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/custom_domains/config/$",
-        AppDomainsViewSet.as_view({"get": "list_configs"}),
-        name="api.custom_domains_config",
     ),
     # build artifact
     re_path(

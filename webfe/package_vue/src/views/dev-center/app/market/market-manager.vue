@@ -4,17 +4,14 @@
     placeholder="market-visit-loading"
   >
     <section v-show="!isDataLoading" class="market-manager">
-      <div
-        v-if="isSmartApp"
-        class="info mb10 mt10"
-      >
-        {{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}
-      </div>
-      <div class="market-info mb25">
+      <div class="market-info mb25 shadow-card-style">
         <div class="flex-row justify-content-between align-items-center">
-          <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
+          <div class="market-info-title-wrapper">
+            <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
+            <span v-if="isSmartApp">{{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}</span>
+          </div>
           <bk-button
-            v-if="isSaveMarketInfo"
+            v-if="isSaveMarketInfo && !isSmartApp"
             theme="primary"
             outline
             class="mr10  market-info-btn"
@@ -24,7 +21,7 @@
             {{ $t('编辑') }}
           </bk-button>
         </div>
-        <div v-if="!isSaveMarketInfo">
+        <div v-if="!isSaveMarketInfo && !isSmartApp">
           <bk-form
             class="market-info-container"
             ref="baseInfoForm"
@@ -326,28 +323,22 @@
             </bk-form-item>
             <bk-form-item
               :label="$t('应用联系人：')"
-              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
+              v-if="GLOBAL.CONFIG.MARKET_INFO"
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
               <p class="form-text">{{ baseInfo.contactArr.join('; ') || '--' }}</p>
             </bk-form-item>
             <bk-form-item
-              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
+              v-if="GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
               :label="$t('所属业务：')"
             >
               <p class="form-text">{{ businessDetailName || '--' }}</p>
             </bk-form-item>
-            <bk-form-item
-              v-if="!isSmartApp"
-              :label="$t('详细描述：')"
-            >
-              <p class="form-text">{{ baseInfo.description || '--' }}</p>
+            <bk-form-item :label="$t('详细描述：')">
+              <p class="form-text text-ellipsis" v-bk-overflow-tips>{{ baseInfo.description || '--' }}</p>
             </bk-form-item>
-            <bk-form-item
-              v-if="!isSmartApp"
-              :label="$t('打开方式：')"
-            >
+            <bk-form-item :label="$t('打开方式：')">
               <p class="form-text">{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
             </bk-form-item>
             <bk-form-item
@@ -712,7 +703,6 @@ export default {
             this.baseInfo.logo = application.logo_url;
           }
         }
-        console.log('this.baseInfo', this.baseInfo);
         if (!product) {
           this.changeNewtab();
         }

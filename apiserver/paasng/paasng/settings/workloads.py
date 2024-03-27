@@ -85,6 +85,10 @@ BUILD_EXTRA_ENV_VARS = settings.get("BUILD_EXTRA_ENV_VARS", {})
 # 默认容器内监听地址
 CONTAINER_PORT = settings.get("CONTAINER_PORT", 5000)
 
+# dev sandbox 中 devserver 的监听地址
+DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
+DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")
+
 # 服务相关插件配置
 SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
 

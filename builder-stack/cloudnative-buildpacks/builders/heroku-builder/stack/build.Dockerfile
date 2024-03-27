@@ -3,14 +3,15 @@ ARG TAG=18.v27
 
 FROM ${IMAGE}:${TAG}
 
+ARG STACK_ID="heroku-18"
 ARG sources
 ARG packages
 ARG package_args='--allow-downgrades --allow-remove-essential --allow-change-held-packages --no-install-recommends'
 
 
 # Set required CNB information
-LABEL io.buildpacks.stack.id="heroku-18"
-ENV CNB_USER_ID=2000 CNB_GROUP_ID=2000 CNB_STACK_ID="heroku-18" STACK="heroku-18"
+LABEL io.buildpacks.stack.id=${STACK_ID}
+ENV CNB_USER_ID=2000 CNB_GROUP_ID=2000 CNB_STACK_ID=${STACK_ID} STACK=${STACK_ID}
 
 # Create the user
 RUN groupadd --gid ${CNB_GROUP_ID} cnb && \
@@ -50,6 +51,5 @@ RUN echo "debconf debconf/frontend select noninteractive" | debconf-set-selectio
     /usr/lib/x86_64-linux-gnu/gconv/EBC* && \
     bash -c "mkdir -p /usr/share/man/man{1..8}"
 
-COPY rootfs/ /
 USER cnb
 WORKDIR /app

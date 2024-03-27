@@ -67,7 +67,7 @@ class BaseStageController:
 
     def execute_post_command(self) -> bool:
         """后置命令，当前阶段的状态更新为 SUCCESS 时执行"""
-        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        stage_definition = find_stage_by_id(self.pd, self.release, self.stage.stage_id)
         if stage_definition is None:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
 
@@ -93,7 +93,7 @@ class BaseStageController:
 
     def execute_pre_command(self, operator: str) -> bool:
         """前置命令，进入该阶段前先执行"""
-        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        stage_definition = find_stage_by_id(self.pd, self.release, self.stage.stage_id)
         if stage_definition is None:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
 
@@ -129,6 +129,7 @@ class BaseStageController:
             "stage_name": self.stage.stage_name,
             "status": self.stage.status,
             "fail_message": self.stage.fail_message,
+            "invoke_method": self.stage.invoke_method,
         }
         return basic_info
 
@@ -217,7 +218,7 @@ class PipelineStage(BaseStageController):
     def __init__(self, stage: PluginReleaseStage):
         super().__init__(stage)
 
-        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        stage_definition = find_stage_by_id(self.pd, self.release, self.stage.stage_id)
         pipeline_env = "prod"
         if stage_definition and stage_definition.pipelineEnv:
             pipeline_env = stage_definition.pipelineEnv
@@ -267,7 +268,7 @@ class PipelineStage(BaseStageController):
         return self.stage.status not in constants.PluginReleaseStatus.running_status()
 
     def execute(self, operator: str):
-        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        stage_definition = find_stage_by_id(self.pd, self.release, self.stage.stage_id)
         if stage_definition is None:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
 
@@ -312,7 +313,7 @@ class PipelineStage(BaseStageController):
         if self.build is None:
             return False
 
-        stage_definition = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        stage_definition = find_stage_by_id(self.pd, self.release, self.stage.stage_id)
         if stage_definition is None:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前步骤状态异常"))
 
@@ -351,7 +352,7 @@ class SubPageStage(BaseStageController):
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
-        stage_def = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+        stage_def = find_stage_by_id(self.pd, self.release, self.stage.stage_id)
         if not stage_def:
             raise error_codes.STAGE_DEF_NOT_FOUND
 
@@ -402,7 +403,7 @@ class BuiltinStage(BaseStageController):
         elif self.stage.stage_id == "grayScale":
             raise NotImplementedError
         elif self.stage.stage_id == "online":
-            stage_def = find_stage_by_id(self.pd.release_stages, self.stage.stage_id)
+            stage_def = find_stage_by_id(self.pd, self.release, self.stage.stage_id)
             if not stage_def:
                 raise error_codes.STAGE_DEF_NOT_FOUND
             return {

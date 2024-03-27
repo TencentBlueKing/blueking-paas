@@ -17,8 +17,8 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Optional
 
-import cattr
 from celery import shared_task
 from django.utils.translation import gettext as _
 
@@ -29,13 +29,11 @@ from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
+from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.declarative.deployment.resources import Scripts
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.declarative.models import DeploymentDescription
+from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler, PerformResult
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
@@ -68,6 +66,11 @@ class ImageReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE.value:
+            # 如果是云原生应用，更新 deployment 的 bkapp_revision_id
+            bkapp_revision_id = self.create_bkapp_revision()
+            self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
+
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
 
@@ -84,7 +87,7 @@ class ImageReleaseMgr(DeployStep):
                 if not deployment:
                     raise DeployShouldAbortError("failed to get processes")
                 processes = deployment.get_processes()
-                # 保存应用描述文件记录的信息到 DB - Processes/Hooks
+                # 保存上一次部署的 Processes/Hooks 到 bkapp models
                 sync_to_bkapp_model(module=module, processes=processes, hooks=deployment.get_deploy_hooks())
             else:
                 # advanced_options.build_id 为空有 2 种可能情况
@@ -92,10 +95,11 @@ class ImageReleaseMgr(DeployStep):
                 # 2. 仅托管镜像的应用(包含云原生应用和旧镜像应用)
                 if is_smart_app:
                     # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
-                    self.handle_smart_app_description()
-                    processes = list(get_processes(deployment=self.deployment).values())
-                    # 保存应用描述文件记录的信息到 DB - Processes/Hooks
-                    sync_to_bkapp_model(module=module, processes=processes, hooks=self.deployment.get_deploy_hooks())
+                    perform_result = self.handle_smart_app_description()
+                    proc_data_from_desc = getattr(perform_result, "loaded_processes", None)
+                    processes = list(
+                        get_processes(deployment=self.deployment, proc_data_from_desc=proc_data_from_desc).values()
+                    )
                 else:
                     processes = [
                         ProcessTmpl(
@@ -113,7 +117,6 @@ class ImageReleaseMgr(DeployStep):
                 # 目前构建流程必须 build_id, 因此需要构造 Build 对象
                 build_id = self.engine_client.create_build(
                     image=runtime_info.generate_image(self.version_info),
-                    procfile={p.name: p.command for p in processes},
                     extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
                     # 需要兼容 s-mart 应用
                     artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
@@ -170,33 +173,34 @@ class ImageReleaseMgr(DeployStep):
 
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
-    def _handle_app_description(self):
+    def _handle_app_description(self) -> Optional[PerformResult]:
         """Handle application description for deployment"""
         module = self.deployment.app_environment.module
         handler = get_app_description_handler(module, self.deployment.operator, self.deployment.version_info)
         if not handler:
             logger.debug("No valid app description file found.")
-            return
+            return None
 
-        if not isinstance(handler, AppDescriptionHandler):
+        if not isinstance(handler, (AppDescriptionHandler, CNativeAppDescriptionHandler)):
             logger.debug(
                 "Currently only runtime configs such as environment variables declared in app_desc.yaml are applied."
             )
-            return
+            return None
 
-        handler.handle_deployment(self.deployment)
+        return handler.handle_deployment(self.deployment)
 
-    def handle_smart_app_description(self):
+    def handle_smart_app_description(self) -> Optional[PerformResult]:
         """A tiny wrapper for _handle_app_description, will ignore all exception raise from _handle_app_description.
         And will do something for s-mart app
 
         - complete scripts command
         """
+        result = None
         try:
-            self._handle_app_description()
+            result = self._handle_app_description()
         except FileNotFoundError:
             logger.debug("App description file not defined, do not process.")
-        except DescriptionValidationError as e:
+        except (DescriptionValidationError, ManifestImportError) as e:
             self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
             logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:
@@ -206,13 +210,4 @@ class ImageReleaseMgr(DeployStep):
             self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
             logger.exception("Exception while processing app description file, skip.")
 
-        # complete scripts command because s-mart app utilizes the image which use entrypoint /runner/init to set run envs
-        description = DeploymentDescription.objects.get(deployment=self.deployment)
-        scripts = cattr.structure(description.scripts, Scripts)
-        if scripts.pre_release_hook:
-            scripts.pre_release_hook = f"{(' ').join(DEFAULT_SLUG_RUNNER_ENTRYPOINT)} {scripts.pre_release_hook}"
-            description.scripts = cattr.unstructure(scripts)
-            description.save(update_fields=["scripts"])
-
-        # refresh_from_db 的目的是 self.deployment.get_deploy_hooks() 能够拿到更新后的 scripts
-        self.deployment.refresh_from_db()
+        return result

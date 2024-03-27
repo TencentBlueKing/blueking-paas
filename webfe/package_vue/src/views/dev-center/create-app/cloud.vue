@@ -33,7 +33,7 @@
             <bk-input
               v-model="formData.code"
               :placeholder="isBkLesscode ? $t('由小写字母组成，长度小于 16 个字符') :
-                $t('由小写字母、数字、连字符（-）组成，首字母必须是字母，长度小于16个字符')"
+                $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               class="form-input-width"
             >
             </bk-input>
@@ -518,6 +518,7 @@
           <div class="mr20" v-if="curStep === 1">
             <bk-button
               theme="primary"
+              :disabled="!curExtendConfig.isAuth"
               @click="handleNext"
             >
               {{ $t('下一步') }}
@@ -612,6 +613,7 @@ import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-ho
 import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import defaultAppType from './default-app-type';
 import createSmartApp from './smart';
+import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 export default {
   components: {
     gitExtend,
@@ -622,6 +624,7 @@ export default {
     defaultAppType,
     createSmartApp,
   },
+  mixins: [sidebarDiffMixin],
   data() {
     return {
       formData: {
@@ -674,7 +677,7 @@ export default {
           fetchMethod: this.generateFetchRepoListMethod('tc_git'),
           repoList: [],
           selectedRepoUrl: '',
-          authDocs: '',
+          authDocs: this.GLOBAL.DOC.TC_GIT_AUTH,
         },
         github: {
           isAuth: true,
@@ -728,15 +731,7 @@ export default {
           },
           {
             validator: (val) => {
-              const reg = this.isBkLesscode ? /^[a-z]+/ : /^[a-z][a-z0-9-]*$/;
-              return reg.test(val);
-            },
-            message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母')),
-            trigger: 'blur',
-          },
-          {
-            validator: (val) => {
-              const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{3,16}$/;
+              const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{2,16}$/;
               return reg.test(val);
             },
             message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')),
@@ -871,6 +866,9 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    curExtendConfig() {
+      return this.gitExtendConfig[this.sourceControlTypeItem];
+    },
   },
   watch: {
     'formData.sourceOrigin'(value) {
@@ -915,15 +913,43 @@ export default {
     this.init();
   },
   methods: {
-    init() {
-      this.fetchLanguageInfo();
-      this.fetchSourceControlTypesData();
-      this.fetchAdvancedOptions();
+    async init() {
+      await Promise.all([
+        this.fetchLanguageInfo(),
+        this.fetchSourceControlTypesData(),
+        this.fetchAdvancedOptions(),
+      ]);
+      // 收集依赖
+      const data = this.collectDependencies();
+      this.initSidebarFormData(data);
     },
     handleSelected(item, key) {
       this.buttonActive = key;
       this.languagesList = item;
       this.formData.sourceInitTemplate = this.languagesList[0].name;
+    },
+
+    // 收集基本表单依赖
+    collectDependencies() {
+      const data = {
+        code: this.formData.code,
+        name: this.formData.name,
+        source_config: {
+          source_init_template: this.formData.sourceInitTemplate,
+          source_control_type: this.sourceControlTypeItem,
+          source_repo_url: this.formData.sourceRepoUrl,
+          source_dir: this.formData.buildDir || '',
+        },
+      };
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)) {
+        data.source_config.source_repo_url = this.repoData.url;
+        data.source_config.source_repo_auth_info = {
+          username: this.repoData.account,
+          password: this.repoData.password,
+        };
+        data.source_config.source_dir = this.repoData.sourceDir;
+      }
+      return data;
     },
 
     // 获取模版来源
@@ -1103,7 +1129,12 @@ export default {
     },
 
     // 处理取消
-    handleCancel() {
+    async handleCancel() {
+      // 内容变更输入弹窗提示
+      const isSwitching = await this.handleBeforeFunction();
+      if (!isSwitching) {
+        return;
+      }
       this.$refs?.processRef?.handleCancel();
       this.initCloudAppData = _.cloneDeep(this.localCloudAppData);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
@@ -1388,6 +1419,11 @@ export default {
       } else {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
       }
+    },
+
+    async handleBeforeFunction() {
+      const data = this.collectDependencies();
+      return this.$isSidebarClosed(JSON.stringify(data));
     },
   },
 };

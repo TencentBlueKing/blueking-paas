@@ -158,8 +158,8 @@ export default {
          * 获取创建版本发布的表单格式
          * @param {Object} params 请求参数：pdId, pluginId
          */
-    getNewVersionFormat({ commit, state }, { pdId, pluginId }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/schema/`;
+    getNewVersionFormat({ commit, state }, { pdId, pluginId, type }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/schema/?type=${type}`;
       return http.get(url, config);
     },
 

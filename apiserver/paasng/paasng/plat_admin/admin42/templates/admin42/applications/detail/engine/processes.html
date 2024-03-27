@@ -30,7 +30,7 @@
                     </bk-table-column>
                     <bk-table-column prop="start_time" label="创建时间">
                         <template slot-scope="props">
-                            创建于 <span v-bk-tooltips="{content: props.row.start_time }">$[ props.row.start_time_humanized ]</span>
+                            创建于 <span>$[ props.row.start_time ]</span>
                         </template>
                     </bk-table-column>
 
@@ -108,10 +108,10 @@
     const processes = {{ processes | to_json }}
 
     const URLRouter = {
-        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/process_spec_plan/' %}"),
-        switch_process_plan: decodeURI("{% url 'workloads.proxy' 'admin42/regions/${region}/apps/${engine_app_name}/processes/${process_type}/plan' %}"),
-        scale: decodeURI("{% url 'workloads.proxy' 'admin42/regions/${region}/apps/${engine_app_name}/processes/${process_type}/scale' %}"),
-        retrieve: decodeURI("{% url 'workloads.proxy' 'admin42/regions/${region}/apps/${engine_app_name}/processes/${process_type}/instances/${process_instance_name}/' %}"),
+        list: decodeURI("{% url 'wl_api.process_spec_plan' %}"),
+        switch_process_plan: decodeURI("{% url 'wl_api.application.process_plan' application.region '${engine_app_name}' '${process_type}' %}"),
+        scale: decodeURI("{% url 'wl_api.application.process_scale' application.region '${engine_app_name}' '${process_type}' %}"),
+        retrieve: decodeURI("{% url 'wl_api.application.process_instance' application.region '${engine_app_name}' '${process_type}' '${process_instance_name}' %}"),
     }
 
 
@@ -175,8 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (form.type === '资源方案') {
                     url_template = URLRouter['switch_process_plan']
                 }
-              return url_template.replace("${region}", this.application.region)
-                        .replace("${engine_app_name}", row.engine_app)
+              return url_template.replace("${engine_app_name}", row.engine_app)
                         .replace("${process_type}", row.type)
             },
             submitCallback: function () {
@@ -245,9 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (row.envs !== undefined) {
                         return true;
                     }
-                    let url = URLRouter.retrieve.replace("${region}", region)
-                            .replace("${engine_app_name}", engine_app)
-                            .replace("${process_type}", row.process_type).replace("${process_instance_name}", row.name)
+                    let url = URLRouter.retrieve.replace("${engine_app_name}", engine_app)
+                            .replace("${process_type}", row.process_type)
+                            .replace("${process_instance_name}", row.name)
                     let data = await this.$http.get(url)
                     row.envs = data.envs
                     return true

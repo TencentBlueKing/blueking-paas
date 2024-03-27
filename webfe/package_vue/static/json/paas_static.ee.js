@@ -281,11 +281,8 @@ export const PLATFORM_CONFIG = {
         // 代码库 OAuth 授权配置指引
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 
-        // 应用进程介绍
-        APP_PROCESS_INTRODUCTION: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/process_procfile.md',
-
         // 构建阶段钩子
-        BUILD_PHASE_HOOK: 'https://bk.tencent.com/docs/markdown/ZH/PaaS/DevelopTools/BaseGuide/topics/paas/release_hooks.md'
+        BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks',
     },
 
     CONFIG: {
@@ -625,12 +622,6 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     },
                     {
-                        "name": staticI18n.$t("事件查询"),
-                        "destRoute": {
-                            "name": "cloudAppEventQuery"
-                        }
-                    },
-                    {
                         "name": staticI18n.$t("告警记录"),
                         "destRoute": {
                             "name": "monitorAlarm"
@@ -710,6 +701,7 @@ export const PAAS_STATIC_CONFIG = {
                             'appMarket',
                             'appBasicInfo',
                             'appMembers',
+                            'appPersistentStorage',
                         ],
                         "destRoute": {
                           "name": "appConfigs"

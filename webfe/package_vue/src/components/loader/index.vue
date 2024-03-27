@@ -1,10 +1,15 @@
 <template lang="html">
   <div
     :class="[{ 'paas-loading-content': isLoaderShow, 'loading': localLoading, 'fadeout': !localLoading }]"
-    :style="{ 'min-height': localLoading && height ? height + 'px' : 'calc(100% - 50px)' }"
+    :style="styleObject"
   >
     <div
-      :class="['loading-placeholder', { 'hide': !isLoaderShow }, { 'transition': !isTransition }]"
+      :class="[
+        'loading-placeholder',
+        { 'hide': !isLoaderShow },
+        { 'transition': !isTransition },
+        { 'customize-width': isCustomizeWidth },
+      ]"
       :style="{ 'background-color': backgroundColor }"
     >
       <template v-if="placeholder">
@@ -13,6 +18,7 @@
           :style="{ 'padding-top': `${offsetTop}px`, 'margin-left': `${offsetLeft}px`, 'transform-origin': 'left' }"
           :base-width="baseWidth"
           :content-width="contentWidth"
+          :is-transform="isTransform"
         />
       </template>
     </div>
@@ -81,6 +87,8 @@ import BuildConfigLoading from './loading/clound-build-config.vue';
 import DeployModuleInfoLoading from './loading/deploy-module-info.vue';
 import ImageManageLoading from './loading/image-manage.vue';
 import ProcessServiceLoading from './loading/process-service.vue';
+import PluinVersionListLoading from './loading/pluin-version-list.vue';
+import PersistentStorageLoading from './loading/persistent-storage.vue';
 export default {
   components: {
     ByUserLoading,
@@ -144,6 +152,8 @@ export default {
     DeployModuleInfoLoading,
     ImageManageLoading,
     ProcessServiceLoading,
+    PluinVersionListLoading,
+    PersistentStorageLoading,
   },
   props: {
     isLoading: {
@@ -176,6 +186,22 @@ export default {
       type: Boolean,
       default: true,
     },
+    isTransform: {
+      type: Boolean,
+      default: true,
+    },
+    isCustomizeWidth: {
+      type: Boolean,
+      default: false,
+    },
+    isMinHeight: {
+      type: Boolean,
+      default: true,
+    },
+    customStyle: {
+      type: Object,
+      default: () => {},
+    },
   },
   data() {
     return {
@@ -186,6 +212,17 @@ export default {
       curPlaceholder: '',
       isPlugin: false,
     };
+  },
+  computed: {
+    styleObject() {
+      if (this.isMinHeight) {
+        return {
+          'min-height': this.localLoading && this.height ? `${this.height}px` : 'calc(100% - 50px)',
+          ...this.customStyle,
+        };
+      }
+      return { ...this.customStyle };
+    },
   },
   watch: {
     isLoading(newVal, oldVal) {
@@ -317,6 +354,11 @@ export default {
         width: auto;
         svg {
           width: 100%;
+        }
+        &.customize-width {
+          svg {
+            width: calc(100% - 48px);
+          }
         }
     }
 }

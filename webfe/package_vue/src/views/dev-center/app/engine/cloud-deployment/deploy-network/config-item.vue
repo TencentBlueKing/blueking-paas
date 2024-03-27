@@ -451,6 +451,20 @@ export default {
 
     // 编辑
     handleEdit() {
+      // 当前数据为空，重置默认值
+      if (this[this.dataName].service.length < 1) {
+        switch (this.dataName) {
+          case 'serviceFormData':
+            this[this.dataName].service.push({ id: '', module: '' });
+            break;
+          case 'dnsRuleFormData':
+            this[this.dataName].service.push({ ip: '', hostnames: [] });
+            break;
+          default:
+            this[this.dataName].service.push({ name: '' });
+            break;
+        }
+      }
       this.isEdit = true;
     },
 
@@ -494,6 +508,7 @@ export default {
           theme: 'success',
           message: this.$t('保存成功'),
         });
+        this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
         this.$emit('refresh');
         // 更新服务发现
         this.isEdit = false;
@@ -523,7 +538,9 @@ export default {
     // 调用对用接口
     saveExecution() {
       // 备份数据更新
-      this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
+      if (this.dataName !== 'serviceFormData') {
+        this.dataBackup[this.dataName] = cloneDeep(this[this.dataName]);
+      }
       switch (this.dataName) {
         case 'serviceFormData':
           this.saveServiceDiscoveryData();

@@ -20,7 +20,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -32,18 +31,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/controllers/base"
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
+	bkappctrl "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/addons"
+	autoscalingctrl "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/autoscaling"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
-	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 // NewBkAppReconciler will return a BkAppReconciler with given k8s client and scheme
@@ -98,81 +105,88 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	log := logf.FromContext(ctx)
 
-	app := &paasv1alpha2.BkApp{}
-	err := r.client.Get(ctx, req.NamespacedName, app)
+	bkapp := &paasv1alpha2.BkApp{}
+	err := r.client.Get(ctx, req.NamespacedName, bkapp)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
 		metrics.IncGetBkappFailures(req.NamespacedName.String())
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
+	// deep copy bkapp to generate merge-patch
+	originalBkApp := bkapp.DeepCopy()
 
-	if app.DeletionTimestamp.IsZero() {
+	if bkapp.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
-		if !controllerutil.ContainsFinalizer(app, paasv1alpha2.BkAppFinalizerName) {
-			controllerutil.AddFinalizer(app, paasv1alpha2.BkAppFinalizerName)
-			if err = r.client.Update(ctx, app); err != nil {
-				metrics.IncAddFinalizerFailures(app)
+		if !controllerutil.ContainsFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName) {
+			controllerutil.AddFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)
+			if err = r.client.Update(ctx, bkapp); err != nil {
+				metrics.IncAddFinalizerFailures(bkapp)
 				return reconcile.Result{}, err
 			}
 		}
 	}
 
-	if app.Generation > app.Status.ObservedGeneration {
-		app.Status.Phase = paasv1alpha2.AppPending
-		if err = r.client.Status().Update(ctx, app); err != nil {
+	if bkapp.Generation > bkapp.Status.ObservedGeneration {
+		bkapp.Status.Phase = paasv1alpha2.AppPending
+		if err = r.updateStatus(ctx, bkapp, originalBkApp, nil); err != nil {
 			log.Error(err, "Unable to update bkapp status when generation changed")
 			return reconcile.Result{}, err
 		}
 	}
 
-	var ret reconcilers.Result
-	for _, reconciler := range []reconcilers.Reconciler{
+	var ret base.Result
+	for _, reconciler := range []base.Reconciler{
 		// NOTE: The order of these reconcilers is important.
-		reconcilers.NewBkappFinalizer(r.client),
+		bkappctrl.NewBkappFinalizer(r.client),
 		// Check if a new deploy action has been issued.
-		reconcilers.NewDeployActionReconciler(r.client),
+		bkappctrl.NewDeployActionReconciler(r.client),
 		// Make sure the "pre-release" hook has been finished if specified.
-		reconcilers.NewHookReconciler(r.client),
+		hooks.NewHookReconciler(r.client),
 
 		// Other reconcilers related with workloads
-		reconcilers.NewAddonReconciler(r.client),
-		reconcilers.NewDeploymentReconciler(r.client),
-		reconcilers.NewServiceReconciler(r.client),
-		reconcilers.NewAutoscalingReconciler(r.client),
+		addons.NewAddonReconciler(r.client),
+		processes.NewDeploymentReconciler(r.client),
+		processes.NewServiceReconciler(r.client),
+		autoscalingctrl.NewAutoscalingReconciler(r.client),
 	} {
 		if reflect2.IsNil(reconciler) {
 			continue
 		}
-		ret = reconciler.Reconcile(ctx, app)
+		ret = reconciler.Reconcile(ctx, bkapp)
 		if ret.ShouldAbort() {
-			if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+			if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.Error()); err != nil {
 				ret = ret.WithError(err)
 			}
 			return ret.ToRepresentation()
 		}
 	}
 
-	if err = r.updateStatus(ctx, app, ret.GetError()); err != nil {
+	if err = r.updateStatus(ctx, bkapp, originalBkApp, ret.Error()); err != nil {
 		ret = ret.WithError(err)
 	}
 	return ret.End().ToRepresentation()
 }
 
-func (r *BkAppReconciler) updateStatus(ctx context.Context, bkapp *paasv1alpha2.BkApp, reconcileErr error) error {
+func (r *BkAppReconciler) updateStatus(
+	ctx context.Context,
+	after *paasv1alpha2.BkApp,
+	before *paasv1alpha2.BkApp,
+	reconcileErr error,
+) error {
 	if reconcileErr == nil {
 		// 更新 ObservedGeneration, 表示成功完成了一次新版本的调和流程
-		bkapp.Status.ObservedGeneration = bkapp.Generation
+		after.Status.ObservedGeneration = after.Generation
 	}
 
-	if err := r.client.Status().Update(ctx, bkapp); err != nil {
+	if err := r.client.Status().Patch(ctx, after, client.MergeFrom(before)); err != nil {
 		syncErr := errors.Wrap(err, "failed to update bkapp status")
 		if reconcileErr == nil {
 			return syncErr
 		} else {
 			// 与调和错误拼接
-			return fmt.Errorf("%s; %s", syncErr, reconcileErr)
+			return errors.Wrap(reconcileErr, syncErr.Error())
 		}
 	}
 
@@ -192,10 +206,16 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	}
 
 	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
-		For(&paasv1alpha2.BkApp{}).
+		// trigger when bkapp .spec changed or annotation changed.
+		For(&paasv1alpha2.BkApp{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{},
+			predicate.AnnotationChangedPredicate{}))).
 		WithOptions(opts).
-		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Pod{})
+		// trigger when deployment changed, i.e. when the deployment was deleted by others.
+		Owns(&appsv1.Deployment{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{},
+			predicate.AnnotationChangedPredicate{}))).
+		// trigger when pod run success or failed
+		Owns(&corev1.Pod{}, builder.WithPredicates(predicate.Or(bkappctrl.NewHookSuccessPredicate(),
+			bkappctrl.NewHookFailedPredicate())))
 
 	if config.Global.IsAutoscalingEnabled() {
 		if err = mgr.GetFieldIndexer().IndexField(

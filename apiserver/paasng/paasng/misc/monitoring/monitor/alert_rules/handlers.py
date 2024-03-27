@@ -16,14 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 from django.dispatch import receiver
 
-from paasng.platform.engine.models.deployment import Deployment
-from paasng.platform.engine.signals import post_appenv_deploy
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.applications.signals import application_member_updated
+from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.signals import post_appenv_deploy
 
 from . import tasks
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_appenv_deploy)

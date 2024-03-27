@@ -56,15 +56,78 @@ class TestReleaseStages:
                 },
             },
         ]
+        pd.test_release_stages = [
+            {
+                "id": "market",
+                "name": "完善市场信息",
+                "invokeMethod": "builtin",
+            }
+        ]
         pd.save()
         pd.refresh_from_db()
 
+    @pytest.mark.parametrize(
+        ("release_type", "source_version_name", "version", "status_code", "resp_code"),
+        [  # 当前插件有未完成的测试版本,仍可创建新分支测试版本
+            ("test", "testbranch1", "testbranch1-2501191602", 201, ""),
+            # 测试版本设置了：不允许选择正在发布过的代码分支
+            ("test", "testbranch", "testbranch-2501191602", 400, "CANNOT_RELEASE_RELEASING_SOURCE_VERSION"),
+            # 当前插件有未完成的正式版本,不能创建正式版本
+            ("prod", "foo", "0.0.2", 400, "CANNOT_RELEASE_ONGOING_EXISTS"),
+        ],
+    )
     @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
-    def test_release_version(self, thirdparty_client, pd, plugin, api_client, iam_policy_client):
-        assert PluginRelease.objects.count() == 0
+    def test_create_release_version(
+        self,
+        test_release,
+        release,
+        pd,
+        plugin,
+        api_client,
+        iam_policy_client,
+        release_type,
+        source_version_name,
+        version,
+        status_code,
+        resp_code,
+    ):
+        # 当前插件有未完成的测试版本,仍可创建测试版本
+        assert (
+            PluginRelease.objects.filter(
+                plugin=plugin, type=release_type, status__in=PluginReleaseStatus.running_status()
+            ).count()
+            == 1
+        )
         with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
-            # 测试创建版本发布
+            # 创建测试版本发布
+            resp = api_client.post(
+                f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/",
+                data={
+                    "type": release_type,
+                    "source_version_type": "branch",
+                    "source_version_name": source_version_name,
+                    "version": version,
+                    "comment": "...",
+                    "semver_type": "patch",
+                },
+            )
+            assert resp.status_code == status_code
+            if status_code != 201:
+                assert resp.json()["code"] == resp_code
+
+    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    def test_release_version(self, thirdparty_client, pd, plugin, api_client, iam_policy_client):
+        # 当前插件没有正在执行的正式版本，可创建新的正式版本
+        assert (
+            PluginRelease.objects.filter(
+                plugin=plugin, type="prod", status__in=PluginReleaseStatus.running_status()
+            ).count()
+            == 0
+        )
+        with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+            get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
+            # 创建正式版本发布
             resp = api_client.post(
                 f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/",
                 data={
@@ -164,6 +227,7 @@ class TestReleaseStages:
             "stage_name": "部署",
             "status": "pending",
             "fail_message": "",
+            "invoke_method": "deployAPI",
             "detail": {
                 "steps": [{"id": "step-1", "name": "步骤1", "status": "successful"}],
                 "finished": True,

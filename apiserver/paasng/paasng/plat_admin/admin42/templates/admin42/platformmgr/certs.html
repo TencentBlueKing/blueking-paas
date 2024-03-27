@@ -78,9 +78,9 @@
 const regionList = {{ region_list | to_json }}
 
 const URLRouter = {
-    create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/app_certs/shared/' %}"),
-    list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/app_certs/shared/' %}"),
-    detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/app_certs/shared/${cert_name}' %}"),
+    create: decodeURI("{% url 'wl_api.shared_app_certs' %}"),
+    list: decodeURI("{% url 'wl_api.shared_app_certs' %}"),
+    detail: decodeURI("{% url 'wl_api.shared_app_cert_by_name' '${cert_name}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {

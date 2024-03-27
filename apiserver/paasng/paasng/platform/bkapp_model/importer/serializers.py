@@ -21,7 +21,7 @@ from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import field_env_var_key
-from paasng.utils.validators import PROC_TYPE_PATTERN
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
 class BaseEnvVarFields(serializers.Serializer):
@@ -154,7 +154,7 @@ class BuildInputSLZ(serializers.Serializer):
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
-    name = serializers.RegexField(regex=PROC_TYPE_PATTERN)
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0)
     resQuotaPlan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
     targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
@@ -188,6 +188,37 @@ class HooksInputSLZ(serializers.Serializer):
         return bk_app.BkAppHooks(**d)
 
 
+class BkSaaSInputSLZ(serializers.Serializer):
+    """Validate the `bkSaaS` field."""
+
+    bkAppCode = serializers.CharField()
+    moduleName = serializers.CharField(required=False, allow_null=True)
+
+
+class ServiceDiscoveryInputSLZ(serializers.Serializer):
+    """Validate the `serviceDiscovery` field."""
+
+    bkSaaS = serializers.ListField(child=BkSaaSInputSLZ(), required=False, allow_empty=True)
+
+    def to_internal_value(self, data) -> bk_app.SvcDiscConfig:
+        d = super().to_internal_value(data)
+        return bk_app.SvcDiscConfig(**d)
+
+
+class HostAliasSLZ(serializers.Serializer):
+    ip = serializers.IPAddressField()
+    hostnames = serializers.ListField(child=serializers.CharField())
+
+
+class DomainResolutionInputSLZ(serializers.Serializer):
+    nameservers = serializers.ListField(child=serializers.IPAddressField(), required=False)
+    hostAliases = serializers.ListField(child=HostAliasSLZ(), required=False)
+
+    def to_internal_value(self, data) -> bk_app.DomainResolution:
+        d = super().to_internal_value(data)
+        return bk_app.DomainResolution(**d)
+
+
 class BkAppSpecInputSLZ(serializers.Serializer):
     """Validate the `spec` field of BkApp resource."""
 
@@ -197,3 +228,5 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)
     hooks = HooksInputSLZ(allow_null=True, default=None)
     envOverlay = EnvOverlayInputSLZ(required=False)
+    svcDiscovery = ServiceDiscoveryInputSLZ(required=False)
+    domainResolution = DomainResolutionInputSLZ(required=False)

@@ -137,7 +137,9 @@ def str2bool(value):
         raise ValueError(f"Given value({value}) not valid!")
 
 
-PROC_TYPE_PATTERN = re.compile(r"^[a-zA-Z0-9]([-a-zA-Z0-9])*$")
+# 进程名称会用于 k8s 资源命名, k8s 资源命名要求 dns-safe, 因此目前限制进程名称只能有小写字母、数字和连字符
+# Note: 这个约束比 heroku 和 cnb 更严格, 未来如果有需求，可以再考虑调整这个限制, CNB/heroku 的限制是: ([a-zA-Z0-9_-]+
+PROC_TYPE_PATTERN = re.compile(r"^[a-z0-9]([-a-z0-9])*$")
 PROC_TYPE_MAX_LENGTH = 12
 
 

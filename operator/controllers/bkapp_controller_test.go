@@ -37,13 +37,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
-	"bk.tencent.com/paas-app-operator/pkg/platform/external"
-	"bk.tencent.com/paas-app-operator/pkg/testing"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
+	"bk.tencent.com/paas-app-operator/pkg/platform/external"
+	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("", func() {
@@ -221,7 +222,7 @@ var _ = Describe("", func() {
 				createdDeployment.Status.ObservedGeneration = createdDeployment.Generation
 				createdDeployment.Status.Replicas = *createdDeployment.Spec.Replicas
 				createdDeployment.Status.UpdatedReplicas = *createdDeployment.Spec.Replicas
-				cond := kubestatus.FindDeploymentStatusCondition(
+				cond := kubeutil.FindDeploymentStatusCondition(
 					createdDeployment.Status.Conditions,
 					appsv1.DeploymentAvailable,
 				)
@@ -327,6 +328,7 @@ var _ = Describe("", func() {
 
 var _ = Describe("Test Status", func() {
 	var bkapp *paasv1alpha2.BkApp
+	var originalBkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var ctx context.Context
@@ -350,6 +352,7 @@ var _ = Describe("Test Status", func() {
 				ObservedGeneration: oldGeneration,
 			},
 		}
+		originalBkapp = bkapp.DeepCopy()
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
@@ -362,7 +365,7 @@ var _ = Describe("Test Status", func() {
 		Expect(bkapp.Status.ObservedGeneration).To(Equal(oldGeneration))
 
 		reconciler := NewBkAppReconciler(builder.WithObjects(bkapp).Build(), scheme)
-		_ = reconciler.updateStatus(ctx, bkapp, nil)
+		_ = reconciler.updateStatus(ctx, bkapp, originalBkapp, nil)
 		Expect(bkapp.Status.ObservedGeneration).To(Equal(newGeneration))
 	})
 
@@ -370,7 +373,7 @@ var _ = Describe("Test Status", func() {
 		Expect(bkapp.Status.ObservedGeneration).To(Equal(oldGeneration))
 
 		reconciler := NewBkAppReconciler(builder.WithObjects(bkapp).Build(), scheme)
-		_ = reconciler.updateStatus(ctx, bkapp, errors.New("failed to reconcile hook"))
+		_ = reconciler.updateStatus(ctx, bkapp, originalBkapp, errors.New("failed to reconcile hook"))
 		Expect(bkapp.Status.ObservedGeneration).To(Equal(oldGeneration))
 	})
 })

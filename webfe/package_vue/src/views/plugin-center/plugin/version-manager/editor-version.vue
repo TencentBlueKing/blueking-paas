@@ -1,12 +1,12 @@
 <template lang="html">
   <div class="container biz-create-success">
+    <paas-plugin-title :name="isOfficialVersion ? $t('新建版本') : $t('新建测试')" />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="plugin-new-version-loading"
       class="app-container middle"
     >
       <div class="new-version">
-        <paas-plugin-title />
         <div
           v-if="curVersion.current_release"
           class="summary-box status"
@@ -63,10 +63,11 @@
               <bk-select
                 v-model="curVersion.source_versions"
                 :disabled="false"
-                ext-cls="select-custom"
-                :placeholder="$t('请选择版本，已经发布过的版本不可选择。')"
+                ext-cls="select-custom-cls"
+                :placeholder="codeBranchPlaceholder"
                 searchable
                 :loading="isBranchLoading"
+                @change="handleSourceVersionChange"
               >
                 <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
                 <bk-option
@@ -74,9 +75,7 @@
                   :id="option.name"
                   :key="option.name"
                   :name="option.name"
-                  :disabled="
-                    !curVersionData.allow_duplicate_source_version && releasedSourceVersions.includes(option.name)
-                  "
+                  :disabled="isOptionDisabled(option)"
                 />
                 <div
                   v-if="curVersionData.version_type === 'tag'"
@@ -160,13 +159,14 @@
             </bk-form-item>
             <bk-form-item label="">
               <div
-                v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isPending }"
+                v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isReleaseDisabled }"
                 style="display: inline-block"
               >
+                <!-- 测试无需限制 -->
                 <bk-button
                   theme="primary"
                   :loading="isSubmitLoading"
-                  :disabled="isPending ? true : false"
+                  :disabled="isReleaseDisabled"
                   @click="submitVersionForm"
                 >
                   {{ $t('提交并发布') }}
@@ -230,7 +230,7 @@
               <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('log')">
+          <bk-table-column label="log">
             <template slot-scope="{ row }">
               <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
             </template>
@@ -315,11 +315,21 @@ export default {
     curPluginInfo() {
       return this.$store.state.plugin.curPluginInfo;
     },
-    releasedSourceVersions() {
-      return this.curVersionData.released_source_versions || [];
-    },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    versionType() {
+      return this.$route.query.type || 'prod';
+    },
+    isOfficialVersion() {
+      return this.versionType === 'prod';
+    },
+    isReleaseDisabled() {
+      return this.isOfficialVersion ? this.isPending : false;
+    },
+    codeBranchPlaceholder() {
+      const revisionPolicy = this.curVersionData.revision_policy;
+      return revisionPolicy === 'disallow_releasing_source_version' ? this.$t('请选择代码分支，正在发布的代码分支不可选择') : this.$t('请选择版本，已经发布过的版本不可选择');
     },
   },
   watch: {
@@ -349,6 +359,7 @@ export default {
       const data = {
         pdId: this.pdId,
         pluginId: this.pluginId,
+        type: this.versionType,
       };
       try {
         const res = await this.$store.dispatch('plugin/getNewVersionFormat', data);
@@ -363,7 +374,7 @@ export default {
         // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
         this.curVersion.semver_choices = res.semver_choices;
         // source_versions 会存在 [] 情况
-        if (res.allow_duplicate_source_version) {
+        if (res.revision_policy === null) {
           this.curVersion.source_versions = res.source_versions[0]?.name || '';
         } else {
           this.curVersion.source_versions = '';
@@ -434,6 +445,7 @@ export default {
         source_version_name: versionData[0].name,
         version: this.curVersion.version,
         comment: this.curVersion.comment,
+        type: this.versionType,
       };
 
       // 仅 versionNo=automatic 需要传递
@@ -514,7 +526,9 @@ export default {
     },
 
     changeVersionType() {
-      this.$refs.versionForm.validate();
+      this.$refs.versionForm.validate().catch((e) => {
+        console.error(e);
+      });
     },
 
     // 新建Tag
@@ -522,14 +536,44 @@ export default {
       const url = this.curVersion.repository.replace('.git', '/-/tags/new');
       window.open(url, '_blank');
     },
+
+    // 当前代码分支是否可以选择
+    isOptionDisabled(data) {
+      const revisionPolicy = this.curVersionData.revision_policy;
+      if (revisionPolicy === null) {
+        return false;
+      }
+      // 不允许选择已经发布过的代码分支
+      if (revisionPolicy === 'disallow_released_source_version') {
+        return this.curVersionData.released_source_versions.includes(data.name);
+      }
+      // 不允许选择正在发布的代码分支
+      if (revisionPolicy === 'disallow_releasing_source_version') {
+        return this.curVersionData.releasing_source_versions.includes(data.name);
+      }
+      return false;
+    },
+
+    handleSourceVersionChange(v) {
+      if (this.curVersionData.version_no === 'branch-timestamp') {
+        const timestamp = Date.now();
+        this.curVersion.version = `${v}-${timestamp}`;
+      }
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+.new-version {
+  margin-top: 24px;
+  padding: 24px;
+  background: #fff;
+  box-shadow: 0 2px 4px 0 #1919290d;
+  border-radius: 2px;
+}
 .app-container {
   padding: 0;
-  margin-top: 8px;
 }
 .header-title {
   display: flex;
@@ -611,6 +655,11 @@ export default {
     padding-right: 6px;
     color: #979ba5;
 
+    a,
+    .icon-cls-copy {
+      transform: translateY(0px);
+    }
+
     .icon-cls-link:hover,
     .icon-cls-copy:hover {
       cursor: pointer;
@@ -655,7 +704,7 @@ export default {
 }
 
 .summary-box {
-  padding: 10px 0 20px;
+  padding-bottom: 20px;
   background: #fff;
   font-size: 12px;
 
@@ -746,11 +795,6 @@ export default {
   min-width: 1080px;
   border-top: 1px solid #f0f1f5;
 }
-
-.plugin-top-title {
-  margin: 16px 0;
-}
-
 .version-info-wrapper div {
   font-size: 14px;
   color: #63656e;
@@ -761,6 +805,10 @@ export default {
 .code-branch-tip {
   font-size: 12px;
   color: #979ba5;
+}
+
+.select-custom-cls {
+  background: #fff;
 }
 </style>
 

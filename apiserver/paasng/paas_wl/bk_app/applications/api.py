@@ -33,11 +33,11 @@ from typing import Dict, List, NamedTuple, Optional, Union
 from uuid import UUID
 
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.applications.managers import WlAppMetadata, get_metadata, update_metadata
 from paas_wl.bk_app.applications.models import Build, WlApp
-from paas_wl.bk_app.applications.models.managers.app_metadata import WlAppMetadata, get_metadata, update_metadata
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
-from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.core.resource import generate_bkapp_name
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 

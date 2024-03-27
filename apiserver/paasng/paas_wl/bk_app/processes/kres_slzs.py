@@ -33,7 +33,7 @@ from paas_wl.bk_app.processes.entities import Resources, Runtime
 from paas_wl.bk_app.processes.exceptions import UnknownProcessTypeError
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
-from paas_wl.infras.resource_templates.utils import AddonManager, ProcessProbeManager
+from paas_wl.infras.resource_templates.managers import AddonManager, ProcessProbeManager
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
@@ -310,7 +310,7 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
 
         deployment_body: Dict[str, Any] = {
             "metadata": {
-                "labels": mapper_version.deployment(process=obj).labels,
+                "labels": mapper_version.proc_resources(process=obj).labels,
                 "name": obj.name,
                 "annotations": {PROCESS_MAPPER_VERSION_KEY: mapper_version.version},
             },
@@ -325,13 +325,13 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
                         "maxSurge": "75%",
                     },
                 },
-                "selector": {"matchLabels": mapper_version.deployment(process=obj).match_labels},
+                "selector": {"matchLabels": mapper_version.proc_resources(process=obj).match_labels},
                 "minReadySeconds": 1,
                 "template": {
                     "spec": self._construct_pod_body_specs(obj),
                     "metadata": {
-                        "labels": mapper_version.pod(process=obj).labels,
-                        "name": mapper_version.pod(process=obj).name,
+                        "labels": mapper_version.proc_resources(process=obj).labels,
+                        "name": mapper_version.proc_resources(process=obj).pod_name,
                     },
                 },
                 "replicas": obj.replicas,

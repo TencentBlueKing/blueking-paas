@@ -21,12 +21,14 @@ import yaml
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.bkapp_model.importer.build import import_build
+from paasng.platform.bkapp_model.importer.domain_resolution import import_domain_resolution
 from paasng.platform.bkapp_model.importer.env_overlays import import_env_overlays
 from paasng.platform.bkapp_model.importer.env_vars import import_env_vars
 from paasng.platform.bkapp_model.importer.hooks import import_hooks
 from paasng.platform.bkapp_model.importer.mounts import import_mounts
 from paasng.platform.bkapp_model.importer.processes import import_processes
 from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
+from paasng.platform.bkapp_model.importer.svc_discovery import import_svc_discovery
 from paasng.platform.modules.models import Module
 
 from .exceptions import ManifestImportError
@@ -79,6 +81,10 @@ def import_manifest(module: Module, input_data: Dict):
         import_env_vars(module, env_vars, overlay_env_vars)
     if mounts or overlay_mounts:
         import_mounts(module, mounts, overlay_mounts)
+    if svc_discovery := validated_data.get("svcDiscovery"):
+        import_svc_discovery(module, svc_discovery)
+    if domain_resolution := validated_data.get("domainResolution"):
+        import_domain_resolution(module, domain_resolution)
 
     # NOTE: Must import the processes first to create the ModuleProcessSpec objs
     import_env_overlays(module, overlay_replicas, overlay_res_quotas, overlay_autoscaling)

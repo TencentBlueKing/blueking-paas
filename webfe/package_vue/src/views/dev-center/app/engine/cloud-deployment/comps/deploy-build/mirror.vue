@@ -131,11 +131,17 @@
                   </bk-option>
                 </bk-select>
               </bk-form-item>
-              <bk-form-item :label="$t('构建工具')">
+              <bk-form-item ext-cls="customize-form-item-dashed">
+                <div class="build-label">
+                  <span class="text" v-bk-tooltips="$t('构建工具会逐个进行构建，请注意构建工具的选择顺序')">
+                    {{ $t('构建工具') }}
+                  </span>
+                </div>
                 <!-- 展示字段需调整 -->
                 <bk-transfer
                   :source-list="sourceToolList"
                   :target-list="targetToolList"
+                  :title="[$t('可选的构建工具'), $t('选中的构建工具 (按选择顺序排序)')]"
                   :display-key="'name'"
                   :setting-key="'id'"
                   :searchable="true"
@@ -147,6 +153,7 @@
                     slot-scope="data"
                     class="transfer-source-item"
                     :data-id="data.id"
+                    v-bk-overflow-tips
                   >
                     {{ data.name }}
                   </div>
@@ -155,6 +162,7 @@
                     slot-scope="data"
                     class="transfer-source-item"
                     :data-id="data.id"
+                    v-bk-overflow-tips
                   >
                     {{ data.name }}
                   </div>
@@ -256,21 +264,23 @@ import transferDrag from '@/mixins/transfer-drag';
 import { TAG_MAP } from '@/common/constants.js';
 import { cloneDeep } from 'lodash';
 
+const defaultMirrorData = {
+  tag_options: {
+    prefix: null,
+    with_version: false,
+    with_build_time: false,
+    with_commit_id: false,
+  },
+  docker_build_args: {},
+};
+
 export default {
   mixins: [appBaseMixin, transferDrag],
   data() {
     return {
       isMirrorEdit: false,
       switchLoading: false,
-      mirrorData: {
-        tag_options: {
-          prefix: null,
-          with_version: false,
-          with_build_time: false,
-          with_commit_id: false,
-        },
-        docker_build_args: {},
-      },
+      mirrorData: defaultMirrorData,
       // 构建方式
       constructMethod: [
         {
@@ -375,7 +385,7 @@ export default {
           moduleId: this.curModuleId,
         });
         this.$emit('set-build-method', results.build_method);
-        this.mirrorData = results || {};
+        this.mirrorData = results || defaultMirrorData;
         // 基础镜像
         if (!this.mirrorData.bp_stack_name) {
           this.mirrorData.bp_stack_name = '';
@@ -388,10 +398,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        setTimeout(() => {
-          this.$emit('close-content-loader', false);
-        }, 200);
       }
     },
 
@@ -807,5 +813,22 @@ export default {
   position: relative;
   top: 120px;
   text-align: center;
+}
+.customize-form-item-dashed {
+  :deep(.bk-form-content) {
+    position: relative;
+  }
+  .build-label {
+    text-align: right;
+    width: 150px;
+    padding-right: 24px;
+    position: absolute;
+    left: -150px;
+    top: 0;
+    .text {
+      padding-bottom: 2px;
+      border-bottom: 1px dashed #666;
+    }
+  }
 }
 </style>

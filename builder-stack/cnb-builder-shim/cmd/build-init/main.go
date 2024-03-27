@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -35,6 +34,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 const (
@@ -42,10 +42,14 @@ const (
 	platformDir = "/platform"
 	cnbDir      = "/cnb"
 
+	// CacheImageEnvVarKey The env var key that store cache image
+	CacheImageEnvVarKey = "CACHE_IMAGE"
 	// OutputImageEnvVarKey The env var key that store output image
 	OutputImageEnvVarKey = "OUTPUT_IMAGE"
 	// RunImageEnvVarKey The env var key that store runner image
 	RunImageEnvVarKey = "CNB_RUN_IMAGE"
+	// UseDockerDaemonEnvVarKey The env var key that store a flag meaning if use docker daemon
+	UseDockerDaemonEnvVarKey = "USE_DOCKER_DAEMON"
 	// SourceUrlEnvVarKey The env var key that store source url
 	SourceUrlEnvVarKey = "SOURCE_GET_URL"
 	// GitRevisionEnvVarKey The env var key that store git revision info
@@ -60,8 +64,10 @@ const (
 )
 
 var (
+	cacheImage  = flag.String("cache-image", os.Getenv(CacheImageEnvVarKey), "cache image tag name")
 	outputImage = flag.String("output-image", os.Getenv(OutputImageEnvVarKey), "The name of image that will get created by the lifecycle.")
 	runImage    = flag.String("run-image", os.Getenv(RunImageEnvVarKey), "The base image from which application images are built.")
+	useDaemon   = flag.Bool("daemon", utils.BoolEnv(UseDockerDaemonEnvVarKey), "export image to docker daemon")
 
 	buildpacks = flag.String("buildpacks", os.Getenv(RequiredBuildpacksEnvVarKey), "Those buildpacks that will used by the lifecycle.")
 
@@ -101,25 +107,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	var (
-		keychain authn.Keychain
-		err      error
-	)
+	var err error
 	logger.Info("Setup Build Environ")
 	logger.Info("Loading registry credentials...")
-	if keychain, err = dockercreds.DefaultKeychain(); err != nil {
-		logger.Error(err, "Failed to load registry credentials")
-		os.Exit(1)
+	keychain := dockercreds.DefaultKeychain()
+
+	if !*useDaemon {
+		logger.Info("Verifying accessibility to container image registry...")
+		if err = verifyOutputImageWritable(keychain); err != nil {
+			logger.Error(err, "OutputImage is not writable")
+			os.Exit(1)
+		}
+		if err = verifyRunImageReadable(keychain); err != nil {
+			logger.Error(err, "RunImage is not readable")
+			os.Exit(1)
+		}
 	}
 
-	logger.Info("Verifying accessibility to container image registry...")
-	if err = verifyOutputImageWritable(keychain); err != nil {
-		logger.Error(err, "OutputImage is not writable")
-		os.Exit(1)
-	}
-	if err = verifyRunImageReadable(keychain); err != nil {
-		logger.Error(err, "RunImage is not readable")
-		os.Exit(1)
+	// 目前 lifecycle 只支持导出 cache image 到 registry
+	if *cacheImage != "" {
+		logger.Info("Verifying accessibility to cache registry...")
+		if err = verifyCacheImageWritable(keychain); err != nil {
+			logger.Error(err, "CacheImage is not writable")
+			os.Exit(1)
+		}
 	}
 
 	logger.Info("Initializing platform env...")
@@ -199,7 +210,7 @@ func setupPlatformEnv(logger logr.Logger, platformDir string, env []string) erro
 		if _, ok := ignoredEnvs[key]; ok {
 			logger.V(2).Info(fmt.Sprintf("skip env var %s", key))
 		} else {
-			err := ioutil.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0755)
+			err := os.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0755)
 			if err != nil {
 				return errors.Wrapf(err, "failed to write env var %s", key)
 			}
@@ -259,7 +270,7 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal order")
 	}
-	err = ioutil.WriteFile(filepath.Join(cnbDir, "order.toml"), data, 0755)
+	err = os.WriteFile(filepath.Join(cnbDir, "order.toml"), data, 0755)
 	if err != nil {
 		return errors.Wrap(err, "failed to write order.toml")
 	}
@@ -270,6 +281,14 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 func verifyOutputImageWritable(keychain authn.Keychain) error {
 	if err := dockercreds.VerifyWriteAccess(keychain, *outputImage); err != nil {
 		return errors.Wrapf(err, "Error verifying write access to %q", *outputImage)
+	}
+	return nil
+}
+
+// verifyCacheImageWritable: 测试是否具有 output image 镜像的写权限
+func verifyCacheImageWritable(keychain authn.Keychain) error {
+	if err := dockercreds.VerifyWriteAccess(keychain, *cacheImage); err != nil {
+		return errors.Wrapf(err, "Error verifying write access to %q", *cacheImage)
 	}
 	return nil
 }

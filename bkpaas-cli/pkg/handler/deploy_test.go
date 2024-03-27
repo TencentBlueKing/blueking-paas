@@ -103,9 +103,8 @@ var _ = Describe("TestCNativeAppDeployer", func() {
 		result, err := deployer.GetResult(deployOpts)
 		Expect(err).To(BeNil())
 		Expect(result.IsStable()).To(BeTrue())
-		Expect(result.String()).To(ContainSubstring("Conditions:"))
-		// 成功部署云原生应用不会包含事件信息
-		Expect(result.String()).ToNot(ContainSubstring("Events:"))
+		Expect(result.String()).To(ContainSubstring("How to fix Procfile"))
+		Expect(result.String()).To(ContainSubstring("Open developer center for more details"))
 	})
 
 	It("TestGetHistory", func() {

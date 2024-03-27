@@ -24,7 +24,7 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 from jsonfield import JSONCharField, JSONField
 from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
 from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
@@ -39,6 +39,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
 
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
+# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
 
@@ -50,19 +51,9 @@ def get_app_docker_registry_client() -> DockerRegistryV2Client:
     )
 
 
-def mark_as_latest_artifact(build: "Build"):
-    """mark the given build as latest artifact"""
-    if build.artifact_type != ArtifactType.IMAGE:
-        return
-    # 旧的同名镜像会被覆盖, 则标记为已删除
-    qs = Build.objects.filter(module_id=build.module_id, image=build.image).exclude(uuid=build.uuid)
-    qs.update(artifact_deleted=True)
-    return
-
-
 class Build(UuidAuditedModel):
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = models.UUIDField(verbose_name="所属应用", null=True)
+    module_id = models.UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")
@@ -80,6 +71,7 @@ class Build(UuidAuditedModel):
     revision = models.CharField(max_length=128, null=True, help_text="unique version, such as sha256")
 
     # Metadata
+    # deprecated: `procfile` will be remove in next version, just use Release.procfile
     procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
     env_variables = JSONField(default=dict, blank=True)
     bkapp_revision_id = models.IntegerField(help_text="与本次构建关联的 BkApp Revision id", null=True)
@@ -176,6 +168,7 @@ class Build(UuidAuditedModel):
         """获取构件详情, 如果构件详情未初始化, 则进行初始化"""
         if self.artifact_detail:
             return self.artifact_detail
+
         if self.artifact_type == ArtifactType.IMAGE:
             image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
             registry_client = get_app_docker_registry_client()
@@ -193,6 +186,12 @@ class Build(UuidAuditedModel):
             }
         self.save(update_fields=["artifact_detail"])
         return self.artifact_detail
+
+    def artifact_invoke_message(self):
+        """获取构建详情，需要单独做国际化处理"""
+        if self.artifact_detail:
+            return _(self.artifact_detail["invoke_message"])
+        return _(self.build_process.invoke_message)
 
     @property
     def version(self):
@@ -258,8 +257,8 @@ class BuildProcessManager(models.Manager):
 class BuildProcess(UuidAuditedModel):
     """This Build Process was invoked via a source tarball or anything similar"""
 
-    application_id = models.UUIDField(verbose_name=_("所属应用"), null=True)
-    module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
+    application_id = models.UUIDField(verbose_name="所属应用", null=True)
+    module_id = models.UUIDField(verbose_name="所属模块", null=True)
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", null=True, on_delete=models.CASCADE, help_text="[deprecated] wl_app 外键")

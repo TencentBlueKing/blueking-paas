@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
 var _ conversion.Convertible = &BkApp{}
@@ -61,10 +61,10 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	// Save legacy proc image and resource configs to annotations
-	if err := kubetypes.SetJsonAnnotation(dst, LegacyProcImageAnnoKey, legacyProcImageConfig); err != nil {
+	if err := kubeutil.SetJsonAnnotation(dst, LegacyProcImageAnnoKey, legacyProcImageConfig); err != nil {
 		return err
 	}
-	if err := kubetypes.SetJsonAnnotation(dst, LegacyProcResAnnoKey, legacyProcResConfig); err != nil {
+	if err := kubeutil.SetJsonAnnotation(dst, LegacyProcResAnnoKey, legacyProcResConfig); err != nil {
 		return err
 	}
 
@@ -145,8 +145,8 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 	)
 
 	// Handle Processes field
-	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcImageAnnoKey)
-	legacyProcResConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcResAnnoKey)
+	legacyProcImageConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcImageAnnoKey)
+	legacyProcResConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcResAnnoKey)
 	for _, proc := range src.Spec.Processes {
 		dstProc := Process{
 			Name:         proc.Name,

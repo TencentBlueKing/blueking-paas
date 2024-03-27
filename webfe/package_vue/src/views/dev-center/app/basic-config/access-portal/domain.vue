@@ -254,422 +254,422 @@
   </div>
 </template>
 
-<script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    let domainInputPlaceholderText = '';
+<script>import appBaseMixin from '@/mixins/app-base-mixin';
+let domainInputPlaceholderText = '';
 
-    export default {
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isInitLoading: true,
-                isDomainLoading: false,
-                domainConfig: {
-                    enabled: false,
-                    valid_domain_suffixes: [],
-                    allow_user_modifications: true
-                },
-                domainList: [],
-                envSelectList: [
-                    { id: 'stag', text: this.$t('预发布环境') },
-                    { id: 'prod', text: this.$t('生产环境') }
-                ],
-                curIngressIpConfigs: [],
+export default {
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isInitLoading: true,
+      isDomainLoading: false,
+      domainConfig: {
+        enabled: false,
+        valid_domain_suffixes: [],
+        allow_user_modifications: true,
+      },
+      domainList: [],
+      envSelectList: [
+        { id: 'stag', text: this.$t('预发布环境') },
+        { id: 'prod', text: this.$t('生产环境') },
+      ],
+      curIngressIpConfigs: [],
 
-                panels: [
-                    { name: 'domain', label: this.$t('域名管理') },
-                    { name: 'ipInfo', label: this.$t('IP 信息') }
-                ],
-                active: 'domain',
-                requestQueue: ['domain', 'config'],
-                domainConfigList: [],
-                tableLoading: false,
-                addUrlDialog: {
-                    visiable: false,
-                    isLoading: false,
-                    showForm: false,
-                    isEdit: false,
-                    title: this.$t('添加域名')
-                },
-                urlParamRules: {
-                    environment_name: [
-                        {
-                            required: true,
-                            message: this.$t('请选择'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    domain_name: [
-                        {
-                            required: true,
-                            message: this.$t('域名不能为空'),
-                            trigger: 'blur'
-                        },
-                        {
-                            validator: value => {
-                                const validDomainsPart = this.domainConfig.valid_domain_suffixes.join('|').replace('.', '\\.');
-                                const domainReg = new RegExp('^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(' + validDomainsPart + ')$');
-                                return domainReg.test(value);
-                            },
-                            message: () => {
-                                return `${this.$t('请输入有效域名，并以这些后缀结尾：')}${domainInputPlaceholderText}`;
-                            },
-                            trigger: 'blur'
-                        }
-                    ],
-                    path_prefix: [
-                        {
-                            regex: /^\/[a-z-z0-9_-]*\/?$/,
-                            message: this.$t('路径必须以"/"开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    module_name: [
-                        {
-                            required: true,
-                            message: this.$t('请选择'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                curUrlParams: {
-                    environment_name: '',
-                    domain_name: '',
-                    path_prefix: '/',
-                    module_name: 'default',
-                    id: ''
-                }
-            };
-        },
-        computed: {
-            // Valid domain suffix or not
-            shouldValidateDomainSuffix () {
-                return this.domainConfig.valid_domain_suffixes.length > 0;
+      panels: [
+        { name: 'domain', label: this.$t('域名管理') },
+        { name: 'ipInfo', label: this.$t('IP 信息') },
+      ],
+      active: 'domain',
+      requestQueue: ['domain', 'config'],
+      domainConfigList: [],
+      tableLoading: false,
+      addUrlDialog: {
+        visiable: false,
+        isLoading: false,
+        showForm: false,
+        isEdit: false,
+        title: this.$t('添加域名'),
+      },
+      urlParamRules: {
+        environment_name: [
+          {
+            required: true,
+            message: this.$t('请选择'),
+            trigger: 'blur',
+          },
+        ],
+        domain_name: [
+          {
+            required: true,
+            message: this.$t('域名不能为空'),
+            trigger: 'blur',
+          },
+          {
+            validator: (value) => {
+              const validDomainsPart = this.domainConfig.valid_domain_suffixes.join('|').replace('.', '\\.');
+              const domainReg = new RegExp(`^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(${validDomainsPart})$`);
+              return domainReg.test(value);
             },
-            // The place holder text for domain input element
-            // eslint-disable-next-line vue/return-in-computed-property
-            domainInputPlaceholderText () {
-                if (this.domainConfig.valid_domain_suffixes.length) {
-                    domainInputPlaceholderText = this.domainConfig.valid_domain_suffixes.join(',');
-                    return this.$t('请输入有效域名，并以这些后缀结尾：') + domainInputPlaceholderText;
-                }
-                return this.$t('请输入有效域名');
-            }
-        },
-        watch: {
-            '$route' () {
-                this.init();
-            },
-            domainList (list) {
-                if (!list.length) {
-                    this.addDomain();
-                }
-            },
-            requestQueue (value) {
-                const flag = value.length < 1;
-                if (flag) {
-                    this.isDomainLoading = false;
-                    this.isInitLoading = false;
-                    this.$emit('data-ready', 'domain-config');
-                }
-            }
-        },
-        created () {
-            this.init();
-        },
-        mounted () {
-            this.checkAppRegion();
-        },
-        methods: {
-            init () {
-                this.active = 'domain';
-                this.curIngressIpConfigs = [];
-                this.requestQueue = ['domain', 'config'];
-                this.isDomainLoading = true;
-                this.checkAppRegion();
-                this.loadDomain();
-                this.loadDomainConfig();
-            },
-            async checkAppRegion () {
-                // Set domainConfig to default values
-                this.domainConfig = {
-                    enabled: false,
-                    valid_domain_suffixes: [],
-                    allow_user_modifications: true
-                };
-                try {
-                    const region = this.curAppInfo.application.region;
-                    const res = await this.$store.dispatch('getAppRegion', region);
-                    // Update domain config
-                    this.domainConfig = res.module_custom_domain;
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                }
-            },
-            addDomain () {
-                this.domainList.push({
-                    id: -1,
-                    isEdited: true,
-                    domain_name: '',
-                    environment_name: 'prod'
-                });
-            },
-            loadDomainConfig () {
-                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/custom_domains/config/').then(
-                    res => {
-                        this.curIngressIpConfigs = res;
-                    },
-                    res => {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: `${this.$t('无法获取域名解析目标IP，错误：')}${res.detail}`
-                        });
-                    }
-                ).finally(res => {
-                    this.requestQueue.shift();
-                });
-            },
-            loadDomain () {
-                this.$http.get(BACKEND_URL + '/svc_workloads/api/services/applications/' + this.appCode + '/domains/').then(
-                    res => {
-                        this.domainConfigList = res;
-                    },
-                    res => {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: `${this.$t('无法获取当前独立域名配置，错误：')}${res.detail}`
-                        });
-                    }
-                ).finally(res => {
-                    this.requestQueue.shift();
-                    // 关闭骨架屏
-                    setTimeout(() => {
-                        this.$emit('closeLoading');
-                    }, 300);
-                });
-            },
-            editDomain (domain) {
-                const input = this.getTargetInput(event.target);
-                domain.isEdited = true;
-                // 保存原来值，用到取消操作时返现
-                domain.originDomain = domain.domain_name;
-                this.$nextTick(() => {
-                    input && input.focus();
-                });
-            },
-            cancelDomain (domain, index) {
-                if (domain.id === -1) {
-                    this.domainList.splice(index, 1);
-                } else {
-                    domain.domain_name = domain.originDomain;
-                    domain.isEdited = false;
-                    delete domain.originDomain;
-                }
-            },
-            getTargetInput (target) {
-                let bkFormItem = null;
-                while (target.offsetParent) {
-                    target = target.offsetParent;
-                    if (target.className === 'bk-form-item') {
-                        bkFormItem = target;
-                        break;
-                    }
-                }
-                if (bkFormItem) {
-                    return bkFormItem.querySelector('.bk-form-input');
-                }
-                return undefined;
-            },
-            submitDomain (domain, event) {
-                const input = this.getTargetInput(event.target);
-                if (!domain.domain_name) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('请输入域名')
-                    });
-                    input && input.focus();
-                    return false;
-                }
-
-                const domainRegString = '^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(';
-                let domainReg;
-                if (this.shouldValidateDomainSuffix) {
-                    // Construct domain regex
-                    const validDomainsPart = this.domainConfig.valid_domain_suffixes.join('|').replace('.', '\\.');
-                    domainReg = new RegExp(domainRegString + validDomainsPart + ')$');
-                } else {
-                    domainReg = new RegExp(domainRegString + ')$');
-                }
-
-                if (!domainReg.test(domain.domain_name)) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.domainInputPlaceholderText
-                    });
-                    input && input.focus();
-                    return false;
-                }
-
-                if (domain.id === -1) {
-                    this.createDomain(domain);
-                } else {
-                    this.updateDomain(domain);
-                }
-            },
-            createDomain (domain) {
-                const domainInfo = {
-                    environment_name: domain.environment_name,
-                    domain_name: domain.domain_name
-                };
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/domain/`;
-                this.$http.post(url, domainInfo).then(
-                    res => {
-                        domain.id = res.id;
-                        domain.isEdited = false;
-
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('添加成功')
-                        });
-
-                        this.loadDomain();
-                    },
-                    res => {
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: res.message
-                        });
-                    }
-                );
-            },
-            updateDomain (domain) {
-                const domainInfo = {
-                    environment_name: domain.environment_name,
-                    domain_name: domain.domain_name
-                };
-                const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/domain/${domain.id}/`;
-                this.$http.put(url, domainInfo).then(
-                    res => {
-                        domain.id = res.id;
-                        domain.isEdited = false;
-
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('更新成功')
-                        });
-
-                        this.loadDomain();
-                    },
-                    res => {
-                        const errorMsg = res.message;
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: `${this.$t('更新失败，错误：')}${errorMsg}`
-                        });
-                    }
-                );
-            },
-            handleShowAddUrlDialog () {
-                // this.$refs.addUrlForm.clear()
-                this.addUrlDialog.visiable = true;
-                this.addUrlDialog.showForm = true;
-                this.curUrlParams = {
-                    environment_name: '',
-                    domain_name: '',
-                    path_prefix: '/',
-                    module_name: 'default',
-                    id: ''
-                };
-            },
-            cancelAddUrl () {
-                this.addUrlDialog.showForm = false;
-                this.addUrlDialog.visiable = false;
-                this.addUrlDialog.isLoading = false;
-                this.addUrlDialog.isEdit = false;
-                this.addUrlDialog.title = '添加域名';
-            },
-            async addDomainUrl () {
-                this.addUrlDialog.isLoading = true;
-                this.$refs.addUrlForm.validate().then(async () => {
-                    try {
-                        const params = {
-                            data: this.curUrlParams,
-                            appCode: this.appCode
-                        };
-                        let fetchUrl = 'entryConfig/addDomainInfo';
-                        if (this.curUrlParams.id) {
-                            fetchUrl = 'entryConfig/updateDomainInfo';
-                        }
-                        await this.$store.dispatch(fetchUrl, params);
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: `${this.curUrlParams.id ? this.$t('更新') : this.$t('添加')}${this.$t('成功')}`
-                        });
-                        this.cancelAddUrl();
-                        this.loadDomain();
-                    } catch (e) {
-                        this.addUrlDialog.isLoading = false;
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: e.message || e.detail || this.$t('接口异常')
-                        });
-                    }
-                }).catch(() => {
-                    this.addUrlDialog.isLoading = false;
-                });
-            },
-            handleEdit (data) {
-                this.curUrlParams = data;
-                this.addUrlDialog.title = this.$t('编辑域名');
-                this.addUrlDialog.visiable = true;
-                this.addUrlDialog.showForm = true;
-                this.addUrlDialog.isEdit = true;
-            },
-            handleDelete (domain, index) {
-                const url = `${BACKEND_URL}/svc_workloads/api/services/applications/${this.appCode}/domains/${domain.id}/`;
-                this.$http.delete(url).then(
-                    res => {
-                        this.$paasMessage({
-                            theme: 'success',
-                            message: this.$t('删除成功')
-                        });
-                        this.loadDomain();
-                    },
-                    res => {
-                        const errorMsg = res.message;
-                        this.$paasMessage({
-                            theme: 'error',
-                            message: `${this.$t('删除失败')},${errorMsg}`
-                        });
-                    }
-                );
-            },
-            showRemoveModal (data, index) {
-                this.$bkInfo({
-                    title: this.$t('确定要删除该域名') + '?',
-                    maskClose: true,
-                    confirmFn: () => {
-                        this.handleDelete(data);
-                    }
-                });
-            },
-            allIngressIpEqual (ipConfigs) {
-              if (ipConfigs.length === 0) {
-                return true;
-              }
-              let firstIngIp = ipConfigs[0].frontend_ingress_ip;
-              for (let config of ipConfigs) {
-                if (config.frontend_ingress_ip !== firstIngIp) {
-                  return false;
-                }
-              }
-              return true;
-            }
-        }
+            message: () => `${this.$t('请输入有效域名，并以这些后缀结尾：')}${domainInputPlaceholderText}`,
+            trigger: 'blur',
+          },
+        ],
+        path_prefix: [
+          {
+            regex: /^\/[a-z-z0-9_-]*\/?$/,
+            message: this.$t('路径必须以"/"开头、且路径只能包含小写字母、数字、下划线(_)和连接符(-)'),
+            trigger: 'blur',
+          },
+        ],
+        module_name: [
+          {
+            required: true,
+            message: this.$t('请选择'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      curUrlParams: {
+        environment_name: '',
+        domain_name: '',
+        path_prefix: '/',
+        module_name: 'default',
+        id: '',
+      },
     };
+  },
+  computed: {
+    // Valid domain suffix or not
+    shouldValidateDomainSuffix() {
+      return this.domainConfig.valid_domain_suffixes.length > 0;
+    },
+    // The place holder text for domain input element
+    // eslint-disable-next-line vue/return-in-computed-property
+    domainInputPlaceholderText() {
+      if (this.domainConfig.valid_domain_suffixes.length) {
+        domainInputPlaceholderText = this.domainConfig.valid_domain_suffixes.join(',');
+        return this.$t('请输入有效域名，并以这些后缀结尾：') + domainInputPlaceholderText;
+      }
+      return this.$t('请输入有效域名');
+    },
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+    domainList(list) {
+      if (!list.length) {
+        this.addDomain();
+      }
+    },
+    requestQueue(value) {
+      const flag = value.length < 1;
+      if (flag) {
+        this.isDomainLoading = false;
+        this.isInitLoading = false;
+        this.$emit('data-ready', 'domain-config');
+      }
+    },
+  },
+  created() {
+    this.init();
+  },
+  mounted() {
+    this.checkAppRegion();
+  },
+  methods: {
+    init() {
+      this.active = 'domain';
+      this.curIngressIpConfigs = [];
+      this.requestQueue = ['domain', 'config'];
+      this.isDomainLoading = true;
+      this.checkAppRegion();
+      this.loadDomain();
+      this.loadDomainConfig();
+    },
+    async checkAppRegion() {
+      // Set domainConfig to default values
+      this.domainConfig = {
+        enabled: false,
+        valid_domain_suffixes: [],
+        allow_user_modifications: true,
+      };
+      try {
+        const { region } = this.curAppInfo.application;
+        const res = await this.$store.dispatch('getAppRegion', region);
+        // Update domain config
+        this.domainConfig = res.module_custom_domain;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      }
+    },
+    addDomain() {
+      this.domainList.push({
+        id: -1,
+        isEdited: true,
+        domain_name: '',
+        environment_name: 'prod',
+      });
+    },
+    loadDomainConfig() {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/domains/configs/`).then(
+        (res) => {
+          this.curIngressIpConfigs = res;
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('无法获取域名解析目标IP，错误：')}${res.detail}`,
+          });
+        },
+      )
+        .finally(() => {
+          this.requestQueue.shift();
+        });
+    },
+    loadDomain() {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/domains/`).then(
+        (res) => {
+          this.domainConfigList = res;
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('无法获取当前独立域名配置，错误：')}${res.detail}`,
+          });
+        },
+      )
+        .finally(() => {
+          this.requestQueue.shift();
+          // 关闭骨架屏
+          setTimeout(() => {
+            this.$emit('closeLoading');
+          }, 300);
+        });
+    },
+    editDomain(domain) {
+      const input = this.getTargetInput(event.target);
+      domain.isEdited = true;
+      // 保存原来值，用到取消操作时返现
+      domain.originDomain = domain.domain_name;
+      this.$nextTick(() => {
+        input && input.focus();
+      });
+    },
+    cancelDomain(domain, index) {
+      if (domain.id === -1) {
+        this.domainList.splice(index, 1);
+      } else {
+        domain.domain_name = domain.originDomain;
+        domain.isEdited = false;
+        delete domain.originDomain;
+      }
+    },
+    getTargetInput(target) {
+      let bkFormItem = null;
+      while (target.offsetParent) {
+        target = target.offsetParent;
+        if (target.className === 'bk-form-item') {
+          bkFormItem = target;
+          break;
+        }
+      }
+      if (bkFormItem) {
+        return bkFormItem.querySelector('.bk-form-input');
+      }
+      return undefined;
+    },
+    submitDomain(domain, event) {
+      const input = this.getTargetInput(event.target);
+      if (!domain.domain_name) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请输入域名'),
+        });
+        input && input.focus();
+        return false;
+      }
+
+      const domainRegString = '^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(';
+      let domainReg;
+      if (this.shouldValidateDomainSuffix) {
+        // Construct domain regex
+        const validDomainsPart = this.domainConfig.valid_domain_suffixes.join('|').replace('.', '\\.');
+        domainReg = new RegExp(`${domainRegString + validDomainsPart})$`);
+      } else {
+        domainReg = new RegExp(`${domainRegString})$`);
+      }
+
+      if (!domainReg.test(domain.domain_name)) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.domainInputPlaceholderText,
+        });
+        input && input.focus();
+        return false;
+      }
+
+      if (domain.id === -1) {
+        this.createDomain(domain);
+      } else {
+        this.updateDomain(domain);
+      }
+    },
+    createDomain(domain) {
+      const domainInfo = {
+        environment_name: domain.environment_name,
+        domain_name: domain.domain_name,
+      };
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/domain/`;
+      this.$http.post(url, domainInfo).then(
+        (res) => {
+          domain.id = res.id;
+          domain.isEdited = false;
+
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('添加成功'),
+          });
+
+          this.loadDomain();
+        },
+        (res) => {
+          this.$paasMessage({
+            theme: 'error',
+            message: res.message,
+          });
+        },
+      );
+    },
+    updateDomain(domain) {
+      const domainInfo = {
+        environment_name: domain.environment_name,
+        domain_name: domain.domain_name,
+      };
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/domain/${domain.id}/`;
+      this.$http.put(url, domainInfo).then(
+        (res) => {
+          domain.id = res.id;
+          domain.isEdited = false;
+
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('更新成功'),
+          });
+
+          this.loadDomain();
+        },
+        (res) => {
+          const errorMsg = res.message;
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('更新失败，错误：')}${errorMsg}`,
+          });
+        },
+      );
+    },
+    handleShowAddUrlDialog() {
+      // this.$refs.addUrlForm.clear()
+      this.addUrlDialog.visiable = true;
+      this.addUrlDialog.showForm = true;
+      this.curUrlParams = {
+        environment_name: '',
+        domain_name: '',
+        path_prefix: '/',
+        module_name: 'default',
+        id: '',
+      };
+    },
+    cancelAddUrl() {
+      this.addUrlDialog.showForm = false;
+      this.addUrlDialog.visiable = false;
+      this.addUrlDialog.isLoading = false;
+      this.addUrlDialog.isEdit = false;
+      this.addUrlDialog.title = '添加域名';
+    },
+    async addDomainUrl() {
+      this.addUrlDialog.isLoading = true;
+      this.$refs.addUrlForm.validate().then(async () => {
+        try {
+          const params = {
+            data: this.curUrlParams,
+            appCode: this.appCode,
+          };
+          let fetchUrl = 'entryConfig/addDomainInfo';
+          if (this.curUrlParams.id) {
+            fetchUrl = 'entryConfig/updateDomainInfo';
+          }
+          await this.$store.dispatch(fetchUrl, params);
+          this.$paasMessage({
+            theme: 'success',
+            message: `${this.curUrlParams.id ? this.$t('更新') : this.$t('添加')}${this.$t('成功')}`,
+          });
+          this.cancelAddUrl();
+          this.loadDomain();
+        } catch (e) {
+          this.addUrlDialog.isLoading = false;
+          this.$paasMessage({
+            theme: 'error',
+            message: e.message || e.detail || this.$t('接口异常'),
+          });
+        }
+      })
+        .catch(() => {
+          this.addUrlDialog.isLoading = false;
+        });
+    },
+    handleEdit(data) {
+      this.curUrlParams = data;
+      this.addUrlDialog.title = this.$t('编辑域名');
+      this.addUrlDialog.visiable = true;
+      this.addUrlDialog.showForm = true;
+      this.addUrlDialog.isEdit = true;
+    },
+    handleDelete(domain, index) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/domains/${domain.id}/`;
+      this.$http.delete(url).then(
+        (res) => {
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('删除成功'),
+          });
+          this.loadDomain();
+        },
+        (res) => {
+          const errorMsg = res.message;
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('删除失败')},${errorMsg}`,
+          });
+        },
+      );
+    },
+    showRemoveModal(data, index) {
+      this.$bkInfo({
+        title: `${this.$t('确定要删除该域名')}?`,
+        maskClose: true,
+        confirmFn: () => {
+          this.handleDelete(data);
+        },
+      });
+    },
+    allIngressIpEqual(ipConfigs) {
+      if (ipConfigs.length === 0) {
+        return true;
+      }
+      const firstIngIp = ipConfigs[0].frontend_ingress_ip;
+      for (const config of ipConfigs) {
+        if (config.frontend_ingress_ip !== firstIngIp) {
+          return false;
+        }
+      }
+      return true;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

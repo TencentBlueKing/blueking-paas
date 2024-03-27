@@ -48,6 +48,8 @@ class AppSpecVersion(StructuredEnum):
     # VER_1 meaning app.yaml is provided by S-Mart App
     VER_1 = 1
     VER_2 = 2
+    # VER_3 meaning cnative app
+    VER_3 = 3
 
 
 class AppDescPluginType(str, StructuredEnum):

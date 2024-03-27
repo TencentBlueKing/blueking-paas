@@ -319,7 +319,8 @@ class ApplicationViewSet(viewsets.ViewSet):
         """
         更新蓝鲸应用基本信息（应用名称）
         - [测试地址](/api/bkapps/applications/{code}/)
-        - param: name, 应用名称
+        - param: name, string, 应用名称
+        - param: logo, file, 应用LOGO，不传则不更新
         """
         application = get_object_or_404(Application, code=code)
         # 编辑应用名称的权限：管理员、运营
@@ -332,9 +333,14 @@ class ApplicationViewSet(viewsets.ViewSet):
         application = serializer.save()
         Product.objects.filter(code=code).update(name_zh_cn=application.name, name_en=application.name_en)
 
+        # 应用 LOGO，不传则不更新
+        if "logo" in request.data:
+            logo_serializer = slzs.ApplicationLogoSLZ(data={"logo": request.data.get("logo")}, instance=application)
+            logo_serializer.is_valid(raise_exception=True)
+            logo_serializer.save()
+
         # 修改应用在蓝鲸监控命名空间的名称
         # 蓝鲸监控查询、更新一个不存在的应用返回的 code 都是 500，没有具体的错误码来标识是不是应用不存在，故直接调用更新API，忽略错误信息
-
         try:
             update_or_create_bk_monitor_space(application)
         except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
@@ -505,6 +511,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         source_config = params["source_config"]
         source_origin = SourceOrigin(source_config["source_origin"])
         self._ensure_source_origin_available(request.user, source_origin)
+
+        # Guide: check if a bk_plugin can be created
+        if params["is_plugin_app"] and not get_bk_plugin_config(params["region"]).allow_creation:
+            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存

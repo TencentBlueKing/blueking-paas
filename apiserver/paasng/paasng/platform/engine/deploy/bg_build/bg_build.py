@@ -27,8 +27,9 @@ from django.utils.encoding import force_text
 from paas_wl.bk_app.applications.constants import ArtifactType
 
 # NOTE: The background building process depends on the paas_wl package.
-from paas_wl.bk_app.applications.models.build import Build, BuildProcess, mark_as_latest_artifact
-from paas_wl.bk_app.deploy.app_res.utils import get_scheduler_client_by_app
+from paas_wl.bk_app.applications.managers import mark_as_latest_artifact
+from paas_wl.bk_app.applications.models.build import Build, BuildProcess
+from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, NamespacesHandler, ensure_image_credentials_secret
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.kubestatus import check_pod_health_status
 from paasng.core.core.storages.redisdb import get_default_redis
@@ -92,7 +93,7 @@ def interrupt_build_proc(bp_id: UUID) -> bool:
 
     bp.set_int_requested_at()
     app = bp.app
-    result = get_scheduler_client_by_app(app).interrupt_builder(app.namespace, name=generate_builder_name(app))
+    result = BuildHandler.new_by_app(app).interrupt_builder(app.namespace, name=generate_builder_name(app))
     return result
 
 
@@ -114,7 +115,8 @@ class BuildProcessExecutor(DeployStep):
         try:
             with self.procedure("准备构建环境"):
                 # 初始化 k8s 调度器
-                self.scheduler_client = get_scheduler_client_by_app(self.wl_app)
+                self.build_handler = BuildHandler.new_by_app(self.wl_app)
+                self.ns_handler = NamespacesHandler.new_by_app(self.wl_app)
 
             with self.procedure("构建环境变量"):
                 env_vars = generate_builder_env_vars(self.bp, metadata)
@@ -127,7 +129,7 @@ class BuildProcessExecutor(DeployStep):
                 self.start_slugbuilder(slugbuilder_template)
 
             with self.procedure("构建任务准备中"):
-                self.scheduler_client.wait_build_logs_readiness(
+                self.build_handler.wait_for_logs_readiness(
                     self.wl_app.namespace, name=self._builder_name, timeout=_WAIT_FOR_READINESS_TIMEOUT
                 )
 
@@ -178,7 +180,7 @@ class BuildProcessExecutor(DeployStep):
         try:
             # User interruption was allowed when first log message was received — which means the Pod
             # has entered "Running" status.
-            for raw_line in self.scheduler_client.get_build_log(
+            for raw_line in self.build_handler.get_build_log(
                 name=self._builder_name, follow=True, timeout=_FOLLOWING_LOGS_TIMEOUT, namespace=self.wl_app.namespace
             ):
                 line = force_text(raw_line)
@@ -200,17 +202,17 @@ class BuildProcessExecutor(DeployStep):
         # The phase of a kubernetes pod was managed in a fully async way, there is not guarantee
         # it will transfer into "success/failed" immediately after "follow_build_logs"
         # call finishes. So we will wait a reasonable long period such as 60 seconds.
-        self.scheduler_client.wait_build_succeeded(self.wl_app.namespace, name=self._builder_name, timeout=60)
+        self.build_handler.wait_for_succeeded(self.wl_app.namespace, name=self._builder_name, timeout=60)
 
     def start_slugbuilder(self, pod_template: SlugBuilderTemplate) -> str:
         """Start a slugbuilder from pod_template
 
         :return slug_builder_name"""
-        self.scheduler_client.ensure_namespace(pod_template.namespace)
-        self.scheduler_client.ensure_image_credentials_secret(self.wl_app)
+        self.ns_handler.ensure_namespace(pod_template.namespace)
+        ensure_image_credentials_secret(self.wl_app)
 
         try:
-            slug_builder_name = self.scheduler_client.build_slug(template=pod_template)
+            slug_builder_name = self.build_handler.build_slug(template=pod_template)
         except ResourceDuplicate as e:
             logger.exception("Duplicate slug-builder Pod exists")
             self.stream.write_message(Style.Error(f"上一次构建未正常退出, 请在{e.extra_value}重试."))
@@ -224,9 +226,6 @@ class BuildProcessExecutor(DeployStep):
 
         :param dict metadata: Metadata to be stored in Build instance, such as `procfile`
         """
-        procfile = {}
-        if "procfile" in metadata:
-            procfile = metadata["procfile"]
         if "image" not in metadata:
             raise KeyError("'image' is required")
         image = metadata["image"]
@@ -248,7 +247,6 @@ class BuildProcessExecutor(DeployStep):
             image=image,
             branch=self.bp.branch,
             revision=self.bp.revision,
-            procfile=procfile,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
             bkapp_revision_id=bkapp_revision_id,
             artifact_type=artifact_type,
@@ -264,7 +262,7 @@ class BuildProcessExecutor(DeployStep):
 
     def clean_slugbuilder(self):
         try:
-            self.scheduler_client.delete_builder(namespace=self.wl_app.namespace, name=self._builder_name)
+            self.build_handler.delete_builder(namespace=self.wl_app.namespace, name=self._builder_name)
         except Exception as e:
             # cleaning should not influence main process
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)

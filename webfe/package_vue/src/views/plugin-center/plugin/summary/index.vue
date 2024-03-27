@@ -1,5 +1,6 @@
 <template>
   <div class="visible-range">
+    <paas-plugin-title />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="summary-plugin-loading"
@@ -7,9 +8,8 @@
       class="app-container overview-middle"
     >
       <div class="middle">
-        <paas-plugin-title />
         <div class="overview-main">
-          <div class="visual-display">
+          <div class="visual-display card-style">
             <div :class="['nav-list', { 'is-iframe': curPluginInfo.overview_page?.bottom_url }]">
               <div
                 class="nav-list-item"
@@ -109,7 +109,7 @@
             </template>
           </div>
 
-          <div class="information-container">
+          <div class="information-container card-style">
             <div>
               <h3>{{ $t('基本信息') }}</h3>
               <div class="base-info">
@@ -616,11 +616,12 @@ export default {
     }
     .app-container {
         .overview-main {
-            margin-top: 20px;
             display: flex;
         }
         .visual-display {
+            padding: 24px;
             width: 100%;
+            background: #fff;
         }
         .nav-list {
             position: relative;
@@ -678,7 +679,6 @@ export default {
           min-height: 827px;
           padding-left: 20px;
           margin-left: 24px;
-          background: #FAFBFD;
           font-size: 12px;
           border-radius: 2px;
           color: #63656E;

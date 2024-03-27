@@ -73,7 +73,7 @@
                 </div>
             </template>
         </bk-table-column>
-        <bk-table-column label="操作" width="180">
+        <bk-table-column label="操作" width="300">
             <template slot-scope="props">
                 <bk-button class="ml5" theme="primary" text @click="handleView(props.row)">查看</bk-button>
                 <bk-button class="ml5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
@@ -82,6 +82,7 @@
                     v-bk-tooltips="genTooltipsConfig(props.row)"
                     @click="handleGenNodeState(props.row.region, props.row.name)"
                 >同步节点信息</bk-button>
+                <bk-button class="ml5" theme="primary" text @click="setAsDefault(props.row)">设为默认集群</bk-button>
             </template>
         </bk-table-column>
     </bk-table>
@@ -431,13 +432,14 @@
     }
 
     const URLRouter = {
-        create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
-        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
-        detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/' %}"),
-        genNodeState: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/node_state/' %}"),
+        create: decodeURI("{% url 'wl_api.clusters' %}"),
+        list: decodeURI("{% url 'wl_api.clusters' %}"),
+        detail: decodeURI("{% url 'wl_api.cluster_by_id' '${cluster_id}' %}"),
+        setAsDefault: decodeURI("{% url 'wl_api.cluster.set_default' '${cluster_id}' %}"),
+        genNodeState: decodeURI("{% url 'wl_api.cluster.node_state' '${cluster_name}' %}"),
         apiServer: {
-            upsert: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers' %}"),
-            delete: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers/${api_server_id}' %}"),
+            upsert: decodeURI("{% url 'wl_api.cluster.api_servers' '${cluster_id}' %}"),
+            delete: decodeURI("{% url 'wl_api.cluster.api_server_by_id' '${cluster_id}' '${api_server_id}' %}"),
         }
     }
 
@@ -593,6 +595,13 @@
                     let url = URLRouter.genNodeState.replace('${cluster_name}', clusterName)
                     this.$http.post(url, {region: region}).then(resp => {
                         this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 节点成功`})
+                        this.fetchClusterList()
+                    })
+                },
+                setAsDefault: function (row) {
+                    let url = URLRouter.setAsDefault.replace("${cluster_id}", row.uuid);
+                    this.$http.post(url).then(resp => {
+                        this.$bkMessage({theme: 'success', message: `成功设置集群 [ ${row.name} ] 为默认集群`})
                         this.fetchClusterList()
                     })
                 },

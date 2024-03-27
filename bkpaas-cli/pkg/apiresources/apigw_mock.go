@@ -136,14 +136,14 @@ func (r MockedRequester) GetAppInfo(appCode string) (map[string]any, error) {
 }
 
 // DeployDefaultApp ...
-func (r MockedRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error) {
+func (r MockedRequester) DeployApp(appCode, appModule, deployEnv string, data map[string]any) (map[string]any, error) {
 	return map[string]any{
 		"deployment_id": "b2d4cccc-f535-4282-9b8c-74162e817413",
 	}, nil
 }
 
-// GetDefaultAppDeployResult ...
-func (r MockedRequester) GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
+// GetAppDeployResult ...
+func (r MockedRequester) GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
 	return map[string]any{
 		"status":       "failed",
 		"logs":         "Can not read Procfile file from repository",
@@ -159,8 +159,8 @@ func (r MockedRequester) GetDefaultAppDeployResult(appCode, appModule, deployID 
 	}, nil
 }
 
-// ListDefaultAppDeployHistory ...
-func (r MockedRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+// ListAppDeployHistory ...
+func (r MockedRequester) ListAppDeployHistory(appCode, appModule string) (map[string]any, error) {
 	return map[string]any{
 		"count": 2,
 		"results": []any{
@@ -207,92 +207,10 @@ func (r MockedRequester) ListDefaultAppDeployHistory(appCode, appModule string) 
 }
 
 // DeployCNativeApp ...
-func (r MockedRequester) DeployCNativeApp(
-	appCode, appModule, deployEnv string, manifest map[string]any,
-) (map[string]any, error) {
-	return manifest, nil
-}
-
-// GetCNativeAppDeployResult ...
-func (r MockedRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error) {
-	return map[string]any{
-		"deployment": map[string]any{
-			"deploy_id":            533,
-			"status":               "ready",
-			"reason":               "AppAvailable",
-			"message":              "",
-			"last_transition_time": "2023-04-17 10:01:00",
-			"operator":             "admin",
-			"created":              "2023-04-17 10:00:00",
-		},
-		"ingress": map[string]any{
-			"url": "http://stag-dot-cnative.bkapps.example.com/",
-		},
-		"conditions": []any{
-			map[string]any{
-				"type":    "AppAvailable",
-				"status":  "True",
-				"reason":  "AppAvailable",
-				"message": "",
-			},
-			map[string]any{
-				"type":    "AppProgressing",
-				"status":  "True",
-				"reason":  "NewRevision",
-				"message": "",
-			},
-			map[string]any{
-				"type":    "AddOnsProvisioned",
-				"status":  "True",
-				"reason":  "Provisioned",
-				"message": "",
-			},
-			map[string]any{
-				"type":    "HooksFinished",
-				"status":  "True",
-				"reason":  "Finished",
-				"message": "",
-			},
-		},
-		"events": []any{
-			map[string]any{
-				"name":             "cnative--web-767546656f-2phcm.175aca6b63de0a02",
-				"type":             "Normal",
-				"reason":           "Killing",
-				"count":            "1",
-				"message":          "Stopping container web",
-				"source_component": "kubelet",
-				"first_seen":       "2023-04-17 10:00:01",
-				"last_seen":        "2023-04-17 10:00:02",
-			},
-		},
-	}, nil
-}
-
-// ListCNativeAppDeployHistory ...
-func (r MockedRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error) {
-	return map[string]any{
-		"count": 2,
-		"results": []any{
-			map[string]any{
-				"id":                   535,
-				"operator":             "admin",
-				"created":              "2023-04-17 19:44:42",
-				"name":                 "cnative-710-1681731882",
-				"status":               "ready",
-				"last_transition_time": "2023-04-17 19:44:48",
-			},
-			map[string]any{
-				"id":       533,
-				"operator": "admin",
-				"created":  "2023-04-17 17:05:26",
-				"name":     "cnative-708-1681722326",
-				"status":   "error",
-				"reason":   "Failed",
-				"message":  "PreReleaseHook fail to succeed: stat /bin/bash: no such file or directory: unknown",
-			},
-		},
-	}, nil
+func (r MockedRequester) UpdataBkappModel(
+	appCode, appModule string, manifest map[string]any,
+) ([]map[string]any, error) {
+	return []map[string]any{manifest}, nil
 }
 
 var _ Requester = MockedRequester{}

@@ -31,8 +31,8 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
-	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
+	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
@@ -216,22 +216,22 @@ var _ = Describe("", func() {
 
 	Context("ToAddressableStatus", func() {
 		It("mixed types", func() {
-			groups := []res.DomainGroup{
+			groups := []dgmingress.DomainGroup{
 				{
-					SourceType: res.DomainSubDomain,
-					Domains: []res.Domain{
+					SourceType: dgmingress.DomainSubDomain,
+					Domains: []dgmingress.Domain{
 						{Host: "subdomain.example.com", PathPrefixList: []string{"/"}},
 					},
 				},
 				{
-					SourceType: res.DomainSubPath,
-					Domains: []res.Domain{
+					SourceType: dgmingress.DomainSubPath,
+					Domains: []dgmingress.Domain{
 						{Host: "subpath.example.com", PathPrefixList: []string{"/foo/", "/foo-bar/"}},
 					},
 				},
 				{
-					SourceType: res.DomainCustom,
-					Domains: []res.Domain{
+					SourceType: dgmingress.DomainCustom,
+					Domains: []dgmingress.Domain{
 						{Host: "custom.example.com", PathPrefixList: []string{"/"}, TLSSecretName: "foo-sec"},
 					},
 				},
@@ -240,19 +240,19 @@ var _ = Describe("", func() {
 			Expect(addresses).To(Equal(
 				[]paasv1alpha2.Addressable{
 					{
-						SourceType: string(res.DomainSubDomain),
+						SourceType: string(dgmingress.DomainSubDomain),
 						URL:        "http://subdomain.example.com/",
 					},
 					{
-						SourceType: string(res.DomainSubPath),
+						SourceType: string(dgmingress.DomainSubPath),
 						URL:        "http://subpath.example.com/foo/",
 					},
 					{
-						SourceType: string(res.DomainSubPath),
+						SourceType: string(dgmingress.DomainSubPath),
 						URL:        "http://subpath.example.com/foo-bar/",
 					},
 					{
-						SourceType: string(res.DomainCustom),
+						SourceType: string(dgmingress.DomainCustom),
 						URL:        "https://custom.example.com/",
 					},
 				},

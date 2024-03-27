@@ -73,7 +73,7 @@
                 <bk-col :span="2">
                     部署运行情况:
                     <bk-collapse v-bind:value="module.envs.map(env=>env.environment)">
-                        <bk-collapse-item v-for="(env, index) in module.envs" :name="env.environment" accordion>
+                        <bk-collapse-item v-for="(env, index) in module.envs" :name="env.environment">
                             $[ env.environment ] 环境
                             <div slot="content" style="margin-bottom: 20px">
                                 <div style="margin-bottom: 5px" >部署集群：</div>

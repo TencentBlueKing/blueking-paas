@@ -11,7 +11,7 @@
     "build:te": "cross-env BK_APP_VERSION=te bk-cli-service-webpack build",
     "build:ee": "cross-env BK_APP_VERSION=ee bk-cli-service-webpack build",
     "build:ce": "cross-env BK_APP_VERSION=ce bk-cli-service-webpack build",
-    "build": "cross-env BK_APP_VERSION=$APP_VERSION bk-cli-service-webpack build",
+    "build": "cross-env BK_APP_VERSION=$APP_VERSION BK_NODE_ENV=$NODE_ENV bk-cli-service-webpack build",
     "lint": "eslint --fix --ext .js,.vue src"
   },
   "dependencies": {
@@ -21,7 +21,7 @@
     "@blueking/cli-service-webpack": "0.0.0-beta.73",
     "@blueking/eslint-config-bk": "^2.1.0-beta.12",
     "@blueking/log": "^2.0.16",
-    "@blueking/notice-component-vue2": "^2.0.0",
+    "@blueking/notice-component-vue2": "^2.0.3",
     "@blueking/stylelint-config-bk": "^2.1.0-beta.9",
     "@blueking/user-selector": "^1.0.5-beta.2",
     "acorn": "8.10.0",

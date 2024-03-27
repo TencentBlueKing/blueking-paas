@@ -75,20 +75,18 @@ func (r apigwRequester) GetAppInfo(appCode string) (map[string]any, error) {
 	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
 }
 
-// DeployDefaultApp 部署普通应用
-func (r apigwRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error) {
+// DeployApp 部署应用
+func (r apigwRequester) DeployApp(appCode, appModule, deployEnv string, data map[string]any) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/envs/%s/deployments/",
 		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
 	)
-	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]string{
-		"version_type": "branch", "version_name": branch, "revision": branch, // 暂不支持按 commit_id 拉取代码
-	}}
+	opts := grequests.RequestOptions{Headers: r.headers(), JSON: data}
 	return r.handlePaaSApiRequest(grequests.Post, url, opts)
 }
 
-// GetDefaultAppDeployResult 获取普通应用部署结果
-func (r apigwRequester) GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
+// GetAppDeployResult 获取应用部署结果
+func (r apigwRequester) GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/deployments/%s/result/",
 		config.G.PaaSApigwUrl, appCode, appModule, deployID,
@@ -96,7 +94,8 @@ func (r apigwRequester) GetDefaultAppDeployResult(appCode, appModule, deployID s
 	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
 }
 
-func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+// ListAppDeployHistory ...
+func (r apigwRequester) ListAppDeployHistory(appCode, appModule string) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/deployments/lists/",
 		config.G.PaaSApigwUrl, appCode, appModule,
@@ -105,34 +104,16 @@ func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (
 	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
-// DeployCNativeApp 部署云原生应用
-func (r apigwRequester) DeployCNativeApp(
-	appCode, appModule, deployEnv string, manifest map[string]any,
-) (map[string]any, error) {
+// UpdataBkappModel ...
+func (r apigwRequester) UpdataBkappModel(
+	appCode, appModule string, manifest map[string]any,
+) ([]map[string]any, error) {
 	url := fmt.Sprintf(
-		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/deployments/",
-		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
+		"%s/bkapps/applications/%s/modules/%s/bkapp_model/manifests/current/",
+		config.G.PaaSApigwUrl, appCode, appModule,
 	)
 	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]any{"manifest": manifest}}
-	return r.handlePaaSApiRequest(grequests.Post, url, opts)
-}
-
-// GetCNativeAppDeployResult 获取云原生应用部署结果
-func (r apigwRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error) {
-	url := fmt.Sprintf(
-		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/status/",
-		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
-	)
-	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
-}
-
-func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error) {
-	url := fmt.Sprintf(
-		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/deployments/",
-		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
-	)
-	opts := grequests.RequestOptions{Headers: r.headers(), Params: map[string]string{"limit": "5"}}
-	return r.handlePaaSApiRequest(grequests.Get, url, opts)
+	return r.handlePaaSListApiRequest(grequests.Put, url, opts)
 }
 
 type gReqFunc func(string, *grequests.RequestOptions) (*grequests.Response, error)
@@ -155,6 +136,30 @@ func (r apigwRequester) handlePaaSApiRequest(
 	}
 
 	respData := map[string]any{}
+	if err = resp.JSON(&respData); err != nil {
+		return nil, ApiRespDecodeErr
+	}
+	return respData, nil
+}
+
+// 处理 PaaS API 调用请求(返回值为 list)
+func (r apigwRequester) handlePaaSListApiRequest(
+	reqFunc gReqFunc, url string, opts grequests.RequestOptions,
+) ([]map[string]any, error) {
+	console.Debug("Request Url: %s, Headers: %v, Params: %v, Body: %v", url, opts.Headers, opts.Params, opts.JSON)
+
+	resp, err := reqFunc(url, &opts)
+	if err != nil {
+		return nil, PaaSApiErr
+	}
+
+	console.Debug("Response %d -> %s", resp.StatusCode, resp.String())
+
+	if !resp.Ok {
+		return nil, errors.Errorf("%d -> %s", resp.StatusCode, resp.String())
+	}
+
+	var respData []map[string]any
 	if err = resp.JSON(&respData); err != nil {
 		return nil, ApiRespDecodeErr
 	}

@@ -24,7 +24,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      active: 'url',
+      active: 'market',
       routeIndex: 0,
     };
   },
@@ -33,20 +33,18 @@ export default {
       return this.curAppInfo.web_config.engine_enabled;
     },
     panels() {
-      // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
-      if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
-        return [
-          { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
-          { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
-          { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
-        ];
-      }
-      return [
+      let panels = [
         { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
+        { name: 'storage', label: this.$t('持久存储'), routeName: 'appPersistentStorage' },
         { name: 'appMobileMarket', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
         { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
         { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
       ];
+      // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
+      if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
+        panels = panels.filter(tab => tab.name !== 'appMobileMarket');
+      }
+      return panels;
     },
   },
   watch: {
@@ -60,7 +58,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curEnv = this.panels.find(item => item.name === name);
+      const curEnv = this.panels.find(item => item.name === name) || this.panels[0];
       this.$router.push({
         name: curEnv.routeName,
         params: {

@@ -6,11 +6,7 @@
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
-      :loading="deployAppDialog.isLoading"
       :auto-close="false"
-      :ok-text="`${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
-      @confirm="handleConfirmValidate"
-      @cancel="handleCancel"
       @after-leave="handleAfterLeave"
     >
       <template #header>
@@ -19,6 +15,53 @@
           <div class="module-name-tag">{{ curAppModule.name || '--' }}</div>
         </div>
       </template>
+
+      <template #footer>
+        <div class="dialog-footer-wrapper">
+          <span v-bk-tooltips="{ content: $t('部署前置条件检查中'), disabled: deployButtonTipsDisable }">
+            <bk-button
+              :theme="'primary'"
+              :loading="deployAppDialog.isLoading"
+              :disabled="deployAppDialog.disabled || deploybuttonDisabled"
+              @click="handleConfirmValidate"
+              class="mr10"
+            >
+              {{ `${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}` }}
+            </bk-button>
+          </span>
+          <bk-button :theme="'default'" @click="handleCancel">
+            {{ $t('取消') }}
+          </bk-button>
+        </div>
+      </template>
+
+      <!-- 部署限制 -->
+      <section v-if="isShowErrorAlert.deploy" class="customize-alert-wrapper mb12">
+        <p class="text">
+          <i class="paasng-icon paasng-remind exclamation-cls"></i>
+          <span>{{ deployErrorData?.message }}</span>
+        </p>
+        <div class="right-link">
+          <bk-button
+            class="link-text"
+            :text="true"
+            @click="handleFixPreparation(deployErrorData)"
+          >
+            {{ $t('立即处理') }}
+            <i class="paasng-icon paasng-jump-link" />
+          </bk-button>
+          <div class="line"></div>
+          <bk-button
+            class="link-text"
+            :text="true"
+            @click="getDeployPreparations('deploy')"
+          >
+            {{ $t('刷新') }}
+            <i class="paasng-icon paasng-refresh-line" v-if="!deployRefreshLoading" />
+            <round-loading class="round-loading-cls" v-else />
+          </bk-button>
+        </div>
+      </section>
 
       <!-- 镜像逻辑，排除smart应用 -->
       <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' && !isSmartApp">
@@ -134,14 +177,18 @@
           <div class="mb10 flex-row justify-content-between">
             <div>{{ isSmartApp ? $t('版本') : $t('代码分支选择') }}</div>
             <!-- smartAPP 不展示，代码版本差异 -->
-            <div
+            <bk-button
               v-if="isShowCodeDifferences"
-              class="version-code"
+              style="font-size: 12px;"
+              theme="primary"
+              text
+              :disabled="isVersionDifferenceDisabled"
               @click="handleShowCommits"
             >
               {{ $t('查看代码版本差异') }}
-            </div>
+            </bk-button>
           </div>
+          <!-- 代码分支禁用 -->
           <bk-select
             v-model="branchValue"
             :placeholder="$t('请选择')"
@@ -149,6 +196,7 @@
             :popover-min-width="420"
             :clearable="false"
             :searchable="true"
+            :disabled="isShowCodeAlert"
             @change="handleChangeBranch"
             :loading="isBranchesLoading"
             :empty-text="branchEmptyText"
@@ -174,22 +222,14 @@
                 :name="option.text"
               />
             </bk-option-group>
-            <div
-              v-if="curAppModule.repo && curAppModule.repo.type === 'bk_svn'"
-              slot="extension"
-              style="cursor: pointer"
-              @click="handleCreateBranch"
-            >
-              <i class="bk-icon icon-plus-circle mr5" />
-              {{ $t('新建部署分支') }}
-            </div>
           </bk-select>
-          <p
+          <!-- 删除 -->
+          <!-- <p
             class="error-text mt5"
             v-if="branchErrorTips"
           >
             {{ branchErrorTips }}
-          </p>
+          </p> -->
         </div>
 
         <div
@@ -257,6 +297,44 @@
           </bk-radio-group>
         </div>
       </div>
+
+      <section v-if="isShowCodeAlert" class="customize-alert-wrapper mt10">
+        <p class="text">
+          <i class="paasng-icon paasng-remind exclamation-cls"></i>
+          <span>{{ codeRepositoryErrorData?.message }}</span>
+        </p>
+        <div class="right-link">
+          <bk-button
+            v-if="codeRepositoryErrorData.action_name === 'NEED_TO_BIND_OAUTH_INFO'"
+            class="link-text"
+            :text="true"
+            @click="hanndleToAuthorize()"
+          >
+            {{ $t('去授权') }}
+            <i class="paasng-icon paasng-jump-link" />
+          </bk-button>
+          <bk-button
+            v-else
+            class="link-text"
+            :text="true"
+            @click="handleFixPreparation(codeRepositoryErrorData)"
+          >
+            {{ $t('立即处理') }}
+            <i class="paasng-icon paasng-jump-link" />
+          </bk-button>
+          <div class="line"></div>
+          <!-- 刷新代码分支 -->
+          <bk-button
+            class="link-text"
+            :text="true"
+            @click="handleRefresh"
+          >
+            {{ $t('刷新') }}
+            <i class="paasng-icon paasng-refresh-line" v-if="!codeRefreshLoading" />
+            <round-loading class="round-loading-cls" v-else />
+          </bk-button>
+        </div>
+      </section>
     </bk-dialog>
     <bk-sideslider
       :is-show.sync="isShowSideslider"
@@ -276,12 +354,120 @@
         ></deploy-status-detail>
       </div>
     </bk-sideslider>
+
+    <bk-dialog
+      v-model="commitDialog.visiable"
+      width="740"
+      :title="$t('查看版本差异')"
+      :theme="'primary'"
+      :mask-close="true"
+      :show-footer="false"
+    >
+      <div class="result">
+        <!-- commitsList 根据 显示 -->
+        <paas-loading :loading="commitDialog.isLoading">
+          <div
+            v-if="!commitDialog.isLoading"
+            slot="loadingContent"
+          >
+            <!-- 改为部署内容 -->
+            <form
+              v-if="moduleReleaseInfo"
+              class="ps-form ps-form-horizontal"
+            >
+              <div class="middle-list mb15">
+                <span class="">
+                  {{ $t('已选中分支：') }}
+                  <strong>{{ branchValue.split(':')[1] || '--' }}</strong>
+                </span>
+                <span class="revision-diff-sep ml25 mr25"> &lt; &gt; </span>
+                <span class="">
+                  {{ $t('已部署分支：') }}
+                  <strong>
+                    {{ moduleReleaseInfo.repo.name }}
+                    （{{ $t('版本号') }}: {{ moduleReleaseInfo.repo.version }} ）
+                  </strong>
+                </span>
+              </div>
+            </form>
+            <table class="ps-table ps-table-default ps-table-outline">
+              <colgroup>
+                <col style="width:150px">
+                <col style="width:150px">
+                <col style="width:170px">
+                <col style="width:250px">
+              </colgroup>
+              <tr class="ps-table-environment-header">
+                <th> {{ $t('版本号') }} </th>
+                <th> {{ $t('提交人') }} </th>
+                <th> {{ $t('提交时间') }} </th>
+                <th> {{ $t('注释') }} </th>
+              </tr>
+              <tr
+                v-if="!commitsList.length"
+                class="ps-table-slide-up"
+              >
+                <td colspan="4">
+                  <div class="ps-no-result">
+                    <div class="text">
+                      <p><i class="paasng-icon paasng-empty no-data" /></p>
+                      <p> {{ $t('暂无版本差异记录') }} </p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tbody
+                v-for="(cItem, index) in commitsList"
+                v-else
+                :key="index"
+                :class="['ps-table-template',{ 'open': commitDialog.curCommitsIndex === index }]"
+              >
+                <tr
+                  class="ps-table-slide-up"
+                  @click.stop.prevent="handleToggleCommitsDetail(index)"
+                >
+                  <td class="pl50">
+                    <i class="icon" />
+                    <a>{{ cItem.revision }}</a>
+                  </td>
+                  <td>{{ cItem.author }}</td>
+                  <td>{{ cItem.date }}</td>
+                  <td>{{ cItem.message }}</td>
+                </tr>
+                <tr class="ps-table-slide-down">
+                  <td colspan="4">
+                    <pre>
+                      <p
+                        v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
+                        :key="chagnItemIndex"
+                      >{{ chagnItem[0] }} {{ chagnItem[1] }}</p>
+                    </pre>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </paas-loading>
+      </div>
+    </bk-dialog>
   </div>
 </template>
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
-import _ from 'lodash';
-// :ok-text="$t('部署至')`${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
+import { cloneDeep } from 'lodash';
+
+// 当前状态，禁用部署按钮
+const deployErrorStatus = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO'];
+
+// 从源码构建，且为当前错误状态，禁用部署按钮
+const codeRepositoryErrorStatus = [
+  'NEED_TO_BIND_OAUTH_INFO',
+  'DONT_HAVE_ENOUGH_PERMISSIONS',
+  'NEED_TO_CORRECT_REPO_INFO',
+  'NEED_TO_COMPLETE_PROCFILE',
+  'CHECK_CI_GIT_TOKEN',
+];
+
 export default {
   components: {
     deployStatusDetail,
@@ -311,6 +497,7 @@ export default {
       deployAppDialog: {
         visiable: false,
         isLoading: false,
+        disabled: true,
       },
       imageSourceData: [
         { value: 'branch', label: this.$t('从源码构建') },
@@ -355,6 +542,20 @@ export default {
       processesData: [],
       allowMultipleImage: false,
       curModulemirrorTag: '',
+      deployPreparations: {},
+      isShowErrorAlert: {
+        deploy: false,
+        code: false,
+      },
+      deployRefreshLoading: false,
+      codeRefreshLoading: false,
+      commitDialog: {
+        visiable: false,
+        isLoading: false,
+        curCommitsIndex: -1,
+      },
+      commitsList: [],
+      moduleReleaseInfo: null,
     };
   },
   computed: {
@@ -419,6 +620,62 @@ export default {
       }
       return false;
     },
+
+    // 是否展示代码仓库相关错误信息
+    isShowCodeAlert() {
+      if (this.isShowErrorAlert.code && this.isSourceCodeBuild) {
+        if (this.buttonActive === 'branch' || this.isSmartApp) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    // 部署相关错误信息
+    deployErrorData() {
+      const faileds = this.deployPreparations.failed_conditions;
+      if (faileds?.length) {
+        const deployErrorList = faileds.filter(v => deployErrorStatus.includes(v.action_name));
+        return deployErrorList[0] || {};
+      }
+      return {};
+    },
+
+    // 代码仓库相关错误信息
+    codeRepositoryErrorData() {
+      const faileds = this.deployPreparations.failed_conditions;
+      if (faileds?.length) {
+        // 查找第一项进行展示，解决当前项，点击刷新重新获取，再处理下一天错误
+        const codeRepositoryErrorList = faileds.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+        return codeRepositoryErrorList[0] || {};
+      }
+      return {};
+    },
+
+    // 部署按钮禁用状态
+    deploybuttonDisabled() {
+      if (this.deployPreparations.all_conditions_matched) {
+        return false;
+      }
+      // 部署限制相关的/代码仓库相关
+      if (this.isShowErrorAlert.deploy || this.isShowCodeAlert) {
+        return true;
+      }
+      return false;
+    },
+
+    // 部署按钮提示禁用
+    deployButtonTipsDisable() {
+      if (this.deployAppDialog.disabled || this.deploybuttonDisabled) {
+        return false;
+      }
+      return true;
+    },
+
+    // svn查看代码版本差异
+    isVersionDifferenceDisabled() {
+      return this.curAppModule.repo.diff_feature.method !== 'external' && this.moduleReleaseInfo === null;
+    },
   },
   watch: {
     show: {
@@ -430,6 +687,7 @@ export default {
         // 初始化镜像taglist
         this.pagination.limit = 10;
         this.imageTagListCount = 0;
+        this.getDeployPreparations();
         // 仅镜像部署不需要获取分支数据
         if (this.deploymentInfoBackUp.build_method !== 'custom_image') {
           this.getModuleBranches(); // 获取分支数据
@@ -439,6 +697,8 @@ export default {
 
         this.setCurData();
         this.getModuleRuntimeOverview();
+        // 获取当前模块部署信息
+        this.getModuleReleaseInfo();
         // 上次选择的镜像拉取策略
         if (this.lastSelectedImagePullStrategy) {
           this.imagePullStrategy = this.lastSelectedImagePullStrategy;
@@ -447,7 +707,7 @@ export default {
       immediate: true,
     },
     deploymentInfo(v) {
-      this.deploymentInfoBackUp = _.cloneDeep(v);
+      this.deploymentInfoBackUp = cloneDeep(v);
       const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
       if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
       this.curModulemirrorTag = versionInfo?.version_name;
@@ -468,7 +728,6 @@ export default {
       if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
       this.curModulemirrorTag = versionInfo?.version_name;
       // smartApp下, 代码差异
-      console.log('this.isSmartApp', this.isSmartApp);
       if (this.isSmartApp) {
         this.branchValue = `${versionInfo?.version_type}:${versionInfo?.version_name}`;
         this.curSelectData = {
@@ -515,7 +774,7 @@ export default {
         //  Smart 应用(预发布/生产)显示最新分支
         if (this.isSmartApp) {
           const sortList = res.results.sort(this.sortData);
-          this.branchSelection = `${sortList[0].type}:${sortList[0].name}`;
+          this.branchValue = `${sortList[0].type}:${sortList[0].name}`;
         }
         this.branchesData = res.results;
         const branchesList = [];
@@ -570,11 +829,11 @@ export default {
 
       // eslint-disable-next-line no-prototype-builtins
       if (favBranchName && this.branchesMap.hasOwnProperty(favBranchName)) {
-        this.branchSelection = favBranchName;
+        this.branchValue = favBranchName;
         return;
       }
 
-      if (this.branchList.length && !this.branchSelection) {
+      if (this.branchList.length && !this.branchValue) {
         if (this.environment === 'prod') {
           if (this.availableBranch) {
             this.branchValue = this.availableBranch;
@@ -605,18 +864,20 @@ export default {
 
     handleAfterLeave() {
       this.branchValue = '';
+      this.isShowErrorAlert.deploy = false;
+      this.isShowErrorAlert.code = false;
+      this.deployAppDialog.disabled = true;
       this.$emit('update:show', false);
     },
 
     // 查看代码差异
     async handleShowCommits() {
-      // console.log('this.curAppModule', this.curAppModule);
-      // if (this.curAppModule.repo.diff_feature.method === 'external') {
-      //   this.showCompare();
-      // } else {
-      //   this.showCommits();
-      // }
-      this.showCompare();
+      if (this.curAppModule.repo.diff_feature.method === 'external') {
+        this.showCompare();
+      } else {
+        // svn
+        this.showCommits();
+      }
     },
 
     // 查看代码对比
@@ -631,14 +892,105 @@ export default {
 
       const fromVersion = this.deploymentInfoBackUp?.version_info?.revision;
       const toVersion = this.branchValue;
-      const win = window.open();
       const res = await this.$store.dispatch('deploy/getGitCompareUrl', {
         appCode: this.appCode,
         moduleId: this.curModuleId,
         fromVersion,
         toVersion,
       });
-      win.location.href = res.result;
+      window.open(res.result, '_blank');
+    },
+
+    /**
+     * 查看代码提交记录
+     */
+    async showCommits() {
+      if (!this.branchValue) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请选择部署分支'),
+        });
+        return false;
+      }
+
+      this.commitDialog.visiable = true;
+      this.commitDialog.isLoading = true;
+
+      try {
+        const fromVersion = this.moduleReleaseInfo.repo?.revision;
+        const toVersion = this.branchValue;
+
+        // 根据用户选择的分支获取提交记录
+        const res = await this.$store.dispatch('deploy/getSvnCommits', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          fromVersion,
+          toVersion,
+        });
+        this.commitsList = res.results;
+      } catch (e) {
+        this.commitsList = [];
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.commitDialog.isLoading = false;
+      }
+    },
+
+    // 获取模块发布信息
+    async getModuleReleaseInfo() {
+      try {
+        const res = await this.$store.dispatch('deploy/getModuleReleaseInfo', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+        });
+
+        if (!res.code) {
+          // 已下架
+          if (res.is_offlined) {
+            res.offline.repo.version = this.formatRevision(res.offline.repo.revision);
+            this.moduleReleaseInfo = res.offline;
+          } else if (res.deployment) {
+            res.deployment.repo.version = this.formatRevision(res.deployment.repo.revision);
+            this.moduleReleaseInfo = res.deployment;
+          } else {
+            this.moduleReleaseInfo = {
+              repo: {},
+            };
+          }
+        }
+      } catch (e) {
+        this.moduleReleaseInfo = null;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    formatRevision(revision) {
+      // 修改后端返回的 repo 数据，增加额外字段
+      // 追加 version 字段
+      // 为 Git 类型版本号取前 8 位
+      const reg = RegExp('^[a-z0-9]{40}$');
+      let version = '';
+      if (reg.test(revision)) {
+        version = revision.substring(0, 8);
+      } else {
+        version = revision;
+      }
+      return version;
+    },
+
+    handleToggleCommitsDetail(index) {
+      if (this.commitDialog.curCommitsIndex === index) {
+        this.commitDialog.curCommitsIndex = -1;
+      } else {
+        this.commitDialog.curCommitsIndex = index;
+      }
     },
 
     async handleConfirmValidate() {
@@ -711,7 +1063,6 @@ export default {
           data: params,
         });
         this.deployAppDialog.visiable = false;
-        this.deployAppDialog.isLoading = false; // 成功之后关闭弹窗打开侧栏
         this.deploymentId = res.deployment_id;
         this.handleAfterLeave(); // 关闭弹窗
         this.isShowSideslider = true; // 打开侧边栏
@@ -776,8 +1127,9 @@ export default {
     // 选择分支
     handleChangeBranch() {
       if (!this.branchesData.length) return;
+      const branchName = this.branchValue.split(':')[1] || this.branchValue;
       this.curSelectData = this.branchesData.find((e) => {
-        if (this.branchValue.includes(e.name)) {
+        if (branchName === e.name) {
           return e;
         }
       });
@@ -790,20 +1142,18 @@ export default {
           e.revision = e.digest;
           e.type = 'image',
           e.name = e.tag;
-          console.log('eeeeee', e);
           return e;
         }
       });
     },
     handleCancel() {
       this.$refs.imageFormRef?.clearError();
+      this.deployAppDialog.visiable = false;
     },
     // 点击镜像来源
     handleSelected(item) {
       this.buttonActive = item.value;
-      if (this.buttonActive === 'branch') {
-        console.log('代码分支');
-      } else {
+      if (this.buttonActive !== 'branch') {
         this.getImageTagList();
       }
       this.pagination.limit = 10;
@@ -829,6 +1179,157 @@ export default {
 
     handleOpenUrl(url) {
       window.open(url, '_blank');
+    },
+
+    // 获取部署准备信息
+    async getDeployPreparations(type) {
+      // 刷新
+      if (type) {
+        type === 'deploy' ? this.deployRefreshLoading = true : this.codeRefreshLoading = true;
+      }
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployPreparations', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+        });
+        this.deployPreparations = res;
+
+        // 将错误数据进行分类
+        if (!res.all_conditions_matched && res.failed_conditions.length) {
+          // 部署限制相关的，错误信息
+          const deployErrorList = res.failed_conditions.filter(v => deployErrorStatus.includes(v.action_name));
+          // 代码仓库相关，错误信息
+          // eslint-disable-next-line max-len
+          const codeRepositoryErrorList = res.failed_conditions.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+          if (deployErrorList.length) {
+            this.isShowErrorAlert.deploy = true;
+          } else {
+            this.isShowErrorAlert.deploy = false;
+          }
+          if (codeRepositoryErrorList.length) {
+            this.isShowErrorAlert.code = true;
+          } else {
+            this.isShowErrorAlert.code = false;
+          }
+        } else {
+          // 没有错误，隐藏错误提示alert
+          this.isShowErrorAlert.deploy = false;
+          this.isShowErrorAlert.code = false;
+        }
+        this.deployAppDialog.disabled = false;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+        this.deployAppDialog.disabled = false;
+      } finally {
+        type === 'deploy' ? this.deployRefreshLoading = false : this.codeRefreshLoading = false;
+      }
+    },
+
+    // 刷新
+    handleRefresh() {
+      this.getDeployPreparations('code');
+      // 代码分支
+      this.getModuleBranches();
+    },
+
+    // 去授权
+    hanndleToAuthorize() {
+      const route = this.$router.resolve({ name: 'serviceCode' });
+      window.open(route.href, '_blank');
+    },
+
+    /**
+     * 处理部署前准备工作项
+     */
+    handleFixPreparation(preparation) {
+      let routeData = {};
+      switch (preparation.action_name) {
+        // 代码仓库没有授权
+        case 'NEED_TO_BIND_OAUTH_INFO':
+          routeData = this.$router.resolve({
+            name: 'serviceCode',
+          });
+          break;
+
+        // 没有访问源码仓库的权限
+        case 'DONT_HAVE_ENOUGH_PERMISSIONS':
+          routeData = this.$router.resolve({
+            name: 'serviceCode',
+          });
+          break;
+
+        // 蓝盾没有授权
+        case 'CHECK_CI_GIT_TOKEN':
+          routeData = this.$router.resolve({
+            name: 'serviceCi',
+          });
+          break;
+
+        // 完善市场信息
+        case 'FILL_PRODUCT_INFO':
+          routeData = this.$router.resolve({
+            name: 'appMarket',
+            params: {
+              id: this.appCode,
+            },
+            query: {
+              focus: 'baseInfo',
+            },
+          });
+          break;
+
+        // 自定义仓库源配置不正确
+        case 'NEED_TO_CORRECT_REPO_INFO':
+          // 模块配置
+          routeData = this.$router.resolve({
+            name: 'cloudAppDeployForBuild',
+            // 高亮第二项
+            params: {
+              id: this.appCode,
+              moduleId: this.curModuleId,
+            },
+          });
+          break;
+
+        // 没有部署权限
+        case 'CHECK_ENV_PROTECTION':
+          this.$paasMessage({
+            message: this.$t('请联系应用管理员'),
+          });
+          break;
+
+        // 未完善进程启动命令
+        case 'NEED_TO_COMPLETE_PROCFILE':
+          routeData = this.$router.resolve({
+            name: 'cloudAppDeployForProcess',
+            params: {
+              id: this.appCode,
+              moduleId: this.curModuleId,
+            },
+          });
+          break;
+
+        // 未设置插件分类
+        case 'FILL_PLUGIN_TAG_INFO':
+          routeData = this.$router.resolve({
+            name: 'appBasicInfo',
+            params: {
+              id: this.appCode,
+              moduleId: this.curModuleId,
+            },
+          });
+          break;
+      }
+
+      if (preparation.action_name === 'CHECK_ENV_PROTECTION') {
+        return;
+      }
+
+      window.open(routeData.href, '_blank');
     },
   },
 };
@@ -906,5 +1407,67 @@ export default {
     padding: 3px 7px;
     border-radius: 2px;
   }
+}
+
+.dialog-footer-wrapper {
+  text-align: right;
+}
+
+.mb12 {
+  margin-bottom: 12px;
+}
+
+.customize-alert-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #63656E;
+  min-height: 32px;
+  background: #FFEDED;
+  border: 1px solid #FFD2D2;
+  border-radius: 2px;
+
+  .text {
+    word-break: break-all;
+    display: flex;
+    margin-right: 10px;
+
+    .exclamation-cls {
+      color: #EA3636;
+      font-size: 14px;
+      transform: translateY(2px);
+      margin-right: 6px;
+    }
+  }
+
+
+  .line {
+    width: 1px;
+    margin: 0 10px;
+    height: 14px;
+    background: #DCDEE5;
+  }
+
+  .right-link {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    .link-text {
+      font-size: 12px;
+      color: #3a84ff;
+      cursor: pointer;
+    }
+    i {
+      font-size: 14px;
+      transform: translateY(0px);
+    }
+  }
+}
+.round-loading-cls {
+  width: 14px;
+    height: 14px;
+    transform: translateY(-1px);
 }
 </style>

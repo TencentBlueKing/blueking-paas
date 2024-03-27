@@ -1,5 +1,5 @@
 <template lang="html">
-  <div :class="['right-main', { 'packages-wrapper': isCloudNativeApp }]">
+  <div :class="['right-main',{ 'packages-wrapper': isCloudNativeApp }, { 'bottom-line': !isSmartApp }]">
     <app-top-bar
       v-if="!isCloudNativeApp"
       :title="$t('包版本管理')"
@@ -7,7 +7,7 @@
       :cur-module="curAppModule"
       :module-list="isLesscodeApp ? curAppModuleList : []"
     />
-    <div class="title" v-else>{{ $t('源码信息') }}</div>
+    <div class="title" v-else>{{ isSmartApp ? $t('包版本管理') : $t('源码信息') }}</div>
     <paas-content-loader
       :is-loading="isPageLoading"
       placeholder="packages-loading"
@@ -299,6 +299,9 @@ export default {
     uploadUrl() {
       return `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/source_package/stash/`;
     },
+    isSmartApp() {
+      return this.curAppInfo.application?.is_smart_app;
+    },
   },
   watch: {
     '$route'() {
@@ -353,6 +356,7 @@ export default {
       } finally {
         this.isPageLoading = false;
         this.isDataLoading = false;
+        this.$emit('close-content-loader');
       }
     },
 
@@ -552,8 +556,10 @@ export default {
         margin-top: 2px;
     }
     .packages-wrapper {
-        border-bottom: 1px solid #eaebf0;
         margin-bottom: 24px;
+        &.bottom-line {
+          border-bottom: 1px solid #eaebf0;
+        }
         .title {
             font-weight: 700;
             font-size: 14px;

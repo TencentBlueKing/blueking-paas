@@ -125,6 +125,7 @@ INSTALLED_APPS = [
     "paasng.platform.bkapp_model",
     "paasng.platform.engine",
     "paasng.platform.engine.streaming",
+    "paasng.platform.evaluation",
     "paasng.accessories.publish.market",
     "paasng.accessories.publish.sync_market",
     "paasng.platform.sourcectl",
@@ -137,6 +138,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.admin_cli",
     "paasng.misc.monitoring.monitor",
     "paasng.misc.monitoring.healthz",
+    "paasng.misc.monitoring.metrics",
     "paasng.misc.search",
     "paasng.accessories.smart_advisor",
     "paasng.platform.bk_lesscode",
@@ -159,7 +161,6 @@ INSTALLED_APPS = [
     # workloads apps
     "paas_wl.bk_app.applications",
     "paas_wl.infras.cluster",
-    "paas_wl.bk_app.monitoring.metrics",
     "paas_wl.workloads.networking.egress",
     "paas_wl.workloads.networking.ingress",
     "paas_wl.workloads.networking.entrance",
@@ -199,6 +200,9 @@ MIDDLEWARE = [
     # API Gateway related
     "apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware",  # JWT 认证
     "apigw_manager.apigw.authentication.ApiGatewayJWTAppMiddleware",  # JWT 透传的应用信息
+    # TODO 在 JWT 透传应用信息的基础上, header 带 bk_username. 非推荐做法, 后续考虑移除
+    # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
+    "paasng.infras.accounts.middlewares.WrapUsernameAsUserMiddleware",
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
     "paasng.infras.accounts.middlewares.AuthenticatedAppAsUserMiddleware",
@@ -1124,11 +1128,13 @@ BKDOC_URL = settings.get("BKDOC_URL", "http://localhost:8080")
 # 文档应用的应用ID
 BK_DOC_APP_ID = settings.get("BK_DOC_APP_ID", "bk_docs_center")
 
-# 蓝鲸官网文档中心地址，若镜像中没有设置该环境变量的值则设置为应用（BK_DOC_APP_ID）的访问地址
-BK_DOCS_URL_PREFIX = settings.get("BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs")
+# 蓝鲸官网文档中心地址
+BK_DOCS_URL_PREFIX = settings.get(
+    "BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs/markdown/PaaS/DevelopTools/BaseGuide"
+)
 
 # 平台FAQ 地址
-PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS3.0/faq")
+PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide/faq")
 
 # 是否有人工客服
 SUPPORT_LIVE_AGENT = settings.get("SUPPORT_LIVE_AGENT", False)
@@ -1143,7 +1149,7 @@ COLORFUL_TERMINAL_OUTPUT = True
 # ------------------
 
 # S-Mart 镜像仓库的 Registry 的域名
-SMART_DOCKER_REGISTRY_HOST = settings.get("SMART_DOCKER_REGISTRY_ADDR", "registry.hub.docker.com")
+SMART_DOCKER_REGISTRY_HOST = settings.get("SMART_DOCKER_REGISTRY_ADDR", "index.docker.io")
 # S-Mart 镜像仓库的命名空间, 即在 Registry 中的项目名
 SMART_DOCKER_REGISTRY_NAMESPACE = settings.get("SMART_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号
@@ -1161,7 +1167,7 @@ BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 # App 应用镜像仓库配置
 # ------------------
 # App 镜像仓库的 Registry 的域名
-APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "registry.hub.docker.com")
+APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "index.docker.io")
 # App 镜像仓库的命名空间, 即在 Registry 中的项目名
 APP_DOCKER_REGISTRY_NAMESPACE = settings.get("APP_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号
@@ -1188,6 +1194,8 @@ BK_LESSCODE_TIPS = settings.get("BK_LESSCODE_TIPS", "")
 DOCKER_REGISTRY_CONFIG = settings.get(
     "DOCKER_REGISTRY_CONFIG", {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
+
+ENABLE_IMAGE_APP_BIND_REPO = settings.get("ENABLE_IMAGE_APP_BIND_REPO", False)
 
 # -----------------
 # 插件开发中心配置项
@@ -1286,6 +1294,12 @@ THIRD_APP_INIT_CODES = settings.get("THIRD_APP_INIT_CODES", "")
 ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
+# 开发者中心管理员，主要用于应用运营报告通知
+BKPAAS_PLATFORM_MANAGERS = settings.get("BKPAAS_PLATFORM_MANAGERS", [])
+# 是否向平台管理员发送应用运营报告邮件
+ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE = settings.get(
+    "ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE", False
+)
 
 # 引入 workloads 相关配置
 # fmt: off
@@ -1298,3 +1312,14 @@ for key in dir(workloads_settings):
         raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
     locals()[key] = getattr(workloads_settings, key)
 # fmt: on
+
+
+# ---------------------------------------------
+#  挂载卷相关配置
+# ---------------------------------------------
+
+# 持久存储默认存储类型
+DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE_CLASS_NAME", "cfs")
+
+# 持久存储默认存储大小
+DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")

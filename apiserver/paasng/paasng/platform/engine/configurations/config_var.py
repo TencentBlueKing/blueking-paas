@@ -30,6 +30,7 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
+from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars
@@ -40,21 +41,19 @@ if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
     from paasng.platform.engine.models import EngineApp
 
-from .provider import env_vars_providers
-
 
 def get_env_variables(
-    env: ModuleEnvironment, include_builtin=True, deployment: Optional[Deployment] = None
+    env: ModuleEnvironment, deployment: Optional[Deployment] = None, include_config_var: bool = True
 ) -> Dict[str, str]:
-    """Get env vars for current environment, this will includes:
+    """Get env vars for current environment, this will include:
 
     - env vars from services
     - user defined config vars
     - built-in env vars
     - (optional) vars defined by deployment description file
 
-    :param include_builtin: Whether include builtin config vars
     :param deployment: Optional deployment object to get vars defined in description file
+    :param include_config_var: if include_config_var is True, will add envs defined in ConfigVar models to result
     :returns: Dict of env vars
     """
     result = {}
@@ -64,14 +63,7 @@ def get_env_variables(
     result.update(env_vars_providers.gather(env, deployment))
 
     # Part: system-wide env vars
-    if include_builtin:
-        result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
-
-    # Part: Address for bk_docs_center saas
-    # Q: Why not in the get_builtin_env_variables method？
-
-    # method(get_preallocated_address) and module(ConfigVar) will be referenced circularly
-    result.update({"BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix()})
+    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
 
     # Part: insert blobstore env vars
     if env.application.type != ApplicationType.CLOUD_NATIVE:
@@ -84,12 +76,11 @@ def get_env_variables(
     # has application global type which shares under every engine_app/environment of an
     # application.
     #
-    # TODO: cnative app skip add user defined env vars
     # Q: Why cnative application doesn't add user defined env vars
     #
     # Because user defined env vars have been added into BkAppSpec
-    # if env.application.type != ApplicationType.CLOUD_NATIVE:
-    result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
+    if include_config_var:
+        result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
 
     # Part: env vars shared from other modules
     result.update(ServiceSharingManager(env.module).get_env_variables(env))
@@ -221,4 +212,10 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
     # 需要根据 region、env 写入不同值的系统环境变量
     envs_by_region_and_env = generate_env_vars_by_region_and_env(region, environment, config_vars_prefix)
 
-    return {**app_info_envs, **runtime_envs, **bk_address_envs, **envs_by_region_and_env}
+    return {
+        **app_info_envs,
+        **runtime_envs,
+        **bk_address_envs,
+        **envs_by_region_and_env,
+        "BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix(),
+    }

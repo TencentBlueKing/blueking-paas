@@ -45,6 +45,11 @@ class TestGetEnvVariables:
         env_vars = get_env_variables(bk_stag_env)
         assert env_vars["FOO"] == "bar"
 
+    def test_exclude_user_config_var(self, bk_module, bk_stag_env):
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
+        env_vars = get_env_variables(bk_stag_env, include_config_var=False)
+        assert "FOO" not in env_vars
+
     def test_builtin_id_and_secret(self, bk_app, bk_stag_env):
         env_vars = get_env_variables(bk_stag_env)
         assert env_vars["BKPAAS_APP_ID"] == bk_app.code

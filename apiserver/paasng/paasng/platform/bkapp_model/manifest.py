@@ -550,7 +550,7 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
 
     # deployment=None 意味着云原生应用不通过 get_env_variables 注入描述文件产生的环境变量
-    for name, value in get_env_variables(env, deployment=None).items():
+    for name, value in get_env_variables(env, deployment=None, include_config_var=False).items():
         env_vars.append(EnvVar(name=name, value=value))
         builtin_env_vars_overlay.append(EnvVarOverlay(envName=environment, name=name, value=value))
 

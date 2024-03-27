@@ -245,7 +245,7 @@ class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()})
     def retrieve(self, request, code):
@@ -273,7 +273,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: DomainResolutionSLZ()})
     def retrieve(self, request, code):

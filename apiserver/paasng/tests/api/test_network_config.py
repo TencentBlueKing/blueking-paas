@@ -38,27 +38,46 @@ class TestSvcDiscConfigViewSet:
         )
         return svc_disc
 
-    def test_get(self, api_client, bk_app, svc_disc):
+    def test_get_normal(self, api_client, bk_app, svc_disc):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
         response = api_client.get(url)
         assert response.status_code == 200
         assert response.data["bk_saas"] == [{"bk_app_code": "bk_app_code_test", "module_name": "module_name_test"}]
 
-    def test_get_error(self, api_client, bk_app):
+    def test_get_missing(self, api_client, bk_app):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
         response = api_client.get(url)
         assert response.status_code == 404
 
-    def test_upsert(self, api_client, bk_app, svc_disc):
+    def test_upsert_normal(self, api_client, bk_app, svc_disc):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
-        request_body = {"bk_saas": [{"bk_app_code": bk_app.code}]}
+        request_body = {"bk_saas": [{"bk_app_code": bk_app.code, "module_name": "default"}]}
         response = api_client.post(url, request_body)
         assert response.status_code == 200
         assert response.data["bk_saas"] == [{"bk_app_code": bk_app.code, "module_name": "default"}]
 
-    def test_upsert_error(self, api_client, bk_app, svc_disc):
+    def test_upsert_module_absent(self, api_client, bk_app, svc_disc):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
-        request_body = {"bk_saas": [{"bk_app_code": bk_app.id, "module_name": "test"}]}
+        request_body = {"bk_saas": [{"bk_app_code": bk_app.code}]}
+        response = api_client.post(url, request_body)
+        assert response.status_code == 200
+        assert response.data["bk_saas"] == [{"bk_app_code": bk_app.code, "module_name": None}]
+
+    def test_upsert_invalid_module(self, api_client, bk_app, svc_disc):
+        url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
+        request_body = {"bk_saas": [{"bk_app_code": bk_app.code, "module_name": "test-invalid-module-name"}]}
+        response = api_client.post(url, request_body)
+        assert response.status_code == 400
+
+    def test_upsert_duplicated_entries(self, api_client, bk_app, svc_disc):
+        url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
+        request_body = {
+            "bk_saas": [
+                # Duplicated entries
+                {"bk_app_code": bk_app.code, "module_name": "default"},
+                {"bk_app_code": bk_app.code, "module_name": "default"},
+            ]
+        }
         response = api_client.post(url, request_body)
         assert response.status_code == 400
 

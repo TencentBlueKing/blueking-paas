@@ -26,18 +26,19 @@ from kubernetes.dynamic.resource import ResourceInstance
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.kube_res.base import GVKConfig
-from paas_wl.workloads.networking.ingress.kres_entities.ingress import (
-    ConfigurationSnippetPatcher,
+from paas_wl.workloads.networking.ingress.entities import PIngressDomain, PServicePortPair
+from paas_wl.workloads.networking.ingress.kres_entities.ingress import ProcessIngress, ingress_kmodel
+from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessService, service_kmodel
+from paas_wl.workloads.networking.ingress.kres_slzs.ingress import (
     IngressV1Beta1Deserializer,
     IngressV1Beta1Serializer,
     IngressV1Deserializer,
     IngressV1Serializer,
-    PIngressDomain,
-    ProcessIngress,
-    ingress_kmodel,
 )
-from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessService, PServicePortPair, service_kmodel
-from paas_wl.workloads.networking.ingress.kres_entities.utils import NginxRegexRewrittenProvider
+from paas_wl.workloads.networking.ingress.kres_slzs.utils import (
+    ConfigurationSnippetPatcher,
+    NginxRegexRewrittenProvider,
+)
 from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

@@ -19,7 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.bk_app.applications.constants import ArtifactType
-from paas_wl.bk_app.applications.models.build import Build, mark_as_latest_artifact
+from paas_wl.bk_app.applications.managers import mark_as_latest_artifact
+from paas_wl.bk_app.applications.models.build import Build
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

@@ -20,12 +20,13 @@ from functools import partial
 import pytest
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.cnative.specs.models import create_app_resource, generate_bkapp_name
+from paas_wl.bk_app.cnative.specs.models import create_app_resource
 from paas_wl.bk_app.cnative.specs.procs.replicas import BkAppProcScaler
 from paas_wl.bk_app.cnative.specs.resource import deploy
 from paas_wl.bk_app.deploy.processes import CNativeProcController, ProcSpecUpdater
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
+from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig

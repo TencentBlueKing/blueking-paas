@@ -69,7 +69,7 @@ class App(UuidAuditedModel):
 
     @cached_property
     def module_name(self):
-        from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+        from paas_wl.bk_app.applications.managers import get_metadata
 
         return get_metadata(self).module_name
 

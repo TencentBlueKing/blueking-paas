@@ -22,8 +22,8 @@ from typing import Dict, List, Optional
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paas_wl.bk_app.applications.models import Release
-from paas_wl.bk_app.applications.models.managers import AppConfigVarManager
 from paas_wl.bk_app.processes.entities import Probe, Resources, Runtime, Status
 from paas_wl.bk_app.processes.kres_slzs import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
 from paas_wl.core.app_structure import get_structure

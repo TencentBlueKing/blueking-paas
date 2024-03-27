@@ -21,7 +21,7 @@ import logging
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.core.app_structure import get_structure
-from paas_wl.core.resource import CNativeBkAppNameGenerator
+from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.kres_entities.ingress import ingress_kmodel
 
@@ -33,7 +33,7 @@ def make_service_name(app: WlApp, process_type: str) -> str:
     if app.type == WlAppType.CLOUD_NATIVE:
         # pkg/controllers/resources/names/names.go
         # return DNSSafeName(bkapp.GetName() + "--" + process)
-        return f"{CNativeBkAppNameGenerator.generate(app)}--{process_type}"
+        return f"{generate_bkapp_name(app)}--{process_type}"
     return f"{app.region}-{app.scheduler_safe_name}-{process_type}"
 
 

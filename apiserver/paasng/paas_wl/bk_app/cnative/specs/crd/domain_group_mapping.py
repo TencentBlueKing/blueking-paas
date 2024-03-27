@@ -21,8 +21,9 @@ from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, validator
 
-from paas_wl.bk_app.cnative.specs.apis import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+
+from .metadata import ObjectMetadata
 
 
 class Domain(BaseModel):

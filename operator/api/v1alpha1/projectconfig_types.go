@@ -151,10 +151,12 @@ func (p *ProjectConfig) GetProcDefaultMemLimits() string {
 	return p.ResLimit.ProcDefaultMemLimits
 }
 
+// GetProcDefaultCpuRequests returns the default cpu requests of a process
 func (p *ProjectConfig) GetProcDefaultCpuRequests() string {
 	return p.ResRequest.ProcDefaultCPURequests
 }
 
+// GetProcDefaultMemRequests returns the default cpu limits of a process
 func (p *ProjectConfig) GetProcDefaultMemRequests() string {
 	return p.ResRequest.ProcDefaultMemRequests
 }

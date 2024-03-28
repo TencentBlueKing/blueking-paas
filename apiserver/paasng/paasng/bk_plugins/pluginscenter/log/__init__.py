@@ -22,10 +22,17 @@ from typing import Dict, List, Literal, Optional, Tuple, cast
 
 import cattr
 
+from paasng.accessories.log.client import LogClientProtocol as BkSaaSLogClientProtocol
+from paasng.accessories.log.client import instantiate_log_client as instantiate_bksaas_log_client
 from paasng.accessories.log.constants import LogType
 from paasng.accessories.log.models import ProcessLogQueryConfig
 from paasng.bk_plugins.pluginscenter.definitions import ElasticSearchParams
-from paasng.bk_plugins.pluginscenter.log.client import LogClientProtocol, instantiate_log_client
+from paasng.bk_plugins.pluginscenter.log.client import (
+    FieldBucketData,
+    LogClientProtocol,
+    Response,
+    instantiate_log_client,
+)
 from paasng.bk_plugins.pluginscenter.log.filters import ElasticSearchFilter
 from paasng.bk_plugins.pluginscenter.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.bk_plugins.pluginscenter.log.utils import clean_logs
@@ -250,9 +257,10 @@ def _instantiate_log_client(
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
     else:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
+
     # Note: log_config.search_params 返回的是 paasng.accessories.log.models.ElasticSearchParams
     # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致,
-    return instantiate_log_client(log_config, operator), log_config.search_params
+    return LogClientAdaptor(instantiate_bksaas_log_client(log_config, operator)), log_config.search_params
 
 
 def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:
@@ -269,3 +277,25 @@ def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:
             raise ValueError("this plugin does not support query ingress logs")
         search_params = cast(ElasticSearchParams, pd.log_config.ingress)
     return search_params.filterFields
+
+
+class LogClientAdaptor:
+    def __init__(self, bksaas_client: BkSaaSLogClientProtocol):
+        self.client = bksaas_client
+
+    """LogClient protocol, all log search backend should abide this protocol"""
+
+    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
+        """Search log from index with search"""
+        return self.client.execute_search(index, search, timeout)
+
+    def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
+        """Aggregate time-based histogram"""
+        return self.client.aggregate_date_histogram(index, search, timeout)
+
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, timeout: int, fields: List[str]
+    ) -> List[FieldFilter]:
+        """Aggregate fields filters"""
+        mappings = self.client.get_mappings(index, search.time_range, timeout)
+        return self.client.aggregate_fields_filters(index, search, mappings=mappings, timeout=timeout)

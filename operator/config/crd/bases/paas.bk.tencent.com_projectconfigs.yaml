@@ -208,23 +208,36 @@ spec:
             - ingressClassName
             - sentryDSN
             type: object
-          resLimit:
-            description: ResLimitConfig contains bkapp resource limit
+          resLimits:
+            description: ResLimitsConfig contains bkapp resource limits
             properties:
               maxReplicas:
                 description: MaxReplicas is single instance max replica num
                 format: int32
                 type: integer
-              procDefaultCPULimits:
-                description: ProcDefaultCPULimits is process's default cpu quota
+              procDefaultCPULimit:
+                description: ProcDefaultCPULimit is process's default cpu quota
                 type: string
-              procDefaultMemLimits:
-                description: ProcDefaultMemLimits is process's default memory quota
+              procDefaultMemLimit:
+                description: ProcDefaultMemLimit is process's default memory quota
                 type: string
             required:
             - maxReplicas
-            - procDefaultCPULimits
-            - procDefaultMemLimits
+            - procDefaultCPULimit
+            - procDefaultMemLimit
+            type: object
+          resRequests:
+            description: ResRequestsConfig contains bkapp resource requests
+            properties:
+              procDefaultCPURequest:
+                description: ProcDefaultCPURequest is process's default cpu request
+                type: string
+              procDefaultMemRequest:
+                description: ProcDefaultMemRequest is process's default memory request
+                type: string
+            required:
+            - procDefaultCPURequest
+            - procDefaultMemRequest
             type: object
           syncPeriod:
             description: SyncPeriod determines the minimum frequency at which watched
@@ -259,7 +272,8 @@ spec:
         - ingressPlugin
         - maxProcesses
         - platform
-        - resLimit
+        - resLimits
+        - resRequests
         type: object
     served: true
     storage: true

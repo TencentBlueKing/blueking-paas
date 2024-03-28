@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from paasng.platform.engine.constants import JobStatus
-from paasng.platform.engine.deploy.bg_build.shims import interrupt_build_proc
+from paasng.platform.engine.deploy.bg_build.bg_build import interrupt_build_proc
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.models.deployment import Deployment
 

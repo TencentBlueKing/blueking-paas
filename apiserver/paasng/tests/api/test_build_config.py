@@ -93,6 +93,7 @@ class TestModuleBuildConfigViewSet:
             "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
             "bp_stack_name": None,
             "buildpacks": [],
+            "use_bk_ci_pipeline": False,
         }
 
     def test_retrieve_bp(self, api_client, bk_app, bk_module, slugbuilder, slugrunner, buildpack_x):
@@ -117,6 +118,7 @@ class TestModuleBuildConfigViewSet:
                     "description": buildpack_x.description,
                 }
             ],
+            "use_bk_ci_pipeline": False,
         }
 
     def test_retrieve_docker(self, api_client, bk_app, bk_module):
@@ -134,6 +136,7 @@ class TestModuleBuildConfigViewSet:
             "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
             "dockerfile_path": "rootfs/Dockerfile",
             "docker_build_args": {"CFLAGS": "-g -Wall", "GOARCH": "amd64", "GO_VERSION": "1.19"},
+            "use_bk_ci_pipeline": False,
         }
 
     def test_retrieve_custom_image(self, api_client, bk_app, bk_module):

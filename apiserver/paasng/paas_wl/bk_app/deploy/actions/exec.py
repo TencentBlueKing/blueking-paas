@@ -58,12 +58,12 @@ class AppCommandExecutor:
 
         self.kmodel = CommandKModel.from_db_obj(self.command, extra_envs=self.extra_envs)
         self.command_handler = CommandHandler.new_by_app(self.command.app)
-        self.STEP_NAME = CommandType(self.command.type).get_step_name()
+        self.step_name = CommandType(self.command.type).get_step_name()
 
     def perform(self):
         self.command.update_status(CommandStatus.SCHEDULED)
         try:
-            self.stream.write_message(Style.Warning(f"Starting {self.STEP_NAME}"))
+            self.stream.write_message(Style.Warning(f"Starting {self.step_name}"))
             self.command_handler.run(self.kmodel)
 
             self.command_handler.wait_for_logs_readiness(self.kmodel, timeout=_WAIT_FOR_READINESS_TIMEOUT)
@@ -83,7 +83,7 @@ class AppCommandExecutor:
             # 上一个 Pre-Release Hook 仍未退出
             logger.exception("Duplicate pre-release-hook Pod exists")
             self.stream.write_message(
-                Style.Error(f"The last {self.STEP_NAME} did not exit normally, please try again at {e.extra_value}.")
+                Style.Error(f"The last {self.step_name} did not exit normally, please try again at {e.extra_value}.")
             )
             self.command.update_status(CommandStatus.FAILED)
         except ReadTargetStatusTimeout as e:
@@ -100,22 +100,22 @@ class AppCommandExecutor:
             # Load the latest content from database, if an interruption was requested for current command
             self.command.refresh_from_db()
             if self.command.int_requested_at:
-                self.stream.write_message(Style.Warning(f"{self.STEP_NAME} aborted."))
+                self.stream.write_message(Style.Warning(f"{self.step_name} aborted."))
                 self.command.update_status(CommandStatus.INTERRUPTED, exit_code=e.exit_code)
             else:
-                logger.exception("%s execute failed", self.STEP_NAME)
+                logger.exception("%s execute failed", self.step_name)
                 self.stream.write_message(Style.Error(e.message))
                 self.command.update_status(CommandStatus.FAILED, exit_code=e.exit_code)
         except Exception:
             # 出现未捕获的异常, 直接将当前步骤置为失败
             logger.exception(f"A critical error happened during execute[{self.command}]")
-            self.stream.write_message(Style.Error(f"{self.STEP_NAME} execution failed."))
+            self.stream.write_message(Style.Error(f"{self.step_name} execution failed."))
             self.command.update_status(CommandStatus.FAILED)
         else:
-            self.stream.write_message(Style.Warning(f"{self.STEP_NAME} execution succeed."))
+            self.stream.write_message(Style.Warning(f"{self.step_name} execution succeed."))
             self.command.update_status(CommandStatus.SUCCESSFUL, exit_code=0)
         finally:
-            self.stream.write_title(f"Cleaning up {self.STEP_NAME} container")
+            self.stream.write_title(f"Cleaning up {self.step_name} container")
             self.command_handler.delete_command(self.kmodel)
 
     def wait_for_succeeded(self):

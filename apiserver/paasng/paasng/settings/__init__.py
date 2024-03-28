@@ -946,9 +946,9 @@ ENGINE_OFFLINE_RESUMABLE_SECS = 60
 DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", {DEFAULT_REGION_NAME: "blueking"})
 
 # 开发者中心在蓝盾的项目 ID
-BKPAAS_DEVOPS_PROJECT_ID = settings.get("BKPAAS_DEVOPS_PROJECT_ID", "bk_paas3")
+BK_CI_PAAS_PROJECT_ID = settings.get("BK_CI_PAAS_PROJECT_ID", "bk_paas3")
 # 云原生应用构建流水线 ID
-BKPAAS_CNB_PIPELINE_ID = settings.get("BKPAAS_CNB_PIPELINE_ID", "")
+BK_CI_BUILD_PIPELINE_ID = settings.get("BK_CI_BUILD_PIPELINE_ID", "")
 
 # ------------
 # 增强服务相关

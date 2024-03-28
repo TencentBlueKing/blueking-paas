@@ -27,8 +27,8 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.deploy.bg_build.executors import (
-    DevopsPipelineBuildProcessExecutor,
     K8sBuildProcessExecutor,
+    PipelineBuildProcessExecutor,
 )
 from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
@@ -48,17 +48,16 @@ def start_bg_build_process(
     bp_id: UUID,
     metadata: Dict,
     stream_channel_id: Optional[str] = None,
-    use_devops_pipeline: bool = False,
+    use_bk_ci_pipeline: bool = False,
 ):
     """Start a new build process which starts a builder to build a slug and deploy
     it to the app cluster.
 
-    :param deploy_id: The ID of the deployment object.
-    :param bp_id: The ID of the build process object.
+    :param deploy_id: The ID of the Deployment object.
+    :param bp_id: The ID of the BuildProcess object.
     """
     deployment = Deployment.objects.get(pk=deploy_id)
     build_process = BuildProcess.objects.get(pk=bp_id)
-    # Make a new channel if stream_channel_id is given
 
     stream: DeployStream
     if stream_channel_id:
@@ -68,10 +67,10 @@ def start_bg_build_process(
     else:
         stream = ConsoleStream()
 
-    if use_devops_pipeline:
-        logger.info("deployment %s, build process %s use devops pipeline to build image", deploy_id, bp_id)
-        devops_pipeline_bp_executor = DevopsPipelineBuildProcessExecutor(deployment, build_process, stream)
-        devops_pipeline_bp_executor.execute(metadata=metadata)
+    if use_bk_ci_pipeline:
+        logger.info("deployment %s, build process %s use bk_ci pipeline to build image", deploy_id, bp_id)
+        pipeline_bp_executor = PipelineBuildProcessExecutor(deployment, build_process, stream)
+        pipeline_bp_executor.execute(metadata=metadata)
     else:
         k8s_bp_executor = K8sBuildProcessExecutor(deployment, build_process, stream)
         k8s_bp_executor.execute(metadata=metadata)

@@ -310,7 +310,7 @@ class BuildProcess(UuidAuditedModel):
         except ObjectDoesNotExist:
             pass
         else:
-            return not cfg.use_devops_pipeline
+            return not cfg.use_bk_ci_pipeline
 
         return True
 

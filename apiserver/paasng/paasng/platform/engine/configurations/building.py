@@ -122,6 +122,6 @@ def get_build_args(module: "Module") -> str:
     return ""
 
 
-def get_use_devops_pipeline(module: "Module") -> bool:
+def get_use_bk_ci_pipeline(module: "Module") -> bool:
     cfg = BuildConfig.objects.get_or_create_by_module(module)
-    return cfg.use_devops_pipeline
+    return cfg.use_bk_ci_pipeline

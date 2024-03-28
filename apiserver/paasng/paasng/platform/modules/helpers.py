@@ -76,7 +76,7 @@ def update_build_config_with_method(
     :param data.image_repository: 镜像仓库, 仅 build_method == CUSTOM_IMAGE 时需要该字段
     :param data.image_credential_name: 镜像凭证, 仅 build_method == CUSTOM_IMAGE 时需要该字段
 
-    :param data.use_devops_pipeline: bool, 是否使用蓝盾流水线进行构建
+    :param data.use_bk_ci_pipeline: bool, 是否使用蓝盾流水线进行构建
     """
 
     update_fields = ["build_method", "updated"]
@@ -105,9 +105,9 @@ def update_build_config_with_method(
         update_fields += ["image_repository", "image_credential_name"]
 
     # 高级选项：通过蓝盾流水线构建
-    if "use_devops_pipeline" in data:
-        build_config.use_devops_pipeline = data["use_devops_pipeline"]
-        update_fields.append("use_devops_pipeline")
+    if "use_bk_ci_pipeline" in data:
+        build_config.use_bk_ci_pipeline = data["use_bk_ci_pipeline"]
+        update_fields.append("use_bk_ci_pipeline")
 
     build_config.save(update_fields=update_fields)
 

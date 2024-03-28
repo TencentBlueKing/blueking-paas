@@ -24,13 +24,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('modules', '0012_appslugbuilder_step_meta_set'),
+        ("modules", "0012_appslugbuilder_step_meta_set"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='buildconfig',
-            name='use_devops_pipeline',
-            field=models.BooleanField(default=False, help_text='是否使用蓝盾流水线构建'),
+            model_name="buildconfig",
+            name="use_devops_pipeline",
+            field=models.BooleanField(default=False, help_text="是否使用蓝盾流水线构建"),
         ),
     ]

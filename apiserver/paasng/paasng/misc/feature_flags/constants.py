@@ -42,7 +42,7 @@ class PlatformFeatureFlag(FeatureFlag):  # type: ignore
         label="镜像应用绑定源码仓库",
         default=settings.ENABLE_IMAGE_APP_BIND_REPO,
     )
-    DEVOPS_PIPELINE_CNB = FeatureFlagField(
+    BK_CI_PIPELINE_BUILD = FeatureFlagField(
         label="蓝盾流水线-云原生应用镜像构建",
-        default=bool(settings.BKPAAS_DEVOPS_PROJECT_ID and settings.BKPAAS_CNB_PIPELINE_ID),
+        default=bool(settings.BK_CI_PAAS_PROJECT_ID and settings.BK_CI_BUILD_PIPELINE_ID),
     )

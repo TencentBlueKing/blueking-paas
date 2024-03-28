@@ -44,13 +44,13 @@ from paasng.platform.engine.configurations.building import (
     SlugbuilderInfo,
     get_build_args,
     get_dockerfile_path,
-    get_use_devops_pipeline,
+    get_use_bk_ci_pipeline,
 )
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
-from paasng.platform.engine.deploy.bg_build.shims import start_bg_build_process
+from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
 from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import HandleAppDescriptionError
 from paasng.platform.engine.models import Deployment
@@ -111,7 +111,7 @@ def start_build_error_callback(*args, **kwargs):
 
 
 class BaseBuilder(DeployStep):
-    PHASE_TYPE = DeployPhaseTypes.BUILD
+    phase_type = DeployPhaseTypes.BUILD
 
     def compress_and_upload(
         self, relative_source_dir: Path, source_destination_path: str, should_ignore: Optional[ExcludeChecker] = None
@@ -349,7 +349,7 @@ class ApplicationBuilder(BaseBuilder):
                 "bkapp_revision_id": bkapp_revision_id,
             },
             stream_channel_id=str(self.deployment.id),
-            use_devops_pipeline=get_use_devops_pipeline(env.module),
+            use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
         return str(build_process.uuid)
 
@@ -454,7 +454,7 @@ class DockerBuilder(BaseBuilder):
                 "bkapp_revision_id": bkapp_revision_id,
             },
             stream_channel_id=str(self.deployment.id),
-            use_devops_pipeline=get_use_devops_pipeline(env.module),
+            use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
         return str(build_process.uuid)
 

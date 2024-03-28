@@ -17,11 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class DevopsPipelineBuildUnsupported(Exception):
-    """不支持通过蓝盾流水线构建"""
-
-
-class DevopsPipelineBuildNotSuccess(Exception):
+class BKCIPipelineBuildNotSuccess(Exception):
     """蓝盾流水线构建未成功（失败/被取消）"""
 
 

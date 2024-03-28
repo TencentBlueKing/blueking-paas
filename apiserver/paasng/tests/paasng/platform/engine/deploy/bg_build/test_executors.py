@@ -26,8 +26,8 @@ from paasng.platform.bk_devops import definitions
 from paasng.platform.bk_devops.constants import PipelineBuildStatus
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.executors import (
-    DevopsPipelineBuildProcessExecutor,
     K8sBuildProcessExecutor,
+    PipelineBuildProcessExecutor,
 )
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.utils.output import ConsoleStream
@@ -111,7 +111,7 @@ class TestDevopsBuildProcessExecutor:
         with mock.patch(
             "paasng.platform.engine.deploy.bg_build.executors.PipelineController", new=StubPipelineController
         ):
-            bpe = DevopsPipelineBuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
+            bpe = PipelineBuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
             bpe.execute(
                 {
                     "image": "busybox:latest",

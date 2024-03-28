@@ -39,8 +39,7 @@ from paasng.platform.bk_devops.constants import PipelineBuildStatus
 from paasng.platform.bk_devops.exceptions import BkDevopsGatewayServiceError
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.exceptions import (
-    DevopsPipelineBuildNotSuccess,
-    DevopsPipelineBuildUnsupported,
+    BKCIPipelineBuildNotSuccess,
     TooManyEnvironmentVariables,
 )
 from paasng.platform.engine.deploy.bg_build.utils import (
@@ -64,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 # Max timeout seconds for waiting the slugbuilder pod to become ready
 _WAIT_FOR_READINESS_TIMEOUT = 300
-_FOLLOWING_LOGS_TIMEOUT = 300
+_BUILD_PROCESS_TIMEOUT = 300
 
 
 class K8sBuildProcessExecutor(DeployStep):
@@ -73,7 +72,7 @@ class K8sBuildProcessExecutor(DeployStep):
     it's a blocking operation and should be executed in a celery task.
     """
 
-    PHASE_TYPE = DeployPhaseTypes.BUILD
+    phase_type = DeployPhaseTypes.BUILD
 
     def __init__(self, deployment: Deployment, bp: BuildProcess, stream: DeployStream):
         super().__init__(deployment, stream)
@@ -153,7 +152,7 @@ class K8sBuildProcessExecutor(DeployStep):
             # User interruption was allowed when first log message was received — which means the Pod
             # has entered "Running" status.
             for raw_line in self.build_handler.get_build_log(
-                name=self._builder_name, follow=True, timeout=_FOLLOWING_LOGS_TIMEOUT, namespace=self.wl_app.namespace
+                name=self._builder_name, follow=True, timeout=_BUILD_PROCESS_TIMEOUT, namespace=self.wl_app.namespace
             ):
                 line = force_text(raw_line)
                 self.stream.write_message(line)
@@ -240,19 +239,22 @@ class K8sBuildProcessExecutor(DeployStep):
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)
 
 
-class DevopsPipelineBuildProcessExecutor(DeployStep):
+class PipelineBuildProcessExecutor(DeployStep):
     """
-    Execute a build process, using devops pipeline to build and upload image,
+    Execute a build process, using bk_ci pipeline to build and upload image,
     it's a blocking operation and should be executed in a celery task.
     """
 
-    PHASE_TYPE = DeployPhaseTypes.BUILD
-    FOLLOWING_LOGS_INTERVAL = 2
-    DEVOPS_LOG_LEVEL_TAG_REGEX = re.compile("##\\[\\w+\\]")
+    phase_type = DeployPhaseTypes.BUILD
+
+    # 轮询结果间隔时间
+    polling_result_interval = 2
+    # 用于匹配蓝盾日志中分类 Tag 的正则表达式
+    bk_ci_log_level_tag_regex = re.compile(r"##\[\w+]")
     # 目前只支持最多把环境变量分五块，理论上是够用的
-    MAX_ENV_VAR_BLOCK_NUM = 5
+    max_env_var_block_num = 5
     # 环境变量字符串单块最大长度
-    MAX_ENV_VAR_BLOCK_LENGTH = 2000
+    mac_env_var_block_length = 3000
 
     def __init__(self, deployment: Deployment, bp: BuildProcess, stream: DeployStream):
         super().__init__(deployment, stream)
@@ -273,7 +275,7 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
                 self.stream.write_message(f"Preparing to build {self.wl_app.name} ...")
 
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")
-                pipeline_build = self._start_devops_pipeline(env_vars)
+                pipeline_build = self._start_bk_ci_pipeline(env_vars)
 
             with self.procedure("等待构建完成"):
                 self.bp.set_logs_was_ready()
@@ -287,14 +289,11 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
             self.stream.write_message("Generated build id: %s" % build_inst.uuid)
 
         except BkDevopsGatewayServiceError:
-            logger.exception(f"call devops pipeline failed during deploy[{self.bp}]")
-            self.stream.write_message(Style.Error("Call devops pipeline failed, please contact the administrator"))
+            logger.exception(f"call bk_ci pipeline failed during deploy[{self.bp}]")
+            self.stream.write_message(Style.Error("Call bk_ci pipeline failed, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
-        except DevopsPipelineBuildUnsupported:
-            self.stream.write_message(Style.Error("build image with devops pipeline unsupported"))
-            self.bp.update_status(BuildStatus.FAILED)
-        except DevopsPipelineBuildNotSuccess:
-            self.stream.write_message(Style.Error("build image with devops pipeline not success"))
+        except BKCIPipelineBuildNotSuccess:
+            self.stream.write_message(Style.Error("build image with bk_ci pipeline not success"))
             self.bp.update_status(BuildStatus.FAILED)
         except TooManyEnvironmentVariables:
             self.stream.write_message(Style.Error("too many environment variables, please contact the administrator"))
@@ -306,13 +305,10 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
             self.stream.write_title("构建完成")
             self.stream.write_message("building process finished.")
 
-    def _start_devops_pipeline(self, env_vars: Dict[str, str]) -> definitions.PipelineBuild:
+    def _start_bk_ci_pipeline(self, env_vars: Dict[str, str]) -> definitions.PipelineBuild:
         """启动蓝盾流水线以构建镜像"""
-        if not (settings.BKPAAS_DEVOPS_PROJECT_ID and settings.BKPAAS_CNB_PIPELINE_ID):
-            raise DevopsPipelineBuildUnsupported("build image with devops pipeline unsupported")
-
         pipeline = definitions.Pipeline(
-            projectId=settings.BKPAAS_DEVOPS_PROJECT_ID, pipelineId=settings.BKPAAS_CNB_PIPELINE_ID
+            projectId=settings.BK_CI_PAAS_PROJECT_ID, pipelineId=settings.BK_CI_BUILD_PIPELINE_ID
         )
         return self.ctl.start_build(
             pipeline,
@@ -326,14 +322,14 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
         # 使用 base64 编码的 JSON 字符串，避免出现特殊符号传递失败的问题
         env_vars_str = base64.b64encode(json.dumps(env_vars).encode("utf-8")).decode("utf-8")
         # 由于蓝盾流水线变量长度超过 4000 会被丢弃，因此我们需要通过分块限制长度
-        block_num = math.ceil(len(env_vars_str) / self.MAX_ENV_VAR_BLOCK_LENGTH)
-        if block_num > self.MAX_ENV_VAR_BLOCK_NUM:
+        block_num = math.ceil(len(env_vars_str) / self.mac_env_var_block_length)
+        if block_num > self.max_env_var_block_num:
             raise TooManyEnvironmentVariables("too many environment variables")
 
         env_vars_params = {"ENV_VARS_BLOCK_NUM": str(block_num)}
         for idx in range(block_num):
-            start = idx * self.MAX_ENV_VAR_BLOCK_LENGTH
-            env_vars_params[f"ENV_VARS_BLOCK_{idx}"] = env_vars_str[start : start + self.MAX_ENV_VAR_BLOCK_LENGTH]
+            start = idx * self.mac_env_var_block_length
+            env_vars_params[f"ENV_VARS_BLOCK_{idx}"] = env_vars_str[start : start + self.mac_env_var_block_length]
 
         return env_vars_params
 
@@ -341,14 +337,14 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
         """通过轮询，检查流水线是否执行完成，并逐批获取执行日志"""
         time_started = time.time()
 
-        while time.time() - time_started < _FOLLOWING_LOGS_TIMEOUT:
-            time.sleep(self.FOLLOWING_LOGS_INTERVAL)
-            self.stream.write_message("Devops pipeline is running, please wait patiently...")
+        while time.time() - time_started < _BUILD_PROCESS_TIMEOUT:
+            time.sleep(self.polling_result_interval)
+            self.stream.write_message("Pipeline is running, please wait patiently...")
 
             try:
                 build_status = self.ctl.retrieve_build_status(pb)
             except BkDevopsGatewayServiceError:
-                logger.exception(f"call devops pipeline for build status and logs failed during deploy[{self.bp}]")
+                logger.exception(f"call bk_ci pipeline for build status and logs failed during deploy[{self.bp}]")
                 raise
 
             # 到达稳定状态后，可以退出轮询
@@ -366,12 +362,12 @@ class DevopsPipelineBuildProcessExecutor(DeployStep):
             # 注：丢弃流水线/构建机启动相关日志，只保留构建组件的日志
             if log.tag.startswith("e-") and log.jobId.startswith("c-"):
                 # 移除蓝盾日志中的级别 Tag，如 ##[error], ##[info] 等
-                self.stream.write_message(re.sub(self.DEVOPS_LOG_LEVEL_TAG_REGEX, "", log.message))
+                self.stream.write_message(re.sub(self.bk_ci_log_level_tag_regex, "", log.message))
 
     def _ensure_pipeline_build_success(self, pb: definitions.PipelineBuild) -> None:
         # 超时/结束轮询后，仍然不是成功状态，应抛出异常
         if self.ctl.retrieve_build_status(pb).status != PipelineBuildStatus.SUCCEED:
-            raise DevopsPipelineBuildNotSuccess("build image with devops pipeline not success")
+            raise BKCIPipelineBuildNotSuccess("build image with bk_ci pipeline not success")
 
     def _create_and_bind_build_instance(self, metadata: Dict) -> Build:
         """

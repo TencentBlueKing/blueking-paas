@@ -72,7 +72,8 @@ class ListBkPluginLogsSLZ(serializers.Serializer):
 
 
 class BkPluginProfileSLZ(serializers.ModelSerializer):
-    # """Serializer for representing and patching `BkPluginProfile`"""
+    """Serializer for representing and patching `BkPluginProfile`"""
+
     distributors = serializers.SlugRelatedField(
         help_text="插件使用方列表",
         slug_field="code_name",

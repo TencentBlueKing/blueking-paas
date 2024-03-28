@@ -56,11 +56,11 @@ type PaaSAnalysisConfig struct {
 
 // ResLimitsConfig contains bkapp resource limits
 type ResLimitsConfig struct {
-	// ProcDefaultCPULimits is process's default cpu quota
-	ProcDefaultCPULimit string `json:"procDefaultCPULimits"`
+	// ProcDefaultCPULimit is process's default cpu quota
+	ProcDefaultCPULimit string `json:"procDefaultCPULimit"`
 
-	// ProcDefaultMemLimits is process's default memory quota
-	ProcDefaultMemLimit string `json:"procDefaultMemLimits"`
+	// ProcDefaultMemLimit is process's default memory quota
+	ProcDefaultMemLimit string `json:"procDefaultMemLimit"`
 
 	// MaxReplicas is single instance max replica num
 	MaxReplicas int32 `json:"maxReplicas"`
@@ -68,11 +68,11 @@ type ResLimitsConfig struct {
 
 // ResRequestsConfig contains bkapp resource requests
 type ResRequestsConfig struct {
-	// ProcDefaultCPURequests is process's default cpu request
-	ProcDefaultCPURequest string `json:"procDefaultCPURequests"`
+	// ProcDefaultCPURequest is process's default cpu request
+	ProcDefaultCPURequest string `json:"procDefaultCPURequest"`
 
-	// ProcDefaultMemRequests is process's default memory request
-	ProcDefaultMemRequest string `json:"procDefaultMemRequests"`
+	// ProcDefaultMemRequest is process's default memory request
+	ProcDefaultMemRequest string `json:"procDefaultMemRequest"`
 }
 
 // AutoscalingConfig contains the config for autoscaling

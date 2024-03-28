@@ -269,8 +269,7 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
 
 	// 配置 cpu request
-	// 当配置了 ProcDefaultCpuRequest（默认 200m）， 优先使用该值作为 CPU Request 配额
-	// 如果错误的配置了 ""， 那么将使用 200m
+	// 当配置了 ProcDefaultCpuRequest， 优先使用该值作为 CPU Request 配额
 	minCpuQuota, _ := quota.NewQuantity("200m", quota.CPU)
 	procDefaultCpuRequest := config.Global.GetProcDefaultCpuRequest()
 	if procDefaultCpuRequest != "" {

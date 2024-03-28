@@ -29,15 +29,7 @@
             >
               <p class="mt10 exception-text">{{ $t('暂无持久存储资源') }}</p>
               <p class="exception-text">
-                {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。') }}
-                <bk-button
-                  theme="primary"
-                  text
-                  style="font-size: 12px"
-                  @click="viewBillingMethod"
-                >
-                  {{ $t('查看计费方式') }}
-                </bk-button>
+                {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。持久存储申请后就会产生实际的费用，请按需申请，不用的资源请及时删除。') }}
               </p>
               <p class="guide-link mt15">
                 <bk-button
@@ -64,16 +56,8 @@
               <span class="tips">
                 <i class="paasng-icon paasng-info-line tips-line" />
                 <span>
-                  {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。持久存储申请后就会产生实际的费用，请按需申请，不用的资源请及时删除。') }}
+                  {{ $t('持久化存储可用于多个模块、进程间共享数据。持久存储申请后就会产生资源成本，请按需申请，不用的资源请及时删除。') }}
                 </span>
-                <bk-button
-                  theme="primary"
-                  text
-                  style="font-size: 12px"
-                  @click="viewBillingMethod"
-                >
-                  {{ $t('查看计费方式') }}
-                </bk-button>
               </span>
             </div>
             <!-- 存储列表 -->
@@ -95,13 +79,17 @@
                   <p class="name">{{ item.display_name }}</p>
                   <div class="info">
                     <span>{{ $t('生效环境') }}：{{ item.environment_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
-                    <span>{{ $t('容量') }}：{{ item.storage_size }}</span>
+                    <span>{{ $t('容量') }}：{{ persistentStorageSizeMap[item.storage_size] }}</span>
                     <span>{{ $t('已绑定模块数') }}：{{ item.bound_modules?.length || 0 }}</span>
                   </div>
                 </div>
                 <div
-                  class="delete"
+                  :class="['delete', { 'disabled': item.bound_modules?.length }]"
                   v-show="curHoverPanels === item.display_name"
+                  v-bk-tooltips="{
+                    content: $t('当前存在{n}个模块已绑定该持久存储。请先前往“模块配置”下的“挂载卷”页面，删除相关挂载项，之后才可以删除持久存储。', { n: item.bound_modules?.length }),
+                    disabled: !item.bound_modules?.length,
+                  }"
                   @click.stop="handlerDelete(item)"
                 >
                   <i class="paasng-icon paasng-delete"></i>
@@ -174,10 +162,9 @@
           </bk-button>
         </div>
         <section class="del-storage-dialog-content">
-          <bk-alert type="error" :show-icon="false">
+          <bk-alert type="error">
             <div slot="title">
-              <i class="paasng-icon paasng-remind remind-cls"></i>
-              {{ deleteAlertTip }}
+              {{ $t('删除持久存储后无法恢复，请确认影响') }}
             </div>
           </bk-alert>
           <div class="delete-tips spacing-x1">
@@ -191,6 +178,8 @@
 </template>
 
 <script>import createPersistentStorageDailog from '@/components/create-persistent-storage-dailog';
+import { PERSISTENT_STORAGE_SIZE_MAP } from '@/common/constants';
+
 const defaultSourceType = 'PersistentStorage';
 
 export default {
@@ -214,6 +203,7 @@ export default {
       },
       persistentStorageDailogVisible: false,
       isShowPersistentStorage: false,
+      persistentStorageSizeMap: PERSISTENT_STORAGE_SIZE_MAP,
     };
   },
   computed: {
@@ -222,12 +212,6 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
-    },
-    deleteAlertTip() {
-      return this.$t(
-        '删除持久存储后无法恢复，目前有 {c} 个模块绑定了该存储，请确认影响',
-        { c: this.curDeleteData.bound_modules?.length || 0 },
-      );
     },
   },
   watch: {
@@ -281,13 +265,9 @@ export default {
     handlerPersistentStorage() {
       this.persistentStorageDailogVisible = true;
     },
-    // 查看计费方式
-    viewBillingMethod() {
-      const url = 'https://cloud.tencent.com/document/product/582/47378';
-      window.open(url, '_blank');
-    },
     // 删除
     handlerDelete(data) {
+      if (data.bound_modules?.length) return;
       this.curDeleteData = data;
       this.delteDialogConfig.visible = true;
     },
@@ -361,6 +341,7 @@ export default {
       i.tips-line {
         font-size: 14px;
         color: #979ba5;
+        transform: translateY(0);
       }
       span {
         color: #63656e;
@@ -423,6 +404,11 @@ export default {
         top: 50%;
         transform: translateY(-50%);
         cursor: pointer;
+
+        &.disabled {
+          color: #c4c6cc;
+          cursor: not-allowed;
+        }
       }
     }
     .content {

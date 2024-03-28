@@ -177,12 +177,13 @@
     <bk-dialog
       v-model="offlineAppDialog.visiable"
       width="450"
-      :title="`${$t('是否')}${$t('下架')}${curModuleId}模块`"
+      :title="disableModuleTitle"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
       :loading="offlineAppDialog.isLoading"
       :ok-text="$t('下架')"
+      :cancel-text="$t('取消')"
       @confirm="confirmOfflineApp"
       @cancel="cancelOfflineApp"
     >
@@ -273,6 +274,7 @@ export default {
       yamlLoading: false,
       curDeployItemIndex: '',
       isDialogShowSideslider: false,  // 部署的侧边栏
+      currentAllExpandedItems: [],
     };
   },
 
@@ -283,6 +285,9 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    disableModuleTitle() {
+      return this.$t('是否下架 {n} 模块', { n: this.curModuleId });
     },
   },
 
@@ -316,10 +321,6 @@ export default {
     // },
   },
 
-  created() {
-    // this.isExpand = this.isDeploy;
-  },
-
   beforeDestroy() {
     bus.$off('get-release-info');
   },
@@ -337,19 +338,16 @@ export default {
       this.getModuleReleaseInfo();
     },
     handleChangePanel(payload) {
-      this.deploymentInfoData.forEach((e) => {
-        if (e.module_name !== payload.module_name) {
-          e.isExpand = false;
-        }
-      });
+      if (payload.isExpand) { // 收起
+        this.currentAllExpandedItems = this.currentAllExpandedItems.filter(name => name !== payload.module_name);
+      } else {
+        this.currentAllExpandedItems.push(payload.module_name);
+      }
       payload.isExpand = !payload.isExpand;
       if (payload.isExpand) {
         this.handleRefresh();
       }
-      // this.$set(this, 'deploymentInfoData', res.data);
-      //   this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
       this.curDeploymentInfoItem = payload || {};
-      // this.isExpand = !this.isExpand;
     },
 
     // 部署
@@ -415,10 +413,14 @@ export default {
         });
         // this.deploymentInfoData = res.data;
         res.data = res.data.map((e) => {
-          if (e.module_name === this.curDeploymentInfoItem.module_name) {
-            e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+          if (this.currentAllExpandedItems.length) {
+            e.isExpand = this.currentAllExpandedItems.includes(e.module_name);
           } else {
-            e.isExpand = false;
+            if (e.module_name === this.curDeploymentInfoItem.module_name) {
+              e.isExpand = this.curDeploymentInfoItem.isExpand || false;
+            } else {
+              e.isExpand = false;
+            }
           }
           return e;
         });
@@ -513,6 +515,7 @@ export default {
 
     // 点击访问链接
     handleOpenUrl(url) {
+      if (!url) return;
       window.open(url);
     },
 
@@ -526,7 +529,6 @@ export default {
 
     // dialog里的slider关闭
     handleListRefresh() {
-      console.log('this.curDeploymentInfoItem.isExpand', this.curDeploymentInfoItem.isExpand);
       this.isDialogShowSideslider = false;
       this.handleRefresh();
     },

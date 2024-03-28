@@ -952,13 +952,31 @@ export default {
       return data;
     },
 
+    // 设置语言顺序
+    prioritizeKeys(obj, keysToPrioritize) {
+      // 优先排序后的对象
+      const prioritizedObj = {};
+      keysToPrioritize.forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          prioritizedObj[key] = obj[key];
+        }
+      });
+      for (const key in obj) {
+        if (!keysToPrioritize.includes(key)) {
+          prioritizedObj[key] = obj[key];
+        }
+      }
+      return prioritizedObj;
+    },
+
     // 获取模版来源
     async fetchLanguageInfo() {
       try {
         const res = await this.$store.dispatch('module/getLanguageInfo');
         const regionChoose = Object.keys(res) || [];
         this.regionChoose = regionChoose[0] || 'ieod';
-        this.languagesData = res[this.regionChoose].languages;
+        const languages = res[this.regionChoose]?.languages || {};
+        this.languagesData = this.prioritizeKeys(languages, ['Python', 'NodeJS']);
         const languagesKeysData = Object.keys(this.languagesData) || [];
         this.buttonActive = languagesKeysData[0] || 'Python';
         this.languagesList = this.languagesData[this.buttonActive];

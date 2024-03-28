@@ -324,14 +324,14 @@ class RemoteAppManager:
     def get_mobile_config(self, env_name: str) -> Optional[MobileConfig]:
         try:
             env = self.application.envs.get(module__is_default=True, environment=env_name)
-        except Exception as e:
-            logger.warning("Error getting env object, err: %s, application: %s.", e, self.application.code)
+        except ObjectDoesNotExist:
+            logger.warning("The env object is not exists, app: %s(%s).", self.application.code, env_name)
             return None
 
         try:
             return env.mobile_config
         except ObjectDoesNotExist:
-            logger.warning("The mobile config object is not exists, application: %s.", self.application.code)
+            logger.warning("The mobile config object is not exists, app: %s(%s).", self.application.code, env_name)
             return None
 
     def hybrate_use_mobile_online(self):

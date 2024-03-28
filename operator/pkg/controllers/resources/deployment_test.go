@@ -232,8 +232,8 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 			// The resource requirements should be the default value defined in project config
 			// TODO: enhance below tests to check real plans
-			Expect(cWebRes.Limits.Cpu().String()).To(Equal(config.Global.GetProcDefaultCpuLimits()))
-			Expect(cWebRes.Limits.Memory().String()).To(Equal(config.Global.GetProcDefaultMemLimits()))
+			Expect(cWebRes.Limits.Cpu().String()).To(Equal(config.Global.GetProcDefaultCpuLimit()))
+			Expect(cWebRes.Limits.Memory().String()).To(Equal(config.Global.GetProcDefaultMemLimit()))
 		})
 
 		It("legacy version", func() {

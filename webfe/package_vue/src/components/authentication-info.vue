@@ -1,91 +1,99 @@
 <template>
   <div v-if="canViewSecret" class="basic-info-item">
-    <div class="title">
-      {{ $t('鉴权信息') }}
-    </div>
-    <div class="info">
-      {{ $t('在调用蓝鲸云 API 时需要提供应用鉴权信息。使用方法请参考：') }}
-      <a :href="GLOBAL.DOC.APIGW_USER_API" target="_blank">
-        {{ $t('API调用指引') }}
-      </a>
-    </div>
-    <!-- 新增密钥 -->
-    <div class="addSecret">
-      <bk-popconfirm
-        ext-cls="addSecretPop"
-        width="240"
-        trigger="click"
-        placement="bottom-start"
-        :confirm-button-is-text="true"
-        :cancel-button-is-text="true"
-        @confirm="confirmAddSecret"
-      >
-        <a v-bk-tooltips.light="addTooltipsConfig" class="bk-text-default mr15" :disabled="appSecretList.length === 1">
-          <bk-button theme="primary" icon="plus" class="mr10" :disabled="!(appSecretList.length === 1)">
-            {{ $t('新增密钥') }}
-          </bk-button>
+    <section class="info-card-style mt16">
+      <div class="title">
+        {{ $t('鉴权信息') }}
+      </div>
+      <div class="info">
+        {{ $t('在调用蓝鲸云 API 时需要提供应用鉴权信息。使用方法请参考：') }}
+        <a :href="GLOBAL.DOC.APIGW_USER_API" target="_blank">
+          {{ $t('API调用指引') }}
         </a>
-        <div slot="content">
-          <div class="add-content-text">
-            {{ $t('新建后，已有密钥的状态保持不变') }}
+      </div>
+      <!-- 新增密钥 -->
+      <div class="addSecret">
+        <bk-popconfirm
+          ext-cls="addSecretPop"
+          width="240"
+          trigger="click"
+          placement="bottom-start"
+          :confirm-button-is-text="true"
+          :cancel-button-is-text="true"
+          @confirm="confirmAddSecret"
+        >
+          <a
+            v-bk-tooltips.light="addTooltipsConfig"
+            class="bk-text-default mr15"
+            :disabled="appSecretList.length === 1">
+            <bk-button theme="primary" icon="plus" class="mr10" :disabled="!(appSecretList.length === 1)">
+              {{ $t('新增密钥') }}
+            </bk-button>
+          </a>
+          <div slot="content">
+            <div class="add-content-text">
+              {{ $t('新建后，已有密钥的状态保持不变') }}
+            </div>
           </div>
-        </div>
-      </bk-popconfirm>
-    </div>
+        </bk-popconfirm>
+      </div>
 
-    <!-- 密钥列表 -->
-    <div class="secrectList">
-      <bk-table :data="appSecretList" size="medium">
-        <bk-table-column :label="$t('应用 ID (bk_app_code)')" prop="bk_app_code" width="190"></bk-table-column>
-        <bk-table-column :label="$t('应用密钥 (bk_app_secret)')" min-width="315">
-          <template slot-scope="props">
-            <span>
-              {{ appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret }}&nbsp;
-            </span>
-            <span
-              v-if="isView(props.row.bk_app_secret) && (!togeFlag || !isDefault(props.row.bk_app_secret))"
-              v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
-              class="paasng-icon paasng-eye-slash icon-color"
-              style="cursor: pointer"
-              @click="getSecretDetail(props.row)"
-            />
-            <span
-              v-else
-              class="paasng-icon paasng-general-copy icon-color copy"
-              style="cursor: pointer"
-              v-copy="appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret"
-            />
-          </template>
-        </bk-table-column>
-        <bk-table-column :label="$t('创建时间')" prop="created_at"> </bk-table-column>
-        <bk-table-column :label="$t('状态')">
-          <template slot-scope="props">
-            <span :style="{ color: props.row.enabled ? '#2DCB56' : '#FF5656' }">
-              {{ props.row.enabled ? $t('已启用') : $t('已禁用') }}
-            </span>
-          </template>
-        </bk-table-column>
-        <bk-table-column :label="$t('操作')">
-          <template slot-scope="props">
-            <a
-              v-bk-tooltips.light="disabledTooltipsConfig"
-              :disabled="!isDefault(props.row.bk_app_secret)"
-              class="bk-text-default mr15"
-            >
-              <bk-button class="mr10" text :disabled="isDefault(props.row.bk_app_secret)" @click="isEnabled(props.row)">
-                {{ props.row.enabled ? $t('禁用') : $t('启用') }}
-              </bk-button>
-            </a>
-            <bk-button v-if="!props.row.enabled" class="mr10" theme="primary" text @click="deleteSecret(props.row)">
-              {{ $t('删除') }}</bk-button
-            >
-          </template>
-        </bk-table-column>
-      </bk-table>
-    </div>
-
+      <!-- 密钥列表 -->
+      <div class="secrectList">
+        <bk-table :data="appSecretList" size="medium">
+          <bk-table-column :label="$t('应用 ID (bk_app_code)')" prop="bk_app_code" width="190"></bk-table-column>
+          <bk-table-column :label="$t('应用密钥 (bk_app_secret)')" min-width="315">
+            <template slot-scope="props">
+              <span>
+                {{ appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret }}&nbsp;
+              </span>
+              <span
+                v-if="isView(props.row.bk_app_secret) && (!togeFlag || !isDefault(props.row.bk_app_secret))"
+                v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
+                class="paasng-icon paasng-eye-slash icon-color"
+                style="cursor: pointer"
+                @click="getSecretDetail(props.row)"
+              />
+              <span
+                v-else
+                class="paasng-icon paasng-general-copy icon-color copy"
+                style="cursor: pointer"
+                v-copy="appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret"
+              />
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('创建时间')" prop="created_at"> </bk-table-column>
+          <bk-table-column :label="$t('状态')">
+            <template slot-scope="props">
+              <span :style="{ color: props.row.enabled ? '#2DCB56' : '#FF5656' }">
+                {{ props.row.enabled ? $t('已启用') : $t('已禁用') }}
+              </span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('操作')">
+            <template slot-scope="props">
+              <a
+                v-bk-tooltips.light="disabledTooltipsConfig"
+                :disabled="!isDefault(props.row.bk_app_secret)"
+                class="bk-text-default mr15"
+              >
+                <bk-button
+                  class="mr10"
+                  text
+                  :disabled="isDefault(props.row.bk_app_secret)"
+                  @click="isEnabled(props.row)">
+                  {{ props.row.enabled ? $t('禁用') : $t('启用') }}
+                </bk-button>
+              </a>
+              <bk-button v-if="!props.row.enabled" class="mr10" theme="primary" text @click="deleteSecret(props.row)">
+                {{ $t('删除') }}</bk-button
+              >
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+    </section>
     <!-- 环境变量默认密钥 -->
-    <div class="defaultSecret" v-if="defaultSecret !== undefined">
+    <div class="info-card-style mt16" v-if="defaultSecret !== undefined">
       <div class="title mr">{{ $t('环境变量默认密钥') }}</div>
       <div class="info">
         {{ $t('内置环境变量 BKPAAS_APP_SECRET 使用的密钥。') }}
@@ -806,8 +814,10 @@ export default {
 }
 </style>
 <style lang="scss" scoped>
+.mt16 {
+  margin-top: 16px;
+}
 .basic-info-item {
-  margin-bottom: 35px;
   .title {
     color: #313238;
     font-size: 14px;

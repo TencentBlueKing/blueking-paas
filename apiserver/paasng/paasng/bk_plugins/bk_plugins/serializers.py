@@ -74,9 +74,26 @@ class ListBkPluginLogsSLZ(serializers.Serializer):
 class BkPluginProfileSLZ(serializers.ModelSerializer):
     """Serializer for representing and patching `BkPluginProfile`"""
 
+    distributors = serializers.SlugRelatedField(
+        help_text="插件使用方列表",
+        slug_field="code_name",
+        queryset=BkPluginDistributor.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+    )
+
     class Meta:
         model = BkPluginProfile
-        fields = ["introduction", "contact", "api_gw_name", "api_gw_id", "api_gw_last_synced_at", "tag"]
+        fields = [
+            "introduction",
+            "contact",
+            "api_gw_name",
+            "api_gw_id",
+            "api_gw_last_synced_at",
+            "tag",
+            "distributors",
+        ]
 
 
 class BkPluginDetailedSLZ(serializers.Serializer):

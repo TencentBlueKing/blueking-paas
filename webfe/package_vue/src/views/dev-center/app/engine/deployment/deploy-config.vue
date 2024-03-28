@@ -247,7 +247,7 @@
                     :clearable="false"
                   />
                 </bk-form-item>
-                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
+                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px; margin-top: 5px;">
                   <bk-button
                     theme="primary"
                     :outline="true"
@@ -276,6 +276,7 @@
 <script>import _ from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
+import i18n from '@/language/i18n.js';
 export default {
   components: {
     tooltipConfirm,
@@ -333,7 +334,7 @@ export default {
       return this.$store.state.curAppModule;
     },
     isDockerApp() {
-      return this.curAppModule.source_origin === 4;
+      return this.curAppModule.repo?.source_type === 'docker';
     },
     curApplicationData() {
       return this.curAppInfo.application;
@@ -488,10 +489,31 @@ export default {
           if (this.configInfo.loaclEnabled) this.showEdit();
         });
       } else {
+        const h = this.$createElement;
         this.$bkInfo({
           width: 500,
           title: `${this.$t('确认禁用模块')}${this.curAppModule.name}${this.$t('部署前置命令?')}`,
-          subTitle: this.$t('禁用后，部署预发布环境、生产环境时都不会再执行该命令'),
+          subHeader: h('div', {
+            style: {
+              color: 'red',
+            },
+          }, [
+            h('div', {
+              style: {
+                textAlign: 'center',
+                color: '#313238',
+              },
+            }, i18n.t('禁用后，部署预发布环境、生产环境时都不会再执行该命令')),
+
+            h('div', {
+              style: {
+                marginTop: '8px',
+                textAlign: 'center',
+                color: '#EA3636',
+                display: this.isDockerApp ? 'none' : 'block',
+              },
+            }, i18n.t('请注意：部署前置命令停用后，将不能再启用')),
+          ]),
           maskClose: true,
           confirmFn: () => {
             this.closeCommand();
@@ -646,9 +668,7 @@ export default {
         cursor: pointer;
       }
     }
-    .config-warp .info-special-form.bk-form.bk-inline-form .bk-form-input {
-      height: 32px;
-      border-radius: 2;
-      font-size: 12px;
+    .config-warp .info-special-form.bk-form .bk-form-content .tooltips-icon {
+      top: 13px;
     }
 </style>

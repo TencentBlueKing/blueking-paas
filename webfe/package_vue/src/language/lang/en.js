@@ -2571,4 +2571,5 @@ export default {
   'S-mart 应用的部署前置命令请在描述文件 app_desc.yaml 中配置。': 'Please configure the pre-deployment commands for the S-mart application in the descriptor file app_desc.yaml.',
   '请将部署前置命令放在部署目录下的 `bin/post-compile` 文件中，并在页面上停用部署前置命令。': 'Please place the pre-deployment commands in the `bin/post-compile` file within the deployment directory, and disable the pre-deployment commands on the webpage.',
   查看使用示例: 'View usage examples',
+  '请注意：部署前置命令停用后，将不能再启用': 'Please note: Once the pre-deployment commands are disabled, they cannot be re-enabled.',
 };

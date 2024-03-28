@@ -136,7 +136,10 @@ class SvcDiscConfigSLZ(serializers.Serializer):
         for item in value:
             pair = (item["bkAppCode"], item["moduleName"] or "")
             if pair in seen:
-                raise serializers.ValidationError(_("服务发现列表中存在重复项：{}").format(pair))
+                pair_for_display = f"AppID: {pair[0]}"
+                if pair[1]:
+                    pair_for_display += f", ModuleName: {pair[1]}"
+                raise serializers.ValidationError(_("服务发现列表中存在重复项：{}").format(f"[{pair_for_display}]"))
             seen.add(pair)
         return value
 

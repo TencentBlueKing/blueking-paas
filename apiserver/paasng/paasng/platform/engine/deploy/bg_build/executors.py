@@ -254,7 +254,7 @@ class PipelineBuildProcessExecutor(DeployStep):
     # 目前只支持最多把环境变量分五块，理论上是够用的
     max_env_var_block_num = 5
     # 环境变量字符串单块最大长度
-    mac_env_var_block_length = 3000
+    mac_env_var_block_length = 3500
 
     def __init__(self, deployment: Deployment, bp: BuildProcess, stream: DeployStream):
         super().__init__(deployment, stream)
@@ -274,6 +274,7 @@ class PipelineBuildProcessExecutor(DeployStep):
             with self.procedure("启动构建任务"):
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")
                 pipeline_build = self._start_bk_ci_pipeline(env_vars)
+                self.stream.write_message("Pipeline build id: %s" % pipeline_build.buildId)
 
             with self.procedure("等待构建完成"):
                 self.bp.set_logs_was_ready()
@@ -291,10 +292,10 @@ class PipelineBuildProcessExecutor(DeployStep):
             self.stream.write_message(Style.Error("Call bk_ci pipeline failed, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
         except BkCIPipelineBuildNotSuccess:
-            self.stream.write_message(Style.Error("build image with bk_ci pipeline not success"))
+            self.stream.write_message(Style.Error("Build image with bk_ci pipeline not success"))
             self.bp.update_status(BuildStatus.FAILED)
         except BkCITooManyEnvVarsError:
-            self.stream.write_message(Style.Error("too many environment variables, please contact the administrator"))
+            self.stream.write_message(Style.Error("Too many environment variables, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
         except Exception:
             logger.exception(f"critical error happened during deploy[{self.bp}]")

@@ -17,7 +17,8 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict
+from contextlib import contextmanager
+from typing import Any, Dict
 
 import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
@@ -29,6 +30,14 @@ from paasng.infras.bk_ci.apigw.client import Group as BkDevopsGroup
 from paasng.infras.bk_ci.exceptions import BkCIApiError, BkCIGatewayServiceError
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def wrap_request_exc():
+    try:
+        yield
+    except (APIGatewayResponseError, ResponseError) as e:
+        raise BkCIGatewayServiceError("call bk ci api error, detail: {}".format(e))
 
 
 class BaseBkCIClient:
@@ -65,18 +74,10 @@ class BkCIPipelineClient(BaseBkCIClient):
         """
         path_params = {"projectId": pipeline.projectId}
         query_params = {"pipelineId": pipeline.pipelineId}
-        try:
-            resp = self.client.v4_app_build_start(path_params=path_params, params=query_params, data=start_params)
-        except (APIGatewayResponseError, ResponseError) as e:
-            raise BkCIGatewayServiceError(
-                "start build for pipeline({pipeline}) error, detail: {detail}".format(pipeline=pipeline, detail=e)
-            )
 
-        if resp.get("status") != 0:
-            logger.error(
-                "start build for pipeline(%(pipeline)s) error, resp: %(resp)s", {"pipeline": pipeline, "resp": resp}
-            )
-            raise BkCIApiError(resp["message"])
+        with wrap_request_exc():
+            resp = self.client.v4_app_build_start(path_params=path_params, params=query_params, data=start_params)
+            self._validate_resp(resp)
 
         data = resp["data"]
         return cattrs.structure(data, entities.PipelineBuild)
@@ -88,16 +89,10 @@ class BkCIPipelineClient(BaseBkCIClient):
         """
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
-        try:
-            resp = self.client.v4_app_build_detail(path_params=path_params, params=query_params)
-        except (APIGatewayResponseError, ResponseError) as e:
-            raise BkCIGatewayServiceError(
-                "retrieve build({build}) detail error, detail: {detail}".format(build=build, detail=e)
-            )
 
-        if resp.get("status") != 0:
-            logger.error("retrieve build(%(build)s) detail error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkCIApiError(resp["message"])
+        with wrap_request_exc():
+            resp = self.client.v4_app_build_detail(path_params=path_params, params=query_params)
+            self._validate_resp(resp)
 
         data = resp["data"]
         return cattrs.structure(data, entities.PipelineBuildDetail)
@@ -109,16 +104,10 @@ class BkCIPipelineClient(BaseBkCIClient):
         """
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
-        try:
-            resp = self.client.v4_app_build_status(path_params=path_params, params=query_params)
-        except (APIGatewayResponseError, ResponseError) as e:
-            raise BkCIGatewayServiceError(
-                "retrieve build({build}) status error, detail: {detail}".format(build=build, detail=e)
-            )
 
-        if resp.get("status") != 0:
-            logger.error("retrieve build(%(build)s) status error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkCIApiError(resp["message"])
+        with wrap_request_exc():
+            resp = self.client.v4_app_build_status(path_params=path_params, params=query_params)
+            self._validate_resp(resp)
 
         data = resp["data"]
         return cattrs.structure(data, entities.PipelineBuildStatus)
@@ -130,14 +119,10 @@ class BkCIPipelineClient(BaseBkCIClient):
         """
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
-        try:
-            resp = self.client.v4_app_build_stop(path_params=path_params, params=query_params)
-        except (APIGatewayResponseError, ResponseError) as e:
-            raise BkCIGatewayServiceError("stop build({build}) error, detail: {detail}".format(build=build, detail=e))
 
-        if resp.get("status") != 0:
-            logger.error("stop build(%(build)s) error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkCIApiError(resp["message"])
+        with wrap_request_exc():
+            resp = self.client.v4_app_build_stop(path_params=path_params, params=query_params)
+            self._validate_resp(resp)
 
         return resp["data"]
 
@@ -164,16 +149,10 @@ class BkCIPipelineClient(BaseBkCIClient):
             "end": start + num,
             "num": num,
         }
-        try:
-            resp = self.client.v4_app_log_more(path_params=path_params, params=query_params)
-        except (APIGatewayResponseError, ResponseError) as e:
-            raise BkCIGatewayServiceError(
-                "retrieve build({build}) log error, detail: {detail}".format(build=build, detail=e)
-            )
 
-        if resp.get("status") != 0:
-            logger.error("retrieve build(%(build)s) log error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkCIApiError(resp["message"])
+        with wrap_request_exc():
+            resp = self.client.v4_app_log_more(path_params=path_params, params=query_params)
+            self._validate_resp(resp)
 
         data = resp["data"]
         return cattrs.structure(data, entities.PipelineLogModel)
@@ -182,16 +161,19 @@ class BkCIPipelineClient(BaseBkCIClient):
         """查询流水线步骤的日志总数"""
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
-        try:
-            resp = self.client.v4_app_log_line_num(path_params=path_params, params=query_params)
-        except (APIGatewayResponseError, ResponseError) as e:
-            raise BkCIGatewayServiceError(
-                "retrieve build({build}) log num error, detail: {detail}".format(build=build, detail=e)
-            )
 
-        if resp.get("status") != 0:
-            logger.error("retrieve build(%(build)s) log num error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkCIApiError(resp["message"])
+        with wrap_request_exc():
+            resp = self.client.v4_app_log_line_num(path_params=path_params, params=query_params)
+            self._validate_resp(resp)
 
         data = resp["data"]
         return data["lastLineNum"]
+
+    @staticmethod
+    def _validate_resp(resp: Dict[str, Any]):
+        """Validate response status code"""
+        if resp.get("status") == 0:
+            return
+
+        logger.error("call bk ci api failed, resp: %s", resp)
+        raise BkCIApiError(resp["message"])

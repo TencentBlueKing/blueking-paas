@@ -34,6 +34,7 @@ from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream
+from paasng.platform.modules.models import BuildConfig
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,12 @@ def interrupt_build_proc(bp_id: UUID) -> bool:
     :raises: DeployInterruptionFailed if the build process is not interruptable.
     """
     bp = BuildProcess.objects.get(pk=bp_id)
+
+    # 蓝盾流水线即使被取消，也不会中断镜像构建流程，因此中断在这种场景下没有意义
+    cfg = BuildConfig.objects.filter(module_id=bp.module_id).first()
+    if cfg and cfg.use_bk_ci_pipeline:
+        raise DeployInterruptionFailed()
+
     if not bp.check_interruption_allowed():
         raise DeployInterruptionFailed()
 

@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="buildconfig",
-            name="use_devops_pipeline",
+            name="use_bk_ci_pipeline",
             field=models.BooleanField(default=False, help_text="是否使用蓝盾流水线构建"),
         ),
     ]

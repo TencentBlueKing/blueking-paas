@@ -22,7 +22,6 @@ from typing import Dict, List, Optional
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -37,7 +36,6 @@ from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.modules.models.build_cfg import BuildConfig
 from paasng.platform.sourcectl.models import VersionInfo
 
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
@@ -303,14 +301,6 @@ class BuildProcess(UuidAuditedModel):
             return False
         if not self.logs_was_ready_at:
             return False
-
-        # 蓝盾流水线即使被取消，也不会中断镜像构建流程，因此中断在这种场景下没有意义
-        try:
-            cfg = BuildConfig.objects.get(module_id=self.module_id)
-        except ObjectDoesNotExist:
-            pass
-        else:
-            return not cfg.use_bk_ci_pipeline
 
         return True
 

@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import base64
+import json
 import time
 from typing import Dict
 from unittest import mock
@@ -51,7 +53,7 @@ class TestDefaultBuildProcessExecutor:
         bpe = DefaultBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
         # TODO: Too much mocks, both tests and codes need refactor
         with mock.patch(
-            "paasng.platform.engine.deploy.bg_build.executors.K8sBuildProcessExecutor.start_slugbuilder"
+            "paasng.platform.engine.deploy.bg_build.executors.DefaultBuildProcessExecutor.start_slugbuilder"
         ), mock.patch("paasng.platform.engine.deploy.bg_build.executors.BuildHandler"), mock.patch(
             "paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"
         ), mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"):
@@ -59,7 +61,7 @@ class TestDefaultBuildProcessExecutor:
         assert build_proc.status == BuildStatus.SUCCESSFUL, "部署失败"
 
 
-class StubPipelineController:
+class StubBkCIPipelineClient:
     def __init__(self, *args, **kwargs):
         pass
 
@@ -107,7 +109,7 @@ class TestPipelineBuildProcessExecutor:
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
         with mock.patch(
-            "paasng.platform.engine.deploy.bg_build.executors.PipelineController", new=StubPipelineController
+            "paasng.platform.engine.deploy.bg_build.executors.BkCIPipelineClient", new=StubBkCIPipelineClient
         ):
             bpe = PipelineBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
             bpe.execute(
@@ -119,3 +121,14 @@ class TestPipelineBuildProcessExecutor:
             )
 
         assert build_proc.status == BuildStatus.SUCCESSFUL
+
+    def test_build_env_vars_params(self, bk_deployment_full, build_proc):
+        attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
+        bpe = PipelineBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
+        env_vars = {f"Key-{idx}": "v" * 100 for idx in range(100)}
+        params = bpe._build_env_vars_params(env_vars)
+
+        # 测试能通过参数反解出环境变量配置
+        assert params["ENV_VARS_BLOCK_NUM"] == "5"
+        encoded_str = "".join(params[f"ENV_VARS_BLOCK_{idx}"] for idx in range(int(params["ENV_VARS_BLOCK_NUM"])))
+        assert json.loads(base64.b64decode(encoded_str).decode("utf-8")) == env_vars

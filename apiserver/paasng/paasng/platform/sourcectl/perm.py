@@ -21,8 +21,8 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, List, Sequence
 
 from paasng.infras.accounts.models import AccountFeatureFlag, User
-from paasng.platform.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
 
 
 class UserSourceProviders:

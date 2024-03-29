@@ -20,9 +20,9 @@ import logging
 
 from django.conf import settings
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.monitoring.app_monitor.managers import AppMonitorController, NullController
 from paas_wl.bk_app.monitoring.app_monitor.models import AppMetricsMonitor
-from paas_wl.bk_app.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

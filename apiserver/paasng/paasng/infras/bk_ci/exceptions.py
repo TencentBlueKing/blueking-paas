@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class BkDevopsGatewayServiceError(Exception):
-    """This error indicates that there's something wrong when operating bk-devops's
+class BkCIGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bk-ci's
     API Gateway resource. It's a wrapper class of API SDK's original exceptions
     """
 
@@ -28,7 +28,7 @@ class BkDevopsGatewayServiceError(Exception):
         self.message = message
 
 
-class BkDevopsApiError(BkDevopsGatewayServiceError):
+class BkCIApiError(BkCIGatewayServiceError):
     """When calling the bk-devops api, bk-devops returns an error message,
     which needs to be captured and displayed to the user on the page
     """

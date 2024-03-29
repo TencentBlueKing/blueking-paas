@@ -33,14 +33,14 @@ from paas_wl.bk_app.applications.models.build import Build, BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, NamespacesHandler, ensure_image_credentials_secret
 from paas_wl.infras.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
 from paas_wl.utils.kubestatus import check_pod_health_status
-from paasng.platform.bk_devops import definitions
-from paasng.platform.bk_devops.client import PipelineController
-from paasng.platform.bk_devops.constants import PipelineBuildStatus
-from paasng.platform.bk_devops.exceptions import BkDevopsGatewayServiceError
+from paasng.infras.bk_ci import entities
+from paasng.infras.bk_ci.client import BkCIPipelineClient
+from paasng.infras.bk_ci.constants import PipelineBuildStatus
+from paasng.infras.bk_ci.exceptions import BkCIGatewayServiceError
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.exceptions import (
-    BKCIPipelineBuildNotSuccess,
-    TooManyEnvironmentVariables,
+    BkCIPipelineBuildNotSuccess,
+    BkCITooManyEnvVarsError,
 )
 from paasng.platform.engine.deploy.bg_build.utils import (
     SlugBuilderTemplate,
@@ -66,7 +66,7 @@ _WAIT_FOR_READINESS_TIMEOUT = 300
 _BUILD_PROCESS_TIMEOUT = 300
 
 
-class K8sBuildProcessExecutor(DeployStep):
+class DefaultBuildProcessExecutor(DeployStep):
     """
     Execute a build process, using k8s pod to build and upload image or slug package,
     it's a blocking operation and should be executed in a celery task.
@@ -263,7 +263,7 @@ class PipelineBuildProcessExecutor(DeployStep):
         self.wl_app: "WlApp" = bp.app
         # 注：蓝盾只提供了正式环境的 API
         bk_username = get_username_by_bkpaas_user_id(bp.owner)
-        self.ctl = PipelineController(bk_username=bk_username)
+        self.ctl = BkCIPipelineClient(bk_username=bk_username)
 
     def execute(self, metadata: Dict):
         """Execute the build process"""
@@ -272,8 +272,6 @@ class PipelineBuildProcessExecutor(DeployStep):
                 env_vars = generate_builder_env_vars(self.bp, metadata)
 
             with self.procedure("启动构建任务"):
-                self.stream.write_message(f"Preparing to build {self.wl_app.name} ...")
-
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")
                 pipeline_build = self._start_bk_ci_pipeline(env_vars)
 
@@ -288,14 +286,14 @@ class PipelineBuildProcessExecutor(DeployStep):
             build_inst = self._create_and_bind_build_instance(metadata=metadata)
             self.stream.write_message("Generated build id: %s" % build_inst.uuid)
 
-        except BkDevopsGatewayServiceError:
+        except BkCIGatewayServiceError:
             logger.exception(f"call bk_ci pipeline failed during deploy[{self.bp}]")
             self.stream.write_message(Style.Error("Call bk_ci pipeline failed, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
-        except BKCIPipelineBuildNotSuccess:
+        except BkCIPipelineBuildNotSuccess:
             self.stream.write_message(Style.Error("build image with bk_ci pipeline not success"))
             self.bp.update_status(BuildStatus.FAILED)
-        except TooManyEnvironmentVariables:
+        except BkCITooManyEnvVarsError:
             self.stream.write_message(Style.Error("too many environment variables, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
         except Exception:
@@ -305,9 +303,9 @@ class PipelineBuildProcessExecutor(DeployStep):
             self.stream.write_title("构建完成")
             self.stream.write_message("building process finished.")
 
-    def _start_bk_ci_pipeline(self, env_vars: Dict[str, str]) -> definitions.PipelineBuild:
+    def _start_bk_ci_pipeline(self, env_vars: Dict[str, str]) -> entities.PipelineBuild:
         """启动蓝盾流水线以构建镜像"""
-        pipeline = definitions.Pipeline(
+        pipeline = entities.Pipeline(
             projectId=settings.BK_CI_PAAS_PROJECT_ID, pipelineId=settings.BK_CI_BUILD_PIPELINE_ID
         )
         return self.ctl.start_build(
@@ -324,7 +322,7 @@ class PipelineBuildProcessExecutor(DeployStep):
         # 由于蓝盾流水线变量长度超过 4000 会被丢弃，因此我们需要通过分块限制长度
         block_num = math.ceil(len(env_vars_str) / self.mac_env_var_block_length)
         if block_num > self.max_env_var_block_num:
-            raise TooManyEnvironmentVariables("too many environment variables")
+            raise BkCITooManyEnvVarsError("too many environment variables")
 
         env_vars_params = {"ENV_VARS_BLOCK_NUM": str(block_num)}
         for idx in range(block_num):
@@ -333,7 +331,7 @@ class PipelineBuildProcessExecutor(DeployStep):
 
         return env_vars_params
 
-    def _start_following_logs(self, pb: definitions.PipelineBuild):
+    def _start_following_logs(self, pb: entities.PipelineBuild):
         """通过轮询，检查流水线是否执行完成，并逐批获取执行日志"""
         time_started = time.time()
 
@@ -343,7 +341,7 @@ class PipelineBuildProcessExecutor(DeployStep):
 
             try:
                 build_status = self.ctl.retrieve_build_status(pb)
-            except BkDevopsGatewayServiceError:
+            except BkCIGatewayServiceError:
                 logger.exception(f"call bk_ci pipeline for build status and logs failed during deploy[{self.bp}]")
                 raise
 
@@ -353,6 +351,7 @@ class PipelineBuildProcessExecutor(DeployStep):
                 PipelineBuildStatus.FAILED,
                 PipelineBuildStatus.CANCELED,
             ]:
+                logger.info("break poll loop with pipeline build status: %s", build_status.status)
                 break
 
         # Q：为什么不在轮询过程中，按分块获取日志（做流式效果）
@@ -364,10 +363,10 @@ class PipelineBuildProcessExecutor(DeployStep):
                 # 移除蓝盾日志中的级别 Tag，如 ##[error], ##[info] 等
                 self.stream.write_message(re.sub(self.bk_ci_log_level_tag_regex, "", log.message))
 
-    def _ensure_pipeline_build_success(self, pb: definitions.PipelineBuild) -> None:
+    def _ensure_pipeline_build_success(self, pb: entities.PipelineBuild) -> None:
         # 超时/结束轮询后，仍然不是成功状态，应抛出异常
         if self.ctl.retrieve_build_status(pb).status != PipelineBuildStatus.SUCCEED:
-            raise BKCIPipelineBuildNotSuccess("build image with bk_ci pipeline not success")
+            raise BkCIPipelineBuildNotSuccess("build image with bk_ci pipeline not success")
 
     def _create_and_bind_build_instance(self, metadata: Dict) -> Build:
         """

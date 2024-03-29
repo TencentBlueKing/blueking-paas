@@ -17,9 +17,9 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class BKCIPipelineBuildNotSuccess(Exception):
+class BkCIPipelineBuildNotSuccess(Exception):
     """蓝盾流水线构建未成功（失败/被取消）"""
 
 
-class TooManyEnvironmentVariables(Exception):
+class BkCITooManyEnvVarsError(Exception):
     """环境变量过多"""

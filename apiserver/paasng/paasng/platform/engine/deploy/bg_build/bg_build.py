@@ -27,7 +27,7 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.deploy.bg_build.executors import (
-    K8sBuildProcessExecutor,
+    DefaultBuildProcessExecutor,
     PipelineBuildProcessExecutor,
 )
 from paasng.platform.engine.deploy.bg_build.utils import generate_builder_name
@@ -72,8 +72,8 @@ def start_bg_build_process(
         pipeline_bp_executor = PipelineBuildProcessExecutor(deployment, build_process, stream)
         pipeline_bp_executor.execute(metadata=metadata)
     else:
-        k8s_bp_executor = K8sBuildProcessExecutor(deployment, build_process, stream)
-        k8s_bp_executor.execute(metadata=metadata)
+        bp_executor = DefaultBuildProcessExecutor(deployment, build_process, stream)
+        bp_executor.execute(metadata=metadata)
 
 
 def interrupt_build_proc(bp_id: UUID) -> bool:

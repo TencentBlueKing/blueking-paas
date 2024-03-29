@@ -23,15 +23,15 @@ import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
 
-from paasng.platform.bk_devops import definitions
-from paasng.platform.bk_devops.apigw.client import Client
-from paasng.platform.bk_devops.apigw.client import Group as BkDevopsGroup
-from paasng.platform.bk_devops.exceptions import BkDevopsApiError, BkDevopsGatewayServiceError
+from paasng.infras.bk_ci import entities
+from paasng.infras.bk_ci.apigw.client import Client
+from paasng.infras.bk_ci.apigw.client import Group as BkDevopsGroup
+from paasng.infras.bk_ci.exceptions import BkCIApiError, BkCIGatewayServiceError
 
 logger = logging.getLogger(__name__)
 
 
-class BaseBkDevopsClient:
+class BaseBkCIClient:
     """bk-devops 通过 APIGW 提供的 API
 
     :param bk_username: 用户名
@@ -50,17 +50,14 @@ class BaseBkDevopsClient:
         self.client: BkDevopsGroup = client.api
 
     def _prepare_headers(self) -> dict:
-        headers = {
-            # 应用态 API 需要添加 X-DEVOPS-UID，用户态 API 不需要
-            "X-DEVOPS-UID": self.bk_username,
-        }
-        return headers
+        # 应用态 API 需要添加 X-DEVOPS-UID，用户态 API 不需要
+        return {"X-DEVOPS-UID": self.bk_username}
 
 
-class PipelineController(BaseBkDevopsClient):
+class BkCIPipelineClient(BaseBkCIClient):
     """bk-devops pipeline 控制器"""
 
-    def start_build(self, pipeline: definitions.Pipeline, start_params: Dict[str, str]) -> definitions.PipelineBuild:
+    def start_build(self, pipeline: entities.Pipeline, start_params: Dict[str, str]) -> entities.PipelineBuild:
         """启动构建
 
         :param pipeline: 流水线对象
@@ -71,7 +68,7 @@ class PipelineController(BaseBkDevopsClient):
         try:
             resp = self.client.v4_app_build_start(path_params=path_params, params=query_params, data=start_params)
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(
+            raise BkCIGatewayServiceError(
                 "start build for pipeline({pipeline}) error, detail: {detail}".format(pipeline=pipeline, detail=e)
             )
 
@@ -79,12 +76,12 @@ class PipelineController(BaseBkDevopsClient):
             logger.error(
                 "start build for pipeline(%(pipeline)s) error, resp: %(resp)s", {"pipeline": pipeline, "resp": resp}
             )
-            raise BkDevopsApiError(resp["message"])
+            raise BkCIApiError(resp["message"])
 
         data = resp["data"]
-        return cattrs.structure(data, definitions.PipelineBuild)
+        return cattrs.structure(data, entities.PipelineBuild)
 
-    def retrieve_build_detail(self, build: definitions.PipelineBuild) -> definitions.PipelineBuildDetail:
+    def retrieve_build_detail(self, build: entities.PipelineBuild) -> entities.PipelineBuildDetail:
         """查询构建详情
 
         :param build: 流水线构建对象
@@ -94,18 +91,18 @@ class PipelineController(BaseBkDevopsClient):
         try:
             resp = self.client.v4_app_build_detail(path_params=path_params, params=query_params)
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(
+            raise BkCIGatewayServiceError(
                 "retrieve build({build}) detail error, detail: {detail}".format(build=build, detail=e)
             )
 
         if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) detail error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp["message"])
+            raise BkCIApiError(resp["message"])
 
         data = resp["data"]
-        return cattrs.structure(data, definitions.PipelineBuildDetail)
+        return cattrs.structure(data, entities.PipelineBuildDetail)
 
-    def retrieve_build_status(self, build: definitions.PipelineBuild) -> definitions.PipelineBuildStatus:
+    def retrieve_build_status(self, build: entities.PipelineBuild) -> entities.PipelineBuildStatus:
         """查询构建状态信息
 
         :param build: 流水线构建对象
@@ -115,18 +112,18 @@ class PipelineController(BaseBkDevopsClient):
         try:
             resp = self.client.v4_app_build_status(path_params=path_params, params=query_params)
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(
+            raise BkCIGatewayServiceError(
                 "retrieve build({build}) status error, detail: {detail}".format(build=build, detail=e)
             )
 
         if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) status error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp["message"])
+            raise BkCIApiError(resp["message"])
 
         data = resp["data"]
-        return cattrs.structure(data, definitions.PipelineBuildStatus)
+        return cattrs.structure(data, entities.PipelineBuildStatus)
 
-    def stop_build(self, build: definitions.PipelineBuild) -> bool:
+    def stop_build(self, build: entities.PipelineBuild) -> bool:
         """停止构建
 
         :param build: 流水线构建对象
@@ -136,23 +133,23 @@ class PipelineController(BaseBkDevopsClient):
         try:
             resp = self.client.v4_app_build_stop(path_params=path_params, params=query_params)
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(
-                "stop build({build}) error, detail: {detail}".format(build=build, detail=e)
-            )
+            raise BkCIGatewayServiceError("stop build({build}) error, detail: {detail}".format(build=build, detail=e))
 
         if resp.get("status") != 0:
             logger.error("stop build(%(build)s) error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp["message"])
+            raise BkCIApiError(resp["message"])
 
-        data = resp["data"]
-        return data
+        return resp["data"]
 
-    def retrieve_log(
-        self,
-        build: definitions.PipelineBuild,
-        start: int,
-        num: int = 500,
-    ) -> definitions.PipelineLogModel:
+    def retrieve_full_log(self, build: entities.PipelineBuild) -> entities.PipelineLogModel:
+        """查询全量日志
+
+        :param build: 流水线构建对象
+        """
+        log_num = self._retrieve_log_num(build)
+        return self._retrieve_log(build, start=0, num=log_num)
+
+    def _retrieve_log(self, build: entities.PipelineBuild, start: int, num: int = 500) -> entities.PipelineLogModel:
         """查询日志
 
         :param build: 流水线构建对象
@@ -170,39 +167,31 @@ class PipelineController(BaseBkDevopsClient):
         try:
             resp = self.client.v4_app_log_more(path_params=path_params, params=query_params)
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(
+            raise BkCIGatewayServiceError(
                 "retrieve build({build}) log error, detail: {detail}".format(build=build, detail=e)
             )
 
         if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) log error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp["message"])
+            raise BkCIApiError(resp["message"])
 
         data = resp["data"]
-        return cattrs.structure(data, definitions.PipelineLogModel)
+        return cattrs.structure(data, entities.PipelineLogModel)
 
-    def retrieve_log_num(self, build: definitions.PipelineBuild) -> int:
+    def _retrieve_log_num(self, build: entities.PipelineBuild) -> int:
         """查询流水线步骤的日志总数"""
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
         try:
             resp = self.client.v4_app_log_line_num(path_params=path_params, params=query_params)
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(
+            raise BkCIGatewayServiceError(
                 "retrieve build({build}) log num error, detail: {detail}".format(build=build, detail=e)
             )
 
         if resp.get("status") != 0:
             logger.error("retrieve build(%(build)s) log num error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp["message"])
+            raise BkCIApiError(resp["message"])
 
         data = resp["data"]
         return data["lastLineNum"]
-
-    def retrieve_full_log(self, build: definitions.PipelineBuild) -> definitions.PipelineLogModel:
-        """查询全量日志
-
-        :param build: 流水线构建对象
-        """
-        log_num = self.retrieve_log_num(build)
-        return self.retrieve_log(build, start=0, num=log_num)

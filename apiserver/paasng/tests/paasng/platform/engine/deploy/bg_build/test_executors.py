@@ -22,24 +22,24 @@ from unittest import mock
 
 import pytest
 
-from paasng.platform.bk_devops import definitions
-from paasng.platform.bk_devops.constants import PipelineBuildStatus
+from paasng.infras.bk_ci import entities
+from paasng.infras.bk_ci.constants import PipelineBuildStatus
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.executors import (
-    K8sBuildProcessExecutor,
+    DefaultBuildProcessExecutor,
     PipelineBuildProcessExecutor,
 )
 from paasng.platform.engine.handlers import attach_all_phases
-from paasng.platform.engine.utils.output import ConsoleStream
+from paasng.platform.engine.utils.output import NullStream
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestK8sBuildProcessExecutor:
+class TestDefaultBuildProcessExecutor:
     def test_create_and_bind_build_instance(self, bk_deployment_full, build_proc):
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
-        bpe = K8sBuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
+        bpe = DefaultBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
         build_instance = bpe.create_and_bind_build_instance(dict(procfile=["sth"], image=""))
         assert str(build_proc.build_id) == str(build_instance.uuid), "绑定 build instance 失败"
         assert build_instance.owner == bk_deployment_full.operator, "build instance 绑定 owner 异常"
@@ -48,7 +48,7 @@ class TestK8sBuildProcessExecutor:
     def test_execute(self, bk_deployment_full, build_proc):
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
-        bpe = K8sBuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
+        bpe = DefaultBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
         # TODO: Too much mocks, both tests and codes need refactor
         with mock.patch(
             "paasng.platform.engine.deploy.bg_build.executors.K8sBuildProcessExecutor.start_slugbuilder"
@@ -63,14 +63,12 @@ class StubPipelineController:
     def __init__(self, *args, **kwargs):
         pass
 
-    def start_build(self, pipeline: definitions.Pipeline, start_params: Dict[str, str]) -> definitions.PipelineBuild:
-        return definitions.PipelineBuild(
-            projectId=pipeline.projectId, pipelineId=pipeline.pipelineId, buildId="b-123456"
-        )
+    def start_build(self, pipeline: entities.Pipeline, start_params: Dict[str, str]) -> entities.PipelineBuild:
+        return entities.PipelineBuild(projectId=pipeline.projectId, pipelineId=pipeline.pipelineId, buildId="b-123456")
 
-    def retrieve_build_status(self, build: definitions.PipelineBuild) -> definitions.PipelineBuildStatus:
+    def retrieve_build_status(self, build: entities.PipelineBuild) -> entities.PipelineBuildStatus:
         cur_timestamp = int(time.time())
-        return definitions.PipelineBuildStatus(
+        return entities.PipelineBuildStatus(
             buildId=build.buildId,
             startTime=cur_timestamp - 1,
             endTime=cur_timestamp,
@@ -81,14 +79,14 @@ class StubPipelineController:
             executeTime=1,
         )
 
-    def retrieve_full_log(self, build: definitions.PipelineBuild) -> definitions.PipelineLogModel:
+    def retrieve_full_log(self, build: entities.PipelineBuild) -> entities.PipelineLogModel:
         cur_timestamp = int(time.time())
-        return definitions.PipelineLogModel(
+        return entities.PipelineLogModel(
             buildId=build.buildId,
             finished=True,
             hasMore=False,
             logs=[
-                definitions.PipelineLogLine(
+                entities.PipelineLogLine(
                     lineNo=idx,
                     timestamp=cur_timestamp + idx,
                     message=f"this is message {idx}",
@@ -104,14 +102,14 @@ class StubPipelineController:
         )
 
 
-class TestDevopsBuildProcessExecutor:
+class TestPipelineBuildProcessExecutor:
     def test_execute(self, bk_deployment_full, build_proc):
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
         with mock.patch(
             "paasng.platform.engine.deploy.bg_build.executors.PipelineController", new=StubPipelineController
         ):
-            bpe = PipelineBuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
+            bpe = PipelineBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
             bpe.execute(
                 {
                     "image": "busybox:latest",

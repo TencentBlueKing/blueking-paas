@@ -49,7 +49,7 @@ def i18n(cls_or_languages: SerializerType) -> SerializerType:
 
 
 def i18n(
-    cls_or_languages: Optional[Union[Optional[List[str]], SerializerType]] = None
+    cls_or_languages: Optional[Union[Optional[List[str]], SerializerType]] = None,
 ) -> Union[SerializerType, Callable[[SerializerType], SerializerType]]:
     """`i18n` decorator will extend those fields wrapped by `I18NField` in the serializer."""
     languages = [lang[0] for lang in settings.LANGUAGES]

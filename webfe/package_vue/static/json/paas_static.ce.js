@@ -282,7 +282,7 @@ export const PLATFORM_CONFIG = {
         BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks',
 
         // 蓝盾流水线构建
-        DEVOPS_PIPELINE_CNB: DOCS_URL_PREFIX + '/topics/paas/devops_pipeline_cnb',
+        BK_CI_PIPELINE_BUILD: DOCS_URL_PREFIX + '/topics/paas/bk_ci_pipeline_build',
     },
 
     CONFIG: {

@@ -29,10 +29,10 @@
             </bk-form-item>
             <bk-form-item
               :label="`${$t('蓝盾流水线构建')}：`"
-              v-if="curAppInfo.feature?.DEVOPS_PIPELINE_CNB"
+              v-if="curAppInfo.feature?.BK_CI_PIPELINE_BUILD"
             >
               <span class="form-text">
-                {{ mirrorData.use_devops_pipeline ? $t('已启用') : $t('未启用') }}
+                {{ mirrorData.use_bk_ci_pipeline ? $t('已启用') : $t('未启用') }}
               </span>
             </bk-form-item>
             <!-- 蓝鲸 Buildpack -->
@@ -121,11 +121,11 @@
             </bk-form-item>
             <bk-form-item
               :label="$t('蓝盾流水线构建')"
-              :property="'use_devops_pipeline'"
-              v-if="curAppInfo.feature?.DEVOPS_PIPELINE_CNB"
+              :property="'use_bk_ci_pipeline'"
+              v-if="curAppInfo.feature?.BK_CI_PIPELINE_BUILD"
             >
               <bk-switcher
-                v-model="mirrorData.use_devops_pipeline"
+                v-model="mirrorData.use_bk_ci_pipeline"
                 theme="primary"
                 size="small"
               />
@@ -133,7 +133,7 @@
                 <bk-icon type="info-circle" />
                 {{ $t('支持从工蜂、Github 等平台拉取依赖，启用后需要调整代码添加凭证') }} <a
                   target="_blank"
-                  :href="GLOBAL.DOC.DEVOPS_PIPELINE_CNB"
+                  :href="GLOBAL.DOC.BK_CI_PIPELINE_BUILD"
                 > {{ $t('查看使用指南') }} </a>
               </span>
             </bk-form-item>
@@ -298,7 +298,7 @@ const defaultMirrorData = {
     with_commit_id: false,
   },
   docker_build_args: {},
-  use_devops_pipeline: false,
+  use_bk_ci_pipeline: false,
 };
 
 export default {

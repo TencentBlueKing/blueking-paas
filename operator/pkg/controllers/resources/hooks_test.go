@@ -103,10 +103,10 @@ var _ = Describe("HookUtils", func() {
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(0))
 			// 容器资源配额
 			hookRes := hook.Pod.Spec.Containers[0].Resources
-			Expect(hookRes.Limits.Cpu().String()).To(Equal(config.Global.GetProcDefaultCpuLimit()))
+			Expect(hookRes.Limits.Cpu().String()).To(Equal(config.Global.GetProcDefaultCpuLimits()))
 			Expect(
 				hookRes.Limits.Memory().String(),
-			).To(Equal(config.Global.GetProcDefaultMemLimit()))
+			).To(Equal(config.Global.GetProcDefaultMemLimits()))
 
 			// 镜像拉取密钥
 			Expect(

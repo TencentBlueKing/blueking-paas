@@ -24,10 +24,8 @@ type ProjectConfigReader interface {
 	// Process related methods
 	GetMaxProcesses() int32
 	GetProcMaxReplicas() int32
-	GetProcDefaultCpuLimit() string
-	GetProcDefaultMemLimit() string
-	GetProcDefaultCpuRequest() string
-	GetProcDefaultMemRequest() string
+	GetProcDefaultCpuLimits() string
+	GetProcDefaultMemLimits() string
 
 	// Platform related methods
 	GetIngressClassName() string
@@ -46,20 +44,12 @@ func (d defaultConfig) GetProcMaxReplicas() int32 {
 	return 5
 }
 
-func (d defaultConfig) GetProcDefaultCpuLimit() string {
+func (d defaultConfig) GetProcDefaultCpuLimits() string {
 	return "4"
 }
 
-func (d defaultConfig) GetProcDefaultMemLimit() string {
+func (d defaultConfig) GetProcDefaultMemLimits() string {
 	return "1Gi"
-}
-
-func (d defaultConfig) GetProcDefaultCpuRequest() string {
-	return ""
-}
-
-func (d defaultConfig) GetProcDefaultMemRequest() string {
-	return ""
 }
 
 func (d defaultConfig) GetIngressClassName() string {

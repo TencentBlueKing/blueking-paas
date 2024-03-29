@@ -54,25 +54,16 @@ type PaaSAnalysisConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
-// ResLimitsConfig contains bkapp resource limits
-type ResLimitsConfig struct {
-	// ProcDefaultCPULimit is process's default cpu quota
-	ProcDefaultCPULimit string `json:"procDefaultCPULimit"`
+// ResLimitConfig contains bkapp resource limit
+type ResLimitConfig struct {
+	// ProcDefaultCPULimits is process's default cpu quota
+	ProcDefaultCPULimits string `json:"procDefaultCPULimits"`
 
-	// ProcDefaultMemLimit is process's default memory quota
-	ProcDefaultMemLimit string `json:"procDefaultMemLimit"`
+	// ProcDefaultMemLimits is process's default memory quota
+	ProcDefaultMemLimits string `json:"procDefaultMemLimits"`
 
 	// MaxReplicas is single instance max replica num
 	MaxReplicas int32 `json:"maxReplicas"`
-}
-
-// ResRequestsConfig contains bkapp resource requests
-type ResRequestsConfig struct {
-	// ProcDefaultCPURequest is process's default cpu request
-	ProcDefaultCPURequest string `json:"procDefaultCPURequest"`
-
-	// ProcDefaultMemRequest is process's default memory request
-	ProcDefaultMemRequest string `json:"procDefaultMemRequest"`
 }
 
 // AutoscalingConfig contains the config for autoscaling
@@ -93,8 +84,7 @@ type ProjectConfig struct {
 
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
-	ResLimits     ResLimitsConfig     `json:"resLimits"`
-	ResRequests   ResRequestsConfig   `json:"resRequests"`
+	ResLimit      ResLimitConfig      `json:"resLimit"`
 	Autoscaling   AutoscalingConfig   `json:"autoscaling"`
 	MaxProcesses  int32               `json:"maxProcesses"`
 }
@@ -112,13 +102,9 @@ func NewProjectConfig() *ProjectConfig {
 	}
 
 	// 资源预设默认值
-	conf.ResLimits.ProcDefaultCPULimit = "4000m"
-	conf.ResLimits.ProcDefaultMemLimit = "1024Mi"
-	conf.ResLimits.MaxReplicas = 5
-
-	// 资源请求默认值
-	conf.ResRequests.ProcDefaultMemRequest = ""
-	conf.ResRequests.ProcDefaultCPURequest = ""
+	conf.ResLimit.ProcDefaultCPULimits = "4000m"
+	conf.ResLimit.ProcDefaultMemLimits = "1024Mi"
+	conf.ResLimit.MaxReplicas = 5
 
 	conf.MaxProcesses = 8
 
@@ -138,27 +124,17 @@ func (p *ProjectConfig) GetMaxProcesses() int32 {
 
 // GetProcMaxReplicas returns the max replicas of a process
 func (p *ProjectConfig) GetProcMaxReplicas() int32 {
-	return p.ResLimits.MaxReplicas
+	return p.ResLimit.MaxReplicas
 }
 
-// GetProcDefaultCpuLimit returns the default cpu limit of a process
-func (p *ProjectConfig) GetProcDefaultCpuLimit() string {
-	return p.ResLimits.ProcDefaultCPULimit
+// GetProcDefaultCpuLimits returns the default cpu limits of a process
+func (p *ProjectConfig) GetProcDefaultCpuLimits() string {
+	return p.ResLimit.ProcDefaultCPULimits
 }
 
-// GetProcDefaultMemLimit returns the default memory limit of a process
-func (p *ProjectConfig) GetProcDefaultMemLimit() string {
-	return p.ResLimits.ProcDefaultMemLimit
-}
-
-// GetProcDefaultCpuRequest returns the default cpu request of a process
-func (p *ProjectConfig) GetProcDefaultCpuRequest() string {
-	return p.ResRequests.ProcDefaultCPURequest
-}
-
-// GetProcDefaultMemRequest returns the default cpu limit of a process
-func (p *ProjectConfig) GetProcDefaultMemRequest() string {
-	return p.ResRequests.ProcDefaultMemRequest
+// GetProcDefaultMemLimits returns the default memory limits of a process
+func (p *ProjectConfig) GetProcDefaultMemLimits() string {
+	return p.ResLimit.ProcDefaultMemLimits
 }
 
 // GetIngressClassName returns the ingress class name

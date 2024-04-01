@@ -252,3 +252,12 @@ export const VERSION_NUMBER_TYPE = {
   minor: '次版本',
   patch: '修正版本',
 };
+
+/**
+ * 持久存储容量映射
+ */
+export const PERSISTENT_STORAGE_SIZE_MAP = {
+  '1Gi': '1GB',
+  '2Gi': '2GB',
+  '4Gi': '4GB',
+};

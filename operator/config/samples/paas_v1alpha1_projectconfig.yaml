@@ -18,10 +18,13 @@ platformConfig:
   sentryDSN: ""
   ## when there are multiple ingress controllers in your cluster, setting the ingressClassName is necessary.
   ingressClassName: ""
-resLimitConfig:
+resLimitsConfig:
   procDefaultCPULimits: "500m"
   procDefaultMemLimits: "256Mi"
   maxReplicas: 5
+resRequestsConfig:
+  procDefaultCPURequest: ""
+  procDefaultMemRequest: ""
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume
 ## when the Manager ends. This requires the binary to immediately end when the

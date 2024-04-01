@@ -145,3 +145,20 @@ class TestCNativeProcController:
         # Turn off the autoscaling
         CNativeProcController(bk_stag_env).scale("web", False, None)
         assert BkAppProcScaler(bk_stag_env).get_autoscaling("web") is None
+
+    @pytest.mark.usefixtures("_deploy_stag_env")
+    def test_scale_down_to_module_target_replicas(self, bk_stag_env, web_proc_factory):
+        """测试 scale down 目标副本数与模块目标副本数( ModuleProcessSpec.target_replicas ) 一致时, 会成功 scale down"""
+        web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web")
+        module_target_replicas = proc_spec.target_replicas
+        assert proc_spec.get_target_replicas(bk_stag_env.environment) == module_target_replicas
+
+        # Scale up process
+        CNativeProcController(bk_stag_env).scale("web", False, module_target_replicas + 1)
+        assert proc_spec.get_target_replicas(bk_stag_env.environment) == module_target_replicas + 1
+
+        # Scale down process
+        CNativeProcController(bk_stag_env).scale("web", False, module_target_replicas)
+        assert proc_spec.get_target_replicas(bk_stag_env.environment) == module_target_replicas

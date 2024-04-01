@@ -64,7 +64,7 @@ export default {
   },
   async created() {
     // 服务发现
-    await this.getServiceDiscoveryData();
+    this.getServiceDiscoveryData();
     this.getDomainResolutionData();
   },
   methods: {
@@ -72,11 +72,7 @@ export default {
     async getServiceDiscoveryData() {
       try {
         const res = await this.$store.dispatch('deploy/getServiceDiscoveryData', { appCode: this.appCode });
-        if (res.bk_saas.length) {
-          this.serviceData.list = res.bk_saas.map(v => ({ key: v.bk_app_code, value: v.module_name }));
-        } else {
-          this.serviceData.list = [];
-        }
+        this.serviceData.list = res.bk_saas.map(v => ({ key: v.bk_app_code, value: v.module_name }));
         // 服务发现表单数据
         this.serviceFormData = res.bk_saas || [];
       } catch (error) {
@@ -89,26 +85,16 @@ export default {
     async getDomainResolutionData() {
       try {
         const res = await this.$store.dispatch('deploy/getDomainResolutionData', { appCode: this.appCode });
-        if (res.host_aliases.length) {
-          this.dnsRuleData.list = res.host_aliases.map(v => ({ key: v.ip, value: v.hostnames }));
-          // 域名解析规则表单数据
-          this.domainRuleDFormData = res.host_aliases;
-        } else {
-          this.dnsRuleData.list = [];
-          this.domainRuleDFormData = [];
-        }
-        if (res.nameservers.length) {
-          this.dnsServeData.list = res.nameservers;
-          // DNS服务器表单数据
-          this.dnsServeFormData = res.nameservers;
-        } else {
-          this.dnsServeData.list = [];
-          this.dnsServeFormData = [];
-        }
+        this.dnsRuleData.list = res.host_aliases.map(v => ({ key: v.ip, value: v.hostnames }));
+        // 域名解析规则表单数据
+        this.domainRuleDFormData = res.host_aliases || [];
+        this.dnsServeData.list = res.nameservers || [];
+        // DNS服务器表单数据
+        this.dnsServeFormData = res.nameservers || [];
       } catch (error) {
         // 404 无数据, 数据重置
         this.dnsRuleData.list = [];
-        this.serviceData.list = [];
+        this.dnsServeData.list = [];
         this.domainRuleDFormData = [];
         this.dnsServeFormData = [];
       } finally {

@@ -98,6 +98,7 @@
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
           class="variable-table-cls mt20"
+          @sort-change="handleSortChange"
         >
           <!-- 新建环境变量 -->
           <template slot="append" v-if="!isPageEdit">
@@ -111,8 +112,9 @@
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
-            :sortable="!isPageEdit"
+            :sortable="isPageEdit ? false : 'custom'"
             :show-overflow-tooltip="true"
+            prop="key"
           >
             <template slot-scope="{ row, $index }">
               <div
@@ -238,10 +240,10 @@
 
           <bk-table-column
             :label="$t('操作')"
-            width="100"
+            width="120"
             class-name="table-colum-module-cls"
           >
-            <template slot-scope="{ $index, row }">
+            <template slot-scope="{ row }">
               <!-- 批量编辑 -->
               <div
                 v-if="isPageEdit"
@@ -249,17 +251,17 @@
               >
                 <i
                   class="icon paasng-icon paasng-plus-circle-shape"
-                  @click="handleEnvTableListData('add', $index)"
+                  @click="handleEnvTableListData('add', row)"
                 ></i>
                 <i
                   class="icon paasng-icon paasng-minus-circle-shape ml10"
-                  @click="handleEnvTableListData('reduce', $index)"
+                  @click="handleEnvTableListData('reduce', row)"
                 ></i>
               </div>
               <!-- 单个编辑 -->
               <div v-else>
                 <template v-if="!row.isEdit">
-                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleEdit($index)">
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleEdit(row)">
                     {{ $t('编辑') }}
                   </bk-button>
                   <bk-popconfirm
@@ -279,10 +281,10 @@
                   </bk-popconfirm>
                 </template>
                 <template v-else>
-                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleSave($index)">
+                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleSave(row)">
                     {{ $t('保存') }}
                   </bk-button>
-                  <bk-button :text="true" title="primary" @click="handleSingleCancel($index)">
+                  <bk-button :text="true" title="primary" @click="handleSingleCancel(row)">
                     {{ $t('取消') }}
                   </bk-button>
                 </template>
@@ -527,7 +529,7 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
@@ -624,7 +626,7 @@ export default {
         { value: 'stag', text: this.$t('预发布环境') },
         { value: 'prod', text: this.$t('生产环境') },
       ],
-      curSortKey: '-created',
+      curSortKey: '',
       exportDialog: {
         visiable: false,
         width: 480,
@@ -681,7 +683,7 @@ export default {
         this.envVarList.forEach((v) => {
           this.$set(v, 'isEdit', false);
         });
-        this.envLocalVarList = _.cloneDeep(this.envVarList);
+        this.envLocalVarList = cloneDeep(this.envVarList);
         this.handleFilterEnv(this.activeEnvValue);
       }, (errRes) => {
         const errorMsg = errRes.message;
@@ -757,7 +759,7 @@ export default {
         if (this.envVarList[i]?.description) {
           await this.$refs[`envRefDescription${i}`].validate();
         }
-        const data = _.cloneDeep(this.envVarList[i]);
+        const data = cloneDeep(this.envVarList[i]);
         // 单条新建编辑操作
         type === 'add' ? this.createdEnvVariable(data, i) : this.updateEnvVariable(data, i);
       } catch (error) {
@@ -821,7 +823,7 @@ export default {
     // 保存
     async save() {
       try {
-        const params = _.cloneDeep(this.envVarList);
+        const params = cloneDeep(this.envVarList);
 
         // 保存环境变，无需传递 is_global
         params.forEach((v) => {
@@ -843,7 +845,7 @@ export default {
           this.$set(v, 'isEdit', false);
         });
         // 更新本地数据
-        this.envLocalVarList = _.cloneDeep(this.envVarList);
+        this.envLocalVarList = cloneDeep(this.envVarList);
         this.$store.commit('cloudApi/updatePageEdit', false);
       } catch (error) {
         const errorMsg = error.message;
@@ -963,7 +965,8 @@ export default {
     },
 
     // 新增一条数据
-    handleEnvTableListData(v, i) {
+    handleEnvTableListData(v, row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       if (v === 'add') {
         this.envVarList.push({
           key: '',
@@ -973,7 +976,7 @@ export default {
           isEdit: true,
         });
       } else {
-        this.envVarList.splice(i, 1);
+        this.envVarList.splice(index, 1);
       }
     },
 
@@ -1240,7 +1243,7 @@ export default {
 
     // 取消
     handleCancel() {
-      this.envVarList = _.cloneDeep(this.envLocalVarList);
+      this.envVarList = cloneDeep(this.envLocalVarList);
       this.isBatchEdit = false;
     },
 
@@ -1274,7 +1277,8 @@ export default {
     },
 
     // 单个环境编辑
-    handleSingleEdit(index) {
+    handleSingleEdit(row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       this.envVarList[index].isEdit = true;
     },
 
@@ -1302,7 +1306,8 @@ export default {
     },
 
     // 单个环境编辑保存
-    handleSingleSave(index) {
+    handleSingleSave(row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       if (this.envVarList[index].isAdd) { // 新建
         this.singleValidate(index, 'add');
       } else { // 编辑
@@ -1317,7 +1322,7 @@ export default {
         this.envVarList.push({
           key: '',
           value: '',
-          environment_name: 'stag',
+          environment_name: this.activeEnvValue === 'all' ? 'stag' : this.activeEnvValue,
           description: '',
           isEdit: true,
           isAdd: true,
@@ -1326,7 +1331,8 @@ export default {
     },
 
     // 单个环境编辑取消
-    handleSingleCancel(index) {
+    handleSingleCancel(row) {
+      const index = this.envVarList.findIndex(v => v.key === row.key);
       this.envVarList[index].isEdit = false;
       // 添加数据未保存，点击取消直接删除
       if (!this.envLocalVarList[index]) {
@@ -1345,10 +1351,17 @@ export default {
       this.activeEnvValue = value;
       // 过滤
       if (value === 'all') {
-        this.envVarList = _.cloneDeep(this.envLocalVarList);
+        this.envVarList = cloneDeep(this.envLocalVarList);
         return;
       }
       this.envVarList = this.envLocalVarList.filter(v => v.environment_name === value);
+    },
+
+    handleSortChange({ order, prop }) {
+      if (prop === 'key') {
+        this.curSortKey = order === 'ascending' ? 'key' : '-key';
+        this.getEnvVarList();
+      }
     },
   },
 };

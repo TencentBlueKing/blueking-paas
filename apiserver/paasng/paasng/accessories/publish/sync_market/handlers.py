@@ -164,7 +164,7 @@ def on_product_create_or_updated(product: Product, **kwargs):
             sync_fields.extend(I18N_FIELDS_IN_CONSOLE)
             manager.sync_data(sync_fields)
         except Exception:
-            logger.exception("同步修改Product属性到桌面失败！")
+            logger.exception("同步修改 Product 属性到桌面失败！product: %s", product.code)
 
         # 同步开发者和运维人员名单
         sync_console_app_developers(application, session)
@@ -381,7 +381,7 @@ def market_config_update_handler(sender, instance: MarketConfig, created: bool, 
             manager = RemoteAppManager(product, session)
             manager.sync_data(sync_fileds)
         except Exception:
-            logger.exception("同步修改Product属性到桌面失败！")
+            logger.exception("同步修改 Product 属性到桌面失败！product: %s", product.code)
 
 
 @run_required_db_console_config
@@ -404,7 +404,7 @@ def sync_external_url_to_market(application: Application):
             # 精简版应用、独立域名应用、独立子域名应用均需要同步 external_url
             manager.sync_data(["external_url"])
         except Exception:
-            logger.exception("同步修改Product属性到桌面失败！")
+            logger.exception("同步修改 Product 属性到桌面失败！product: %s", product.code)
 
 
 @receiver(post_appenv_deploy)

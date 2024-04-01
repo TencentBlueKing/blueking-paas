@@ -18,7 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paasng.platform.mgrlegacy.models import MigrationProcess
+from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
+from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.utils.i18n.serializers import DjangoTranslatedCharField
 
 
@@ -126,3 +127,20 @@ class QueryMigrationAppSLZ(serializers.Serializer):
 
 class ApplicationMigrationInfoSLZ(serializers.Serializer):
     is_need_alert_migration_timeout = serializers.BooleanField(help_text="是否需要提醒迁移超时了")
+
+
+class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
+    error_msg = serializers.SerializerMethodField(help_text="错误信息")
+
+    class Meta:
+        model = CNativeMigrationProcess
+        fields = ("status", "error_msg", "created_at", "confirm_at")
+
+    def get_error_msg(self, obj: CNativeMigrationProcess) -> str:
+        if obj.status == CNativeMigrationStatus.MIGRATION_FAILED.value:
+            # 仅有一个有效的错误信息
+            return [m.error_msg for m in obj.details.migrations if m.error_msg][0]
+        elif obj.status == CNativeMigrationStatus.ROLLBACK_FAILED.value:
+            # 仅有一个有效的错误信息
+            return [m.error_msg for m in obj.details.rollbacks if m.error_msg][0]
+        return ""

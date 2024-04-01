@@ -16,23 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-
-
-class MigrationFailed(Exception):
-    pass
-
-
-class NotSupportError(Exception):
-    pass
-
-
-class PreCheckMigrationFailed(Exception):
-    """Pre-check migrate failed"""
-
-
-class BackupLegacyDataFailed(Exception):
-    """Backup legacy data failed"""
-
-
-class RollbackFailed(Exception):
-    """rollback failed"""

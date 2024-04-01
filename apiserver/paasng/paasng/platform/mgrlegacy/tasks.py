@@ -21,8 +21,9 @@ import logging
 from celery import shared_task
 
 from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.platform.mgrlegacy import migrate
 from paasng.platform.mgrlegacy.constants import MigrationStatus
-from paasng.platform.mgrlegacy.models import MigrationProcess
+from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 
 logger = logging.getLogger(__name__)
 
@@ -90,3 +91,17 @@ def confirm_with_rollback_on_failure(migration_process_id):
             migration_process.set_status(MigrationStatus.DONE_MIGRATION.value)
         else:
             migration_process.set_confirmed_state()
+
+
+@shared_task
+def migrate_default_to_cnative(migration_process_id):
+    migrate.migrate_default_to_cnative(migration_process=CNativeMigrationProcess.objects.get(id=migration_process_id))
+
+
+@shared_task
+def rollback_cnative_to_default(rollback_process_id, last_migration_process_id):
+    migrate.rollback_cnative_to_default(
+        rollback_process=CNativeMigrationProcess.objects.get(id=rollback_process_id),
+        last_migration_process=CNativeMigrationProcess.objects.get(id=last_migration_process_id),
+    )
+    # TODO 增加下线云原生应用的集群操作

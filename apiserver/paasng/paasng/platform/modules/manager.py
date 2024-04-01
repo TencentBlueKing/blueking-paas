@@ -34,9 +34,7 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
-from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
-from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -265,18 +263,6 @@ class ModuleInitializer:
         # 只有云原生应用需要在创建模块后初始化 AppModelResource
         if self.application.type != ApplicationType.CLOUD_NATIVE:
             return
-
-        # 即使没有指定 bkapp_spec，也会默认初始化 AppModelResource，
-        # 但这仅仅是占位数据，应当在第一次部署时候被源码库中的配置替换
-        # TODO 删除创建 AppModelResource 占位用途?
-        res_name = generate_bkapp_name(self.module)
-        resource = create_app_resource(name=res_name, image="stub")
-        AppModelResource.objects.create_from_resource(
-            region=self.application.region,
-            application_id=self.application.id,
-            module_id=self.module.id,
-            resource=resource,
-        )
 
         if not bkapp_spec or bkapp_spec["build_config"].build_method != RuntimeType.CUSTOM_IMAGE:
             return

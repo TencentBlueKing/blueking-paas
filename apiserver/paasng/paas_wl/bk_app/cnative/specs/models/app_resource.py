@@ -72,6 +72,15 @@ class AppModelResourceManager(models.Manager):
         )
         return model_resource
 
+    def get_or_create_by_app_module(self, app: Application, module: Module) -> "AppModelResource":
+        try:
+            return self.get(module_id=module.id)
+        except AppModelResource.DoesNotExist:
+            # 原逻辑: 创建云原生应用的模块时, 会创建 AppModelResource 用于占位
+            res_name = generate_bkapp_name(module)
+            resource = create_app_resource(res_name, image="stub")
+            return self.create_from_resource(app.region, app.id, module.id, resource)
+
 
 class AppModelResource(TimestampedModel):
     """Cloud-native Application's Model Resource"""

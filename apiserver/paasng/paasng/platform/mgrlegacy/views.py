@@ -20,7 +20,8 @@ import datetime
 import logging
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone as django_timezone
 from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
@@ -29,8 +30,10 @@ from rest_framework.response import Response
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.accounts.permissions.application import check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
-from paasng.platform.mgrlegacy.constants import MigrationStatus
+from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
@@ -39,9 +42,10 @@ except ImportError:
 
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
-from paasng.platform.mgrlegacy.models import MigrationProcess
+from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.platform.mgrlegacy.serializers import (
     ApplicationMigrationInfoSLZ,
+    CNativeMigrationProcessSLZ,
     LegacyAppSLZ,
     LegacyAppStateSLZ,
     MigrationProcessConfirmSLZ,
@@ -52,7 +56,9 @@ from paasng.platform.mgrlegacy.serializers import (
 )
 from paasng.platform.mgrlegacy.tasks import (
     confirm_with_rollback_on_failure,
+    migrate_default_to_cnative,
     migrate_with_rollback_on_failure,
+    rollback_cnative_to_default,
     rollback_migration_process,
 )
 from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms
@@ -230,3 +236,88 @@ class ApplicationMigrationInfoAPIView(viewsets.ViewSet):
         data = {"is_need_alert_migration_timeout": is_need_alert_migration_timeout}
         slz = ApplicationMigrationInfoSLZ(instance=data)
         return Response(data=slz.data)
+
+
+class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """
+    普通应用向云原生应用迁移的相关接口
+    """
+
+    def migrate(self, request, code):
+        """迁移普通应用到云原生应用
+
+        NOTE: 仅迁移应用在平台侧的配置数据
+        """
+        app = self.get_application()
+
+        if app.type == ApplicationType.CLOUD_NATIVE.value:
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用已是云原生应用，无法迁移")
+
+        if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
+
+        migration_process = CNativeMigrationProcess.create_migration_process(app, request.user.pk)
+        process_id = migration_process.id
+        migrate_default_to_cnative.delay(process_id)
+
+        return Response({"process_id": process_id}, status=status.HTTP_201_CREATED)
+
+    def rollback(self, request, code):
+        """回滚云原生应用到普通应用
+
+        NOTE: 只有上一次迁移成功的应用才可能需要回滚
+        """
+        app = self.get_application()
+
+        if app.type != ApplicationType.CLOUD_NATIVE.value:
+            raise error_codes.APP_ROLLBACK_FAILED.f("该应用非云原生应用，无法回滚")
+
+        if last_process := CNativeMigrationProcess.objects.filter(app=app).last():
+            if last_process.is_active():
+                raise error_codes.APP_ROLLBACK_FAILED.f("该应用正在变更中, 无法回滚")
+            if last_process.status != CNativeMigrationStatus.MIGRATION_SUCCEEDED.value:
+                raise error_codes.APP_ROLLBACK_FAILED.f(f"该应用处于 {last_process.status} 状态, 无法回滚")
+        else:
+            raise error_codes.APP_ROLLBACK_FAILED.f("该应用未进行过迁移, 无法回滚")
+
+        rollback_process = CNativeMigrationProcess.create_rollback_process(app, request.user.pk)
+        process_id = rollback_process.id
+        rollback_cnative_to_default.delay(process_id, last_process.id)
+
+        return Response({"process_id": process_id}, status=status.HTTP_201_CREATED)
+
+    def get_process_by_id(self, request, process_id):
+        """根据迁移记录 id 获取迁移记录"""
+        process = get_object_or_404(CNativeMigrationProcess, id=process_id)
+        slz = CNativeMigrationProcessSLZ(process)
+        return Response(data=slz.data)
+
+    def get_latest_process(self, request, code):
+        """获取最新的迁移记录"""
+        app = self.get_application()
+
+        try:
+            process = CNativeMigrationProcess.objects.filter(app=app).latest()
+        except CNativeMigrationProcess.DoesNotExist:
+            raise Http404("no process found")
+        else:
+            slz = CNativeMigrationProcessSLZ(process)
+            return Response(data=slz.data)
+
+    def list_processes(self, request, code):
+        """获取当前应用的所有迁移记录"""
+        app = self.get_application()
+        processes = CNativeMigrationProcess.objects.filter(app=app)
+        slz = CNativeMigrationProcessSLZ(processes, many=True)
+        return Response(data=slz.data)
+
+    def confirm(self, request, process_id):
+        """确认迁移"""
+        process = get_object_or_404(CNativeMigrationProcess, id=process_id)
+
+        if process.status != CNativeMigrationStatus.MIGRATION_SUCCEEDED.value:
+            raise error_codes.APP_MIGRATION_CONFIRMED_FAILED.f("该应用记录未表明应用已成功迁移, 无法确认")
+
+        process.confirm()
+        # TODO 增加清理普通应用的集群操作
+        return Response(status=status.HTTP_204_NO_CONTENT)

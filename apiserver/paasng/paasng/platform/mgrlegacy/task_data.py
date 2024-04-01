@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List, Type
+
 from .app_migrations.basic import BaseObjectMigration, MainInfoMigration
 from .app_migrations.egress_gateway import EgressGatewayMigration
 from .app_migrations.envs import DefaultEnvironmentVariableMigration
@@ -24,6 +26,10 @@ from .app_migrations.product import ProductMigration
 from .app_migrations.service_mysql import MysqlServiceMigration
 from .app_migrations.service_rabbitmq import RabbitMQServiceMigration
 from .app_migrations.sourcectl import SourceControlMigration
+from .cnative_migrations.application import ApplicationTypeMigrator
+from .cnative_migrations.base import CNativeBaseMigrator
+from .cnative_migrations.build_config import BuildConfigMigrator
+from .cnative_migrations.cluster import BoundClusterMigrator
 
 # 应用迁移步骤
 MIGRATION_CLASSES_LIST = [
@@ -44,4 +50,11 @@ THIRD_APP_MIGRATION_CLASSES_LIST = [
     MainInfoMigration,
     ProductMigration,
     MarketMigration,
+]
+
+# 普通应用迁移至云原生应用步骤类
+MIGRATE_TO_CNATIVE_CLASSES_LIST: List[Type[CNativeBaseMigrator]] = [
+    ApplicationTypeMigrator,
+    BoundClusterMigrator,
+    BuildConfigMigrator,
 ]

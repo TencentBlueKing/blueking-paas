@@ -16,23 +16,25 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from pathlib import Path
+from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import ValidationError
 
-import pytest
+from paasng.platform.declarative.application.resources import ApplicationDesc
+from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.sourcectl.models import SPStat
 
-from paasng.platform.smart_app.utils.prepared import PreparedSourcePackage
 
+def get_app_description(stat: SPStat) -> ApplicationDesc:
+    """Get application description object from source package stats
 
-class TestPreparedSourcePackage:
-    @pytest.mark.parametrize(
-        ("file_path", "expected_basename"),
-        [
-            ("/var/本地日志3.log", "3.log"),
-            ("/var/app$3-.tar.gz", "app3.tar.gz"),
-        ],
-    )
-    def test_generate_storage_path(self, file_path, expected_basename, rf, bk_user):
-        request = rf.get("/")
-        request.user = bk_user
-        path = PreparedSourcePackage(request).generate_storage_path(file_path)
-        assert Path(path).name.endswith(expected_basename)
+    :raises: ValidationError when meta info is invalid or empty
+    """
+    if not stat.meta_info:
+        raise ValidationError(_("找不到任何有效的应用描述信息"))
+
+    try:
+        desc = get_desc_handler(stat.meta_info).app_desc
+    except DescriptionValidationError as e:
+        raise ValidationError(str(e))
+    return desc

@@ -50,9 +50,17 @@ class BaseImageConf(BaseModel):
     tag: Optional[str] = Field(default=settings.SMART_IMAGE_TAG, description="基础镜像的标签")
 
 
+class CNBBaseImageConf(BaseModel):
+    """S-Mart 基础镜像配置"""
+
+    name: Optional[str] = Field(default=settings.SMART_CNB_IMAGE_NAME, description="云原生基础镜像的名称")
+    tag: Optional[str] = Field(default=settings.SMART_CNB_IMAGE_TAG, description="云原生基础镜像的标签")
+
+
 class Settings(BaseModel):
     registry: RegistryConf = Field(default_factory=RegistryConf)
     base_image: BaseImageConf = Field(default_factory=BaseImageConf)
+    cnb_base_image: CNBBaseImageConf = Field(default_factory=CNBBaseImageConf)
 
     def reload(self):
         for field_name, field in self.__fields__.items():

@@ -1,0 +1,41 @@
+spec_version: 2
+app_version: "1.0"
+app:
+  region: "default"
+  bk_app_code: "TO_BE_CHANGED"
+  bk_app_name: "TO_BE_CHANGED"
+  market:
+    introduction: "A demo application"
+    description: "Description of a demo application"
+    display_options:
+      width: 800
+      height: 600
+modules:
+  main:
+    language: Python
+    is_default: True
+    source_dir: main
+    services:
+      - name: mysql
+    env_variables:
+      - key: BKAPP_DEMO
+        value: demo_value
+        description: "Demo env variable"
+    processes:
+      web:
+        command: gunicorn wsgi -b :5000 --access-logfile - --error-logfile -
+        replicas: 1
+  sidecar:
+    language: Python
+    source_dir: main
+    # is_default: False
+    services:
+      - name: mysql
+    env_variables:
+      - key: BKAPP_DEMO
+        value: demo_value
+        description: "Demo env variable"
+    processes:
+      web:
+        command: gunicorn wsgi -b :5000 --access-logfile - --error-logfile -
+        replicas: 1

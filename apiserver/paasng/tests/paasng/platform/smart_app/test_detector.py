@@ -21,13 +21,13 @@ import yaml
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.declarative.constants import AppSpecVersion
-from paasng.platform.smart_app.detector import (
+from paasng.platform.smart_app.utils.app_desc import get_app_description
+from paasng.platform.smart_app.utils.detector import (
     AppYamlDetector,
     DetectResult,
     ManifestDetector,
     SourcePackageStatReader,
 )
-from paasng.platform.smart_app.utils import get_app_description
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML
 
 pytestmark = pytest.mark.django_db

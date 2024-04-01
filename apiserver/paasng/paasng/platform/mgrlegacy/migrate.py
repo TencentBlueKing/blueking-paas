@@ -234,12 +234,11 @@ def _rollback_cnative(process: CNativeMigrationProcess, last_migration_process: 
     :param process: 用于记录当前的回滚过程详情
     :param last_migration_process: 最近一次迁移过程, 其中的 legacy_data 和 details.migrations 用于回滚
     """
-    performed_migrator_classes: List[Type[CNativeBaseMigrator]] = []
-    performed_migrations = last_migration_process.details.migrations
 
-    for result in performed_migrations:
-        if result.is_finished and result.is_succeeded:
-            performed_migrator_classes.append(CNativeBaseMigrator.get_class(result.migrator_name))
+    performed_migrations = last_migration_process.details.migrations
+    performed_migrator_classes: List[Type[CNativeBaseMigrator]] = [
+        CNativeBaseMigrator.get_class(result.migrator_name) for result in performed_migrations if result.is_finished
+    ]
 
     for migrator_cls in performed_migrator_classes:
         try:

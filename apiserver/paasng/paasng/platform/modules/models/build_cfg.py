@@ -82,4 +82,8 @@ class BuildConfig(UuidAuditedModel):
 
     # Image Tag Policy
     tag_options: ImageTagOptions = ImageTagOptionsField(default=ImageTagOptions)
+
+    # 高级选项
+    use_bk_ci_pipeline = models.BooleanField(help_text="是否使用蓝盾流水线构建", default=False)
+
     objects = BuildConfigManager()

@@ -296,10 +296,10 @@ class DeploymentCoordinator:
 class DeployStep:
     """Base class for a deploy step"""
 
-    PHASE_TYPE: Optional[DeployPhaseTypes] = None
+    phase_type: Optional[DeployPhaseTypes] = None
 
     def __init__(self, deployment: Deployment, stream: Optional[DeployStream] = None):
-        if not self.PHASE_TYPE:
+        if not self.phase_type:
             raise NotImplementedError("phase type should be specific firstly")
 
         self.deployment = deployment
@@ -310,9 +310,9 @@ class DeployStep:
         self.version_info = deployment.version_info
 
         self.stream = stream or get_default_stream(deployment)
-        self.state_mgr = DeploymentStateMgr(deployment=self.deployment, stream=self.stream, phase_type=self.PHASE_TYPE)
+        self.state_mgr = DeploymentStateMgr(deployment=self.deployment, stream=self.stream, phase_type=self.phase_type)
 
-        self.phase = self.deployment.deployphase_set.get(type=self.PHASE_TYPE)
+        self.phase = self.deployment.deployphase_set.get(type=self.phase_type)
         self.procedure = partial(DeployProcedure, self.stream, self.deployment, phase=self.phase)
         self.procedure_force_phase = partial(DeployProcedure, self.stream, self.deployment)
 

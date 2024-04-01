@@ -120,3 +120,8 @@ def get_build_args(module: "Module") -> str:
         # 避免 value 有 "," 导致字符分割是异常, 将内容进行 base64 编码
         return ",".join([base64.b64encode(f"{k}={v}".encode()).decode() for k, v in build_args.items()])
     return ""
+
+
+def get_use_bk_ci_pipeline(module: "Module") -> bool:
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    return cfg.use_bk_ci_pipeline

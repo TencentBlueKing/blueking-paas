@@ -722,8 +722,8 @@ export default {
   '说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。': 'Note: Only after authorization is granted to a user, the latter can pull the relevant information of the local plug-in, and use the plug-in function in the product by accessing the API of the plug-in registered to the BlueKing Gateway.',
   除了创建时注明的: '除了创建时注明的',
   '之外，插件默认不授权给任何其他使用方。': 'In addition, the plugin is not licensed to any other users by default.',
-  鉴权信息: 'Authentication information',
-  '在调用蓝鲸云 API 时需要提供应用鉴权信息。使用方法请参考：': 'APP authentication information needs to be provided when calling BlueKing cloud API. Please refer to:',
+  密钥信息: 'Secret Information',
+  '在调用蓝鲸云 API 时需要提供应用密钥信息。使用方法请参考：': 'Application Secret information is required when calling the BlueKing Cloud API. For usage, please refer to:',
   别名: 'Alias',
   验证查看: 'Verify view',
   点击查看: 'Click to view',
@@ -2577,4 +2577,6 @@ export default {
   '请注意：部署前置命令停用后，将不能再启用': 'Please note: Once the pre-deployment commands are disabled, they cannot be re-enabled.',
   '只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。': 'Only if it is authorized to a user, the latter can pull the relevant information of the local plug-in and use the plug-in function in the product by accessing the API registered by the plug-in to BK gateway. In addition to the "plug-in user" specified at the time of creation, the plug-in is not licensed to any other user by default.',
   预览: 'Preview',
+  禁用成功: 'Disabled successfully',
+  启用成功: 'Enabled successfully',
 };

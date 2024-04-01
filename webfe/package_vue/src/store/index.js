@@ -49,6 +49,7 @@ import pluginMembers from './modules/plugin-members';
 import imageManage from './modules/image-manage';
 import observability from './modules/observability';
 import persistentStorage from './modules/persistent-storage';
+import authenticationInfo from './modules/authentication-info';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -425,6 +426,7 @@ export default new Vuex.Store({
     imageManage,
     observability,
     persistentStorage,
+    authenticationInfo,
   },
   state,
   getters,

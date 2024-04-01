@@ -182,7 +182,7 @@
             {{ $t('删除应用') }}
           </bk-button>
           <p>
-            <i class="paasng-icon paasng-paas-remind-fill"></i>
+            <i class="paasng-icon paasng-paas-remind-fill mr5"></i>
             {{ $t('只有管理员才能删除应用，请在删除前与应用其他成员沟通') }}
           </p>
         </div>

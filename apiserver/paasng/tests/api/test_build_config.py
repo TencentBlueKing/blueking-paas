@@ -153,6 +153,7 @@ class TestModuleBuildConfigViewSet:
             "image_repository": "example.com/foo",
             "image_credential_name": "foo",
             "build_method": "custom_image",
+            "use_bk_ci_pipeline": False,
         }
 
     def test_modify_bp(

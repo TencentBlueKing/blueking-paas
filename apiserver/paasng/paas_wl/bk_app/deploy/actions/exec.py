@@ -46,7 +46,7 @@ class AppCommandExecutor:
 
     kmodel: CommandKModel = field(init=False)
     command_handler: CommandHandler = field(init=False)
-    STEP_NAME: str = field(init=False)
+    step_name: str = field(init=False)
 
     def __attrs_post_init__(self):
         if not self.command.build:

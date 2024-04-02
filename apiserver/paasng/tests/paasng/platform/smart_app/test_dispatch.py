@@ -24,7 +24,11 @@ import pytest
 import requests
 
 from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
-from paasng.platform.smart_app.utils.dispatch import dispatch_cnb_image_to_registry, dispatch_slug_image_to_registry
+from paasng.platform.smart_app.utils.dispatch import (
+    bksmart_settings,
+    dispatch_cnb_image_to_registry,
+    dispatch_slug_image_to_registry,
+)
 from paasng.platform.smart_app.utils.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, uncompress_directory
 from tests.paasng.platform.smart_app.utils import MockAdapter, MockResponse
@@ -36,7 +40,8 @@ pytestmark = pytest.mark.django_db
 def mock_adapter():
     session = requests.session()
     adapter = MockAdapter()
-    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    session.mount("https://", adapter)
     with mock.patch("requests.sessions.Session") as mocked_session:
         mocked_session.return_value = session
         yield adapter
@@ -96,19 +101,18 @@ def test_dispatch_slug_image_to_registry(
     slug_runner_image = mgr.get_slugrunner_image_info()
     module_image = mgr.get_image_info()
 
-    upload_url = "http://upload-endpoint/"
-    commit_url = "http://commit-endpoint/"
+    base_url = bksmart_settings.registry.get_client().api_base_url
+    upload_url = "https://upload-endpoint/"
+    commit_url = "https://commit-endpoint/"
 
     # Step 1: 获取镜像镜像信息
-    slugrunner_manifest_url = (
-        f"http://{slug_runner_image.domain}/v2/{slug_runner_image.name}/manifests/{slug_runner_image.tag}"
-    )
+    slugrunner_manifest_url = f"{base_url}/v2/{slug_runner_image.name}/manifests/{slug_runner_image.tag}"
     mock_adapter.register(slugrunner_manifest_url, MockResponse(body=image_manifest_content))
-    slugrunner_config_url = f"http://{slug_runner_image.domain}/v2/{slug_runner_image.name}/blobs/example-config"
+    slugrunner_config_url = f"{base_url}/v2/{slug_runner_image.name}/blobs/example-config"
     mock_adapter.register(slugrunner_config_url, MockResponse(body=image_config_content))
 
     # Step 2: 初始化上传
-    init_upload_url = f"http://{module_image.domain}/v2/{module_image.name}/blobs/uploads/"
+    init_upload_url = f"{base_url}/v2/{module_image.name}/blobs/uploads/"
     mock_adapter.register(
         init_upload_url, MockResponse(status_code=202, headers={"docker-upload-uuid": "abc", "location": upload_url})
     )
@@ -133,7 +137,7 @@ def test_dispatch_slug_image_to_registry(
 
     # 由于有时间字段, 镜像 id 每个单测都会改变
     # Step 7 & 8: 上传合并后的配置文件 & 验证配置文件已上传成功
-    app_image_config_url = f"http://{module_image.domain}/v2/{module_image.name}/blobs/sha256:.*"
+    app_image_config_url = f"{base_url}/v2/{module_image.name}/blobs/sha256:.*"
     mock_adapter.register(
         app_image_config_url,
         MockResponse(headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"}),
@@ -145,7 +149,7 @@ def test_dispatch_slug_image_to_registry(
 
     # Step 10: 验证镜像清单已上传成功
     # 1.0 是 app_desc 里的 app_version
-    app_image_manifest_url = f"http://{module_image.domain}/v2/{module_image.name}/manifests/1.0"
+    app_image_manifest_url = f"{base_url}/v2/{module_image.name}/manifests/1.0"
     mock_adapter.register(app_image_manifest_url, MockResponse(body=image_manifest_content))
 
     with generate_temp_dir() as tempdir:
@@ -179,19 +183,18 @@ def test_dispatch_cnb_image_to_registry(
     cnb_runner_image = mgr.get_cnb_runner_image_info()
     module_image = mgr.get_image_info()
 
-    upload_url = "http://upload-endpoint/"
-    commit_url = "http://commit-endpoint/"
+    base_url = bksmart_settings.registry.get_client().api_base_url
+    upload_url = "https://upload-endpoint/"
+    commit_url = "https://commit-endpoint/"
 
     # Step 1: 获取镜像镜像信息
-    runner_manifest_url = (
-        f"http://{cnb_runner_image.domain}/v2/{cnb_runner_image.name}/manifests/{cnb_runner_image.tag}"
-    )
+    runner_manifest_url = f"{base_url}/v2/{cnb_runner_image.name}/manifests/{cnb_runner_image.tag}"
     mock_adapter.register(runner_manifest_url, MockResponse(body=image_manifest_content))
-    runner_config_url = f"http://{cnb_runner_image.domain}/v2/{cnb_runner_image.name}/blobs/example-config"
+    runner_config_url = f"{base_url}/v2/{cnb_runner_image.name}/blobs/example-config"
     mock_adapter.register(runner_config_url, MockResponse(body=image_config_content))
 
     # Step 2: 初始化上传
-    init_upload_url = f"http://{module_image.domain}/v2/{module_image.name}/blobs/uploads/"
+    init_upload_url = f"{base_url}/v2/{module_image.name}/blobs/uploads/"
     mock_adapter.register(
         init_upload_url, MockResponse(status_code=202, headers={"docker-upload-uuid": "abc", "location": upload_url})
     )
@@ -212,7 +215,7 @@ def test_dispatch_cnb_image_to_registry(
 
     # 由于有时间字段, 镜像 id 每个单测都会改变
     # Step 4 & 5: 上传合并后的配置文件 & 验证配置文件已上传成功
-    app_image_config_url = f"http://{module_image.domain}/v2/{module_image.name}/blobs/sha256:.*"
+    app_image_config_url = f"{base_url}/v2/{module_image.name}/blobs/sha256:.*"
     mock_adapter.register(
         app_image_config_url,
         MockResponse(headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"}),
@@ -224,7 +227,7 @@ def test_dispatch_cnb_image_to_registry(
 
     # Step 7: 验证镜像清单已上传成功
     # 1.0 是 app_desc 里的 app_version
-    app_image_manifest_url = f"http://{module_image.domain}/v2/{module_image.name}/manifests/1.0"
+    app_image_manifest_url = f"{base_url}/v2/{module_image.name}/manifests/1.0"
     mock_adapter.register(app_image_manifest_url, MockResponse(body=image_manifest_content))
 
     with generate_temp_dir() as tempdir:

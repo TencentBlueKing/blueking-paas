@@ -81,7 +81,7 @@ class ZipPath(PathLike):
 
     def __init__(self, source: zipfile.ZipFile, path: Union[str, PurePath]):
         self.source = source
-        self.path = PurePath(path).relative_to("..")
+        self.path = PurePath(path).relative_to(".")
 
     def __truediv__(self, other: str):
         return ZipPath(self.source, self.path / other)

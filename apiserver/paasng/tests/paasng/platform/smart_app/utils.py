@@ -51,6 +51,9 @@ class MockAdapter(BaseAdapter):
         resp.raw = io.BytesIO(mock_response.body)
         return resp
 
+    def close(self):
+        """Nothing bo close, just implement BaseAdapter interface"""
+
     def register(self, url, response: MockResponse):
         self.responses[url] = response
 

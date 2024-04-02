@@ -96,7 +96,7 @@ class SourcePackageStatReader:
         - the raw meta info of source package, `{}` is returned by default
         :raises: ValidationError when meta info is not valid YAML
         """
-        relative_path = "../"
+        relative_path = "./"
 
         with self.accessor(self.path) as archive:
             try:

@@ -254,7 +254,7 @@ class ModuleInitializer:
         for buildpack in planer.get_required_buildpacks(bp_stack_name=slugbuilder.name):
             binder.bind_buildpack(buildpack)
 
-    def initialize_app_model_resource(self, bkapp_spec: Optional[Dict] = None):
+    def initialize_app_model_resource(self, bkapp_spec: Dict[str, Any]):
         """
         Initialize the AppModelResource and import the bkapp_spec into the corresponding bkapp models
 
@@ -357,11 +357,6 @@ def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):
         with _humanize_exception(_("绑定初始运行环境失败，请稍候再试"), "bind default runtime"):
             module_initializer.bind_default_runtime()
 
-    if module.application.type == ApplicationType.CLOUD_NATIVE:
-        # Cloud-native applications require the initialization of application model resources
-        with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
-            module_initializer.initialize_app_model_resource()
-
     on_module_initialized.send(sender=initialize_smart_module, module=module)
     return ModuleInitResult(source_init_result={})
 
@@ -428,8 +423,9 @@ def initialize_module(
     with _humanize_exception("bind_default_services", _("绑定初始增强服务失败，请稍候再试")):
         module_initializer.bind_default_services()
 
-    with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
-        module_initializer.initialize_app_model_resource(bkapp_spec)
+    if bkapp_spec:
+        with _humanize_exception("initialize_app_model_resource", _("初始化应用模型失败, 请稍候再试")):
+            module_initializer.initialize_app_model_resource(bkapp_spec)
 
     on_module_initialized.send(sender=initialize_module, module=module)
     return ModuleInitResult(source_init_result=source_init_result)

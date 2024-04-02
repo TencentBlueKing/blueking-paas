@@ -19,8 +19,8 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
-from paasng.platform.bkapp_model.importer.env_vars import import_declarative_env_vars, import_env_vars
-from paasng.platform.bkapp_model.models import DeclarativeEnvironVar
+from paasng.platform.bkapp_model.importer.env_vars import import_env_vars, import_preset_env_vars
+from paasng.platform.bkapp_model.models import PresetEnvVariable
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ConfigVar
 
@@ -44,17 +44,17 @@ class Test__import_env_vars:
 class Test__import_declarative_env_vars:
     def test_integrated(self, bk_module):
         G(
-            DeclarativeEnvironVar,
+            PresetEnvVariable,
             module=bk_module,
             environment_name=ConfigVarEnvName.GLOBAL,
             key="KEY_EXISTING",
         )
         global_env_vars = [EnvVar(name="KEY1", value="foo"), EnvVar(name="KEY2", value="foo")]
         overlay_env_vars = [EnvVarOverlay(envName="stag", name="KEY3", value="foo")]
-        ret = import_declarative_env_vars(bk_module, global_env_vars, overlay_env_vars)
+        ret = import_preset_env_vars(bk_module, global_env_vars, overlay_env_vars)
 
-        assert DeclarativeEnvironVar.objects.count() == 3
-        assert DeclarativeEnvironVar.objects.filter(environment_name=ConfigVarEnvName.GLOBAL).count() == 2
+        assert PresetEnvVariable.objects.count() == 3
+        assert PresetEnvVariable.objects.filter(environment_name=ConfigVarEnvName.GLOBAL).count() == 2
         assert ret.updated_num == 0
         assert ret.created_num == 3
         assert ret.deleted_num == 1

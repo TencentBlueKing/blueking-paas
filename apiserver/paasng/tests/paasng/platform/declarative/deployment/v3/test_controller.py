@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
-from paasng.platform.bkapp_model.models import DeclarativeEnvironVar, ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, PresetEnvVariable
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
@@ -119,7 +119,7 @@ class TestEnvVariablesField:
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert len(desc_obj.get_env_variables()) == 3
 
-    def test_declarative_environ_vars(self, bk_module, bk_deployment):
+    def test_preset_environ_vars(self, bk_module, bk_deployment):
         json_data = builder.make_module(
             module_name="test",
             module_spec={
@@ -135,17 +135,16 @@ class TestEnvVariablesField:
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        assert DeclarativeEnvironVar.objects.filter(module=bk_module).count() == 4
+        assert PresetEnvVariable.objects.filter(module=bk_module).count() == 4
         assert (
-            DeclarativeEnvironVar.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.GLOBAL).count()
-            == 2
+            PresetEnvVariable.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.GLOBAL).count() == 2
         )
         assert (
-            DeclarativeEnvironVar.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.STAG).get().value
+            PresetEnvVariable.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.STAG).get().value
             == "stag"
         )
         assert (
-            DeclarativeEnvironVar.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.PROD).get().value
+            PresetEnvVariable.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.PROD).get().value
             == "prod"
         )
 

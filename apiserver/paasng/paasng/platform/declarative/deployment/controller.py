@@ -138,7 +138,7 @@ class DeploymentDeclarativeController:
                 sync_hooks(module, hooks)
                 self.deployment.update_fields(hooks=hooks)
         # 导入描述性环境变量
-        env_vars.import_declarative_env_vars(module, *get_declarative_env_vars(desc.spec))
+        env_vars.import_preset_env_vars(module, *get_declarative_env_vars(desc.spec))
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)

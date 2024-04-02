@@ -75,9 +75,9 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
 from paasng.platform.bkapp_model.models import (
-    DeclarativeEnvironVar,
     DomainResolution,
     ModuleProcessSpec,
+    PresetEnvVariable,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -327,40 +327,38 @@ class EnvVarsManifestConstructor(ManifestConstructor):
     """Construct the env variables part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        g_declarative_vars = [
+        g_preset_vars = [
             EnvVar(name=var.key, value=var.value, environment_name=ConfigVarEnvName.GLOBAL)
-            for var in DeclarativeEnvironVar.objects.filter(
+            for var in PresetEnvVariable.objects.filter(
                 module=module, environment_name=ConfigVarEnvName.GLOBAL
             ).order_by("key")
         ]
-        g_ui_vars = [
+        g_user_vars = [
             EnvVar(name=var.key, value=var.value)
             for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by(
                 "key"
             )
         ]
-        model_res.spec.configuration.env = merge_env_vars(
-            g_declarative_vars, g_ui_vars, strategy=MergeStrategy.OVERRIDE
-        )
+        model_res.spec.configuration.env = merge_env_vars(g_preset_vars, g_user_vars, strategy=MergeStrategy.OVERRIDE)
 
         # The environment specific variables
         overlay = model_res.spec.envOverlay
         if not overlay:
             overlay = model_res.spec.envOverlay = EnvOverlay()
-        scoped_declarative_vars = [
+        scoped_preset_vars = [
             EnvVarOverlay(envName=var.environment_name, name=var.key, value=var.value)
-            for var in DeclarativeEnvironVar.objects.filter(module=module)
+            for var in PresetEnvVariable.objects.filter(module=module)
             .exclude(environment_name=ConfigVarEnvName.GLOBAL)
             .order_by("key")
         ]
-        scoped_ui_vars = [
+        scoped_user_vars = [
             EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.value)
             for var in ConfigVar.objects.filter(module=module)
             .exclude(is_global=True)
             .order_by("environment__environment", "key")
         ]
         overlay.envVariables = merge_env_vars_overlay(
-            scoped_declarative_vars, scoped_ui_vars, strategy=MergeStrategy.OVERRIDE
+            scoped_preset_vars, scoped_user_vars, strategy=MergeStrategy.OVERRIDE
         )
 
 

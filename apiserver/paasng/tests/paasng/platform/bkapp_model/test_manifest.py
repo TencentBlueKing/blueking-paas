@@ -66,9 +66,9 @@ from paasng.platform.bkapp_model.manifest import (
     get_manifest,
 )
 from paasng.platform.bkapp_model.models import (
-    DeclarativeEnvironVar,
     DomainResolution,
     ModuleProcessSpec,
+    PresetEnvVariable,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -161,10 +161,10 @@ class TestEnvVarsManifestConstructor:
             EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
         ]
 
-    def test_declarative(self, bk_module, bk_stag_env, blank_resource):
-        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
-        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
-        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+    def test_preset(self, bk_module, bk_stag_env, blank_resource):
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
 
         EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
         assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="1")]
@@ -176,9 +176,9 @@ class TestEnvVarsManifestConstructor:
     def test_override_declarative(self, bk_module, bk_stag_env, blank_resource):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG", value="2")
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG_XX", value="2")
-        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
-        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
-        G(DeclarativeEnvironVar, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
         # case: 是否覆盖与顺序无关.
         ConfigVar.objects.create(
             module=bk_module,

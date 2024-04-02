@@ -263,8 +263,8 @@ class DomainResolution(AuditedModel):
     host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")
 
 
-class DeclarativeEnvironVar(AuditedModel):
-    """应用描述文件中定义的环境变量"""
+class PresetEnvVariable(AuditedModel):
+    """应用描述文件中预定义的环境变量"""
 
     module = models.ForeignKey(Module, on_delete=models.CASCADE)
     environment_name = models.CharField(

@@ -19,7 +19,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
-from paasng.platform.bkapp_model.models import DeclarativeEnvironVar
+from paasng.platform.bkapp_model.models import PresetEnvVariable
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.managers import ConfigVarManager
@@ -70,7 +70,7 @@ def import_env_vars(
     return CommonImportResult(created_num=ret.create_num, updated_num=ret.overwrited_num, deleted_num=deleted_num)
 
 
-def import_declarative_env_vars(
+def import_preset_env_vars(
     module: Module, global_env_vars: List[EnvVar], overlay_env_vars: List[EnvVarOverlay]
 ) -> CommonImportResult:
     """Import environment variables from app_desc.yaml, existing data that is not in the input list may be removed.
@@ -79,9 +79,9 @@ def import_declarative_env_vars(
     :param overlay_env_vars: The environment-specified variables.
     :return: A result object.
     """
-    config_vars: Dict[str, Dict[str, DeclarativeEnvironVar]] = defaultdict(dict)
+    config_vars: Dict[str, Dict[str, PresetEnvVariable]] = defaultdict(dict)
     for var in global_env_vars:
-        config_vars[ConfigVarEnvName.GLOBAL][var.name] = DeclarativeEnvironVar(
+        config_vars[ConfigVarEnvName.GLOBAL][var.name] = PresetEnvVariable(
             module=module,
             environment_name=ConfigVarEnvName.GLOBAL,
             key=var.name,
@@ -89,7 +89,7 @@ def import_declarative_env_vars(
         )
 
     for overlay_var in overlay_env_vars:
-        config_vars[ConfigVarEnvName(overlay_var.envName)][overlay_var.name] = DeclarativeEnvironVar(
+        config_vars[ConfigVarEnvName(overlay_var.envName)][overlay_var.name] = PresetEnvVariable(
             module=module,
             environment_name=ConfigVarEnvName(overlay_var.envName),
             key=overlay_var.name,
@@ -99,7 +99,7 @@ def import_declarative_env_vars(
     ret = CommonImportResult()
     for env_name, env_config_vars in config_vars.items():
         for var in env_config_vars.values():
-            _, created = DeclarativeEnvironVar.objects.update_or_create(
+            _, created = PresetEnvVariable.objects.update_or_create(
                 module=var.module,
                 environment_name=var.environment_name,
                 key=var.key,
@@ -109,7 +109,7 @@ def import_declarative_env_vars(
             )
             ret.incr_by_created_flag(created)
         deleted_num, _ = (
-            DeclarativeEnvironVar.objects.filter(module=module, environment_name=env_name)
+            PresetEnvVariable.objects.filter(module=module, environment_name=env_name)
             .exclude(key__in=env_config_vars.keys())
             .delete()
         )

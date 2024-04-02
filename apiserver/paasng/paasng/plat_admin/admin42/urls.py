@@ -231,12 +231,12 @@ urlpatterns = [
     # 平台管理-应用运营评估
     url(
         r"^applications/evaluations/$",
-        applications.ApplicationOperationEvaluationView.as_view({"get": "get"}),
+        applications.ApplicationOperationEvaluationView.as_view(),
         name="admin.applications.operation_evaluation.list",
     ),
     url(
         r"^applications/evaluations/export/$",
-        applications.ApplicationOperationEvaluationView.as_view({"get": "export"}),
+        applications.ApplicationOperationReportExportView.as_view({"get": "export"}),
         name="admin.applications.operation_evaluation.export",
     ),
     # 应用详情-概览页

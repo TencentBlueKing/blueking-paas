@@ -18,10 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import List
 
+import rest_framework.request
 import xlwt
 from django.db.models import Q
 from django.http import HttpResponse
-from django.views.generic import TemplateView
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -45,7 +45,7 @@ from paasng.plat_admin.admin42.serializers.application import (
     BindEnvClusterSLZ,
 )
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
-from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView, PaginationMixin
+from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
@@ -124,10 +124,8 @@ class ApplicationListView(GenericTemplateView):
         return kwargs
 
 
-class ApplicationOperationEvaluationView(TemplateView, PaginationMixin, viewsets.GenericViewSet):
-    name = "应用运营评估"
-    template_name = "admin42/applications/list_evaluations.html"
-    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+class ApplicationOperationReportMixin:
+    request: rest_framework.request.Request
 
     def get_queryset(self):
         slz = AppOperationReportListInputSLZ(data=self.request.query_params)
@@ -146,6 +144,12 @@ class ApplicationOperationEvaluationView(TemplateView, PaginationMixin, viewsets
 
         return queryset
 
+
+class ApplicationOperationEvaluationView(ApplicationOperationReportMixin, GenericTemplateView):
+    name = "应用运营评估"
+    template_name = "admin42/applications/list_evaluations.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
     def get_context_data(self, **kwargs):
         self.paginator.default_limit = 10
 
@@ -155,6 +159,10 @@ class ApplicationOperationEvaluationView(TemplateView, PaginationMixin, viewsets
         ).data
         kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
+
+
+class ApplicationOperationReportExportView(ApplicationOperationReportMixin, viewsets.GenericViewSet):
+    """导出应用运营报告"""
 
     def export(self, request, *args, **kwargs):
         work_book = xlwt.Workbook(encoding="utf-8")

@@ -163,8 +163,10 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
     image_tarball = (workplace / module.name).with_suffix(".tgz")
     with generate_temp_dir() as image_tmp_folder:
         uncompress_directory(source_path=image_tarball, target_path=image_tmp_folder)
-        # 解析 manifest 文件，获取镜像信息, 逐层上传
-        tarball_manifest = DockerExportedImageManifest(**json.loads((image_tmp_folder / "manifest.json").read_text()))
+        # 解析 manifest.json 文件的第一个镜像, 逐层上传
+        tarball_manifest = DockerExportedImageManifest(
+            **json.loads((image_tmp_folder / "manifest.json").read_text())[0]
+        )
 
         client = bksmart_settings.registry.get_client()
         image_ref = ImageRef.from_image(

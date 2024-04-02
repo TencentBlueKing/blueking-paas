@@ -137,7 +137,6 @@ class SourcePackageStatReader:
         """Try extracting version from meta info"""
         if not meta_info:
             return None
-
         try:
             desc = get_desc_handler(meta_info).app_desc
         except DescriptionValidationError as e:

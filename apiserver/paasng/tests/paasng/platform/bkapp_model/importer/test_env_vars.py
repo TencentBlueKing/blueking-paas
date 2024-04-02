@@ -41,7 +41,7 @@ class Test__import_env_vars:
         assert ret.deleted_num == 1
 
 
-class Test__import_declarative_env_vars:
+class Test__import_preset_env_vars:
     def test_integrated(self, bk_module):
         G(
             PresetEnvVariable,

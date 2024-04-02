@@ -77,7 +77,7 @@ def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
     }
 
 
-def get_declarative_env_vars(spec: bk_app.BkAppSpec) -> Tuple[List[bk_app.EnvVar], List[bk_app.EnvVarOverlay]]:
+def get_preset_env_vars(spec: bk_app.BkAppSpec) -> Tuple[List[bk_app.EnvVar], List[bk_app.EnvVarOverlay]]:
     # 应用描述文件中的环境变量不展示到产品页面
     overlay_env_vars: List[bk_app.EnvVarOverlay] = []
     if spec.envOverlay:
@@ -138,7 +138,7 @@ class DeploymentDeclarativeController:
                 sync_hooks(module, hooks)
                 self.deployment.update_fields(hooks=hooks)
         # 导入描述性环境变量
-        env_vars.import_preset_env_vars(module, *get_declarative_env_vars(desc.spec))
+        env_vars.import_preset_env_vars(module, *get_preset_env_vars(desc.spec))
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)

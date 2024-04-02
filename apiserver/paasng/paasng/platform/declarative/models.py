@@ -155,7 +155,7 @@ class DeploymentDescription(TimestampedModel):
     def get_env_variables(self) -> List[Dict]:
         """从 spec 提供 dict 格式的环境变量给 EnvVariablesReader, 用于普通应用部署流程.
 
-        [deprecated] should use DeclarativeEnvironVar directly
+        [deprecated] should use PresetEnvVariable directly
         > 存量的旧版本数据使用 `env_variables` 字段
         """
         if self.spec is not None:

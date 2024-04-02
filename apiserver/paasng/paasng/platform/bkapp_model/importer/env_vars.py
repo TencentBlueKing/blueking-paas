@@ -19,10 +19,10 @@ from collections import defaultdict
 from typing import Dict, List
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
-from paasng.platform.bkapp_model.models import PresetEnvVariable
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.managers import ConfigVarManager
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.models import Module
 
 from .entities import CommonImportResult

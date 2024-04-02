@@ -68,13 +68,13 @@ from paasng.platform.bkapp_model.manifest import (
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
-    PresetEnvVariable,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
 from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string

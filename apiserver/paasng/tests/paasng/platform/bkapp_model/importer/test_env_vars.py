@@ -20,9 +20,9 @@ from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paasng.platform.bkapp_model.importer.env_vars import import_env_vars, import_preset_env_vars
-from paasng.platform.bkapp_model.models import PresetEnvVariable
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 
 pytestmark = pytest.mark.django_db
 

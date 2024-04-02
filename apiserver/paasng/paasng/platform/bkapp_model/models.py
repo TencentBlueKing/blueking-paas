@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 import shlex
 from typing import TYPE_CHECKING, List, Optional
 
-from blue_krill.models.fields import EncryptField
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -27,7 +26,7 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.bk_app.cnative.specs.crd.bk_app import HostAlias, SvcDiscEntryBkSaaS
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.platform.applications.models import Application
-from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, ImagePullPolicy
+from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.platform.engine.models.deployment import AutoscalingConfig
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
@@ -261,17 +260,3 @@ class DomainResolution(AuditedModel):
 
     nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
     host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")
-
-
-class PresetEnvVariable(AuditedModel):
-    """应用描述文件中预定义的环境变量"""
-
-    module = models.ForeignKey(Module, on_delete=models.CASCADE)
-    environment_name = models.CharField(
-        verbose_name=_("环境名称"), choices=ConfigVarEnvName.get_choices(), max_length=16
-    )
-    key = models.CharField(max_length=128, null=False)
-    value = EncryptField(null=False)
-
-    class Meta:
-        unique_together = ("module", "environment_name", "key")

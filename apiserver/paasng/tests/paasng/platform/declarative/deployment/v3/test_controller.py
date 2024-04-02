@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, PresetEnvVariable
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
@@ -32,6 +32,7 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.declarative.serializers import validate_desc
 from paasng.platform.engine.constants import ConfigVarEnvName
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813

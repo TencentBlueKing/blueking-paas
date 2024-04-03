@@ -26,7 +26,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paas_wl.core.env import env_is_running
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance import serializers as slzs
 from paas_wl.workloads.networking.entrance.addrs import URL, Address
@@ -178,10 +177,9 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
             all_entrances.append(module_entrances)
             for env in module.envs.all():
                 env_entrances = module_entrances["envs"].setdefault(env.environment, [])
-                is_running = env_is_running(env)
                 addresses = []
                 # 每个环境仅展示一个内置访问地址
-                _, builtin_address = get_builtin_addr_preferred(env)
+                is_running, builtin_address = get_builtin_addr_preferred(env)
                 if builtin_address:
                     addresses.append(builtin_address)
                 else:

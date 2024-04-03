@@ -28,7 +28,7 @@ from paasng.platform.modules.models import Module
 class PresetEnvVariable(AuditedModel):
     """应用描述文件中预定义的环境变量"""
 
-    module = models.ForeignKey(Module, on_delete=models.CASCADE)
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=ConfigVarEnvName.get_choices(), max_length=16
     )

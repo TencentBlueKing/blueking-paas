@@ -164,6 +164,8 @@ class ApplicationOperationEvaluationView(ApplicationOperationReportMixin, Generi
 class ApplicationOperationReportExportView(ApplicationOperationReportMixin, viewsets.GenericViewSet):
     """导出应用运营报告"""
 
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
     def export(self, request, *args, **kwargs):
         work_book = xlwt.Workbook(encoding="utf-8")
         work_sheet = work_book.add_sheet("reports")

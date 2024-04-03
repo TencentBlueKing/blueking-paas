@@ -26,12 +26,6 @@ pytestmark = pytest.mark.django_db
 
 
 class Test__import_build:
-    def test_v1alpha1(self, bk_module):
-        import_build(bk_module, BkAppBuildConfig(image="example.com/foo:latest", imageCredentialsName="foo"))
-        cfg = BuildConfig.objects.get(module=bk_module)
-        assert cfg.image_repository == "example.com/foo"
-        assert cfg.image_credential_name == "foo"
-
     def test_v1alpha2(self, bk_module):
         import_build(bk_module, BkAppBuildConfig(image="example.com/foo", imageCredentialsName="foo"))
         cfg = BuildConfig.objects.get(module=bk_module)

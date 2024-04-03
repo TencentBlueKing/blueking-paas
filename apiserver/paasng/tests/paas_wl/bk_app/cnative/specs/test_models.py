@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
@@ -82,13 +81,6 @@ class TestCreateAppResource:
 
     def test_v1alpha2(self, bkapp_manifest):
         obj = create_app_resource("foo-app", "nginx:latest")
-        assert obj.dict() == bkapp_manifest
-
-    def test_v1alpha1(self, bkapp_manifest):
-        obj = create_app_resource("foo-app", "nginx:latest", api_version=ApiVersion.V1ALPHA1)
-        bkapp_manifest["apiVersion"] = "paas.bk.tencent.com/v1alpha1"
-        bkapp_manifest["spec"]["build"] = None
-        bkapp_manifest["spec"]["processes"][0]["image"] = "nginx:latest"
         assert obj.dict() == bkapp_manifest
 
 

@@ -184,11 +184,6 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         }
         # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
         allow_multiple_image = len(images - {image_repository}) >= 1
-        image_credential_names = (
-            {}
-            if not allow_multiple_image
-            else {proc_spec["name"]: proc_spec.get("image_credential_name", None) for proc_spec in proc_specs}
-        )
 
         processes = [
             BkAppProcess(
@@ -204,7 +199,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         mgr = ModuleProcessSpecManager(module)
         # 更新进程配置
-        mgr.sync_from_bkapp(processes, image_credential_names)
+        mgr.sync_from_bkapp(processes)
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):

@@ -23,7 +23,6 @@ from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.constants import (
-    LEGACY_PROC_IMAGE_ANNO_KEY,
     ApiVersion,
     MountEnvName,
     ResQuotaPlan,
@@ -203,9 +202,10 @@ class TestBuiltinAnnotsManifestConstructor:
         BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
 
         annots = blank_resource.metadata.annotations
-        assert annots[
-            "bkapp.paas.bk.tencent.com/image-credentials"
-        ] == f"{generate_bkapp_name(bk_module)}--dockerconfigjson"
+        assert (
+            annots["bkapp.paas.bk.tencent.com/image-credentials"]
+            == f"{generate_bkapp_name(bk_module)}--dockerconfigjson"
+        )
         assert annots["bkapp.paas.bk.tencent.com/module-name"] == bk_module.name
         assert annots["bkapp.paas.bk.tencent.com/name"] == app.name
         assert annots["bkapp.paas.bk.tencent.com/region"] == app.region
@@ -266,7 +266,6 @@ class TestProcessesManifestConstructor:
     def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
         initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
-        assert LEGACY_PROC_IMAGE_ANNO_KEY not in blank_resource.metadata.annotations
         assert blank_resource.spec.dict(include={"processes", "envOverlay"}) == {
             "processes": [
                 {
@@ -318,20 +317,6 @@ class TestProcessesManifestConstructor:
             "maxReplicas": 2,
             "policy": "default",
         }
-
-    @pytest.fixture()
-    def v1alpha1_process_web(self, bk_module, process_web) -> ModuleProcessSpec:
-        process_web.image = "python:latest"
-        process_web.image_credential_name = "auto-generated"
-        process_web.save(update_fields=["image", "image_credential_name"])
-        return process_web
-
-    def test_v1alpha1(self, bk_module, blank_resource, v1alpha1_process_web):
-        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
-        assert (
-            blank_resource.metadata.annotations[LEGACY_PROC_IMAGE_ANNO_KEY]
-            == '{"web": {"image": "python:latest", "policy": "IfNotPresent"}}'
-        )
 
 
 class TestMountsManifestConstructor:

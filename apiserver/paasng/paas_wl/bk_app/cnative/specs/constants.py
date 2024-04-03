@@ -50,10 +50,6 @@ WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
 IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
 # 注解中存储数据统计站点ID的键名
 PA_SITE_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
-# LegacyProcImageAnnoKey, In API version "v1alpha1", every process can use a different image.
-# This behaviour was changed in "v1alpha2", but we still need to save the legacy images configs
-# in annotations to maintain backward compatibility.
-LEGACY_PROC_IMAGE_ANNO_KEY = "bkapp.paas.bk.tencent.com/legacy-proc-image-config"
 # LegacyProcResAnnoKey, In API version "v1alpha1", every process can specify the exact CPU and
 # memory resources. This behaviour was changed in "v1alpha2", but we still need to save the
 # legacy resource configs in annotations to maintain backward compatibility.

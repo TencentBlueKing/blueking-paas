@@ -222,10 +222,6 @@ def create_app_resource(
             ],
         ),
     )
-    # 兼容 v1alpha1 版本逻辑
-    if api_version == ApiVersion.V1ALPHA1:
-        obj.spec.build = None
-        obj.spec.processes[0].image = image
 
     return obj
 

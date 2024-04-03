@@ -52,22 +52,6 @@ class ImageParser:
                 image = bkapp.spec.build.image
             else:
                 raise ValueError(_("spec.build.image is missing"))
-        elif bkapp.apiVersion == ApiVersion.V1ALPHA1:
-            # 兼容 V1ALPHA1
-            # 优先使用 web 进程的镜像, 如无 web 进程, 则使用第一个进程的镜像
-            images = []
-            for proc in bkapp.spec.processes:
-                if proc.image:
-                    images.append(proc.image)
-                    if proc.name == "web":
-                        image = proc.image
-            if image == "":
-                image = images[0] if images else image
-            if len(images) > 1:
-                logger.warning(
-                    "multiple image are defined, "
-                    "only the image of the process named web or the first process's image will be used"
-                )
         else:
             NotImplementedError("unknown apiVersion: {}".format(bkapp.apiVersion))
 

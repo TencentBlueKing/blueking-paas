@@ -16,9 +16,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -60,14 +60,6 @@ def import_processes(module: Module, processes: List[BkAppProcess], annotations:
                 "policy": autoscaling.policy,
             }
 
-        # 兼容使用 v1alpha1 支持多镜像的场景
-        if process.image:
-            defaults["image"] = process.image
-        if process.imagePullPolicy:
-            defaults["image_pull_policy"] = process.imagePullPolicy
-        if image_credential_name := _extract_image_credential_name(process.name, annotations):
-            defaults["image_credential_name"] = image_credential_name
-
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
         ret.incr_by_created_flag(created)
         # Move out from the index
@@ -76,23 +68,3 @@ def import_processes(module: Module, processes: List[BkAppProcess], annotations:
     # Remove existing data that is not touched.
     ret.deleted_num, _ = ModuleProcessSpec.objects.filter(module=module, id__in=existing_index.values()).delete()
     return ret
-
-
-def _extract_image_credential_name(process_name: str, annotations: Dict) -> Optional[str]:
-    """extract image credential name from annotations(v1alpha1).
-
-    v1alpha1:
-        bkapp.paas.bk.tencent.com/image-credentials: true
-        bkapp.paas.bk.tencent.com/image-credentials.web: xxx # image credential name
-
-    v1alpha2:
-        bkapp.paas.bk.tencent.com/image-credentials: xxx--dockerconfigjson # image pull secret name
-    """
-    value = annotations.get(IMAGE_CREDENTIALS_REF_ANNO_KEY)
-    if not value:
-        return None
-
-    if value == "true":
-        return annotations.get(f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.{process_name}")
-
-    return None

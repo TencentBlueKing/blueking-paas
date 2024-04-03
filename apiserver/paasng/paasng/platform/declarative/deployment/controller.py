@@ -26,7 +26,7 @@ from django.db.transaction import atomic
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.importer import env_vars, import_manifest
+from paasng.platform.bkapp_model.importer import env_vars, import_manifest, svc_discovery
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
@@ -78,11 +78,20 @@ def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
 
 
 def get_preset_env_vars(spec: bk_app.BkAppSpec) -> Tuple[List[bk_app.EnvVar], List[bk_app.EnvVarOverlay]]:
-    # 应用描述文件中的环境变量不展示到产品页面
+    """从应用描述文件中提取预定义环境变量, 存储到 PresetEnvVariable 表中"""
     overlay_env_vars: List[bk_app.EnvVarOverlay] = []
     if spec.envOverlay:
         overlay_env_vars = spec.envOverlay.envVariables or []
     return spec.configuration.env, overlay_env_vars
+
+
+def get_svc_discovery(spec: bk_app.BkAppSpec) -> Optional[bk_app.SvcDiscConfig]:
+    """从应用描述文件中提取服务发现配置, 存储到 SvcDiscConfig 表中
+
+    NOTE: 仅用于普通应用, 让普通应用也可以通过 SvcDiscConfig 模型拿到服务发现配置的环境变量
+    (云原生应用在 import_manifest 已导入服务发现配置)
+    """
+    return spec.svcDiscovery
 
 
 class DeploymentDeclarativeController:
@@ -138,7 +147,11 @@ class DeploymentDeclarativeController:
             if hooks := deploy_desc.get_deploy_hooks():
                 sync_hooks(module, hooks)
                 self.deployment.update_fields(hooks=hooks)
-        # 导入描述性环境变量
+            # 导入服务发现配置
+            # Warning: SvcDiscConfig 是 Application 全局的, 多模块配置不一样时会互相覆盖(这与普通应用原来的行为不一致, 但目前暂无更好的解决方案)
+            if svc_disc := get_svc_discovery(spec=desc.spec):
+                svc_discovery.import_svc_discovery(module=module, svc_disc=svc_disc)
+        # 导入预定义环境变量
         env_vars.import_preset_env_vars(module, *get_preset_env_vars(desc.spec))
 
         if desc.bk_monitor:

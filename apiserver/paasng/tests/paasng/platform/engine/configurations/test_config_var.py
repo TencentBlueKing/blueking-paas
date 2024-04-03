@@ -105,7 +105,7 @@ class TestGetEnvVariables:
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
         with ctx as expected:
             AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
-            env_vars = get_env_variables(bk_stag_env, deployment=bk_deployment)
+            env_vars = get_env_variables(bk_stag_env)
             for key, value in expected.items():
                 assert key in env_vars
                 assert env_vars[key] == value
@@ -125,7 +125,7 @@ class TestGetEnvVariables:
         )
         fp = io.StringIO(yaml_content)
         AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
-        env_vars = get_env_variables(bk_stag_env, deployment=bk_deployment)
+        env_vars = get_env_variables(bk_stag_env)
         assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" in env_vars
 
 

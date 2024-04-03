@@ -58,7 +58,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
             update_image_runtime_config(deployment=self.deployment)
 
         with self.procedure("初始化指令执行环境"):
-            extra_envs = get_env_variables(self.engine_app.env, deployment=self.deployment)
+            extra_envs = get_env_variables(self.engine_app.env)
             command_id = exec_command(
                 self.engine_app.env,
                 command_template=CommandTemplate(

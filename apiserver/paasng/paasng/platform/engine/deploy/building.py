@@ -309,7 +309,7 @@ class ApplicationBuilder(BaseBuilder):
         blocking current process.
         """
         env = self.deployment.app_environment
-        extra_envs = get_env_variables(env, deployment=self.deployment)
+        extra_envs = get_env_variables(env)
 
         # get slugbuilder and buildpacks from engine_app
         build_info = SlugbuilderInfo.from_engine_app(env.get_engine_app())

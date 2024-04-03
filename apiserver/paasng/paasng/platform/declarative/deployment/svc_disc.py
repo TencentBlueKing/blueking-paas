@@ -31,28 +31,11 @@ from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.entrance.preallocated import get_exposed_url_type, get_preallocated_address
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.deployment.resources import BkSaaSItem
-from paasng.platform.declarative.models import DeploymentDescription
-from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
-
-
-@env_vars_providers.register_deploy
-def get_services_as_env_variables(deployment: Deployment) -> Dict[str, str]:
-    """Get env vars which were defined by deployment description file"""
-    try:
-        deploy_desc = DeploymentDescription.objects.get(deployment=deployment)
-    except DeploymentDescription.DoesNotExist:
-        return {}
-
-    svc_discovery = deploy_desc.get_svc_discovery()
-    if not svc_discovery:
-        return {}
-    return BkSaaSEnvVariableFactory(svc_discovery.bk_saas).make()
 
 
 class BkSaaSEnvVariableFactory:

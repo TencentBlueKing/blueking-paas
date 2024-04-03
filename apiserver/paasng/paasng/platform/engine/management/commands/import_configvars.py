@@ -24,9 +24,9 @@ import argparse
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.models.managers import ConfigVarManager
 from paasng.platform.engine.serializers import ConfigVarImportSLZ
-from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):

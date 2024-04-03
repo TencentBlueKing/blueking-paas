@@ -51,7 +51,7 @@ class BkAppReleaseMgr(DeployStep):
     """BkApp(CRD) Release Step, will schedule the Deployment/Ingress and so on by k8s operator.
     The k8s operator is deployed at app cluster"""
 
-    PHASE_TYPE = DeployPhaseTypes.RELEASE
+    phase_type = DeployPhaseTypes.RELEASE
 
     def start(self):
         build = Build.objects.get(pk=self.deployment.build_id)

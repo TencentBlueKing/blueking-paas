@@ -17,6 +17,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models.module import Module, set_source_obj_finder_func
+from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.models import (
     DockerRepository,
     GitRepository,
@@ -25,9 +28,6 @@ from paasng.platform.sourcectl.models import (
     SvnRepository,
 )
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.module import Module, set_source_obj_finder_func
-from paasng.platform.modules.specs import ModuleSpecs
 
 logger = logging.getLogger(__name__)
 

@@ -16,19 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
-from paasng.platform.engine.deploy.release.operator import BkAppReleaseMgr
-from paasng.platform.engine.models.deployment import Deployment
 
 
-def start_release_step(deployment_id: str):
-    """start a release process"""
-    deployment = Deployment.objects.get(pk=deployment_id)
-    application = deployment.app_environment.application
+class BkCIGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bk-ci's
+    API Gateway resource. It's a wrapper class of API SDK's original exceptions
+    """
 
-    if application.type == ApplicationType.CLOUD_NATIVE:
-        release_mgr = BkAppReleaseMgr.from_deployment_id(deployment_id)
-    else:
-        release_mgr = ApplicationPreReleaseExecutor.from_deployment_id(deployment_id)
-    release_mgr.start()
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class BkCIApiError(BkCIGatewayServiceError):
+    """When calling the bk-devops api, bk-devops returns an error message,
+    which needs to be captured and displayed to the user on the page
+    """

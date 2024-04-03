@@ -21,9 +21,8 @@ from contextlib import suppress
 from functools import lru_cache, wraps
 from typing import Optional, Type
 
-from bkapi_client_core.apigateway import APIGatewayClient, Operation
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, bind_property
 from bkapi_client_core.apigateway import OperationGroup as _OperationGroup
-from bkapi_client_core.apigateway import bind_property
 from bkapi_client_core.config import HookEvent
 from bkapi_client_core.exceptions import ResponseError
 from bkapi_client_core.session import Session

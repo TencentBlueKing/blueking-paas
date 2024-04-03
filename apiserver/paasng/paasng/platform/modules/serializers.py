@@ -20,6 +20,7 @@ import string
 from typing import Dict, Optional
 
 import cattr
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -293,6 +294,9 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     image_repository = serializers.CharField(help_text="镜像仓库", required=False, allow_null=True)
     image_credential_name = serializers.CharField(help_text="镜像凭证名称", required=False, allow_null=True)
 
+    # 高级选项：通过蓝盾流水线构建
+    use_bk_ci_pipeline = serializers.BooleanField(help_text="是否使用蓝盾流水线构建", default=False)
+
     def validate(self, attrs):
         build_method = RuntimeType(attrs["build_method"])
         missed_params = []
@@ -307,6 +311,12 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
                 detail={param: _("This field is required.") for param in missed_params}, code="required"
             )
         return attrs
+
+    def validate_use_bk_ci_pipeline(self, use_bk_ci_pipeline: bool) -> bool:
+        if use_bk_ci_pipeline and not (settings.BK_CI_PAAS_PROJECT_ID and settings.BK_CI_BUILD_PIPELINE_ID):
+            raise ValidationError("build image with bk_ci pipeline unsupported")
+
+        return use_bk_ci_pipeline
 
 
 class ImageCredentialSLZ(serializers.Serializer):

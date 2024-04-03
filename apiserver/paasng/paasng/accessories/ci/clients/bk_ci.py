@@ -22,8 +22,8 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
 from paasng.accessories.ci.clients.apigw import Client
-from paasng.accessories.ci.clients.apigw import Group as BKCIGroup
-from paasng.accessories.ci.clients.exceptions import BKCIApiError, BKCIGatewayServiceError
+from paasng.accessories.ci.clients.apigw import Group as BkCIGroup
+from paasng.accessories.ci.clients.exceptions import BkCIApiError, BkCIGatewayServiceError
 
 if TYPE_CHECKING:
     from paasng.accessories.ci.base import BkUserOAuth
@@ -51,20 +51,20 @@ class BkCIClient:
             }
         )
 
-        self.client: BKCIGroup = client.api
+        self.client: BkCIGroup = client.api
 
     def trigger_codecc_pipeline(self, trigger_params: dict):
         """[应用态]手动触发流水线，不存在时创建"""
         try:
             resp = self.client.app_codecc_custom_pipeline_new(data=trigger_params)
         except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f"trigger codecc pipeline error, detail: {e}")
+            raise BkCIGatewayServiceError(f"trigger codecc pipeline error, detail: {e}")
 
         # API 返回示例，code 是字符串格式
         # {u'status': 200, u'message': u'The system is busy inside. Please try again later', u'code': u'2300001'}
         if resp.get("code") != "0":
             logger.exception(f"trigger codecc pipeline error, resp:{resp}")
-            raise BKCIApiError(resp["message"], resp["code"])
+            raise BkCIApiError(resp["message"], resp["code"])
 
         return resp
 
@@ -73,11 +73,11 @@ class BkCIClient:
         try:
             resp = self.client.app_codecc_tool_defect_count(data={"taskId": task_id})
         except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f"get codecc defect tool counts error, detail: {e}")
+            raise BkCIGatewayServiceError(f"get codecc defect tool counts error, detail: {e}")
 
         if resp.get("code") != "0":
             logger.exception(f"get codecc defect tool counts error, resp:{resp}")
-            raise BKCIApiError(resp["message"], resp["code"])
+            raise BkCIApiError(resp["message"], resp["code"])
 
         return resp.get("data")
 
@@ -86,10 +86,10 @@ class BkCIClient:
         try:
             resp = self.client.app_codecc_build_id_mapping(data={"codeccbuildId": build_id})
         except APIGatewayResponseError as e:
-            raise BKCIGatewayServiceError(f"get codecc task info by build({build_id}) error, detail: {e}")
+            raise BkCIGatewayServiceError(f"get codecc task info by build({build_id}) error, detail: {e}")
 
         if resp.get("code") != "0":
             logger.exception(f"get codecc task info, resp:{resp}")
-            raise BKCIApiError(resp["message"], resp["code"])
+            raise BkCIApiError(resp["message"], resp["code"])
 
         return resp.get("data", {}).get("task_id")

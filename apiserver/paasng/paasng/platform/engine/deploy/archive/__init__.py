@@ -16,12 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.deploy.archive.base import BaseArchiveManager
 from paasng.platform.engine.deploy.archive.legacy import ApplicationArchiveManager
 from paasng.platform.engine.deploy.archive.operator import BkAppArchiveManager
 from paasng.platform.engine.models.offline import OfflineOperation
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import ModuleEnvironment
 
 
 def start_archive_step(env: ModuleEnvironment, operator: str) -> OfflineOperation:

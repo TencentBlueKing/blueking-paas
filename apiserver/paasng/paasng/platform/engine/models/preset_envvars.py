@@ -16,19 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
-from paasng.platform.engine.deploy.release.operator import BkAppReleaseMgr
-from paasng.platform.engine.models.deployment import Deployment
+from blue_krill.models.fields import EncryptField
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+from paas_wl.utils.models import AuditedModel
+from paasng.platform.engine.constants import ConfigVarEnvName
+from paasng.platform.modules.models import Module
 
 
-def start_release_step(deployment_id: str):
-    """start a release process"""
-    deployment = Deployment.objects.get(pk=deployment_id)
-    application = deployment.app_environment.application
+class PresetEnvVariable(AuditedModel):
+    """应用描述文件中预定义的环境变量"""
 
-    if application.type == ApplicationType.CLOUD_NATIVE:
-        release_mgr = BkAppReleaseMgr.from_deployment_id(deployment_id)
-    else:
-        release_mgr = ApplicationPreReleaseExecutor.from_deployment_id(deployment_id)
-    release_mgr.start()
+    module = models.ForeignKey(Module, on_delete=models.CASCADE)
+    environment_name = models.CharField(
+        verbose_name=_("环境名称"), choices=ConfigVarEnvName.get_choices(), max_length=16
+    )
+    key = models.CharField(max_length=128, null=False)
+    value = EncryptField(null=False)
+
+    class Meta:
+        unique_together = ("module", "environment_name", "key")

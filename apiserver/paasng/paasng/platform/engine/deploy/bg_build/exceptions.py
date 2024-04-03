@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,19 +15,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
-from paasng.platform.engine.deploy.release.operator import BkAppReleaseMgr
-from paasng.platform.engine.models.deployment import Deployment
 
 
-def start_release_step(deployment_id: str):
-    """start a release process"""
-    deployment = Deployment.objects.get(pk=deployment_id)
-    application = deployment.app_environment.application
+class BkCIPipelineBuildNotSuccess(Exception):
+    """蓝盾流水线构建未成功（失败/被取消）"""
 
-    if application.type == ApplicationType.CLOUD_NATIVE:
-        release_mgr = BkAppReleaseMgr.from_deployment_id(deployment_id)
-    else:
-        release_mgr = ApplicationPreReleaseExecutor.from_deployment_id(deployment_id)
-    release_mgr.start()
+
+class BkCITooManyEnvVarsError(Exception):
+    """环境变量过多"""

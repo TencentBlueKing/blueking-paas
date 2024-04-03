@@ -40,7 +40,12 @@ from paasng.platform.declarative.exceptions import (
     DescriptionValidationError,
 )
 from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler
-from paasng.platform.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
+from paasng.platform.engine.configurations.building import (
+    SlugbuilderInfo,
+    get_build_args,
+    get_dockerfile_path,
+    get_use_bk_ci_pipeline,
+)
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
@@ -106,7 +111,7 @@ def start_build_error_callback(*args, **kwargs):
 
 
 class BaseBuilder(DeployStep):
-    PHASE_TYPE = DeployPhaseTypes.BUILD
+    phase_type = DeployPhaseTypes.BUILD
 
     def compress_and_upload(
         self, relative_source_dir: Path, source_destination_path: str, should_ignore: Optional[ExcludeChecker] = None
@@ -334,7 +339,6 @@ class ApplicationBuilder(BaseBuilder):
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            stream_channel_id=str(self.deployment.id),
             metadata={
                 "extra_envs": extra_envs,
                 # TODO: 不传递 image_repository
@@ -344,6 +348,8 @@ class ApplicationBuilder(BaseBuilder):
                 "use_cnb": build_info.use_cnb,
                 "bkapp_revision_id": bkapp_revision_id,
             },
+            stream_channel_id=str(self.deployment.id),
+            use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
         return str(build_process.uuid)
 
@@ -439,7 +445,6 @@ class DockerBuilder(BaseBuilder):
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            stream_channel_id=str(self.deployment.id),
             metadata={
                 "extra_envs": extra_envs or {},
                 # TODO: 不传递 image_repository
@@ -448,6 +453,8 @@ class DockerBuilder(BaseBuilder):
                 "use_dockerfile": True,
                 "bkapp_revision_id": bkapp_revision_id,
             },
+            stream_channel_id=str(self.deployment.id),
+            use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
         return str(build_process.uuid)
 

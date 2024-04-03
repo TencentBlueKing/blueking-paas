@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('environment_name', models.CharField(choices=[('stag', '仅测试环境'), ('prod', '仅生产环境'), ('_global_', '所有环境')], max_length=16, verbose_name='环境名称')),
                 ('key', models.CharField(max_length=128)),
                 ('value', blue_krill.models.fields.EncryptField()),
-                ('module', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='modules.module')),
+                ('module', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='modules.module', db_constraint=False)),
             ],
             options={
                 'unique_together': {('module', 'environment_name', 'key')},

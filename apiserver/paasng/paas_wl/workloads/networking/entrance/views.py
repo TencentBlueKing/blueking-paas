@@ -182,14 +182,20 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
                 is_running, builtin_address = get_builtin_addr_preferred(env)
                 if builtin_address:
                     addresses.append(builtin_address)
-                else:
-                    # 除非集群的配置有问题, 理论上 builtin_address 不会为空
+                elif not is_running:
+                    # No builtin address found for the not running env means there must
+                    # be something wrong with the platform config, log it.
                     logger.error(
-                        "builtin address is None for application %s module %s env %s",
+                        "cannot found builtin address, application: %s, module: %s(%s)",
                         application.code,
                         module.name,
                         env.environment,
                     )
+                else:
+                    # No builtin address found for the running env, this can be normal
+                    # when the module has no "web" process.
+                    pass
+
                 addresses.extend(LiveEnvAddresses(env).list_custom())
                 for address in addresses:
                     env_entrances.append(

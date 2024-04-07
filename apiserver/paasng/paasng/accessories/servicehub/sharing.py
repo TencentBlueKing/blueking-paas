@@ -137,6 +137,17 @@ class ServiceSharingManager:
             ret.update(env_variables)
         return ret
 
+    def get_env_variables_for_env_import(self, env: ModuleEnvironment) -> Dict[str, str]:
+        if env.module != self.module:
+            raise RuntimeError("Invalid env object, must belongs to self.module")
+
+        ret = {}
+        for referenced_info in self.list_all_shared_info():
+            ref_env = referenced_info.ref_module.get_envs(env.environment)
+            env_variables = mixed_service_mgr.get_env_vars_for_env_import(ref_env.engine_app, referenced_info.service)
+            ret.update(env_variables)
+        return ret
+
 
 def extract_shared_info(attachment: SharedServiceAttachment) -> Optional[SharedServiceInfo]:
     """Extract shared service infomation by attachment object

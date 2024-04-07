@@ -26,7 +26,7 @@ from typing import Any, Dict, Generator, Iterator, List, Optional, cast
 from uuid import UUID
 
 from django.core.exceptions import ValidationError
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -338,6 +338,18 @@ class LocalServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
+    def list_provisioned_rels_for_env_import(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
+    ) -> Generator[EngineAppInstanceRel, None, None]:
+        """Return all provisioned engine_app for env import"""
+        qs = engine_app.service_attachment.exclude(
+            Q(service_instance__isnull=True) | Q(write_instance_credentials_to_env=False)
+        )
+        if service:
+            qs = qs.filter(service_id=service.uuid)
+        for attachment in qs:
+            yield self.transform_rel_db_obj(attachment)
+
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         try:
             return ServiceEngineAppAttachment.objects.get(
@@ -378,6 +390,13 @@ class LocalServiceMgr(BaseServiceMgr):
             ).exists():
                 env_list.append(env.environment)
         return env_list
+
+    def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
+        """Get ServiceEngineAppAttachment"""
+        try:
+            return ServiceEngineAppAttachment.objects.get(service_id=service.uuid, engine_app=engine_app)
+        except ServiceEngineAppAttachment.DoesNotExist as e:
+            raise SvcAttachmentDoesNotExist from e
 
 
 class LocalPlanMgr(BasePlanMgr):

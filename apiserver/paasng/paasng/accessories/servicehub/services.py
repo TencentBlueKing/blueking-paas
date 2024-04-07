@@ -269,6 +269,12 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    def list_provisioned_rels_for_env_import(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
+    ) -> Generator[EngineAppInstanceRel, None, None]:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_provisioned_queryset(self, service: ServiceObj, application_ids: List[str]) -> QuerySet:
         raise NotImplementedError
 
@@ -290,6 +296,10 @@ class BaseServiceMgr(metaclass=ABCMeta):
 
     @abstractmethod
     def find_by_name(self, name: str, region: str) -> ServiceObj:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
         raise NotImplementedError
 
 

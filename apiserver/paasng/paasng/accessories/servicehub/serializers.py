@@ -22,6 +22,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.services.models import ServiceCategory
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.serializers import MinimalModuleSLZ
 
 
@@ -234,3 +235,18 @@ class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
 
     provision_infos = ProvisionInfoSLZ(help_text="共享服务实例分配信息")
     specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())
+
+
+class EngineAppAttachmentsQuerySLZ(serializers.Serializer):
+    environment = serializers.ChoiceField(choices=AppEnvName.get_choices(), required=False)
+
+
+class EngineAppAttachmentSLZ(serializers.Serializer):
+    environment = serializers.CharField(source="engine_app.env.environment")
+    service_id = serializers.UUIDField(source="service.uuid")
+    write_instance_credentials_to_env = serializers.BooleanField(help_text="是否写入环境变量")
+
+
+class UpdateEngineAppAttachmentSLZ(serializers.Serializer):
+    environment = serializers.ChoiceField(choices=AppEnvName.get_choices(), required=False)
+    write_instance_credentials_to_env = serializers.BooleanField(help_text="是否写入环境变量")

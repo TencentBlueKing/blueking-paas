@@ -23,7 +23,7 @@ from django.dispatch import receiver
 
 from paasng.accessories.ci.base import BkUserOAuth
 from paasng.accessories.ci.constants import CIBackend
-from paasng.accessories.ci.exceptions import NotSupportedRepoType
+from paasng.accessories.ci.exceptions import NotSupportedRepoType, RepoNotFoundError
 from paasng.accessories.ci.managers import get_ci_manager_cls_by_backend
 from paasng.accessories.ci.models import CIAtomJob
 from paasng.infras.accounts.models import Oauth2TokenHolder
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_appenv_deploy)
-def start_ci_job(sender: "ApplicationEnvironment", deployment: "Deployment", **kwargs):
+def start_ci_job(sender: "ApplicationEnvironment", deployment: "Deployment", **kwargs):  # noqa: PLR0911
     """开始 CI 任务"""
     if deployment.status != JobStatus.SUCCESSFUL.value:
         logger.info("AppEnv<%s> deploy failed, skipping", sender)
@@ -67,9 +67,12 @@ def start_ci_job(sender: "ApplicationEnvironment", deployment: "Deployment", **k
     except NotSupportedRepoType as e:
         logger.info("source type<%s> is not support, ci skipping", e.source_type)
         return
+    except RepoNotFoundError:
+        logger.info("cannot get a repository, skip running CI job.")
+        return
     except Oauth2TokenHolder.DoesNotExist:
         logger.info(f"AppEnv<{sender}> failed to execute ci job: Oauth2TokenHolder does not exist")
         return
     except Exception:
-        logger.exception("failed to execute ci job")
+        logger.exception("failed to execute ci job, unknown error.")
         return

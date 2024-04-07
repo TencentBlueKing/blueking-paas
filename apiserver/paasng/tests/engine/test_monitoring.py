@@ -21,6 +21,7 @@ from unittest import mock
 
 import arrow
 import pytest
+from django.utils import timezone
 
 from paasng.engine.monitoring import count_frozen_deployments
 
@@ -30,7 +31,7 @@ pytestmark = pytest.mark.django_db
 
 
 # Get current datetime when compiling
-_NOW = arrow.now()
+_NOW = timezone.now()
 
 
 @pytest.fixture

@@ -6,6 +6,7 @@ authors = ["blueking <blueking@tencent.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.8.1,<3.9"
+urllib3 = "1.26.18"
 
 [tool.poetry.dev-dependencies]
 # Essential tools to format source codes, required when using pre-commit

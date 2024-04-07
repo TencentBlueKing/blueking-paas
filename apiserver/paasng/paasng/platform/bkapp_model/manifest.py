@@ -200,7 +200,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     command=command,
                     args=args,
                     targetPort=process_spec.port,
-                    # TODO?: 是否需要使用 LEGACY_PROC_RES_ANNO_KEY 存储不支持的 plan
+                    # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
                     autoscaling=autoscaling_spec,
                 )

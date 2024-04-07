@@ -45,7 +45,7 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
-from paasng.platform.engine.constants import ImagePullPolicy, RuntimeType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
@@ -300,7 +300,6 @@ class ModuleInitializer:
                 command=proc["command"],
                 args=proc["args"],
                 targetPort=proc.get("port", None),
-                imagePullPolicy=ImagePullPolicy.IF_NOT_PRESENT,
             )
             for proc in bkapp_spec["processes"]
         ]

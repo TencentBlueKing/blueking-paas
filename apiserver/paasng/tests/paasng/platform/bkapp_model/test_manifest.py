@@ -101,9 +101,7 @@ def local_service(bk_app):
 @pytest.fixture()
 def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
-    return G(
-        ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000, image=None
-    )
+    return G(ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000)
 
 
 @pytest.fixture()
@@ -256,7 +254,7 @@ class TestProcessesManifestConstructor:
         cfg.build_method = RuntimeType.DOCKERFILE
         cfg.save(update_fields=["build_method"])
 
-        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}", image=None)
+        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}")
 
         assert ProcessesManifestConstructor().get_command_and_args(bk_module, proc) == (
             ["start"],

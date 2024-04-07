@@ -27,7 +27,7 @@ from paasng.platform.modules.models import Module
 logger = logging.getLogger(__name__)
 
 
-def import_processes(module: Module, processes: List[BkAppProcess], annotations: Dict) -> CommonImportResult:
+def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImportResult:
     """Import processes data.
 
     :param processes: A list of BkAppProcess items.

@@ -50,10 +50,6 @@ WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
 IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
 # 注解中存储数据统计站点ID的键名
 PA_SITE_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
-# LegacyProcResAnnoKey, In API version "v1alpha1", every process can specify the exact CPU and
-# memory resources. This behaviour was changed in "v1alpha2", but we still need to save the
-# legacy resource configs in annotations to maintain backward compatibility.
-LEGACY_PROC_RES_ANNO_KEY = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
 # 注解中存储资源类型的键名
 RESOURCE_TYPE_KEY = "bkapp.paas.bk.tencent.com/resource-type"
 # 注解中声明镜像类型是否 cnb 的键名

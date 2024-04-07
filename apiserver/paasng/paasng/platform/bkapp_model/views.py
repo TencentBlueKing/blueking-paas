@@ -50,7 +50,7 @@ from paasng.platform.bkapp_model.serializers import (
     SvcDiscConfigSLZ,
 )
 from paasng.platform.bkapp_model.utils import get_image_info
-from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
+from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -136,15 +136,11 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         proc_specs = ModuleProcessSpec.objects.filter(module=module)
         image_repository, image_credential_name = get_image_info(module)
 
-        images = {proc_spec.image for proc_spec in proc_specs if proc_spec.image is not None}
-        # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
-        allow_multiple_image = len(images - {image_repository}) >= 1
-
         proc_specs_data = [
             {
                 "name": proc_spec.name,
-                "image": proc_spec.image or image_repository,
-                "image_credential_name": proc_spec.image_credential_name or image_credential_name,
+                "image": image_repository,
+                "image_credential_name": image_credential_name,
                 "command": proc_spec.command or [],
                 "args": proc_spec.args or [],
                 "port": proc_spec.port,
@@ -163,7 +159,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         ]
         return Response(
             ModuleProcessSpecsOutputSLZ(
-                {"metadata": {"allow_multiple_image": allow_multiple_image}, "proc_specs": proc_specs_data}
+                {"metadata": {"allow_multiple_image": False}, "proc_specs": proc_specs_data}
             ).data
         )
 
@@ -176,23 +172,12 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         proc_specs = slz.validated_data
 
-        image_repository, image_credential_name = get_image_info(module)
-        images = {
-            proc_spec.image
-            for proc_spec in ModuleProcessSpec.objects.filter(module=module)
-            if proc_spec.image is not None
-        }
-        # 兼容可以为每个进程单独设置镜像的版本（如 v1alph1 版本时所存储的存量 BkApp 资源）
-        allow_multiple_image = len(images - {image_repository}) >= 1
-
         processes = [
             BkAppProcess(
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
                 targetPort=proc_spec.get("port", None),
-                image=proc_spec["image"] if allow_multiple_image else "",
-                imagePullPolicy=ImagePullPolicy.IF_NOT_PRESENT,
             )
             for proc_spec in proc_specs
         ]

@@ -70,9 +70,7 @@ def import_manifest(module: Module, input_data: Dict):
         overlay_mounts = env_overlay.get("mounts", [])
 
     # Run importer functions
-    import_processes(
-        module, processes=validated_data["processes"], annotations=input_data["metadata"].get("annotations", {})
-    )
+    import_processes(module, processes=validated_data["processes"])
     if build := validated_data.get("build"):
         import_build(module, build)
     if hooks := validated_data.get("hooks"):

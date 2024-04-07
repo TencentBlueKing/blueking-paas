@@ -46,15 +46,10 @@ class ImageParser:
 
     def get_image_field(self, bkapp: BkAppResource) -> str:
         """get image field from app model resource"""
-        image = ""
         if bkapp.apiVersion == ApiVersion.V1ALPHA2:
             if bkapp.spec.build and bkapp.spec.build.image:
-                image = bkapp.spec.build.image
+                return bkapp.spec.build.image
             else:
                 raise ValueError(_("spec.build.image is missing"))
         else:
-            NotImplementedError("unknown apiVersion: {}".format(bkapp.apiVersion))
-
-        if not image:
-            raise ValueError(_("image is missing"))
-        return image
+            raise NotImplementedError("unknown apiVersion: {}".format(bkapp.apiVersion))

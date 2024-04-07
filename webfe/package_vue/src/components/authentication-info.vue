@@ -143,7 +143,7 @@
         <bk-button theme="default" @click="handleChangeDefaultSecret">
           {{ $t('更换默认密钥') }}
         </bk-button>
-        <p>{{ $t('密钥使用情况概览（仅包含已部署环境）') }}</p>
+        <p v-if="!isSameSecrect">{{ $t('密钥使用情况概览（仅包含已部署环境）') }}</p>
       </div>
 
       <!-- 已部署密钥概览 -->

@@ -129,5 +129,43 @@ var _ = Describe("Test configmap related functions", func() {
 				Expect(len(deploy.Spec.Template.Spec.Containers[0].Env)).To(Equal(1))
 			})
 		})
+
+		Context("test ApplyToPod", func() {
+			var pod *corev1.Pod
+			var configmap *v1.ConfigMap
+
+			BeforeEach(func() {
+				// An empty pod object
+				pod = &corev1.Pod{
+					TypeMeta: metav1.TypeMeta{Kind: "Pod", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      names.PreReleaseHook(bkapp),
+						Namespace: bkapp.Namespace,
+						Labels:    labels.Hook(bkapp, paasv1alpha2.HookPreRelease),
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "nginx", Image: "nginx:latest"}},
+					},
+				}
+
+				configmap = &v1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: bkapp.Namespace, Name: "svc-disc-results-" + bkapp.Name},
+					Data: map[string]string{
+						DataKeyBkSaaS: "some_value",
+					},
+				}
+			})
+
+			It("Applied successfully", func() {
+				Expect(len(pod.Spec.Containers[0].Env)).To(BeZero())
+
+				ret := NewWorkloadsMutator(
+					builder.WithObjects(configmap).Build(),
+					bkapp,
+				).ApplyToPod(ctx, pod)
+				Expect(ret).To(BeTrue())
+				Expect(len(pod.Spec.Containers[0].Env)).To(Equal(1))
+			})
+		})
 	})
 })

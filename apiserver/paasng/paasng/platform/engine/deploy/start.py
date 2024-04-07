@@ -78,6 +78,7 @@ def initialize_deployment(
         Hook(
             type=hook.type,
             command=hook.proc_command,
+            args=hook.args,
             enabled=hook.enabled,
         )
         for hook in module.deploy_hooks.all()

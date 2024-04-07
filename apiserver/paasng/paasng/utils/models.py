@@ -286,6 +286,9 @@ class OrderByField:
 F = TypeVar("F", bound=models.Field)
 M = TypeVar("M")
 
+cattr.register_structure_hook(str, lambda items, cl: items)  # type: ignore
+cattr.register_unstructure_hook(str, lambda value: value)  # type: ignore
+
 
 def _make_json_field(
     base_class: Type[F],

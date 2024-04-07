@@ -211,7 +211,7 @@ def aggregate_fields_filters(
         index=search_params.indexPattern,
         search=search,
         timeout=DEFAULT_ES_SEARCH_TIMEOUT,
-        fields=search_params.filterFields,
+        fields=get_filter_fields(pd=pd, log_type=log_type_map[log_type]),
     )
 
 
@@ -253,14 +253,18 @@ def _instantiate_log_client(
     env = Application.objects.get(code=instance.id).get_app_envs("prod")
     if log_type == LogType.INGRESS:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
+        search_params = log_config.search_params
+        search_params.termTemplate = {"engine_app_name.keyword": "bkapp-{{ plugin_id }}-prod"}
     elif log_type == LogType.STANDARD_OUTPUT:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
+        search_params = log_config.search_params
     else:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
+        search_params = log_config.search_params
 
     # Note: log_config.search_params 返回的是 paasng.accessories.log.models.ElasticSearchParams
     # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致,
-    return LogClientAdaptor(instantiate_bksaas_log_client(log_config, operator)), log_config.search_params
+    return LogClientAdaptor(instantiate_bksaas_log_client(log_config, operator)), search_params
 
 
 def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:

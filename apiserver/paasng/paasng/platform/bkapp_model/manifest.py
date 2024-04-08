@@ -298,19 +298,21 @@ class ProcessesManifestConstructor(ManifestConstructor):
 
         :return: (command, args)
         """
-        # 仅托管镜像的应用目前会在页面上配置 command/args 字段, 其余类型的应用使用 proc_command 声明启动命令
-        if process_spec.command or process_spec.args:
-            return self._sanitize_args(process_spec.command or []), self._sanitize_args(process_spec.args or [])
-
         mgr = ModuleRuntimeManager(module)
+
+        # buildpack 优先级最高, 忽略 process_spec 中的命令配置. 按照 buildpack 规则设置 command 和 args
         if mgr.build_config.build_method == RuntimeType.BUILDPACK:
             # Note: 此处无需考虑兼容 cnb buildpack, cnb buildpack 的启动命令由 operator 做兼容(通过 use-cnb annotations 声明)
             # 普通应用的启动命令固定了 entrypoint
             return DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", process_spec.name]
 
-        if mgr.build_config.build_method == RuntimeType.DOCKERFILE:
+        if process_spec.proc_command:
             o = self._sanitize_args(shlex.split(process_spec.proc_command))
             return [o[0]], o[1:]
+
+        if process_spec.command or process_spec.args:
+            return self._sanitize_args(process_spec.command or []), self._sanitize_args(process_spec.args or [])
+
         raise ValueError("Error getting command and args")
 
     @staticmethod

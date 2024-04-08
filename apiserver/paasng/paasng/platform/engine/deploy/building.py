@@ -161,7 +161,7 @@ class BaseBuilder(DeployStep):
         except (DescriptionValidationError, ManifestImportError) as e:
             if raise_exception:
                 raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
-            logger.exception("Exception while parsing app description file, skip.")
+            logger.warning("Error while parsing app description file, skip, error: %s", e)
         except ControllerError as e:
             if raise_exception:
                 raise HandleAppDescriptionError(reason=e.message) from e

@@ -541,5 +541,40 @@ export default {
       const url = `${BACKEND_URL}/api/bkplugins/bk-udc/plugins/${pluginId}/reactivate/`;
       return http.post(url, data, config);
     },
+
+    /**
+     * 获取插件基本信息
+     * @param {Object} params appCode
+     */
+    getPluginBaseInfoData({ commit, state }, { appCode }, config) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${appCode}/profile/`;
+      return http.get(url, config);
+    },
+
+    /**
+     * 获取插件使用方列表
+     * @param {Object} params appCode
+     */
+    getPluginDistributors({ commit, state }, { appCode }, config) {
+      const url = `${BACKEND_URL}/api/bk_plugin_distributors/`;
+      return http.get(url, config);
+    },
+
+    /**
+     * 获取已授权插件
+     * @param {Object} params appCode
+     */
+    getAuthorizedPlugins({ commit, state }, { appCode }, config) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${appCode}/distributors/`;
+      return http.get(url, config);
+    },
+
+    /**
+     * 更新插件基本信息
+     */
+    updatePluginBseInfo({ commit, state }, { appCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${appCode}/profile/`;
+      return http.patch(url, data, config);
+    },
   },
 };

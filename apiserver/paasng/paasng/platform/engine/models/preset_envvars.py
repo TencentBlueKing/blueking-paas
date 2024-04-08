@@ -16,30 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
-import logging
+from blue_krill.models.fields import EncryptField
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
-import pytest
-from django.test import TestCase
-from rest_framework.test import APIRequestFactory
-
-from paasng.plat_admin.api_doc.views import FullSwaggerConfigurationView
-from tests.utils.auth import create_user
-
-logger = logging.getLogger(__name__)
+from paas_wl.utils.models import AuditedModel
+from paasng.platform.engine.constants import ConfigVarEnvName
+from paasng.platform.modules.models import Module
 
 
-class TestSwaggerConfigurationGenerator(TestCase):
-    def setUp(self):
-        self.user = create_user()
+class PresetEnvVariable(AuditedModel):
+    """应用描述文件中预定义的环境变量"""
 
-    @pytest.mark.skip(reason="don't know how to fix.")
-    def test_default(self):
-        factory = APIRequestFactory()
-        request = factory.get("/docs/swagger.full")
-        request.user = self.user
-        response = FullSwaggerConfigurationView.as_view()(request)
-        configuration_json = response.content
-        configuration_dict = json.loads(configuration_json)
-        assert response.status_code == 200
-        assert "swagger" in configuration_dict
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
+    environment_name = models.CharField(
+        verbose_name=_("环境名称"), choices=ConfigVarEnvName.get_choices(), max_length=16
+    )
+    key = models.CharField(max_length=128, null=False)
+    value = EncryptField(null=False)
+
+    class Meta:
+        unique_together = ("module", "environment_name", "key")

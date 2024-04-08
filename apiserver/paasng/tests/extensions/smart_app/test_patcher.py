@@ -234,7 +234,7 @@ class TestSourcePackagePatcher:
         with tarfile.open(patched_tar) as tar, ctx:
             fp = tar.extractfile(target)
             assert fp
-            assert yaml.load(fp.read()) == expected
+            assert yaml.full_load(fp.read()) == expected
 
     @pytest.mark.parametrize(
         "contents, target, ctx, expected",

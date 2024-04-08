@@ -54,10 +54,6 @@ class TestCreateAppResource:
                         "targetPort": None,
                         "resQuotaPlan": None,
                         "autoscaling": None,
-                        "cpu": None,
-                        "memory": None,
-                        "image": None,
-                        "imagePullPolicy": None,
                         "probes": None,
                         "proc_command": None,
                     }

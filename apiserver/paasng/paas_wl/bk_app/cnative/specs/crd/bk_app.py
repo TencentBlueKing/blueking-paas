@@ -254,7 +254,7 @@ class BkAppBuildConfig(BaseModel):
 
     # 兼容使用注解支持多镜像的场景（v1alpha1 遗留功能）
     image: Optional[str] = None
-    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
+    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT.value
     imageCredentialsName: Optional[str] = None
     dockerfile: Optional[str] = None
     buildTarget: Optional[str] = None
@@ -323,7 +323,7 @@ class BkAppSpec(BaseModel):
 class BkAppStatus(BaseModel):
     """BkAppStatus defines the observed state of BkApp"""
 
-    phase: str = MResPhaseType.AppPending
+    phase: str = MResPhaseType.AppPending.value
     observedGeneration: int = Field(default=0)
     conditions: List[MetaV1Condition] = Field(default_factory=list)
     lastUpdate: Optional[datetime.datetime]

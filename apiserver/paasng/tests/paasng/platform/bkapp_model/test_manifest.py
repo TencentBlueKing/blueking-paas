@@ -275,10 +275,6 @@ class TestProcessesManifestConstructor:
                     "resQuotaPlan": "default",
                     "autoscaling": None,
                     "probes": None,
-                    "cpu": None,
-                    "memory": None,
-                    "image": None,
-                    "imagePullPolicy": None,
                     "proc_command": None,
                 }
             ],

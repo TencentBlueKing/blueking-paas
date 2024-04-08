@@ -200,11 +200,14 @@ class CreateMountSourceSLZ(serializers.Serializer):
             raise serializers.ValidationError("预发布环境仅支持 1G 的持久存储")
 
         # 检查挂载资源 display_name 是否存在
+        display_name = attrs.get("display_name")
+        # 若 display_name 为空，则不校验
+        if not display_name:
+            return attrs
         application_id = self.context.get("application_id")
         source_type = attrs["source_type"]
-        display_name = attrs.get("display_name")
         controller = init_volume_source_controller(source_type)
-        if controller.list_by_app(application_id).filter(display_name=display_name):
+        if controller.list_by_app(application_id).filter(display_name=display_name).exists():
             raise serializers.ValidationError(_("已存在同名挂载资源"))
         return attrs
 
@@ -221,13 +224,17 @@ class UpdateMountSourceSLZ(serializers.Serializer):
 
     def validate(self, attrs):
         # 检查挂载资源 display_name 是否存在
+        display_name = attrs.get("display_name")
+        # 若 display_name 为空，则不校验
+        if not display_name:
+            return attrs
         application_id = self.context.get("application_id")
         source_type = attrs["source_type"]
-        display_name = attrs.get("display_name")
         controller = init_volume_source_controller(source_type)
+        # 更新时通过 name 索引， 排除掉自身
         query_set = controller.list_by_app(application_id).exclude(name=attrs["source_name"])
         if query_set.filter(display_name=display_name).exists():
-            raise serializers.ValidationError(_("该名称已存在"))
+            raise serializers.ValidationError(_("已存在同名挂载资源"))
         return attrs
 
 
@@ -259,8 +266,4 @@ class MountSourceSLZ(serializers.Serializer):
         return [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]
 
     def get_display_name(self, obj):
-        if obj.display_name:
-            return obj.display_name
-        else:
-            source_type = self.get_source_type(obj)
-            return f"{source_type}-{obj.created.strftime('%y%m%d%H%M')}"
+        return obj.display_name or f"{self.get_source_type(obj)}-{obj.created.strftime('%y%m%d%H%M')}"

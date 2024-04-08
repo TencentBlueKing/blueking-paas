@@ -33,4 +33,5 @@ class OperationIssueType(str, StructuredEnum):
     NONE = EnumField("none", label=_("无"))
     OWNERLESS = EnumField("ownerless", label=_("无主"))
     INACTIVE = EnumField("inactive", label=_("不活跃"))
+    UNDEPLOY = EnumField("undeploy", label=_("未部署/已下线"))
     MISCONFIGURED = EnumField("misconfigured", label=_("配置错误"))

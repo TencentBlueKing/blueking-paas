@@ -32,6 +32,9 @@
             <bk-radio value="inactive" class="m5">
                 <i class="bk-icon">不活跃</i>
             </bk-radio>
+            <bk-radio value="undeploy" class="m5">
+                <i class="bk-icon">未部署/已下线</i>
+            </bk-radio>
             <bk-radio value="misconfigured" class="m5">
                 <i class="bk-icon">配置不当</i>
             </bk-radio>
@@ -115,7 +118,7 @@
                 <bk-col><label class="m10">部署时间:</label> $[dialog.form.latest_deployed_at || '--' ]</bk-col>
                 <bk-col>
                     <label class="m10">
-                        <a :href="appOverviewPageUrl(dialog.form.app_code)" target="_blank">跳转到应用概览</a>
+                        <a :href="getAppOverviewUrl(dialog.form.app_code)" target="_blank">跳转到应用概览</a>
                     </label>
                 </bk-col>
             </bk-row>
@@ -196,7 +199,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return {
                 data,
                 pagination,
-                baseUrl: '{% url "admin.applications.detail.overview" "app_code" %}',
+                appOverviewUrl: '{% url "admin.applications.detail.overview" "app_code" %}',
+                dataExportUrl: '{% url "admin.applications.operation_evaluation.export" %}',
                 SEARCH_PARAM,
                 ISSUE_TYPE_PARAM,
                 filterKey,
@@ -216,8 +220,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         methods: {
-            appOverviewPageUrl(app_code) {
-                return this.baseUrl.replace("app_code", app_code)
+            getAppOverviewUrl(app_code) {
+                return this.appOverviewUrl.replace("app_code", app_code)
             },
             handleView(row) {
                 this.dialog.form = row
@@ -257,7 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = `${prefix}?${query}`
             },
             handleExport() {
-                this.$bkMessage({theme: 'error', message: `暂不支持导出数据`})
+                url = this.dataExportUrl
+                if (this.issueType) {
+                    url += "?issue_type=" + this.issueType
+                }
+                open(url)
             },
             genIssuesTooltipsConfig(row) {
                 return {

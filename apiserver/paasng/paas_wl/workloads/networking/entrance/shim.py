@@ -167,7 +167,7 @@ def get_builtin_addr_preferred(env: ModuleEnvironment) -> Tuple[bool, Optional[A
     - Custom domain is not included
     - Both cloud-native and default application are supported
 
-    :returns: Tuple[bool, str] containing two values:
+    :return: Tuple[bool, str] containing two values:
         - A boolean value indicating whether the address is living.
         - A string representing the shortest URL by default.
           * If a preferred root domain was set and a match can be found using that domain,

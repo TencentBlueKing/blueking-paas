@@ -301,6 +301,7 @@ class BuildProcess(UuidAuditedModel):
             return False
         if not self.logs_was_ready_at:
             return False
+
         return True
 
     def set_logs_was_ready(self):

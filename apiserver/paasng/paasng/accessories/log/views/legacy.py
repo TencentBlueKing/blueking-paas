@@ -21,10 +21,10 @@ from typing import List
 
 from rest_framework.response import Response
 
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.accessories.log.serializers import LogQueryParamsSLZ
 from paasng.accessories.log.views.logs import ModuleStdoutLogAPIView, ModuleStructuredLogAPIView
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.utils.datetime import convert_timestamp_to_str
 
 

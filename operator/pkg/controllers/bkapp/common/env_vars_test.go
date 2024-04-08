@@ -19,19 +19,11 @@
 package common
 
 import (
-	"bytes"
-	"io"
-	"net/http"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/lo"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/platform/external"
-	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Get App Envs", func() {
@@ -72,71 +64,5 @@ var _ = Describe("Get App Envs", func() {
 		bkapp.Spec.Configuration.Env = []paasv1alpha2.AppEnvVar{}
 		envs := GetAppEnvs(bkapp)
 		Expect(len(envs)).To(Equal(0))
-	})
-
-	Context("with addon envs", func() {
-		BeforeEach(func() {
-			bkapp.Spec.Addons = []paasv1alpha2.Addon{
-				{Name: "foo-service"},
-			}
-		})
-
-		AfterEach(func() {
-			external.SetDefaultClient(nil)
-		})
-
-		It("with metadata", func() {
-			external.SetDefaultClient(external.NewTestClient("foo", "bar", &external.SimpleResponse{
-				StatusCode: 200,
-				Body:       `{"credentials": {"FAKE_FOO": "FOO"}}`,
-			}))
-			testing.WithAppInfoAnnotations(bkapp)
-			envs := GetAppEnvs(bkapp)
-			Expect(len(envs)).To(Equal(3))
-			env, found := lo.Find[corev1.EnvVar](envs, func(t corev1.EnvVar) bool {
-				return t.Name == "FAKE_FOO"
-			})
-			Expect(found).To(BeTrue())
-			Expect(env.Value).To(Equal("FOO"))
-		})
-
-		It("missing metadata", func() {
-			external.SetDefaultClient(external.NewTestClient("foo", "bar", &external.SimpleResponse{
-				StatusCode: 200,
-				Body:       `{"credentials": {"FAKE_FOO": "FOO"}}`,
-			}))
-			envs := GetAppEnvs(bkapp)
-			Expect(len(envs)).To(Equal(2))
-		})
-
-		DescribeTable("with metadata", func(handler external.RoundTripFunc, expectEnvCount int) {
-			testing.WithAppInfoAnnotations(bkapp)
-			external.SetDefaultClient(external.NewTestClient("foo", "bar", handler))
-
-			envs := GetAppEnvs(bkapp)
-			Expect(len(envs)).To(Equal(expectEnvCount))
-		},
-			Entry("addon found and get 1 extra envs", func(req *http.Request) *http.Response {
-				return &http.Response{
-					StatusCode: 200,
-					Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
-					Header:     make(http.Header),
-				}
-			}, 3),
-			Entry("addon found but no extra envs", func(req *http.Request) *http.Response {
-				return &http.Response{
-					StatusCode: 200,
-					Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {}}`)),
-					Header:     make(http.Header),
-				}
-			}, 2),
-			Entry("addon not found!", func(req *http.Request) *http.Response {
-				return &http.Response{
-					StatusCode: 404,
-					Body:       io.NopCloser(bytes.NewBufferString(`Not Found`)),
-					Header:     make(http.Header),
-				}
-			}, 2),
-		)
 	})
 })

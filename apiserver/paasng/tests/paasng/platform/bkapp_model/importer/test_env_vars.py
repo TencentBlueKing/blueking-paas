@@ -16,23 +16,45 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import pytest
+from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
-from paasng.platform.bkapp_model.importer.env_vars import import_env_vars
+from paasng.platform.bkapp_model.importer.env_vars import import_env_vars, import_preset_env_vars
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 
 pytestmark = pytest.mark.django_db
 
 
 class Test__import_env_vars:
     def test_integrated(self, bk_module):
-        ConfigVar.objects.create(module=bk_module, key="KEY_EXISTING")
+        G(ConfigVar, module=bk_module, key="KEY_EXISTING")
         env_vars = [EnvVar(name="KEY1", value="foo"), EnvVar(name="KEY2", value="foo")]
         overlay_env_vars = [EnvVarOverlay(envName="stag", name="KEY3", value="foo")]
         ret = import_env_vars(bk_module, env_vars, overlay_env_vars)
 
         assert ConfigVar.objects.count() == 3
         assert ConfigVar.objects.filter(is_global=True).count() == 2
+        assert ret.updated_num == 0
+        assert ret.created_num == 3
+        assert ret.deleted_num == 1
+
+
+class Test__import_preset_env_vars:
+    def test_integrated(self, bk_module):
+        G(
+            PresetEnvVariable,
+            module=bk_module,
+            environment_name=ConfigVarEnvName.GLOBAL,
+            key="KEY_EXISTING",
+        )
+        global_env_vars = [EnvVar(name="KEY1", value="foo"), EnvVar(name="KEY2", value="foo")]
+        overlay_env_vars = [EnvVarOverlay(envName="stag", name="KEY3", value="foo")]
+        ret = import_preset_env_vars(bk_module, global_env_vars, overlay_env_vars)
+
+        assert PresetEnvVariable.objects.count() == 3
+        assert PresetEnvVariable.objects.filter(environment_name=ConfigVarEnvName.GLOBAL).count() == 2
         assert ret.updated_num == 0
         assert ret.created_num == 3
         assert ret.deleted_num == 1

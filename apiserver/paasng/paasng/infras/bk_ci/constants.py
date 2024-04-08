@@ -16,19 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
-from paasng.platform.engine.deploy.release.operator import BkAppReleaseMgr
-from paasng.platform.engine.models.deployment import Deployment
+from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
-def start_release_step(deployment_id: str):
-    """start a release process"""
-    deployment = Deployment.objects.get(pk=deployment_id)
-    application = deployment.app_environment.application
+class PipelineBuildStatus(str, StructuredEnum):
+    """蓝盾流水线构建状态"""
 
-    if application.type == ApplicationType.CLOUD_NATIVE:
-        release_mgr = BkAppReleaseMgr.from_deployment_id(deployment_id)
-    else:
-        release_mgr = ApplicationPreReleaseExecutor.from_deployment_id(deployment_id)
-    release_mgr.start()
+    SUCCEED = EnumField("SUCCEED", label=_("成功"))
+    FAILED = EnumField("FAILED", label=_("失败"))
+    CANCELED = EnumField("CANCELED", label=_("已取消"))

@@ -25,10 +25,10 @@ from attrs import define, field
 from cookiecutter.main import cookiecutter
 from django.conf import settings
 
-from paasng.platform.sourcectl.utils import generate_temp_dir
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.platform.sourcectl.utils import generate_temp_dir
 
 
 @define

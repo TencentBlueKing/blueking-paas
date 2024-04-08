@@ -20,9 +20,9 @@ from typing import Optional
 
 from django.conf import settings
 
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.models import Deployment, OfflineOperation
 from paasng.platform.engine.workflow import DeploymentCoordinator
-from paasng.platform.applications.models import ModuleEnvironment
 
 
 class DeploymentGetter:

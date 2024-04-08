@@ -62,12 +62,12 @@ urlpatterns = [
         name="sys.api.lesscode.bind_db_service",
     ),
     re_path(
-        make_app_pattern(suffix="/addons/(?P<service_name>[^/]+)/", prefix="sys/api/bkapps/applications/"),
+        make_app_pattern(suffix=r"/addons/(?P<service_name>[^/]+)/$", prefix="sys/api/bkapps/applications/"),
         SysAddonsAPIViewSet.as_view({"get": "query_credentials", "post": "provision_service"}),
         name="sys.api.applications.addons",
     ),
     re_path(
-        make_app_pattern(suffix="/addons/", prefix="sys/api/bkapps/applications/"),
+        make_app_pattern(suffix=r"/addons/$", prefix="sys/api/bkapps/applications/"),
         SysAddonsAPIViewSet.as_view({"get": "list_services"}),
         name="sys.api.applications.list_addons",
     ),
@@ -77,7 +77,7 @@ urlpatterns = [
             include_envs=False,
             prefix="sys/api/bkapps/applications/",
         ),
-        SysAddonsAPIViewSet.as_view({"get": "retrieve_specs"}),
-        name="sys.api.applications.retrieve_specs",
+        SysAddonsAPIViewSet.as_view({"get": "retrieve_specs_by_uuid"}),
+        name="sys.api.applications.retrieve_specs_by_uuid",
     ),
 ]

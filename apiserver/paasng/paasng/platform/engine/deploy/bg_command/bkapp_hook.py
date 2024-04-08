@@ -44,8 +44,8 @@ class PreReleaseDummyExecutor(DeployStep):
     用于前端正确渲染"执行部署前置命令"步骤, 同时获取日志
     """
 
-    PHASE_TYPE = DeployPhaseTypes.RELEASE
-    STEP_NAME = "执行部署前置命令"
+    phase_type = DeployPhaseTypes.RELEASE
+    step_name = "执行部署前置命令"
 
     def start(self, hook_name: str):
         self._mark_step_start()
@@ -54,7 +54,7 @@ class PreReleaseDummyExecutor(DeployStep):
 
     def _mark_step_start(self):
         try:
-            step = self.phase.get_step_by_name(self.STEP_NAME)
+            step = self.phase.get_step_by_name(self.step_name)
         except StepNotInPresetListError:
             return
         step.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
@@ -96,7 +96,7 @@ class PreReleaseDummyExecutor(DeployStep):
             self.stream.write_message(Style.Warning("Pre-release exceeded timeout"))
 
         try:
-            step = self.phase.get_step_by_name(self.STEP_NAME)
+            step = self.phase.get_step_by_name(self.step_name)
         except StepNotInPresetListError:
             return
 

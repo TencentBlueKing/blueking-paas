@@ -18,9 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from paasng.platform.engine.constants import AppEnvName
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
+from paasng.platform.engine.constants import AppEnvName
 
 logger = logging.getLogger(__name__)
 

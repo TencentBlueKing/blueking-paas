@@ -21,11 +21,11 @@ import logging
 from celery import shared_task
 from django.utils.translation import gettext_lazy as _
 
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.deploy.archive import start_archive_step
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models import Deployment
-from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
 

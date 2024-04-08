@@ -381,6 +381,9 @@ const router = new Router({
       path: '/developer-center/apps/',
       name: 'myApplications',
       component: devCenterIndex,
+      meta: {
+        isDefaultBackgroundColor: true,
+      },
     },
     {
       path: '/developer-center/apps/my-monitor',

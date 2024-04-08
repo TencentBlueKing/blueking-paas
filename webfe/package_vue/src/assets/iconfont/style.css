@@ -857,7 +857,7 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-insights:before {
 	content: "\e21d";
 }
-.paasng-close:before {
+.paasng-bold-close:before {
 	content: "\e21b";
 }
 .paasng-time:before {
@@ -1033,4 +1033,10 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-gitlab-3:before {
 	content: "\e266";
+}
+.paasng-jiangxu:before {
+	content: "\e26d";
+}
+.paasng-shengxu:before {
+	content: "\e26c";
 }

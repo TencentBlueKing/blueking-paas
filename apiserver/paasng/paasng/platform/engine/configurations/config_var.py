@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 def get_env_variables(
     env: ModuleEnvironment,
-    include_config_var: bool = True,
+    include_config_vars: bool = True,
     include_preset_env_vars: bool = True,
     include_svc_disc: bool = True,
 ) -> Dict[str, str]:
@@ -57,9 +57,14 @@ def get_env_variables(
     - built-in env vars
     - (optional) vars defined by deployment description file
 
-    :param deployment: Optional deployment object to get vars defined in description file
-    :param include_config_var: if include_config_var is True, will add envs defined in ConfigVar models to result
+    :param include_config_vars: if True, will add envs defined in ConfigVar models to result
+    :param include_preset_env_vars: if True, will add preset env vars defined in PresetEnvVariable models to result
+    :param include_svc_disc: if True, will add svc discovery as env vars to result
     :returns: Dict of env vars
+
+    ---
+    for cloud native application, should not include config_var, preset_env_vars and svc_disc.
+    Because these are already provided via `ManifestConstructor`
     """
     result = {}
     engine_app = env.get_engine_app()
@@ -84,7 +89,7 @@ def get_env_variables(
     # Because Config Vars, unlike ServiceInstance, is not bind to EngineApp. It
     # has application global type which shares under every engine_app/environment of an
     # application.
-    if include_config_var:
+    if include_config_vars:
         result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
 
     # Part: env vars shared from other modules
@@ -227,6 +232,6 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
 
 
 def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
-    """Get PresetEnvVariable as env variables, only used by normal app type application."""
+    """Get PresetEnvVariable as env variables dict"""
     qs: Iterator[PresetEnvVariable] = PresetEnvVariable.objects.filter(module=env.module)
     return {item.key: item.value for item in qs if item.is_within_scope(ConfigVarEnvName(env.environment))}

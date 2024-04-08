@@ -41,11 +41,11 @@ class TestGetEnvVariables:
             yield
 
     @pytest.mark.parametrize(
-        ("include_config_var", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
+        ("include_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
     )
-    def test_param_include_config_var(self, bk_module, bk_stag_env, include_config_var, ctx):
+    def test_param_include_config_vars(self, bk_module, bk_stag_env, include_config_vars, ctx):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
-        env_vars = get_env_variables(bk_stag_env, include_config_var=include_config_var)
+        env_vars = get_env_variables(bk_stag_env, include_config_vars=include_config_vars)
         with ctx as expected:
             assert env_vars["FOO"] == expected
 

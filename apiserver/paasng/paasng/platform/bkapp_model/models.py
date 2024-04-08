@@ -253,7 +253,7 @@ class DomainResolution(AuditedModel):
 
 
 def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
-    """Get SvcDiscConfig as env variables, only used by normal app type application."""
+    """Get SvcDiscConfig as env variables"""
     try:
         svc_disc = SvcDiscConfig.objects.get(application=env.application)
     except SvcDiscConfig.DoesNotExist:

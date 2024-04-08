@@ -34,7 +34,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 
 
 class Command(BaseCommand):
-    help = "A command to setup bk-log custom collector"
+    help = "A command to batch disable mount host path"
 
     def add_arguments(self, parser):
         parser.add_argument("--app-code", dest="app_code", help="应用 Code", default="", required=False)
@@ -56,12 +56,20 @@ class Command(BaseCommand):
             help="处理所有应用集群的所有 BkApp, 如果指定了 region, 将只处理 region 内的所有集群",
         )
         parser.add_argument("--no-dry-run", dest="dry_run", help="dry run", action="store_false")
+        parser.add_argument(
+            "--edge-disable",
+            dest="edge_disable",
+            help="是否忽略应用维度的条件, 当环境符合时直接禁用宿主机挂载点",
+            action="store_true",
+            default=False,
+        )
 
-    def handle(self, app_code, region, cluster_name, all_clusters, dry_run, *args, **options):
+    def handle(self, app_code, region, cluster_name, all_clusters, edge_disable, dry_run, *args, **options):
         style_func = self.style.SUCCESS if not dry_run else self.style.NOTICE
         qs = self.validate_params(app_code, region, cluster_name, all_clusters)
         for application in qs:
             can_use_bklog = True
+            pending_latest_config = []
             for module in application.modules.all():
                 for env in module.envs.all():  # type: ModuleEnvironment
                     env_can_use_bklog = self.check_env_status(env)
@@ -70,8 +78,13 @@ class Command(BaseCommand):
                             # 日志平台采集配置已下发大于 14 天, 可停用平台日志采集链路
                             # Note: 需等待用户下次触发配置时，才会真正生效
                             wl_app = env.wl_app
-                            wl_app.latest_config.mount_log_to_host = False
-                            wl_app.latest_config.save(update_fields=["mount_log_to_host", "updated"])
+                            # warning: latest_config 是 property, 必须拿出来后才能修改
+                            latest_config = wl_app.latest_config
+                            latest_config.mount_log_to_host = False
+                            if edge_disable:
+                                latest_config.save(update_fields=["mount_log_to_host", "updated"])
+                            else:
+                                pending_latest_config.append(latest_config)
                         self.stdout.write(
                             "disable hostpath log collector for "
                             f"Application<{application.code}> "
@@ -84,6 +97,8 @@ class Command(BaseCommand):
             if can_use_bklog:
                 if not dry_run:
                     application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
+                    for cfg in pending_latest_config:
+                        cfg.save(update_fields=["mount_log_to_host", "updated"])
 
                 self.stdout.write(
                     f"switch log query to bk-log index for Application<{application.code}>",

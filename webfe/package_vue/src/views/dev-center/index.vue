@@ -1,15 +1,14 @@
 <template lang="html">
   <div
-    class="bk-apps-wrapper mt30"
+    class="bk-apps-wrapper"
     :style="{
       'min-height': `${minHeight}px`,
-      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 28 : 28}px`
+      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`
     }"
-    @click="resetAction()"
   >
     <div
       v-if="!userHasApp"
-      class="wrap"
+      class="no-app-list-wrap"
     >
       <div class="application-blank">
         <h2> {{ $t('蓝鲸应用是蓝鲸应用引擎提供的服务单位') }} </h2>
@@ -99,15 +98,11 @@
     <paas-content-loader
       v-else
       :is-loading="isFirstLoading"
-      :placeholder="loaderPlaceholder"
+      placeholder="apps-loading"
       offset-top="20"
       class="wrap"
-      :height="575"
+      :height="700"
     >
-      <h2 class="application-title">
-        {{ $t('我的应用') }}
-        <span> ({{ pageConf.count }}) </span>
-      </h2>
       <div class="paas-application-tit clearfix">
         <div class="fright clearfix">
           <div class="app-title-left">
@@ -117,25 +112,28 @@
                 theme="primary"
                 @click="createApp"
               >
+                <i class="paasng-icon paasng-plus-thick" />
                 {{ $t('创建应用') }}
               </bk-button>
             </div>
-            <div
-              v-if="userFeature.MGRLEGACY"
-              class="migrate"
-            >
-              <bk-button
-                :theme="'default'"
-                @click="appMigrate"
-              >
-                {{ $t('迁移旧版应用') }}
-              </bk-button>
-            </div>
+            <!-- 全部应用、我创建的 -->
+            <section class="application-overview-module">
+              <bk-radio-group v-model="curAppCreationType" @change="handlerAppOverviewChange">
+                <bk-radio-button value="all">
+                  <span>{{ $t('全部应用') }}</span>
+                  <span class="app-count">{{ pagination.count }}</span>
+                </bk-radio-button>
+                <bk-radio-button value="iCreated">
+                  <span>{{ $t('我创建的') }}</span>
+                  <span class="app-count">0</span>
+                </bk-radio-button>
+              </bk-radio-group>
+            </section>
           </div>
 
           <div class="app-title-right">
             <!-- 应用分类筛选项 -->
-            <div class="paas-filter-wrapper mr8">
+            <div class="paas-filter-wrapper">
               <div
                 v-for="item in appTypeList"
                 :key="item.key"
@@ -145,10 +143,47 @@
                 {{ item.text }}
               </div>
             </div>
-            <div class="paas-search mr8">
+            <!-- 筛选 -->
+            <section class="app-filter-module">
+              <bk-popover
+                theme="light navigation-message"
+                ext-cls="app-filter-popover-cls"
+                placement="bottom"
+                :arrow="false"
+                offset="-14, 2"
+                :tippy-options="{ 'hideOnClick': false }"
+              >
+                <div class="filter-view">
+                  <div class="text">{{ $t(curFilterValue) }}</div>
+                  <div
+                    :class="[
+                      'filter-right-icon',
+                      { active: sortValue.indexOf('-') !== -1 }
+                    ]"
+                    v-bk-tooltips="{ content: filterTips }"
+                    @mouseenter.stop
+                    @click.stop="handleTtogleOrder"
+                  >
+                    <i :class="['paasng-icon', sortValue.indexOf('-') !== -1 ? 'paasng-shengxu' : 'paasng-jiangxu']" />
+                  </div>
+                </div>
+                <template #content>
+                  <ul class="filter-navigation-list">
+                    <li
+                      v-for="item in filterList"
+                      :key="item.value"
+                      :class="['nav-item', { 'active': item.text === curFilterValue }]"
+                      @click="handleFilterApp(item)"
+                    >
+                      {{ $t(item.text) }}
+                    </li>
+                  </ul>
+                </template>
+              </bk-popover>
+            </section>
+            <div class="paas-search">
               <bk-input
                 v-model="filterKey"
-                :placeholder="$t('输入应用名称、ID，按Enter搜索')"
                 :clearable="true"
                 :right-icon="'paasng-icon paasng-search'"
                 @enter="searchApp"
@@ -156,446 +191,286 @@
             </div>
 
             <div
-              class="advanced-filter"
-              @click.stop="toggleChoose(true)"
+              v-if="userFeature.MGRLEGACY"
+              class="migrate"
             >
-              <p>
-                {{ $t('高级筛选') }}
-                <i
-                  class="paasng-icon"
-                  :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
-                />
-              </p>
-            </div>
-          </div>
-          <div
-            v-if="ifopen"
-            class="choose-panel"
-            @click.stop="showChoose"
-          >
-            <div class="overflow shaixuan">
-              <label class="button-holder">
-                <input
-                  v-model="appFilter.includeInactive"
-                  type="checkbox"
-                  class="ps-checkbox-default"
-                  value="true"
-                >
-                <span> {{ $t('显示已下架应用') }} </span>
-              </label>
-            </div>
-            <div class="overflow shaixuan">
-              <label class="button-holder">
-                <input
-                  v-model="appFilter.excludeCollaborated"
-                  type="checkbox"
-                  class="ps-checkbox-default"
-                  value="true"
-                >
-                <span> {{ $t('只显示我创建的') }} </span>
-              </label>
-            </div>
-            <div class="overflow shaixuan">
-              <div style="margin-top: -5px; width: 78px; float: left">
-                {{ $t('排序方式') }}
-              </div>
-              <div :style="{ width: enFormItemWidth, float: 'right' }">
-                <bk-radio-group v-model="sortValue">
-                  <bk-radio
-                    value="name"
-                    style="display: block; margin: 4px 0 0 0;"
-                  >
-                    {{ $t('应用名称') }}
-                  </bk-radio>
-                  <bk-radio
-                    value="-created"
-                    style="display: block; margin: 4px 0 0 0;"
-                  >
-                    {{ $t('最新创建') }}
-                  </bk-radio>
-                  <bk-radio
-                    value="created"
-                    style="display: block; margin: 4px 0 0 0;"
-                  >
-                    {{ $t('最早创建') }}
-                  </bk-radio>
-                  <bk-radio
-                    value="-latest_operated_at"
-                    style="display: block; margin: 4px 0 0 0;"
-                  >
-                    {{ $t('最近操作') }}
-                  </bk-radio>
-                </bk-radio-group>
-              </div>
-            </div>
-            <div
-              v-if="isShowLanguagesSearch"
-              class="overflow"
-            >
-              <div style="width: 78px; float: left; margin-top: -4px;">
-                {{ $t('使用语言') }}
-              </div>
-              <div :style="{ width: enFormItemWidth, float: 'right' }">
-                <label
-                  v-if="isShowAllWithLanguages"
-                  class="button-holder"
-                >
-                  <input
-                    v-model="IncludeAllLanguages"
-                    type="checkbox"
-                    class="ps-checkbox-default"
-                  >
-                  <span> {{ $t('全部') }} ({{ appNumInfo.All }})</span>
-                </label>
-                <label
-                  v-for="(language, languageIndex) in availableLanguages"
-                  v-if="appNumInfo[language]"
-                  :key="languageIndex"
-                  class="button-holder"
-                >
-                  <input
-                    v-model="appFilter.languageList"
-                    type="checkbox"
-                    class="ps-checkbox-default"
-                    :value="language"
-                  >
-                  <span>{{ language }} ({{ appNumInfo[language] }})</span>
-                </label>
-              </div>
-            </div>
-            <div
-              v-if="isShowRegionsSearch && platformFeature.REGION_DISPLAY"
-              class="overflow"
-            >
-              <div style="width: 78px; float: left">
-                {{ $t('应用版本') }}
-              </div>
-              <div :style="{ width: enFormItemWidth, float: 'right' }">
-                <label
-                  v-if="isShowAllWithRegions"
-                  class="button-holder"
-                >
-                  <input
-                    v-model="IncludeAllRegions"
-                    type="checkbox"
-                    class="ps-checkbox-default"
-                  >
-                  <span> {{ $t('全部') }} ({{ appNumInfo.All }})</span>
-                </label>
-                <label
-                  v-for="(region, regionIndex) in availableRegions"
-                  v-if="appNumInfo[region]"
-                  :key="regionIndex"
-                  class="button-holder"
-                >
-                  <input
-                    v-model="appFilter.regionList"
-                    type="checkbox"
-                    class="ps-checkbox-default"
-                    :value="region"
-                  >
-                  <span>{{ RegionTranslate[region] }} ({{ appNumInfo[region] }})</span>
-                </label>
-              </div>
-            </div>
-            <div class="application-choose-btn">
               <bk-button
                 theme="primary"
-                class="mr10"
-                @click.stop.prevent="fetchAppList(1)"
+                text
+                @click="appMigrate"
               >
-                {{ $t('筛选') }}
-              </bk-button>
-              <bk-button
-                theme="default"
-                @click.stop.prevent="reset"
-              >
-                {{ $t('重置') }}
+                {{ $t('旧版应用迁移') }}
               </bk-button>
             </div>
           </div>
+
         </div>
       </div>
 
-      <div
-        v-bkloading="{ isLoading: isLoading, opacity: .7 }"
-        :class="['apps-table-wrapper', { 'min-h': isLoading }, { 'reset-min-h': !isLoading && !appList.length }]"
-      >
-        <template v-if="appList.length">
-          <div
-            v-for="(appItem, appIndex) in appList"
-            :key="appIndex"
-            class="table-item"
-            :class="{ 'mt': appIndex !== appList.length - 1 }"
-          >
-            <div class="item-header">
-              <div
-                class="star-wrapper"
-                @click="toggleAppMarked(appItem)"
+
+      <!-- 重构 -->
+      <bk-table
+        :data="appList"
+        size="medium"
+        ref="appTableCls"
+        :pagination="pagination"
+        :outer-border="false"
+        v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
+        ext-cls="app-list-table-cls"
+        :row-key="rowKey"
+        :expand-row-keys="expandRowKeys"
+        @filter-change="handleFilterChange"
+        @page-change="handlePageChange"
+        @page-limit-change="handlePageLimitChange"
+        @row-mouse-enter="(index) => curHoverRowIndex = index"
+        @row-mouse-leave="curHoverRowIndex = -1">
+        <div slot="empty">
+          <table-empty
+            :keyword="tableEmptyConf.keyword"
+            :abnormal="tableEmptyConf.isAbnormal"
+            @reacquire="fetchAppList"
+            @clear-filter="clearFilterKey"
+          />
+        </div>
+        <bk-table-column label="" :width="50">
+          <template slot-scope="{ row }">
+            <div
+              :class="['star-wrapper', { 'off-shelf': !row.application.is_active }]"
+              @click="toggleAppMarked(row)"
+            >
+              <span
+                class="star-icon"
+                :title="row.marked ? $t('取消置顶') : $t('置顶')"
               >
-                <span
-                  class="star-icon"
-                  :title="appItem.marked ? $t('取消置顶') : $t('置顶')"
-                >
-                  <i :class="['paasng-icon', { 'paasng-star-cover': appItem.marked }, { 'paasng-star-line': !appItem.marked }]" />
-                </span>
-              </div>
-              <div
-                class="basic-info"
-                @click="toPage(appItem)"
-              >
-                <img
-                  :src="appItem.application ? (appItem.application.logo_url ? appItem.application.logo_url : defaultImg) : defaultImg"
-                  class="app-logo"
-                >
-                <span class="app-name">
-                  {{ appItem.application.name }}
-                </span>
-              </div>
-              <div
-                v-if="platformFeature.REGION_DISPLAY"
-                class="region-info"
-              >
-                <span
-                  :class="['reg-tag', { 'inner': appItem.application.region_name === $t('内部版') }, { 'clouds': appItem.application.region_name === $t('混合云版') }]"
-                >
-                  {{ appItem.application.region_name }}
-                </span>
-              </div>
-              <div
-                class="module-info"
-                @click="expandedPanel(appItem)"
-              >
-                <template v-if="appItem.application.config_info.engine_enabled && appItem.application.type !== 'cloud_native'">
-                  <span
-                    class="module-name"
-                    :class="appItem.expanded ? 'expanded' : ''"
-                  > {{ $t('共') }}&nbsp; {{ appItem.application.modules.length }} &nbsp;{{ $t('个模块') }} <i
-                    class="paasng-icon unfold-icon"
-                    :class="appItem.expanded ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
-                  />
+                <i :class="['paasng-icon', { 'paasng-star-cover': row.marked }, { 'paasng-star-line': !row.marked }]" />
+              </span>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column type="expand" width="0">
+          <!-- v-if="appItem.application.config_info.engine_enabled && appItem.application.type !== 'cloud_native'" -->
+          <template slot-scope="props">
+            <bk-table
+              v-if="props.row.application.config_info.engine_enabled && props.row.application.type !== 'cloud_native'"
+              :data="props.row.application.modules"
+              :outer-border="false"
+              size="small"
+              ext-cls="child-modules-table-cls"
+              :header-cell-style="{background: '#fff', borderRight: 'none'}">
+              <bk-table-column prop="name" :label="$t('模块')">
+                <template slot-scope="childProps">
+                  <span class="link" @click.stop="toModule(props.row, childProps.row)">
+                    {{ childProps.row.name }}
+                    <span
+                      v-if="childProps.row.is_default"
+                      style="color: #979ba5"
+                    >({{ $t('主模块') }})</span>
                   </span>
                 </template>
-              </div>
-              <div class="visit-operate">
-                <div
-                  v-if="!Object.keys(appItem.application.deploy_info).length"
-                  class="app-operation-section"
-                >
-                  <!-- 外链应用 -->
-                  <bk-button
-                    theme="primary"
-                    text
-                    ext-cls="link-btn-cls"
-                    @click="toCloudAPI(appItem)"
-                  >
-                    {{ $t('申请云API权限') }}
-                    <i class="paasng-icon paasng-keys cloud-icon" />
-                  </bk-button>
-                  <span
-                    v-bk-tooltips.top="{ content: $t('应用未设置访问路径'), disabled: appItem.market_config.source_tp_url }"
-                    class="link-btn-cls right-text"
-                  >
-                    <bk-button
-                      theme="primary"
-                      text
-                      :disabled="!appItem.market_config.source_tp_url"
-                      @click="toAccessApps(appItem)"
-                    >
-                      {{ $t('访问应用') }}
-                      <i class="paasng-icon paasng-external-link" />
-                    </bk-button>
-                  </span>
-                </div>
-
-                <div
-                  v-else
-                  class="app-operation-section"
-                >
-                  <template>
-                    <bk-button
-                      :disabled="!appItem.application.deploy_info.stag.deployed"
-                      text
-                      ext-cls="link-btn-cls"
-                      @click="visitLink(appItem, 'stag')"
-                    >
-                      <template v-if="!appItem.application.deploy_info.stag.deployed">
-                        <span v-bk-tooltips="$t('应用未部署，不能访问')"> {{ $t('预发布环境') }} <i class="paasng-icon paasng-external-link" />
-                        </span>
-                      </template>
-                      <template v-else>
-                        <span>
-                          {{ $t('预发布环境') }}
-                          <i class="paasng-icon paasng-external-link" />
-                        </span>
-                      </template>
-                    </bk-button>
-                    <bk-button
-                      :disabled="!appItem.application.deploy_info.prod.deployed"
-                      text
-                      ext-cls="link-btn-cls right-text"
-                      @click="visitLink(appItem, 'prod')"
-                    >
-                      <template v-if="!appItem.application.deploy_info.prod.deployed">
-                        <span v-bk-tooltips="$t('应用未部署，不能访问')"> {{ $t('生产环境') }} <i class="paasng-icon paasng-external-link" />
-                        </span>
-                      </template>
-                      <template v-else>
-                        <span>
-                          {{ $t('生产环境') }}
-                          <i class="paasng-icon paasng-external-link" />
-                        </span>
-                      </template>
-                    </bk-button>
+              </bk-table-column>
+              <bk-table-column prop="language" :label="$t('语言')"></bk-table-column>
+              <bk-table-column prop="created" :label="$t('创建时间')"></bk-table-column>
+              <bk-table-column :label="$t('操作')">
+                <template slot-scope="{ row }">
+                  <template v-if="Object.keys(props.row.application.deploy_info)?.length">
+                    <a
+                      href="javascript:void(0);"
+                      class="blue"
+                      style="margin-right: 8px;"
+                      @click="deploy(props.row, row)"
+                    > {{ $t('部署') }} </a>
+                    <!-- props 当前应用项，row 当前应用模块项 -->
+                    <a
+                      href="javascript:void(0);"
+                      class="blue"
+                      @click="viewLog(props.row, row)"
+                    > {{ $t('查看日志') }} </a>
                   </template>
-                </div>
+                  <template v-else>
+                    <a
+                      href="javascript:void(0);"
+                      class="blue"
+                      @click="applyCludeApi(props.row)"
+                    > {{ $t('申请云API权限') }} </a>
+                  </template>
+                </template>
+              </bk-table-column>
+            </bk-table>
+            <div
+              class="add-module-cls"
+              v-if="props.row.application.type !== 'cloud_native'"
+            >
+              <bk-button
+                v-if="props.row.creation_allowed"
+                style="margin-left: -13px;"
+                theme="primary"
+                icon="plus-circle-shape"
+                text
+                size="small"
+                @click="addModule(props.row)"
+              >
+                {{ $t('点击创建新模块') }}
+              </bk-button>
+              <bk-button
+                v-else
+                style="margin-left: -13px;"
+                icon="plus-circle-shape"
+                text
+                size="small"
+                disabled
+              >
+                <span
+                  v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
+                  v-dashed
+                > {{ $t('点击创建新模块') }} </span>
+              </bk-button>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('应用')" prop="name" :min-width="280">
+          <template slot-scope="{ row }">
+            <div :class="['app-name', { 'off-shelf': !row.application.is_active }]">
+              <img
+                :src="row.application ? (row.application.logo_url ? row.application.logo_url : defaultImg) : defaultImg"
+                class="app-logo"
+              />
+              <div class="info">
+                <span class="name" @click="toPage(row)">{{ row.application.name }}</span>
+                <span class="code">{{ row.application.code }}</span>
               </div>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('模块数量')" :width="135">
+          <template slot-scope="{ row, $index }">
+            <span
+              v-if="row.application.config_info.engine_enabled && row.application.type !== 'cloud_native'"
+              :class="['module-name', { 'off-shelf': !row.application.is_active }]"
+              @click="handleExpandRow(row)"
+            > {{ $t('共') }}&nbsp; {{ row.application.modules.length }} &nbsp;{{ $t('个模块') }}
+              <i
+                v-if="expandRowKeys.includes(row.application.code) || $index === curHoverRowIndex"
+                class="paasng-icon unfold-icon"
+                :class="expandRowKeys.includes(row.application.code) ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+              />
+            </span>
+            <span v-else>--</span>
+          </template>
+        </bk-table-column>
+        <!-- ee/ce 不展示这一列 -->
+        <bk-table-column
+          :label="$t('版本')"
+          prop="region_name"
+          column-key="region_name"
+          :filters="versionFilters"
+          :filter-multiple="false"
+          v-if="platformFeature.REGION_DISPLAY"
+        >
+          <template slot-scope="{ row }">
+            <span :class="{ 'off-shelf': !row.application.is_active }">
+              {{ $t(row.application.region_name) }}
+            </span>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('应用类型')">
+          <template slot-scope="{ row }">
+            <span :class="{ 'off-shelf': !row.application.is_active }">
+              {{ $t(PAAS_APP_TYPE[row.application.type]) }}
+            </span>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('状态')" prop="status">
+          <template slot-scope="{ row }">
+            <i :class="['dot', { 'successful': row.application.is_active }]"></i>
+            <span :class="{ 'off-shelf': !row.application.is_active }">
+              {{ row.application.is_active ? $t('正常') : $t('下架') }}
+            </span>
+          </template>
+        </bk-table-column>
+        <bk-table-column label="" :width="localLanguage === 'en' ? 440 : 260">
+          <template slot-scope="{ row }">
+            <div
+              v-if="!Object.keys(row.application.deploy_info).length"
+              class="app-operation-section"
+            >
+              <!-- 外链应用 -->
+              <bk-button
+                theme="primary"
+                text
+                ext-cls="link-btn-cls"
+                @click="toCloudAPI(row)"
+              >
+                {{ $t('申请云API权限') }}
+                <i class="paasng-icon paasng-keys cloud-icon" />
+              </bk-button>
+              <span
+                v-bk-tooltips.top="{ content: $t('应用未设置访问路径'), disabled: row.market_config.source_tp_url }"
+                class="link-btn-cls right-text"
+              >
+                <bk-button
+                  theme="primary"
+                  text
+                  :disabled="!row.market_config.source_tp_url"
+                  @click="toAccessApps(row)"
+                >
+                  {{ $t('访问应用') }}
+                  <i class="paasng-icon paasng-external-link" />
+                </bk-button>
+              </span>
             </div>
             <div
-              v-show="appItem.expanded"
-              class="item-content"
+              v-else
+              class="app-operation-section"
             >
-              <div class="apps-table-wrapper">
-                <table class="ps-table ps-table-default ps-instances-table ps-table-special">
-                  <thead>
-                    <th> {{ $t('模块') }} </th>
-                    <th> {{ $t('语言') }} </th>
-                    <th> {{ $t('创建时间') }} </th>
-                    <th style="width: 150px;">
-                      {{ $t('操作') }}
-                    </th>
-                  </thead>
-                  <tbody>
-                    <template v-if="appItem.application.modules.length">
-                      <tr
-                        v-for="subModule in appItem.application.modules"
-                        :key="subModule.id"
-                      >
-                        <td
-                          class="module-name"
-                          @click.stop="toModule(appItem, subModule)"
-                        >
-                          <p>
-                            {{ subModule.name }}
-                            <span
-                              v-if="subModule.is_default"
-                              style="color: #979ba5;"
-                            > {{ $t('(主模块)') }} </span>
-                          </p>
-                        </td>
-                        <td class="run-state">
-                          <p>{{ subModule.language }}</p>
-                        </td>
-                        <td class="time">
-                          <p>{{ subModule.created || '--' }}</p>
-                        </td>
-                        <td class="operate">
-                          <template v-if="Object.keys(appItem.application.deploy_info).length">
-                            <a
-                              href="javascript:void(0);"
-                              class="blue"
-                              style="margin-right: 6px;"
-                              @click="deploy(appItem, subModule)"
-                            > {{ $t('部署') }} </a>
-                            <a
-                              href="javascript:void(0);"
-                              class="blue"
-                              @click="viewLog(appItem, subModule)"
-                            > {{ $t('查看日志') }} </a>
-                          </template>
-                          <template v-else>
-                            <a
-                              href="javascript:void(0);"
-                              class="blue"
-                              @click="applyCludeApi(appItem)"
-                            > {{ $t('申请云API权限') }} </a>
-                          </template>
-                        </td>
-                      </tr>
-                    </template>
-                    <template v-else>
-                      <tr class="module-tr-empty">
-                        <td colspan="4">
-                          <div class="ps-no-result">
-                            <table-empty
-                              :empty-title="$t('暂无模块')"
-                              empty
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    </template>
-                    <tr v-if="appItem.application.type !== 'cloud_native'">
-                      <td
-                        colspan="4"
-                        style="text-align: left;"
-                      >
-                        <bk-button
-                          v-if="appItem.creation_allowed"
-                          style="margin-left: -13px;"
-                          theme="primary"
-                          icon="plus-circle-shape"
-                          text
-                          size="small"
-                          @click="addModule(appItem)"
-                        >
-                          {{ $t('点击创建新模块') }}
-                        </bk-button>
-                        <bk-button
-                          v-else
-                          style="margin-left: -13px;"
-                          icon="plus-circle-shape"
-                          text
-                          size="small"
-                          disabled
-                        >
-                          <span
-                            v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
-                            v-dashed
-                          > {{ $t('点击创建新模块') }} </span>
-                        </bk-button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <template>
+                <bk-button
+                  :disabled="!row.application.deploy_info.stag.deployed"
+                  text
+                  ext-cls="link-btn-cls"
+                  @click="visitLink(row, 'stag')"
+                >
+                  <template v-if="!row.application.deploy_info.stag.deployed">
+                    <span v-bk-tooltips="$t('应用未部署，不能访问')">
+                      {{ $t('访问预发布环境') }} <i class="paasng-icon paasng-external-link" />
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span>
+                      {{ $t('访问预发布环境') }}
+                      <i class="paasng-icon paasng-external-link" />
+                    </span>
+                  </template>
+                </bk-button>
+                <bk-button
+                  :disabled="!row.application.deploy_info.prod.deployed"
+                  text
+                  ext-cls="link-btn-cls right-text"
+                  @click="visitLink(row, 'prod')"
+                >
+                  <template v-if="!row.application.deploy_info.prod.deployed">
+                    <span v-bk-tooltips="$t('应用未部署，不能访问')">
+                      {{ $t('访问生产环境') }} <i class="paasng-icon paasng-external-link" />
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span>
+                      {{ $t('访问生产环境') }}
+                      <i class="paasng-icon paasng-external-link" />
+                    </span>
+                  </template>
+                </bk-button>
+              </template>
             </div>
-          </div>
-        </template>
-        <template v-if="!isLoading && !appList.length">
-          <div class="ps-no-result">
-            <table-empty
-              :keyword="tableEmptyConf.keyword"
-              :abnormal="tableEmptyConf.isAbnormal"
-              :empty-title="$t('暂无应用')"
-              @reacquire="fetchAppList"
-              @clear-filter="clearFilterKey"
-            />
-          </div>
-        </template>
-      </div>
-
-      <div
-        v-if="pageConf.count"
-        style="margin: 20px 0;"
-      >
-        <bk-pagination
-          size="small"
-          align="right"
-          :current.sync="pageConf.curPage"
-          :count="pageConf.count"
-          :limit="pageConf.limit"
-          :limit-list="pageConf.limitList"
-          @change="pageChange"
-          @limit-change="handlePageSizeChange"
-        />
-      </div>
+          </template>
+        </bk-table-column>
+      </bk-table>
     </paas-content-loader>
   </div>
 </template>
 
 <script>import auth from '@/auth';
 import i18n from '@/language/i18n';
+import { PAAS_APP_TYPE } from '@/common/constants';
 
 const APP_TYPE_MAP = [
   {
@@ -619,6 +494,15 @@ const APP_TYPE_MAP = [
     type: 'engineless_app',
   },
 ];
+
+const FILTER_TIP = {
+  name: 'A - Z',
+  '-name': 'Z - A',
+  created: '最新',
+  '-created': '最早',
+  latest_operated_at: '最新',
+  '-latest_operated_at': '最早',
+};
 
 export default {
   // Get userHasApp before render
@@ -662,19 +546,11 @@ export default {
   },
   data() {
     return {
-      isInitLoading: true,
       isLoading: true,
       isFirstLoading: true,
-      searcLoading: false,
       userHasApp: true,
-      ifopen: false,
       minHeight: 550,
-      ifvisited: -1,
       appList: [],
-      loaderPlaceholder: 'apps-loading',
-      // 过滤后的 app 数量
-      appNum: '',
-      focusInput: 0,
       defaultImg: '/static/images/default_logo.png',
       // 搜索条件筛选
       appFilter: {
@@ -690,13 +566,6 @@ export default {
       },
       // 搜索词
       filterKey: '',
-      pageConf: {
-        count: 0,
-        curPage: 0,
-        totalPage: 0,
-        limit: 10,
-        limitList: [5, 10, 20, 50],
-      },
       sortValue: 'name',
       // fetchParams
       fetchParams: {
@@ -740,6 +609,25 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
+      curFilterValue: '应用ID',
+      filterList: [
+        { text: '应用ID', value: 'name' },
+        { text: '创建时间', value: 'created' },
+        { text: '操作时间', value: 'latest_operated_at' },
+      ],
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+        limitList: [5, 10, 20, 50],
+      },
+      PAAS_APP_TYPE,
+      curAppCreationType: 'all',
+      versionFilters: [{ text: '内部版', value: '内部版' }, { text: '外部版', value: '外部版' }],
+      expandRowKeys: [],
+      curHoverRowIndex: -1,
+      isFilterConditionPresent: false,
+      filterRegion: [],
     };
   },
   computed: {
@@ -748,42 +636,6 @@ export default {
     },
     platformFeature() {
       return this.$store.state.platformFeature;
-    },
-    // 显示全部语言
-    IncludeAllLanguages: {
-      get() {
-        // 由于当全不选时，按照drf的逻辑是不使用该filter字段，导致行为也是全选
-        return this.appFilter.languageList.length === this.availableLanguages.length;
-      },
-      set(value) {
-        this.appFilter.languageList = (value) ? this.availableLanguages : [];
-      },
-    },
-    // 显示所有版本
-    IncludeAllRegions: {
-      get() {
-        // 由于当全不选时，按照drf的逻辑是不使用该filter字段，导致行为也是全选
-        return this.appFilter.regionList.length === this.availableRegions.length;
-      },
-      set(value) {
-        this.appFilter.regionList = (value) ? this.availableRegions : [];
-      },
-    },
-    isOrderByDesc() {
-      // 是否倒序
-      return this.fetchParams.order_by.indexOf('-') === 0;
-    },
-    isShowLanguagesSearch() {
-      return this.availableLanguages.filter(item => this.appNumInfo[item]).length > 0;
-    },
-    isShowRegionsSearch() {
-      return this.availableRegions.length > 0;
-    },
-    isShowAllWithLanguages() {
-      return this.availableLanguages.filter(item => this.appNumInfo[item]).length > 1;
-    },
-    isShowAllWithRegions() {
-      return this.availableRegions.length > 1;
     },
     appTypeList() {
       if (!this.$store.state.userFeature?.ALLOW_CREATE_CLOUD_NATIVE_APP) {
@@ -794,11 +646,11 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    enFormItemWidth() {
-      return this.localLanguage === 'en' ? '120px' : '110px';
-    },
     isShowNotice() {
       return this.$store.state.isShowNotice;
+    },
+    filterTips() {
+      return FILTER_TIP[this.sortValue];
     },
   },
   watch: {
@@ -810,10 +662,8 @@ export default {
         }
       }
     },
-    ifopen(value) {
-      if (!value) {
-        this.sortValue = this.fetchParams.order_by;
-      }
+    filterRegion() {
+      this.fetchAppList();
     },
   },
   created() {
@@ -824,15 +674,19 @@ export default {
     this.fetchAppList();
   },
   mounted() {
-    const HEADER_HEIGHT = 50;
-    const FOOTER_HEIGHT = 70;
-    const winHeight = window.innerHeight;
-    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
-    if (contentHeight > this.minHeight) {
-      this.minHeight = contentHeight;
-    }
+    this.handlePageHeight();
   },
   methods: {
+    handlePageHeight() {
+      const HEADER_HEIGHT = 50;
+      const FOOTER_HEIGHT = 70;
+      const winHeight = window.innerHeight;
+      const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
+      if (contentHeight > this.minHeight) {
+        this.minHeight = contentHeight;
+      }
+    },
+
     deploy(item, subModule) {
       if (item.application.type === 'cloud_native') {
         this.toDeploy(item.application);
@@ -871,8 +725,14 @@ export default {
       this.toAppSummary(appItem);
     },
 
-    pageChange(page) {
+    handlePageChange(page) {
+      this.pagination.current = page;
       this.fetchAppList(page);
+    },
+
+    handlePageLimitChange(limit) {
+      this.pagination.limit = limit;
+      this.fetchAppList();
     },
 
     toCloudAPI(item) {
@@ -921,14 +781,6 @@ export default {
       });
     },
 
-    expandedPanel(item) {
-      if (!item.application.config_info.engine_enabled) {
-        return;
-      }
-      this.fetchRegionInfo(item.application.region, item);
-      item.expanded = !item.expanded;
-    },
-
     async fetchRegionInfo(region, item) {
       try {
         const res = await this.$store.dispatch('fetchRegionInfo', region);
@@ -939,15 +791,6 @@ export default {
           message: e.detail || this.$t('接口异常'),
         });
       }
-    },
-
-    toAppBaseInfo(appItem) {
-      this.$router.push({
-        name: 'appBaseInfo',
-        params: {
-          id: appItem.application.code,
-        },
-      });
     },
 
     toModule(appItem, subModule) {
@@ -986,55 +829,17 @@ export default {
       this.fetchAppList();
     },
 
-    clearFilter() {
-      this.filterKey = '';
-    },
-
-    // 列表排序
-    toggleSortTab() {
-      if (this.fetchParams.order_by.indexOf('-') === 0) {
-        this.fetchParams.order_by = this.fetchParams.order_by.substr(1);
-      } else {
-        this.fetchParams.order_by = `-${this.fetchParams.order_by}`;
-      }
-      this.fetchAppList();
-    },
-
-    setFocus(n) {
-      this.focusInput = n;
-    },
-
-    // 初始化
-    resetAction() {
-      this.ifopen = false;
-      this.ifvisited = -1;
-    },
-
-    showChoose() {
-      this.ifopen = true;
-    },
-
-    toggleChoose() {
-      this.ifopen = !this.ifopen;
-    },
-
-    handlePageSizeChange(pageSize) {
-      this.pageConf.limit = pageSize;
-      this.fetchAppList();
-    },
-
     // 获取 app list
     async fetchAppList(page = 1) {
       let url = `${BACKEND_URL}/api/bkapps/applications/lists/detailed?format=json`;
       // 筛选,搜索等操作时，强制切到 page 的页码
       // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
-      // 如果能切到 axios 就可以去掉这部分代码了
       url = this.getParams(url);
       this.fetchParams.order_by = this.sortValue;
       this.fetchParams = Object.assign(this.fetchParams, {
         search_term: this.filterKey,
-        offset: (page - 1) * this.pageConf.limit,
-        limit: this.pageConf.limit,
+        offset: (page - 1) * this.pagination.limit,
+        limit: this.pagination.limit,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: this.appFilter.excludeCollaborated,
         // 是否包含已下架应用，默认不包含
@@ -1048,14 +853,12 @@ export default {
       }
       try {
         const res = await this.$store.dispatch('getAppList', { url });
-        this.pageConf.curPage = page;
-        this.pageConf.count = res.count;
-        this.pageConf.totalPage = Math.ceil(this.pageConf.count / this.pageConf.limit);
         (res.results || []).forEach((item) => {
-          this.$set(item, 'expanded', false);
           this.$set(item, 'creation_allowed', true);
         });
-        this.appList.splice(0, this.appList.length, ...(res.results || []));
+        this.appList = res.results || [];
+        this.pagination.count = res.count;
+        this.pagination.current = page;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -1099,13 +902,10 @@ export default {
         includeInactive: false,
         // 我创建的
         excludeCollaborated: false,
-        IncludeAllLanguages: true,
-        IncludeAllRegions: true,
         languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
         regionList: ['ieod', 'tencent', 'clouds'],
         type: false,
       };
-      this.sortValue = 'name';
       this.filterKey = '';
       this.fetchAppList();
     },
@@ -1142,317 +942,76 @@ export default {
       this.fetchAppList();
     },
 
+    // 清空搜索筛选条件
     clearFilterKey() {
+      this.$refs.appTableCls?.clearFilter();
       this.filterKey = '';
       this.reset();
     },
 
     getParams(url) {
-      if (!this.IncludeAllLanguages) {
-        this.appFilter.languageList.forEach((item) => {
-          // 过滤无应用类型的应用
-          if (this.appNumInfo[item]) {
-            url += `&language=${item}`;
-          }
-        });
-      }
       // 应用版本
-      if (!this.IncludeAllRegions) {
-        this.appFilter.regionList.forEach((item) => {
-          if (this.appNumInfo[item]) {
-            url += `&region=${item}`;
-          }
-        });
+      if (this.filterRegion.length) {
+        const region = this.filterRegion[0] === '内部版' ? 'ieod' : 'tencent';
+        url += `&region=${region}`;
       }
       return url;
     },
 
-    updateTableEmptyConfig(arr) {
-      let url = '';
-      let isParams = false;
-      url = this.getParams(url);
-      for (const value in this.appFilter) {
-        if (typeof this.appFilter[value] === 'boolean' && this.appFilter[value]) {
-          isParams = true;
-          break;
-        }
-      };
-      if (this.filterKey || isParams || url) {
+    // 是否存在筛选条件
+    updateTableEmptyConfig() {
+      if (this.filterKey || this.isFilterConditionPresent) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }
       this.tableEmptyConf.keyword = '';
+    },
+    handleFilterApp(item) {
+      this.curFilterValue = item.text;
+      this.sortValue = item.value;
+      this.fetchAppList();
+    },
+    // 切换排序规则
+    handleTtogleOrder() {
+      if (this.sortValue.indexOf('-') !== -1) {
+        this.sortValue = this.sortValue.replace('-', '');
+      } else {
+        this.sortValue = `-${this.sortValue}`;
+      }
+      this.fetchAppList();
+    },
+    handlerAppOverviewChange(value) {
+      this.appFilter.excludeCollaborated = value === 'iCreated';
+      this.fetchAppList(1);
+    },
+    // 行key
+    rowKey(row) {
+      return row.application.code;
+    },
+    // 模块详情展开处理
+    handleExpandRow(row) {
+      if (this.expandRowKeys.includes(row.application.code)) {
+        this.expandRowKeys = this.expandRowKeys.filter(item => item !== row.application.code);
+        return;
+      }
+      this.expandRowKeys.push(row.application.code);
+    },
+    // 表格筛选
+    handleFilterChange(filds) {
+      if (filds.region_name) {
+        this.filterRegion = filds.region_name.length ? filds.region_name : [];
+      }
+      this.isFilterConditionPresent = !!filds.region_name.length;
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+    $customize-disabled-color: #C4C6CC;
+
     .bk-apps-wrapper {
-        width: 100%;
-        padding: 28px 0 44px;
-    }
-
-    .apps-table-wrapper {
-        position: relative;
-        width: 100%;
-        min-height: 100px;
-        &.min-h {
-            min-height: 255px;
-        }
-        &.reset-min-h {
-            min-height: 400px;
-        }
-        .table-item {
-            width: calc(100% - 2px);
-            background: #fff;
-            border-radius: 2px;
-            border: 1px solid #dcdee5;
-            &.mt {
-                margin-bottom: 10px;
-            }
-            &:hover {
-                box-shadow: 0px 3px 6px 0px rgba(99, 101, 110, .1);
-                .visit-operate .app-operation-section button i {
-                    opacity: 1;
-                }
-            }
-        }
-        .ps-no-result {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-        }
-        .item-header {
-            width: 100%;
-            height: 64px;
-            line-height: 64px;
-            .star-wrapper {
-                display: inline-block;
-                position: relative;
-                width: 38px;
-                height: 61px;
-                cursor: pointer;
-                &:hover {
-                    .star-icon {
-                        .paasng-star-line {
-                            color: #979ba5;
-                        }
-                    }
-                }
-                .star-icon {
-                    display: inline-block;
-                    position: relative;
-                    left: 18px;
-                    top: 12px;
-                    margin-right: 10px;
-                    height: 31px;
-                    width: 27px;
-                    z-index: 1;
-                    .paasng-icon {
-                        position: relative;
-                        top: -13px;
-                        font-size: 20px;
-                    }
-                    .paasng-star-cover {
-                        color: #ff9c01;
-                    }
-                    .paasng-star-line {
-                        color: #dcdee5;
-                    }
-                }
-            }
-            .basic-info {
-                display: inline-block;
-                position: relative;
-                width: 30%;
-                height: 100%;
-                cursor: pointer;
-                &:hover {
-                    .app-name {
-                        color: #3a84ff;
-                    }
-                }
-                .app-name {
-                    display: inline-block;
-                    position: relative;
-                    top: -2px;
-                    height: 100%;
-                    padding-left: 6px;
-                    max-width: 250px;
-                    text-overflow: ellipsis;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    color: #63656e;
-                    font-size: 14px;
-                    font-weight: bold;
-                    vertical-align: middle;
-                    &:hover {
-                        color: #3a84ff;
-                    }
-                }
-                .app-logo {
-                    position: relative;
-                    top: 10px;
-                    margin: 0 5px 0 12px;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 4px;
-                    // cursor: pointer;
-                    &:hover {
-                        color: #3a84ff;
-                    }
-                    &.reset-ml {
-                        margin-left: 48px;
-                    }
-                }
-            }
-            .region-info {
-                display: inline-block;
-                width: 10%;
-                .reg-tag {
-                    display: inline-block;
-                    padding: 2px 6px;
-                    margin-left: 2px;
-                    line-height: 16px;
-                    background: #e7fcfa;
-                    color: #2dcbae;
-                    font-size: 12px;
-                    border-radius: 2px;
-                    &.inner {
-                        background: #fdefd8;
-                        color: #ff9c01;
-                    }
-                    &.clouds {
-                        background: #ede8ff;
-                        color: #7d01ff;
-                    }
-                }
-            }
-            .module-info {
-                display: inline-block;
-                width: 34%;
-                cursor: pointer;
-                &:hover {
-                    .module-name {
-                        color: #3a84ff;
-                        .unfold-icon {
-                            display: inline-block;
-                        }
-                    }
-                }
-                .module-name {
-                    display: inline-block;
-                    margin: 0 4px;
-                    width: 200px;
-                    height: 65px;
-                    overflow: hidden;
-                    vertical-align: middle;
-                    color: #63656e;
-                    &.expanded {
-                        color: #3a84ff;
-                        .unfold-icon {
-                            display: inline-block;
-                        }
-                    }
-                    // 图标默认为隐藏
-                    .unfold-icon {
-                        display: none;
-                        position: relative;
-                        top: 1px;
-                        font-size: 14px;
-                        color: #3a8fff;
-                    }
-                }
-            }
-            .visit-operate {
-                display: inline-block;
-                width: 21%;
-            }
-        }
-        .item-content {
-            .header-shadow {
-                width: 100%;
-                height: 5px;
-                background: linear-gradient(180deg,rgba(99,101,110,1) 0%,rgba(99,101,110,0) 100%);
-                opacity: .05;
-            }
-            .apps-table-wrapper {
-                padding: 0 35px 0 54px !important;
-            }
-            .ps-instances-table {
-                width: 100%;
-
-                &.ps-table th,
-                &.ps-table td {
-                    position: relative;
-                    padding: 8px 24px;
-                    line-height: 24px;
-                    background: #fff;
-                }
-            }
-            .ps-table-special {
-                thead {
-                    th {
-                        border-top: none !important;
-                        border-right: none !important;
-                        color: #63656e;
-                        font-size: 12px;
-                        font-weight: bold;
-                        background: #f5f6fa !important;
-                    }
-                }
-            }
-            .module-name {
-                color: #3a84ff;
-                cursor: pointer;
-                &:hover {
-                    color: #699df4;
-                }
-            }
-            .operate {
-                margin-left: -6px;
-                a:hover {
-                    color: #699df4;
-                }
-            }
-            .ps-no-result {
-                height: auto;
-
-                .text {
-                    height: 90px;
-                }
-            }
-        }
-    }
-
-    .advanced-filter {
-        float: left;
-        width: 98px;
-        height: 32px;
-        line-height: 32px;
-        margin-top: 3px;
-        border: 1px solid #c4c6cc;
-        border-radius: 2px;
-        background: #fff;
-        cursor: pointer;
-        z-index: 1;
-        color: #63656E;
-        font-size: 12px;
-        &:hover {
-            color: #3a84ff;
-            p .paasng-icon {
-                color: #3a84ff !important;
-            }
-        }
-        p {
-            text-align: center;
-            .paasng-icon {
-                font-size: 12px;
-                color: #979BA5;
-            }
-        }
+        width: calc(100% - 48px);
     }
 
     .app-operation-section {
@@ -1499,50 +1058,10 @@ export default {
         }
     }
 
-    .ps-table-app {
-        color: #666;
-
-        &:hover {
-            color: #3a84ff;
-        }
-    }
-
-    .ps-table-operate {
-        color: #3a84ff;
-        padding: 0 9px;
-
-        &:hover {
-            color: #699df4;
-        }
-    }
-
-    .ps-table th.pl30,
-    .ps-table td.pl30 {
-        padding-left: 30px;
-    }
-
-    .ps-table tr:hover {
-        .ps-table-app {
-            color: #3a84ff;
-        }
-    }
-
     div.choose-panel {
         input {
             appearance: none;
         }
-    }
-
-    .table-applications {
-
-        th,
-        td {
-            font-size: 14px;
-        }
-    }
-
-    .table-applications {
-        width: 100%;
     }
 
     label {
@@ -1556,7 +1075,7 @@ export default {
     }
 
     .paas-application-tit {
-        padding: 16px 0;
+        padding: 24px 0 16px;
         color: #666;
         line-height: 36px;
         position: relative;
@@ -1580,10 +1099,11 @@ export default {
                 height: 32px;
                 margin-top: 3px;
                 padding: 4px;
-                background: #F0F1F5;
+                background: #EAEBF0;
                 color: #63656E;
                 border-radius: 2px;
                 .filter-item {
+                  position: relative;
                     font-size: 12px;
                     line-height: 24px;
                     padding: 0 10px;
@@ -1594,6 +1114,26 @@ export default {
                         background: #fff;
                         color: #3A84FF;
                         border-radius: 2px;
+                        z-index: 9;
+                        &::before {
+                          background: transparent
+                        }
+                        & + .filter-item::before {
+                          background: transparent
+                        }
+                    }
+                    &::before {
+                      content: '';
+                      position: absolute;
+                      width: 1px;
+                      height: 12px;
+                      background: #dddfe6;
+                      left: 0;
+                      top: 50%;
+                      transform: translateY(-50%)
+                    }
+                    &:first-child::before {
+                      background: transparent
                     }
                 }
             }
@@ -1660,38 +1200,6 @@ export default {
         width: 52px;
         padding-left: 14px;
     }
-
-    .application-choose-btn {
-        border-top: solid 1px #e9edee;
-        text-align: center;
-        padding: 6px 0;
-    }
-
-    .application-choose-btn a {
-        width: 68px;
-        height: 30px;
-        line-height: 30px;
-        border: solid 1px #e9edee;
-        margin: 8px 5px;
-        border-radius: 2px;
-        color: #666;
-        transition: all .5s;
-    }
-
-    .application-choose-btn a:hover {
-        background: #e9edee;
-    }
-
-    .application-choose-btn a.active {
-        background: #3A84FF;
-        border: solid 1px #3A84FF;
-        color: #fff;
-    }
-
-    .application-choose-btn a.active:hover {
-        background: #3a84ff;
-    }
-
     .application-choose img {
         position: relative;
         top: 2px;
@@ -1700,13 +1208,13 @@ export default {
 
     .application-list {
         overflow: hidden;
-        margin: 57px -25px 31px -25px;
+        display: flex;
+        justify-content: space-between;
     }
 
     .application-list li {
         float: left;
         width: 360px;
-        padding: 0 25px;
         text-align: center;
         color: #333;
         padding-bottom: 5px;
@@ -1830,14 +1338,248 @@ export default {
     .ps-btn-visit[disabled] .paasng-angle-down {
         color: #d7eadf !important;
     }
-    .wrap {
+    .no-app-list-wrap {
         width: 1180px;
+        margin: 0 auto;
     }
-    .module-tr-empty {
-        height: 280px;
+    .wrap {
+        width: 100%;
+        margin: 0 24px 24px;
     }
+
     .link-btn-cls {
         display: inline-block;
         height: 100%;
     }
+    .migrate {
+      margin-left: 16px;
+    }
+
+    .app-list-table-cls {
+      .app-name {
+        display: flex;
+        img {
+          width: 32px;
+          height: 32px;
+        }
+        .info {
+          display: flex;
+          flex-flow: column;
+          justify-content: center;
+          margin-left: 8px;
+          font-size: 12px;
+          color: #63656E;
+          .name {
+            font-weight: 700;
+            font-size: 12px;
+            color: #3A84FF;
+            cursor: pointer;
+          }
+        }
+      }
+
+      .module-name {
+        user-select: none;
+        color: #3A84FF;
+        cursor: pointer;
+      }
+
+      .star-wrapper {
+        i {
+          color: #979BA5;
+          font-size: 16px;
+          cursor: pointer;
+
+          &.paasng-star-cover {
+            color: #FFB848 !important;
+          }
+
+          &:hover {
+            color: #63656E;
+          }
+        }
+      }
+      i.dot {
+        display: inline-block;
+        margin-right: 8px;
+        width: 8px;
+        height: 8px;
+        background: #F0F1F5;
+        border: 1px solid $customize-disabled-color;
+        border-radius: 50%;
+
+        &.successful {
+          background: #E5F6EA;
+          border: 1px solid #3FC06D;
+        }
+      }
+
+      .off-shelf {
+        color: $customize-disabled-color;
+        &.app-name .info {
+          .name,
+          .code {
+            color: $customize-disabled-color;
+          }
+        }
+        &.module-name {
+          color: $customize-disabled-color;
+        }
+      }
+
+      :deep(.add-module-cls) {
+        border-top: 1px solid #dfe0e5;
+        background-color: #FFF;
+        padding: 8px 16px;
+        button i.bk-icon.left-icon {
+          top: -1px;
+        }
+      }
+    }
+    .application-overview-module {
+      .bk-radio-button-input.is-checked + .bk-radio-button-text .app-count {
+        background: #FFFFFF;
+      }
+      .app-count {
+        display: inline-block;
+        font-size: 12px;
+        height: 17px;
+        line-height: 17px;
+        padding: 0 8px;
+        background: #F0F1F5;
+        border-radius: 18px;
+        margin-left: 3px;
+        transform: translateY(-1px);
+      }
+    }
+</style>
+
+<style lang="scss">
+section.app-filter-module {
+  margin: 3px 16px 0;
+  width: 117px;
+  height: 32px;
+  background: #EAEBF0;
+  border-radius: 2px;
+  .bk-tooltip {
+    display: block;
+  }
+
+  .filter-view {
+    width: 100%;
+    display: flex;
+  }
+  .text {
+    position: relative;
+    padding-left: 8px;
+    font-size: 12px;
+    color: #63656E;
+    flex: 1;
+    line-height: 32px;
+    cursor: pointer;
+    &::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 14px;
+      width: 1px;
+      background-color: #DCDEE5;
+    }
+    &:hover {
+      background: #DCDEE5;
+      border-radius: 2px 0 0 2px;
+    }
+  }
+  .filter-right-icon {
+    cursor: pointer;
+    width: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      color: #979BA5;
+    }
+
+    &:hover {
+      background: #DCDEE5;
+      border-radius: 0 2px 2px 0;
+    }
+    &.active {
+      i {
+        color: #3A84FF;
+      }
+    }
+  }
+}
+.bk-apps-wrapper .wrap .app-filter-module .bk-tooltip-ref {
+  display: block;
+}
+.app-filter-popover-cls {
+  width: 87px;
+  background: #FFFFFF;
+  border: 1px solid #DCDEE5;
+  box-shadow: 0 2px 6px 0 #0000001a;
+  border-radius: 2px;
+  height: 104px;
+  padding: 4px 0;
+  .tippy-tooltip.light-theme {
+    height: 100%;
+    transform: translateY(0px) !important;
+  }
+  .filter-navigation-list {
+    .nav-item {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      padding: 12px;
+      background: #FFFFFF;
+      font-size: 12px;
+      color: #63656E;
+      cursor: pointer;
+      &:hover {
+        background: #F5F7FA;
+      }
+      &.active {
+        color: #3A84FF;
+        background: #E1ECFF;
+      }
+    }
+  }
+}
+.app-list-table-cls {
+  .bk-table-row.expanded .bk-table-column-expand .bk-table-expand-icon i {
+    color: #63656E;
+  }
+  // height
+  &>.bk-table-body-wrapper>table tbody>tr {
+    height: 56px;
+  }
+
+  .is-expanded-row td.bk-table-expanded-cell {
+    padding: 0 52px !important;
+    background-color: #FAFBFD;
+  }
+  .bk-table-pagination-wrapper {
+    background-color: #FFFFFF;
+  }
+
+  .child-modules-table-cls {
+    .bk-table-header-wrapper thead tr th {
+      background: #F5F7FA !important;
+    }
+    .bk-table-body-wrapper table tbody>tr {
+      height: 42px !important;
+      td {
+        height: 42px;
+      }
+    }
+    .link {
+      cursor: pointer;
+      color: #3A84FF;
+    }
+  }
+}
 </style>

@@ -40,7 +40,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	hookres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/svcdisc"
-
 	"bk.tencent.com/paas-app-operator/pkg/health"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )

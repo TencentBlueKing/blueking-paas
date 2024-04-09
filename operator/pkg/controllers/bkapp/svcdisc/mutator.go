@@ -59,7 +59,7 @@ func (w *WorkloadsMutator) ApplyToDeployment(ctx context.Context, d *appsv1.Depl
 		return false
 	}
 
-	w.updateContainers(d.Spec.Template.Spec.Containers)
+	d.Spec.Template.Spec.Containers = w.updateContainers(d.Spec.Template.Spec.Containers)
 	return true
 }
 
@@ -71,14 +71,15 @@ func (w *WorkloadsMutator) ApplyToPod(ctx context.Context, d *corev1.Pod) bool {
 		return false
 	}
 
-	w.updateContainers(d.Spec.Containers)
+	d.Spec.Containers = w.updateContainers(d.Spec.Containers)
 	return true
 }
 
-// Update a list of containers to add the svc-discovery related env variables
-func (w *WorkloadsMutator) updateContainers(containers []corev1.Container) {
+// Update a list of containers to add the svc-discovery related env variables, return a new slice.
+func (w *WorkloadsMutator) updateContainers(containers []corev1.Container) []corev1.Container {
+	results := make([]corev1.Container, len(containers))
 	for i, container := range containers {
-		containers[i].Env = append(container.Env, v1.EnvVar{
+		container.Env = append(container.Env, v1.EnvVar{
 			Name: EnvKeyBkSaaS,
 			ValueFrom: &v1.EnvVarSource{
 				ConfigMapKeyRef: &v1.ConfigMapKeySelector{
@@ -87,7 +88,9 @@ func (w *WorkloadsMutator) updateContainers(containers []corev1.Container) {
 				},
 			},
 		})
+		results[i] = container
 	}
+	return results
 }
 
 // Validate if the configmap that required for svc-discovery exists and it's data is valid.

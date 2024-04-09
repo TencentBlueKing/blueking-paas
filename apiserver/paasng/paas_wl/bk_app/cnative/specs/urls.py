@@ -49,7 +49,7 @@ urlpatterns = [
     ),
     url(
         r"api/bkapps/applications/(?P<code>[^/]+)/mres/mount_sources/$",
-        views.MountSourceViewSet.as_view({"get": "list", "post": "create", "delete": "destroy"}),
+        views.MountSourceViewSet.as_view({"get": "list", "post": "create", "delete": "destroy", "put": "update"}),
         name="api.mres.mount_source",
     ),
     url(

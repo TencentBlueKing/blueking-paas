@@ -20,11 +20,13 @@ import logging
 
 from paasng.accessories.publish.market.models import MarketConfig, Product
 from paasng.accessories.publish.sync_market.handlers import on_product_deploy_success
+from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
 from paasng.platform.engine.models import Deployment
 
 logger = logging.getLogger(__name__)
 
 
+@run_required_db_console_config
 def publish_to_market_by_deployment(deployment: Deployment):
     """Publish the application to market, triggered by a finished deployment.
 

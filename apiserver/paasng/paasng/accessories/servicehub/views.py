@@ -683,7 +683,7 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def list(self, request, code, module_name, service_id):
-        """查看增强服务不同环境下是否导入环境变量"""
+        """查看增强服务是否导入环境变量"""
         module = self.get_module_via_path()
         envs = module.envs.all()
         service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)

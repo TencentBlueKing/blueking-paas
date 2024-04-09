@@ -42,14 +42,14 @@ def count_frozen_deployments(edge_seconds: int = 90, now: Optional[datetime.date
     :param now: current datetime, default to `arrow.now().datetime`
     """
     now = now if now else arrow.now().datetime
-    edge_date = now - datetime.timedelta(seconds=edge_seconds)
+    edge_date = arrow.get(now).shift(seconds=-edge_seconds)
 
-    logger.info('Start counting frozen deployments since {}'.format(edge_date.isoformat()))
+    logger.info('Start counting frozen deployments since {}'.format(edge_date.format()))
     # Set `created__lte` to narrow source dataset, while it's not required because deployment_is_frozen will filter
     # unqualified deployments anyway.
-    deploys = Deployment.objects.filter(status=JobStatus.PENDING.value, created__lte=edge_date)
+    deploys = Deployment.objects.filter(status=JobStatus.PENDING.value, created__lte=edge_date.datetime)
 
-    frozen_deployments_cnt = sum(deployment_is_frozen(deployment, edge_date) for deployment in deploys)
+    frozen_deployments_cnt = sum(deployment_is_frozen(deployment, edge_date.datetime) for deployment in deploys)
     logger.info('Frozen deployments count: {}'.format(frozen_deployments_cnt))
     return frozen_deployments_cnt
 

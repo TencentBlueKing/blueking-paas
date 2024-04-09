@@ -85,7 +85,7 @@ def format_timestamp(
     elif input_format == "timestamp[ns]":
         return int(value) // 1000
     else:
-        return int(arrow.get(value).timestamp())
+        return int(arrow.get(value).timestamp)
 
 
 def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> List[FieldFilter]:

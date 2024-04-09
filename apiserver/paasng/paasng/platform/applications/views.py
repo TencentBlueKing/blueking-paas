@@ -184,9 +184,11 @@ class ApplicationViewSet(viewsets.ViewSet):
         ]
 
         # 统计普通应用、云原生应用、外链应用的数量
-        default_app_count = applications.filter(type__in=ApplicationType.normal_app_type()).count()
+        default_app_count = applications.filter(type__in=ApplicationType.DEFAULT).count()
         engineless_app_count = applications.filter(type=ApplicationType.ENGINELESS_APP).count()
         cloud_native_app_count = applications.filter(type=ApplicationType.CLOUD_NATIVE).count()
+        # 统计我创建的应用数量
+        my_app_count = applications.filter(owner=request.user.pk).count()
 
         serializer = slzs.ApplicationWithMarketSLZ(data, many=True)
         return paginator.get_paginated_response(
@@ -195,6 +197,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                 "default_app_count": default_app_count,
                 "engineless_app_count": engineless_app_count,
                 "cloud_native_app_count": cloud_native_app_count,
+                "my_app_count": my_app_count,
             },
         )
 

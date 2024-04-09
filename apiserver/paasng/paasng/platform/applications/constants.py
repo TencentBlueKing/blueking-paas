@@ -31,11 +31,6 @@ class ApplicationType(str, StructuredEnum):
     # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
     CLOUD_NATIVE = EnumField("cloud_native", label="云原生应用")
 
-    @classmethod
-    def normal_app_type(cls):
-        """普通应用类型"""
-        return [cls.DEFAULT]
-
 
 class ApplicationRole(int, StructuredEnum):
     NOBODY = EnumField(-1, label="无身份用户")

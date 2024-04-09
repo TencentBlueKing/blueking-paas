@@ -184,7 +184,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         ]
 
         # 统计普通应用、云原生应用、外链应用的数量
-        default_app_count = applications.filter(type__in=ApplicationType.DEFAULT).count()
+        default_app_count = applications.filter(type=ApplicationType.DEFAULT).count()
         engineless_app_count = applications.filter(type=ApplicationType.ENGINELESS_APP).count()
         cloud_native_app_count = applications.filter(type=ApplicationType.CLOUD_NATIVE).count()
         # 统计我创建的应用数量

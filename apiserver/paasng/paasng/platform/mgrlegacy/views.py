@@ -272,6 +272,7 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if app.type != ApplicationType.CLOUD_NATIVE.value:
             raise error_codes.APP_ROLLBACK_FAILED.f("该应用非云原生应用，无法回滚")
 
+        # 根据最新的迁移记录, 判断是否可以回滚
         if last_process := CNativeMigrationProcess.objects.filter(app=app).last():
             if last_process.is_active():
                 raise error_codes.APP_ROLLBACK_FAILED.f("该应用正在变更中, 无法回滚")

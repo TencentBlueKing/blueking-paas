@@ -29,7 +29,7 @@ from .app_migrations.sourcectl import SourceControlMigration
 from .cnative_migrations.application import ApplicationTypeMigrator
 from .cnative_migrations.base import CNativeBaseMigrator
 from .cnative_migrations.build_config import BuildConfigMigrator
-from .cnative_migrations.cluster import BoundClusterMigrator
+from .cnative_migrations.cluster import ApplicationClusterMigrator
 
 # 应用迁移步骤
 MIGRATION_CLASSES_LIST = [
@@ -55,6 +55,6 @@ THIRD_APP_MIGRATION_CLASSES_LIST = [
 # 普通应用迁移至云原生应用步骤类
 MIGRATE_TO_CNATIVE_CLASSES_LIST: List[Type[CNativeBaseMigrator]] = [
     ApplicationTypeMigrator,
-    BoundClusterMigrator,
+    ApplicationClusterMigrator,
     BuildConfigMigrator,
 ]

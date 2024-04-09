@@ -50,7 +50,7 @@ class TestMigrateAndRollback:
         assert bk_app.get_engine_app("stag").to_wl_obj().latest_config.cluster == CNATIVE_CLUSTER_NAME
         assert [result.migrator_name for result in migration_process.details.migrations] == [
             "ApplicationTypeMigrator",
-            "BoundClusterMigrator",
+            "ApplicationClusterMigrator",
             "BuildConfigMigrator",
         ]
 
@@ -60,9 +60,9 @@ class TestMigrateAndRollback:
         rollback_cnative_to_default(rollback_process, migration_process)
         assert rollback_process.status == "rollback_succeeded"
         assert [result.migrator_name for result in rollback_process.details.rollbacks] == [
-            "ApplicationTypeMigrator",
-            "BoundClusterMigrator",
             "BuildConfigMigrator",
+            "ApplicationClusterMigrator",
+            "ApplicationTypeMigrator",
         ]
 
     def test_migrate_failed(self, bk_app, migration_process):
@@ -78,10 +78,10 @@ class TestMigrateAndRollback:
 
             assert [result.migrator_name for result in migration_process.details.migrations] == [
                 "ApplicationTypeMigrator",
-                "BoundClusterMigrator",
+                "ApplicationClusterMigrator",
                 "BuildConfigMigrator",
             ]
             assert [result.migrator_name for result in migration_process.details.rollbacks] == [
+                "ApplicationClusterMigrator",
                 "ApplicationTypeMigrator",
-                "BoundClusterMigrator",
             ]

@@ -188,9 +188,11 @@ def migrate_default_to_cnative(migration_process: CNativeMigrationProcess):
             migrator_cls(migration_process).migrate()
         except (PreCheckMigrationFailed, BackupLegacyDataFailed) as e:
             migrate_succeeded = False
-            # 没有实际开始迁移, 设置 is_finished=False
+            # 没有实际开始迁移, 设置 rollback_if_failed=False
             migration_process.append_migration(
-                MigrationResult(migrator_name=migrator_name, is_succeeded=False, is_finished=False, error_msg=str(e))
+                MigrationResult(
+                    migrator_name=migrator_name, is_succeeded=False, rollback_if_failed=False, error_msg=str(e)
+                )
             )
             break
         except MigrationFailed as e:
@@ -237,10 +239,12 @@ def _rollback_cnative(process: CNativeMigrationProcess, last_migration_process: 
 
     performed_migrations = last_migration_process.details.migrations
     performed_migrator_classes: List[Type[CNativeBaseMigrator]] = [
-        CNativeBaseMigrator.get_class(result.migrator_name) for result in performed_migrations if result.is_finished
+        CNativeBaseMigrator.get_class(result.migrator_name)
+        for result in performed_migrations
+        if result.rollback_if_failed
     ]
 
-    for migrator_cls in performed_migrator_classes:
+    for migrator_cls in reversed(performed_migrator_classes):
         try:
             migrator_cls(last_migration_process).rollback()
         except RollbackFailed as e:

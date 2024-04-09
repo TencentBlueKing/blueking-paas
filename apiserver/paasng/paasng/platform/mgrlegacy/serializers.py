@@ -139,8 +139,8 @@ class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
     def get_error_msg(self, obj: CNativeMigrationProcess) -> str:
         if obj.status == CNativeMigrationStatus.MIGRATION_FAILED.value:
             # 仅有一个有效的错误信息
-            return [m.error_msg for m in obj.details.migrations if m.error_msg][0]
+            return next((m.error_msg for m in obj.details.migrations if m.error_msg), "")
         elif obj.status == CNativeMigrationStatus.ROLLBACK_FAILED.value:
             # 仅有一个有效的错误信息
-            return [m.error_msg for m in obj.details.rollbacks if m.error_msg][0]
+            return next((m.error_msg for m in obj.details.rollbacks if m.error_msg), "")
         return ""

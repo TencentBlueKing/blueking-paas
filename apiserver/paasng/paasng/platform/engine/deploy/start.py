@@ -71,7 +71,7 @@ def initialize_deployment(
     bkapp_revision_id = None
     if application.type == ApplicationType.CLOUD_NATIVE:
         # Get current module resource object
-        model_resource = AppModelResource.objects.get_or_create_by_module(module)
+        model_resource, _ = AppModelResource.objects.get_or_create_by_module(module)
         bkapp_revision_id = model_resource.revision.id
 
     hooks = HookList(

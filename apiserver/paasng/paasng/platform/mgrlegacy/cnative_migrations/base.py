@@ -31,7 +31,6 @@ class CNativeBaseMigrator(ABC):
     """
 
     _classes_map: Dict[str, Type["CNativeBaseMigrator"]] = {}
-    _environments = ["stag", "prod"]
 
     def __init__(self, migration_process: CNativeMigrationProcess):
         self.migration_process = migration_process
@@ -40,15 +39,23 @@ class CNativeBaseMigrator(ABC):
     def __init_subclass__(cls, **kwargs):
         cls._classes_map[cls.__name__] = cls
 
+    @classmethod
+    def get_class(cls, cls_name: str):
+        return cls._classes_map[cls_name]
+
+    @classmethod
+    def get_name(cls):
+        return cls.__name__
+
     def migrate(self):
         """migrate from default app(普通应用) to cloud native app"""
-        self._can_migrate()
+        self._can_migrate_or_raise()
 
         try:
             if legacy_data := self._generate_legacy_data():
                 self._backup_legacy_data(legacy_data)
         except Exception as e:
-            raise BackupLegacyDataFailed(f"backup legacy data failed: {e}")
+            raise BackupLegacyDataFailed(f"backup data failed: {e}")
 
         try:
             self._migrate()
@@ -78,24 +85,15 @@ class CNativeBaseMigrator(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def _can_migrate(self):
+    def _can_migrate_or_raise(self):
         """
         check if the migrator can run migrate
 
-        :raise PreCheckMigrationFailed: if the migration pre-condition is not met"""
+        :raise PreCheckMigrationFailed: if the migration pre-condition is not met
+        """
         raise NotImplementedError()
 
+    @abstractmethod
     def _rollback(self):
         """actual rollback logic"""
         raise NotImplementedError()
-
-    def _get_wl_app(self, module_name: str, environment: str):
-        return self.app.get_engine_app(environment, module_name).to_wl_obj()
-
-    @classmethod
-    def get_class(cls, cls_name: str):
-        return cls._classes_map[cls_name]
-
-    @classmethod
-    def get_name(cls):
-        return cls.__name__

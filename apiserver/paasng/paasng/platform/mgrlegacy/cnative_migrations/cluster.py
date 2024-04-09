@@ -27,31 +27,29 @@ from paasng.platform.mgrlegacy.exceptions import PreCheckMigrationFailed
 from .base import CNativeBaseMigrator
 
 
-class BoundClusterMigrator(CNativeBaseMigrator):
-    """BoundClusterMigrator to migrate the relationship between clusters and app(module)"""
+class ApplicationClusterMigrator(CNativeBaseMigrator):
+    """ApplicationClusterMigrator to migrate the relationship between clusters and app(module)"""
 
     def _generate_legacy_data(self) -> Optional[DefaultAppLegacyData]:
         legacy_data: DefaultAppLegacyData = self.migration_process.legacy_data
         legacy_data.clusters = []
 
         for m in self.app.modules.all():
-            for env in self._environments:
-                wl_app = self._get_wl_app(m.name, env)
+            for env in m.envs.all():
+                wl_app = env.wl_app
                 legacy_data.clusters.append(
                     ClusterLegacyData(
                         module_name=m.name,
-                        environment=env,
+                        environment=env.environment,
                         cluster_name=get_cluster_by_app(wl_app).name,
                     )
                 )
 
         return legacy_data
 
-    def _can_migrate(self):
+    def _can_migrate_or_raise(self):
         if self.app.type != ApplicationType.CLOUD_NATIVE.value:
-            raise PreCheckMigrationFailed(
-                "ApplicationTypeMigrator.migrate must be called before BoundClusterMigrator.migrate"
-            )
+            raise PreCheckMigrationFailed("type migrate must be called before cluster migrate")
 
     def _migrate(self):
         cnative_cluster = RegionClusterService(self.app.region).get_cnative_app_default_cluster()

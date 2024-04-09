@@ -40,20 +40,18 @@ class BuildConfigMigrator(CNativeBaseMigrator):
             builds.append(
                 BuildLegacyData(
                     module_name=m.name,
-                    buildpack_names=list(config.buildpacks.values_list("name", flat=True)),
-                    buildpack_builder_name=config.buildpack_builder.name,
-                    buildpack_runner_name=config.buildpack_runner.name,
+                    buildpack_ids=list(config.buildpacks.values_list("id", flat=True)),
+                    buildpack_builder_id=config.buildpack_builder.id,
+                    buildpack_runner_id=config.buildpack_runner.id,
                 )
             )
 
         legacy_data.builds = builds
         return legacy_data
 
-    def _can_migrate(self):
+    def _can_migrate_or_raise(self):
         if self.app.type != ApplicationType.CLOUD_NATIVE.value:
-            raise PreCheckMigrationFailed(
-                "ApplicationTypeMigrator.migrate must be called before BuildConfigMigrator.migrate"
-            )
+            raise PreCheckMigrationFailed("type migrate must be called before build config migrate")
 
     def _migrate(self):
         """migrate buildpacks/buildpack_builder/buildpack_runner of the app(module)"""
@@ -77,12 +75,8 @@ class BuildConfigMigrator(CNativeBaseMigrator):
             binder.clear_runtime()
             # 重新绑定旧构建信息
             binder.bind_image(
-                slugrunner=AppSlugRunner.objects.get(
-                    name=build_map[m.name].buildpack_runner_name, region=self.app.region
-                ),
-                slugbuilder=AppSlugBuilder.objects.get(
-                    name=build_map[m.name].buildpack_builder_name, region=self.app.region
-                ),
+                slugrunner=AppSlugRunner.objects.get(id=build_map[m.name].buildpack_runner_id),
+                slugbuilder=AppSlugBuilder.objects.get(id=build_map[m.name].buildpack_builder_id),
             )
-            for bp_name in build_map[m.name].buildpack_names:
-                binder.bind_buildpack(AppBuildPack.objects.get(name=bp_name, region=self.app.region))
+            for bp_id in build_map[m.name].buildpack_ids:
+                binder.bind_buildpack(AppBuildPack.objects.get(id=bp_id))

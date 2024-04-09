@@ -21,7 +21,7 @@ import pytest
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.mgrlegacy.cnative_migrations.application import ApplicationTypeMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.build_config import BuildConfigMigrator
-from paasng.platform.mgrlegacy.cnative_migrations.cluster import BoundClusterMigrator
+from paasng.platform.mgrlegacy.cnative_migrations.cluster import ApplicationClusterMigrator
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
@@ -42,7 +42,7 @@ class TestApplicationTypeMigrator:
         assert bk_app.get_engine_app("stag").to_wl_obj().type == ApplicationType.DEFAULT.value
 
 
-class TestBoundClusterMigrator:
+class TestApplicationClusterMigrator:
     @pytest.fixture(autouse=True)
     def _migrate_app_type(self, bk_app, migration_process):
         ApplicationTypeMigrator(migration_process).migrate()
@@ -50,10 +50,10 @@ class TestBoundClusterMigrator:
         ApplicationTypeMigrator(migration_process).rollback()
 
     def test_migrate_and_rollback(self, bk_app, migration_process):
-        BoundClusterMigrator(migration_process).migrate()
+        ApplicationClusterMigrator(migration_process).migrate()
         assert bk_app.get_engine_app("stag").to_wl_obj().latest_config.cluster == CNATIVE_CLUSTER_NAME
 
-        BoundClusterMigrator(migration_process).rollback()
+        ApplicationClusterMigrator(migration_process).rollback()
         assert bk_app.get_engine_app("stag").to_wl_obj().latest_config.cluster == CLUSTER_NAME_FOR_TESTING
 
 
@@ -74,12 +74,12 @@ class TestBuildConfigMigrator:
     ):
         BuildConfigMigrator(migration_process).migrate()
         config = BuildConfig.objects.get(module=bk_module)
-        assert config.buildpacks.filter(name=buildpack.name).exists()
+        assert config.buildpacks.filter(id=buildpack.id).exists()
         assert config.buildpack_builder == cnb_builder
         assert config.buildpack_runner == cnb_runner
 
         BuildConfigMigrator(migration_process).rollback()
         config = BuildConfig.objects.get(module=bk_module)
-        assert config.buildpacks.filter(name=buildpack.name).exists()
+        assert config.buildpacks.filter(id=buildpack.id).exists()
         assert config.buildpack_builder == slugbuilder
         assert config.buildpack_runner == slugrunner

@@ -35,9 +35,9 @@ class ApplicationTypeMigrator(CNativeBaseMigrator):
         legacy_data.app_type = self.app.type
         return legacy_data
 
-    def _can_migrate(self):
-        if self.app.type == ApplicationType.CLOUD_NATIVE.value:
-            raise PreCheckMigrationFailed(f"app({self.app.code}) type is already cloud_native")
+    def _can_migrate_or_raise(self):
+        if self.app.type != ApplicationType.DEFAULT.value:
+            raise PreCheckMigrationFailed(f"app({self.app.code}) type is not default")
 
     def _migrate(self):
         """migrate the type field of application and wl_app to cloud_native"""
@@ -55,8 +55,8 @@ class ApplicationTypeMigrator(CNativeBaseMigrator):
         wl_app_type = self._get_wl_app_type(app)
 
         for m in app.modules.all():
-            for env in self._environments:
-                wl_app = self._get_wl_app(m.name, env)
+            for env in m.envs.all():
+                wl_app = env.wl_app
                 wl_app.type = wl_app_type
                 wl_app.save(update_fields=["type"])
 

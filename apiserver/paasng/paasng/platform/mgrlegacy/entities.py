@@ -38,10 +38,9 @@ class BuildLegacyData(BaseModel):
     """Build config info before migration"""
 
     module_name: str
-    # AppBuildPack, AppSlugBuilder, AppSlugRunner 需要遵守 name+region 唯一性
-    buildpack_names: List[str]
-    buildpack_builder_name: str
-    buildpack_runner_name: str
+    buildpack_ids: List[int]
+    buildpack_builder_id: int
+    buildpack_runner_id: int
 
 
 @register
@@ -60,13 +59,13 @@ class MigrationResult(BaseModel):
 
     :param migrator_name: the name of migrator class
     :param is_succeeded: represents whether migrate or rollback is succeeded
-    :param is_finished: represents whether migrate or rollback is finished. default is True
+    :param rollback_if_failed: represents whether rollback when the entire migration process failed. default is True
     :param error_msg: the error message when migrate or rollback
     """
 
     migrator_name: str
     is_succeeded: bool
-    is_finished: bool = True
+    rollback_if_failed: bool = True
     error_msg: str = ""
 
 

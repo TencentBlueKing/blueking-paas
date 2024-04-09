@@ -285,6 +285,7 @@ class CNativeMigrationProcess(OwnerTimestampedModel):
         self.save(update_fields=["status"])
 
     def confirm(self):
+        """确认迁移, 用于标记整个迁移过程已经完成, 应用不再处于可迁移状态"""
         self.status = CNativeMigrationStatus.CONFIRMED.value
         self.confirm_at = datetime.datetime.now()
         self.save(update_fields=["status", "confirm_at"])

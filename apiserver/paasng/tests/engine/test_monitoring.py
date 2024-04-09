@@ -17,20 +17,20 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import uuid
+from datetime import datetime, timedelta
 from unittest import mock
 
-import arrow
 import pytest
 
 from paasng.engine.monitoring import count_frozen_deployments
 
 from .setup_utils import create_fake_deployment
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 # Get current datetime when compiling
-_NOW = arrow.now()
+NOW = datetime.now()
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def bk_deployment(bk_module):
     deployment = create_fake_deployment(bk_module)
     deployment.build_process_id = uuid.uuid4()
     # Deployment was created 15 seconds ago
-    deployment.created = _NOW.shift(seconds=-15).datetime
+    deployment.created = NOW - timedelta(seconds=15)
     deployment.save()
     return deployment
 
@@ -47,7 +47,7 @@ class TestCountFrozenDeployments:
     def test_no_build_process_id(self, bk_deployment):
         bk_deployment.build_process_id = None
         bk_deployment.save()
-        assert count_frozen_deployments(edge_seconds=10, now=_NOW.datetime) == 1
+        assert count_frozen_deployments(edge_seconds=10, now=NOW) == 1
 
     @pytest.mark.parametrize(
         'log_lines,cnt',
@@ -67,14 +67,14 @@ class TestCountFrozenDeployments:
             # Log lines were fresh
             (
                 [
-                    {"stream": "STDOUT", "line": "foo", "created": _NOW.format()},
+                    {"stream": "STDOUT", "line": "foo", "created": NOW.isoformat()},
                 ],
                 0,
             ),
             # Log lines were staled
             (
                 [
-                    {"stream": "STDOUT", "line": "foo", "created": _NOW.shift(seconds=-30).format()},
+                    {"stream": "STDOUT", "line": "foo", "created": (NOW - timedelta(seconds=30)).isoformat()},
                 ],
                 1,
             ),
@@ -83,9 +83,9 @@ class TestCountFrozenDeployments:
     def test_different_log_lines(self, bk_deployment, log_lines, cnt):
         with mock.patch('paasng.engine.monitoring.EngineDeployClient') as mocked_client:
             mocked_client().list_build_proc_logs.return_value = log_lines
-            assert count_frozen_deployments(edge_seconds=10, now=_NOW.datetime) == cnt
+            assert count_frozen_deployments(edge_seconds=10, now=NOW) == cnt
 
     def test_now_not_provided(self, bk_deployment):
-        bk_deployment.created = arrow.now().datetime
+        bk_deployment.created = datetime.now()
         bk_deployment.save()
         assert count_frozen_deployments(edge_seconds=10) == 0

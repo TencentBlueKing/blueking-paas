@@ -34,7 +34,7 @@ from paasng.utils.es_log.models import FieldFilter, LogLine, extra_field
         (1000, "timestamp[ns]", 1),
         (datetime.datetime(1970, 1, 1), "datetime", 0),
         (datetime.datetime(1970, 1, 1).replace(tzinfo=pytz.timezone("UTC")), "datetime", 0),
-        (datetime.datetime(1970, 1, 1).replace(tzinfo=pytz.timezone("Asia/Shanghai")), "datetime", -29160),
+        (datetime.datetime(1970, 1, 1).replace(tzinfo=pytz.timezone("Asia/Shanghai")), "datetime", -28800),
     ],
 )
 def test_format_timestamp(value, input_format, expected):

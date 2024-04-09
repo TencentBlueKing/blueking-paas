@@ -39,9 +39,9 @@ def count_frozen_deployments(edge_seconds: int = 90, now: Optional[datetime.date
     """Count frozen deployments
 
     :param edge_seconds: if a pending deployment's has no updates in `edge_seconds`, it will be counted as "frozen"
-    :param now: current datetime, default to `datetime.datetime.now`
+    :param now: current datetime, default to `arrow.now().datetime`
     """
-    now = now if now else datetime.datetime.now()
+    now = now if now else arrow.now().datetime
     edge_date = now - datetime.timedelta(seconds=edge_seconds)
 
     logger.info('Start counting frozen deployments since {}'.format(edge_date.isoformat()))

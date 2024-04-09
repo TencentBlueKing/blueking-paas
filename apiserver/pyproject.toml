@@ -10,7 +10,7 @@ version = "0.0.1"
 python = ">=3.8.1,<3.11"
 aenum = "2.1.2"
 apscheduler = "3.6.0"
-arrow = "1.3.0"
+arrow = "0.12.1"
 bk-iam = "1.1.20"
 bkpaas-auth = "2.0.6"
 apigw-manager = {version = "1.2.0"}

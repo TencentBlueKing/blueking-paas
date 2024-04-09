@@ -478,7 +478,7 @@ class TestRemoteMgr:
     @mock.patch("paasng.accessories.servicehub.remote.manager.get_cluster_egress_info")
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.retrieve_instance")
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
-    def test_get_env_vars_for_env_import(
+    def test_get_env_vars_with_exclude_disabled(
         self,
         mocked_provision,
         mocked_retrieve,
@@ -501,14 +501,17 @@ class TestRemoteMgr:
                 data["uuid"] = rel.db_obj.service_instance_id
                 mocked_retrieve.return_value = data
 
-                assert mixed_service_mgr.get_env_vars_for_env_import(env.engine_app) != {}
+                assert (
+                    mixed_service_mgr.get_env_vars(env.engine_app, None, True)["CEPH_BUCKET"]
+                    == data["credentials"]["bucket"]  # type: ignore
+                )
 
                 # 测试配置 write_instance_credentials_to_env 后， 不导入环境变量
                 attachment = mixed_service_mgr.get_attachment_by_engine_app(svc, env.engine_app)
-                attachment.write_instance_credentials_to_env = False
-                attachment.save(update_fields=["write_instance_credentials_to_env"])
+                attachment.credentials_enabled = False
+                attachment.save(update_fields=["credentials_enabled"])
 
-                assert mixed_service_mgr.get_env_vars_for_env_import(env.engine_app) == {}
+                assert mixed_service_mgr.get_env_vars(env.engine_app, None, True) == {}
 
     # TODO: 重构单元测试
     # def test_module_rebind_with_specs(self):

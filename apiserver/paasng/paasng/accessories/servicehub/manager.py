@@ -217,39 +217,27 @@ class MixedServiceMgr:
     list_provisioned_rels = cast(
         Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_provisioned_rels")
     )
-    list_provisioned_rels_for_env_import = cast(
-        Callable[..., Iterable[EngineAppInstanceRel]],
-        _proxied_chained_generator("list_provisioned_rels_for_env_import"),
-    )
     list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
     list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
 
     # Proxied generator methods end
 
-    def get_env_vars(self, engine_app: EngineApp, service: Optional[ServiceObj] = None) -> Dict[str, str]:
+    def get_env_vars(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, exclude_disabled: bool = False
+    ) -> Dict[str, str]:
         """Get all provisioned services env variables
 
         :param engine_app: EngineApp object
         :param service: Optional service object. if given, will only return credentials of the specified service,
             otherwise return the credentials of all services.
+        :param exclude_disabled: Whether to exclude disabled service instances
         :returns: Dict of env variables.
         """
-        instances = [rel.get_instance() for rel in self.list_provisioned_rels(engine_app, service=service)]
-        # 新的覆盖旧的
-        instances.sort(key=operator.attrgetter("create_time"))
-
-        result = {}
-        for i in instances:
-            result.update(i.credentials)
-        return result
-
-    def get_env_vars_for_env_import(
-        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
-    ) -> Dict[str, str]:
-        """Get all provisioned services env variables for env import"""
-        instances = [
-            rel.get_instance() for rel in self.list_provisioned_rels_for_env_import(engine_app, service=service)
-        ]
+        rels = list(self.list_provisioned_rels(engine_app, service=service))
+        if exclude_disabled:
+            instances = [rel.get_instance() for rel in rels if rel.db_obj.credentials_enabled]
+        else:
+            instances = [rel.get_instance() for rel in rels]
         # 新的覆盖旧的
         instances.sort(key=operator.attrgetter("create_time"))
 

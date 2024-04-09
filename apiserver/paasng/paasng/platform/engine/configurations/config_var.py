@@ -92,10 +92,10 @@ def get_env_variables(
     result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
 
     # Part: env vars shared from other modules
-    result.update(ServiceSharingManager(env.module).get_env_variables_for_env_import(env))
+    result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
 
     # Part: env vars provided by services
-    result.update(mixed_service_mgr.get_env_vars_for_env_import(engine_app))
+    result.update(mixed_service_mgr.get_env_vars(engine_app, None, True))
 
     # Part: Application's default sub domains/paths
     result.update(AppDefaultDomains(env).as_env_vars())

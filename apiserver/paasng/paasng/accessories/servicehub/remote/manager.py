@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, cast
 
 import arrow
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
@@ -606,18 +606,6 @@ class RemoteServiceMgr(BaseServiceMgr):
     ) -> Generator[RemoteEngineAppInstanceRel, None, None]:
         """Return all provisioned engine_app <-> remote service instances"""
         qs = engine_app.remote_service_attachment.exclude(service_instance_id__isnull=True)
-        if service:
-            qs = qs.filter(service_id=service.uuid)
-        for attachment in qs:
-            yield self.transform_rel_db_obj(attachment)
-
-    def list_provisioned_rels_for_env_import(
-        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
-    ) -> Generator[EngineAppInstanceRel, None, None]:
-        """Return all provisioned engine_app for env import"""
-        qs = engine_app.remote_service_attachment.exclude(
-            Q(service_instance_id__isnull=True) | Q(write_instance_credentials_to_env=False)
-        )
         if service:
             qs = qs.filter(service_id=service.uuid)
         for attachment in qs:

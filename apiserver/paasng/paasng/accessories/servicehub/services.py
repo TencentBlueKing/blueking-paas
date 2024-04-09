@@ -269,12 +269,6 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def list_provisioned_rels_for_env_import(
-        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
-    ) -> Generator[EngineAppInstanceRel, None, None]:
-        raise NotImplementedError
-
-    @abstractmethod
     def get_provisioned_queryset(self, service: ServiceObj, application_ids: List[str]) -> QuerySet:
         raise NotImplementedError
 

@@ -679,67 +679,35 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_200_OK)
 
 
-class EngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
-    @staticmethod
-    def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
 
     def list(self, request, code, module_name, service_id):
         """查看增强服务不同环境下是否导入环境变量"""
-        slz = slzs.EngineAppAttachmentsQuerySLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-        environment = slz.validated_data.get("environment")
-
         module = self.get_module_via_path()
         envs = module.envs.all()
-        if environment:
-            envs = envs.filter(environment=environment)
-        service_obj = self.get_service(service_id, self.get_application())
+        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
         engine_app_attachments = [
             mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app) for env in envs
         ]
-        return Response(slzs.EngineAppAttachmentSLZ(engine_app_attachments, many=True).data)
-
-    def retrieve(self, request, code, module_name, service_id):
-        """查看增强服务是否导入环境变量"""
-        # TODO: 产品侧没有区分环境，临时兼容，后续删除
-        slz = slzs.EngineAppAttachmentsQuerySLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-        environment = slz.validated_data.get("environment")
-
-        module = self.get_module_via_path()
-        envs = module.envs.all()
-        if environment:
-            envs = envs.filter(environment=environment)
-        service_obj = self.get_service(service_id, self.get_application())
-        write_instance_credentials_to_env = True
-        for env in envs:
-            attachment = mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app)
-            if attachment.write_instance_credentials_to_env is False:
-                write_instance_credentials_to_env = False
-        return Response({"write_instance_credentials_to_env": write_instance_credentials_to_env})
+        return Response(slzs.ServiceEngineAppAttachmentSLZ(engine_app_attachments, many=True).data)
 
     def update(self, request, code, module_name, service_id):
         """修改增强服务是否导入环境变量"""
-        slz = slzs.UpdateEngineAppAttachmentSLZ(data=request.data)
+        slz = slzs.UpdateServiceEngineAppAttachmentSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        environment = data.get("environment")
-        write_instance_credentials_to_env = data["write_instance_credentials_to_env"]
+        credentials_enabled = data["credentials_enabled"]
 
         module = self.get_module_via_path()
         envs = module.envs.all()
-        if environment:
-            envs = envs.filter(environment=environment)
-        service_obj = self.get_service(service_id, self.get_application())
+        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
         results = []
         for env in envs:
             attachment = mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app)
-            attachment.write_instance_credentials_to_env = write_instance_credentials_to_env
-            attachment.save(update_fields=["write_instance_credentials_to_env"])
+            attachment.credentials_enabled = credentials_enabled
+            attachment.save(update_fields=["credentials_enabled"])
             results.append(attachment)
 
-        return Response(slzs.EngineAppAttachmentSLZ(results, many=True).data)
+        return Response(slzs.ServiceEngineAppAttachmentSLZ(results, many=True).data)

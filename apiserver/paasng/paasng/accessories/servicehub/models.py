@@ -57,7 +57,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
     service_instance = models.ForeignKey(
         ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, related_name="service_attachment"
     )
-    write_instance_credentials_to_env = models.BooleanField(default=False, verbose_name="写入环境变量")
+    credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
 
     class Meta:
         unique_together = ("service", "engine_app")
@@ -146,7 +146,7 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
     service_id = models.UUIDField(verbose_name="远程增强服务 ID")
     plan_id = models.UUIDField(verbose_name="远程增强服务 Plan ID")
     service_instance_id = models.UUIDField(null=True)
-    write_instance_credentials_to_env = models.BooleanField(default=True, verbose_name="写入环境变量")
+    credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
 
     class Meta:
         unique_together = ("service_id", "engine_app")

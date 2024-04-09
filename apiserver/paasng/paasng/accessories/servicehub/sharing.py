@@ -122,10 +122,11 @@ class ServiceSharingManager:
         """Destroy a shared relationship"""
         SharedServiceAttachment.objects.filter(module=self.module, service_id=service.uuid).delete()
 
-    def get_env_variables(self, env: ModuleEnvironment) -> Dict[str, str]:
+    def get_env_variables(self, env: ModuleEnvironment, exclude_disabled: bool = False) -> Dict[str, str]:
         """Get all env variables shared from other modules
 
         :param env: ModuleEnvironment object, must belongs to self.module
+        :param exclude_disabled: Whether to exclude disabled service instances
         """
         if env.module != self.module:
             raise RuntimeError("Invalid env object, must belongs to self.module")
@@ -133,18 +134,9 @@ class ServiceSharingManager:
         ret = {}
         for referenced_info in self.list_all_shared_info():
             ref_env = referenced_info.ref_module.get_envs(env.environment)
-            env_variables = mixed_service_mgr.get_env_vars(ref_env.engine_app, referenced_info.service)
-            ret.update(env_variables)
-        return ret
-
-    def get_env_variables_for_env_import(self, env: ModuleEnvironment) -> Dict[str, str]:
-        if env.module != self.module:
-            raise RuntimeError("Invalid env object, must belongs to self.module")
-
-        ret = {}
-        for referenced_info in self.list_all_shared_info():
-            ref_env = referenced_info.ref_module.get_envs(env.environment)
-            env_variables = mixed_service_mgr.get_env_vars_for_env_import(ref_env.engine_app, referenced_info.service)
+            env_variables = mixed_service_mgr.get_env_vars(
+                ref_env.engine_app, referenced_info.service, exclude_disabled
+            )
             ret.update(env_variables)
         return ret
 

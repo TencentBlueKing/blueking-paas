@@ -33,8 +33,9 @@ def wrap_request_exc():
     try:
         yield
     except requests.RequestException as e:
-        logger.exception(f"unable to fetch response from {e.request.url}")
-        raise BkOauthApiException(f'something wrong happened when fetching {e.request.url}') from e
+        url = e.request.url if e.request else "--"
+        logger.exception(f"unable to fetch response from {url}")
+        raise BkOauthApiException(f'something wrong happened when fetching {url}') from e
     except json.decoder.JSONDecodeError as e:
         logger.exception(f'invalid json response: {e.doc}')
         raise BkOauthApiException(f'invalid json response: {e.doc}') from e

@@ -25,7 +25,7 @@ from typing import Dict, List, Optional, Tuple
 from django.conf import settings
 from kubernetes.utils.quantity import parse_quantity
 
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import (
     ACCESS_CONTROL_ANNO_KEY,
     BKAPP_CODE_ANNO_KEY,
@@ -35,7 +35,6 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKPAAS_DEPLOY_ID_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
-    LEGACY_PROC_IMAGE_ANNO_KEY,
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
@@ -66,9 +65,10 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
-from paas_wl.bk_app.cnative.specs.models import Mount, generate_bkapp_name
+from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
+from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.models import ModuleEnvironment
@@ -79,11 +79,17 @@ from paasng.platform.bkapp_model.models import (
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
-from paasng.platform.bkapp_model.utils import merge_env_vars, override_env_vars_overlay
+from paasng.platform.bkapp_model.utils import (
+    MergeStrategy,
+    merge_env_vars,
+    merge_env_vars_overlay,
+    override_env_vars_overlay,
+)
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.constants import AppEnvName, RuntimeType
+from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
+from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
-from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
@@ -173,7 +179,6 @@ class ProcessesManifestConstructor(ManifestConstructor):
             logger.warning("模块<%s> 未定义任何进程", module)
             return
 
-        legacy_processes = {}
         processes = []
         for process_spec in process_specs:
             try:
@@ -195,20 +200,12 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     command=command,
                     args=args,
                     targetPort=process_spec.port,
-                    # TODO?: 是否需要使用 LEGACY_PROC_RES_ANNO_KEY 存储不支持的 plan
+                    # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
                     autoscaling=autoscaling_spec,
                 )
             )
-            # deprecated: support v1alpha1
-            if process_spec.image:
-                legacy_processes[process_spec.name] = {
-                    "image": process_spec.image,
-                    "policy": process_spec.image_pull_policy,
-                }
 
-        if legacy_processes:
-            model_res.metadata.annotations[LEGACY_PROC_IMAGE_ANNO_KEY] = json.dumps(legacy_processes)
         model_res.spec.processes = processes
 
         # Apply other env-overlay related changes.
@@ -291,19 +288,21 @@ class ProcessesManifestConstructor(ManifestConstructor):
 
         :return: (command, args)
         """
-        # 仅托管镜像的应用目前会在页面上配置 command/args 字段, 其余类型的应用使用 proc_command 声明启动命令
-        if process_spec.command or process_spec.args:
-            return self._sanitize_args(process_spec.command or []), self._sanitize_args(process_spec.args or [])
-
         mgr = ModuleRuntimeManager(module)
+
+        # buildpack 优先级最高, 忽略 process_spec 中的命令配置. 按照 buildpack 规则设置 command 和 args
         if mgr.build_config.build_method == RuntimeType.BUILDPACK:
             # Note: 此处无需考虑兼容 cnb buildpack, cnb buildpack 的启动命令由 operator 做兼容(通过 use-cnb annotations 声明)
             # 普通应用的启动命令固定了 entrypoint
             return DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", process_spec.name]
 
-        if mgr.build_config.build_method == RuntimeType.DOCKERFILE:
+        if process_spec.proc_command:
             o = self._sanitize_args(shlex.split(process_spec.proc_command))
             return [o[0]], o[1:]
+
+        if process_spec.command or process_spec.args:
+            return self._sanitize_args(process_spec.command or []), self._sanitize_args(process_spec.args or [])
+
         raise ValueError("Error getting command and args")
 
     @staticmethod
@@ -320,19 +319,39 @@ class EnvVarsManifestConstructor(ManifestConstructor):
     """Construct the env variables part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        # The global variables
-        for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by("key"):
-            model_res.spec.configuration.env.append(EnvVar(name=var.key, value=var.value))
+        g_preset_vars = [
+            EnvVar(name=var.key, value=var.value, environment_name=ConfigVarEnvName.GLOBAL)
+            for var in PresetEnvVariable.objects.filter(
+                module=module, environment_name=ConfigVarEnvName.GLOBAL
+            ).order_by("key")
+        ]
+        g_user_vars = [
+            EnvVar(name=var.key, value=var.value)
+            for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by(
+                "key"
+            )
+        ]
+        model_res.spec.configuration.env = merge_env_vars(g_preset_vars, g_user_vars, strategy=MergeStrategy.OVERRIDE)
 
         # The environment specific variables
         overlay = model_res.spec.envOverlay
         if not overlay:
-            overlay = EnvOverlay()
-        for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
-            for var in ConfigVar.objects.filter(module=module, environment=module.get_envs(env)).order_by("key"):
-                overlay.append_item("envVariables", EnvVarOverlay(envName=env, name=var.key, value=var.value))
-
-        model_res.spec.envOverlay = overlay
+            overlay = model_res.spec.envOverlay = EnvOverlay()
+        scoped_preset_vars = [
+            EnvVarOverlay(envName=var.environment_name, name=var.key, value=var.value)
+            for var in PresetEnvVariable.objects.filter(module=module)
+            .exclude(environment_name=ConfigVarEnvName.GLOBAL)
+            .order_by("key")
+        ]
+        scoped_user_vars = [
+            EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.value)
+            for var in ConfigVar.objects.filter(module=module)
+            .exclude(is_global=True)
+            .order_by("environment__environment", "key")
+        ]
+        overlay.envVariables = merge_env_vars_overlay(
+            scoped_preset_vars, scoped_user_vars, strategy=MergeStrategy.OVERRIDE
+        )
 
 
 class HooksManifestConstructor(ManifestConstructor):
@@ -453,6 +472,8 @@ def get_bkapp_resource_for_deploy(
     :param deploy_id: The ID of the AppModelDeploy object.
     :param force_image: If given, set the image of the application to this value.
     :param image_pull_policy: If given, set the imagePullPolicy to this value.
+    :param use_cnb: A bool flag describe if the bkapp image is built with cnb
+    :param deployment: The related deployment instance
     :returns: The BkApp resource that is ready for deploying.
     """
     model_res = get_bkapp_resource(env.module)
@@ -478,9 +499,9 @@ def get_bkapp_resource_for_deploy(
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
-    apply_builtin_env_vars(model_res, env, deployment)
+    apply_builtin_env_vars(model_res, env)
 
-    # TODO: Missing parts: "build", "hooks", "service-disc"
+    # TODO: Missing parts: "build"
     return model_res
 
 
@@ -503,7 +524,7 @@ def apply_env_annots(model_res: BkAppResource, env: ModuleEnvironment, deploy_id
         model_res.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
 
-def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, deployment: Optional[Deployment] = None):
+def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     """Apply the builtin environment vars to the resource object. These vars are hidden from
     the default manifest view and should only be used in the deploying procedure.
 
@@ -515,14 +536,17 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment, dep
     environment = env.environment
     builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
 
-    for name, value in get_env_variables(env, True, deployment).items():
+    # deployment=None 意味着云原生应用不通过 get_env_variables 注入描述文件产生的环境变量
+    # include_config_var=False 是因为 EnvVarsManifestConstructor 已处理了 config vars
+    for name, value in get_env_variables(env, deployment=None, include_config_var=False).items():
         env_vars.append(EnvVar(name=name, value=value))
         builtin_env_vars_overlay.append(EnvVarOverlay(envName=environment, name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones
     model_res.spec.configuration.env = merge_env_vars(model_res.spec.configuration.env, env_vars)
 
-    if model_res.spec.envOverlay and model_res.spec.envOverlay.envVariables:
-        model_res.spec.envOverlay.envVariables = override_env_vars_overlay(
-            model_res.spec.envOverlay.envVariables, builtin_env_vars_overlay
-        )
+    if builtin_env_vars_overlay:
+        overlay = model_res.spec.envOverlay
+        if not overlay:
+            overlay = model_res.spec.envOverlay = EnvOverlay(envVariables=[])
+        overlay.envVariables = override_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay)

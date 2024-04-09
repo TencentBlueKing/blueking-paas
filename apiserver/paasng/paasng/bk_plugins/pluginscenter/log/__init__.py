@@ -18,16 +18,26 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple, cast
 
 import cattr
 
+from paasng.accessories.log.client import LogClientProtocol as BkSaaSLogClientProtocol
+from paasng.accessories.log.client import instantiate_log_client as instantiate_bksaas_log_client
+from paasng.accessories.log.constants import LogType
+from paasng.accessories.log.models import ProcessLogQueryConfig
 from paasng.bk_plugins.pluginscenter.definitions import ElasticSearchParams
-from paasng.bk_plugins.pluginscenter.log.client import instantiate_log_client
+from paasng.bk_plugins.pluginscenter.log.client import (
+    FieldBucketData,
+    LogClientProtocol,
+    Response,
+    instantiate_log_client,
+)
 from paasng.bk_plugins.pluginscenter.log.filters import ElasticSearchFilter
 from paasng.bk_plugins.pluginscenter.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.bk_plugins.pluginscenter.log.utils import clean_logs
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
+from paasng.platform.applications.models import Application
 from paasng.utils.es_log.misc import clean_histogram_buckets
 from paasng.utils.es_log.models import DateHistogram, FieldFilter, Logs
 from paasng.utils.es_log.search import SmartSearch
@@ -49,19 +59,18 @@ def query_standard_output_logs(
     offset: int,
 ) -> Logs[StandardOutputLogLine]:
     """查询标准输出日志"""
-    log_client = instantiate_log_client(pd.log_config, operator)
-    stdout_config = pd.log_config.stdout
+    log_client, search_params = _instantiate_log_client(pd, instance, LogType.STANDARD_OUTPUT, operator)
     search = make_base_search(
-        plugin=instance, search_params=stdout_config, time_range=time_range, limit=limit, offset=offset
+        plugin=instance, search_params=search_params, time_range=time_range, limit=limit, offset=offset
     )
     if query_string:
         search = search.filter("query_string", query=query_string, analyze_wildcard=True)
     response, total = log_client.execute_search(
-        index=stdout_config.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
+        index=search_params.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
     )
     return cattr.structure(
         {
-            "logs": clean_logs(list(response), stdout_config),
+            "logs": clean_logs(list(response), search_params),
             "total": total,
             "dsl": json.dumps(search.to_dict()),
         },
@@ -81,12 +90,9 @@ def query_structure_logs(
     exclude: Optional[Dict[str, List[str]]] = None,
 ) -> Logs[StructureLogLine]:
     """查询结构化日志"""
-    log_client = instantiate_log_client(pd.log_config, operator)
-    json_config = pd.log_config.json_
-    if not json_config:
-        raise ValueError("this plugin does not support query json logs")
+    log_client, search_params = _instantiate_log_client(pd, instance, LogType.STRUCTURED, operator)
     search = make_base_search(
-        plugin=instance, search_params=json_config, time_range=time_range, limit=limit, offset=offset
+        plugin=instance, search_params=search_params, time_range=time_range, limit=limit, offset=offset
     )
     if query_string:
         search = search.filter("query_string", query=query_string, analyze_wildcard=True)
@@ -95,11 +101,11 @@ def query_structure_logs(
     if exclude:
         search = search.exclude("terms", **exclude)
     response, total = log_client.execute_search(
-        index=json_config.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
+        index=search_params.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
     )
     return cattr.structure(
         {
-            "logs": clean_logs(list(response), json_config),
+            "logs": clean_logs(list(response), search_params),
             "total": total,
             "dsl": json.dumps(search.to_dict()),
         },
@@ -117,21 +123,18 @@ def query_ingress_logs(
     offset: int,
 ) -> Logs[IngressLogLine]:
     """查询 ingress 访问日志"""
-    log_client = instantiate_log_client(pd.log_config, operator)
-    ingress_config = pd.log_config.ingress
-    if not ingress_config:
-        raise ValueError("this plugin does not support query ingress logs")
+    log_client, search_params = _instantiate_log_client(pd, instance, LogType.INGRESS, operator)
     search = make_base_search(
-        plugin=instance, search_params=ingress_config, time_range=time_range, limit=limit, offset=offset
+        plugin=instance, search_params=search_params, time_range=time_range, limit=limit, offset=offset
     )
     if query_string:
         search = search.filter("query_string", query=query_string, analyze_wildcard=True)
     response, total = log_client.execute_search(
-        index=ingress_config.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
+        index=search_params.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
     )
     return cattr.structure(
         {
-            "logs": clean_logs(list(response), ingress_config),
+            "logs": clean_logs(list(response), search_params),
             "total": total,
             "dsl": json.dumps(search.to_dict()),
         },
@@ -150,16 +153,14 @@ def aggregate_date_histogram(
     exclude: Optional[Dict[str, List[str]]] = None,
 ) -> DateHistogram:
     """查询日志的直方图"""
-    log_client = instantiate_log_client(pd.log_config, operator)
-    search_params: Optional[ElasticSearchParams] = None
-    if log_type == "standard_output":
-        search_params = pd.log_config.stdout
-    elif log_type == "structure":
-        search_params = pd.log_config.json_
-    elif log_type == "ingress":
-        search_params = pd.log_config.ingress
-    if not search_params:
-        raise ValueError(f"this plugin does not support query {log_type} logs")
+    # 前端在路径参数中使用了小写, 这里需要转换一下
+    log_type_map = {
+        "standard_output": LogType.STANDARD_OUTPUT,
+        "structure": LogType.STRUCTURED,
+        "ingress": LogType.INGRESS,
+    }
+    log_client, search_params = _instantiate_log_client(pd, instance, log_type_map[log_type], operator)
+
     search = make_base_search(plugin=instance, search_params=search_params, time_range=time_range, limit=0, offset=0)
     if query_string:
         search = search.filter("query_string", query=query_string, analyze_wildcard=True)
@@ -191,16 +192,13 @@ def aggregate_fields_filters(
     exclude: Optional[Dict[str, List[str]]] = None,
 ) -> List[FieldFilter]:
     """查询日志的可选字段和对应的值分布(只取前200条数据做统计)"""
-    log_client = instantiate_log_client(pd.log_config, operator)
-    search_params: Optional[ElasticSearchParams] = None
-    if log_type == "standard_output":
-        search_params = pd.log_config.stdout
-    elif log_type == "structure":
-        search_params = pd.log_config.json_
-    elif log_type == "ingress":
-        search_params = pd.log_config.ingress
-    if not search_params:
-        raise ValueError(f"this plugin does not support query {log_type} logs")
+    # 前端在路径参数中使用了小写, 这里需要转换一下
+    log_type_map = {
+        "standard_output": LogType.STANDARD_OUTPUT,
+        "structure": LogType.STRUCTURED,
+        "ingress": LogType.INGRESS,
+    }
+    log_client, search_params = _instantiate_log_client(pd, instance, log_type_map[log_type], operator)
 
     search = make_base_search(plugin=instance, search_params=search_params, time_range=time_range, limit=200, offset=0)
     if query_string:
@@ -213,7 +211,7 @@ def aggregate_fields_filters(
         index=search_params.indexPattern,
         search=search,
         timeout=DEFAULT_ES_SEARCH_TIMEOUT,
-        fields=search_params.filterFields,
+        fields=get_filter_fields(pd=pd, log_type=log_type_map[log_type]),
     )
 
 
@@ -231,3 +229,77 @@ def make_base_search(
     search = plugin_filter.filter_by_builtin_filters(search)
     search = plugin_filter.filter_by_builtin_excludes(search)
     return search.limit_offset(limit=limit, offset=offset)
+
+
+def _instantiate_log_client(
+    pd: PluginDefinition, instance: PluginInstance, log_type: LogType, operator: str
+) -> Tuple[LogClientProtocol, ElasticSearchParams]:
+    """实例化日志查询客户端"""
+    if pd.identifier != "bk-saas":
+        log_client = instantiate_log_client(pd.log_config, operator)
+        search_params: ElasticSearchParams
+        if log_type == LogType.STANDARD_OUTPUT:
+            search_params = pd.log_config.stdout
+        elif log_type == LogType.STRUCTURED:
+            if not pd.log_config.json_:
+                raise ValueError("this plugin does not support query json logs")
+            search_params = cast(ElasticSearchParams, pd.log_config.json_)
+        else:
+            if not pd.log_config.ingress:
+                raise ValueError("this plugin does not support query ingress logs")
+            search_params = cast(ElasticSearchParams, pd.log_config.ingress)
+        return log_client, search_params
+    # 由于 bk-saas 接入了日志平台, 每个应用独立的日志查询配置, 因此需要访问 PaaS 的数据库获取配置信息
+    env = Application.objects.get(code=instance.id).get_app_envs("prod")
+    if log_type == LogType.INGRESS:
+        log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
+        search_params = log_config.search_params
+        search_params.termTemplate = {"engine_app_name.keyword": "bkapp-{{ plugin_id }}-prod"}
+    elif log_type == LogType.STANDARD_OUTPUT:
+        log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
+        search_params = log_config.search_params
+    else:
+        log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env=env).json
+        search_params = log_config.search_params
+
+    # Note: log_config.search_params 返回的是 paasng.accessories.log.models.ElasticSearchParams
+    # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致,
+    return LogClientAdaptor(instantiate_bksaas_log_client(log_config, operator)), search_params
+
+
+def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:
+    """获取插件类型中声明的字段列表"""
+    search_params: ElasticSearchParams
+    if log_type == LogType.STANDARD_OUTPUT:
+        search_params = pd.log_config.stdout
+    elif log_type == LogType.STRUCTURED:
+        if not pd.log_config.json_:
+            raise ValueError("this plugin does not support query json logs")
+        search_params = cast(ElasticSearchParams, pd.log_config.json_)
+    else:
+        if not pd.log_config.ingress:
+            raise ValueError("this plugin does not support query ingress logs")
+        search_params = cast(ElasticSearchParams, pd.log_config.ingress)
+    return search_params.filterFields
+
+
+class LogClientAdaptor:
+    def __init__(self, bksaas_client: BkSaaSLogClientProtocol):
+        self.client = bksaas_client
+
+    """LogClient protocol, all log search backend should abide this protocol"""
+
+    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
+        """Search log from index with search"""
+        return self.client.execute_search(index, search, timeout)
+
+    def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
+        """Aggregate time-based histogram"""
+        return self.client.aggregate_date_histogram(index, search, timeout)
+
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, timeout: int, fields: List[str]
+    ) -> List[FieldFilter]:
+        """Aggregate fields filters"""
+        mappings = self.client.get_mappings(index, search.time_range, timeout)
+        return self.client.aggregate_fields_filters(index, search, mappings=mappings, timeout=timeout)

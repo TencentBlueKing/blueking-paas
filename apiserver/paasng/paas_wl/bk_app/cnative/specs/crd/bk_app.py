@@ -21,15 +21,16 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
-import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
-from paas_wl.bk_app.cnative.specs.apis import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
+
+from .metadata import ObjectMetadata
 
 
 class MetaV1Condition(BaseModel):
@@ -125,46 +126,14 @@ class BkAppProcess(BaseModel):
     # TODO: `probes` is NOT supported by operator now.
     probes: Optional[ProbeSet] = None
 
-    # Deprecated: use resQuotaPlan instead in v1alpha2
-    cpu: Optional[str] = None
-    # Deprecated: use resQuotaPlan instead in v1alpha2
-    memory: Optional[str] = None
-    # Deprecated: use spec.build.image instead in v1alpha2
-    image: Optional[str] = None
-    # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
-    imagePullPolicy: Optional[str] = None
     # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
     proc_command: Optional[str] = Field(None)
 
     def get_proc_command(self) -> str:
-        """get_proc_command: Procfile 风格的命令
-        使用场景:
-        - buildpacks 构建方案使用该方法生成 Procfile 文件
-        """
+        """get_proc_command: 生成 Procfile 文件中对应的命令行"""
         if self.proc_command:
             return self.proc_command
-        # Warning: 已知 shlex.join 不支持环境变量, 对于 buildpack 构建的应用, 使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
-        # 例如会报错: Error: '${PORT:-5000}' is not a valid port number.
-        return self._sanitize_proc_command(
-            (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
-        )
-
-    @staticmethod
-    def _sanitize_proc_command(proc_command: str) -> str:
-        """Sanitize the command and arg list, replace some special expressions which can't
-        be interpreted by the operator.
-        """
-        # '${PORT:-5000}' is massively used by the app framework, while it can not work well with shlex.join,
-        # here remove the single quote added by shlex.join.
-        known_cases = [
-            ("':$PORT'", ":$PORT"),
-            ("':${PORT:-5000}'", ":${PORT}"),
-            ("'[::]:${PORT}'", "[::]:${PORT}"),
-            ("'[::]:${PORT:-5000}'", "[::]:${PORT}"),
-        ]
-        for old, new in known_cases:
-            proc_command = proc_command.replace(old, new)
-        return proc_command
+        return generate_bash_command_with_tokens(self.command or [], self.args or [])
 
 
 class Hook(BaseModel):
@@ -285,7 +254,7 @@ class BkAppBuildConfig(BaseModel):
 
     # 兼容使用注解支持多镜像的场景（v1alpha1 遗留功能）
     image: Optional[str] = None
-    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
+    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT.value
     imageCredentialsName: Optional[str] = None
     dockerfile: Optional[str] = None
     buildTarget: Optional[str] = None
@@ -354,7 +323,7 @@ class BkAppSpec(BaseModel):
 class BkAppStatus(BaseModel):
     """BkAppStatus defines the observed state of BkApp"""
 
-    phase: str = MResPhaseType.AppPending
+    phase: str = MResPhaseType.AppPending.value
     observedGeneration: int = Field(default=0)
     conditions: List[MetaV1Condition] = Field(default_factory=list)
     lastUpdate: Optional[datetime.datetime]
@@ -375,8 +344,8 @@ class BkAppResource(BaseModel):
         """ApiVersion can not be used for "Literal" validation directly, so we define a
         custom validator instead.
         """
-        if v not in [ApiVersion.V1ALPHA2, ApiVersion.V1ALPHA1]:
-            raise ValueError(f"{v} is not valid, use {ApiVersion.V1ALPHA2} or {ApiVersion.V1ALPHA1}")
+        if v != ApiVersion.V1ALPHA2:
+            raise ValueError(f"{v} is not valid, use {ApiVersion.V1ALPHA2}")
         return v
 
     def to_deployable(self) -> Dict:

@@ -33,7 +33,7 @@ from paas_wl.bk_app.processes.entities import Resources, Runtime
 from paas_wl.bk_app.processes.exceptions import UnknownProcessTypeError
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
-from paas_wl.infras.resource_templates.utils import AddonManager, ProcessProbeManager
+from paas_wl.infras.resource_templates.managers import AddonManager, ProcessProbeManager
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy

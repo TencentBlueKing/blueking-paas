@@ -18,11 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.core.resource import CNativeBkAppNameGenerator
+from paas_wl.core.resource import generate_bkapp_name
 
 
 def make_image_pull_secret_name(wl_app: WlApp) -> str:
     """Return the secret name for image pull credentials"""
     if wl_app.type == WlAppType.CLOUD_NATIVE:
-        return f"{CNativeBkAppNameGenerator.generate(wl_app)}--dockerconfigjson"
+        return f"{generate_bkapp_name(wl_app)}--dockerconfigjson"
     return f"{wl_app.scheduler_safe_name}--dockerconfigjson"

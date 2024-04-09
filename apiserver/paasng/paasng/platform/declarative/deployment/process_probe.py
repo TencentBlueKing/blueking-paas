@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 
 from paas_wl.bk_app.processes.models import ProcessProbe
-from paasng.platform.declarative.deployment.resources import Probe
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.declarative.deployment.resources import Probe
 
 
 def upsert_process_probe(

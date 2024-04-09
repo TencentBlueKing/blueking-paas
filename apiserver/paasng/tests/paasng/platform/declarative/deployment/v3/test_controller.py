@@ -31,6 +31,8 @@ from paasng.platform.declarative.deployment.validations.v3 import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.declarative.serializers import validate_desc
+from paasng.platform.engine.constants import ConfigVarEnvName
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
@@ -75,6 +77,10 @@ class TestProcessesField:
             web.get_proc_command()
             == 'gunicorn wsgi -w 4 -b [::]:${PORT} --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
+        assert (
+            bk_deployment.declarative_config.spec.processes[0].get_proc_command()
+            == 'bash -c \'"$(eval echo \\"$0\\")" "$(eval echo \\"${1}\\")" "$(eval echo \\"${2}\\")" "$(eval echo \\"${3}\\")" "$(eval echo \\"${4}\\")" "$(eval echo \\"${5}\\")" "$(eval echo \\"${6}\\")" "$(eval echo \\"${7}\\")" "$(eval echo \\"${8}\\")" "$(eval echo \\"${9}\\")" "$(eval echo \\"${10}\\")" "$(eval echo \\"${11}\\")"\' gunicorn wsgi -w 4 -b \'[::]:${PORT:-5000}\' --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
+        )
 
 
 class TestEnvVariablesField:
@@ -113,6 +119,35 @@ class TestEnvVariablesField:
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert len(desc_obj.get_env_variables()) == 3
+
+    def test_preset_environ_vars(self, bk_module, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "configuration": {"env": [{"name": "FOO", "value": "1"}, {"name": "BAR", "value": "2"}]},
+                "envOverlay": {
+                    "envVariables": [
+                        {"name": "BAZ", "value": "stag", "envName": "stag"},
+                        {"name": "BAZ", "value": "prod", "envName": "prod"},
+                    ]
+                },
+            },
+        )
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert PresetEnvVariable.objects.filter(module=bk_module).count() == 4
+        assert (
+            PresetEnvVariable.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.GLOBAL).count() == 2
+        )
+        assert (
+            PresetEnvVariable.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.STAG).get().value
+            == "stag"
+        )
+        assert (
+            PresetEnvVariable.objects.filter(module=bk_module, environment_name=ConfigVarEnvName.PROD).get().value
+            == "prod"
+        )
 
 
 class TestEnvVariablesReader:

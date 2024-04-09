@@ -15,14 +15,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict, List, Optional
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from typing_extensions import TypeAlias
 
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
-from paasng.platform.modules.constants import DeployHookType, ModuleName
-from paasng.platform.modules.models.module import Module
+from paasng.platform.applications.models import Application
+from paasng.platform.modules.constants import DeployHookType
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -106,22 +109,39 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     """A service discovery entry that represents an application and an optional module."""
 
     bk_app_code = serializers.CharField(help_text="被服务发现的应用 code", max_length=20, source="bkAppCode")
-    module_name = serializers.CharField(
-        help_text="被服务发现的应用模块", max_length=20, default=ModuleName.DEFAULT.value, source="moduleName"
-    )
+    module_name = serializers.CharField(help_text="被服务发现的模块", max_length=20, source="moduleName", default=None)
 
     def validate(self, attrs):
         """校验应用和模块存在，否则抛出异常"""
-        # NOTE: 在整个链路中，应用下的模块配置错误都没有提示，因此在创建应用时，提示错误
-        # 判断应用或者模块是否存在
-        if not Module.objects.filter(application__code=attrs["bkAppCode"], name=attrs["moduleName"]).exists():
-            raise serializers.ValidationError(_(f'应用{attrs["bkAppCode"]}或模块{attrs["moduleName"]}不存在'))
+        try:
+            application = Application.objects.get(code=attrs["bkAppCode"])
+        except Application.DoesNotExist:
+            raise serializers.ValidationError(_("应用{}不存在").format(attrs["bkAppCode"]))
 
+        # Check if module exists when the "module_name" is set
+        if module_name := attrs["moduleName"]:  # noqa: SIM102
+            if not application.modules.filter(name=module_name).exists():
+                raise serializers.ValidationError(_("模块{}不存在").format(module_name))
         return attrs
+
+
+BkSaaSList: TypeAlias = List[Dict[str, Optional[str]]]
 
 
 class SvcDiscConfigSLZ(serializers.Serializer):
     bk_saas = serializers.ListField(help_text="服务发现列表", child=SvcDiscEntryBkSaaSSLZ())
+
+    def validate_bk_saas(self, value: BkSaaSList) -> BkSaaSList:
+        seen = set()
+        for item in value:
+            pair = (item["bkAppCode"], item["moduleName"] or "")
+            if pair in seen:
+                pair_for_display = f"AppID: {pair[0]}"
+                if pair[1]:
+                    pair_for_display += f", ModuleName: {pair[1]}"
+                raise serializers.ValidationError(_("服务发现列表中存在重复项：{}").format(f"[{pair_for_display}]"))
+            seen.add(pair)
+        return value
 
 
 class HostAliasSLZ(serializers.Serializer):

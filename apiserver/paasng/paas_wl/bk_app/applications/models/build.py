@@ -51,16 +51,6 @@ def get_app_docker_registry_client() -> DockerRegistryV2Client:
     )
 
 
-def mark_as_latest_artifact(build: "Build"):
-    """mark the given build as latest artifact"""
-    if build.artifact_type != ArtifactType.IMAGE:
-        return
-    # 旧的同名镜像会被覆盖, 则标记为已删除
-    qs = Build.objects.filter(module_id=build.module_id, image=build.image).exclude(uuid=build.uuid)
-    qs.update(artifact_deleted=True)
-    return
-
-
 class Build(UuidAuditedModel):
     application_id = models.UUIDField(verbose_name="所属应用", null=True)
     module_id = models.UUIDField(verbose_name="所属模块", null=True)
@@ -311,6 +301,7 @@ class BuildProcess(UuidAuditedModel):
             return False
         if not self.logs_was_ready_at:
             return False
+
         return True
 
     def set_logs_was_ready(self):

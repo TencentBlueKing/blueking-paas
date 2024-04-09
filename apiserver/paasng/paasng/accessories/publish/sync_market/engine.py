@@ -23,7 +23,6 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.fields import SkipField
 
 from paasng.accessories.publish.market.constant import AppState
 from paasng.accessories.publish.market.models import MarketConfig
@@ -325,13 +324,15 @@ class RemoteAppManager:
     def get_mobile_config(self, env_name: str) -> Optional[MobileConfig]:
         try:
             env = self.application.envs.get(module__is_default=True, environment=env_name)
-        except SkipField:
-            pass
-        except Exception as e:
-            logger.warning(f"fail to get mobile config status: {e}")
-        else:
+        except ObjectDoesNotExist:
+            logger.warning("The env object does not exist, app: %s(%s).", self.application.code, env_name)
+            return None
+
+        try:
             return env.mobile_config
-        return None
+        except ObjectDoesNotExist:
+            logger.warning("The mobile config object does not exist, app: %s(%s).", self.application.code, env_name)
+            return None
 
     def hybrate_use_mobile_online(self):
         """

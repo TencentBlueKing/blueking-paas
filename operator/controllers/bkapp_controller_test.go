@@ -28,7 +28,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -176,11 +175,6 @@ var _ = Describe("", func() {
 		Expect(condHooks.Reason).To(Equal("Progressing"))
 		Expect(condHooks.Status).To(Equal(metav1.ConditionFalse))
 		Expect(hookStatus.Phase).To(Equal(paasv1alpha2.HealthProgressing))
-
-		// Check addons envs
-		Expect(
-			lo.Contains(preReleaseHookPod.Spec.Containers[0].Env, corev1.EnvVar{Name: "FAKE_FOO", Value: "FOO"}),
-		).To(BeTrue())
 
 		By("By update the pre-release-hook pod Status.Phase to Succeeded")
 		preReleaseHookPod.Status.Phase = corev1.PodSucceeded

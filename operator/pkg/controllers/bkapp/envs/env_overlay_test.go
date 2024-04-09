@@ -29,7 +29,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
@@ -261,6 +263,28 @@ var _ = Describe("Environment overlay related functions", func() {
 			resReq, _ := getter.GetByProc("web")
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+		})
+
+		It("Get Default Requests", func() {
+			originalConfig := config.Global
+			projConf := paasv1alpha1.NewProjectConfig()
+			projConf.ResRequests.ProcDefaultCPURequest = "100m"
+			projConf.ResRequests.ProcDefaultMemRequest = "128Mi"
+			config.SetConfig(projConf)
+			defer config.SetConfig(originalConfig)
+
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C1G},
+				},
+			}
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("100m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("128Mi"))).To(BeTrue())
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 		})

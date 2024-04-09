@@ -70,9 +70,7 @@ def import_manifest(module: Module, input_data: Dict):
         overlay_mounts = env_overlay.get("mounts", [])
 
     # Run importer functions
-    import_processes(
-        module, processes=validated_data["processes"], annotations=input_data["metadata"].get("annotations", {})
-    )
+    import_processes(module, processes=validated_data["processes"])
     if build := validated_data.get("build"):
         import_build(module, build)
     if hooks := validated_data.get("hooks"):
@@ -81,7 +79,7 @@ def import_manifest(module: Module, input_data: Dict):
         import_env_vars(module, env_vars, overlay_env_vars)
     if mounts or overlay_mounts:
         import_mounts(module, mounts, overlay_mounts)
-    if svc_discovery := validated_data.get("serviceDiscovery"):
+    if svc_discovery := validated_data.get("svcDiscovery"):
         import_svc_discovery(module, svc_discovery)
     if domain_resolution := validated_data.get("domainResolution"):
         import_domain_resolution(module, domain_resolution)

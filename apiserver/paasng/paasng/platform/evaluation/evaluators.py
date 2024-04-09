@@ -42,6 +42,9 @@ class AppOperationEvaluator:
         if issues := self._evaluate_by_app_members_status():
             return OperationIssueType.OWNERLESS, issues
 
+        if issues := self._evaluate_by_process_status(metrics):
+            return OperationIssueType.UNDEPLOY, issues
+
         if issues := self._evaluate_by_user_activity(metrics):
             return OperationIssueType.INACTIVE, issues
 
@@ -68,6 +71,17 @@ class AppOperationEvaluator:
         # 对于不是平台管理员创建的应用，如果在职的成员只有管理员，则也认为是无主应用
         return ["应用成员中不包含除平台管理员之外的在职人员"]
 
+    def _evaluate_by_process_status(self, metrics: Dict[str, Any]) -> List[str]:
+        """根据进程状态评估"""
+        if not metrics["latest_deployed_at"]:
+            return ["应用未部署过"]
+
+        # 注：由于 requests 是根据实际进程数量算出来的，不是理论值，因此如果都是 0 说明没有运行中的进程
+        if not (metrics["cpu_requests"] and metrics["mem_requests"]):
+            return ["应用无运行中的进程"]
+
+        return []
+
     def _evaluate_by_user_activity(self, metrics: Dict[str, Any]) -> List[str]:
         """根据用户活跃度评估应用"""
         # 有访问记录，说明是活跃应用，不需要参与后面的操作评估
@@ -76,15 +90,13 @@ class AppOperationEvaluator:
 
         issues = ["应用最近 30 天没有访问记录"]
 
-        if not metrics["latest_deployed_at"]:
-            issues.append("应用未部署过")
-        elif metrics["latest_deployed_at"] < timezone.now() - timedelta(days=180):
+        if metrics["latest_deployed_at"] < timezone.now() - timedelta(days=180):
             issues.append("应用最近半年没有部署记录")
 
         if not metrics["latest_operated_at"]:
             issues.append("应用没有操作记录")
-        elif metrics["latest_operated_at"] < timezone.now() - timedelta(days=90):
-            issues.append("应用最近 3 个月没有操作记录")
+        elif metrics["latest_operated_at"] < timezone.now() - timedelta(days=180):
+            issues.append("应用最近半年没有操作记录")
 
         return issues
 

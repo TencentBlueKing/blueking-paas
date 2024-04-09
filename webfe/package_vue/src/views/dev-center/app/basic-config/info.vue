@@ -1,14 +1,22 @@
 <template lang="html">
   <div class="right-main">
     <paas-content-loader
-      class="app-container middle base-info-container shadow-card-style"
+      class="app-container middle base-info-container"
       :is-loading="isLoading"
       placeholder="base-info-loading"
     >
       <section>
-        <div class="basic-info-item mt15">
+        <!-- 基本信息 -->
+        <div class="basic-info-item info-card-style">
           <div class="title">
             {{ $t('基本信息-title') }}
+            <div
+              v-if="!appBaseInfoConfig.isEdit"
+              :class="['edit-container', { 'disabled': !isBasicInfoEditable }]"
+              @click="handleEditBaseInfo">
+              <i class="paasng-icon paasng-edit-2 pl10" />
+              {{ $t('编辑') }}
+            </div>
           </div>
           <div
             v-if="isSmartApp"
@@ -22,140 +30,109 @@
           >
             {{ $t('管理员、开发者和运营者可以修改应用名称等基本信息') }}
           </div>
-          <div class="content no-border">
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label logo"> {{ $t('应用logo') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div class="logo-uploader item-logn-content">
-                  <div class="preview">
-                    <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
+          <section class="main">
+            <!-- 查看态 -->
+            <div class="view-mode" v-if="!appBaseInfoConfig.isEdit">
+              <section class="info-warpper">
+                <div class="row">
+                  <div class="item">
+                    <div class="label">{{ $t('应用名称') }}：</div>
+                    <div class="value" v-bk-overflow-tips>{{ localeAppInfo.name || '--' }}</div>
                   </div>
-                  <div
-                    v-if="canEditAppBasicInfo"
-                    class="preview-btn pl20"
-                  >
-                    <template>
-                      <div>
-                        <bk-button
-                          :theme="'default'"
-                          class="upload-btn mt5"
-                        >
-                          {{ $t('更换图片') }}
-                          <input
-                            type="file"
-                            accept="image/jpeg, image/png"
-                            value=""
-                            name="logo"
-                            @change="handlerUploadFile"
-                          >
-                        </bk-button>
-                        <p
-                          class="tip"
-                          style="line-height: 1;"
-                        >
-                          {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
-                        </p>
+                  <div class="item" v-if="platformFeature.REGION_DISPLAY">
+                    <div class="label">{{ $t('应用版本') }}：</div>
+                    <div class="value">{{ curAppInfo.application.region_name || '--' }}</div>
+                  </div>
+                </div>
+                <div class="item">
+                  <div class="label">{{ $t('创建时间') }}：</div>
+                  <div class="value">{{ curAppInfo.application.created || '--' }}</div>
+                </div>
+              </section>
+              <div class="logo-wrapper">
+                <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
+              </div>
+            </div>
+            <!-- 编辑态 -->
+            <div class="edit-mode" v-else>
+              <bk-form
+                :label-width="200"
+                :model="localeAppInfo"
+                form-type="vertical"
+                ref="formNameRef">
+                <bk-form-item
+                  :label="$t('应用名称')"
+                  :property="'name'"
+                  :rules="rules.name"
+                  :required="true"
+                  :error-display-type="'normal'">
+                  <bk-input v-model="localeAppInfo.name"></bk-input>
+                </bk-form-item>
+                <bk-form-item :label="$t('应用版本')" v-if="platformFeature.REGION_DISPLAY">
+                  <bk-input disabled v-model="curAppInfo.application.region_name"></bk-input>
+                </bk-form-item>
+                <bk-form-item label="LOGO">
+                  <div class="logoupload-wrapper">
+                    <div
+                      :class="['logoupload-cls', { 'preview': appBaseInfoConfig.isPreviewImageShow }]"
+                      @mouseenter="isMaskLayerShown = true"
+                      @mouseleave="isMaskLayerShown = false"
+                    >
+                      <!-- 默认 -->
+                      <div class="logoupload-content">
+                        <i class="bk-icon icon-plus-line"></i>
+                        <p>{{ $t('点击上传') }}</p>
                       </div>
-                    </template>
+                      <!-- 预览图 -->
+                      <div class="preview-image-cls">
+                        <img id="preview-image" />
+                      </div>
+                      <!-- 遮罩层 -->
+                      <div class="logo-mask-layer-cls" v-if="appBaseInfoConfig.isPreviewImageShow && isMaskLayerShown">
+                        <i class="paasng-icon paasng-close" @click="handleClose"></i>
+                        <i class="paasng-icon paasng-upload-2" @click="handleInputClick"></i>
+                      </div>
+                      <input
+                        ref="logoInputRef"
+                        type="file"
+                        accept="image/jpeg, image/png"
+                        name="logo"
+                        @change="beforeFileUploadProcessing"
+                      >
+                    </div>
+                    <p class="tip">
+                      {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
+                    </p>
                   </div>
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              :model="localeAppInfo"
-              class="info-special-form"
-              form-type="inline"
-              ref="appNmaeRef"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('应用名称') }} </label>
-              </bk-form-item>
-              <bk-form-item
-                style="width: calc(100% - 180px);"
-                :icon-offset="localLanguage === 'en' ? 104 : 84"
-                :required="true"
-                :property="'name'"
-                :rules="rules.name"
-                ext-cls="item-app-name-cls">
-                <bk-input
-                  ref="nameInput"
-                  v-model="localeAppInfo.name"
-                  :placeholder="$t('请输入20个字符以内的应用名称')"
-                  :readonly="!isEdited"
-                  ext-cls="paas-info-app-name-cls"
-                  :clearable="false"
-                  :maxlength="20"
-                />
-
-                <div
-                  v-if="!isSmartApp && canEditAppBasicInfo"
-                  class="action-box"
-                >
-                  <template v-if="!isEdited">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
-                      @click="showEdit"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      :disabled="localeAppInfo.name === ''"
-                      text
-                      @click.stop.prevent="handleSaveCheck"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelBasicInfo"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              v-if="platformFeature.REGION_DISPLAY"
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('应用版本') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div class="item-content">
-                  {{ curAppInfo.application.region_name || '--' }}
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('创建时间') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div class="item-content">
-                  {{ curAppInfo.application.created || '--' }}
-                </div>
-              </bk-form-item>
-            </bk-form>
-          </div>
+                </bk-form-item>
+                <bk-form-item class="mt20 base-info-form-btn">
+                  <bk-button
+                    ext-cls="mr8"
+                    theme="primary"
+                    :loading="appBaseInfoConfig.isLoading"
+                    @click.stop="handleSubmitBaseInfo">
+                    {{ $t('提交') }}
+                  </bk-button>
+                  <bk-button
+                    ext-cls="mr8"
+                    theme="default"
+                    :disabled="appBaseInfoConfig.logoData === null"
+                    @click="handlePreview">{{ $t('预览') }}</bk-button>
+                  <bk-button
+                    theme="default"
+                    @click="handlerBaseInfoCancel">
+                    {{ $t('取消') }}
+                  </bk-button>
+                </bk-form-item>
+              </bk-form>
+            </div>
+          </section>
         </div>
+
+        <!-- 应用描述文件 -->
         <div
           v-if="curAppInfo.application.type !== 'cloud_native'"
-          class="basic-info-item mt15"
+          class="basic-info-item mt16 info-card-style"
         >
           <div class="desc-flex">
             <div class="title">
@@ -167,6 +144,8 @@
             >
               <bk-switcher
                 v-model="descAppStatus"
+                theme="primary"
+                size="small"
                 :disabled="descAppDisabled"
               />
             </div>
@@ -176,276 +155,36 @@
             <a
               :href="GLOBAL.DOC.APP_DESC_DOC"
               target="_blank"
-            > {{ $t('文档：什么是应用描述文件') }} </a>
+            >
+              <i class="paasng-icon paasng-process-file"></i>
+              {{ $t('文档：什么是应用描述文件') }}
+            </a>
           </div>
         </div>
-        <div
-          v-if="curAppInfo.application.is_plugin_app"
-          class="basic-info-item plugin-type-scope"
-        >
-          <div class="title">
-            {{ $t('插件信息') }}
-          </div>
-          <div class="info">
-            {{ $t('管理插件相关信息') }}
-          </div>
-          <div class="content no-border">
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('插件简介') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div v-bk-tooltips="{ content: localeAppInfo.introduction, disabled: pluginIntroDuction }">
-                  <bk-input
-                    ref="pluginInput"
-                    v-model="localeAppInfo.introduction"
-                    :placeholder="pluginPlaceholder"
-                    :readonly="!pluginIntroDuction"
-                    ext-cls="paas-info-app-name-cls plugin-name"
-                    :clearable="false"
-                  />
-                </div>
 
-                <div class="action-box">
-                  <template v-if="!pluginIntroDuction">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
-                      @click="showPluginEdit"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      :disabled="localeAppInfo.name === ''"
-                      text
-                      @click.stop.prevent="submitPluginBasicInfo()"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelPluginBasicInfo"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('联系人员') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <user
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  :disabled="isDisabled"
-                  class="info-member-cls"
-                  @change="updateContact"
-                />
-                <div class="action-box">
-                  <template v-if="isDisabled">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
-                      @click="showPluginContactEdit"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      :disabled="localeAppInfo.name === ''"
-                      text
-                      @click.stop.prevent="submitPluginBasicInfo({ contact: curVal })"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelPluginContactBasicInfo"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('蓝鲸网关') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div class="item-content">
-                  <span
-                    v-if="apiGwName"
-                    style="color: #3A84FF;"
-                  >{{ $t('已绑定到') + apiGwName }}</span>
-                  <span
-                    v-else
-                    style="color: #979ba5;"
-                  > {{ $t('暂未找到已同步网关') }} </span>
-                  <i
-                    v-bk-tooltips="$t('网关维护者默认为应用管理员')"
-                    class="paasng-icon paasng-info-circle tooltip-icon"
-                  />
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('插件分类') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div
-                  ref="refPluginType"
-                  :class="['item-content', 'plugin-type', { 'custom-active': !isPluginCategoryFocus && isFocus }]"
-                >
-                  <bk-select
-                    v-model="pluginTypeValue"
-                    :disabled="isPluginCategoryFocus"
-                    clearable
-                    ext-cls="select-custom"
-                    searchable
-                  >
-                    <bk-option
-                      v-for="option in pluginTypeList"
-                      :id="option.id"
-                      :key="option.id"
-                      :name="option.name"
-                    />
-                  </bk-select>
-                </div>
-                <div class="action-box">
-                  <template v-if="isPluginCategoryFocus">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
-                      @click="showPluginSelected"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      :disabled="localeAppInfo.name === ''"
-                      text
-                      @click.stop.prevent="submitPluginBasicInfo({ 'tag': pluginTypeValue })"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="handlerPluginCategoryCancel"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;height: 480px;">
-                <label class="title-label plugin-info">
-                  <p style="height: 26px"> {{ $t('插件使用方') }} </p>
-                  <span
-                    v-bk-tooltips.bottom="tipsInfo"
-                    class="bottom-middle"
-                  >
-                    <!-- <a href="#"> {{ $t('功能说明') }} </a> 待确定路径-->
-                    <span
-                      v-dashed
-                      style="color: #3a84ff;height: 30px;"
-                    > {{ $t('功能说明') }} </span>
-                  </span>
-                </label>
-              </bk-form-item>
-              <bk-form-item
-                class="pluginEmploy"
-                style="width: calc(100% - 180px);"
-              >
-                <bk-transfer
-                  :target-list="targetPluginList"
-                  :source-list="pluginList"
-                  :display-key="'name'"
-                  :setting-key="'code_name'"
-                  :show-overflow-tips="false"
-                  :empty-content="promptContent"
-                  :title="titleArr"
-                  @change="transferChange"
-                />
-                <div class="button-wrap">
-                  <bk-button
-                    :theme="'primary'"
-                    type="submit"
-                    :title="$t('保存')"
-                    class="mr10"
-                    @click="updateAuthorizationUse"
-                  >
-                    {{ $t('保存') }}
-                  </bk-button>
-                  <bk-button
-                    :theme="'default'"
-                    :title="$t('还原')"
-                    class="mr10"
-                    @click="revivification"
-                  >
-                    {{ $t('还原') }}
-                  </bk-button>
-                </div>
-                <div class="explain">
-                  <p> {{ $t('说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。') }} </p>
-                  <p>{{ $t('除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}</p>
-                </div>
-              </bk-form-item>
-            </bk-form>
-          </div>
-        </div>
+        <!-- 插件信息 -->
+        <plugin-info v-if="curAppInfo.application.is_plugin_app" />
+
         <!-- 鉴权信息 -->
-        <authentication-info ref="authenticationRef" v-if="canViewSecret" />
+        <authentication-info
+          v-if="canViewSecret"
+          ref="authenticationRef"
+        />
 
         <div
           v-if="canDeleteApp"
-          class="basic-info-item"
+          class="delete-app-wrapper mt16"
         >
-          <div class="title">
+          <bk-button
+            theme="danger"
+            @click="showRemovePrompt"
+          >
             {{ $t('删除应用') }}
-          </div>
-          <div class="info">
+          </bk-button>
+          <p>
+            <i class="paasng-icon paasng-paas-remind-fill mr5"></i>
             {{ $t('只有管理员才能删除应用，请在删除前与应用其他成员沟通') }}
-          </div>
-          <div class="content no-border">
-            <bk-button
-              theme="danger"
-              @click="showRemovePrompt"
-            >
-              {{ $t('删除应用') }}
-            </bk-button>
-            <div class="ps-text-warn spacing-x1">
-              {{ $t('该操作无法撤回') }}
-            </div>
-          </div>
+          </p>
         </div>
       </section>
     </paas-content-loader>
@@ -457,7 +196,6 @@
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
-      :loading="delAppDialog.isLoading"
       @after-leave="hookAfterClose"
     >
       <div class="ps-form">
@@ -479,6 +217,7 @@
         <bk-button
           theme="primary"
           :disabled="!formRemoveValidated"
+          :loading="delAppDialog.isLoading"
           @click="submitRemoveApp"
         >
           {{ $t('确定') }}
@@ -492,20 +231,31 @@
         </bk-button>
       </template>
     </bk-dialog>
+
+    <!-- 预览效果 -->
+    <bk-dialog
+      v-model="previewDialogConfig.visible"
+      ext-cls="base-info-preview-dialog-cls"
+      theme="primary">
+      <div class="content">
+        <img id="dislog-preview-image" />
+        <h3 class="title">{{ localeAppInfo.name }}</h3>
+      </div>
+    </bk-dialog>
   </div>
 </template>
 
 <script>import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
-import User from '@/components/user';
 // import BluekingUserSelector from '@blueking/user-selector';
 import authenticationInfo from '@/components/authentication-info.vue';
 // import 'BKSelectMinCss';
+import pluginInfo from './plugin-info.vue';
 
 export default {
   components: {
     authenticationInfo,
-    User,
+    pluginInfo,
     // BluekingUserSelector,
     //   'bk-member-selector': () => {
     //       return import('@/components/user/member-selector/member-selector.vue');
@@ -516,24 +266,12 @@ export default {
     return {
       isLoading: false,
       formRemoveConfirmCode: '',
-      curEnv: '',
-      appSecret: null,
-      showingSecret: false,
-      appSecretVerificationCode: '',
-      appSecretTimeInterval: undefined,
-      appSecretTimer: 0,
-      resolveLocker: undefined,
-      isAcceptSMSCode: false,
-      phoneNumerLoading: true,
-
       localeAppInfo: {
         name: '',
         logo: '',
         introduction: '',
         contact: [],
       },
-      localeAppInfoNameTemp: '',
-      localeAppInfoPluginTemp: '',
       rules: {
         name: [
           {
@@ -560,29 +298,18 @@ export default {
         visiable: false,
         isLoading: false,
       },
-      isEdited: false,
-      pluginIntroDuction: false,
-      pluginPlaceholder: this.$t('无'),
-      isDisabled: true,
-      curVal: '',
-      contactCopy: [],
       descAppStatus: false,
       descAppDisabled: false,
-      pluginList: [],
-      targetPluginList: [],
-      restoringPluginList: [],
-      restoringTargetData: [],
-      PluginDataAllFirst: true,
-      TargetDataFirst: true,
-      titleArr: [this.$t('可选的插件使用方'), this.$t('已授权给以下使用方')],
-      promptContent: [this.$t('无数据'), this.$t('未选择已授权使用方')],
-      apiGwName: '',
-      AuthorizedUseList: [],
-      tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。'),
-      pluginTypeList: [],
-      pluginTypeValue: '',
-      isPluginCategoryFocus: true,
-      isFocus: true,
+      appBaseInfoConfig: {
+        isEdit: false,
+        isPreviewImageShow: false,
+        logoData: null,
+        isLoading: false,
+      },
+      previewDialogConfig: {
+        visible: false,
+      },
+      isMaskLayerShown: false,
     };
   },
   computed: {
@@ -592,17 +319,11 @@ export default {
     canViewSecret() {
       return this.curAppInfo.role.name !== 'operator';
     },
-    canEditAppBasicInfo() {
+    isBasicInfoEditable() {
       return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
     },
     formRemoveValidated() {
       return this.curAppInfo.application.code === this.formRemoveConfirmCode;
-    },
-    appSecretText() {
-      if (this.appSecret && this.showingSecret) {
-        return this.appSecret;
-      }
-      return '************';
     },
     platformFeature() {
       console.warn(this.$store.state.platformFeature);
@@ -614,8 +335,8 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    isPluginTypeActive() {
-      return this.$route.params.pluginTypeActive;
+    curAppName() {
+      return this.curAppInfo.application?.name;
     },
   },
   watch: {
@@ -623,17 +344,10 @@ export default {
       this.isLoading = true;
       this.localeAppInfo.name = value.application.name;
       this.localeAppInfo.logo = value.application.logo_url;
-      if (value.application.is_plugin_app) {
-        this.getProfile();
-      }
       this.$refs.authenticationRef?.resetAppSecret();
       setTimeout(() => {
         this.isLoading = false;
-      }, 300);
-    },
-    'localeAppInfo.name'() {
-      this.appSecret = '';
-      this.appSecretTimer = 0;
+      }, 500);
     },
   },
   created() {
@@ -643,27 +357,13 @@ export default {
     this.descAppStatus = this.curAppInfo.feature.APPLICATION_DESCRIPTION;
     this.isLoading = true;
     this.getDescAppStatus();
-    this.getPluginAll();
-    this.getAuthorizedUse();
     this.init();
-    if (this.curAppInfo.application.is_plugin_app) {
-      this.getProfile();
-    }
-    if (this.curAppInfo.application.name) {
-      this.localeAppInfo.name = this.curAppInfo.application.name;
+    if (this.curAppName) {
+      this.localeAppInfo.name = this.curAppName;
     }
     setTimeout(() => {
       this.isLoading = false;
     }, 300);
-    this.$nextTick(() => {
-      // 是否active插件分类
-      if (this.isPluginTypeActive) {
-        this.showPluginSelected();
-      }
-    });
-  },
-  beforeDestroy() {
-    window.removeEventListener('click', this.isCustomActive);
   },
   methods: {
     async getDescAppStatus() {
@@ -679,206 +379,49 @@ export default {
     },
     async init() {
       this.initAppMarketInfo();
-      this.getPluginTypeList();
       this.formRemoveConfirmCode = '';
-      this.appSecret = null;
-      this.showingSecret = false;
     },
 
-    cancelBasicInfo() {
-      this.$refs.appNmaeRef?.clearError();
-      this.isEdited = false;
-      this.localeAppInfo.name = this.localeAppInfoNameTemp;
-    },
-
-    showEdit() {
-      this.isEdited = true;
-      this.localeAppInfoNameTemp = this.localeAppInfo.name;
-      this.$refs.nameInput.focus();
-    },
-
-    cancelPluginBasicInfo() {
-      this.pluginIntroDuction = false;
-      this.localeAppInfo.introduction = this.localeAppInfoPluginTemp;
-      this.pluginPlaceholder = this.$t('无');
-    },
-
-    cancelPluginContactBasicInfo() {
-      this.isDisabled = true;
-      this.localeAppInfo.contact = this.contactCopy;
-    },
-
-    showPluginEdit() {
-      this.pluginIntroDuction = true;
-      this.localeAppInfoPluginTemp = this.localeAppInfo.introduction;
-      this.pluginPlaceholder = this.$t('请输入插件简介');
-      this.$refs.pluginInput.focus();
-    },
-
-    showPluginContactEdit() {
-      this.isDisabled = false;
-      this.$nextTick(() => {
-        this.$refs.member_selector.focus();
-      });
-    },
-
-    updateContact(curVal) {
-      this.curVal = curVal.length > 0 ? curVal.join(';') : '';
-    },
-
-    async submitPluginBasicInfo(data = '') {
-      let params;
-      if (!data) {
-        params = {
-          introduction: this.localeAppInfo.introduction,
-        };
-      } else {
-        params = { ...data };
-      }
-      const url = `${BACKEND_URL}/api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
-      this.$http.patch(url, params).then(
-        (res) => {
-          this.$paasMessage({
-            theme: 'success',
-            message: this.$t('插件信息修改成功！'),
-          });
-          if (data) {
-            this.contactCopy = res.contact ? res.contact.split(';') : [];
-          }
-        },
-        (e) => {
-          if (!data) this.localeAppInfo.introduction = this.localeAppInfoPluginTemp;
-          this.$paasMessage({
-            theme: 'error',
-            message: e.detail || e.message || this.$t('接口异常'),
-          });
-        },
-      )
-        .finally(() => {
-          if (data) {
-            this.isDisabled = true;
-          } else {
-            this.pluginIntroDuction = false;
-            this.pluginPlaceholder = this.$t('无');
-          }
-          this.handlerPluginCategoryCancel();
-        });
-    },
-
-    transferChange(sourceList, targetList, targetValueList) {
-      this.AuthorizedUseList = targetValueList;
-    },
-
-    arrayEqual(arr1, arr2) {
-      if (arr1 === arr2) return true;
-      if (arr1.length !== arr2.length) return false;
-      for (let i = 0; i < arr1.length; ++i) {
-        if (arr1[i] !== arr2[i]) return false;
-      }
-      return true;
-    },
-
-    updateAuthorizationUse() {
-      const url = `${BACKEND_URL}/api/bk_plugins/${this.appCode}/distributors/`;
-      const data = this.AuthorizedUseList;
-      const flag = this.arrayEqual(this.targetPluginList, data);
-      if (!flag) {
-        this.$http.put(url, {
-          distributors: data,
-        }).then(
-          (res) => {
-            this.getPluginAll();
-            this.getAuthorizedUse();
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('授权成功！'),
-            });
-          },
-          (res) => {
-            this.$paasMessage({
-              theme: 'error',
-              message: res.detail,
-            });
-          },
-        );
-      } else {
-        this.$paasMessage({
-          theme: 'warning',
-          message: this.$t('未选择授权使用方'),
-        });
-      }
-    },
-
-    getPluginAll() {
-      const url = `${BACKEND_URL}/api/bk_plugin_distributors/`;
-      this.$http.get(url).then((res) => {
-        this.pluginList = res;
-        if (this.PluginDataAllFirst) {
-          this.restoringPluginList = this.pluginList;
-          this.PluginDataAllFirst = false;
-        }
-      }, (e) => {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      });
-    },
-
-    getAuthorizedUse() {
-      const url = `${BACKEND_URL}/api/bk_plugins/${this.appCode}/distributors/`;
-      this.$http.get(url).then((res) => {
-        this.targetPluginList = res.map(item => item.code_name);
-        if (this.TargetDataFirst) {
-          this.restoringTargetData = this.targetPluginList;
-          this.TargetDataFirst = false;
-        }
-      }, (e) => {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      });
-    },
-
-    revivification() {
-      this.pluginList.splice(0, this.pluginList.length, ...this.restoringPluginList);
-      this.targetPluginList.splice(0, this.targetPluginList.length, ...this.restoringTargetData);
-    },
 
     // 应用名称校验
     handleSaveCheck() {
+      // 应用名称保存
       this.$refs.appNmaeRef.validate().then(() => {
-        this.submitBasicInfo();
+        this.updateAppBasicInfo();
       }, (e) => {
         console.error(e.content || e);
       });
     },
 
-    async submitBasicInfo() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/`;
-      this.$http.put(url, {
-        name: this.localeAppInfo.name,
-      }).then(
-        (res) => {
-          this.$store.commit('updateCurAppName', this.localeAppInfo.name);
-          this.$paasMessage({
-            theme: 'success',
-            message: this.$t('信息修改成功！'),
-          });
-        },
-        (res) => {
-          this.localeAppInfo.name = this.localeAppInfoNameTemp;
-          this.$paasMessage({
-            theme: 'error',
-            message: res.detail,
-          });
-        },
-      )
-        .finally(() => {
-          this.isEdited = false;
-          this.$refs.appNmaeRef?.clearError();
+    // 更新基本信息
+    async updateAppBasicInfo() {
+      try {
+        const data = new FormData();
+        data.append('name', this.localeAppInfo.name);
+        if (this.appBaseInfoConfig.logoData) {
+          data.append('logo', this.appBaseInfoConfig.logoData);
+        }
+        const res = await this.$store.dispatch('baseInfo/updateAppBasicInfo', {
+          appCode: this.appCode,
+          data,
         });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('信息修改成功！'),
+        });
+        this.resetAppBaseInfoConfig();
+        this.localeAppInfo.logo = res.logo_url;
+        this.$emit('current-app-info-updated');
+        this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
+      } catch (e) {
+        this.localeAppInfo.name = this.curAppName;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.$refs.appNmaeRef?.clearError();
+      }
     },
 
     showRemovePrompt() {
@@ -889,175 +432,32 @@ export default {
       this.formRemoveConfirmCode = '';
     },
 
-    submitRemoveApp() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/`;
-
-      this.$http.delete(url).then(
-        (res) => {
-          this.delAppDialog.visiable = false;
-          this.$paasMessage({
-            theme: 'success',
-            message: this.$t('应用删除成功'),
-          });
-          this.$router.push({
-            name: 'myApplications',
-          });
-        },
-        (res) => {
-          this.$paasMessage({
-            theme: 'error',
-            message: res.detail,
-          });
-          this.delAppDialog.visiable = false;
-        },
-      );
-    },
-    onSecretToggle() {
-      if (!this.userFeature.VERIFICATION_CODE) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verifications/`;
-        this.$http.post(url, { verification_code: '' }).then(
-          (res) => {
-            this.isAcceptSMSCode = false;
-            this.appSecret = res.app_secret;
-            this.showingSecret = true;
-          },
-          (res) => {
-            this.$paasMessage({
-              theme: 'error',
-              message: this.$t('验证码错误！'),
-            });
-          },
-        );
-        return;
-      }
-      if (this.appSecret) {
-        this.showingSecret = !this.showingSecret;
-        return;
-      }
-      this.phoneNumerLoading = true;
-      this.sendMsg().then(() => {
-        this.phoneNumerLoading = false;
-        this.isAcceptSMSCode = true;
-      })
-        .catch((_) => {
-          this.isAcceptSMSCode = false;
-          this.appSecretTimer = 0;
-          this.$paasMessage({
-            theme: 'error',
-            message: this.$t('请求失败，请稍候重试'),
-          });
-        });
-    },
-
-    getAppSecret() {
-      if (this.appSecretVerificationCode === '') {
-        this.$paasMessage({
-          limit: 1,
-          theme: 'error',
-          message: this.$t('请输入验证码！'),
-        });
-        return;
-      }
-      const form = {
-        verification_code: this.appSecretVerificationCode,
-      };
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.curAppInfo.application.code}/secret_verifications/`;
-      this.$http.post(url, form).then(
-        (res) => {
-          this.isAcceptSMSCode = false;
-          this.appSecret = res.app_secret;
-          this.showingSecret = true;
-        },
-        (res) => {
-          this.$paasMessage({
-            theme: 'error',
-            message: this.$t('验证码错误！'),
-          });
-        },
-      )
-        .then(() => {
-          this.appSecretVerificationCode = '';
-        });
-    },
-
-    sendMsg() {
-      // 硬编码，需前后端统一
-      return new Promise((resolve, reject) => {
-        this.resolveLocker = resolve;
-        if (this.appSecretTimer > 0) {
-          this.resolveLocker();
-          return;
-        }
-        const url = `${BACKEND_URL}/api/accounts/verification/generation/`;
-
-        this.appSecretTimer = 60;
-        this.$http.post(url, { func: 'GET_APP_SECRET' }).then(
-          (res) => {
-            this.appSecretVerificationCode = '';
-            this.resolveLocker();
-            if (!this.appSecretTimeInterval) {
-              this.appSecretTimeInterval = setInterval(() => {
-                if (this.appSecretTimer > 0) {
-                  this.appSecretTimer--;
-                } else {
-                  clearInterval(this.appSecretTimeInterval);
-                  this.appSecretTimeInterval = undefined;
-                }
-              }, 1000);
-            }
-          },
-          (res) => {
-            this.appSecretVerificationCode = '';
-            reject(new Error(this.$t('请求失败，请稍候重试！')));
-          },
-        );
-      });
-    },
-
-    /**
-             * 选择文件后回调处理
-             * @param {Object} e 事件
-             */
-    async handlerUploadFile(e) {
-      e.preventDefault();
-      const { files } = e.target;
-      const data = new FormData();
-      const fileInfo = files[0];
-      const maxSize = 2 * 1024;
-      // 支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。验证
-      const imgSize = fileInfo.size / 1024;
-
-      if (imgSize > maxSize) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('文件大小应<2M！'),
-        });
-        return;
-      }
-
-      data.append('logo', files[0]);
-      const params = {
-        appCode: this.appCode,
-        data,
-      };
-
+    // 删除应用
+    async submitRemoveApp() {
+      this.delAppDialog.isLoading = true;
       try {
-        const res = await this.$store.dispatch('market/uploadAppLogo', params);
-        this.localeAppInfo.logo = res.logo_url;
-        this.$emit('current-app-info-updated');
-        this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
-
+        await this.$store.dispatch('baseInfo/deleteApp', {
+          appCode: this.appCode,
+        });
+        this.delAppDialog.visiable = false;
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('logo上传成功！'),
+          message: this.$t('应用删除成功'),
+        });
+        this.$router.push({
+          name: 'myApplications',
         });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
+          message: e.detail,
         });
+        this.delAppDialog.visiable = false;
+      } finally {
+        this.delAppDialog.isLoading = false;
       }
     },
+
     async initAppMarketInfo() {
       try {
         const res = await this.$store.dispatch('market/getAppBaseInfo', this.appCode);
@@ -1069,28 +469,8 @@ export default {
         });
       }
     },
-    async getProfile() {
-      const url = `${BACKEND_URL}/api/bk_plugins/${this.curAppInfo.application.code}/profile/`;
-      this.$http.get(url).then((res) => {
-        this.localeAppInfo.introduction = res.introduction;
-        this.localeAppInfo.contact = res.contact ? res.contact.split(';') : [];
-        this.contactCopy = res.contact ? res.contact.split(';') : [];
-        this.curVal = res.contact;
-        this.apiGwName = res.api_gw_name;
-        this.pluginTypeValue = res.tag || '';
-      }, (e) => {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      })
-        .finally(() => {
-          this.exportLoading = false;
-        });
-    },
     async toggleDescSwitch() {
       if (this.descAppDisabled) return;
-      console.log(this.descAppStatus);
       let title = this.$t('确认启用应用描述文件');
       let subTitle = this.$t('启用后，可在 app_desc.yaml 文件中定义环境变量，服务发现等');
       if (this.descAppStatus) {
@@ -1121,51 +501,96 @@ export default {
       }
     },
 
-    async getPluginTypeList() {
-      try {
-        const data = await this.$store.dispatch('market/getPluginTypeList');
-        this.pluginTypeList = data || [];
-      } catch (e) {
+    // 基本信息编辑
+    handleEditBaseInfo() {
+      if (!this.isBasicInfoEditable) return;
+      this.appBaseInfoConfig.isEdit = true;
+    },
+
+    // 处理文件选择，显示选择后的预览图
+    beforeFileUploadProcessing(e) {
+      e.preventDefault();
+      const file = e.target.files[0];
+      if (!file) return;
+      const maxSize = 2 * 1024;
+
+      // 支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。验证
+      const imgSize = file.size / 1024;
+      if (imgSize > maxSize) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
+          message: this.$t('文件大小应<2M！'),
         });
+        return;
       }
+
+      // 显示预览图
+      const imgEl = document.querySelector('#preview-image');
+      const previewImageUrl = URL.createObjectURL(file);
+      imgEl.style.display = 'block';
+      imgEl.src = previewImageUrl;
+      this.appBaseInfoConfig.isPreviewImageShow = true;
+      this.appBaseInfoConfig.logoData = file;
     },
 
-    showPluginSelected() {
-      window.addEventListener('click', this.isCustomActive);
+    // 设置预览图
+    setPreviewImage(imgEl, file) {
+      const previewImageUrl = URL.createObjectURL(file);
+      imgEl.style.display = 'block';
+      imgEl.src = previewImageUrl;
     },
 
-    handlerPluginCategoryCancel() {
-      window.removeEventListener('click', this.isCustomActive);
-      this.isPluginCategoryFocus = true;
-      this.isFocus = true;
+    // 预览
+    handlePreview() {
+      this.previewDialogConfig.visible = true;
+      // 显示预览图
+      const imgEl = document.querySelector('#dislog-preview-image');
+      this.setPreviewImage(imgEl, this.appBaseInfoConfig.logoData);
     },
-    isCustomActive(ev) {
-      if (!this.isPluginCategoryFocus) {
-        this.isFocus = this.isParent(ev.target, document.querySelector('.plugin-type'));
-      }
-      this.isPluginCategoryFocus = false;
+
+    // 基本信息取消
+    handlerBaseInfoCancel() {
+      this.localeAppInfo.name = this.curAppName;
+      this.resetAppBaseInfoConfig();
     },
-    isParent(target, parentObj) {
-      while (target !== undefined && target !== null && target.tagName.toUpperCase() !== 'BODY') {
-        if (target === parentObj) {
-          return true;
-        }
-        target = target.parentNode;
-      }
-      return false;
+
+    // 数据重置
+    resetAppBaseInfoConfig() {
+      this.appBaseInfoConfig.isEdit = false;
+      this.appBaseInfoConfig.isPreviewImageShow = false;
+      this.appBaseInfoConfig.logoData = null;
+      this.appBaseInfoConfig.isLoading = false;
+    },
+
+    // 基本信息提交
+    handleSubmitBaseInfo() {
+      this.$refs.formNameRef?.validate().then(async () => {
+        this.appBaseInfoConfig.isLoading = true;
+        this.updateAppBasicInfo();
+      }, (e) => {
+        console.error(e);
+      });
+    },
+
+    handleClose() {
+      const imgEl = document.querySelector('#preview-image');
+      imgEl.src = '';
+      imgEl.style.display = 'none';
+      this.$refs.logoInputRef.value = '';
+      this.appBaseInfoConfig.logoData = null;
+      this.appBaseInfoConfig.isPreviewImageShow = false;
+    },
+
+    handleInputClick() {
+      this.$refs.logoInputRef?.click();
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    .base-info-container{
-      background: #fff;
+    .mt16 {
       margin-top: 16px;
-      padding: 2px 24px;
     }
     .desc-flex{
         display: flex;
@@ -1181,13 +606,27 @@ export default {
         }
     }
     .basic-info-item {
-        margin-bottom: 35px;
+        &:first-child {
+          margin-top: 8px;
+        }
         .title {
+            display: flex;
+            align-items: flex-end;
             color: #313238;
             font-size: 14px;
             font-weight: bold;
             line-height: 1;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
+            .edit-container {
+              font-size: 12px;
+              color: #3A84FF;
+              cursor: pointer;
+
+              &.disabled {
+                color: #c4c6cc;
+                cursor: not-allowed;
+              }
+            }
         }
         .info {
             color: #979ba5;
@@ -1197,123 +636,6 @@ export default {
             margin-top: 20px;
             border: 1px solid #dcdee5;
             border-radius: 2px;
-            &.no-border {
-                border: none;
-            }
-            .info-special-form:nth-child(2) {
-                position: relative;
-                top: -4px;
-            }
-            .info-special-form:nth-child(3) {
-                position: relative;
-                top: -8px;
-            }
-            .info-special-form:nth-child(4) {
-                position: relative;
-                top: -12px;
-            }
-            .info-special-form:nth-child(5) {
-                position: relative;
-                top: -16px;
-            }
-            .item-content {
-                padding: 0 10px 0 25px;
-                height: 42px;
-                line-height: 42px;
-                border-right: 1px solid #dcdee5;
-                border-bottom: 1px solid #dcdee5;
-            }
-
-            .item-logn-content{
-                padding: 20px 10px 0 25px;
-                height: 105px;
-                border-right: 1px solid #dcdee5;
-                border-top: 1px solid #dcdee5;
-                .tip {
-                    font-size: 12px;
-                    color: #979BA5;
-                }
-            }
-            .title-label {
-                display: inline-block;
-                width: 180px;
-                height: 42px;
-                line-height: 42px;
-                text-align: center;
-                border: 1px solid #dcdee5;
-            }
-
-            .logo{
-                height: 105px;
-                line-height: 105px;
-            }
-
-            .plugin-info {
-                height: 460px;
-                padding-top: 20px;
-            }
-
-            .content-item {
-                position: relative;
-                height: 60px;
-                line-height: 60px;
-                border-bottom: 1px solid #dcdee5;
-                label {
-                    display: inline-block;
-                    position: relative;
-                    top: -1px;
-                    width: 180px;
-                    height: 60px;
-                    border-right: 1px solid #dcdee5;
-                    color: #313238;
-                    vertical-align: middle;
-                    .basic-p {
-                        padding-left: 30px;
-                    }
-                    .title-p {
-                        line-height: 30px;
-                        text-align: center;
-                        &.tip {
-                            font-size: 12px;
-                            color: #979ba5;
-                        }
-                    }
-                }
-                .item-practical-content {
-                    display: inline-block;
-                    padding-left: 20px;
-                    max-width: calc(100% - 180px);
-                    text-overflow: ellipsis;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    vertical-align: top;
-
-                    .edit-input {
-                        display: inline-block;
-                        position: relative;
-                        top: -1px;
-                    }
-
-                    .edit-button {
-                        display: inline-block;
-                        position: absolute;
-                        right: 10px;
-                    }
-
-                    .edit {
-                        position: relative;
-                        color: #63656e;
-                        font-weight: bold;
-                        cursor: pointer;
-                        &:hover {
-                            color: #3a84ff;
-                        }
-                    }
-                }
-            }
-            .content-item:last-child {
-                border-bottom: none;
-            }
             .pre-release-wrapper,
             .production-wrapper {
                 display: inline-block;
@@ -1491,78 +813,192 @@ export default {
         }
     }
 
-    .button-wrap {
-        margin-top: 20px;
-    }
-
-    .explain {
-        margin-top: 20px;
-    }
-
-    .explain p {
-        line-height: 1.5em;
-        color: #979ba5;
-    }
-
-    .pluginEmploy {
-        height: 460px;padding: 20px 24px 0;
-        border: 1px solid #dcdee5;
-        border-left: transparent;
-    }
-
-    .logo-uploader {
-        // margin-bottom: 15px;
-        display: flex;
-        overflow: hidden;
-
-        .preview {
-            img {
-                width: 64px;
-                height: 64px;
-                border-radius: 2px;
-            }
-        }
-
-        .upload-btn {
-            width: 100px;
-            overflow: hidden;
-            margin-bottom: 10px;
-            input {
-                position: absolute;
-                left: 0;
-                top: 0;
-                z-index: 10;
-                height: 100%;
-                min-height: 40px;
-                width: 100%;
-                opacity: 0;
-                cursor: pointer;
-            }
-        }
-    }
-    .select-custom {
-        width: 500px;
-        height: 32px !important;
-    }
-    .custom-active {
-        transition: all .2s;
-        position: relative;
-        border-radius: 0 2px 2px 0;
-        border-color:#3a84ff !important;
-        border-top: 1px solid #3a84ff;
-        border-left: 1px solid #3a84ff;
-        z-index: 9;
-    }
-    .plugin-type {
-        display: flex;
-        align-items: center;
-    }
     .action-box {
         z-index: 11 !important;
     }
 
     h2.basic-information {
       box-shadow: 0 3px 4px 0 #0000000a;
+    }
+
+    .info-card-style {
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+        color: #313238;
+      }
+    }
+    .main {
+      .view-mode {
+        display: flex;
+        justify-content: space-between;
+        .info-warpper {
+          margin-top: 16px;
+          flex: 1;
+          .row {
+            display: flex;
+            .value {
+              width: 150px;
+            }
+          }
+        }
+        .item {
+          display: flex;
+          align-items: center;
+          height: 40px;
+          line-height: 40px;
+          font-size: 14px;
+          color: #63656E;
+          .label {
+            width: 130px;
+            text-align: right;
+          }
+          .value {
+            color: #313238;
+            text-wrap: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+        .logo-wrapper {
+          flex-shrink: 0;
+          margin-right: 78px;
+          width: 96px;
+          height: 96px;
+          img {
+            width: 100%;
+            height: 100%;
+          }
+        }
+      }
+
+      .edit-mode {
+        font-size: 12px;
+        width: 630px;
+        margin-top: 16px;
+        .logoupload-wrapper {
+          display: flex;
+          align-items: center;
+          .tip {
+            margin-left: 12px;
+            color: #979BA5;
+          }
+        }
+        .logoupload-cls {
+          flex-shrink: 0;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          width: 96px;
+          height: 96px;
+          color: #63656E;
+          background: #FAFBFD;
+          border: 1px dashed #C4C6CC;
+          border-radius: 2px;
+          cursor: pointer;
+
+          &.preview {
+            background: #FFFFFF;
+            border: 1px solid #C4C6CC !important;
+          }
+
+          &:hover {
+            color: #3A84FF;
+            border-color: #3A84FF;
+            .icon-plus-line {
+              color: #3A84FF;
+            }
+          }
+
+          .logoupload-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+
+          .preview-image-cls {
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: calc(100% - 6px);
+            height: calc(100% - 6px);
+          }
+
+          .logo-mask-layer-cls {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: calc(100% - 6px);
+            height: calc(100% - 6px);
+            background: #00000099;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+
+            i {
+              cursor: pointer;
+              color: #FAFBFD;
+              font-size: 20px;
+            }
+
+            i:hover {
+              color: #3A84FF;
+            }
+
+            .paasng-close {
+              position: absolute;
+              right: 3px;
+              top: 3px;
+            }
+          }
+
+          i {
+            font-size: 22px;
+            color: #979BA5;
+          }
+          p {
+            text-align: center;
+          }
+          input {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            opacity: 0;
+          }
+        }
+      }
+    }
+    .base-info-form-btn button {
+      width: 88px;
+    }
+    .logoupload-cls .preview-image-cls #preview-image {
+      display: none;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      left: 0;
+      top: 0;
+      z-index: 5;
+    }
+    .delete-app-wrapper {
+      p {
+        color: #63656E;
+        font-size: 12px;
+        margin-left: 13px;
+        i {
+          font-size: 14px;
+          color: #FFB848;
+        }
+      }
+      display: flex;
+      align-items: center;
     }
 </style>
 <style lang="scss">
@@ -1579,51 +1015,31 @@ export default {
         padding-right: 130px !important;
         @include ellipsis;
     }
-    .info-member-cls{
-        height: 41px;
-        .bk-tag-selector{
-            min-height: 41px;
-            .bk-tag-input{
-                height: 41px !important;
-                padding-left: 20px;
-                border-top: 0;
-                border-color: #dcdee5;
-                margin-top: 1px;
-                .placeholder{
-                    top: 5px;
-                    left: 25px;
-                }
-                .clear-icon{
-                    margin-right: 19px !important;
-                    display: none;
-                }
-            }
-
-            .active{
-                border-color:#3a84ff !important;
-                border-top: 1px solid #3a84ff;
-                border-radius: 0 2px 2px 0;
-            }
+    .base-info-preview-dialog-cls {
+      .bk-dialog-footer {
+        display: none;
+      }
+      .bk-dialog-body {
+        padding: 0;
+      }
+      .content {
+        display: flex;
+        align-items: center;
+        background: #182132;
+        margin: 0 24px 24px;
+        padding-left: 12px;
+        height: 45px;
+        #dislog-preview-image {
+          height: 32px;
+          width: 32px;
         }
-        .user-selector-layout{
-            height: 42px !important;
-            .user-selector-container{
-              height: 41px !important;
-              .user-selector-selected{
-                margin-top: 10px;
-              }
-              .user-selector-input{
-                margin-top: 10px;
-              }
-            }
-          }
-    }
-    .item-app-name-cls .bk-form-content {
-        i.tooltips-icon {
-            right: 150px;
-            z-index: 99;
-            top: 50%;
-            transform: translateY(-50%);
+        .title {
+          font-family: MicrosoftYaHei;
+          margin-left: 8px;
+          font-size: 14px;
+          font-weight: 400;
+          color: #EAEBF0;
         }
+      }
     }
 </style>

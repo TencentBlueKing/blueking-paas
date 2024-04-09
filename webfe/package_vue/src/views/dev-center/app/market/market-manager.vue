@@ -319,7 +319,7 @@
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
-              <p class="form-text">{{ baseInfo.introduction || '--' }}</p>
+              <p class="form-text text-ellipsis" v-bk-overflow-tips>{{ baseInfo.introduction || '--' }}</p>
             </bk-form-item>
             <bk-form-item
               :label="$t('应用联系人：')"
@@ -494,6 +494,9 @@ export default {
     },
     businessDetailName() {
       return this.businessList.find(e => this.baseInfo.related_corp_products.includes(e.id))?.display_name;
+    },
+    isSmartApp() {
+      return this.curAppInfo.application?.is_smart_app;
     },
   },
   watch: {

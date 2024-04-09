@@ -27,15 +27,7 @@
     <section class="storage-dialog-content">
       <bk-alert type="info">
         <div slot="title">
-          {{ $t('持久存储会申请对应容量的腾讯云 CFS，新建后就会产生实际的费用，请按需申请。') }}
-          <bk-button
-            theme="primary"
-            text
-            style="font-size: 12px"
-            @click="viewBillingMethod"
-          >
-            {{ $t('查看计费方式') }}
-          </bk-button>
+          {{ $t('持久存储各容量规格所产生的成本不同，请按需申请。') }}
         </div>
       </bk-alert>
       <bk-form
@@ -63,11 +55,19 @@
           :property="'capacity'"
         >
           <bk-radio-group v-model="createPersistentStorageData.capacity">
-            <bk-radio :value="'1Gi'">1Gi</bk-radio>
-            <bk-radio :value="'2Gi'" :disabled="preReleaseEnvironment">2Gi</bk-radio>
-            <bk-radio :value="'4Gi'" :disabled="preReleaseEnvironment">4Gi</bk-radio>
+            <bk-radio :value="'1Gi'">1GB</bk-radio>
+            <bk-radio
+              v-bk-tooltips="capacitySelectionDisabledConfig"
+              :value="'2Gi'"
+              :disabled="preReleaseEnvironment"
+            >2GB</bk-radio>
+            <bk-radio
+              v-bk-tooltips="capacitySelectionDisabledConfig"
+              :value="'4Gi'"
+              :disabled="preReleaseEnvironment"
+            >4GB</bk-radio>
           </bk-radio-group>
-          <p class="capacity-tips">{{ $t('容量无法更改，请合理评估容量') }}</p>
+          <p class="capacity-tips">{{ $t('申请成功后无法调整，请合理评估。') }}</p>
         </bk-form-item>
       </bk-form>
     </section>
@@ -109,6 +109,9 @@ export default {
     },
     preReleaseEnvironment() {
       return this.createPersistentStorageData.stage === 'stag';
+    },
+    capacitySelectionDisabledConfig() {
+      return { content: this.$t('预发布环境目前仅支持 1GB 容量'), disabled: !this.preReleaseEnvironment };
     },
   },
   watch: {
@@ -158,11 +161,6 @@ export default {
         };
       }, 500);
     },
-    // 查看计费方式
-    viewBillingMethod() {
-      const url = 'https://cloud.tencent.com/document/product/582/47378';
-      window.open(url, '_blank');
-    },
     handlerChange() {
       this.createPersistentStorageData.capacity = '1Gi';
     },
@@ -171,11 +169,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.storage-dialog-content {
-  :deep(.icon-info) {
-    line-height: 22px;
-  }
-}
 .capacity-tips {
   color: #979BA5;
   font-size: 12px;

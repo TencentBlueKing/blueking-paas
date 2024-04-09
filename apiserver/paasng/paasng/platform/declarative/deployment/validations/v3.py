@@ -21,7 +21,7 @@ from pydantic import ValidationError as PDValidationError
 from rest_framework import exceptions, serializers
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paas_wl.bk_app.cnative.specs.models import to_error_string
+from paas_wl.utils.basic import to_error_string
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.serializers import validate_language

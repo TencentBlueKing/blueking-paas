@@ -40,7 +40,7 @@ from paasng.platform.modules.constants import DeployHookType
 
 
 class ApplicationPreReleaseExecutor(DeployStep):
-    PHASE_TYPE = DeployPhaseTypes.RELEASE
+    phase_type = DeployPhaseTypes.RELEASE
 
     @DeployStep.procedures
     def start(self):

@@ -22,23 +22,13 @@ import pytest
 from django.db.models import ObjectDoesNotExist
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY, ApiVersion
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paas_wl.workloads.images.models import AppImageCredential, AppUserCredential
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-def build_manifest_v1alpha1(refs: Dict[str, str], processes: Dict[str, str]) -> Dict:
-    return {
-        "apiVersion": ApiVersion.V1ALPHA1,
-        "metadata": {
-            "annotations": {f"{IMAGE_CREDENTIALS_REF_ANNO_KEY}.{proc}": ref_name for proc, ref_name in refs.items()}
-        },
-        "spec": {"processes": [{"name": name, "image": image} for name, image in processes.items()]},
-    }
 
 
 def build_manifest_v1alpha2(image: Optional[str] = None, credential_name: Optional[str] = None) -> Dict:

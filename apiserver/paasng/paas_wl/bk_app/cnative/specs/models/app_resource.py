@@ -16,13 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pydantic import ValidationError as PDValidationError
-from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
@@ -35,7 +34,8 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     ObjectMetadata,
 )
 from paas_wl.core.env import EnvIsRunningHub
-from paas_wl.core.resource import CNativeBkAppNameGenerator
+from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.utils.basic import to_error_string
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -71,6 +71,15 @@ class AppModelResourceManager(models.Manager):
             region=region, application_id=application_id, module_id=module_id, revision=revision
         )
         return model_resource
+
+    def get_or_create_by_module(self, module: Module) -> Tuple["AppModelResource", bool]:
+        try:
+            return self.get(module_id=module.id), False
+        except AppModelResource.DoesNotExist:
+            # 原逻辑: 创建云原生应用的模块时, 会创建 AppModelResource 用于占位
+            res_name = generate_bkapp_name(module)
+            resource = create_app_resource(res_name, image="stub")
+            return self.create_from_resource(module.region, module.application.id, module.id, resource), True
 
 
 class AppModelResource(TimestampedModel):
@@ -222,10 +231,6 @@ def create_app_resource(
             ],
         ),
     )
-    # 兼容 v1alpha1 版本逻辑
-    if api_version == ApiVersion.V1ALPHA1:
-        obj.spec.build = None
-        obj.spec.processes[0].image = image
 
     return obj
 
@@ -254,15 +259,6 @@ def update_app_resource(app: Application, module: Module, payload: Dict):
         raise ValueError(f"{app.id} not initialized")
 
     model_resource.use_resource(obj)
-
-
-def to_error_string(exc: PDValidationError) -> str:
-    """Transform a pydantic Exception object to a one-line string"""
-    # TODO: Improve error message format
-    return display_errors(exc.errors()).replace("\n", " ")
-
-
-generate_bkapp_name = CNativeBkAppNameGenerator.generate
 
 
 # Register env_is_running implementations

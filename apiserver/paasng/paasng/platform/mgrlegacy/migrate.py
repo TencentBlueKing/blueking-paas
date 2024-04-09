@@ -18,11 +18,21 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import traceback
+from contextlib import suppress
+from typing import List, Type
 
 from paasng.accessories.publish.sync_market.managers import AppManger
+from paasng.platform.mgrlegacy.cnative_migrations.base import CNativeBaseMigrator
 from paasng.platform.mgrlegacy.constants import MigrationStatus
-from paasng.platform.mgrlegacy.exceptions import MigrationFailed
-from paasng.platform.mgrlegacy.models import MigrationContext, MigrationRegister
+from paasng.platform.mgrlegacy.entities import MigrationResult, RollbackResult
+from paasng.platform.mgrlegacy.exceptions import (
+    BackupLegacyDataFailed,
+    MigrationFailed,
+    PreCheckMigrationFailed,
+    RollbackFailed,
+)
+from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationContext, MigrationRegister
+from paasng.platform.mgrlegacy.task_data import MIGRATE_TO_CNATIVE_CLASSES_LIST
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
@@ -164,3 +174,83 @@ def run_single_rollback(migration_process, migration_class, session):
     )
     migration = migration_class(context)
     _do_rollback(migration_process, migration, context)
+
+
+def migrate_default_to_cnative(migration_process: CNativeMigrationProcess):
+    """
+    migrate default app to cloud-native app. auto rollback if migrate failed
+    """
+    migrate_succeeded = True
+
+    for migrator_cls in MIGRATE_TO_CNATIVE_CLASSES_LIST:
+        migrator_name = migrator_cls.get_name()
+        try:
+            migrator_cls(migration_process).migrate()
+        except (PreCheckMigrationFailed, BackupLegacyDataFailed) as e:
+            migrate_succeeded = False
+            # 没有实际开始迁移, 设置 rollback_if_failed=False
+            migration_process.append_migration(
+                MigrationResult(
+                    migrator_name=migrator_name, is_succeeded=False, rollback_if_failed=False, error_msg=str(e)
+                )
+            )
+            break
+        except MigrationFailed as e:
+            migrate_succeeded = False
+            # 开始迁移, 但迁移失败
+            migration_process.append_migration(
+                MigrationResult(migrator_name=migrator_name, is_succeeded=False, error_msg=str(e))
+            )
+            break
+        else:
+            migration_process.append_migration(MigrationResult(migrator_name=migrator_name, is_succeeded=True))
+
+    if not migrate_succeeded:
+        with suppress(RollbackFailed):
+            _rollback_cnative(migration_process, migration_process)
+
+    migration_process.finish_migration(migrate_succeeded)
+
+
+def rollback_cnative_to_default(
+    rollback_process: CNativeMigrationProcess, last_migration_process: CNativeMigrationProcess
+):
+    """rollback cloud-native app to default app
+
+    :param rollback_process: 当前的回滚过程
+    :param last_migration_process: 最近一次迁移过程, 用于回滚
+    """
+
+    try:
+        _rollback_cnative(rollback_process, last_migration_process)
+    except MigrationFailed:
+        rollback_process.finish_rollback(False)
+    else:
+        rollback_process.finish_rollback(True)
+
+
+def _rollback_cnative(process: CNativeMigrationProcess, last_migration_process: CNativeMigrationProcess):
+    """
+    actual rollback cloud-native app to default
+
+    :param process: 用于记录当前的回滚过程详情
+    :param last_migration_process: 最近一次迁移过程, 其中的 legacy_data 和 details.migrations 用于回滚
+    """
+
+    performed_migrations = last_migration_process.details.migrations
+    performed_migrator_classes: List[Type[CNativeBaseMigrator]] = [
+        CNativeBaseMigrator.get_class(result.migrator_name)
+        for result in performed_migrations
+        if result.rollback_if_failed
+    ]
+
+    for migrator_cls in reversed(performed_migrator_classes):
+        try:
+            migrator_cls(last_migration_process).rollback()
+        except RollbackFailed as e:
+            process.append_rollback(
+                RollbackResult(migrator_name=migrator_cls.get_name(), is_succeeded=False, error_msg=str(e))
+            )
+            raise
+        else:
+            process.append_rollback(RollbackResult(migrator_name=migrator_cls.get_name(), is_succeeded=True))

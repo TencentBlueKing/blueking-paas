@@ -93,6 +93,25 @@ const actions = {
 
     return Vue.http.get(url).then(resp => resp);
   },
+
+  /**
+   * 更新基本信息
+   * @param {String} params 应用code
+   * @param {FormData} params  data
+   */
+  updateAppBasicInfo({}, { appCode, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/`;
+    return Vue.http.put(url, data, config);
+  },
+
+  /**
+   * 删除应用
+   * @param {String} params 请求参数：应用code
+   */
+  deleteApp({}, { appCode }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/`;
+    return Vue.http.delete(url, {}, config);
+  },
 };
 
 export default {

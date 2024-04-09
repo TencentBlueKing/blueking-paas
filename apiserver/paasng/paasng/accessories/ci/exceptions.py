@@ -28,3 +28,7 @@ class NotSupportedRepoType(Exception):
     def __init__(self, source_type: str, *args):
         self.source_type = source_type
         super().__init__(*args)
+
+
+class RepoNotFoundError(Exception):
+    """Unable to get a repository for running the CI job."""

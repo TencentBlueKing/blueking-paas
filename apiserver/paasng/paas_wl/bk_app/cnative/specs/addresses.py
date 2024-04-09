@@ -29,7 +29,7 @@ from paas_wl.bk_app.cnative.specs.crd.domain_group_mapping import (
     MappingRef,
     ObjectMetadata,
 )
-from paas_wl.bk_app.cnative.specs.models import generate_bkapp_name
+from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.workloads.networking.ingress.certs import (
     DomainWithCert,

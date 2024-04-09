@@ -17,11 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import MODULE_NAME_ANNO_KEY
 from paas_wl.bk_app.monitoring.bklog.constants import BkLogConfigType
-from paas_wl.bk_app.monitoring.bklog.entities import BkAppLogConfig, LabelSelector, bklog_config_kmodel
+from paas_wl.bk_app.monitoring.bklog.kres_entities import BkAppLogConfig, LabelSelector, bklog_config_kmodel
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.platform.applications.models import ModuleEnvironment

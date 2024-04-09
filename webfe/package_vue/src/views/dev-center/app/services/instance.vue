@@ -699,6 +699,10 @@ export default {
         min-width: 200px;
         margin: 0 auto;
         padding: 5px 20px;
+
+        h2,h3 {
+          color: var(--color-fg-default);
+        }
     }
 
     .paasng-question-circle {
@@ -944,7 +948,7 @@ export default {
         overflow: auto;
         font-size: 85%;
         line-height: 1.45;
-        background-color: #f6f8fa;
+        background-color: var(--color-canvas-subtle);
         border-radius: 3px;
     }
 

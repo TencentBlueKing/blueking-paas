@@ -161,7 +161,6 @@ class DeploymentDescSLZ(serializers.Serializer):
                     "name": proc_type,
                     "replicas": process["replicas"] or 1,
                     "resQuotaPlan": get_quota_plan(process["plan"]) if process.get("plan") else None,
-                    # 镜像已保证 entrypoint 是 /runner/init
                     "command": None,
                     "args": shlex.split(process["command"]),
                     "probes": process.get("probes"),

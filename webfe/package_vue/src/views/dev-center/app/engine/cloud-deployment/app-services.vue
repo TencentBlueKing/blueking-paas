@@ -800,6 +800,12 @@ export default {
       }
     }
 
+    .markdown-body {
+      h2 {
+        color: var(--color-fg-default);
+      }
+    }
+
     #markdown {
       padding: 20px;
     }
@@ -817,7 +823,7 @@ export default {
     }
 
     #markdown h3 {
-        color: #333;
+        color: var(--color-fg-default);
         line-height: 52px;
         font-size: 14px;
         position: relative;
@@ -891,7 +897,7 @@ export default {
         overflow: auto;
         font-size: 85%;
         line-height: 1.45;
-        background-color: #f6f8fa;
+        background-color: var(--color-canvas-subtle);
         border-radius: 3px;
     }
 

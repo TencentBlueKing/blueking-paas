@@ -25,9 +25,10 @@ from typing import TYPE_CHECKING, Dict, Optional
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
+from paas_wl.bk_app.applications.managers import AppConfigVarManager
+
 # NOTE: Import kube resource related modules from paas_wl
 from paas_wl.bk_app.applications.models.build import BuildProcess
-from paas_wl.bk_app.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
 from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.kres_entities import ImageCredentials

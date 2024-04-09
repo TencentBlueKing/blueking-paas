@@ -26,14 +26,13 @@ from django.db import models
 from jsonfield import JSONField
 
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.models.managers.app_metadata import get_metadata
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProbeType, ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.platform.declarative.deployment.resources import ProbeHandler
 from paasng.utils.models import make_json_field
 
@@ -92,18 +91,6 @@ class ProcessSpec(TimestampedModel):
     command: List[str] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: List[str] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
-
-    # Deprecated: 仅用于 v1alpha1 的云原生应用
-    image = models.CharField(help_text="容器镜像, 仅用于 v1alpha1 的云原生应用", max_length=255, null=True)
-    image_pull_policy = models.CharField(
-        help_text="镜像拉取策略(仅用于 v1alpha1 的云原生应用)",
-        choices=ImagePullPolicy.get_choices(),
-        default=ImagePullPolicy.IF_NOT_PRESENT,
-        max_length=20,
-    )
-    image_credential_name = models.CharField(
-        help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True
-    )
 
     target_replicas = models.IntegerField("期望副本数", default=1)
     target_status = models.CharField("期望状态", max_length=32, default="start")

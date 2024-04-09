@@ -439,6 +439,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         info = {
             "build_method": build_config.build_method,
+            "use_bk_ci_pipeline": build_config.use_bk_ci_pipeline,
         }
         if build_config.build_method == RuntimeType.BUILDPACK:
             runtime_manager = ModuleRuntimeManager(module)

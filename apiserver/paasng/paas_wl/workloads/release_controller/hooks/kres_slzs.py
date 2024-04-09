@@ -26,7 +26,7 @@ from kubernetes.dynamic import ResourceField, ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
-from paas_wl.infras.resource_templates.utils import AddonManager
+from paas_wl.infras.resource_templates.managers import AddonManager
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer, Schedule
 from paas_wl.infras.resources.kube_res.envs import decode_envs, encode_envs
 from paas_wl.utils.kubestatus import (

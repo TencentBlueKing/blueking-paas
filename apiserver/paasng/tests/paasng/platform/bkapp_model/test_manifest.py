@@ -23,7 +23,6 @@ from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.constants import (
-    LEGACY_PROC_IMAGE_ANNO_KEY,
     ApiVersion,
     MountEnvName,
     ResQuotaPlan,
@@ -48,7 +47,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
-from paas_wl.core.resource import CNativeBkAppNameGenerator
+from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (
@@ -72,8 +71,9 @@ from paasng.platform.bkapp_model.models import (
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string
@@ -101,9 +101,7 @@ def local_service(bk_app):
 @pytest.fixture()
 def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
-    return G(
-        ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000, image=None
-    )
+    return G(ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000)
 
 
 @pytest.fixture()
@@ -160,6 +158,41 @@ class TestEnvVarsManifestConstructor:
             EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
         ]
 
+    def test_preset(self, bk_module, bk_stag_env, blank_resource):
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+
+        EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="1")]
+        assert blank_resource.spec.envOverlay.envVariables == [
+            EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            EnvVarOverlay(envName="stag", name="STAG", value="1"),
+        ]
+
+    def test_override_preset(self, bk_module, bk_stag_env, blank_resource):
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG", value="2")
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG_XX", value="2")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+        # case: 是否覆盖与顺序无关.
+        ConfigVar.objects.create(
+            module=bk_module,
+            environment_id=ENVIRONMENT_ID_FOR_GLOBAL,
+            key="GLOBAL",
+            value="2",
+            is_global=True,
+        )
+
+        EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="2")]
+        assert blank_resource.spec.envOverlay.envVariables == [
+            EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            EnvVarOverlay(envName="stag", name="STAG", value="2"),
+            EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
+        ]
+
 
 class TestBuiltinAnnotsManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
@@ -167,9 +200,10 @@ class TestBuiltinAnnotsManifestConstructor:
         BuiltinAnnotsManifestConstructor().apply_to(blank_resource, bk_module)
 
         annots = blank_resource.metadata.annotations
-        assert annots[
-            "bkapp.paas.bk.tencent.com/image-credentials"
-        ] == f"{CNativeBkAppNameGenerator.generate(bk_module)}--dockerconfigjson"
+        assert (
+            annots["bkapp.paas.bk.tencent.com/image-credentials"]
+            == f"{generate_bkapp_name(bk_module)}--dockerconfigjson"
+        )
         assert annots["bkapp.paas.bk.tencent.com/module-name"] == bk_module.name
         assert annots["bkapp.paas.bk.tencent.com/name"] == app.name
         assert annots["bkapp.paas.bk.tencent.com/region"] == app.region
@@ -220,7 +254,7 @@ class TestProcessesManifestConstructor:
         cfg.build_method = RuntimeType.DOCKERFILE
         cfg.save(update_fields=["build_method"])
 
-        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}", image=None)
+        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}")
 
         assert ProcessesManifestConstructor().get_command_and_args(bk_module, proc) == (
             ["start"],
@@ -230,7 +264,6 @@ class TestProcessesManifestConstructor:
     def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
         initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
-        assert LEGACY_PROC_IMAGE_ANNO_KEY not in blank_resource.metadata.annotations
         assert blank_resource.spec.dict(include={"processes", "envOverlay"}) == {
             "processes": [
                 {
@@ -242,10 +275,6 @@ class TestProcessesManifestConstructor:
                     "resQuotaPlan": "default",
                     "autoscaling": None,
                     "probes": None,
-                    "cpu": None,
-                    "memory": None,
-                    "image": None,
-                    "imagePullPolicy": None,
                     "proc_command": None,
                 }
             ],
@@ -283,25 +312,12 @@ class TestProcessesManifestConstructor:
             "policy": "default",
         }
 
-    @pytest.fixture()
-    def v1alpha1_process_web(self, bk_module, process_web) -> ModuleProcessSpec:
-        process_web.image = "python:latest"
-        process_web.image_credential_name = "auto-generated"
-        process_web.save(update_fields=["image", "image_credential_name"])
-        return process_web
-
-    def test_v1alpha1(self, bk_module, blank_resource, v1alpha1_process_web):
-        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
-        assert (
-            blank_resource.metadata.annotations[LEGACY_PROC_IMAGE_ANNO_KEY]
-            == '{"web": {"image": "python:latest", "policy": "IfNotPresent"}}'
-        )
-
 
 class TestMountsManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
         create_mount = functools.partial(
-            Mount.objects.create,
+            G,
+            model=Mount,
             module_id=bk_module.id,
             name="nginx",
             source_type=VolumeSourceType.ConfigMap,
@@ -361,31 +377,33 @@ class TestHooksManifestConstructor:
 
 
 class TestSvcDiscoveryManifestConstructor:
-    def test_normal(self, bk_module, blank_resource):
-        create_svc_disc = functools.partial(SvcDiscConfig.objects.create, application=bk_module.application)
-        # Create svc_disc object
-        create_svc_disc(
+    def test_normal(self, bk_app, bk_module, blank_resource):
+        G(
+            SvcDiscConfig,
+            application=bk_app,
             bk_saas=[
-                {
-                    "bkAppCode": "bk_app_code_test",
-                    "moduleName": "module_name_test",
-                }
-            ]
+                {"bkAppCode": "foo"},
+                {"bkAppCode": "bar", "moduleName": "default"},
+                {"bkAppCode": "bar", "moduleName": "opps"},
+            ],
         )
 
         SvcDiscoveryManifestConstructor().apply_to(blank_resource, bk_module)
         assert blank_resource.spec.svcDiscovery == SvcDiscConfigSpec(
-            bkSaaS=[SvcDiscEntryBkSaaS(bkAppCode="bk_app_code_test", moduleName="module_name_test")],
+            bkSaaS=[
+                SvcDiscEntryBkSaaS(bkAppCode="foo"),
+                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
+                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
+            ],
         )
 
 
 class TestDomainResolutionManifestConstructor:
-    def test_normal(self, bk_module, blank_resource):
-        create_domain_resolution = functools.partial(
-            DomainResolution.objects.create, application=bk_module.application
-        )
+    def test_normal(self, bk_app, bk_module, blank_resource):
         # Create domain_resolution object
-        create_domain_resolution(
+        G(
+            DomainResolution,
+            application=bk_app,
             nameservers=["192.168.1.3", "192.168.1.4"],
             host_aliases=[
                 {
@@ -440,8 +458,8 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
         DeploymentDescription,
         deployment=bk_deployment,
         env_variables=[
-            {"key": "FOO", "value": "1"},
-            {"key": "BAR", "value": "2"},
+            {"key": "FOO", "value": "1", "environment_name": "_global_"},
+            {"key": "BAR", "value": "2", "environment_name": "stag"},
         ],
         runtime={
             "svc_discovery": {
@@ -453,7 +471,7 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
         },
     )
     with mock_cluster_service():
-        apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment)
+        apply_builtin_env_vars(blank_resource, bk_stag_env)
         var_names = {item.name for item in blank_resource.spec.configuration.env}
         for name in (
             "BKPAAS_APP_ID",
@@ -463,14 +481,14 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
             "BKPAAS_DEFAULT_PREALLOCATED_URLS",
         ):
             assert name in var_names
-        # 应用描述文件中声明的环境变量会写入到 DeploymentDescription 表中，验证 DeploymentDescription 中的 env_variables 都写入到了环境变量
-        assert "FOO" in var_names
-        assert "BAR" in var_names
-        # 应用描述文件中申明了服务发现的话，也需要写入相关的环境变量
-        assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" in var_names
+        # 验证描述文件中声明的环境变量不会通过 apply_builtin_env_vars 注入(而是在更上层的组装 manifest 时处理)
+        assert "FOO" not in var_names
+        assert "BAR" not in var_names
+        # 应用描述文件中申明了服务发现的话，不会写入相关的环境变量(云原生应用的服务发现通过 configmap 注入环境变量)
+        assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" not in var_names
 
 
-def test_builtin_env_has_high_priority(blank_resource, bk_stag_env, bk_deployment):
+def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
     custom_login_url = generate_random_string()
 
     blank_resource.spec.envOverlay = EnvOverlay()
@@ -479,7 +497,7 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env, bk_deploymen
     ]
 
     with mock_cluster_service():
-        apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment)
+        apply_builtin_env_vars(blank_resource, bk_stag_env)
         vars = {item.name: item.value for item in blank_resource.spec.configuration.env}
         vars_overlay = {(v.name, v.envName): v.value for v in blank_resource.spec.envOverlay.envVariables}
 

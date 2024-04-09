@@ -184,6 +184,16 @@ class BkPluginProfileViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = serializers.BkPluginProfileSLZ(data=request.data, instance=profile)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # 插件使用方，传了才更新
+        if "distributors" in serializer.validated_data:
+            plugin_app = self.get_application()
+            distributors = serializer.validated_data["distributors"]
+            try:
+                set_distributors(plugin_app, distributors)
+            except RuntimeError:
+                logger.exception(f"Unable to set distributor for {plugin_app}")
+                raise error_codes.UNABLE_TO_SET_DISTRIBUTORS
         return Response(serializers.BkPluginProfileSLZ(instance=profile).data)
 
     def _get_plugin(self) -> BkPlugin:

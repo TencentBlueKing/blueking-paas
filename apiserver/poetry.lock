@@ -40,19 +40,19 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "apigw-manager"
-version = "1.2.0"
-description = ""
+version = "3.0.2"
+description = "The SDK for managing blueking gateway resource."
 category = "main"
 optional = false
 python-versions = ">=3.6.1,<4.0.0"
 files = [
-    {file = "apigw_manager-1.2.0-py3-none-any.whl", hash = "sha256:a2b5c36748b979afb52ef2b089ad604060012e7734a647567f693e854f06972e"},
+    {file = "apigw_manager-3.0.2-py3-none-any.whl", hash = "sha256:c495d8da42362c30e262bc524923807659b045654c82686c3f377afdd282b4d9"},
 ]
 
 [package.dependencies]
 bkapi-bk-apigateway = ">=1.0.11,<2.0.0"
-bkapi-client-core = ">=1.1.3"
-future = "0.18.2"
+bkapi-client-core = ">=1.2.0"
+future = ">=0.18.2"
 packaging = ">=21.0"
 pyyaml = ">=5.4.1"
 setuptools = ">=21.0.0"
@@ -1819,13 +1819,14 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "future"
-version = "0.18.2"
+version = "1.0.0"
 description = "Clean single-source support for Python 3 and 2"
 category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
-    {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
+    {file = "future-1.0.0-py3-none-any.whl", hash = "sha256:929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216"},
+    {file = "future-1.0.0.tar.gz", hash = "sha256:bd2968309307861edae1458a4f8a4f3598c03be43b97521076aebf5d94c07b05"},
 ]
 
 [package.source]
@@ -5442,4 +5443,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "1ae39aeb621f0cc5c152740e37077ee7077409577267d29c510018c4b6222599"
+content-hash = "cb29f5ab9c730cb154943b2369cef6ab84d9b741bf38452702d3f5f89094ccbe"

@@ -84,6 +84,7 @@ class UpsertMountSLZ(serializers.Serializer):
     # 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
     mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+    # TODO: 更改为 resource_name 更合适
     source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
     persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
@@ -213,11 +214,13 @@ class CreateMountSourceSLZ(serializers.Serializer):
 
 
 class DeleteMountSourcesSLZ(serializers.Serializer):
+    # TODO: 更改为 resource_name 更合适
     source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
 
 
 class UpdateMountSourceSLZ(serializers.Serializer):
+    # TODO: 更改为 resource_name 更合适
     source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     display_name = serializers.CharField(max_length=63, required=True)

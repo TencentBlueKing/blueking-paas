@@ -153,8 +153,9 @@ class ApplicationViewSet(viewsets.ViewSet):
         )
         # 查询我创建的应用时，也需要返回总的应用数量给前端
         all_app_count = applications.count()
-        if exclude_collaborated := params.get("exclude_collaborated"):
-            applications = UserApplicationFilter(request.user).filter(exclude_collaborated=exclude_collaborated)
+        # 仅查询我创建的应用
+        if params.get("exclude_collaborated") is True:
+            applications = applications.filter(owner=request.user.pk)
 
         # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:

@@ -35,7 +35,6 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKPAAS_DEPLOY_ID_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
-    LEGACY_PROC_IMAGE_ANNO_KEY,
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
@@ -180,7 +179,6 @@ class ProcessesManifestConstructor(ManifestConstructor):
             logger.warning("模块<%s> 未定义任何进程", module)
             return
 
-        legacy_processes = {}
         processes = []
         for process_spec in process_specs:
             try:
@@ -202,20 +200,12 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     command=command,
                     args=args,
                     targetPort=process_spec.port,
-                    # TODO?: 是否需要使用 LEGACY_PROC_RES_ANNO_KEY 存储不支持的 plan
+                    # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
                     autoscaling=autoscaling_spec,
                 )
             )
-            # deprecated: support v1alpha1
-            if process_spec.image:
-                legacy_processes[process_spec.name] = {
-                    "image": process_spec.image,
-                    "policy": process_spec.image_pull_policy,
-                }
 
-        if legacy_processes:
-            model_res.metadata.annotations[LEGACY_PROC_IMAGE_ANNO_KEY] = json.dumps(legacy_processes)
         model_res.spec.processes = processes
 
         # Apply other env-overlay related changes.

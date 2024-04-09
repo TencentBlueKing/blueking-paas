@@ -45,7 +45,7 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
-from paasng.platform.engine.constants import ImagePullPolicy, RuntimeType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
@@ -300,14 +300,12 @@ class ModuleInitializer:
                 command=proc["command"],
                 args=proc["args"],
                 targetPort=proc.get("port", None),
-                imagePullPolicy=ImagePullPolicy.IF_NOT_PRESENT,
             )
             for proc in bkapp_spec["processes"]
         ]
 
         mgr = ModuleProcessSpecManager(self.module)
-        # image_credential_names 设置为空字典, 目的是不保存到 ModuleProcessSpec 的 image_credential_name 字段, 该字段仅为 v1alpha1 设计
-        mgr.sync_from_bkapp(processes, image_credential_names={})
+        mgr.sync_from_bkapp(processes)
         for proc in bkapp_spec["processes"]:
             if env_overlay := proc.get("env_overlay"):
                 mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)

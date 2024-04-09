@@ -74,31 +74,6 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[1]["command"] == ["celery"]
         assert proc_specs[1]["args"] == []
 
-    @pytest.fixture()
-    def web_v1alpha1(self, web):
-        web.image = "python:latest"
-        web.save()
-        return web
-
-    def test_retrieve_v1alpha1(self, api_client, bk_cnative_app, bk_module, web_v1alpha1, celery_worker):
-        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
-        resp = api_client.get(url)
-        data = resp.json()
-        metadata = data["metadata"]
-        proc_specs = data["proc_specs"]
-
-        assert metadata["allow_multiple_image"] is True
-        assert len(proc_specs) == 2
-        assert proc_specs[0]["name"] == "web"
-        assert proc_specs[0]["image"] == "python:latest"
-        assert proc_specs[0]["command"] == ["python"]
-        assert proc_specs[0]["args"] == ["-m", "http.server"]
-
-        assert proc_specs[1]["name"] == "worker"
-        assert proc_specs[1]["image"] == "example.com/foo"
-        assert proc_specs[1]["command"] == ["celery"]
-        assert proc_specs[1]["args"] == []
-
     def test_save(self, api_client, bk_cnative_app, bk_module, web, celery_worker):
         G(
             ProcessSpecEnvOverlay,
@@ -187,39 +162,3 @@ class TestModuleProcessSpecViewSet:
             max_replicas=5,
             policy="default",
         )
-
-    def test_save_v1alpha1(self, api_client, bk_cnative_app, bk_module, web_v1alpha1, celery_worker):
-        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
-        request_data = [
-            {
-                "name": "web",
-                "image": "python:v1",
-                "image_credential_name": "foo",
-                "command": ["python", "-m", "http.server"],
-                "args": None,
-                "port": 4999,
-                "env_overlay": {
-                    "stag": {
-                        "environment_name": "stag",
-                        "plan_name": "default",
-                        "target_replicas": 2,
-                        "autoscaling": False,
-                    }
-                },
-            }
-        ]
-        resp = api_client.post(url, data=request_data)
-        data = resp.json()
-        metadata = data["metadata"]
-        proc_specs = data["proc_specs"]
-
-        assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 1
-        assert metadata["allow_multiple_image"] is True
-        assert len(proc_specs) == 1
-        assert proc_specs[0]["name"] == "web"
-        assert proc_specs[0]["image"] == "python:v1"
-        assert proc_specs[0]["image_credential_name"] == "foo"
-        assert proc_specs[0]["command"] == ["python", "-m", "http.server"]
-        assert proc_specs[0]["args"] == []
-        assert proc_specs[0]["port"] == 4999
-        assert proc_specs[0]["env_overlay"]["stag"]["plan_name"] == "default"

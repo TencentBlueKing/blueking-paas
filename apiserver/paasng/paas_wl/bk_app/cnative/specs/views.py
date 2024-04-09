@@ -34,14 +34,8 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
-from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.models import (
-    AppModelResource,
-    AppModelRevision,
-    Mount,
-)
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
     check_persistent_storage_enabled,
@@ -126,26 +120,13 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
 
         cfg = BuildConfig.objects.get_or_create_by_module(module)
-        if cfg.image_repository:
-            # 如果用户填的是 dockerhub 的镜像仓库，则补齐 registry 的域名信息
-            parsed = parse_image(cfg.image_repository, default_registry="index.docker.io")
-            repository = f"{parsed.domain}/{parsed.name}"
-            credential_name = cfg.image_credential_name
-        else:
-            # TODO: 数据迁移后删除以下代码
-            model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
-            bkapp = BkAppResource(**model_resource.revision.json_value)
+        if not cfg.image_repository:
+            raise error_codes.LIST_TAGS_FAILED.f("no image_repository found")
 
-            try:
-                repository = ImageParser(bkapp).get_repository()
-            except ValueError as e:
-                raise error_codes.INVALID_MRES.f(str(e))
-
-            assert bkapp.spec.build
-            if repository != bkapp.spec.build.image:
-                logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
-
-            credential_name = bkapp.spec.build.imageCredentialsName
+        # 如果用户填的是 dockerhub 的镜像仓库，则补齐 registry 的域名信息
+        parsed = parse_image(cfg.image_repository, default_registry="index.docker.io")
+        repository = f"{parsed.domain}/{parsed.name}"
+        credential_name = cfg.image_credential_name
 
         username, password = "", ""
         if credential_name:

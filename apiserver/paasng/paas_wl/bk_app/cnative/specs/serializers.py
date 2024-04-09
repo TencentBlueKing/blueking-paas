@@ -266,4 +266,4 @@ class MountSourceSLZ(serializers.Serializer):
         return [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]
 
     def get_display_name(self, obj):
-        return obj.display_name or f"{self.get_source_type(obj)}-{obj.created.strftime('%y%m%d%H%M')}"
+        return obj.get_display_name()

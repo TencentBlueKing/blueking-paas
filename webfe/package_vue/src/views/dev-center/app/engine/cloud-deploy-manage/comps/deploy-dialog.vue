@@ -1472,5 +1472,10 @@ export default {
 }
 .deploy-dialog-container :deep(.bk-sideslider-wrapper.right) {
   overflow: unset;
+  .paas-deploy-log-wrapper {
+    height: 100%;
+    margin-bottom: 24px;
+    min-height: 620px;
+  }
 }
 </style>

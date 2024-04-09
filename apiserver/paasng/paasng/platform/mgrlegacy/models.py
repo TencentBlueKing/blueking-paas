@@ -25,8 +25,10 @@ from django.db import models
 from jsonfield import JSONField
 
 from paasng.platform.applications.models import Application
-from paasng.platform.mgrlegacy.constants import MigrationStatus
-from paasng.utils.models import OwnerTimestampedModel
+from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
+from paasng.utils.models import OwnerTimestampedModel, make_json_field
+
+from .entities import DefaultAppLegacyData, MigrationResult, ProcessDetails, RollbackResult
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +223,72 @@ class MigrationProcess(OwnerTimestampedModel):
 
     def __str__(self):
         return "%s[%s]" % (self.__class__, self.id)
+
+
+DefaultAppLegacyDataField = make_json_field("DefaultAppLegacyDataField", DefaultAppLegacyData)
+ProcessDetailsField = make_json_field("ProcessDetailsField", ProcessDetails)
+
+
+class CNativeMigrationProcess(OwnerTimestampedModel):
+    app = models.ForeignKey(Application, on_delete=models.CASCADE, null=True)
+    status = models.CharField(
+        choices=CNativeMigrationStatus.get_choices(), default=CNativeMigrationStatus.DEFAULT.value, max_length=20
+    )
+    legacy_data: DefaultAppLegacyData = DefaultAppLegacyDataField(
+        default=DefaultAppLegacyData, help_text="记录迁移前的数据, 用于回滚"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, help_text="操作记录的创建时间")
+    confirm_at = models.DateTimeField(null=True, help_text="用户确认的时间")
+
+    details: ProcessDetails = ProcessDetailsField(default=ProcessDetails, help_text="迁移过程详情")
+
+    class Meta:
+        get_latest_by = "created_at"
+        ordering = ["-created_at"]
+
+    @classmethod
+    def create_migration_process(cls, app, owner) -> "CNativeMigrationProcess":
+        return cls.objects.create(app=app, owner=owner, status=CNativeMigrationStatus.ON_MIGRATION.value)
+
+    @classmethod
+    def create_rollback_process(cls, app, owner) -> "CNativeMigrationProcess":
+        return cls.objects.create(app=app, owner=owner, status=CNativeMigrationStatus.ON_ROLLBACK.value)
+
+    def is_active(self):
+        return self.status in [
+            CNativeMigrationStatus.ON_MIGRATION.value,
+            CNativeMigrationStatus.ON_ROLLBACK.value,
+            CNativeMigrationStatus.DEFAULT.value,
+        ]
+
+    def append_migration(self, result: MigrationResult):
+        self.details.migrations.append(result)
+        self.save(update_fields=["details"])
+
+    def append_rollback(self, result: RollbackResult):
+        self.details.rollbacks.append(result)
+        self.save(update_fields=["details"])
+
+    def finish_migration(self, is_succeeded: bool):
+        if is_succeeded:
+            self.status = CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+        else:
+            self.status = CNativeMigrationStatus.MIGRATION_FAILED.value
+        self.save(update_fields=["status"])
+
+    def finish_rollback(self, is_succeeded: bool):
+        if is_succeeded:
+            self.status = CNativeMigrationStatus.ROLLBACK_SUCCEEDED.value
+        else:
+            self.status = CNativeMigrationStatus.ROLLBACK_FAILED.value
+        self.save(update_fields=["status"])
+
+    def confirm(self):
+        """确认迁移, 用于标记整个迁移过程已经完成, 应用不再处于可迁移状态"""
+        self.status = CNativeMigrationStatus.CONFIRMED.value
+        self.confirm_at = datetime.datetime.now()
+        self.save(update_fields=["status", "confirm_at"])
 
 
 class MigrationContext:

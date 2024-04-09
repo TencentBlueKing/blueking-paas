@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from django.db import models
@@ -71,6 +71,15 @@ class AppModelResourceManager(models.Manager):
             region=region, application_id=application_id, module_id=module_id, revision=revision
         )
         return model_resource
+
+    def get_or_create_by_module(self, module: Module) -> Tuple["AppModelResource", bool]:
+        try:
+            return self.get(module_id=module.id), False
+        except AppModelResource.DoesNotExist:
+            # 原逻辑: 创建云原生应用的模块时, 会创建 AppModelResource 用于占位
+            res_name = generate_bkapp_name(module)
+            resource = create_app_resource(res_name, image="stub")
+            return self.create_from_resource(module.region, module.application.id, module.id, resource), True
 
 
 class AppModelResource(TimestampedModel):

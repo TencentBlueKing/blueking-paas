@@ -1470,4 +1470,7 @@ export default {
     height: 14px;
     transform: translateY(-1px);
 }
+.deploy-dialog-container :deep(.bk-sideslider-wrapper.right) {
+  overflow: unset;
+}
 </style>

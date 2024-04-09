@@ -230,7 +230,7 @@ ProcessDetailsField = make_json_field("ProcessDetailsField", ProcessDetails)
 
 
 class CNativeMigrationProcess(OwnerTimestampedModel):
-    app = models.ForeignKey(Application, on_delete=models.CASCADE, null=True)
+    app = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(
         choices=CNativeMigrationStatus.get_choices(), default=CNativeMigrationStatus.DEFAULT.value, max_length=20
     )

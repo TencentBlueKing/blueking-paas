@@ -84,6 +84,7 @@ class UpsertMountSLZ(serializers.Serializer):
     # 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
     mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+    # TODO: 更改为 resource_name 更合适
     source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
     persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
@@ -190,6 +191,7 @@ class CreateMountSourceSLZ(serializers.Serializer):
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
     persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
+    display_name = serializers.CharField(max_length=63, required=False)
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -197,12 +199,46 @@ class CreateMountSourceSLZ(serializers.Serializer):
 
         if storage_size != PersistentStorageSize.P_1G.value and environment_name == MountEnvName.STAG.value:
             raise serializers.ValidationError("预发布环境仅支持 1G 的持久存储")
+
+        # 检查挂载资源 display_name 是否存在
+        display_name = attrs.get("display_name")
+        # 若 display_name 为空，则不校验
+        if not display_name:
+            return attrs
+        application_id = self.context.get("application_id")
+        source_type = attrs["source_type"]
+        controller = init_volume_source_controller(source_type)
+        if controller.list_by_app(application_id).filter(display_name=display_name).exists():
+            raise serializers.ValidationError(_("已存在同名挂载资源"))
         return attrs
 
 
 class DeleteMountSourcesSLZ(serializers.Serializer):
+    # TODO: 更改为 resource_name 更合适
     source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
     source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+
+
+class UpdateMountSourceSLZ(serializers.Serializer):
+    # TODO: 更改为 resource_name 更合适
+    source_name = serializers.CharField(help_text=_("挂载资源的名称"), required=True)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+    display_name = serializers.CharField(max_length=63, required=True)
+
+    def validate(self, attrs):
+        # 检查挂载资源 display_name 是否存在
+        display_name = attrs.get("display_name")
+        # 若 display_name 为空，则不校验
+        if not display_name:
+            return attrs
+        application_id = self.context.get("application_id")
+        source_type = attrs["source_type"]
+        controller = init_volume_source_controller(source_type)
+        # 更新时通过 name 索引， 排除掉自身
+        query_set = controller.list_by_app(application_id).exclude(name=attrs["source_name"])
+        if query_set.filter(display_name=display_name).exists():
+            raise serializers.ValidationError(_("已存在同名挂载资源"))
+        return attrs
 
 
 class MountSourceSLZ(serializers.Serializer):
@@ -233,4 +269,4 @@ class MountSourceSLZ(serializers.Serializer):
         return [{"module": mount.module.name, "path": mount.mount_path} for mount in mounts]
 
     def get_display_name(self, obj):
-        return obj.display_name
+        return obj.get_display_name()

@@ -90,6 +90,16 @@ func (i *HookInstance) TimeoutExceededFailed(timeout time.Duration) bool {
 		i.Status.StartTime.Add(timeout).Before(time.Now())
 }
 
+// IsPreReleaseProgressing checks if the pre-release hook of the current app is in "progressing" status.
+// Return false if the app does not have any pre-release hook.
+func IsPreReleaseProgressing(bkapp *paasv1alpha2.BkApp) bool {
+	if bkapp.Spec.Hooks == nil || bkapp.Spec.Hooks.PreRelease == nil {
+		return false
+	}
+	status := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
+	return status != nil && status.Phase == paasv1alpha2.HealthProgressing
+}
+
 // BuildPreReleaseHook 从应用描述中解析 Pre-Release-Hook 对象
 func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookStatus) *HookInstance {
 	if bkapp.Spec.Hooks == nil || bkapp.Spec.Hooks.PreRelease == nil {

@@ -39,6 +39,7 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	hookres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks/resources"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/svcdisc"
 	"bk.tencent.com/paas-app-operator/pkg/health"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
 )
@@ -104,6 +105,11 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 
 	hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
 	if hook != nil {
+		// Apply service discovery related changes
+		if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToPod(ctx, hook.Pod); ok {
+			log.V(1).Info("Applied svc-discovery related changes to the pre-release pod.")
+		}
+
 		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
 			return r.Result.WithError(err)
 		}

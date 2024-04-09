@@ -21,6 +21,7 @@ import (
 	"context"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -52,27 +53,33 @@ type WorkloadsMutator struct {
 
 // ApplyToDeployment mutates the given deployment, it try to inject service discovery information
 // to the env variables and volumes of the deployment, it mutate the deployments in-place.
-// return whether the mutation is performed.
+// Return whether the mutation is performed.
 func (w *WorkloadsMutator) ApplyToDeployment(ctx context.Context, d *appsv1.Deployment) bool {
-	log := logf.FromContext(ctx)
-
-	if w.bkapp.Spec.SvcDiscovery == nil {
+	if !w.validateConfigMap(ctx) {
 		return false
 	}
 
-	configmap, err := w.GetConfigMap(ctx)
-	if err != nil {
-		log.V(1).Info("unable to get configmap, skip apply.", "error", err)
-		return false
-	}
-	if _, ok := configmap.Data[DataKeyBkSaaS]; !ok {
-		log.V(1).Info("configmap data invalid, skip apply.")
+	d.Spec.Template.Spec.Containers = w.updateContainers(d.Spec.Template.Spec.Containers)
+	return true
+}
+
+// ApplyToPod mutates the given pod, it try to inject service discovery information
+// to the env variables and volumes of the pod, it mutate the pod in-place.
+// Return whether the mutation is performed.
+func (w *WorkloadsMutator) ApplyToPod(ctx context.Context, d *corev1.Pod) bool {
+	if !w.validateConfigMap(ctx) {
 		return false
 	}
 
-	for i, container := range d.Spec.Template.Spec.Containers {
-		// Use the index to modify the container structure in-place
-		d.Spec.Template.Spec.Containers[i].Env = append(container.Env, v1.EnvVar{
+	d.Spec.Containers = w.updateContainers(d.Spec.Containers)
+	return true
+}
+
+// Update a list of containers to add the svc-discovery related env variables, return a new slice.
+func (w *WorkloadsMutator) updateContainers(containers []corev1.Container) []corev1.Container {
+	results := make([]corev1.Container, len(containers))
+	for i, container := range containers {
+		container.Env = append(container.Env, v1.EnvVar{
 			Name: EnvKeyBkSaaS,
 			ValueFrom: &v1.EnvVarSource{
 				ConfigMapKeyRef: &v1.ConfigMapKeySelector{
@@ -81,14 +88,35 @@ func (w *WorkloadsMutator) ApplyToDeployment(ctx context.Context, d *appsv1.Depl
 				},
 			},
 		})
+		results[i] = container
+	}
+	return results
+}
+
+// Validate if the configmap that required for svc-discovery exists and it's data is valid.
+func (w *WorkloadsMutator) validateConfigMap(ctx context.Context) bool {
+	log := logf.FromContext(ctx)
+
+	if w.bkapp.Spec.SvcDiscovery == nil {
+		return false
+	}
+
+	configmap, err := w.getConfigMap(ctx)
+	if err != nil {
+		log.V(1).Info("failed to validate svc-discovery configmap.", "appName", w.bkapp.GetName(), "error", err)
+		return false
+	}
+	if _, ok := configmap.Data[DataKeyBkSaaS]; !ok {
+		log.V(1).Info("failed to validate svc-discovery configmap, data invalid.", "appName", w.bkapp.GetName())
+		return false
 	}
 	return true
 }
 
-// GetConfigMap get the configmap that contains the svc-discovery results, the results was written by the
+// getConfigMap get the configmap that contains the svc-discovery results, the results was written by the
 // apiserver service of bk-paas earlier.
 // return nil if the configmap resource does not exist or an error occurred.
-func (w *WorkloadsMutator) GetConfigMap(ctx context.Context) (*v1.ConfigMap, error) {
+func (w *WorkloadsMutator) getConfigMap(ctx context.Context) (*v1.ConfigMap, error) {
 	c := v1.ConfigMap{}
 	name := w.configMapResourceName()
 	if err := w.client.Get(ctx, client.ObjectKey{Namespace: w.bkapp.Namespace, Name: name}, &c); err != nil {

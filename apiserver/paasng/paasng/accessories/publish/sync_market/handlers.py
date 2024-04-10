@@ -61,34 +61,6 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=Deployment)
-@run_required_db_console_config
-def deploy_handler(sender, instance, created, raw, using, update_fields, *args, **kwargs):
-    """关注部署状态"""
-    application = instance.app_environment.application
-    is_default_module_prod_deploy_success = all(
-        [
-            instance.app_environment.environment == "prod",
-            instance.app_environment.module == application.get_default_module(),
-            instance.has_succeeded(),
-        ]
-    )
-    if not is_default_module_prod_deploy_success:
-        return
-
-    product = application.get_product()
-    if product is None:
-        logger.warning("正式环境发布成功, 但 Product 对象不存在！")
-        product = Product.objects.create_default_product(application=application)
-
-    try:
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
-        market_config.on_release()
-        on_product_deploy_success(product, "prod")
-    except Exception:
-        logger.exception("打开桌面入口失败！")
-
-
 def on_product_deploy_success(product, environment, auto_enable_market=False, **kwargs):
     """
     app提测上线

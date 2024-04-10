@@ -285,19 +285,14 @@ class MarketConfig(TimestampedModel):
     objects = MarketConfigManager()
 
     def on_release(self):
-        """应用主模块正式环境上线 handler (尝试开启应用市场)
-        如果 auto_enable_when_deploy == True 则开启市场, 并设置 auto_enable_when_deploy = False
-        否则, 不做处理
-        """
+        """应用主模块正式环境上线后触发，仅当 auto 开关开启时打开应用市场。"""
         if self.auto_enable_when_deploy:
             self.enabled = True
             self.auto_enable_when_deploy = False
             self.save(update_fields=["auto_enable_when_deploy", "enabled"])
 
     def on_offline(self):
-        """应用主模块正式环境下线 handler (关闭应用市场)
-        如果 enabled == True, 则设置 auto_enable_when_deploy = True, 再设置 enabled = False
-        """
+        """应用主模块正式环境下线后触发，从市场下线并重置 auto 开关。"""
         if self.enabled:
             self.auto_enable_when_deploy = True
             self.enabled = False

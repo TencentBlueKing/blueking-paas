@@ -23,6 +23,7 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
+from translated_fields import to_attribute
 
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paasng.accessories.publish.entrance.exposer import (
@@ -121,9 +122,9 @@ class TestUpdateExposedURLType:
             application=bk_app,
             defaults={
                 "code": bk_app.code,
-                "name": bk_app.name,
-                "introduction": "foo",
-                "description": "bar",
+                to_attribute("name"): bk_app.name,
+                to_attribute("introduction"): "foo",
+                to_attribute("description"): "bar",
                 "type": AppType.PAAS_APP.value,
             },
         )

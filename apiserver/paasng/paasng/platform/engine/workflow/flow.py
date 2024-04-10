@@ -27,6 +27,7 @@ from django.utils.encoding import force_text
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
+from paasng.accessories.publish.market.status import publish_to_market_by_deployment
 from paasng.accessories.servicehub.exceptions import ProvisionInstanceError
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.applications.models import ModuleEnvironment
@@ -166,19 +167,22 @@ class DeploymentStateMgr:
         # Record operation
         ModuleEnvironmentOperations.objects.filter(object_uid=self.deployment.id).update(status=status.value)
 
-        if status == JobStatus.SUCCESSFUL and self.deployment.app_environment.is_offlined:
-            # 任意部署任务成功，下架状态都需要被更新
-            self.deployment.app_environment.is_offlined = False
-            self.deployment.app_environment.save(update_fields=["is_offlined"])
+        env_obj = self.deployment.app_environment
+        if status == JobStatus.SUCCESSFUL and env_obj.is_offlined:
+            env_obj.restore_archived()
+
+        # INFO: Must call the publish after the environment has been restored from "archived" status
+        # or the publish may fail because it doesn't consider the application is in running status.
+        publish_to_market_by_deployment(self.deployment)
 
         # Release deploy lock
         try:
-            DeploymentCoordinator(self.deployment.app_environment).release_lock(expected_deployment=self.deployment)
+            DeploymentCoordinator(env_obj).release_lock(expected_deployment=self.deployment)
         except ValueError as e:
             logger.warning("Failed to release the deployment lock: %s", e)
 
         # Trigger signal
-        post_appenv_deploy.send(self.deployment.app_environment, deployment=self.deployment)
+        post_appenv_deploy.send(env_obj, deployment=self.deployment)
 
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:

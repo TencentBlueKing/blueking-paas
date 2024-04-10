@@ -43,6 +43,8 @@ const (
 	DefaultOrderPath = "/cnb/order.toml"
 	// DefaultLayersDir is the default dir to store bp layers
 	DefaultLayersDir = "/layers"
+	// DefaultLogLevel is the default log level for lifecycle
+	DefaultLogLevel = "info"
 
 	// CacheImageEnvVarKey The env var key that store cache image
 	CacheImageEnvVarKey = "CACHE_IMAGE"
@@ -50,6 +52,8 @@ const (
 	OutputImageEnvVarKey = "OUTPUT_IMAGE"
 	// UseDockerDaemonEnvVarKey The env var key that store a flag meaning if use docker daemon
 	UseDockerDaemonEnvVarKey = "USE_DOCKER_DAEMON"
+	// LogLevelEnvVarKey The env var key that store log level
+	LogLevelEnvVarKey = "CNB_LOG_LEVEL"
 
 	// DevModeEnvVarKey The env var key that indicates whether to use the dev mode or not
 	DevModeEnvVarKey = "DEV_MODE"
@@ -86,8 +90,7 @@ var (
 		"The name of image that will get created by the lifecycle.",
 	)
 	useDaemon = flag.Bool("daemon", utils.BoolEnv(UseDockerDaemonEnvVarKey), "export image to docker daemon")
-
-	logLevel = flag.String("log-level", "info", "logging level")
+	logLevel  = flag.String("log-level", utils.EnvOrDefault(LogLevelEnvVarKey, DefaultLogLevel), "logging level")
 
 	dev = flag.Bool("dev", utils.BoolEnv(DevModeEnvVarKey), "use dev mode or not")
 )
@@ -100,7 +103,7 @@ func init() {
 	flag.Lookup("group").NoOptDefVal = DefaultGroupPath
 	flag.Lookup("plan").NoOptDefVal = DefaultPlanPath
 	flag.Lookup("layers").NoOptDefVal = DefaultLayersDir
-	flag.Lookup("log-level").NoOptDefVal = "info"
+	flag.Lookup("log-level").NoOptDefVal = DefaultLogLevel
 	flag.Lookup("uid").NoOptDefVal = fmt.Sprintf("%d", DefaultUid)
 	flag.Lookup("gid").NoOptDefVal = fmt.Sprintf("%d", DefaultGid)
 }
@@ -201,10 +204,12 @@ func getBuilderSteps(ctx context.Context) []phase.Step {
 		),
 	}
 	if *cacheImage != "" {
-		steps = append(steps, phase.MakeRestorerStep(ctx, *lifecycleDir, *cacheImage, *groupPath, *layersDir, *logLevel, *useDaemon, *uid, *gid))
+		steps = append(steps, phase.MakeRestorerStep(ctx, *lifecycleDir, *cacheImage, *groupPath, *layersDir,
+			*logLevel, *useDaemon, *uid, *gid))
 	}
 	steps = append(steps,
-		phase.MakeBuilderStep(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel, *uid, *gid),
+		phase.MakeBuilderStep(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir,
+			*logLevel, *uid, *gid),
 		phase.MakeExporterStep(
 			ctx,
 			*lifecycleDir,
@@ -236,6 +241,7 @@ func getDevSteps(ctx context.Context) []phase.Step {
 			*uid,
 			*gid,
 		),
-		phase.MakeBuilderStep(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir, *logLevel, *uid, *gid),
+		phase.MakeBuilderStep(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir,
+			*logLevel, *uid, *gid),
 	}
 }

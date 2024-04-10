@@ -9,107 +9,115 @@
       :module-list="curAppModuleList"
       :first-module-name="firstTabActiveName"
       :active-route-name="active"
+      @tab-change="handleTabChange"
     />
-    <paas-content-loader
-      :placeholder="loaderPlaceholder"
-      :offset-top="30"
-      class="app-container middle overview"
-    >
-      <div
-        v-if="!isTab"
-        class="top-return-bar flex-row align-items-center"
-        @click="handleGoBack"
+    <section :class="[{ 'enhanced-service-main-cls': !isTab }, { 'cloud-native-app': isCloudNativeApp }]">
+      <paas-content-loader
+        :placeholder="loaderPlaceholder"
+        :offset-top="30"
+        class="app-container middle overview"
+        :class="{ 'enhanced-service': !isTab }"
       >
-        <i
-          class="paasng-icon paasng-arrows-left icon-cls-back mr5"
-        />
-        <h4>{{ $t('返回上一页') }}</h4>
-      </div>
-      <section class="deploy-panel deploy-main mt5">
-        <!-- 增强服务实例详情隐藏tab -->
-        <bk-tab
-          v-show="isTab"
-          ext-cls="deploy-tab-cls"
-          :active.sync="active"
-          @tab-change="handleGoPage"
-        >
-          <template slot="setting">
-            <bk-button
-              class="pr20"
-              text
-              @click="handleYamlView"
-            >
-              {{ $t('查看YAML') }}
-            </bk-button>
-          </template>
-          <bk-tab-panel
-            v-for="(panel, index) in curTabPanels"
-            v-bind="panel"
-            :key="index"
-          ></bk-tab-panel>
-        </bk-tab>
+        <template v-if="!isTab">
+          <div
+            class="top-return-bar flex-row align-items-center"
+            @click="handleGoBack"
+          >
+            <i
+              class="paasng-icon paasng-arrows-left icon-cls-back mr5"
+            />
+            <h4>{{ $t('返回上一页') }}</h4>
+          </div>
+          <!-- 动态数据 -->
+          <bk-alert
+            v-if="instanceTipsConfig.isShow"
+            class="instance-alert-cls"
+            type="info"
+            :title="instanceTipsConfig.tips">
+          </bk-alert>
+        </template>
 
-        <div class="deploy-content">
-          <router-view
-            :ref="routerRefs"
-            :key="renderIndex"
-            :save-loading="buttonLoading"
-            :is-component-btn="!isFooterActionBtn"
-            @cancel="handleCancel"
-            @hide-tab="isTab = false"
+        <section :class="['deploy-panel', 'deploy-main', 'mt5', { 'instance-details-cls': !isTab }]">
+          <!-- 增强服务实例详情隐藏tab -->
+          <bk-tab
+            v-show="isTab"
+            ext-cls="deploy-tab-cls"
+            :active.sync="active"
             @tab-change="handleGoPage"
-          />
-        </div>
-      </section>
+          >
+            <template slot="setting">
+              <bk-button
+                class="pr20"
+                text
+                @click="handleYamlView"
+              >
+                {{ $t('查看YAML') }}
+              </bk-button>
+            </template>
+            <bk-tab-panel
+              v-for="(panel, index) in curTabPanels"
+              v-bind="panel"
+              :key="index"
+            ></bk-tab-panel>
+          </bk-tab>
 
-      <!-- <div
-        class="deploy-btn-wrapper"
-        v-if="isPageEdit && isFooterActionBtn"
-      >
-        <bk-button
-          :loading="buttonLoading"
-          class="pl20 pr20"
-          :theme="'primary'"
-          @click="handleSave"
-        >
-          {{ $t('保存') }}
-        </bk-button>
-        <bk-button
-          class="pl20 pr20 ml20"
-          @click="handleCancel"
-        >
-          {{ $t('取消') }}
-        </bk-button>
-      </div> -->
+          <div class="deploy-content">
+            <router-view
+              :ref="routerRefs"
+              :key="renderIndex"
+              :save-loading="buttonLoading"
+              :is-component-btn="!isFooterActionBtn"
+              @cancel="handleCancel"
+              @hide-tab="isTab = false"
+              @tab-change="handleGoPage"
+              @set-markdown="setMarkdown"
+              @set-tooltips="setTooltips"
+              @set-loading="setMarkdownLoading"
+            />
+          </div>
+        </section>
 
-      <bk-dialog
-        v-model="deployDialogConfig.visible"
-        theme="primary"
-        :width="deployDialogConfig.dialogWidth"
-        ext-cls="deploy-dialog"
-        title="YAML"
-        header-position="left"
-        :position="{ top: deployDialogConfig.top }"
-        :show-footer="false"
-      >
-        <deployYaml
-          :height="deployDialogConfig.height"
-          :cloud-app-data="dialogCloudAppData"
-        />
-      </bk-dialog>
-    </paas-content-loader>
+
+      </paas-content-loader>
+
+      <usage-guide
+        v-if="isShowUsageGuide && isCloudNativeApp"
+        :data="serviceMarkdown"
+        :is-cloud-native="isCloudNativeApp"
+        :is-loading="isMarkdownLoading"
+      />
+    </section>
+
+    <bk-dialog
+      v-model="deployDialogConfig.visible"
+      theme="primary"
+      :width="deployDialogConfig.dialogWidth"
+      ext-cls="deploy-dialog"
+      title="YAML"
+      header-position="left"
+      :position="{ top: deployDialogConfig.top }"
+      :show-footer="false"
+    >
+      <deployYaml
+        :height="deployDialogConfig.height"
+        :cloud-app-data="dialogCloudAppData"
+      />
+    </bk-dialog>
   </div>
 </template>
 
 <script>import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
+import usageGuide from '@/components/usage-guide';
 import { throttle } from 'lodash';
+import { bus } from '@/common/bus';
 
 export default {
   components: {
     moduleTopBar,
     deployYaml,
+    usageGuide,
   },
   mixins: [appBaseMixin],
   data() {
@@ -137,6 +145,10 @@ export default {
       isTab: true,
       dialogCloudAppData: [],
       topBarIndex: 0,
+      isShowUsageGuide: false,
+      serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
+      instanceTipsConfig: {},
+      isMarkdownLoading: false,
     };
   },
   computed: {
@@ -196,6 +208,9 @@ export default {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
       this.$store.commit('cloudApi/updatePageEdit', false);
+      if (this.isShowUsageGuide) {
+        this.handleCloseUsageGuide();
+      }
     },
     appCode() {
       this.topBarIndex += 1;
@@ -210,6 +225,12 @@ export default {
         name: this.active || this.firstTabActiveName,
       });
     }
+    bus.$on('show-usage-guide', () => {
+      this.isShowUsageGuide = true;
+    });
+    bus.$on('close-usage-guide', () => {
+      this.isShowUsageGuide = false;
+    });
   },
   mounted() {
     this.handleWindowResize();
@@ -254,6 +275,7 @@ export default {
     handleGoBack() {
       this.handleGoPage('appServices');
       this.isTab = true;
+      this.handleCloseUsageGuide();
     },
 
     handleWindowResize() {
@@ -271,6 +293,27 @@ export default {
         this.deployDialogConfig.height = 520;
       }
     },
+
+    handleCloseUsageGuide() {
+      this.isShowUsageGuide = false;
+    },
+
+    handleTabChange() {
+      this.handleCloseUsageGuide();
+      this.isTab = true;
+    },
+
+    setMarkdown(markdown) {
+      this.serviceMarkdown = markdown;
+    },
+
+    setTooltips(data) {
+      this.instanceTipsConfig = data;
+    },
+
+    setMarkdownLoading(loading) {
+      this.isMarkdownLoading = loading;
+    },
   },
 };
 </script>
@@ -278,6 +321,15 @@ export default {
 <style lang="scss" scoped>
 @import '../../../../../assets/css/components/conf.scss';
 @import './index.scss';
+.enhanced-service-main-cls.cloud-native-app {
+  height: 100%;
+  display: flex;
+  .enhanced-service {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .title {
   font-size: 16px;
   color: #313238;
@@ -327,11 +379,17 @@ export default {
 
 .deploy-panel.deploy-main {
   box-shadow: 0 2px 4px 0 #1919290d;
+
+  &.instance-details-cls {
+    height: auto;
+    min-height: auto;
+  }
 }
 
 .top-return-bar {
   background: #F5F7FA;
   cursor: pointer;
+  margin-bottom: 16px;
   h4 {
     font-size: 14px;
     color: #313238;
@@ -343,6 +401,9 @@ export default {
     font-size: 14px;
     font-weight: bold;
   }
+}
+.instance-alert-cls {
+  margin-bottom: 16px;
 }
 </style>
 <style lang="scss">

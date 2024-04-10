@@ -1251,7 +1251,7 @@ export default {
   服务启用成功: 'Service enabled successfully',
   暂无使用说明: 'No instructions for use',
   实例详情: 'Instance details',
-  实例ID: 'Instance ID',
+  '实例 ID': 'Instance ID',
   使用环境: 'Use environment',
   管理入口: 'Management portal',
   '服务正在创建中，请通过“管理入口”查看进度': 'The service is being created, please check the progress through the "Admin Portal"',
@@ -2579,4 +2579,6 @@ export default {
   预览: 'Preview',
   禁用成功: 'Disabled successfully',
   启用成功: 'Enabled successfully',
+  凭证信息: 'Credential Information',
+  查看管理入口: 'View Management Portal',
 };

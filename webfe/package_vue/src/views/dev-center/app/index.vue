@@ -12,7 +12,8 @@
               <paas-cloud-app-nav v-if="type === 'cloud_native'" />
               <paas-app-nav v-else />
             </div>
-            <div class="overview-fright">
+            <!-- 特殊页面样式无需指定padding-bottom -->
+            <div :class="['overview-fright', { 'not-padding-bottom': $route.path.includes('service_inner/') }] ">
               <router-view
                 v-if="userVisitEnable && appVisitEnable"
                 :app-info="appInfo"
@@ -350,5 +351,9 @@ export default {
         font-size: 20px;
         color: #979797;
         line-height: 80px;
+    }
+
+    .not-padding-bottom {
+      padding-bottom: 0;
     }
 </style>

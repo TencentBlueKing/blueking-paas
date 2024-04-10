@@ -55,7 +55,9 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
         default=ImagePullPolicy.IF_NOT_PRESENT,
     )
     build_only = serializers.BooleanField(help_text="是否仅构建, 不发布", default=False)
-    special_tag = serializers.CharField(help_text="指定构建的镜像 tag", required=False, allow_null=True, allow_blank=True)
+    special_tag = serializers.CharField(
+        help_text="指定构建的镜像 tag", required=False, allow_null=True, allow_blank=True
+    )
     build_id = serializers.CharField(
         help_text="构建产物ID, 提供该ID时将跳过构建", required=False, allow_null=True, allow_blank=True
     )
@@ -66,7 +68,9 @@ class CreateDeploymentSLZ(serializers.Serializer):
     """创建部署"""
 
     version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
-    version_name = serializers.CharField(required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name")
+    version_name = serializers.CharField(
+        required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"
+    )
     revision = serializers.CharField(
         required=False,
         help_text="版本信息, 如 hash(git版本)/version(源码包); 如果根据 smart_revision 能查询到 revision, 则不使用该值",
@@ -145,7 +149,7 @@ class DeploymentSLZ(serializers.ModelSerializer):
 
 
 class DeploymentErrorTipsSLZ(serializers.Serializer):
-    matched_solutions_found = serializers.NullBooleanField(help_text="是否有匹配的 tips")
+    matched_solutions_found = serializers.BooleanField(help_text="是否有匹配的 tips", allow_null=True)
     possible_reason = serializers.CharField(help_text="可能导致部署错误的原因")
     helpers = serializers.DictField()
 
@@ -236,7 +240,12 @@ class ConfigVarFormatSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="环境变量值")
     environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
     description = serializers.CharField(
-        allow_blank=True, allow_null=True, max_length=200, required=False, default='', help_text='变量描述，不超过 200 个字符'
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        required=False,
+        default='',
+        help_text='变量描述，不超过 200 个字符',
     )
 
     def to_internal_value(self, data):
@@ -492,7 +501,9 @@ class ResourceMetricsSLZ(serializers.Serializer):
 class CustomDomainsConfigSLZ(serializers.Serializer):
     module = serializers.CharField(help_text='所属模块')
     environment = serializers.CharField(help_text='部署环境')
-    frontend_ingress_ip = serializers.CharField(help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能')
+    frontend_ingress_ip = serializers.CharField(
+        help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能'
+    )
 
 
 class ConditionNotMatchedSLZ(serializers.Serializer):

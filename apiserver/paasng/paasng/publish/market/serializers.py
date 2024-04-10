@@ -52,7 +52,11 @@ class VisiableLabelsSlz(serializers.Serializer):
     type = serializers.CharField(label="类型", min_length=1)
     name = serializers.CharField(label="名称", min_length=1)
     display_name = serializers.CharField(
-        label="中文名", help_text="type 为 user 的时候有该字段，其他type没有该字段", allow_null=True, allow_blank=True, required=False
+        label="中文名",
+        help_text="type 为 user 的时候有该字段，其他type没有该字段",
+        allow_null=True,
+        allow_blank=True,
+        required=False,
     )
 
 
@@ -105,14 +109,20 @@ class ProductTagByNameField(serializers.SlugRelatedField):
 
 @i18n
 class ProductBaseSLZ(serializers.Serializer):
-    resizable = serializers.BooleanField(source="displayoptions.resizable", help_text=u"是否可调整窗口大小", required=False)
+    resizable = serializers.BooleanField(
+        source="displayoptions.resizable", help_text=u"是否可调整窗口大小", required=False
+    )
     width = serializers.IntegerField(source="displayoptions.width", help_text=u"窗口宽度", default=1200)
     height = serializers.IntegerField(source="displayoptions.height", help_text=u"窗口高度", default=600)
-    is_win_maximize = serializers.BooleanField(source="displayoptions.is_win_maximize", help_text=u"窗口是否默认最大化")
+    is_win_maximize = serializers.BooleanField(
+        source="displayoptions.is_win_maximize", help_text=u"窗口是否默认最大化"
+    )
     win_bars = serializers.BooleanField(source="displayoptions.win_bars", help_text=u"是否显示评分栏")
 
     # TODO: 当「修改市场信息」页面支持填写 i18n 字段时去除 write_only. (现在去掉 write_only 会导致市场信息无法被修改)
-    name = I18NExtend(AppNameField(max_length=20, required=True, help_text=u"应用名称，不能超过20个字符", write_only=True))
+    name = I18NExtend(
+        AppNameField(max_length=20, required=True, help_text=u"应用名称，不能超过20个字符", write_only=True)
+    )
     introduction = I18NExtend(serializers.CharField(help_text="应用简介", max_length=100, write_only=True))
     description = I18NExtend(RichTextField(help_text="应用描述", allow_blank=True, write_only=True))
     # 联系人非必填时，前端可能不传或者传空字符串
@@ -138,7 +148,9 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
         many=False,
         allow_null=True,
         help_text="应用id",
-        validators=[UniqueValidator(queryset=Product.objects.all(), lookup="exact", message=u"该应用已经注册，请不要重复注册")],
+        validators=[
+            UniqueValidator(queryset=Product.objects.all(), lookup="exact", message=u"该应用已经注册，请不要重复注册")
+        ],
     )
     tag = ProductTagField(slug_field="id")
 
@@ -270,7 +282,7 @@ class MarketConfigSLZ(serializers.ModelSerializer):
         required=False,
         help_text="访问地址类型\n" + " ".join(map(str, ProductSourceUrlType.get_choices())),
     )
-    prefer_https = serializers.NullBooleanField(required=False, help_text="是否偏好 HTTPS")
+    prefer_https = serializers.BooleanField(required=False, help_text="是否偏好 HTTPS", allow_null=True)
 
     source_module_id = serializers.UUIDField(allow_null=True, required=False, help_text="绑定模块id", read_only=True)
     enabled = serializers.BooleanField(read_only=True, help_text="是否上架到市场")

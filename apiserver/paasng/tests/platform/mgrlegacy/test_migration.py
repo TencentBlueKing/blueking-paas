@@ -41,7 +41,7 @@ except ImportError:
     from paasng.platform.mgrlegacy.app_migrations.sourcectl import SourceControlMigration
 
 
-pytestmark = skip_if_legacy_not_configured()
+pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
 @pytest.mark.usefixtures("legacy_app_code")
@@ -267,5 +267,7 @@ class TestProductMigration(BaseTestCaseForMigration):
     def test_rollback(self):
         self.test_migrate()
         self.migration.rollback()
-        assert DisplayOptions.objects.filter(product__code=self.context.app.code).count() == 0, "DisplayOptions 删除异常"
+        assert (
+            DisplayOptions.objects.filter(product__code=self.context.app.code).count() == 0
+        ), "DisplayOptions 删除异常"
         assert Product.objects.filter(code=self.context.app.code).count() == 0, "Product 删除异常"

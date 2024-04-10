@@ -16,17 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import pytest
+
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.mgrlegacy.app_migrations.basic import BaseObjectMigration, MainInfoMigration
 from paasng.platform.mgrlegacy.app_migrations.envs_base import BaseEnvironmentVariableMigration
 from paasng.platform.mgrlegacy.app_migrations.product import ProductMigration
 from paasng.publish.sync_market.constant import EnvItem
+from tests.conftest import skip_if_legacy_not_configured
 from tests.platform.mgrlegacy.test_migration import BaseTestCaseForMigration
 
 try:
     from paasng.platform.mgrlegacy.app_migrations.sourcectl_te import SourceControlMigration
 except ImportError:
     from paasng.platform.mgrlegacy.app_migrations.sourcectl import SourceControlMigration
+
+pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
 class TestBaseEnvironmentVariableMigration(BaseTestCaseForMigration):

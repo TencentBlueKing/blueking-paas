@@ -247,3 +247,7 @@ APIGW_ENVIRONMENT = env("APIGW_ENVIRONMENT", default='prod')
 ENABLE_BK_MONITOR_APIGW = env.bool("ENABLE_BK_MONITOR_APIGW", default=True)
 # 蓝鲸监控的访问地址, 用于拼接 APM 详情页面的访问地址
 BK_MONITORV3_URL = env("BK_MONITORV3_URL", default="")
+
+# 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
+BK_CRYPTO_TYPE = env("BK_CRYPTO_TYPE", "CLASSIC")
+ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"

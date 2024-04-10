@@ -226,3 +226,7 @@ ENABLE_ADMIN = False
 
 # 跳转回应用首页的 url 模板
 DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/apps/{app_code}/{module}/summary"
+
+# 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
+BK_CRYPTO_TYPE = env("BK_CRYPTO_TYPE", "CLASSIC")
+ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"

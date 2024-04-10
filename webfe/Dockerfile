@@ -8,7 +8,7 @@ ENV NPM_VERSION 10.5.0
 # install requirements & build
 COPY ./package_vue /package_vue
 WORKDIR /package_vue
-RUN npm install --unsafe-perm --registry=https://mirrors.tencent.com/npm/ --force
+RUN npm install --unsafe-perm --registry=https://mirrors.tencent.com/npm/
 RUN npm run build
 
 ######### Nginx part #########

@@ -105,7 +105,7 @@
     "wangeditor": "^3.0.3"
   },
   "optionalDependencies": {
-    "@tencent/bk-magic-vue": "2.4.17-beta.4"
+    "@tencent/bk-magic-vue": "2.5.9-beta.6"
   },
   "engines": {
     "node": ">= 4.0.0",

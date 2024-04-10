@@ -51,11 +51,10 @@ def publish_to_market_by_deployment(deployment: Deployment):
 
 def _is_default_prod_success(deployment: Deployment) -> bool:
     """Check if the deployment is on the default module's prod environment and has succeeded."""
-    application = deployment.app_environment.application
     return all(
         (
             deployment.app_environment.environment == "prod",
-            deployment.app_environment.module == application.get_default_module(),
+            deployment.app_environment.module.is_default,
             deployment.has_succeeded(),
         )
     )

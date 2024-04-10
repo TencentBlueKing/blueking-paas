@@ -1,9 +1,9 @@
 ######### Npm part #########
-FROM node:14.17.6 AS StaticBuilding
+FROM node:18.20.1 AS StaticBuilding
 
 ARG APP_VERSION=ce
 ARG NODE_ENV=production
-ENV NPM_VERSION 6.14.15
+ENV NPM_VERSION 10.5.0
 
 # install requirements & build
 COPY ./package_vue /package_vue

@@ -8,6 +8,8 @@ ENV NPM_VERSION 6.14.15
 # install requirements & build
 COPY ./package_vue /package_vue
 WORKDIR /package_vue
+
+# no --force
 RUN npm install --unsafe-perm --registry=https://mirrors.tencent.com/npm/
 RUN npm run build
 

@@ -28,7 +28,6 @@ from .setup_utils import create_fake_deployment
 
 pytestmark = pytest.mark.django_db
 
-
 # Get current datetime when compiling
 _NOW = arrow.now()
 
@@ -47,7 +46,7 @@ class TestCountFrozenDeployments:
     def test_no_build_process_id(self, bk_deployment):
         bk_deployment.build_process_id = None
         bk_deployment.save()
-        assert count_frozen_deployments(edge_seconds=10, now=_NOW) == 1
+        assert count_frozen_deployments(edge_seconds=10, now=_NOW.datetime) == 1
 
     @pytest.mark.parametrize(
         'log_lines,cnt',

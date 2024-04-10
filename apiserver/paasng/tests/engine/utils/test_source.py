@@ -363,7 +363,7 @@ class TestDownloadSourceToDir:
             procfile = working_dir / target
             assert procfile.exists()
             assert procfile.is_file()
-            assert yaml.load(procfile.read_text()) == expected
+            assert yaml.full_load(procfile.read_text()) == expected
 
     # 模拟 S_MART 应用的 source_dir 目录加密的场景
     def test_add_procfile_ext(self, bk_module, bk_deployment):
@@ -380,7 +380,7 @@ class TestDownloadSourceToDir:
             download_source_to_dir(bk_module, 'user_id:100', bk_deployment, working_dir)
             assert procfile.exists()
             assert procfile.is_file()
-            assert yaml.load(procfile.read_text()) == {"hello": "echo 'Hello World'"}
+            assert yaml.full_load(procfile.read_text()) == {"hello": "echo 'Hello World'"}
 
 
 class TestCheckSourcePackage:

@@ -527,7 +527,7 @@ class CommandHandler(PodScheduleHandler):
 
     @staticmethod
     def get_pod_timeout(pod: Command) -> arrow.Arrow:
-        return arrow.get(pod.start_time) + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)
+        return arrow.get(pod.start_time) + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)  # type: ignore
 
 
 class ProcAutoscalingHandler(ResourceHandlerBase):

@@ -115,7 +115,7 @@ class CommandDeserializer(AppEntityDeserializer['Command']):
             type_=annotations["type"],
             version=int(annotations["version"]),
             # 运行时信息
-            start_time=start_time,
+            start_time=start_time.datetime if start_time else None,
             phase=pod_status.phase,
             phase_message=health_status.message,
             main_container_exit_code=main_container_exit_code,

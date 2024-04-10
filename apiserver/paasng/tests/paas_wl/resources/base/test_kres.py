@@ -279,7 +279,7 @@ class TestKPod:
 
 
 def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1") -> Dict:
-    manifest = yaml.load(
+    manifest = yaml.full_load(
         dedent(
             '''\
         apiVersion: {api_version}
@@ -306,7 +306,7 @@ def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1")
     '''.format(
                 api_version=api_version, name=name
             )
-        )
+        ),
     )
     return manifest
 

@@ -161,7 +161,6 @@
                       { active: sortValue.indexOf('-') !== -1 }
                     ]"
                     v-bk-tooltips="{ content: filterTips }"
-                    @mouseenter.stop
                     @click.stop="handleTtogleOrder"
                   >
                     <i :class="['paasng-icon', sortValue.indexOf('-') !== -1 ? 'paasng-shengxu' : 'paasng-jiangxu']" />
@@ -221,7 +220,8 @@
         @page-change="handlePageChange"
         @page-limit-change="handlePageLimitChange"
         @row-mouse-enter="(index) => curHoverRowIndex = index"
-        @row-mouse-leave="curHoverRowIndex = -1">
+        @row-mouse-leave="curHoverRowIndex = -1"
+        @row-click="toPage">
         <div slot="empty">
           <table-empty
             :keyword="tableEmptyConf.keyword"
@@ -289,7 +289,7 @@
                       href="javascript:void(0);"
                       class="blue"
                       @click="applyCludeApi(props.row)"
-                    > {{ $t('申请云API权限') }} </a>
+                    > {{ $t('申请 云API 权限') }} </a>
                   </template>
                 </template>
               </bk-table-column>
@@ -333,7 +333,7 @@
                 class="app-logo"
               />
               <div class="info">
-                <span class="name" @click="toPage(row)">{{ row.application.name }}</span>
+                <span class="name" @click.stop="toPage(row)">{{ row.application.name }}</span>
                 <span class="code">{{ row.application.code }}</span>
               </div>
             </div>
@@ -344,7 +344,7 @@
             <span
               v-if="row.application.config_info.engine_enabled && row.application.type !== 'cloud_native'"
               :class="['module-name', { 'off-shelf': !row.application.is_active }]"
-              @click="handleExpandRow(row)"
+              @click.stop="handleExpandRow(row)"
             > {{ $t('共') }}&nbsp; {{ row.application.modules.length }} &nbsp;{{ $t('个模块') }}
               <i
                 v-if="expandRowKeys.includes(row.application.code) || $index === curHoverRowIndex"
@@ -401,7 +401,7 @@
                 ext-cls="link-btn-cls"
                 @click="toCloudAPI(row)"
               >
-                {{ $t('申请云API权限') }}
+                {{ $t('申请云 API 权限') }}
                 <i class="paasng-icon paasng-keys cloud-icon" />
               </bk-button>
               <span
@@ -1410,6 +1410,8 @@ export default {
       }
 
       .module-name {
+        display: inline-block;
+        padding: 5px 5px 5px 0px;
         user-select: none;
         color: #3A84FF;
         cursor: pointer;
@@ -1587,6 +1589,10 @@ section.app-filter-module {
   // height
   &>.bk-table-body-wrapper>table tbody>tr {
     height: 56px;
+
+    &.hover-row {
+      cursor: pointer;
+    }
   }
 
   .is-expanded-row td.bk-table-expanded-cell {
@@ -1603,6 +1609,7 @@ section.app-filter-module {
     }
     .bk-table-body-wrapper table tbody>tr {
       height: 42px !important;
+      cursor: default;
       td {
         height: 42px;
       }

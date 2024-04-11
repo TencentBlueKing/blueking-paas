@@ -641,7 +641,7 @@ export default {
   暂未部署: 'Not yet deployed',
   暂未成功部署: 'Not yet successfully deployed',
   正在运行: 'Running',
-  申请云API权限: 'Apply Cloud API',
+  '申请云 API 权限': 'Apply Cloud API',
   '应用未部署，不能访问': 'The APP is not deployed and cannot be accessed',
   点击立即授权: 'Click Authorize Now',
   '腾讯内部 Git 源码托管系统': 'Tencent internal git source code hosting system',

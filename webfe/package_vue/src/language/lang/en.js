@@ -1367,7 +1367,7 @@ export default {
   应用: 'APP',
   外链应用: 'Ext-link APP',
   '平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能，并提供源码包部署和通过配置文件定义应用信息的能力': 'The platform provides APP engine, Add-ons, cloud API permissions, APP market and the ability to deploy source packages and define APP information via configuration files for such APP',
-  '源码包上传成功，以下为从app.yml文件中解析出的信息': 'The source code package is uploaded successfully, the following is the information parsed from the app_desc.yml file',
+  '源码包上传成功，以下为从 app_desc.yml 文件中解析出的信息': 'The source package was uploaded successfully, the following information has been parsed from the app_desc.yml file',
   重新上传: 'Re-upload',
   '什么是 S-mart 应用？': 'What is an S-mart APP?',
   确认并创建应用: 'Confirm and create APP',

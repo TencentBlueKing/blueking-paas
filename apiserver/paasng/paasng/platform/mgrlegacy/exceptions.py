@@ -24,3 +24,15 @@ class MigrationFailed(Exception):
 
 class NotSupportError(Exception):
     pass
+
+
+class PreCheckMigrationFailed(Exception):
+    """Pre-check migrate failed"""
+
+
+class BackupLegacyDataFailed(Exception):
+    """Backup legacy data failed"""
+
+
+class RollbackFailed(Exception):
+    """rollback failed"""

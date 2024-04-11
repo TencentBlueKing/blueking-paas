@@ -162,13 +162,6 @@ class ProcessInputSLZ(serializers.Serializer):
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
 
-    # TODO 删除 v1alpha1 的配置
-    # v1alpha1
-    image = serializers.CharField(allow_null=True, default=None, allow_blank=True)
-    imagePullPolicy = serializers.ChoiceField(choices=ImagePullPolicy.get_choices(), allow_null=True, default=None)
-    cpu = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    memory = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-
     def to_internal_value(self, data) -> bk_app.BkAppProcess:
         d = super().to_internal_value(data)
         return bk_app.BkAppProcess(**d)

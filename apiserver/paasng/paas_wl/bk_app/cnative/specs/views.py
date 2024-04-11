@@ -34,14 +34,8 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
-from paas_wl.bk_app.cnative.specs.image_parser import ImageParser
-from paas_wl.bk_app.cnative.specs.models import (
-    AppModelResource,
-    AppModelRevision,
-    Mount,
-)
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
     check_persistent_storage_enabled,
@@ -57,6 +51,7 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     QueryMountSourcesSLZ,
     QueryMountsSLZ,
     ResQuotaPlanSLZ,
+    UpdateMountSourceSLZ,
     UpsertMountSLZ,
 )
 from paas_wl.utils.error_codes import error_codes
@@ -126,26 +121,13 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
 
         cfg = BuildConfig.objects.get_or_create_by_module(module)
-        if cfg.image_repository:
-            # 如果用户填的是 dockerhub 的镜像仓库，则补齐 registry 的域名信息
-            parsed = parse_image(cfg.image_repository, default_registry="index.docker.io")
-            repository = f"{parsed.domain}/{parsed.name}"
-            credential_name = cfg.image_credential_name
-        else:
-            # TODO: 数据迁移后删除以下代码
-            model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
-            bkapp = BkAppResource(**model_resource.revision.json_value)
+        if not cfg.image_repository:
+            raise error_codes.LIST_TAGS_FAILED.f("no image_repository found")
 
-            try:
-                repository = ImageParser(bkapp).get_repository()
-            except ValueError as e:
-                raise error_codes.INVALID_MRES.f(str(e))
-
-            assert bkapp.spec.build
-            if repository != bkapp.spec.build.image:
-                logger.warning("BkApp 的 spec.build.image 为镜像全名, 将忽略 tag 部分")
-
-            credential_name = bkapp.spec.build.imageCredentialsName
+        # 如果用户填的是 dockerhub 的镜像仓库，则补齐 registry 的域名信息
+        parsed = parse_image(cfg.image_repository, default_registry="index.docker.io")
+        repository = f"{parsed.domain}/{parsed.name}"
+        credential_name = cfg.image_credential_name
 
         username, password = "", ""
         if credential_name:
@@ -337,7 +319,7 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         enabled = check_persistent_storage_enabled(application=app)
         if not enabled:
             raise error_codes.CREATE_VOLUME_SOURCE_FAILED.f(_("当前应用暂不支持持久存储功能，请联系管理员"))
-        slz = CreateMountSourceSLZ(data=request.data)
+        slz = CreateMountSourceSLZ(data=request.data, context={"application_id": app.id})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
@@ -348,13 +330,31 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
         )
 
+        params = {"application_id": app.id, "environment_name": environment_name, "storage_size": storage_size}
+        if display_name := validated_data.get("display_name"):
+            params["display_name"] = display_name
+
         controller = init_volume_source_controller(source_type)
-        source = controller.create_by_app(
-            application_id=app.id, environment_name=environment_name, storage_size=storage_size
-        )
+        source = controller.create_by_app(**params)
 
         slz = MountSourceSLZ(source)
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(request_body=UpdateMountSourceSLZ, responses={200: MountSourceSLZ})
+    def update(self, request, code):
+        app = self.get_application()
+
+        slz = UpdateMountSourceSLZ(data=request.data, context={"application_id": app.id})
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        controller = init_volume_source_controller(data.get("source_type"))
+        source = controller.model_class.objects.get(application_id=app.id, name=data.get("source_name"))
+        source.display_name = data.get("display_name")
+        source.save(update_fields=["display_name"])
+
+        slz = MountSourceSLZ(source)
+        return Response(data=slz.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, code):
         app = self.get_application()

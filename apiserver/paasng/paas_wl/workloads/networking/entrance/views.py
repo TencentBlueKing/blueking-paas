@@ -26,7 +26,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paas_wl.core.env import env_is_running
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance import serializers as slzs
 from paas_wl.workloads.networking.entrance.addrs import URL, Address
@@ -178,20 +177,25 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
             all_entrances.append(module_entrances)
             for env in module.envs.all():
                 env_entrances = module_entrances["envs"].setdefault(env.environment, [])
-                is_running = env_is_running(env)
                 addresses = []
                 # 每个环境仅展示一个内置访问地址
-                _, builtin_address = get_builtin_addr_preferred(env)
+                is_running, builtin_address = get_builtin_addr_preferred(env)
                 if builtin_address:
                     addresses.append(builtin_address)
-                else:
-                    # 除非集群的配置有问题, 理论上 builtin_address 不会为空
+                elif not is_running:
+                    # No builtin address found for the not running env means there must
+                    # be something wrong with the platform config, log it.
                     logger.error(
-                        "builtin address is None for application %s module %s env %s",
+                        "cannot found builtin address, application: %s, module: %s(%s)",
                         application.code,
                         module.name,
                         env.environment,
                     )
+                else:
+                    # No builtin address found for the running env, this can be normal
+                    # when the module has no "web" process.
+                    pass
+
                 addresses.extend(LiveEnvAddresses(env).list_custom())
                 for address in addresses:
                     env_entrances.append(

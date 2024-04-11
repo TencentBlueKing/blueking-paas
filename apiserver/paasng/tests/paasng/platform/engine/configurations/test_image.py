@@ -82,8 +82,6 @@ class TestRuntimeInfo:
     @pytest.mark.parametrize(
         ("image_repository", "expected"),
         [
-            # v1alpha1
-            ("", ""),
             # v1alpha2
             (
                 "docker.io/library/python",

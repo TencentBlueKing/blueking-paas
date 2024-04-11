@@ -23,7 +23,6 @@ from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.constants import (
-    LEGACY_PROC_IMAGE_ANNO_KEY,
     ApiVersion,
     MountEnvName,
     ResQuotaPlan,
@@ -62,7 +61,6 @@ from paasng.platform.bkapp_model.manifest import (
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
     apply_builtin_env_vars,
-    apply_deploy_desc,
     apply_env_annots,
     get_manifest,
 )
@@ -73,8 +71,9 @@ from paasng.platform.bkapp_model.models import (
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string
@@ -102,9 +101,7 @@ def local_service(bk_app):
 @pytest.fixture()
 def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
-    return G(
-        ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000, image=None
-    )
+    return G(ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000)
 
 
 @pytest.fixture()
@@ -159,6 +156,41 @@ class TestEnvVarsManifestConstructor:
         assert blank_resource.spec.envOverlay.envVariables == [
             EnvVarOverlay(envName="stag", name="BAR", value="1"),
             EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
+        ]
+
+    def test_preset(self, bk_module, bk_stag_env, blank_resource):
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+
+        EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="1")]
+        assert blank_resource.spec.envOverlay.envVariables == [
+            EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            EnvVarOverlay(envName="stag", name="STAG", value="1"),
+        ]
+
+    def test_override_preset(self, bk_module, bk_stag_env, blank_resource):
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG", value="2")
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="STAG_XX", value="2")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+        # case: 是否覆盖与顺序无关.
+        ConfigVar.objects.create(
+            module=bk_module,
+            environment_id=ENVIRONMENT_ID_FOR_GLOBAL,
+            key="GLOBAL",
+            value="2",
+            is_global=True,
+        )
+
+        EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="2")]
+        assert blank_resource.spec.envOverlay.envVariables == [
+            EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            EnvVarOverlay(envName="stag", name="STAG", value="2"),
+            EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
         ]
 
 
@@ -222,7 +254,7 @@ class TestProcessesManifestConstructor:
         cfg.build_method = RuntimeType.DOCKERFILE
         cfg.save(update_fields=["build_method"])
 
-        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}", image=None)
+        proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}")
 
         assert ProcessesManifestConstructor().get_command_and_args(bk_module, proc) == (
             ["start"],
@@ -232,7 +264,6 @@ class TestProcessesManifestConstructor:
     def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
         initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
-        assert LEGACY_PROC_IMAGE_ANNO_KEY not in blank_resource.metadata.annotations
         assert blank_resource.spec.dict(include={"processes", "envOverlay"}) == {
             "processes": [
                 {
@@ -244,10 +275,6 @@ class TestProcessesManifestConstructor:
                     "resQuotaPlan": "default",
                     "autoscaling": None,
                     "probes": None,
-                    "cpu": None,
-                    "memory": None,
-                    "image": None,
-                    "imagePullPolicy": None,
                     "proc_command": None,
                 }
             ],
@@ -284,20 +311,6 @@ class TestProcessesManifestConstructor:
             "maxReplicas": 2,
             "policy": "default",
         }
-
-    @pytest.fixture()
-    def v1alpha1_process_web(self, bk_module, process_web) -> ModuleProcessSpec:
-        process_web.image = "python:latest"
-        process_web.image_credential_name = "auto-generated"
-        process_web.save(update_fields=["image", "image_credential_name"])
-        return process_web
-
-    def test_v1alpha1(self, bk_module, blank_resource, v1alpha1_process_web):
-        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
-        assert (
-            blank_resource.metadata.annotations[LEGACY_PROC_IMAGE_ANNO_KEY]
-            == '{"web": {"image": "python:latest", "policy": "IfNotPresent"}}'
-        )
 
 
 class TestMountsManifestConstructor:
@@ -490,19 +503,3 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
 
         assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
         assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
-
-
-def test_apply_deploy_desc_spec_v2(blank_resource, bk_deployment):
-    G(
-        DeploymentDescription,
-        deployment=bk_deployment,
-        env_variables=[
-            {"key": "FOO", "value": "1", "environment_name": "_global_"},
-            {"key": "BAR", "value": "2", "environment_name": "stag"},
-            {"key": "BAZ", "value": "3", "environment_name": "prod"},
-        ],
-    )
-    apply_deploy_desc(blank_resource, bk_deployment)
-    assert {item.name for item in blank_resource.spec.configuration.env} == {"FOO"}
-    assert {item.name for item in blank_resource.spec.envOverlay.envVariables if item.envName == "stag"} == {"BAR"}
-    assert {item.name for item in blank_resource.spec.envOverlay.envVariables if item.envName == "prod"} == {"BAZ"}

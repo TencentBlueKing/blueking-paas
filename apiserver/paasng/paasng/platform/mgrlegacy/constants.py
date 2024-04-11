@@ -18,6 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
 
+from blue_krill.data_types.enum import StructuredEnum
+
 from paasng.utils.basic import ChoicesEnum
 
 
@@ -118,6 +120,17 @@ class LegacyAppState(ChoicesEnum):
 class AppMember:
     username: str
     role: int
+
+
+class CNativeMigrationStatus(str, StructuredEnum):
+    DEFAULT = "default"
+    ON_MIGRATION = "on_migration"
+    MIGRATION_SUCCEEDED = "migration_succeeded"
+    MIGRATION_FAILED = "migration_failed"
+    CONFIRMED = "confirmed"
+    ON_ROLLBACK = "on_rollback"
+    ROLLBACK_SUCCEEDED = "rollback_succeeded"
+    ROLLBACK_FAILED = "rollback_failed"
 
 
 try:

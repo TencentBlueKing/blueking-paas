@@ -854,13 +854,19 @@ export default {
     },
 
     highlight({ name }) {
-      if (this.isFilter) {
-        const searchValueArr = this.searchValue.split(',');
-        for (let i = 0; i < searchValueArr.length; i++) {
-          if (searchValueArr[i] !== '') {
-            name = name.replace(new RegExp(searchValueArr[i], 'g'), `<marked>${searchValueArr[i]}</marked>`);
-          }
-        }
+      if (this.isFilter && this.searchValue.trim()) {
+        // 分割、过滤空字符、去除两端空格，最后转义特殊字符
+        const keywords = this.searchValue.split(',')
+          .filter(keyword => keyword.trim() !== '')
+          .map(keyword => keyword.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+
+        if (keywords.length === 0) return name; // 如果没有关键词，直接返回原名
+
+        // 创建正则表达式，'gi'代表全局匹配且忽略大小写
+        const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
+
+        // 进行匹配和替换
+        return name.replace(regex, matched => `<marked>${matched}</marked>`);
       }
       return name;
     },

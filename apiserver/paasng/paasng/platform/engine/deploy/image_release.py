@@ -62,7 +62,7 @@ def release_without_build(deployment_id, *args, **kwargs):
 class ImageReleaseMgr(DeployStep):
     """The main controller for release an Image application"""
 
-    PHASE_TYPE = DeployPhaseTypes.RELEASE
+    phase_type = DeployPhaseTypes.RELEASE
 
     @DeployStep.procedures
     def start(self):

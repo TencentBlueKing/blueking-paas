@@ -40,10 +40,14 @@ class TestGetEnvVariables:
         with mock_cluster_service():
             yield
 
-    def test_user_config_var(self, bk_module, bk_stag_env):
+    @pytest.mark.parametrize(
+        ("include_config_var", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
+    )
+    def test_param_include_config_var(self, bk_module, bk_stag_env, include_config_var, ctx):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
-        env_vars = get_env_variables(bk_stag_env)
-        assert env_vars["FOO"] == "bar"
+        env_vars = get_env_variables(bk_stag_env, include_config_var=include_config_var)
+        with ctx as expected:
+            assert env_vars["FOO"] == expected
 
     def test_builtin_id_and_secret(self, bk_app, bk_stag_env):
         env_vars = get_env_variables(bk_stag_env)

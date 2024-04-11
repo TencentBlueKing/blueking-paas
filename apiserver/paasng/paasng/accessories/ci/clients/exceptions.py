@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Optional
 
 
-class BKCIGatewayServiceError(Exception):
+class BkCIGatewayServiceError(Exception):
     """This error indicates that there's something wrong when operating bk-iam's
     API Gateway resource. It's a wrapper class of API SDK's original exceptions
     """
@@ -29,7 +29,7 @@ class BKCIGatewayServiceError(Exception):
         self.message = message
 
 
-class BKCIApiError(BKCIGatewayServiceError):
+class BkCIApiError(BkCIGatewayServiceError):
     """When calling the bk-iam api, bk-iam returns an error message,
     which needs to be captured and displayed to the user on the page
     """

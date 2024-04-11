@@ -52,6 +52,7 @@ def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
     elif spec_version == AppSpecVersion.VER_2:
         return AppDescriptionHandler(json_data)
     else:
+        # 对应 AppSpecVersion.VER_3
         return CNativeAppDescriptionHandler(json_data)
 
 

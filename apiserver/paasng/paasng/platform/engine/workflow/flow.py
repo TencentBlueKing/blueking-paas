@@ -27,6 +27,7 @@ from django.utils.encoding import force_text
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
+from paasng.accessories.publish.market.status import publish_to_market_by_deployment
 from paasng.accessories.servicehub.exceptions import ProvisionInstanceError
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.applications.models import ModuleEnvironment
@@ -159,26 +160,36 @@ class DeploymentStateMgr:
         if write_to_stream and err_detail:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
+        # Update the status of the deployment and the env obj.
+        self.update(status=status.value, err_detail=err_detail)
+        env_obj = self.deployment.app_environment
+        if status == JobStatus.SUCCESSFUL and env_obj.is_offlined:
+            env_obj.restore_archived()
+
+        # End the deploy phase by sending signal, this should cause the clients that are watching
+        # for new events to be notified about the end of the release phase. Those clients may
+        # request for the latest released information after being notified.
+        #
+        # NOTE: To avoid returning obsolete release information, we must end the phase AFTER
+        # the deployment has been updated.
         post_phase_end.send(self, status=status, phase=self.phase_type)
         self.stream.close()
-        self.update(status=status.value, err_detail=err_detail)
+
+        # NOTE: Must call the publish after the environment has been restored from "archived" status
+        # or the publish may fail because it doesn't consider the application is in running status.
+        publish_to_market_by_deployment(self.deployment)
 
         # Record operation
         ModuleEnvironmentOperations.objects.filter(object_uid=self.deployment.id).update(status=status.value)
 
-        if status == JobStatus.SUCCESSFUL and self.deployment.app_environment.is_offlined:
-            # 任意部署任务成功，下架状态都需要被更新
-            self.deployment.app_environment.is_offlined = False
-            self.deployment.app_environment.save(update_fields=["is_offlined"])
-
         # Release deploy lock
         try:
-            DeploymentCoordinator(self.deployment.app_environment).release_lock(expected_deployment=self.deployment)
+            DeploymentCoordinator(env_obj).release_lock(expected_deployment=self.deployment)
         except ValueError as e:
             logger.warning("Failed to release the deployment lock: %s", e)
 
         # Trigger signal
-        post_appenv_deploy.send(self.deployment.app_environment, deployment=self.deployment)
+        post_appenv_deploy.send(env_obj, deployment=self.deployment)
 
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:
@@ -296,10 +307,10 @@ class DeploymentCoordinator:
 class DeployStep:
     """Base class for a deploy step"""
 
-    PHASE_TYPE: Optional[DeployPhaseTypes] = None
+    phase_type: Optional[DeployPhaseTypes] = None
 
     def __init__(self, deployment: Deployment, stream: Optional[DeployStream] = None):
-        if not self.PHASE_TYPE:
+        if not self.phase_type:
             raise NotImplementedError("phase type should be specific firstly")
 
         self.deployment = deployment
@@ -310,9 +321,9 @@ class DeployStep:
         self.version_info = deployment.version_info
 
         self.stream = stream or get_default_stream(deployment)
-        self.state_mgr = DeploymentStateMgr(deployment=self.deployment, stream=self.stream, phase_type=self.PHASE_TYPE)
+        self.state_mgr = DeploymentStateMgr(deployment=self.deployment, stream=self.stream, phase_type=self.phase_type)
 
-        self.phase = self.deployment.deployphase_set.get(type=self.PHASE_TYPE)
+        self.phase = self.deployment.deployphase_set.get(type=self.phase_type)
         self.procedure = partial(DeployProcedure, self.stream, self.deployment, phase=self.phase)
         self.procedure_force_phase = partial(DeployProcedure, self.stream, self.deployment)
 

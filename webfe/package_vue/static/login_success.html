@@ -58,7 +58,7 @@
             var is_ajax = window.location.href.match(/is\_ajax\=(\d+)/)
             if (is_ajax && is_ajax[1]) {
                 // parent.bus.$emit('close-login-modal')
-                top.bus.$emit('close-login-modal')
+                window.opener.bus.$emit('close-login-modal')
             }
         })
     </script>

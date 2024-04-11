@@ -89,6 +89,9 @@ class ErrorCodes:
     LEGACY_MIGRATION_CONFIRMED_FAILED = ErrorCode(_("应用迁移确认, 切换入口失败"))
     APP_NOT_OFFLINE_IN_PAAS3 = ErrorCode(_("应用在新版开发者中心未完全下架"))
     APP_NOT_OFFLINE_IN_PAAS2 = ErrorCode(_("应用在旧版开发者中心未完全下架"))
+    APP_MIGRATION_FAILED = ErrorCode(_("应用迁移失败"))
+    APP_ROLLBACK_FAILED = ErrorCode(_("应用回滚失败"))
+    APP_MIGRATION_CONFIRMED_FAILED = ErrorCode(_("应用迁移确认失败"))
     # 下架
     CANNOT_GET_OFFLINE = ErrorCode(_("查询下线信息失败"))
     CANNOT_OFFLINE_APP = ErrorCode(_("下线失败"))

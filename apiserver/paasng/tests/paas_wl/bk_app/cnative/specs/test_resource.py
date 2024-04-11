@@ -24,12 +24,10 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.cnative.specs.constants import (
-    IMAGE_CREDENTIALS_REF_ANNO_KEY,
     DeployStatus,
     MResConditionType,
     MResPhaseType,
 )
-from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.bk_app.cnative.specs.resource import (
     MresConditionParser,
     create_or_update_bkapp_with_retries,
@@ -37,7 +35,6 @@ from paas_wl.bk_app.cnative.specs.resource import (
     get_mres_from_cluster,
 )
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paas_wl.workloads.images.utils import make_image_pull_secret_name
 from tests.paas_wl.bk_app.cnative.specs.utils import create_condition, create_res, with_conds
 from tests.utils.mocks.engine import replace_cluster_service
 
@@ -90,40 +87,6 @@ class TestMresConditionDetector:
 @pytest.mark.skip_when_no_crds()
 class TestBkAppClusterOperator:
     """测试在集群中操作 bkapp 资源"""
-
-    @pytest.mark.usefixtures("_with_stag_ns")
-    def test_deploy_and_get_status_v1alpha1(self, bk_app, bk_stag_env, bk_stag_wl_app):
-        manifest: Dict = {
-            "apiVersion": "paas.bk.tencent.com/v1alpha1",
-            "kind": "BkApp",
-            "metadata": {"name": bk_app.code, "annotations": {IMAGE_CREDENTIALS_REF_ANNO_KEY: "true"}},
-            "spec": {
-                "processes": [
-                    {"name": "web", "replicas": 1, "image": "nginx:latest", "cpu": "100m", "memory": "100Mi"}
-                ],
-                "hooks": {"preRelease": {"command": ["/bin/echo"], "args": ["Hello"]}},
-                "configuration": {"env": []},
-            },
-        }
-
-        with replace_cluster_service():
-            ret = deploy(bk_stag_env, manifest)
-        assert ret["spec"]["processes"][0]["name"] == "web"
-        assert get_mres_from_cluster(bk_stag_env) is not None
-
-        with get_client_by_app(bk_stag_wl_app) as client:
-            assert (
-                ImageCredentialsManager(client).get(bk_stag_wl_app, make_image_pull_secret_name(wl_app=bk_stag_wl_app))
-                is not None
-            )
-
-        # 修改进程配置信息，再次部署到集群
-        manifest["spec"]["processes"].append(
-            {"name": "worker", "replicas": 1, "image": "busybox:latest", "cpu": "100m", "memory": "100Mi"}
-        )
-        with replace_cluster_service():
-            ret = deploy(bk_stag_env, manifest)
-        assert ret["spec"]["processes"][1]["name"] == "worker"
 
     @pytest.mark.usefixtures("_with_stag_ns")
     def test_deploy_and_get_status_v1alpha2(self, bk_app, bk_stag_env, bk_stag_wl_app):

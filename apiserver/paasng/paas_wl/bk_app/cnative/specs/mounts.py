@@ -184,13 +184,16 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
 
     def create_by_app(self, application_id: str, environment_name: str, **kwargs) -> PersistentStorageSource:
         application = Application.objects.get(id=application_id)
-        return self.model_class.objects.create(
-            application_id=application_id,
-            environment_name=environment_name,
-            name=generate_source_config_name(app_code=application.code),
-            storage_size=kwargs.get("storage_size"),
-            storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME,
-        )
+        params = {
+            "application_id": application_id,
+            "environment_name": environment_name,
+            "name": generate_source_config_name(app_code=application.code),
+            "storage_size": kwargs.get("storage_size"),
+            "storage_class_name": settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME,
+        }
+        if display_name := kwargs.get("display_name"):
+            params["display_name"] = display_name
+        return self.model_class.objects.create(**params)
 
     def delete_by_app(self, application_id: str, source_name: str) -> None:
         # 删除持久存储资源前，需要确保对应挂载卷资源已被删除

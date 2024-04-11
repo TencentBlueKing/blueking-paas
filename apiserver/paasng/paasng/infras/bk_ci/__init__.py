@@ -16,30 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
-import logging
-
-import pytest
-from django.test import TestCase
-from rest_framework.test import APIRequestFactory
-
-from paasng.plat_admin.api_doc.views import FullSwaggerConfigurationView
-from tests.utils.auth import create_user
-
-logger = logging.getLogger(__name__)
-
-
-class TestSwaggerConfigurationGenerator(TestCase):
-    def setUp(self):
-        self.user = create_user()
-
-    @pytest.mark.skip(reason="don't know how to fix.")
-    def test_default(self):
-        factory = APIRequestFactory()
-        request = factory.get("/docs/swagger.full")
-        request.user = self.user
-        response = FullSwaggerConfigurationView.as_view()(request)
-        configuration_json = response.content
-        configuration_dict = json.loads(configuration_json)
-        assert response.status_code == 200
-        assert "swagger" in configuration_dict

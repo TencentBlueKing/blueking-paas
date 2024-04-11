@@ -26,7 +26,6 @@ from paas_wl.bk_app.cnative.specs.credentials import split_image
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.constants import SourceOrigin
@@ -73,29 +72,15 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
 
 def get_credential_refs(module: Module) -> List[ImageCredentialRef]:
     """get the valid user-defined image credential references"""
-
-    try:
-        build_config = BuildConfig.objects.get(module=module)
-    except BuildConfig.DoesNotExist:
-        pass
-    else:
-        if build_config.image_repository and build_config.image_credential_name:
-            return [
-                ImageCredentialRef(
-                    image=split_image(build_config.image_repository),
-                    credential_name=build_config.image_credential_name,
-                )
-            ]
-
-    # TODO v1alph1 版本迁移完成后, 删除下面的代码并重构当前函数
-    refs = []
-    for proc_spec in ModuleProcessSpec.objects.filter(module=module):
-        if proc_spec.image and proc_spec.image_credential_name:
-            refs.append(
-                ImageCredentialRef(image=split_image(proc_spec.image), credential_name=proc_spec.image_credential_name)
+    build_config = BuildConfig.objects.get(module=module)
+    if build_config.image_repository and build_config.image_credential_name:
+        return [
+            ImageCredentialRef(
+                image=split_image(build_config.image_repository),
+                credential_name=build_config.image_credential_name,
             )
-
-    return refs
+        ]
+    return []
 
 
 @dataclass

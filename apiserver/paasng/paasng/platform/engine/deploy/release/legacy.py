@@ -54,7 +54,7 @@ class ApplicationReleaseMgr(DeployStep):
     Python k8s client will call k8s api at platform cluster.
     """
 
-    PHASE_TYPE = DeployPhaseTypes.RELEASE
+    phase_type = DeployPhaseTypes.RELEASE
 
     @DeployStep.procedures
     def start(self):

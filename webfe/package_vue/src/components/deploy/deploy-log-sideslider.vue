@@ -3,6 +3,7 @@
     :width="920"
     :is-show.sync="historySideslider.isShow"
     :quick-close="true"
+    ext-cls="deploy-history-sideslider"
     @hidden="errorTips = {}"
   >
     <div
@@ -280,6 +281,9 @@ export default {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+.deploy-history-sideslider :deep(.bk-sideslider-content) {
+  overflow: unset;
 }
 .deploy-detail {
   display: flex;

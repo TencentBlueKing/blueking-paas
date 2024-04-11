@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 import shutil
 from pathlib import Path
 
+from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
 from paasng.platform.sourcectl.git.client import GitClient
 from paasng.platform.sourcectl.utils import generate_temp_dir
-from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
 
 
 class GitTemplateDownloader:

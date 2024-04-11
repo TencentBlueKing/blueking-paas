@@ -234,3 +234,12 @@ class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
 
     provision_infos = ProvisionInfoSLZ(help_text="共享服务实例分配信息")
     specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())
+
+
+class ServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    environment = serializers.CharField(source="engine_app.env.environment")
+    credentials_disabled = serializers.BooleanField(help_text="是否禁止使用凭证")
+
+
+class UpdateServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    credentials_disabled = serializers.BooleanField(help_text="是否禁止使用凭证")

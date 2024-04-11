@@ -222,15 +222,22 @@ class MixedServiceMgr:
 
     # Proxied generator methods end
 
-    def get_env_vars(self, engine_app: EngineApp, service: Optional[ServiceObj] = None) -> Dict[str, str]:
+    def get_env_vars(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, exclude_disabled: bool = False
+    ) -> Dict[str, str]:
         """Get all provisioned services env variables
 
         :param engine_app: EngineApp object
         :param service: Optional service object. if given, will only return credentials of the specified service,
             otherwise return the credentials of all services.
+        :param exclude_disabled: Whether to exclude disabled service instances
         :returns: Dict of env variables.
         """
-        instances = [rel.get_instance() for rel in self.list_provisioned_rels(engine_app, service=service)]
+        rels = list(self.list_provisioned_rels(engine_app, service=service))
+        if exclude_disabled:
+            instances = [rel.get_instance() for rel in rels if not rel.db_obj.credentials_disabled]
+        else:
+            instances = [rel.get_instance() for rel in rels]
         # 新的覆盖旧的
         instances.sort(key=operator.attrgetter("create_time"))
 
@@ -238,6 +245,14 @@ class MixedServiceMgr:
         for i in instances:
             result.update(i.credentials)
         return result
+
+    def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
+        for mgr in self.mgr_instances:
+            try:
+                return mgr.get_attachment_by_engine_app(service, engine_app)
+            except SvcAttachmentDoesNotExist:
+                continue
+        raise SvcAttachmentDoesNotExist(f"engine_app<{engine_app}> has no attachment with service<{service.uuid}>")
 
 
 class MixedPlanMgr:

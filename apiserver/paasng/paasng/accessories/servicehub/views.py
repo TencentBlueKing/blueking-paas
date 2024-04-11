@@ -677,3 +677,37 @@ class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
                 continue
             return Response(ApplicationMembersInfoSLZ(app).data)
         return Response(status=status.HTTP_200_OK)
+
+
+class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def list(self, request, code, module_name, service_id):
+        """查看增强服务是否导入环境变量"""
+        module = self.get_module_via_path()
+        envs = module.envs.all()
+        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        engine_app_attachments = [
+            mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app) for env in envs
+        ]
+        return Response(slzs.ServiceEngineAppAttachmentSLZ(engine_app_attachments, many=True).data)
+
+    def update(self, request, code, module_name, service_id):
+        """修改增强服务是否导入环境变量"""
+        slz = slzs.UpdateServiceEngineAppAttachmentSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        credentials_disabled = data["credentials_disabled"]
+
+        module = self.get_module_via_path()
+        envs = module.envs.all()
+        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        results = []
+        for env in envs:
+            attachment = mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app)
+            attachment.credentials_disabled = credentials_disabled
+            attachment.save(update_fields=["credentials_disabled"])
+            results.append(attachment)
+
+        return Response(slzs.ServiceEngineAppAttachmentSLZ(results, many=True).data)

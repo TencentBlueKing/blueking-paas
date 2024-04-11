@@ -93,7 +93,9 @@ class ApplicationFilterSLZ(serializers.Serializer):
     languages = serializers.ListField(required=False, help_text="应用开发语言")
     search_term = serializers.CharField(required=False, help_text="搜索关键字")
     source_origin = serializers.IntegerField(required=False, help_text="源码来源")
-    market_enabled = serializers.NullBooleanField(required=False, default=None, help_text="是否已开启市场")
+    market_enabled = serializers.BooleanField(
+        required=False, default=None, allow_null=True, help_text="是否已开启市场"
+    )
     order_by = serializers.ListField(default=["-created"], help_text="排序关键字")
 
     def validate_order_by(self, fields):

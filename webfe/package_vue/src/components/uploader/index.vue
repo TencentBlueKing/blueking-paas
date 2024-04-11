@@ -543,5 +543,10 @@
           }
         }
       }
+      &:hover {
+        .config-upload-content .content-icon {
+          color: #3A84FF;
+        }
+      }
     }
 </style>

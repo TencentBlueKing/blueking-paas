@@ -157,7 +157,7 @@
                     </td>
                     <template v-for="field of fieldSelectedList">
                       <td :key="field" class="field">
-                        <div v-html="log.detail[field] || '--'" />
+                        <div>{{log.detail[field] || '--' }}</div>
                       </td>
                     </template>
                   </tr>
@@ -166,6 +166,7 @@
                       <ul class="detail-box">
                         <li v-for="(keyItem, key) of log.detail" :key="key">
                           <span class="key">{{ key }}：</span>
+                          <!-- eslint-disable-next-line vue/no-v-html -->
                           <pre class="value" v-html="keyItem || '--'" />
                         </li>
                       </ul>
@@ -432,8 +433,6 @@ export default {
 
     toggleDetail(log) {
       log.isToggled = !log.isToggled;
-      const list = JSON.parse(JSON.stringify(this.logList));
-      this.logList.splice(0, this.logList.length, ...list);
       this.hideAllFilterPopover();
     },
 
@@ -646,7 +645,7 @@ export default {
           item.isToggled = false;
         });
 
-        this.logList.splice(0, this.logList.length, ...data);
+        this.logList = data;
         this.pagination.count = res.total;
         this.pagination.current = page;
         if (!this.fieldSelectedList.length) {
@@ -657,7 +656,7 @@ export default {
       } catch (res) {
         // 表格异常状态
         this.tableEmptyConf.isAbnormal = true;
-        this.logList.splice(0, this.logList.length, ...[]);
+        this.logList = [];
         this.pagination.count = 0;
       } finally {
         setTimeout(() => {

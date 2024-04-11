@@ -76,8 +76,6 @@ class BuildConfig(UuidAuditedModel):
     # custom image 相关配置
     # Note: 如需要支持将镜像推送到外部仓库时, 可复用 image_repository 字段
     image_repository = models.TextField(verbose_name=_("镜像仓库"), null=True)
-    # TODO image 未使用, 可删除(删除前需再次确认)
-    image = models.TextField(verbose_name=_("镜像地址"), null=True)
     image_credential_name = models.CharField(verbose_name=_("镜像凭证名称"), null=True, max_length=32)
 
     # Image Tag Policy

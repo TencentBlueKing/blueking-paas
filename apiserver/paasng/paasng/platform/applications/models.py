@@ -457,6 +457,11 @@ class ApplicationEnvironment(TimestampedModel):
         else:
             return True
 
+    def restore_archived(self):
+        """Restore the environment from "archived" status."""
+        self.is_offlined = False
+        self.save(update_fields=["is_offlined"])
+
 
 # Make an alias name to descrease misunderstanding
 ModuleEnvironment = ApplicationEnvironment

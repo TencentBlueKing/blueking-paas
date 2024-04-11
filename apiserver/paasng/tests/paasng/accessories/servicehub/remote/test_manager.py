@@ -475,6 +475,44 @@ class TestRemoteMgr:
 
                 assert mixed_service_mgr.get_env_vars(env.engine_app) != {}
 
+    @mock.patch("paasng.accessories.servicehub.remote.manager.get_cluster_egress_info")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.retrieve_instance")
+    @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
+    def test_get_env_vars_with_exclude_disabled(
+        self,
+        mocked_provision,
+        mocked_retrieve,
+        get_cluster_egress_info,
+        store,
+        bk_app,
+        bk_module,
+    ):
+        get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
+        mgr = RemoteServiceMgr(store=store)
+        svc = mgr.get(id_of_first_service, region=bk_module.region)
+        mgr.bind_service(svc, bk_module)
+        for env in bk_app.envs.all():
+            for rel in mgr.list_unprovisioned_rels(env.engine_app):
+                assert rel.is_provisioned() is False
+                rel.provision()
+
+                # Mock retrieve response
+                data = data_mocks.REMOTE_INSTANCE_JSON.copy()
+                data["uuid"] = rel.db_obj.service_instance_id
+                mocked_retrieve.return_value = data
+
+                assert (
+                    mixed_service_mgr.get_env_vars(env.engine_app, exclude_disabled=True)["CEPH_BUCKET"]
+                    == data["credentials"]["bucket"]  # type: ignore
+                )
+
+                # 测试配置 write_instance_credentials_to_env 后， 不导入环境变量
+                attachment = mixed_service_mgr.get_attachment_by_engine_app(svc, env.engine_app)
+                attachment.credentials_disabled = True
+                attachment.save(update_fields=["credentials_disabled"])
+
+                assert mixed_service_mgr.get_env_vars(env.engine_app, exclude_disabled=True) == {}
+
     # TODO: 重构单元测试
     # def test_module_rebind_with_specs(self):
     #     mgr = RemoteServiceMgr(store=self.store)

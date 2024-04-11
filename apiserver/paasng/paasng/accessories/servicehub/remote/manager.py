@@ -671,6 +671,13 @@ class RemoteServiceMgr(BaseServiceMgr):
                 service_objects.append(svc)
         return service_objects
 
+    def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
+        """Get RemoteServiceEngineAppAttachment"""
+        try:
+            return RemoteServiceEngineAppAttachment.objects.get(service_id=service.uuid, engine_app=engine_app)
+        except RemoteServiceEngineAppAttachment.DoesNotExist as e:
+            raise exceptions.SvcAttachmentDoesNotExist from e
+
 
 class RemotePlanMgr(BasePlanMgr):
     """Remote REST plans manager"""

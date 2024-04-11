@@ -22,20 +22,6 @@
       <router-view />
     </div>
     <paas-footer v-if="$route.meta.showPaasFooter" />
-    <div
-      v-if="showLoginModal"
-      class="login-dialog"
-    >
-      <div class="hole-bg" />
-      <iframe
-        :src="loginURL"
-        scrolling="no"
-        border="0"
-        width="500"
-        height="400"
-        :class="GLOBAL.CONFIG.IFRAME_CLASS"
-      />
-    </div>
   </div>
 </template>
 
@@ -53,14 +39,12 @@ export default {
     NoticeComponent,
   },
   data() {
-    const loginCallbackURL = `${window.location.origin}/static/login_success.html?is_ajax=1`;
-    const loginURL = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/plain/?size=big&app_code=1&c_url=${loginCallbackURL}`;
     return {
       userInfo: {},
-      loginURL,
       showLoginModal: false,
       isPlugin: false,
       apiUrl: `${BACKEND_URL}/notice/announcements/`,
+      loginWindow: null,
     };
   },
   computed: {
@@ -91,6 +75,11 @@ export default {
     isPlugin() {
       this.setGlobalBodyStyle();
     },
+    showLoginModal(vlaue) {
+      if (vlaue) {
+        this.openLoginWindow();
+      }
+    },
   },
   created() {
     bus.$on('show-login-modal', () => {
@@ -98,7 +87,13 @@ export default {
     });
     bus.$on('close-login-modal', () => {
       this.showLoginModal = false;
-      window.location.reload();
+      setTimeout(() => {
+        if (this.loginWindow) {
+          this.loginWindow.close();
+          this.loginWindow = null;
+        }
+        window.location.reload();
+      }, 300);
     });
   },
   methods: {
@@ -114,6 +109,35 @@ export default {
     // 插件开发者中心设置全局底色
     setGlobalBodyStyle() {
       document.body.style.backgroundColor = this.isPlugin ? '#F5F6FA' : '';
+    },
+    // 打开登录窗口
+    openLoginWindow(w = 500, h = 420) {
+      const loginCallbackURL = `${window.location.origin}/static/login_success.html?is_ajax=1`;
+      const loginURL = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/plain/?size=big&app_code=1&c_url=${loginCallbackURL}`;
+      // 宽/高
+      const screenWidth = window.screen.width;
+      const screenHeight = window.screen.height;
+
+      // 打开新窗口
+      this.loginWindow = window.open(loginURL, '_blank', `
+        width=${w},
+        height=${h},
+        top=${(screenHeight - h) / 2},
+        left=${(screenWidth - w) / 2},
+        channelmode=0,
+        directories=0,
+        fullscreen=0,
+        location=0,
+        menubar=0,
+        resizable=0,
+        scrollbars=0,
+        status=0,
+        titlebar=0,
+        toolbar=0,
+        close=0
+    `);
+
+      if (this.loginWindow) this.loginWindow.focus();
     },
   },
 };
@@ -134,68 +158,6 @@ export default {
 
     .gray-bg {
         background: #fafbfd;
-    }
-
-    .login-dialog {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 99999;
-    }
-
-    .login-dialog .hole-bg {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, .7);
-    }
-
-    .login-dialog .close-btn {
-        position: absolute;
-        left: 50%;
-        z-index: 10002;
-        margin-left: 220px;
-        top: 50%;
-        margin-top: -235px;
-        width: 16px;
-        height: 16px;
-        background: #FFF;
-        border-radius: 8px;
-        text-align: center;
-        z-index: 10002;
-        cursor: pointer;
-    }
-
-    .login-dialog .close-btn:hover {
-        box-shadow: 0 0 10px rgba(255, 255, 255, .5);
-    }
-
-    .login-dialog .close-btn img {
-        width: 8px;
-        margin-top: 0;
-        display: inline-block;
-        position: relative;
-        top: -1px;
-    }
-
-    .login-dialog iframe {
-        display: block;
-        background: #FFF;
-        border: 0;
-        width: 700px;
-        height: 510px;
-        margin: -225px auto 0;
-        top: 50%;
-        position: relative;
-        z-index: 10002;
-        &.small {
-            width: 400px;
-            height: 400px;
-        }
     }
 
     .notice {

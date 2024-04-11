@@ -31,11 +31,6 @@ class ApplicationType(str, StructuredEnum):
     # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
     CLOUD_NATIVE = EnumField("cloud_native", label="云原生应用")
 
-    @classmethod
-    def normal_app_type(cls):
-        """普通应用类型"""
-        return [cls.DEFAULT]
-
 
 class ApplicationRole(int, StructuredEnum):
     NOBODY = EnumField(-1, label="无身份用户")
@@ -100,7 +95,9 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
 
     APPLICATION_DESCRIPTION = FeatureFlagField(label="部署时使用应用描述文件", default=True)
     MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=True)
-    ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案查询日志"), default=False)
+    ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
+    ENABLE_BK_LOG_CLIENT = FeatureFlagField(label=_("使用蓝鲸日志平台接口查询日志"), default=False)
+
     TOGGLE_EGRESS_BINDING = FeatureFlagField(label=_("开启出口 IP 管理"), default=False)
 
     # 持久存储挂载卷相关的 feature flag

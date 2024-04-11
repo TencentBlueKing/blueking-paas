@@ -120,6 +120,7 @@ class DeploymentDeclarativeController:
             # 云原生应用
             # TODO: 优化 import 方式, 例如直接接受 desc.spec
             # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
+            # Warning: import_manifest 时, proc_command 会被置为 None, 仅 command/args 会保留
             import_manifest(
                 module,
                 input_data=convert_bkapp_spec_to_manifest(deploy_desc.spec),

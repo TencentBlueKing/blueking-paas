@@ -207,8 +207,6 @@
         </div>
       </div>
 
-
-      <!-- 重构 -->
       <bk-table
         :data="appList"
         size="medium"
@@ -379,7 +377,10 @@
             </span>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('状态')" prop="status">
+        <bk-table-column
+          :label="$t('状态')"
+          :render-header="statusRenderHeader"
+        >
           <template slot-scope="{ row }">
             <i :class="['dot', { 'successful': row.application.is_active }]"></i>
             <span :class="{ 'off-shelf': !row.application.is_active }">
@@ -470,6 +471,7 @@
 
 <script>import auth from '@/auth';
 import i18n from '@/language/i18n';
+import tebleHeaderFilters from '@/components/teble-header-filters';
 import { PAAS_APP_TYPE } from '@/common/constants';
 
 const APP_TYPE_MAP = [
@@ -629,6 +631,7 @@ export default {
       isFilterConditionPresent: false,
       filterRegion: [],
       appExtraData: {},
+      tableHeaderFilterValue: 'all',
     };
   },
   computed: {
@@ -837,20 +840,24 @@ export default {
       // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
       url = this.getParams(url);
       this.fetchParams.order_by = this.sortValue;
-      this.fetchParams = Object.assign(this.fetchParams, {
+      const params = Object.assign(this.fetchParams, {
         search_term: this.filterKey,
         offset: (page - 1) * this.pagination.limit,
         limit: this.pagination.limit,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: this.appFilter.excludeCollaborated,
         // 是否包含已下架应用，默认不包含
-        include_inactive: this.appFilter.includeInactive,
+        include_inactive: this.tableHeaderFilterValue === 'all',
         // 对应类型
         type: this.curAppType,
       });
+      if (this.tableHeaderFilterValue !== 'all') {
+        // 全部：include_inactive == true / 正常：不传参数
+        delete params.include_inactive;
+      }
       this.isLoading = true;
-      for (const key in this.fetchParams) {
-        url += `&${key}=${this.fetchParams[key]}`;
+      for (const key in params) {
+        url += `&${key}=${params[key]}`;
       }
       try {
         const res = await this.$store.dispatch('getAppList', { url });
@@ -947,6 +954,7 @@ export default {
     // 清空搜索筛选条件
     clearFilterKey() {
       this.$refs.appTableCls?.clearFilter();
+      this.tableHeaderFilterValue = 'all';
       this.filterKey = '';
       this.reset();
     },
@@ -1004,6 +1012,27 @@ export default {
         this.filterRegion = filds.region_name.length ? filds.region_name : [];
       }
       this.isFilterConditionPresent = !!filds.region_name.length;
+    },
+
+    statusRenderHeader(h) {
+      return h(tebleHeaderFilters, {
+        props: {
+          active: this.tableHeaderFilterValue,
+          label: this.$t('状态'),
+          iconClass: 'bk-icon icon-funnel',
+          filterList: [
+            { text: this.$t('全部'), value: 'all' },
+            { text: this.$t('正常'), value: 'normal' },
+            { text: this.$t('下架'), value: 'archive', disabled: true },
+          ],
+        },
+        on: {
+          'filter-change': (data) => {
+            this.tableHeaderFilterValue = data.value;
+            this.fetchAppList();
+          },
+        },
+      });
     },
   },
 };

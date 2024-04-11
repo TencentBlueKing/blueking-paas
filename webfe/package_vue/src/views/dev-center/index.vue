@@ -121,11 +121,11 @@
               <bk-radio-group v-model="curAppCreationType" @change="handlerAppOverviewChange">
                 <bk-radio-button value="all">
                   <span>{{ $t('全部应用') }}</span>
-                  <span class="app-count">{{ pagination.count }}</span>
+                  <span class="app-count">{{ appExtraData.all_app_count || 0 }}</span>
                 </bk-radio-button>
                 <bk-radio-button value="iCreated">
                   <span>{{ $t('我创建的') }}</span>
-                  <span class="app-count">0</span>
+                  <span class="app-count">{{ appExtraData.my_app_count || 0 }}</span>
                 </bk-radio-button>
               </bk-radio-group>
             </section>
@@ -628,6 +628,7 @@ export default {
       curHoverRowIndex: -1,
       isFilterConditionPresent: false,
       filterRegion: [],
+      appExtraData: {},
     };
   },
   computed: {
@@ -859,6 +860,7 @@ export default {
         this.appList = res.results || [];
         this.pagination.count = res.count;
         this.pagination.current = page;
+        this.appExtraData = res.extra_data;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -1443,8 +1445,8 @@ export default {
       .app-count {
         display: inline-block;
         font-size: 12px;
-        height: 17px;
-        line-height: 17px;
+        height: 16px;
+        line-height: 16px;
         padding: 0 8px;
         background: #F0F1F5;
         border-radius: 18px;

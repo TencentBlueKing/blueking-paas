@@ -379,6 +379,13 @@ class LocalServiceMgr(BaseServiceMgr):
                 env_list.append(env.environment)
         return env_list
 
+    def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
+        """Get ServiceEngineAppAttachment"""
+        try:
+            return ServiceEngineAppAttachment.objects.get(service_id=service.uuid, engine_app=engine_app)
+        except ServiceEngineAppAttachment.DoesNotExist as e:
+            raise SvcAttachmentDoesNotExist from e
+
 
 class LocalPlanMgr(BasePlanMgr):
     """Local in-database plans manager"""

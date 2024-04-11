@@ -235,7 +235,7 @@ class MixedServiceMgr:
         """
         rels = list(self.list_provisioned_rels(engine_app, service=service))
         if exclude_disabled:
-            instances = [rel.get_instance() for rel in rels if rel.db_obj.credentials_enabled]
+            instances = [rel.get_instance() for rel in rels if not rel.db_obj.credentials_disabled]
         else:
             instances = [rel.get_instance() for rel in rels]
         # 新的覆盖旧的

@@ -62,7 +62,9 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
     if options.prefix:
         parts.append(options.prefix)
     if options.with_version:
-        parts.append(version.version_name)
+        # 若 version_name 带有 '/', 替换为 '-'
+        version_name = version.version_name.replace("/", "-")
+        parts.append(version_name)
     if options.with_build_time:
         parts.append(arrow.now().format("YYMMDDHHmm"))
     if options.with_commit_id:

@@ -110,6 +110,9 @@ class BKLogClient:
 
         response = Response(search.search, resp["data"])
         total = resp["data"]["hits"]["total"]
+        # esquery_scroll 接口返回的 total 格式为 {'value': int, 'relation': 'eq'}
+        if isinstance(total, dict):
+            total = total["value"]
         return response, total
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:

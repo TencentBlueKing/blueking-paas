@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """
 Django settings for svc_rabbitmq project.
 
@@ -144,12 +145,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
-LANGUAGE_CODE = 'zh-cn'
+LANGUAGE_CODE = "zh-cn"
 
 LANGUAGES = [("zh-cn", "简体中文"), ("en", "English")]
 

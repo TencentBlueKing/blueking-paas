@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import base64
 import os
 from pathlib import Path
@@ -30,7 +31,7 @@ env = environ.Env(
 # read `.env` from 'svc_otel/settings/.env'
 env.read_env()
 
-DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 # Build paths inside the project like this: BASE_DIR / ...
 BASE_DIR = Path(__file__).parents[2].absolute()
@@ -39,7 +40,7 @@ BASE_DIR = Path(__file__).parents[2].absolute()
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'c6h~oz+!%4b%br^8ekz&s7zt$(athjh_'
+SECRET_KEY = "c6h~oz+!%4b%br^8ekz&s7zt$(athjh_"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
@@ -110,8 +111,8 @@ if os.getenv("DATABASE_URL"):
     DATABASES = {"default": env.db()}
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
             "NAME": env("MYSQL_NAME", default="svc_bkrepo"),
             "USER": env("MYSQL_USER", default="svc_bkrepo"),
             "PASSWORD": env("MYSQL_PASSWORD", default="blueking"),
@@ -141,7 +142,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
-LANGUAGE_CODE = 'zh-cn'
+LANGUAGE_CODE = "zh-cn"
 
 LANGUAGES = [("zh-cn", "简体中文"), ("en", "English")]
 
@@ -206,7 +207,7 @@ def get_logging_config(log_level="DEBUG"):
     }
 
 
-BKKRILL_ENCRYPT_SECRET_KEY = base64.b64encode(b'oVOcQCMuuXjFoLvrbJvUKAnNvrAoalqV')
+BKKRILL_ENCRYPT_SECRET_KEY = base64.b64encode(b"oVOcQCMuuXjFoLvrbJvUKAnNvrAoalqV")
 
 METRIC_CLIENT_TOKEN_DICT = {
     "monitoring": env.str("METRIC_CLIENT_TOKEN", "f7b58586-5e20-f189-7cf5-a020524cda3e"),
@@ -234,15 +235,15 @@ ENABLE_ADMIN = True
 DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/apps/{app_code}/{module}/summary"
 
 # 在监控获取的grpc push url
-BK_OTEL_GRPC_URL = env("BK_OTEL_GRPC_URL", default='')
+BK_OTEL_GRPC_URL = env("BK_OTEL_GRPC_URL", default="")
 # 调用 API 需要的信息
-BK_APP_CODE = env("BK_APP_CODE", default='bk_paas3')
-BK_APP_SECRET = env("BK_APP_SECRET", default='')
+BK_APP_CODE = env("BK_APP_CODE", default="bk_paas3")
+BK_APP_SECRET = env("BK_APP_SECRET", default="")
 # 对外版蓝鲸监控的 API 注册在 ESB
-BK_COMPONENT_API_URL = env("BK_COMPONENT_API_URL", default='')
+BK_COMPONENT_API_URL = env("BK_COMPONENT_API_URL", default="")
 # 上云版蓝鲸监控的 API 注册在 APIGW
-BK_API_URL_TMPL = env("BK_API_URL_TMPL", default='')
-APIGW_ENVIRONMENT = env("APIGW_ENVIRONMENT", default='prod')
+BK_API_URL_TMPL = env("BK_API_URL_TMPL", default="")
+APIGW_ENVIRONMENT = env("APIGW_ENVIRONMENT", default="prod")
 # 蓝鲸监控的API是否已经注册在 APIGW
 ENABLE_BK_MONITOR_APIGW = env.bool("ENABLE_BK_MONITOR_APIGW", default=True)
 # 蓝鲸监控的访问地址, 用于拼接 APM 详情页面的访问地址

@@ -159,7 +159,7 @@ def update_or_create_es_search_config(
             "search_params": search_params,
         }
 
-    search_config, _ = ElasticSearchConfig.objects.get_or_create(
+    search_config, _ = ElasticSearchConfig.objects.update_or_create(
         collector_config_id=collector_config.collector_config.id,
         defaults=defaults,
     )

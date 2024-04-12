@@ -255,3 +255,7 @@ AUTHENTICATION_BACKENDS = [
     # 如果项目需要保留使用数据库表的方式来设计用户模型, 则需要使用 DjangoAuthUserCompatibleBackend
     'bkpaas_auth.backends.DjangoAuthUserCompatibleBackend',
 ]
+
+# 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
+BK_CRYPTO_TYPE = env.str("BK_CRYPTO_TYPE", default="CLASSIC")
+ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"

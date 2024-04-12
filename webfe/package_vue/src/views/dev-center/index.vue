@@ -246,10 +246,9 @@
           </template>
         </bk-table-column>
         <bk-table-column type="expand" width="0">
-          <!-- v-if="appItem.application.config_info.engine_enabled && appItem.application.type !== 'cloud_native'" -->
           <template slot-scope="props">
             <bk-table
-              v-if="props.row.application.config_info.engine_enabled && props.row.application.type !== 'cloud_native'"
+              v-if="props.row.application.config_info.engine_enabled"
               :data="props.row.application.modules"
               :outer-border="false"
               size="small"
@@ -294,10 +293,7 @@
                 </template>
               </bk-table-column>
             </bk-table>
-            <div
-              class="add-module-cls"
-              v-if="props.row.application.type !== 'cloud_native'"
-            >
+            <div class="add-module-cls">
               <bk-button
                 v-if="props.row.creation_allowed"
                 style="margin-left: -13px;"
@@ -342,7 +338,7 @@
         <bk-table-column :label="$t('模块数量')" :width="135">
           <template slot-scope="{ row, $index }">
             <span
-              v-if="row.application.config_info.engine_enabled && row.application.type !== 'cloud_native'"
+              v-if="row.application.config_info.engine_enabled"
               :class="['module-name', { 'off-shelf': !row.application.is_active }]"
               @click.stop="handleExpandRow(row)"
             > {{ $t('共') }}&nbsp; {{ row.application.modules.length }} &nbsp;{{ $t('个模块') }}
@@ -692,37 +688,13 @@ export default {
     },
 
     deploy(item, subModule) {
-      if (item.application.type === 'cloud_native') {
-        this.toDeploy(item.application);
-      } else {
-        this.$router.push({
-          name: 'appDeploy',
-          params: {
-            id: item.application.code,
-            moduleId: subModule.name,
-          },
-        });
-      }
-    },
-
-    async toDeploy(recordItem) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${recordItem.code}/`;
-      try {
-        const res = await this.$http.get(url);
-        this.type = res.application.type;
-        this.$router.push({
-          name: this.type === 'cloud_native' ? 'cloudAppDeploy' : 'appDeploy',
-          params: {
-            id: recordItem.code,
-          },
-        });
-      } catch (e) {
-        this.$paasMessage({
-          limit: 1,
-          theme: 'error',
-          message: e.message,
-        });
-      }
+      this.$router.push({
+        name: item.application.type === 'cloud_native' ? 'cloudAppDeployManageStag' : 'appDeploy',
+        params: {
+          id: item.application.code,
+          moduleId: subModule.name,
+        },
+      });
     },
 
     toPage(appItem) {

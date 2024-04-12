@@ -902,6 +902,8 @@ export default {
       curTargetMaxReplicas: 0,
       curTargetMinReplicas: 0,
       defaultUtilizationRate: '85%',
+      serverEventErrorTimer: 0,
+      serverEventEOFTimer: 0,
     };
   },
   computed: {
@@ -1644,15 +1646,15 @@ export default {
 
     updateProcessStatus(process) {
       /*
-                 * 设置进程状态
-                 * targetStatus: 进行的操作，start\stop\scale
-                 * status: 操作状态，Running\stoped
-                 *
-                 * 如何判断进程当前是否为操作中（繁忙状态）？
-                 * 主要根据 process_packages 里面的 target_status 判断：
-                 * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
-                 * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
-                 */
+       * 设置进程状态
+       * targetStatus: 进行的操作，start\stop\scale
+       * status: 操作状态，Running\stoped
+       *
+       * 如何判断进程当前是否为操作中（繁忙状态）？
+       * 主要根据 process_packages 里面的 target_status 判断：
+       * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
+       * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+       */
       if (process.targetStatus === 'stop') {
         process.operateIconTitle = this.$t('启动进程');
         process.operateIconTitleCopy = this.$t('启动进程');
@@ -1703,8 +1705,9 @@ export default {
         console.error(this.$t('推送异常'), event);
         this.serverEvent.close();
 
+        clearTimeout(this.serverEventErrorTimer);
         // 推迟调用，防止过于频繁导致服务性能问题
-        setTimeout(() => {
+        this.serverEventErrorTimer = setTimeout(() => {
           this.$store.commit('updataEnvEventData', []);
           this.watchServerPush();
         }, 10000);
@@ -1715,8 +1718,9 @@ export default {
         console.log(this.$t('推送结束发起重连'), event);
         this.serverEvent.close();
 
+        clearTimeout(this.serverEventEOFTimer);
         // 推迟调用，防止过于频繁导致服务性能问题
-        setTimeout(() => {
+        this.serverEventEOFTimer = setTimeout(() => {
           this.$store.commit('updataEnvEventData', []);
           this.watchServerPush();
         }, 10000);

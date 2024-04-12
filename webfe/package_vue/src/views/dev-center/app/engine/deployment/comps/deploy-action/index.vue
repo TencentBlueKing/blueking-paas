@@ -1259,6 +1259,8 @@ export default {
       branchInfoType: '',
       lessCodeData: {},
       lessCodeFlag: true,
+      serverEventErrorTimer: 0,
+      serverEventEOFTimer: 0,
     };
   },
   computed: {
@@ -2707,15 +2709,15 @@ export default {
 
     updateProcessStatus(process) {
       /*
-                 * 设置进程状态
-                 * targetStatus: 进行的操作，start\stop\scale
-                 * status: 操作状态，Running\stoped
-                 *
-                 * 如何判断进程当前是否为操作中（繁忙状态）？
-                 * 主要根据 process_packages 里面的 target_status 判断：
-                 * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
-                 * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
-                 */
+       * 设置进程状态
+       * targetStatus: 进行的操作，start\stop\scale
+       * status: 操作状态，Running\stoped
+       *
+       * 如何判断进程当前是否为操作中（繁忙状态）？
+       * 主要根据 process_packages 里面的 target_status 判断：
+       * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
+       * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+       */
       if (process.targetStatus === 'stop') {
         // process.operateIconTitle = '启动进程'
         // process.operateIconTitleCopy = '启动进程'
@@ -2826,19 +2828,21 @@ export default {
         console.error(this.$t('推送异常'), event);
         this.serverProcessEvent.close();
 
+        clearTimeout(this.serverEventErrorTimer);
         // 推迟调用，防止过于频繁导致服务性能问题
-        setTimeout(() => {
+        this.serverEventErrorTimer = setTimeout(() => {
           this.watchServerPush();
         }, 3000);
       };
 
       // 服务结束
-      this.serverProcessEvent.addEventListener('EOF', (event) => {
+      this.serverProcessEvent.addEventListener('EOF', (_event) => {
         this.serverProcessEvent.close();
 
         if (!this.isDeploySseEof) {
+          clearTimeout(this.serverEventEOFTimer);
           // 推迟调用，防止过于频繁导致服务性能问题
-          setTimeout(() => {
+          this.serverEventEOFTimer = setTimeout(() => {
             this.watchServerPush();
           }, 3000);
         }

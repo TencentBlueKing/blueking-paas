@@ -25,10 +25,10 @@ import pytest
 import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
 
-from paasng.platform.declarative.deployment.env_vars import get_desc_env_variables
-from paasng.platform.declarative.deployment.svc_disc import get_services_as_env_variables
+from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.declarative.handlers import CNativeAppDescriptionHandler, DescriptionHandler
 from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
+from paasng.platform.engine.configurations.config_var import get_preset_env_variables
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -110,6 +110,6 @@ class TestAppDescriptionHandler:
             "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
         ) as update_bkmonitor:
             get_desc_handler(yaml_content).handle_deployment(bk_deployment)
-            assert get_desc_env_variables(bk_deployment) == expected["env_variables"]
-            assert get_services_as_env_variables(bk_deployment) == expected["svc_discovery"]
+            assert get_preset_env_variables(bk_deployment.app_environment) == expected["env_variables"]
+            assert get_svc_disc_as_env_variables(bk_deployment.app_environment) == expected["svc_discovery"]
             assert not update_bkmonitor.called

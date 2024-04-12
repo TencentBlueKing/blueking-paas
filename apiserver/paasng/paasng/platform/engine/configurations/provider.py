@@ -18,10 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """Use a separate module to avoid circular imports
 """
 from collections import OrderedDict
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict
 
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.models import Deployment
 
 
 def _make_id(target):
@@ -35,7 +34,6 @@ class EnvVariablesProviders:
 
     def __init__(self):
         self._registered_funcs_env = OrderedDict()
-        self._registered_funcs_deploy = OrderedDict()
 
     def register_env(self, func: Callable):
         """Register a function with env argument"""
@@ -43,12 +41,7 @@ class EnvVariablesProviders:
         self._registered_funcs_env[_make_id(func)] = func
         return func
 
-    def register_deploy(self, func: Callable):
-        """Register a function with deployment argument"""
-        self._registered_funcs_deploy[_make_id(func)] = func
-        return func
-
-    def gather(self, env: ModuleEnvironment, deployment: Optional[Deployment] = None) -> Dict:
+    def gather(self, env: ModuleEnvironment) -> Dict:
         """Gather all env variables for given env
 
         :param deployment: if given, the result will include deployment-scoped env variables
@@ -56,9 +49,6 @@ class EnvVariablesProviders:
         result = {}
         for func in self._registered_funcs_env.values():
             result.update(func(env))
-        if deployment:
-            for func in self._registered_funcs_deploy.values():
-                result.update(func(deployment))
         return result
 
 

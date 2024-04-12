@@ -174,7 +174,7 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
         procfile = {p.name: p.command for p in previous_deployment.get_processes()}
         deployment_id = None
 
-    extra_envs = get_env_variables(env, deployment=deployment)
+    extra_envs = get_env_variables(env)
 
     # Create the release and start the background task to wait for the release if needed
     release = release_to_k8s(env, build_id, extra_envs, procfile)

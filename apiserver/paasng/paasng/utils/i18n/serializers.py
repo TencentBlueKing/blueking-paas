@@ -44,8 +44,7 @@ def i18n(cls_or_languages: Optional[List[str]] = None) -> Callable[[SerializerTy
 
 
 @overload
-def i18n(cls_or_languages: SerializerType) -> SerializerType:
-    ...
+def i18n(cls_or_languages: SerializerType) -> SerializerType: ...
 
 
 def i18n(
@@ -113,7 +112,7 @@ class I18NExtend:
     ...     field = I18NExtend(serializers.CharField())
     ...
     ... slz = DataSLZ(data={"field_en": "alpha", "field_zh_cn": "阿尔法"})
-    ... slz.is_valid(True)
+    ... slz.is_valid(raise_exception=True)
     ... assert slz.validated_data == {"field_en": "alpha", "field_zh_cn": "阿尔法"}
     """
 

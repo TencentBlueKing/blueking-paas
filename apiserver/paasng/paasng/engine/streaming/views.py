@@ -71,7 +71,7 @@ class StreamViewSet(ViewSet):
     @swagger_auto_schema(query_serializer=HistoryEventsQuerySLZ, responses={200: StreamEventSLZ(many=True)})
     def history_events(self, request, channel_id):
         slz = HistoryEventsQuerySLZ(data=request.query_params)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
 
         subscriber = self.get_subscriber(channel_id)
 

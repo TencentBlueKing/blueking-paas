@@ -288,7 +288,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
 
     @swagger_auto_schema(
         request_body=slzs.SourcePackageUploadViaUrlSLZ,
-        responses={200: slzs.SourcePackageSLZ},
+        responses={200: slzs.SourcePackageSLZ()},
         tags=["源码包管理"],
         operation_description="目前仅提供给 lesscode 项目使用",
     )
@@ -296,7 +296,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         """根据 URL 方式上传源码包, 目前不校验 app.yaml"""
         module = self.get_module()
         slz = slzs.SourcePackageUploadViaUrlSLZ(data=request.data)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
         allow_overwrite = data["allow_overwrite"]
         version = data["version"]
@@ -351,9 +351,9 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
             return self._modify_image(request, code, module_name)
 
-        serializer = slzs.RepoBackendModifySLZ(data=self.request.data)
-        serializer.is_valid(True)
-        data = serializer.data
+        slz = slzs.RepoBackendModifySLZ(data=self.request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.data
         repo_type = data["source_control_type"]
         repo_url = data["source_repo_url"]
 
@@ -374,14 +374,14 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def _modify_image(self, request, code, module_name):
         module = self.get_module_via_path()
-        serializer = slzs.RepoBackendModifySLZ(data=request.data)
-        serializer.is_valid(True)
-        data = serializer.data
+        slz = slzs.RepoBackendModifySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.data
         repo_url = data["source_repo_url"]
 
         init_image_repo(
             module,
-            repo_url=data["source_repo_url"],
+            repo_url=repo_url,
             source_dir=data["source_dir"],
             repo_auth_info=data["source_repo_auth_info"],
         )

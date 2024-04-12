@@ -42,9 +42,9 @@ class MixDocumentSearch(ViewSet):
                 },
             ]
         """
-        search_word = DocumentSearchWordSLZ(data=request.GET)
-        search_word.is_valid(True)
-        keyword = search_word.validated_data["keyword"]
+        slz = DocumentSearchWordSLZ(data=request.GET)
+        slz.is_valid(raise_exception=True)
+        keyword = slz.validated_data["keyword"]
         return Response(MixSearcher().search(keyword))
 
 
@@ -59,7 +59,7 @@ class ApplicationsSearchViewset(ViewSet):
     @swagger_auto_schema(
         # Use serializer with only "keyword" field to avoid conflict
         operation_id="api-application-search",
-        query_serializer=DocumentSearchWordSLZ,
+        query_serializer=DocumentSearchWordSLZ(),
         tags=['搜索'],
         responses={200: AppSearchResultSLZ(many=True)},
     )
@@ -79,7 +79,7 @@ class ApplicationsSearchViewset(ViewSet):
 class BkDocsSearchViewset(ViewSet):
     @swagger_auto_schema(
         operation_id="api-bkdoc-search",
-        query_serializer=UniversalSearchSLZ,
+        query_serializer=UniversalSearchSLZ(),
         tags=['搜索'],
         responses={200: DocSearchResultSLZ(many=True)},
     )

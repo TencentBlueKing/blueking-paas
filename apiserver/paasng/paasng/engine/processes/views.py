@@ -60,7 +60,7 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     )
     def open(self, request, code, module_name, environment, process_type, process_instance_name):
         slz = slzs.WebConsoleOpenSLZ(data=request.query_params)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
 
         application = self.get_application()
         module = self.get_module_via_path()
@@ -92,7 +92,9 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
                 links = DocumentaryLinkAdvisor().search_by_tags([tag])
                 if not links:
                     # 如果数据库无文章记录, 就只能抛异常了
-                    raise error_codes.CANNOT_OPERATE_PROCESS.f(_("当前运行镜像不支持 WebConsole 功能，请尝试绑定最新运行时"))
+                    raise error_codes.CANNOT_OPERATE_PROCESS.f(
+                        _("当前运行镜像不支持 WebConsole 功能，请尝试绑定最新运行时")
+                    )
                 link = links[0]
 
                 return Response(

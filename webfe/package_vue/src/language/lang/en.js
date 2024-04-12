@@ -2581,4 +2581,10 @@ export default {
   启用成功: 'Enabled successfully',
   凭证信息: 'Credential Information',
   查看管理入口: 'View Management Portal',
+  写入环境变量: 'Write to Environment Variable',
+  '若不写入，将无法从环境变量获取实例的凭证信息': 'If not written, it will not be possible to obtain the instances credential information from environment variables',
+  确认不写入环境变量: 'Confirm Not to Write to Environment Variable',
+  '选择不写入将无法通过环境变量获取实例凭证信息，请确保您了解此操作的影响。': 'Choosing not to write will prevent obtaining instance credential information via environment variables, please ensure you understand the implications of this action.',
+  已配置为写入环境变量: 'Configured to Write to Environment Variable',
+  已配置为不写入环境变量: 'Configured Not to Write to Environment Variable',
 };

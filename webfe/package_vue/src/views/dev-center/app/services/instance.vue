@@ -18,6 +18,23 @@
 
         <section class="instance-tab-container">
           <p class="title">{{ $t('实例详情') }}</p>
+          <!-- 写入环境变量 -->
+          <div class="env-variables-wrapper">
+            <span class="sub-title">{{ $t('写入环境变量') }}</span>
+            <div @click.stop="handleSwitcherChange">
+              <bk-switcher
+                v-model="credentialsDisabled"
+                theme="primary"
+                size="small"
+                :pre-check="() => false"
+              ></bk-switcher>
+            </div>
+            <span class="tips">
+              <i class="paasng-icon paasng-info-line mr5"></i>
+              {{ $t('若不写入，将无法从环境变量获取实例的凭证信息') }}
+            </span>
+          </div>
+          <!-- 编辑 -->
           <div class="instance-info" v-if="specifications.length">
             <div class="item" v-for="item in specifications" :key="item.name">
               <span>{{ item.name }}：</span>
@@ -124,7 +141,7 @@
                 {{ row.environment_name }}
               </template>
             </bk-table-column>
-            <bk-table-column label="操作" width="150">
+            <bk-table-column :label="$t('操作')" :width="localLanguage === 'en' ? 180 : 150">
               <template slot-scope="{ row }">
                 <p>
                   <template v-if="row.service_instance.config.admin_url">
@@ -245,6 +262,7 @@ export default {
         isLoading: false,
       },
       isTableLoading: false,
+      credentialsDisabled: false,
     };
   },
   computed: {
@@ -265,6 +283,9 @@ export default {
     },
     isLoading() {
       return this.requestQueue.length > 0;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -288,6 +309,7 @@ export default {
     this.init();
     this.fetchEnableSpecs();
     this.fetchServicesShareDetail();
+    this.getCredentialsDisabled();
     bus.$emit('show-usage-guide');
   },
   methods: {
@@ -523,6 +545,66 @@ export default {
       this.instanceDialogConfig.isLoading = true;
       this.$refs.configInfoEdit?.handleSave();
     },
+
+    async getCredentialsDisabled() {
+      try {
+        const res = await this.$store.dispatch('service/getCredentialsDisabled', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+        });
+        // 第一版不考虑环境情况默认取第一项, true禁用、false启用
+        const disabled = res.length ? res[0].credentials_disabled : true;
+        this.credentialsDisabled = !disabled;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 写入环境变量启用/禁用
+    handleSwitcherChange() {
+      // false启用 、 true 当前为禁用状态
+      console.log('this.credentialsDisabled', this.credentialsDisabled);
+      if (!this.credentialsDisabled) {
+        this.updateCredentialsDisabled();
+        return;
+      }
+      this.$bkInfo({
+        width: 460,
+        title: this.$t('确认不写入环境变量'),
+        subTitle: this.$t('选择不写入将无法通过环境变量获取实例凭证信息，请确保您了解此操作的影响。'),
+        confirmFn: () => {
+          this.updateCredentialsDisabled();
+        },
+      });
+    },
+
+    // 启用/停用写入环境变量
+    async updateCredentialsDisabled() {
+      try {
+        const { credentialsDisabled } = this;
+        await this.$store.dispatch('service/updateCredentialsDisabled', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+          data: { credentials_disabled: credentialsDisabled },
+        });
+        const successtTips = credentialsDisabled ? this.$t('已配置为不写入环境变量') : this.$t('已配置为写入环境变量');
+        this.$paasMessage({
+          theme: 'success',
+          message: successtTips,
+        });
+        this.getCredentialsDisabled();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 
@@ -752,6 +834,24 @@ export default {
             cursor: not-allowed;
             color: #C4C6CC;
           }
+        }
+      }
+      .env-variables-wrapper {
+        display: flex;
+        align-items: center;
+        margin-top: 16px;
+        font-size: 12px;
+        color: #63656E;
+        line-height: 20px;
+        .sub-title {
+          margin-right: 12px;
+        }
+        .tips {
+          margin-left: 16px;
+        }
+        i {
+          font-size: 14px;
+          color: #979BA5;
         }
       }
     }

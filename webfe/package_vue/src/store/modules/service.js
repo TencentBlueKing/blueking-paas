@@ -105,5 +105,21 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/`;
       return http.get(url, config);
     },
+
+    /**
+     * 获取增强服务环境变量信息
+     */
+    getCredentialsDisabled({}, { appCode, moduleId, service }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/credentials_disabled/`;
+      return http.get(url, config);
+    },
+
+    /**
+     * 更新增强服务环境变量信息
+     */
+    updateCredentialsDisabled({}, { appCode, moduleId, service, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/credentials_disabled/`;
+      return http.put(url, data, config);
+    },
   },
 };

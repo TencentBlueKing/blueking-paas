@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from blue_krill.models.fields import EncryptField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -37,3 +38,9 @@ class PresetEnvVariable(AuditedModel):
 
     class Meta:
         unique_together = ("module", "environment_name", "key")
+
+    def is_within_scope(self, given_env: ConfigVarEnvName) -> bool:
+        """判断当前的环境变量在所给的环境中是否生效"""
+        if self.environment_name is None or self.environment_name == ConfigVarEnvName.GLOBAL:
+            return True
+        return self.environment_name == given_env

@@ -25,12 +25,3 @@ class DeclarativeConfig(AppConfig):
     def ready(self):
         # Register protection hooks
         from . import protections  # noqa: F401
-
-        self.register_env_vars_providers()
-
-    def register_env_vars_providers(self):
-        # import to activate provider registration
-        from .deployment import (  # noqa: F401
-            env_vars,
-            svc_disc,
-        )

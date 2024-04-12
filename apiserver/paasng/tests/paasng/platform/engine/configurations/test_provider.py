@@ -34,14 +34,4 @@ def test_providers(bk_stag_env, bk_deployment):
     def test_get_vars_2(env):
         return {"FOO": "1", "BAR": str(env.id)}
 
-    @providers.register_deploy
-    def test_get_vars_deploy(deployment):
-        return {"DEP": str(deployment.id)}
-
     assert providers.gather(bk_stag_env) == {"FOO": "1", "BAR": str(bk_stag_env.id), "FOOBAR": "z"}
-    assert providers.gather(bk_stag_env, bk_deployment) == {
-        "FOO": "1",
-        "BAR": str(bk_stag_env.id),
-        "FOOBAR": "z",
-        "DEP": str(bk_deployment.id),
-    }

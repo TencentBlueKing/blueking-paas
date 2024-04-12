@@ -62,12 +62,7 @@
                   empty
                 />
                 <p class="sub-title">
-                  {{ $t('服务启用后，将在重新部署时申请实例，请先') }}
-                  <span
-                    class="link pl27"
-                    style="cursor: pointer;"
-                    @click="toAppDeploy"
-                  >{{ $t('部署应用') }}</span>
+                  {{ $t('服务启用后，将在下一次部署过程中申请实例，请先进行应用部署。') }}
                 </p>
               </div>
             </div>
@@ -512,25 +507,6 @@ export default {
         document.getSelection().addRange(selected);
       }
       this.$bkMessage({ theme: 'success', message: this.$t('复制成功'), delay: 2000, dismissable: false });
-    },
-
-    toAppDeploy() {
-      const type = this.curAppInfo.application.type || '';
-      if (type === 'cloud_native') {
-        this.$router.push({
-          name: 'cloudAppDeployForProcess',
-          params: {
-            moduleId: this.curAppModule.name,
-            id: this.appCode,
-          },
-        });
-        return;
-      }
-      this.$router.push({
-        name: 'appDeploy',
-        params: { id: this.appCode },
-        query: { focus: 'stag' },
-      });
     },
 
     // 编辑实例弹窗
@@ -1068,10 +1044,6 @@ export default {
       .paas-loading-panel .text {
         .sub-title {
           font-size: 12px;
-        }
-        .link {
-          color: #3a84ff;
-          cursor: pointer;
         }
       }
     }

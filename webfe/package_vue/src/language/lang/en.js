@@ -1258,7 +1258,6 @@ export default {
   '敏感字段，请参考下方使用指南，通过环境变量获取': 'For sensitive fields, please refer to the usage guide below and obtain them through env variables',
   '敏感字段，点击后显示': 'Sensitive fields, displayed after clicking',
   暂无增强服务配置信息: 'No Add-ons configuration information yet',
-  '服务启用后，将在重新部署时申请实例，请先': 'After the service is enabled, an instance will be applied for during redeployment. Please first',
   部署应用: 'Deploy the APP',
   管理实例: 'Manage instances',
   删除服务: 'Delete service',
@@ -2587,4 +2586,5 @@ export default {
   '选择不写入将无法通过环境变量获取实例凭证信息，请确保您了解此操作的影响。': 'Choosing not to write will prevent obtaining instance credential information via environment variables, please ensure you understand the implications of this action.',
   已配置为写入环境变量: 'Configured to Write to Environment Variable',
   已配置为不写入环境变量: 'Configured Not to Write to Environment Variable',
+  '服务启用后，将在下一次部署过程中申请实例，请先进行应用部署。': 'After the service is enabled, an instance will be applied for during the next deployment process. Please proceed with the application deployment first.',
 };

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from pathlib import Path
 from unittest import mock
@@ -94,9 +95,9 @@ class TestAppMonitorController:
         name = "servicemonitors.monitoring.coreos.com"
 
         if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 16):
-            body = yaml.load((Path(__file__).parent / "crd/v1beta1.yaml").read_text())
+            body = yaml.full_load((Path(__file__).parent / "crd/v1beta1.yaml").read_text())
         else:
-            body = yaml.load((Path(__file__).parent / "crd/v1.yaml").read_text())
+            body = yaml.full_load((Path(__file__).parent / "crd/v1.yaml").read_text())
 
         try:
             KCustomResourceDefinition(k8s_client).create_or_update(name, body=body)

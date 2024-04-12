@@ -43,7 +43,7 @@ class TestBase64FileField:
     def test_to_internal_value(self, data, ctx):
         slz = Base64FileFieldSLZ(data={"file": data})
         with ctx as expected:
-            slz.is_valid(True)
+            slz.is_valid(raise_exception=True)
             assert slz.validated_data["file"].read() == expected
 
     @pytest.mark.parametrize(

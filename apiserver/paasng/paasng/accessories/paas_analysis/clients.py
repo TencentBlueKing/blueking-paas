@@ -317,7 +317,7 @@ class SiteMetricsClient:
             site_name=self.site.name, metric_source_type=self.metric_source_type.value
         )
         slz = slzs.PageViewConfigSLZ(data=resp, context={"region": self.site.region})
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_total_page_view_metric_about_site(self, start_time: datetime.date, end_time: datetime.date):
@@ -328,7 +328,7 @@ class SiteMetricsClient:
             end_time=end_time,
         )
         slz = slzs.PageViewTotalMetricSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_metrics_dimension(
@@ -353,7 +353,7 @@ class SiteMetricsClient:
             interval=interval.value,
         )
         slz = slzs.MetricsDimensionSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_metrics_aggregate_by_interval_about_site(
@@ -372,7 +372,7 @@ class SiteMetricsClient:
             fill_missing_data=fill_missing_data,
         )
         slz = slzs.PageViewMetricTrendSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     ################
@@ -382,7 +382,7 @@ class SiteMetricsClient:
     def get_site_ce_config(self):
         resp = self.pa_client.get_site_ce_config(site_name=self.site.name)
         slz = slzs.CustomEventConfigSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_total_custom_event_metric_about_site(
@@ -396,7 +396,7 @@ class SiteMetricsClient:
             end_time=end_time,
         )
         slz = slzs.CustomEventTotalMetricSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_custom_event_overview(
@@ -418,7 +418,7 @@ class SiteMetricsClient:
             interval=interval.value,
         )
         slz = slzs.CustomEventOverviewTableSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_custom_event_detail(
@@ -444,7 +444,7 @@ class SiteMetricsClient:
             interval=interval.value,
         )
         slz = slzs.CustomEventDetailTableSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_custom_event_trend_about_site(
@@ -462,5 +462,5 @@ class SiteMetricsClient:
             fill_missing_data=fill_missing_data,
         )
         slz = slzs.CustomEventMetricTrendSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data

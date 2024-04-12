@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import base64
 import hashlib
 import logging
@@ -120,7 +121,7 @@ class SourcePackageStatReader:
                 raise RuntimeError("file: {} can not be extracted".format(app_filename))
 
             try:
-                meta_info = yaml.load(meta_file)
+                meta_info = yaml.full_load(meta_file)
             except YAMLError:
                 logger.exception(_("应用描述文件内容不是有效 YAML 格式"))
                 raise ValidationError(_("应用描述文件内容不是有效 YAML 格式"))

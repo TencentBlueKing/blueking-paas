@@ -172,7 +172,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
 
     def create(self, request, *args, **kwargs):
         slz = ServiceObjSLZ(data=request.data)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
         # 只支持创建本地增强服务
         LocalServiceMgr().create(data)
@@ -196,7 +196,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
             raise Http404("ServiceObjNotFound")
 
         slz = ServiceObjSLZ(data=request.data)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         try:
@@ -237,7 +237,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
 
     def create(self, request, service_id):
         slz = PlanObjSLZ(data=request.data)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         service = mixed_service_mgr.get_without_region(uuid=service_id)
@@ -263,7 +263,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
 
     def update(self, request, service_id, plan_id):
         slz = PlanObjSLZ(data=request.data)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         service = mixed_service_mgr.get_without_region(uuid=service_id)

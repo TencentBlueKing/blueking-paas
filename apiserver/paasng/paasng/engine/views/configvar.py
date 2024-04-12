@@ -34,7 +34,12 @@ from paasng.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
 )
-from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
+from paasng.engine.constants import (
+    AppInfoBuiltinEnv,
+    AppRunTimeBuiltinEnv,
+    ConfigVarEnvName,
+    NoPrefixAppRunTimeBuiltinEnv,
+)
 from paasng.engine.models import ConfigVar
 from paasng.engine.models.config_var import add_prefix_to_key
 from paasng.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
@@ -46,7 +51,7 @@ from paasng.utils.error_codes import error_codes
 
 @method_decorator(name="update", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=['环境配置']))
 @method_decorator(name="create", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=['环境配置']))
-@method_decorator(name="list", decorator=swagger_auto_schema(query_serializer=ListConfigVarsSLZ, tags=['环境配置']))
+@method_decorator(name="list", decorator=swagger_auto_schema(query_serializer=ListConfigVarsSLZ(), tags=['环境配置']))
 @method_decorator(name="destroy", decorator=swagger_auto_schema(tags=['环境配置']))
 class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     """ViewSet for config vars"""
@@ -82,7 +87,11 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         slz = ConfigVarApplyResultSLZ(res_nums)
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(query_serializer=ListConfigVarsSLZ, tags=['环境配置'], responses={200: ConfigVarSLZ(many=True)})
+    @swagger_auto_schema(
+        query_serializer=ListConfigVarsSLZ(),
+        tags=['环境配置'],
+        responses={200: ConfigVarSLZ(many=True)},
+    )
     def list(self, request, **kwargs):
         """查看应用的所有环境变量"""
         input_slz = ListConfigVarsSLZ(data=request.query_params)
@@ -93,7 +102,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         # Filter by environment name
         environment_name = input_slz.data.get('environment_name')
         if environment_name:
-            config_vars = config_vars.filter_by_environment_name(environment_name)
+            config_vars = config_vars.filter_by_environment_name(ConfigVarEnvName(environment_name))
 
         # Change result ordering
         config_vars = config_vars.order_by(input_slz.data['order_by'], 'is_global')

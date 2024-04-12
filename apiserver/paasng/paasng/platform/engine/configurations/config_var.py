@@ -96,7 +96,7 @@ def get_env_variables(
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
 
     # Part: env vars provided by services
-    result.update(mixed_service_mgr.get_env_vars(engine_app, exclude_disabled=True))
+    result.update(mixed_service_mgr.get_env_vars(engine_app, filter_enabled=True))
 
     # Part: Application's default sub domains/paths
     result.update(AppDefaultDomains(env).as_env_vars())

@@ -21,6 +21,7 @@ from typing import Optional
 from paas_wl.bk_app.applications.constants import WlAppType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
+from paasng.platform.mgrlegacy.cnative_wl import WlAppBackupManager
 from paasng.platform.mgrlegacy.entities import DefaultAppLegacyData
 from paasng.platform.mgrlegacy.exceptions import PreCheckMigrationFailed
 
@@ -35,6 +36,16 @@ class ApplicationTypeMigrator(CNativeBaseMigrator):
         legacy_data.app_type = self.app.type
         return legacy_data
 
+    def _backup_legacy_data(self, legacy_data: DefaultAppLegacyData):
+        """backup legacy data for rollback"""
+
+        # 备份 wl_app
+        for m in self.app.modules.all():
+            for env in m.envs.all():
+                WlAppBackupManager(env.wl_app).create()
+
+        return super()._backup_legacy_data(legacy_data)
+
     def _can_migrate_or_raise(self):
         if self.app.type != ApplicationType.DEFAULT.value:
             raise PreCheckMigrationFailed(f"app({self.app.code}) type is not default")
@@ -47,6 +58,12 @@ class ApplicationTypeMigrator(CNativeBaseMigrator):
 
     def _rollback(self):
         """rollback the type field of application and wl_app to legacy data"""
+
+        # 删除 wl_app 备份
+        for m in self.app.modules.all():
+            for env in m.envs.all():
+                WlAppBackupManager(env.wl_app).delete()
+
         self.app.type = self.migration_process.legacy_data.app_type
         self.app.save(update_fields=["type"])
         self._update_wl_app_type(self.app)

@@ -25,14 +25,19 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone as django_timezone
 from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.bk_app.processes.constants import ProcessUpdateType
+from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
+from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.infras.accounts.permissions.application import check_application_perm
+from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.mgrlegacy.cnative_wl import DefaultAppProcessController, WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 
 try:
@@ -40,6 +45,7 @@ try:
 except ImportError:
     from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 
+from paas_wl.utils.error_codes import error_codes as wl_error_codes
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
@@ -48,6 +54,7 @@ from paasng.platform.mgrlegacy.serializers import (
     CNativeMigrationProcessSLZ,
     LegacyAppSLZ,
     LegacyAppStateSLZ,
+    ListProcessesSLZ,
     MigrationProcessConfirmSLZ,
     MigrationProcessCreateSLZ,
     MigrationProcessDetailSLZ,
@@ -243,6 +250,8 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     普通应用向云原生应用迁移的相关接口
     """
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def migrate(self, request, code):
         """迁移普通应用到云原生应用
 
@@ -322,3 +331,65 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         process.confirm()
         # TODO 增加清理普通应用的集群操作
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用进程管理接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def list(self, request, *args, **kwargs):
+        """list all processes/instances.
+
+        参考 paas_wl.bk_app.processes.views.ListAndWatchProcsViewSet.list 实现
+        """
+        wl_app = self._get_wl_app()
+        process_controller = DefaultAppProcessController.new_by_app(wl_app)
+        processes_info = process_controller.get_processes_info()
+
+        data = {
+            "processes": {
+                "items": processes_info.processes,
+                "metadata": {"resource_version": processes_info.rv_proc},
+            },
+            "instances": {
+                "items": [inst for proc in processes_info.processes for inst in proc.instances],
+                "metadata": {"resource_version": processes_info.rv_inst},
+            },
+        }
+
+        return Response(ListProcessesSLZ(data).data)
+
+    def update(self, request, *args, **kwargs):
+        """stop/start/scale process
+
+        参考 paas_wl.bk_app.processes.views.ProcessesViewSet.update 实现
+        """
+        slz = UpdateProcessSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        wl_app = self._get_wl_app()
+
+        process_type = validated_data["process_type"]
+        operate_type = validated_data["operate_type"]
+
+        proc_config = get_mapper_proc_config_latest(wl_app, process_type)
+        process_controller = DefaultAppProcessController.new_by_app(wl_app)
+
+        try:
+            if operate_type == ProcessUpdateType.START:
+                process_controller.start(proc_config)
+            elif operate_type == ProcessUpdateType.STOP:
+                process_controller.stop(proc_config)
+            else:
+                target_replicas = validated_data["target_replicas"]
+                process_controller.scale(proc_config, target_replicas)
+        except Exception as e:
+            raise wl_error_codes.PROCESS_OPERATE_FAILED.f(str(e))
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _get_wl_app(self):
+        original_wl_app = self.get_wl_app_via_path()
+        return WlAppBackupManager(original_wl_app).get()

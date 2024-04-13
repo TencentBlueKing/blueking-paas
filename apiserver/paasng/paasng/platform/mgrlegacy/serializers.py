@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
+from paas_wl.bk_app.processes.serializers import InstanceListSLZ, ProcessListSLZ
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.utils.i18n.serializers import DjangoTranslatedCharField
@@ -144,3 +145,8 @@ class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
             # 仅有一个有效的错误信息
             return next((m.error_msg for m in obj.details.rollbacks if m.error_msg), "")
         return ""
+
+
+class ListProcessesSLZ(serializers.Serializer):
+    processes = ProcessListSLZ()
+    instances = InstanceListSLZ()

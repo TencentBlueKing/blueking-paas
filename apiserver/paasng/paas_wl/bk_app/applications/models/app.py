@@ -28,6 +28,8 @@ from paas_wl.bk_app.applications.models.validators import validate_app_name, val
 
 logger = logging.getLogger(__name__)
 
+NAME_BAK_SUFFIX = "-bak"
+
 
 # Deprecated: 名称 App 容易与其他概念混淆，请使用别名 WlApp
 class App(UuidAuditedModel):
@@ -46,6 +48,11 @@ class App(UuidAuditedModel):
     @property
     def scheduler_safe_name(self):
         """app name in scheduler backend"""
+
+        # NAME_BAK_SUFFIX 作为 name 的后缀, 用于 mgrlegacy 中备份 wl_app 实例. 但在生成 scheduler_safe_name 时需要清洗掉它
+        if self.name.endswith(NAME_BAK_SUFFIX):
+            return self.name[: -len(NAME_BAK_SUFFIX)].replace("_", "0us0")
+
         return self.name.replace("_", "0us0")
 
     @property
@@ -79,9 +86,7 @@ class App(UuidAuditedModel):
 
     @property
     def use_dev_sandbox(self) -> bool:
-        if self.name.endswith("-dev"):
-            return True
-        return False
+        return self.name.endswith("-dev")
 
     def __str__(self) -> str:
         return f"<{self.name}, region: {self.region}, type: {self.type}>"

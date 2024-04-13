@@ -82,19 +82,28 @@ urlpatterns = [
         views.CNativeMigrationViewSet.as_view({"post": "rollback"}),
     ),
     url(
-        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/processes/$",
+        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/migration_processes/$",
         views.CNativeMigrationViewSet.as_view({"get": "list_processes"}),
     ),
     url(
-        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/processes/latest/$",
+        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/migration_processes/latest/$",
         views.CNativeMigrationViewSet.as_view({"get": "get_latest_process"}),
     ),
     url(
-        r"^api/mgrlegacy/cloud-native/processes/(?P<process_id>\d+)/$",
+        r"^api/mgrlegacy/cloud-native/migration_processes/(?P<process_id>\d+)/$",
         views.CNativeMigrationViewSet.as_view({"get": "get_process_by_id"}),
     ),
     url(
-        r"^api/mgrlegacy/cloud-native/processes/(?P<process_id>\d+)/confirm/$",
+        r"^api/mgrlegacy/cloud-native/migration_processes/(?P<process_id>\d+)/confirm/$",
         views.CNativeMigrationViewSet.as_view({"put": "confirm"}),
+    ),
+    # 普通应用进程管理
+    re_path(
+        make_app_pattern(r"/processes/list/$", prefix="api/mgrlegacy/applications/"),
+        views.DefaultAppProcessViewSet.as_view({"get": "list"}),
+    ),
+    re_path(
+        make_app_pattern(r"/processes/$", prefix="api/mgrlegacy/applications/"),
+        views.DefaultAppProcessViewSet.as_view({"post": "update"}),
     ),
 ]

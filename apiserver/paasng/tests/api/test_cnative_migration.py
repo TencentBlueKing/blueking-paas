@@ -77,12 +77,12 @@ class TestQueryProcessCNativeMigrationViewSet:
         process = CNativeMigrationProcess.objects.create(
             app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
         )
-        response = api_client.get(f"/api/mgrlegacy/cloud-native/processes/{process.id}/")
+        response = api_client.get(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/")
         assert response.data["status"] == "migration_succeeded"
         assert response.data["error_msg"] == ""
 
     def test_get_process_by_id_404(self, api_client, bk_app, bk_user):
-        response = api_client.get("/api/mgrlegacy/cloud-native/processes/1/")
+        response = api_client.get("/api/mgrlegacy/cloud-native/migration_processes/1/")
         assert response.status_code == 404
 
     def test_get_latest_process(self, api_client, bk_app, bk_user):
@@ -97,7 +97,9 @@ class TestQueryProcessCNativeMigrationViewSet:
             status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
         )
 
-        response = api_client.get(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/processes/latest/")
+        response = api_client.get(
+            f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/migration_processes/latest/"
+        )
         assert response.data["status"] == "migration_succeeded"
 
     def list_processes(self, api_client, bk_app, bk_user):
@@ -121,7 +123,7 @@ class TestQueryProcessCNativeMigrationViewSet:
             app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
         )
 
-        response = api_client.get(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/processes/")
+        response = api_client.get(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/migration_processes/")
         assert response.data[0]["status"] == "migration_succeeded"
         assert response.data[1]["status"] == "migration_failed"
         assert response.data[1]["error_msg"] == "cnb buildpacks versions incompatible"
@@ -132,12 +134,12 @@ class TestConfirmCNativeMigrationViewSet:
         process = CNativeMigrationProcess.objects.create(
             app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
         )
-        response = api_client.put(f"/api/mgrlegacy/cloud-native/processes/{process.id}/confirm/")
+        response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
         assert response.status_code == 204
 
     def test_confirm_failed(self, api_client, bk_app, bk_user):
         process = CNativeMigrationProcess.objects.create(
             app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_FAILED.value
         )
-        response = api_client.put(f"/api/mgrlegacy/cloud-native/processes/{process.id}/confirm/")
+        response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
         assert response.data["detail"] == "应用迁移确认失败: 该应用记录未表明应用已成功迁移, 无法确认"

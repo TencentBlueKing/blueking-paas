@@ -32,7 +32,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import copy
 
-from bleach.encoding import force_unicode
 from bleach.sanitizer import BleachSanitizerFilter, Cleaner
 
 allow_tags = [
@@ -119,8 +118,6 @@ class BkCleaner(Cleaner):
         """
         if not text:
             return ""
-
-        text = force_unicode(text)
 
         dom = self.parser.parseFragment(text)
         filtered = BkBleachSanitizerFilter(

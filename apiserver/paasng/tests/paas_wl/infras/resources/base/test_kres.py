@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Tests for Kubernetes resources utils
 """
 import math
@@ -282,7 +283,7 @@ class TestKPod:
 
 
 def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1") -> Dict:
-    manifest = yaml.load(
+    manifest = yaml.full_load(
         dedent(
             """\
         apiVersion: {api_version}

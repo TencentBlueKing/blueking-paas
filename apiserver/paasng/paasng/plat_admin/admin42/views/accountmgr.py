@@ -105,7 +105,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
                 **request.data,
             )
         )
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         user_id = data["user"]
@@ -149,7 +149,7 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
 
     def update_or_create(self, request):
         slz = AccountFeatureFlagSLZ(data=dict(user=dict(username=request.data["username"]), **request.data))
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         AccountFeatureFlag.objects.set_feature(get_user_by_user_id(data["user"]), data["name"], data["effect"])

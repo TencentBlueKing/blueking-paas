@@ -9,7 +9,7 @@ ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
 RUN pip install --upgrade pip
-RUN pip install poetry==1.1.11
+RUN pip install poetry==1.3.2
 
 # Change security level of openssl to lower value in order to avoid "CA_MD_TOO_WEAK" error
 # See https://stackoverflow.com/questions/52218876/how-to-fix-ssl-issue-ssl-ctx-use-certificate-ca-md-too-weak-on-python-zeep?rq=1

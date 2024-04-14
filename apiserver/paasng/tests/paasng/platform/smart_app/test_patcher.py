@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import tarfile
 from unittest import mock
 
@@ -264,7 +265,7 @@ class TestSourcePackagePatcher:
         with tarfile.open(patched_tar) as tar, ctx:
             fp = tar.extractfile(target)
             assert fp
-            data = yaml.load(fp.read())
+            data = yaml.full_load(fp.read())
             assert data == expected
 
     @pytest.mark.parametrize(

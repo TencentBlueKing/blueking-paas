@@ -52,7 +52,7 @@
     "@blueking/user-selector": "^1.0.6",
     "@vue/compiler-sfc": "^3.0.7",
     "@vue/component-compiler-utils": "^3.1.2",
-    "axios": "^0.19.0",
+    "axios": "^1.6.0",
     "bk-magic-vue": "^2.3.1",
     "codemirror": "^5.65.5",
     "cookie": "^0.3.1",

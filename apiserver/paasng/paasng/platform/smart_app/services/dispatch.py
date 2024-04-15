@@ -57,12 +57,6 @@ def dispatch_package_to_modules(
 
         handler: Callable[[Module, Path, SPStat, User], SourcePackage]
         builder_flag = workplace / ".Version"
-
-        # TODO: 需要更优雅的包版本协议
-        # 目前支持的包格式有3种:
-        # - 源码
-        # - slug 镜像
-        # - cnb 镜像
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
             if version == SMartPackageVersionFlag.CNB_IMAGE_LAYERS:

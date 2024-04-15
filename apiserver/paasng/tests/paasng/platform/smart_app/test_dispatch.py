@@ -30,6 +30,7 @@ from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.dispatch import (
     bksmart_settings,
     dispatch_cnb_image_to_registry,
+    dispatch_package_to_modules,
     dispatch_slug_image_to_registry,
 )
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
@@ -270,7 +271,7 @@ def test_dispatch_cnb_image_to_registry(
         layer_touch_url = f"{base_url}/v2/{module_image.name}/blobs/sha256:{sha256_digest}"
         mock_adapter.register_uri(
             "HEAD",
-            url=re.compile(layer_touch_url),
+            url=layer_touch_url,
             headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"},
         )
 
@@ -307,7 +308,7 @@ def test_dispatch_cnb_image_to_registry(
         # 1. 获取镜像镜像信息
         ("GET", runner_manifest_url),
         ("GET", runner_config_url),
-        # 2. 上传镜像层
+        # 2. 按序上传镜像层
         *list(
             chain.from_iterable(
                 [
@@ -336,3 +337,25 @@ def test_dispatch_cnb_image_to_registry(
             assert expected_url.fullmatch(req.url)
         else:
             assert expected_url == req.url
+
+
+@pytest.mark.parametrize(
+    ("package_path", "dispatcher_uri"),
+    [
+        ("cnb-image", "paasng.platform.smart_app.services.dispatch.dispatch_cnb_image_to_registry"),
+        ("slugrunner-image", "paasng.platform.smart_app.services.dispatch.dispatch_slug_image_to_registry"),
+    ],
+)
+def test_dispatch_package_to_modules(bk_app, bk_module, bk_user, assets_rootpath, package_path, dispatcher_uri):
+    """测试根据 s-mart 包结构选择不同的 dispatcher"""
+    smart_asserts_path = assets_rootpath / package_path
+    bk_module.name = "main"
+    bk_module.save()
+
+    with generate_temp_dir() as tempdir:
+        tarball_path = tempdir / "tar.gz"
+        compress_directory(smart_asserts_path, tarball_path)
+        stat = SourcePackageStatReader(tarball_path).read()
+        with mock.patch(dispatcher_uri) as dispatcher:
+            dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
+        assert dispatcher.called

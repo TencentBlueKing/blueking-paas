@@ -139,7 +139,7 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     image_ref.add_layer(LayerRef(local_path=procfile_path))
 
     logger.debug("Start pushing Image.")
-    manifest = image_ref.push()
+    manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
     stat.name = stat.version
     stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
@@ -181,7 +181,7 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
         for layer_path in tarball_manifest.layers:
             image_ref.add_layer(LayerRef(local_path=image_tmp_folder / layer_path))
         logger.debug("Start pushing Image.")
-        manifest = image_ref.push()
+        manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
     stat.name = stat.version
     stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")

@@ -61,21 +61,28 @@ const (
 	DefaultUid int = 2000
 	// DefaultGid is the default gid to run lifecycle
 	DefaultGid int = 2000
+
+	// SkipTLSVerifyEnvVarKey The env var key that store SkipTLSVerify
+	SkipTLSVerifyEnvVarKey = "CNB_SKIP_TLS_VERIFY"
 )
 
 var (
-	cacheImage  = flag.String("cache-image", os.Getenv(CacheImageEnvVarKey), "cache image tag name")
+	cacheImage  = flag.String("cache-image", os.Getenv(CacheImageEnvVarKey), "cache image tag name.")
 	outputImage = flag.String("output-image", os.Getenv(OutputImageEnvVarKey), "The name of image that will get created by the lifecycle.")
 	runImage    = flag.String("run-image", os.Getenv(RunImageEnvVarKey), "The base image from which application images are built.")
-	useDaemon   = flag.Bool("daemon", utils.BoolEnv(UseDockerDaemonEnvVarKey), "export image to docker daemon")
+	useDaemon   = flag.Bool("daemon", utils.BoolEnv(UseDockerDaemonEnvVarKey), "export image to docker daemon.")
 
 	buildpacks = flag.String("buildpacks", os.Getenv(RequiredBuildpacksEnvVarKey), "Those buildpacks that will used by the lifecycle.")
 
 	sourceUrl   = flag.String("source-url", os.Getenv(SourceUrlEnvVarKey), "The url of the source code.")
 	gitRevision = flag.String("git-revision", os.Getenv(GitRevisionEnvVarKey), "The Git revision to make the repository HEAD.")
 
-	uid = flag.Int("uid", DefaultUid, "UID of user's group in the stack's build and run images")
-	gid = flag.Int("gid", DefaultGid, "GID of user's group in the stack's build and run images")
+	uid = flag.Int("uid", DefaultUid, "UID of user's group in the stack's build and run images.")
+	gid = flag.Int("gid", DefaultGid, "GID of user's group in the stack's build and run images.")
+
+	skipTLSVerify = flag.Bool("skip-tls-verify",
+		utils.BoolEnv(SkipTLSVerifyEnvVarKey),
+		"Skip verify TLS certificates.")
 )
 
 func init() {
@@ -105,6 +112,9 @@ func main() {
 			fmt.Sprintf("please provide it by using --source-url or setting it as an environment variable %s", SourceUrlEnvVarKey),
 		)
 		os.Exit(1)
+	}
+	if *skipTLSVerify {
+		dockercreds.InsecureSkipVerify()
 	}
 
 	var err error

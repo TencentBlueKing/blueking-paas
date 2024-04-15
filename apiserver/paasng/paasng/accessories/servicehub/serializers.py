@@ -238,8 +238,8 @@ class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
 
 class ServiceEngineAppAttachmentSLZ(serializers.Serializer):
     environment = serializers.CharField(source="engine_app.env.environment")
-    credentials_disabled = serializers.BooleanField(help_text="是否禁止使用凭证")
+    credentials_enabled = serializers.BooleanField(help_text="是否使用凭证")
 
 
 class UpdateServiceEngineAppAttachmentSLZ(serializers.Serializer):
-    credentials_disabled = serializers.BooleanField(help_text="是否禁止使用凭证")
+    credentials_enabled = serializers.BooleanField(help_text="是否使用凭证")

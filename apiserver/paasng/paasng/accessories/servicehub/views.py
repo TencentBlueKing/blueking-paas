@@ -698,7 +698,7 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        credentials_disabled = data["credentials_disabled"]
+        credentials_enabled = data["credentials_enabled"]
 
         module = self.get_module_via_path()
         envs = module.envs.all()
@@ -706,8 +706,8 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
         results = []
         for env in envs:
             attachment = mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app)
-            attachment.credentials_disabled = credentials_disabled
-            attachment.save(update_fields=["credentials_disabled"])
+            attachment.credentials_enabled = credentials_enabled
+            attachment.save(update_fields=["credentials_enabled"])
             results.append(attachment)
 
         return Response(slzs.ServiceEngineAppAttachmentSLZ(results, many=True).data)

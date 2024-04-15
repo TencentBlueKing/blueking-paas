@@ -45,10 +45,10 @@ class TestServiceEngineAppAttachmentViewSet:
         get_attachment_by_engine_app.side_effect = self.mock_get_attachment_by_engine_app(service.uuid)
 
         response = api_client.get(
-            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{service.uuid}/credentials_disabled/"
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{service.uuid}/credentials_enabled/"
         )
         assert response.status_code == 200
-        assert response.data[0]["credentials_disabled"] is False
+        assert response.data[0]["credentials_enabled"] is True
 
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_attachment_by_engine_app")
@@ -57,9 +57,9 @@ class TestServiceEngineAppAttachmentViewSet:
         get_attachment_by_engine_app.side_effect = self.mock_get_attachment_by_engine_app(service.uuid)
 
         response = api_client.put(
-            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{service.uuid}/credentials_disabled/",
-            {"credentials_disabled": True},
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{service.uuid}/credentials_enabled/",
+            {"credentials_enabled": False},
         )
         assert response.status_code == 200
-        assert response.data[0]["credentials_disabled"] is True
-        assert response.data[1]["credentials_disabled"] is True
+        assert response.data[0]["credentials_enabled"] is False
+        assert response.data[1]["credentials_enabled"] is False

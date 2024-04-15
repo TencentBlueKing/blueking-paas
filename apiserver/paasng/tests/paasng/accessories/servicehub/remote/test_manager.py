@@ -502,16 +502,16 @@ class TestRemoteMgr:
                 mocked_retrieve.return_value = data
 
                 assert (
-                    mixed_service_mgr.get_env_vars(env.engine_app, exclude_disabled=True)["CEPH_BUCKET"]
+                    mixed_service_mgr.get_env_vars(env.engine_app, filter_enabled=True)["CEPH_BUCKET"]
                     == data["credentials"]["bucket"]  # type: ignore
                 )
 
-                # 测试配置 write_instance_credentials_to_env 后， 不导入环境变量
+                # 测试配置 credentials_enabled 后， 不导入环境变量
                 attachment = mixed_service_mgr.get_attachment_by_engine_app(svc, env.engine_app)
-                attachment.credentials_disabled = True
-                attachment.save(update_fields=["credentials_disabled"])
+                attachment.credentials_enabled = False
+                attachment.save(update_fields=["credentials_enabled"])
 
-                assert mixed_service_mgr.get_env_vars(env.engine_app, exclude_disabled=True) == {}
+                assert mixed_service_mgr.get_env_vars(env.engine_app, filter_enabled=True) == {}
 
     # TODO: 重构单元测试
     # def test_module_rebind_with_specs(self):

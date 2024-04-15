@@ -105,9 +105,9 @@ urlpatterns = [
     ),
     # Manager engine_app attachment
     url(
-        make_app_pattern(f"/services/{SERVICE_UUID}/credentials_disabled/$", include_envs=False),
+        make_app_pattern(f"/services/{SERVICE_UUID}/credentials_enabled/$", include_envs=False),
         views.ServiceEngineAppAttachmentViewSet.as_view({"get": "list", "put": "update"}),
-        name="api.services.credentials_disabled",
+        name="api.services.credentials_enabled",
     ),
     # Service sharing APIs
     re_path(

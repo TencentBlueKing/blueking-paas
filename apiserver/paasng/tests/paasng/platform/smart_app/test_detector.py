@@ -21,8 +21,8 @@ import yaml
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.declarative.constants import AppSpecVersion
-from paasng.platform.smart_app.utils.app_desc import get_app_description
-from paasng.platform.smart_app.utils.detector import (
+from paasng.platform.smart_app.services.app_desc import get_app_description
+from paasng.platform.smart_app.services.detector import (
     AppYamlDetector,
     DetectResult,
     ManifestDetector,

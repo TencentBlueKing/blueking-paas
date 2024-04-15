@@ -20,7 +20,7 @@ import pytest
 from django.utils.translation import override
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.smart_app.utils.app_desc import get_app_description
+from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.sourcectl.models import SPStat
 from paasng.utils.i18n import gettext_lazy
 

@@ -50,10 +50,10 @@ from paasng.platform.smart_app.serializers import (
     PackageStashResponseSLZ,
     PackageStashResponseWithDiffSLZ,
 )
-from paasng.platform.smart_app.utils.app_desc import get_app_description
-from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
-from paasng.platform.smart_app.utils.dispatch import dispatch_package_to_modules
-from paasng.platform.smart_app.utils.prepared import PreparedSourcePackage
+from paasng.platform.smart_app.services.app_desc import get_app_description
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
+from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_package
 from paasng.platform.sourcectl.serializers import SourcePackageSLZ

@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Optional
-
 from django.conf import settings
 from moby_distribution import APIEndpoint, DockerRegistryV2Client
 from pydantic import BaseModel, Field
@@ -44,23 +42,25 @@ class RegistryConf(BaseModel):
 
 
 class BaseImageConf(BaseModel):
-    """S-Mart 基础镜像配置"""
+    """slug S-Mart 基础镜像配置, 用于配置合并镜像层时的基础镜像"""
 
-    name: Optional[str] = Field(default=settings.SMART_IMAGE_NAME, description="基础镜像的名称")
-    tag: Optional[str] = Field(default=settings.SMART_IMAGE_TAG, description="基础镜像的标签")
+    name: str = Field(default=settings.SMART_IMAGE_NAME, description="基础镜像的名称")
+    tag: str = Field(default=settings.SMART_IMAGE_TAG, description="基础镜像的标签")
 
 
 class CNBBaseImageConf(BaseModel):
-    """S-Mart 基础镜像配置"""
+    """cloud native S-Mart 基础镜像配置, 用于配置合并镜像层时的基础镜像"""
 
-    name: Optional[str] = Field(default=settings.SMART_CNB_IMAGE_NAME, description="云原生基础镜像的名称")
-    tag: Optional[str] = Field(default=settings.SMART_CNB_IMAGE_TAG, description="云原生基础镜像的标签")
+    name: str = Field(default=settings.SMART_CNB_IMAGE_NAME, description="云原生基础镜像的名称")
+    tag: str = Field(default=settings.SMART_CNB_IMAGE_TAG, description="云原生基础镜像的标签")
 
 
 class Settings(BaseModel):
     registry: RegistryConf = Field(default_factory=RegistryConf)
-    base_image: BaseImageConf = Field(default_factory=BaseImageConf)
-    cnb_base_image: CNBBaseImageConf = Field(default_factory=CNBBaseImageConf)
+    base_image: BaseImageConf = Field(default_factory=BaseImageConf, description="slug s-mart 基础镜像")
+    cnb_base_image: CNBBaseImageConf = Field(
+        default_factory=CNBBaseImageConf, description="cloud native s-mart 基础镜像"
+    )
 
     def reload(self):
         for field_name, field in self.__fields__.items():

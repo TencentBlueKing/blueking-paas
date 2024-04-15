@@ -24,8 +24,8 @@ from typing import Dict
 import pytest
 import yaml
 
-from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
-from paasng.platform.smart_app.utils.path import ZipPath
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.path import ZipPath
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML, gen_tar, gen_zip
 

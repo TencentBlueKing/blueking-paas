@@ -28,8 +28,8 @@ from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.platform.smart_app.utils.detector import ManifestDetector
-from paasng.platform.smart_app.utils.path import LocalFSPath, PathProtocol
+from paasng.platform.smart_app.services.detector import ManifestDetector
+from paasng.platform.smart_app.services.path import LocalFSPath, PathProtocol
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import BinaryTarClient
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir

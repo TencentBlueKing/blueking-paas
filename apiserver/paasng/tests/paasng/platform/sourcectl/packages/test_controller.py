@@ -21,7 +21,7 @@ import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
 
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.controllers.package import PackageController
 from paasng.platform.sourcectl.exceptions import GetProcfileError
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, SPStoragePolicy, VersionInfo

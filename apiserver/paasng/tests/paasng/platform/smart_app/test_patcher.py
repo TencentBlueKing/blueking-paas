@@ -27,9 +27,9 @@ from blue_krill.contextlib import nullcontext as does_not_raise
 from paasng.platform.declarative import constants
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
-from paasng.platform.smart_app.utils.patcher import SourceCodePatcher
-from paasng.platform.smart_app.utils.path import LocalFSPath
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.patcher import SourceCodePatcher
+from paasng.platform.smart_app.services.path import LocalFSPath
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML
 

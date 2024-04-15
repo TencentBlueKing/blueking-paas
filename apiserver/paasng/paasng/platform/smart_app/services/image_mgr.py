@@ -32,7 +32,7 @@ class SMartImageManager:
         self.module = module
 
     def get_slugrunner_image_info(self) -> NamedImage:
-        """获取 S-Mart(slug)应用的基础镜像的信息"""
+        """获取 slug S-Mart 基础镜像信息"""
         if bksmart_settings.base_image.name and bksmart_settings.base_image.tag:
             return NamedImage(
                 domain=bksmart_settings.registry.host,
@@ -47,6 +47,7 @@ class SMartImageManager:
         return named
 
     def get_cnb_runner_image_info(self) -> NamedImage:
+        """获取 cloud native S-Mart 基础镜像信息"""
         if bksmart_settings.cnb_base_image.name and bksmart_settings.cnb_base_image.tag:
             return NamedImage(
                 domain=bksmart_settings.registry.host,

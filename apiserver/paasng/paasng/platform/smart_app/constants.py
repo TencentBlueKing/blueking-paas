@@ -16,23 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from pathlib import Path
-
-import pytest
-
-from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
+from enum import Enum
 
 
-class TestPreparedSourcePackage:
-    @pytest.mark.parametrize(
-        ("file_path", "expected_basename"),
-        [
-            ("/var/本地日志3.log", "3.log"),
-            ("/var/app$3-.tar.gz", "app3.tar.gz"),
-        ],
-    )
-    def test_generate_storage_path(self, file_path, expected_basename, rf, bk_user):
-        request = rf.get("/")
-        request.user = bk_user
-        path = PreparedSourcePackage(request).generate_storage_path(file_path)
-        assert Path(path).name.endswith(expected_basename)
+class SMartPackageVersionFlag(str, Enum):
+    # 源码包
+    SOURCE_PACKAGE = "source"
+    # slug 构建方案的镜像层
+    SLUG_IMAGE_LAYERS = "slug-layers"
+    # cnb 构建方案的镜像层
+    CNB_IMAGE_LAYERS = "cnb-image-layers"

@@ -3,7 +3,7 @@
 .
 ├── README.md # 忽略, s-mart 包无该文件
 ├── app_desc.yaml  # 应用描述文件
-├── .Version 包结构占位文件
+├── .Version # 包结构占位文件
 ├── sidecar.tgz  # sidecar 模块的镜像层文件
 └── main.tgz  # main 模块的镜像层文件
 ```

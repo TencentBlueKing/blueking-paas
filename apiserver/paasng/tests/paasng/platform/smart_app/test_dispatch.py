@@ -23,13 +23,13 @@ from unittest import mock
 import pytest
 import requests
 
-from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
-from paasng.platform.smart_app.utils.dispatch import (
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.dispatch import (
     bksmart_settings,
     dispatch_cnb_image_to_registry,
     dispatch_slug_image_to_registry,
 )
-from paasng.platform.smart_app.utils.image_mgr import SMartImageManager
+from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, uncompress_directory
 from tests.paasng.platform.smart_app.utils import MockAdapter, MockResponse
 

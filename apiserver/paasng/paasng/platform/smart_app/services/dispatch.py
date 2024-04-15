@@ -21,7 +21,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Set
+from typing import Callable, List, Set
 
 from moby_distribution import ImageRef, LayerRef
 
@@ -30,13 +30,15 @@ from paasng.platform.applications.models import Application
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.models import Module
 from paasng.platform.smart_app.conf import bksmart_settings
+from paasng.platform.smart_app.constants import SMartPackageVersionFlag
 from paasng.platform.smart_app.entities import DockerExportedImageManifest
-from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
-from paasng.platform.smart_app.utils.image_mgr import SMartImageManager
-from paasng.platform.smart_app.utils.patcher import SourceCodePatcher
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.image_mgr import SMartImageManager
+from paasng.platform.smart_app.services.patcher import SourceCodePatcher
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +49,7 @@ _PARALLEL_PATCHING = True
 
 def dispatch_package_to_modules(
     application: Application, tarball_filepath: PathLike, stat: SPStat, operator: User, modules: Set[str]
-):
+) -> List[SourcePackage]:
     """Dispatch package to those modules which mentioned in args modules"""
     # TODO: 优化分发镜像的逻辑(如果存在多个模块用同一个镜像层, 那么应该只上传一次镜像)
     with generate_temp_dir() as workplace:
@@ -62,8 +64,8 @@ def dispatch_package_to_modules(
         # - slug 镜像
         # - cnb 镜像
         if builder_flag.exists():
-            version = builder_flag.read_text()
-            if version == "3":
+            version = builder_flag.read_text().strip()
+            if version == SMartPackageVersionFlag.CNB_IMAGE_LAYERS:
                 handler = dispatch_cnb_image_to_registry
             else:
                 handler = dispatch_slug_image_to_registry
@@ -87,7 +89,7 @@ def dispatch_package_to_modules(
             return packages
 
 
-def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User):
+def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User) -> SourcePackage:
     """Patch an uncompressed package and upload compressed tarball one blobstore,
     then bind the package to provided module.
 
@@ -108,8 +110,8 @@ def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat
         return source_package
 
 
-def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User):
-    """Merge Image Layer to BaseImage, then push the new image to registry
+def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
+    """Merge image layer to base image, then push the new image to registry
 
     [deprecated] `dispatch_slug_image_to_registry` is a handler for s-mart which is built with slug-pilot.
     """
@@ -140,7 +142,7 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     manifest = image_ref.push()
 
     stat.name = stat.version
-    stat.sha256_signature = manifest.config.digest.replace("sha256:", "")
+    stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
     policy = SPStoragePolicy(
         path=new_image_info.name,
         url=f"{new_image_info.domain}/{new_image_info.name}:{new_image_info.tag}",
@@ -152,8 +154,8 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     return source_package
 
 
-def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User):
-    """Merge Image Layer to BaseImage, then push the new image to registry"""
+def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
+    """Merge image layer to base image, then push the new image to registry"""
     logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
 
     mgr = SMartImageManager(module)
@@ -182,7 +184,7 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
         manifest = image_ref.push()
 
     stat.name = stat.version
-    stat.sha256_signature = manifest.config.digest.replace("sha256:", "")
+    stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
     policy = SPStoragePolicy(
         path=new_image_info.name,
         url=f"{new_image_info.domain}/{new_image_info.name}:{new_image_info.tag}",

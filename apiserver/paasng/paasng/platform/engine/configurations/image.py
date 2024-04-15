@@ -35,7 +35,7 @@ from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.conf import bksmart_settings
-from paasng.platform.smart_app.utils.image_mgr import SMartImageManager
+from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.models import RepoBasicAuthHolder
 
 if TYPE_CHECKING:
@@ -172,7 +172,7 @@ class RuntimeImageInfo:
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
-            from paasng.platform.smart_app.utils.image_mgr import SMartImageManager
+            from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 
             named = SMartImageManager(self.module).get_image_info(version_info.revision)
             return f"{named.domain}/{named.name}:{named.tag}"

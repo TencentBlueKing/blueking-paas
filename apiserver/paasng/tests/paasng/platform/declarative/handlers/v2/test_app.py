@@ -27,7 +27,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.handlers import AppDescriptionHandler, DescriptionHandler
 from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
-from paasng.platform.smart_app.utils.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 

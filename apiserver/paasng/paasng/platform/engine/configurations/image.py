@@ -63,7 +63,7 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
     if options.prefix:
         parts.append(options.prefix)
     if options.with_version:
-        # version_name 不符合 tag 正则的字符, 替换为 '-'
+        # 不符合 tag 正则的字符, 替换为 '-'
         tag_regex = re.compile("[^a-zA-Z0-9_.-]")
         version_name = tag_regex.sub("-", version.version_name)
         # 去掉开头的 '-'

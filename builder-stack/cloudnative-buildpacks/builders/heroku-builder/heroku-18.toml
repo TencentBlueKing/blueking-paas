@@ -43,7 +43,7 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
   version = "v2"
 
 [lifecycle]
-  uri = "https://bkpaas-runtimes-1252002024.cos.ap-shanghai.myqcloud.com/buildpacks/lifecycle-v0.17.6%2Blinux.x86-64.tgz"
+  uri = "https://bkpaas-runtimes-1252002024.cos.ap-shanghai.myqcloud.com/buildpacks/lifecycle-v0.17.6%2Bblueking.linux.x86-64.tgz"
 
 [[order]]
   [[order.group]]

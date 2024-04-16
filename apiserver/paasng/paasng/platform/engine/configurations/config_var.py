@@ -15,8 +15,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Config variables related functions"""
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Iterator
 
 from django.conf import settings
 
@@ -29,11 +30,12 @@ from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv
-from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
 from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.utils.blobstore import make_blob_store_env
 
@@ -43,7 +45,10 @@ if TYPE_CHECKING:
 
 
 def get_env_variables(
-    env: ModuleEnvironment, deployment: Optional[Deployment] = None, include_config_var: bool = True
+    env: ModuleEnvironment,
+    include_config_vars: bool = True,
+    include_preset_env_vars: bool = True,
+    include_svc_disc: bool = True,
 ) -> Dict[str, str]:
     """Get env vars for current environment, this will include:
 
@@ -52,15 +57,24 @@ def get_env_variables(
     - built-in env vars
     - (optional) vars defined by deployment description file
 
-    :param deployment: Optional deployment object to get vars defined in description file
-    :param include_config_var: if include_config_var is True, will add envs defined in ConfigVar models to result
+    :param include_config_vars: if True, will add envs defined in ConfigVar models to result
+    :param include_preset_env_vars: if True, will add preset env vars defined in PresetEnvVariable models to result
+    :param include_svc_disc: if True, will add svc discovery as env vars to result
     :returns: Dict of env vars
+
+    ---
+    for cloud native application, should not include config_var, preset_env_vars and svc_disc.
+    Because these are already provided via `ManifestConstructor`
     """
     result = {}
     engine_app = env.get_engine_app()
 
     # Part: Gather values from registered env variables providers, it has lowest priority
-    result.update(env_vars_providers.gather(env, deployment))
+    result.update(env_vars_providers.gather(env))
+    if include_preset_env_vars:
+        result.update(get_preset_env_variables(env))
+    if include_svc_disc:
+        result.update(get_svc_disc_as_env_variables(env))
 
     # Part: system-wide env vars
     result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
@@ -70,19 +84,19 @@ def get_env_variables(
         result.update(generate_blobstore_env_vars(engine_app))
 
     # Part: user defined env vars
-    # Q: Why don't we using engine_app directly to get ConfigVars?
+    # Q: Why don't we use engine_app directly to get ConfigVars?
     #
     # Because Config Vars, unlike ServiceInstance, is not bind to EngineApp. It
     # has application global type which shares under every engine_app/environment of an
     # application.
-    if include_config_var:
+    if include_config_vars:
         result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
 
     # Part: env vars shared from other modules
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
 
     # Part: env vars provided by services
-    result.update(mixed_service_mgr.get_env_vars(engine_app, exclude_disabled=True))
+    result.update(mixed_service_mgr.get_env_vars(engine_app, filter_enabled=True))
 
     # Part: Application's default sub domains/paths
     result.update(AppDefaultDomains(env).as_env_vars())
@@ -215,3 +229,9 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
         **envs_by_region_and_env,
         "BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix(),
     }
+
+
+def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+    """Get PresetEnvVariable as env variables dict"""
+    qs: Iterator[PresetEnvVariable] = PresetEnvVariable.objects.filter(module=env.module)
+    return {item.key: item.value for item in qs if item.is_within_scope(ConfigVarEnvName(env.environment))}

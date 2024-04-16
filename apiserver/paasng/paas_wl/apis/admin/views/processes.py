@@ -67,7 +67,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
     def create(self, request, **kwargs):
         """创建 ProcessSpecPlan"""
         slz = self.get_serializer(data=request.data)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         slz.save()
         return Response(slz.validated_data, status=status.HTTP_201_CREATED)
 
@@ -75,7 +75,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
         """更新已有 ProcessSpecPlan"""
         instance = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
         slz = self.get_serializer(data=request.data, instance=instance)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         slz.save()
 
         return Response(slz.validated_data, status=status.HTTP_200_OK)

@@ -19,13 +19,11 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
-from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.deployment.resources import SvcDiscovery
 from paasng.platform.declarative.deployment.svc_disc import (
     BkSaaSEnvVariableFactory,
-    get_services_as_env_variables,
 )
 from paasng.platform.declarative.deployment.validations.v2 import DeploymentDescSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
@@ -112,26 +110,6 @@ class TestEnvVariablesField:
         assert PresetEnvVariable.objects.filter(module=bk_module).count() == 4
 
 
-class TestEnvVariablesReader:
-    @pytest.fixture(autouse=True)
-    def _setup_tasks(self, bk_user, bk_deployment):
-        json_data = {
-            "env_variables": [
-                {"key": "FOO", "value": "1"},
-                {"key": "BAR", "value": "2"},
-                {"key": "STAG", "value": "3", "environment_name": "stag"},
-                {"key": "PROD", "value": "4", "environment_name": "prod"},
-            ],
-            "language": "python",
-        }
-        controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-
-    def test_read_as_dict(self, bk_deployment):
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert EnvVariablesReader(desc_obj).read_as_dict() == {"FOO": "1", "BAR": "2", "PROD": "4"}
-
-
 class TestSvcDiscoveryField:
     @staticmethod
     def apply_config(bk_deployment):
@@ -166,7 +144,7 @@ class TestSvcDiscoveryField:
             replaced_ingress_config={"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}
         ):
             self.apply_config(bk_deployment)
-            env_vars = get_services_as_env_variables(bk_deployment)
+            env_vars = get_svc_disc_as_env_variables(bk_deployment.app_environment)
             value = env_vars["BKPAAS_SERVICE_ADDRESSES_BKSAAS"]
             addresses = BkSaaSEnvVariableFactory.decode_data(value)
             assert len(addresses) == 2
@@ -187,7 +165,7 @@ class TestSvcDiscoveryField:
             replaced_ingress_config={"sub_path_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}
         ):
             self.apply_config(bk_deployment)
-            env_vars = get_services_as_env_variables(bk_deployment)
+            env_vars = get_svc_disc_as_env_variables(bk_deployment.app_environment)
             value = env_vars["BKPAAS_SERVICE_ADDRESSES_BKSAAS"]
             addresses = BkSaaSEnvVariableFactory.decode_data(value)
             assert len(addresses) == 2

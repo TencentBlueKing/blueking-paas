@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import os
 from pathlib import Path
 
@@ -35,7 +36,7 @@ BASE_DIR = Path(__file__).parents[2].absolute()
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'ot08tcs_&u(&fb~bgny!6+(b07ch*@nj'
+SECRET_KEY = "ot08tcs_&u(&fb~bgny!6+(b07ch*@nj"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
@@ -67,7 +68,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'bkpaas_auth.middlewares.CookieLoginMiddleware',
+    "bkpaas_auth.middlewares.CookieLoginMiddleware",
     # Append middlewares from paas_service to make client auth works
     "paas_service.auth.middleware.VerifiedClientMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -110,8 +111,8 @@ if os.getenv("DATABASE_URL"):
     DATABASES = {"default": env.db()}
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
             "NAME": env("MYSQL_NAME", default="svc_bkrepo"),
             "USER": env("MYSQL_USER", default="svc_bkrepo"),
             "PASSWORD": env("MYSQL_PASSWORD", default="blueking"),
@@ -141,7 +142,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
-LANGUAGE_CODE = 'zh-cn'
+LANGUAGE_CODE = "zh-cn"
 
 LANGUAGES = [("zh-cn", "简体中文"), ("en", "English")]
 
@@ -236,16 +237,16 @@ DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/a
 BKREPO_DEFAULT_QUOTA = env.int("BKREPO_DEFAULT_QUOTA", None)
 
 # bkrepo 扩容最大容量限制, 10g, 单位 bytes
-EXTEND_CONFIG_MAX_SIZE_ALLOWED = 2 ** 30 * 10
+EXTEND_CONFIG_MAX_SIZE_ALLOWED = 2**30 * 10
 
 # bkrepo 扩容步长, 1g, 单位 bytes
-EXTEND_CONFIG_EXTRA_SIZE_BYTES = 2 ** 30
+EXTEND_CONFIG_EXTRA_SIZE_BYTES = 2**30
 
 BKAUTH_DEFAULT_PROVIDER_TYPE = env("BKAUTH_DEFAULT_PROVIDER_TYPE", default="BK")
 # 蓝鲸登录票据在Cookie中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
 BKAUTH_BACKEND_TYPE = env("BKAUTH_BACKEND_TYPE", default="bk_token")
 
-LOGIN_URL = env.str("BK_LOGIN_API_URL", default='http://paasee.blueking-fake.com/login')
+LOGIN_URL = env.str("BK_LOGIN_API_URL", default="http://paasee.blueking-fake.com/login")
 
 BKAUTH_USER_COOKIE_VERIFY_URL = LOGIN_URL + env.str("BK_LOGIN_VERIFY_API_PATH", default="/api/v3/is_login/")
 
@@ -253,5 +254,9 @@ AUTHENTICATION_BACKENDS = [
     # [推荐] 使用内置的虚拟用户类型，不依赖于数据库表.
     # 'bkpaas_auth.backends.UniversalAuthBackend',
     # 如果项目需要保留使用数据库表的方式来设计用户模型, 则需要使用 DjangoAuthUserCompatibleBackend
-    'bkpaas_auth.backends.DjangoAuthUserCompatibleBackend',
+    "bkpaas_auth.backends.DjangoAuthUserCompatibleBackend",
 ]
+
+# 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
+BK_CRYPTO_TYPE = env.str("BK_CRYPTO_TYPE", default="CLASSIC")
+ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"

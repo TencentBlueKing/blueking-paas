@@ -16,19 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import TYPE_CHECKING, List
+from typing import List
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.processes.controllers import ProcessesInfo
+from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
+from paas_wl.infras.resources.base.base import EnhancedApiClient
 from paas_wl.infras.resources.base.kres import KDeployment
+from paas_wl.infras.resources.generation.mapper import MapperProcConfig
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models import WlApp
-    from paas_wl.bk_app.processes.kres_entities import Process
-    from paas_wl.infras.resources.base.base import EnhancedApiClient
-    from paas_wl.infras.resources.generation.mapper import MapperProcConfig
 
 
 class DefaultAppProcessController:

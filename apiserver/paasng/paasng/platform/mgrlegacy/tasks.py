@@ -20,10 +20,14 @@ import logging
 
 from celery import shared_task
 
+from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
+from paas_wl.bk_app.mgrlegacy import WlAppBackupManager
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy import migrate
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
+
+from .entrance import get_entrances
 
 logger = logging.getLogger(__name__)
 
@@ -95,13 +99,41 @@ def confirm_with_rollback_on_failure(migration_process_id):
 
 @shared_task
 def migrate_default_to_cnative(migration_process_id):
-    migrate.migrate_default_to_cnative(migration_process=CNativeMigrationProcess.objects.get(id=migration_process_id))
+    # 保存访问入口数据
+    migration_process = CNativeMigrationProcess.objects.get(id=migration_process_id)
+    migration_process.legacy_data.entrances = get_entrances(migration_process.app)
+    migration_process.save(update_fields=["legacy_data"])
+
+    migrate.migrate_default_to_cnative(migration_process=migration_process)
 
 
 @shared_task
 def rollback_cnative_to_default(rollback_process_id, last_migration_process_id):
+    last_migration_process = CNativeMigrationProcess.objects.get(id=last_migration_process_id)
+
+    # 清理云原生应用: 销毁集群资源, 删除 wl_app 的备份
+    for m in last_migration_process.app.modules.all():
+        for env in m.envs.all():
+            wl_app = env.wl_app
+            NamespacesHandler.new_by_app(wl_app).delete(wl_app.namespace)
+            WlAppBackupManager(wl_app).delete()
+
     migrate.rollback_cnative_to_default(
         rollback_process=CNativeMigrationProcess.objects.get(id=rollback_process_id),
-        last_migration_process=CNativeMigrationProcess.objects.get(id=last_migration_process_id),
+        last_migration_process=last_migration_process,
     )
-    # TODO 增加下线云原生应用的集群操作
+
+
+@shared_task
+def confirm_migration(migration_process_id):
+    migration_process = CNativeMigrationProcess.objects.get(id=migration_process_id)
+
+    # 清理普通应用: 销毁集群资源, 删除 wl_app 的备份
+    for m in migration_process.app.modules.all():
+        for env in m.envs.all():
+            manager = WlAppBackupManager(env.wl_app)
+            wl_app_backup = manager.get()
+            NamespacesHandler.new_by_app(wl_app_backup).delete(wl_app_backup.namespace)
+            manager.delete()
+
+    migration_process.confirm()

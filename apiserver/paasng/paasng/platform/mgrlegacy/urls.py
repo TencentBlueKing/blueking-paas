@@ -99,11 +99,11 @@ urlpatterns = [
     ),
     # 普通应用进程管理
     re_path(
-        make_app_pattern(r"/processes/list/$", prefix="api/mgrlegacy/applications/"),
-        views.DefaultAppProcessViewSet.as_view({"get": "list"}),
-    ),
-    re_path(
         make_app_pattern(r"/processes/$", prefix="api/mgrlegacy/applications/"),
-        views.DefaultAppProcessViewSet.as_view({"post": "update"}),
+        views.DefaultAppProcessViewSet.as_view({"put": "update", "get": "list"}),
+    ),
+    url(
+        r"^api/mgrlegacy/applications/(?P<code>[^/]+)/entrances/$",
+        views.DefaultAppEntranceViewSet.as_view({"get": "list_all_entrances"}),
     ),
 ]

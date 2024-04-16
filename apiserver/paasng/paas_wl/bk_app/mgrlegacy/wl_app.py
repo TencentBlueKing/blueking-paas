@@ -44,10 +44,13 @@ class WlAppBackupManager:
         Config.objects.create(**config_dict)
 
         # 创建对应的 Release 副本
-        release = Release.objects.get_latest(self.original_wl_app)
-        release_dict = model_to_dict(release, exclude=uuid_audited_fields + ["app"])
-        release_dict["app"] = wl_app
-        Release.objects.create(**release_dict)
+        try:
+            release = Release.objects.get_latest(self.original_wl_app)
+            release_dict = model_to_dict(release, exclude=uuid_audited_fields + ["app"])
+            release_dict["app"] = wl_app
+            Release.objects.create(**release_dict)
+        except Release.DoesNotExist:
+            pass
 
         return wl_app
 

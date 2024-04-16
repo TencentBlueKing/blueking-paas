@@ -28,16 +28,17 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.bk_app.mgrlegacy import DefaultAppProcessController, WlAppBackupManager
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
+from paas_wl.workloads.networking.entrance.serializers import ModuleEntrancesSLZ
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
-from paasng.platform.mgrlegacy.cnative_wl import DefaultAppProcessController, WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 
 try:
@@ -62,6 +63,7 @@ from paasng.platform.mgrlegacy.serializers import (
     QueryMigrationAppSLZ,
 )
 from paasng.platform.mgrlegacy.tasks import (
+    confirm_migration,
     confirm_with_rollback_on_failure,
     migrate_default_to_cnative,
     migrate_with_rollback_on_failure,
@@ -328,8 +330,8 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if process.status != CNativeMigrationStatus.MIGRATION_SUCCEEDED.value:
             raise error_codes.APP_MIGRATION_CONFIRMED_FAILED.f("该应用记录未表明应用已成功迁移, 无法确认")
 
-        process.confirm()
-        # TODO 增加清理普通应用的集群操作
+        confirm_migration.delay(process.id)
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -393,3 +395,20 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def _get_wl_app(self):
         original_wl_app = self.get_wl_app_via_path()
         return WlAppBackupManager(original_wl_app).get()
+
+
+class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用访问地址查询接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def list_all_entrances(self, request, code):
+        """查看应用所有模块的访问入口"""
+        app = self.get_application()
+
+        if last_process := CNativeMigrationProcess.objects.filter(
+            app=app, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+        ).last():
+            return Response(data=ModuleEntrancesSLZ(last_process.legacy_data.entrances, many=True).data)
+
+        return Response(data=[])

@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 from typing import Optional
 
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.mgrlegacy import WlAppBackupManager
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.platform.mgrlegacy.cnative_wl import WlAppBackupManager
 from paasng.platform.mgrlegacy.entities import DefaultAppLegacyData
 from paasng.platform.mgrlegacy.exceptions import PreCheckMigrationFailed
 

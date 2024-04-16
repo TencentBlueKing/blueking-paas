@@ -46,7 +46,7 @@ class TestApplicationTypeMigrator:
         assert bk_app.type == ApplicationType.DEFAULT.value
         assert bk_app.get_engine_app("stag").to_wl_obj().type == ApplicationType.DEFAULT.value
         with pytest.raises(ObjectDoesNotExist):
-            assert WlAppBackupManager(wl_obj).get()
+            WlAppBackupManager(wl_obj).get()
 
 
 class TestApplicationClusterMigrator:

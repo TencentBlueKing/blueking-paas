@@ -19,7 +19,9 @@ to the current version of the project delivered to anyone in the future.
 from enum import Enum
 
 
-class SMartPackageVersionFlag(str, Enum):
+class SMartPackageBuilderVersionFlag(str, Enum):
+    """s-mart 包构建器版本, 不同版本的构建器输出的产物类型不一样"""
+
     # 源码包
     SOURCE_PACKAGE = "source"
     # slug 构建方案的镜像层

@@ -47,6 +47,7 @@ class PerformResult:
                              - 云原生应用, 以应用描述文件为准
     """
 
+    spec_version: AppSpecVersion
     loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
 
     def set_processes(self, processes: Dict[str, Process]):
@@ -63,6 +64,9 @@ class PerformResult:
             Dict[str, ProcessTmpl],
         )
 
+    def is_use_cnb(self) -> bool:
+        return self.spec_version == AppSpecVersion.VER_3
+
 
 def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
     """将应用描述文件中的 BkAppSpec 转换成适合直接导入到模型的格式"""
@@ -73,7 +77,7 @@ def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
     }
     return {
         "metadata": {},
-        "spec": spec.dict(exclude_none=True, exclude_unset=True, exclude=exclude),
+        "spec": spec.dict(exclude_none=True, exclude=exclude),
     }
 
 
@@ -106,7 +110,7 @@ class DeploymentDeclarativeController:
 
         :param desc: deployment specification
         """
-        result = PerformResult()
+        result = PerformResult(spec_version=desc.spec_version)
         logger.debug("Update related deployment description object.")
 
         application = self.deployment.app_environment.application

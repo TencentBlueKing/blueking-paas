@@ -23,14 +23,14 @@ from os import PathLike
 from pathlib import Path
 from typing import Callable, List, Set
 
-from moby_distribution import ImageRef, LayerRef
+from moby_distribution import ImageJSON, ImageRef, LayerRef
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.models import Module
 from paasng.platform.smart_app.conf import bksmart_settings
-from paasng.platform.smart_app.constants import SMartPackageVersionFlag
+from paasng.platform.smart_app.constants import SMartPackageBuilderVersionFlag
 from paasng.platform.smart_app.entities import DockerExportedImageManifest
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
@@ -59,7 +59,7 @@ def dispatch_package_to_modules(
         builder_flag = workplace / ".Version"
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
-            if version == SMartPackageVersionFlag.CNB_IMAGE_LAYERS:
+            if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
                 handler = dispatch_cnb_image_to_registry
             else:
                 handler = dispatch_slug_image_to_registry
@@ -172,9 +172,20 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
             to_reference=new_image_info.tag,
             client=client,
         )
+
+        # merge image json at first.
+        # cnb_layers_image_json.config contains Env, default Entrypoint.
+        base_image_json = image_ref.image_json
+        cnb_layers_image_json = ImageJSON(**json.loads((image_tmp_folder / tarball_manifest.config).read_text()))
+        base_image_json.config = cnb_layers_image_json.config
+        image_ref._initial_config = base_image_json.json(
+            exclude_unset=True, exclude_defaults=True, separators=(",", ":")
+        )
+
         for layer_path in tarball_manifest.layers:
             image_ref.add_layer(LayerRef(local_path=image_tmp_folder / layer_path))
         logger.debug("Start pushing Image.")
+
         manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
     stat.name = stat.version

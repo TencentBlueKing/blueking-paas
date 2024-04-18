@@ -1,5 +1,5 @@
 <template lang="html">
-  <div>
+  <div class="instance-wrapper">
     <app-top-bar
       v-if="!isCloudNativeApp"
       :paths="servicePaths"
@@ -7,290 +7,193 @@
       :cur-module="curAppModule"
     />
 
-    <div class="instance-container">
-      <section class="instance-tab-container">
-        <bk-tab
-          class="mt5"
-          :active.sync="curServiceTab"
-          type="unborder-card"
-        >
-          <bk-tab-panel
-            name="detail"
-            :label="$t('实例详情')"
-          >
-            <paas-content-loader
-              :is-loading="isLoading"
-              placeholder="data-inner-loading"
-              :height="600"
-              :offset-top="0"
-            >
-              <div
-                class="dataStore-middle health-wrapper"
-                style="min-height: 200px;"
-              >
-                <bk-alert
-                  v-if="delAppDialog.moduleList.length > 0"
-                  style="margin-bottom: 10px;"
-                  type="info"
-                  :title="pageTips"
-                />
-                <div v-if="!isLoading">
-                  <table
-                    class="ps-table ps-table-default"
-                    style="width: 100%;"
-                  >
-                    <tr class="ps-table-environment-header">
-                      <th style="width: 120px">
-                        {{ $t('实例ID') }}
-                      </th>
-                      <th style="width: 420px;">
-                        {{ $t('配置信息') }}
-                      </th>
-                      <th style="width: 180px">
-                        {{ $t('使用环境') }}
-                      </th>
-                      <th
-                        v-if="hasAdminUrl"
-                        style="width: 120px"
-                      >
-                        {{ $t('管理入口') }}
-                      </th>
-                    </tr>
-                    <template v-if="instanceCount !== 0">
-                      <tr
-                        v-for="(item, index) in instanceList"
-                        :key="index"
-                        class="ps-table-slide-up"
-                      >
-                        <td>#{{ index + 1 }}</td>
-                        <template
-                          v-if="item.service_instance.config.hasOwnProperty('is_done')
-                            && !item.service_instance.config.is_done">
-                          <td>
-                            <p class="mt15 mb15">
-                              {{ $t('服务正在创建中，请通过“管理入口”查看进度') }}
-                            </p>
-                          </td>
-                        </template>
-                        <template v-else>
-                          <td>
-                            <div
-                              v-for="(value, key) in item.service_instance.credentials"
-                              :key="key"
-                              class="config-width"
-                            >
-                              <i class="gray">{{ key }}: </i><span class="break-all">{{ value }}</span><br>
-                            </div>
-                            <div
-                              v-for="(key, fieldsIndex) in item.service_instance.sensitive_fields"
-                              :key="fieldsIndex"
-                            >
-                              <i class="gray">{{ key }}: </i>******
-                              <i
-                                v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
-                                class="paasng-icon paasng-question-circle"
-                              />
-                            </div>
-                            <div
-                              v-for="(value, key) in item.service_instance.hidden_fields"
-                              :key="key"
-                            >
-                              <i class="gray">{{ key }}: </i>
-                              <span
-                                v-if="hFieldstoggleStatus[index][key]"
-                                class="break-all"
-                              >
-                                {{ value }}
-                              </span>
-                              <span
-                                v-else
-                                class="break-all"
-                              >******</span>
-                              <button
-                                v-bk-tooltips="$t('敏感字段，点击后显示')"
-                                class="btn-display-hidden-field ps-btn ps-btn-default ps-btn-xs"
-                                @click="$set(hFieldstoggleStatus[index], key, !hFieldstoggleStatus[index][key])"
-                              >
-                                {{ hFieldstoggleText[hFieldstoggleStatus[index][key] || false] }}
-                              </button>
-                            </div>
-                            <div
-                              v-if="!item.service_instance.sensitive_fields.length"
-                              class="copy-container"
-                            >
-                              <span @click="handleCopy(item)"> {{ $t('复制') }} </span>
-                            </div>
-                          </td>
-                        </template>
-                        <td>{{ item.environment_name }}</td>
-                        <td v-if="hasAdminUrl">
-                          <p>
-                            <template v-if="item.service_instance.config.admin_url">
-                              <a
-                                :href="item.service_instance.config.admin_url"
-                                class="blue"
-                                target="_blank"
-                              > {{ $t('查看') }} </a>
-                            </template>
-                            <template v-else>
-                              --
-                            </template>
-                          </p>
-                        </td>
-                      </tr>
-                    </template>
-                    <tr
-                      v-if="instanceCount === 0"
-                      class="ps-table-slide-up"
-                    >
-                      <td :colspan="hasAdminUrl ? 4 : 3">
-                        <div class="paas-loading-panel">
-                          <div class="text">
-                            <table-empty
-                              class="table-empty-cls"
-                              :empty-title="$t('暂无增强服务配置信息')"
-                              empty
-                            />
-                            {{ $t('服务启用后，将在重新部署时申请实例，请先') }}
-                            <span
-                              class="blue pl27"
-                              style="cursor: pointer;"
-                              @click="toAppDeploy"
-                            >{{ $t('部署应用') }}</span>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-                </div>
-              </div>
+    <section :class="['instance-detail', { 'default-instance-detail-cls': !isCloudNativeApp }]">
+      <div class="instance-container-cls">
+        <bk-alert
+          v-if="delAppDialog.moduleList.length > 0 && !isCloudNativeApp"
+          style="margin-bottom: 10px;"
+          type="info"
+          :title="pageTips"
+        />
 
-              <div
-                v-if="!isLoading"
-                class="middle"
-              >
-                <div class="dataStore-middle">
-                  <h3 style="font-size: 16px;">
-                    {{ $t('使用指南') }}
-                  </h3>
-                  <div v-if="!isGuardLoading">
-                    <div
-                      id="markdown"
-                      class="data-store-use"
-                    >
-                      <div
-                        class="markdown-body"
-                        v-html="compiledMarkdown"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </paas-content-loader>
-          </bk-tab-panel>
-          <bk-tab-panel
-            name="manager"
-            :label="$t('管理实例')"
-          >
-            <div class="manager-example">
-              <section
-                v-if="specifications.length"
-                class="config-info"
-              >
-                <template v-if="showConfigInfo">
-                  <config-view
-                    :can-edit="canEditConfig"
-                    :loading="editLoading"
-                    :list="specifications"
-                    @on-edit="handleConfigEdit"
-                  />
-                </template>
-                <template v-else>
-                  <config-edit
-                    mode="edit"
-                    :list="definitions"
-                    :guide="serviceMarkdown"
-                    :value="values"
-                    :save-loading="saveLoading"
-                    @on-change="handleConfigChange"
-                  />
-                </template>
-              </section>
-              <div class="delete-title">
-                {{ $t('删除服务') }}
-              </div>
-              <p class="delete-tips">
-                {{ $t('所有已申请实例的相关数据将被销毁。应用与服务之间的绑定关系也会被解除。') }}
-              </p>
-              <div class="delete-button">
-                <bk-popover
-                  v-if="isSmartApp"
-                  :content="$t('S-mart应用暂不支持删除增强服务')"
-                >
-                  <bk-button
-                    theme="danger"
-                    disabled
-                  >
-                    {{ $t('删除服务') }}
-                  </bk-button>
-                </bk-popover>
-                <bk-button
-                  v-else
-                  theme="danger"
-                  @click="showRemovePrompt"
-                >
-                  {{ $t('删除服务') }}
-                </bk-button>
+        <section class="instance-tab-container">
+          <p class="title">{{ $t('实例详情') }}</p>
+          <!-- 写入环境变量 -->
+          <div class="env-variables-wrapper">
+            <span class="sub-title">{{ $t('写入环境变量') }}</span>
+            <div @click.stop="handleSwitcherChange">
+              <bk-switcher
+                v-model="credentialsDisabled"
+                theme="primary"
+                size="small"
+                :pre-check="() => false"
+              ></bk-switcher>
+            </div>
+            <span class="tips">
+              <i class="paasng-icon paasng-info-line mr5"></i>
+              {{ $t('若不写入，将无法从环境变量获取实例的凭证信息') }}
+            </span>
+          </div>
+          <!-- 编辑 -->
+          <div class="instance-info" v-if="specifications.length">
+            <div class="item" v-for="item in specifications" :key="item.name">
+              <span>{{ item.name }}：</span>
+              <span class="value" v-bk-overflow-tips>{{ item.value }}</span>
+            </div>
+            <span
+              v-bk-tooltips="{ content: $t('增强服务实例已分配，不能再修改配置信息'), disabled: canEditConfig }"
+              :class="['edit-icon', { 'disabled': !canEditConfig }]"
+              @click="handleEditInstance">
+              <i class="paasng-icon paasng-edit-2"></i>
+            </span>
+          </div>
+          <bk-table
+            :data="instanceList"
+            v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+            size="large"
+            style="margin-top: 15px;"
+            ext-cls="instance-details-table-cls"
+            :outer-border="false">
+            <div slot="empty" class="paas-loading-panel">
+              <div class="text">
+                <table-empty
+                  class="table-empty-cls"
+                  :empty-title="$t('暂无增强服务配置信息')"
+                  empty
+                />
+                <p class="sub-title">
+                  {{ $t('服务启用后，将在下一次部署过程中申请实例，请先进行应用部署。') }}
+                </p>
               </div>
             </div>
-          </bk-tab-panel>
-        </bk-tab>
-      </section>
-    </div>
+            <bk-table-column :label="$t('实例 ID')" width="100">
+              <template slot-scope="{ $index }">
+                #{{ $index + 1 }}
+              </template></bk-table-column>
+            <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="300">
+              <template slot-scope="{ row, $index }">
+                <template
+                  v-if="row.service_instance.config.hasOwnProperty('is_done')
+                    && !row.service_instance.config.is_done">
+                  <p class="mt15 mb15">
+                    {{ $t('服务正在创建中，请通过“管理入口”查看进度') }}
+                  </p>
+                </template>
+                <template v-else>
+                  <section class="credential-information">
+                    <div
+                      v-for="(value, key) in row.service_instance.credentials"
+                      :key="key"
+                      class="config-width"
+                    >
+                      <span class="gray">{{ key }}: </span><span class="break-all">{{ value }}</span><br>
+                    </div>
+                    <div
+                      v-for="(key, fieldsIndex) in row.service_instance.sensitive_fields"
+                      :key="fieldsIndex"
+                    >
+                      <span class="gray">{{ key }}: </span>******
+                      <i
+                        v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
+                        class="paasng-icon paasng-question-circle"
+                      />
+                    </div>
+                    <div
+                      v-for="(value, key) in row.service_instance.hidden_fields"
+                      :key="key"
+                    >
+                      <span class="gray">{{ key }}: </span>
+                      <span
+                        v-if="hFieldstoggleStatus[$index][key]"
+                        class="break-all"
+                      >
+                        {{ value }}
+                      </span>
+                      <span
+                        v-else
+                        class="break-all"
+                      >******</span>
+                      <button
+                        v-bk-tooltips="$t('敏感字段，点击后显示')"
+                        class="btn-display-hidden-field ps-btn ps-btn-default ps-btn-xs"
+                        @click="$set(hFieldstoggleStatus[$index], key, !hFieldstoggleStatus[$index][key])"
+                      >
+                        {{ hFieldstoggleText[hFieldstoggleStatus[$index][key] || false] }}
+                      </button>
+                    </div>
+                  </section>
+                  <div
+                    v-if="!row.service_instance.sensitive_fields.length"
+                    class="copy-container"
+                  >
+                    <i class="paasng-icon paasng-general-copy" @click="handleCopy(row)" />
+                  </div>
+                </template>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('使用环境')" prop="ip">
+              <template slot-scope="{ row }">
+                {{ row.environment_name }}
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('操作')" :width="localLanguage === 'en' ? 180 : 150">
+              <template slot-scope="{ row }">
+                <p>
+                  <template v-if="row.service_instance.config.admin_url">
+                    <a
+                      :href="row.service_instance.config.admin_url"
+                      class="blue"
+                      target="_blank"
+                    > {{ $t('查看管理入口') }} </a>
+                  </template>
+                  <template v-else>
+                    --
+                  </template>
+                </p>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </section>
+      </div>
+
+      <!-- 使用指南 -->
+      <usage-guide
+        v-if="!isCloudNativeApp"
+        :data="compiledMarkdown"
+        :is-cloud-native="isCloudNativeApp"
+        :is-loading="isTableLoading"
+      />
+    </section>
 
     <bk-dialog
-      v-model="delAppDialog.visiable"
-      width="540"
-      :title="$t('确认删除实例？')"
+      v-model="instanceDialogConfig.visiable"
+      width="400"
+      :title="$t('配置信息')"
       :theme="'primary'"
       :mask-close="false"
       :header-position="'left'"
-      :loading="delAppDialog.isLoading"
-      @after-leave="hookAfterClose"
     >
-      <form
-        class="ps-form"
-        style="min-height: 63px;"
-        @submit.prevent="submitRemoveInstance"
-      >
-        <div class="spacing-x1">
-          {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
-        </div>
-        <div class="ps-form-group">
-          <input
-            v-model="formRemoveConfirmCode"
-            type="text"
-            class="ps-form-control"
-          >
-        </div>
-        <bk-alert
-          v-if="delAppDialog.moduleList.length > 0"
-          style="margin-top: 10px;"
-          type="error"
-          :title="errorTips"
-        />
-      </form>
+      <config-edit
+        ref="configInfoEdit"
+        mode="edit"
+        :is-save-operation="false"
+        :list="definitions"
+        :guide="serviceMarkdown"
+        :value="values"
+        :save-loading="saveLoading"
+        @on-change="handleConfigChange"
+      />
       <template slot="footer">
         <bk-button
           theme="primary"
-          :disabled="!formRemoveValidated"
-          @click="submitRemoveInstance"
+          :loading="instanceDialogConfig.isLoading"
+          @click="handleConfigInfoSave"
         >
           {{ $t('确定') }}
         </bk-button>
         <bk-button
           theme="default"
-          @click="delAppDialog.visiable = false"
+          @click="instanceDialogConfig.visiable = false"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -302,15 +205,16 @@
 <script>import { marked } from 'marked';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
-import ConfigView from './comps/config-view';
 import ConfigEdit from './comps/config-edit';
+import usageGuide from '@/components/usage-guide';
 import $ from 'jquery';
+import { bus } from '@/common/bus';
 
 export default {
   components: {
     appTopBar,
-    ConfigView,
     ConfigEdit,
+    usageGuide,
   },
   mixins: [appBaseMixin],
   data() {
@@ -318,10 +222,6 @@ export default {
       categoryId: 0,
       instanceList: [],
       instanceCount: 0,
-      name: '',
-      appName: this.$route.query.appName,
-      title: '',
-      // isLoading: true,
       isGuardLoading: true,
       service: this.$route.params.service,
       hFieldstoggleStatus: [],
@@ -329,7 +229,6 @@ export default {
         true: this.$t('隐藏'),
         false: this.$t('显示'),
       },
-      serviceExtraMsg: '',
       serviceExtraMsgMap: {
         'GCS-MySQL': this.$t('每个应用默认开启MySQL服务，并默认分配两个服务实例'),
         MySQL: this.$t('每个应用默认开启MySQL服务，并默认分配两个服务实例'),
@@ -338,7 +237,6 @@ export default {
       },
       serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
       // detail: 实例详情 manager: 管理实例
-      curServiceTab: 'detail',
       delAppDialog: {
         visiable: false,
         isLoading: false,
@@ -351,10 +249,15 @@ export default {
       specifications: [],
       definitions: [],
       values: [],
-      editLoading: false,
       saveLoading: false,
       requestQueue: ['init', 'enabled', 'shareModule'],
       copyContent: '',
+      instanceDialogConfig: {
+        visiable: false,
+        isLoading: false,
+      },
+      isTableLoading: false,
+      credentialsDisabled: false,
     };
   },
   computed: {
@@ -365,30 +268,19 @@ export default {
             $(this).attr('target', '_blank');
           });
       });
-      console.log('marked', marked);
       return marked(this.serviceMarkdown, { sanitize: true });
-    },
-    hasAdminUrl() {
-      const hasUrlItems = this.instanceList.filter(item => item.service_instance.config.admin_url);
-      if (hasUrlItems && hasUrlItems.length) {
-        return true;
-      }
-      return false;
-    },
-    formRemoveValidated() {
-      return this.appCode === this.formRemoveConfirmCode;
     },
     region() {
       return this.curAppInfo.application.region;
-    },
-    errorTips() {
-      return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
     },
     pageTips() {
       return `${this.$t('实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，这些模块将获得实例的所有环境变量。')}`;
     },
     isLoading() {
       return this.requestQueue.length > 0;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -398,16 +290,22 @@ export default {
       this.fetchEnableSpecs();
       this.fetchServicesShareDetail();
     },
-    curServiceTab(value) {
-      if (value === 'detail') {
-        this.init();
-      }
+    compiledMarkdown() {
+      this.$emit('set-markdown', this.compiledMarkdown);
+    },
+    'delAppDialog.moduleList'() {
+      this.$emit('set-tooltips', { isShow: this.delAppDialog.moduleList.length > 0, tips: this.pageTips });
+    },
+    isTableLoading(value) {
+      this.$emit('set-loading', value);
     },
   },
   created() {
     this.init();
     this.fetchEnableSpecs();
     this.fetchServicesShareDetail();
+    this.getCredentialsEnabled();
+    bus.$emit('show-usage-guide');
   },
   methods: {
     async fetchServicesShareDetail() {
@@ -428,15 +326,9 @@ export default {
         this.requestQueue.shift();
       }
     },
-
-    fliter(str) {
-      if (str.substr(str.length - 1, str.length) === '_') {
-        str = str.substr(0, str.length - 1);
-      }
-    },
-
     init() {
       this.isGuardLoading = true;
+      this.isTableLoading = true;
 
       this.$http.get(`${BACKEND_URL}/api/services/${this.service}/`).then((response) => {
         this.servicePaths = [];
@@ -485,6 +377,7 @@ export default {
         })
         .finally(() => {
           this.requestQueue.shift();
+          this.isTableLoading = false;
         });
     },
 
@@ -500,21 +393,20 @@ export default {
           name: display_name,
           value,
         }));
-      } catch (_) {
-
+      } catch (e) {
+        console.error(e);
       } finally {
         this.requestQueue.shift();
       }
     },
 
     async fetchServicesSpecsDetail() {
-      this.editLoading = true;
       try {
         const res = await this.$store.dispatch('service/getServicesSpecsDetail', {
           id: this.service,
           region: this.region,
-        })
-                    ;(res.definitions || []).forEach((item, index) => {
+        });
+        (res.definitions || []).forEach((item, index) => {
           let values = [];
           res.values.forEach((val) => {
             values.push(val[index]);
@@ -533,62 +425,7 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        this.editLoading = false;
       }
-    },
-
-    showExtraMsg(serviceName) {
-      if (!(serviceName in this.serviceExtraMsgMap)) {
-        return false;
-      }
-      this.serviceExtraMsg = this.serviceExtraMsgMap[serviceName];
-      return true;
-    },
-
-    curTabSwitch(tab) {
-      this.curServiceTab = tab;
-    },
-
-    showRemovePrompt() {
-      this.delAppDialog.visiable = true;
-      this.fetchServicesShareDetail();
-    },
-
-    hookAfterClose() {
-      this.formRemoveConfirmCode = '';
-    },
-
-    submitRemoveInstance() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.service}/`;
-
-      this.$http.delete(url).then(
-        () => {
-          this.delAppDialog.visiable = false;
-          this.$paasMessage({
-            theme: 'success',
-            message: this.$t('删除服务实例成功'),
-          });
-          this.$router.push({
-            name: 'appService',
-            params: {
-              category_id: this.$route.params.category_id,
-              id: this.$route.params.id,
-            },
-          });
-        },
-        (res) => {
-          this.$paasMessage({
-            theme: 'error',
-            message: res.detail,
-          });
-          this.delAppDialog.visiable = false;
-        },
-      );
-    },
-
-    handleConfigEdit() {
-      this.fetchServicesSpecsDetail();
     },
 
     async handleConfigChange(action, payload) {
@@ -632,6 +469,7 @@ export default {
         });
         this.specifications = specifications;
         this.showConfigInfo = true;
+        this.instanceDialogConfig.visiable = false;
       } catch (e) {
         this.$paasMessage({
           limit: 1,
@@ -640,6 +478,7 @@ export default {
         });
       } finally {
         this.saveLoading = false;
+        this.instanceDialogConfig.isLoading = false;
       }
     },
     handleCopy(payload) {
@@ -670,23 +509,74 @@ export default {
       this.$bkMessage({ theme: 'success', message: this.$t('复制成功'), delay: 2000, dismissable: false });
     },
 
-    toAppDeploy() {
-      const type = this.curAppInfo.application.type || '';
-      if (type === 'cloud_native') {
-        this.$router.push({
-          name: 'cloudAppDeployForProcess',
-          params: {
-            moduleId: this.curAppModule.name,
-            id: this.appCode,
-          },
+    // 编辑实例弹窗
+    handleEditInstance() {
+      if (!this.canEditConfig) return;
+      this.instanceDialogConfig.visiable = true;
+      this.fetchServicesSpecsDetail();
+    },
+
+    // 编辑实例确定
+    handleConfigInfoSave() {
+      this.instanceDialogConfig.isLoading = true;
+      this.$refs.configInfoEdit?.handleSave();
+    },
+
+    async getCredentialsEnabled() {
+      try {
+        const res = await this.$store.dispatch('service/getCredentialsEnabled', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
         });
+        // 第一版不考虑环境情况默认取第一项
+        this.credentialsDisabled = res.length ? res[0].credentials_enabled : false;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 写入环境变量启用/禁用
+    handleSwitcherChange() {
+      if (!this.credentialsDisabled) {
+        this.updateCredentialsEnabled();
         return;
       }
-      this.$router.push({
-        name: 'appDeploy',
-        params: { id: this.appCode },
-        query: { focus: 'stag' },
+      this.$bkInfo({
+        width: 460,
+        title: this.$t('确认不写入环境变量'),
+        subTitle: this.$t('选择不写入将无法通过环境变量获取实例凭证信息，请确保您了解此操作的影响。'),
+        confirmFn: () => {
+          this.updateCredentialsEnabled();
+        },
       });
+    },
+
+    // 启用/停用写入环境变量
+    async updateCredentialsEnabled() {
+      try {
+        const { credentialsDisabled } = this;
+        await this.$store.dispatch('service/updateCredentialsEnabled', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+          data: { credentials_enabled: !credentialsDisabled },
+        });
+        const successtTips = credentialsDisabled ? this.$t('已配置为不写入环境变量') : this.$t('已配置为写入环境变量');
+        this.$paasMessage({
+          theme: 'success',
+          message: successtTips,
+        });
+        this.getCredentialsEnabled();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };
@@ -866,6 +756,87 @@ export default {
             color: #63656e;
         }
     }
+
+    .default-instance-detail-cls {
+      display: flex;
+      .instance-container-cls {
+        margin: 16px 24px 0;
+        flex: 1;
+      }
+    }
+    .instance-tab-container {
+      box-shadow: 0 2px 4px 0 #1919290d;
+      border-radius: 2px;
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+        color: #313238;
+        line-height: 22px;
+      }
+      .instance-info {
+        position: relative;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 16px 0px;
+        padding: 10px 16px;
+        background: #F0F5FF;
+        border-radius: 2px;
+        .item {
+          white-space: nowrap;
+          display: flex;
+          align-items: flex-end;
+          line-height: 20px;
+          .value {
+            width: 66px;
+            overflow: hidden;
+            text-overflow:ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            color: #313238;
+          }
+        }
+        .edit-icon {
+          position: absolute;
+          right: 14px;
+          cursor: pointer;
+          &:hover {
+            color: #3A84FF;
+          }
+          &.disabled {
+            cursor: not-allowed;
+            color: #C4C6CC;
+          }
+        }
+      }
+      .env-variables-wrapper {
+        display: flex;
+        align-items: center;
+        margin-top: 16px;
+        font-size: 12px;
+        color: #63656E;
+        line-height: 20px;
+        .sub-title {
+          margin-right: 12px;
+        }
+        .tips {
+          margin-left: 16px;
+        }
+        i {
+          font-size: 14px;
+          color: #979BA5;
+        }
+      }
+    }
+    .instance-wrapper {
+      height: 100%;
+      .instance-detail {
+        height: 100%;
+      }
+    }
+    .instance-alert-cls {
+      margin-bottom: 16px;
+    }
 </style>
 <style lang="scss">
     #markdown h2 {
@@ -1036,16 +1007,41 @@ export default {
     }
     .config-width {
         width: 88%;
+        display: inline-block;
     }
     .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
         color: #999;
     }
     .instance-tab-container{
       background: #fff;
-      margin-top: 16px;
+      padding: 16px 24px;
     }
 
-    .instance-container{
-      margin: 0px 24px;
+    .instance-container-cls{
+      min-width: 0;
+    }
+
+    .instance-details-table-cls {
+      .bk-table-body .cell {
+        display: inline-table;
+      }
+      .bk-table-row.bk-table-row-last td {
+        border-bottom: none;
+      }
+      .credential-information {
+      }
+      .gray {
+        color: #c4c6cc;
+      }
+      .break-all {
+        color: #63656E;
+        font-size: 12px;
+        line-height: 20px;
+      }
+      .paas-loading-panel .text {
+        .sub-title {
+          font-size: 12px;
+        }
+      }
     }
 </style>

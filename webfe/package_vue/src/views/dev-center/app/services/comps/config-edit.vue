@@ -1,6 +1,6 @@
 <template lang="html">
   <section v-if="isShowPage">
-    <h3 class="title">
+    <h3 class="title" v-if="isSaveOperation">
       {{ $t('配置信息') }}
       <bk-button
         text
@@ -12,7 +12,7 @@
         {{ $t('使用指南') }}
       </bk-button>
     </h3>
-    <section class="content">
+    <section :class="['content', { 'not-title': !isSaveOperation }]">
       <section
         v-for="(item, index) in listDisplay"
         :key="index"
@@ -50,7 +50,7 @@
         {{ $t('模块部署前可在“增强服务/管理实例”页面修改配置信息，部署后则不能再修改配置信息') }}
       </p>
     </section>
-    <section class="action">
+    <section class="action" v-if="isSaveOperation">
       <template v-if="mode === ''">
         <bk-button
           :loading="enableLoadingUse"
@@ -134,6 +134,10 @@ export default {
       type: String,
       default: '',
     },
+    isSaveOperation: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
@@ -156,7 +160,6 @@ export default {
             $(this).attr('target', '_blank');
           });
       });
-      console.log('marked', marked, this.guide);
       return marked(this.guide, { sanitize: true });
     },
   },
@@ -289,7 +292,13 @@ export default {
     .content {
         padding: 25px 10px 10px 10px;
         border-bottom: 1px solid #dcdee5;
+        &.not-title {
+          padding: 0;
+          border-bottom: none;
+        }
         .item {
+            display: flex;
+            align-items: center;
             &.mb {
                 margin-bottom: 20px;
             }

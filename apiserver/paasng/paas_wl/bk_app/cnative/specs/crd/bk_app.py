@@ -126,14 +126,6 @@ class BkAppProcess(BaseModel):
     # TODO: `probes` is NOT supported by operator now.
     probes: Optional[ProbeSet] = None
 
-    # Deprecated: use resQuotaPlan instead in v1alpha2
-    cpu: Optional[str] = None
-    # Deprecated: use resQuotaPlan instead in v1alpha2
-    memory: Optional[str] = None
-    # Deprecated: use spec.build.image instead in v1alpha2
-    image: Optional[str] = None
-    # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
-    imagePullPolicy: Optional[str] = None
     # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
     proc_command: Optional[str] = Field(None)
 
@@ -262,7 +254,7 @@ class BkAppBuildConfig(BaseModel):
 
     # 兼容使用注解支持多镜像的场景（v1alpha1 遗留功能）
     image: Optional[str] = None
-    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
+    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT.value
     imageCredentialsName: Optional[str] = None
     dockerfile: Optional[str] = None
     buildTarget: Optional[str] = None
@@ -331,7 +323,7 @@ class BkAppSpec(BaseModel):
 class BkAppStatus(BaseModel):
     """BkAppStatus defines the observed state of BkApp"""
 
-    phase: str = MResPhaseType.AppPending
+    phase: str = MResPhaseType.AppPending.value
     observedGeneration: int = Field(default=0)
     conditions: List[MetaV1Condition] = Field(default_factory=list)
     lastUpdate: Optional[datetime.datetime]
@@ -352,8 +344,8 @@ class BkAppResource(BaseModel):
         """ApiVersion can not be used for "Literal" validation directly, so we define a
         custom validator instead.
         """
-        if v not in [ApiVersion.V1ALPHA2, ApiVersion.V1ALPHA1]:
-            raise ValueError(f"{v} is not valid, use {ApiVersion.V1ALPHA2} or {ApiVersion.V1ALPHA1}")
+        if v != ApiVersion.V1ALPHA2:
+            raise ValueError(f"{v} is not valid, use {ApiVersion.V1ALPHA2}")
         return v
 
     def to_deployable(self) -> Dict:

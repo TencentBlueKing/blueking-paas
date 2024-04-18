@@ -24,6 +24,7 @@ from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.market.protections import AppPublishPreparer
+from paasng.accessories.publish.market.status import publish_to_market_by_deployment
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.constants import SourceOrigin
@@ -97,10 +98,13 @@ def test_create_then_release(
     # 创建产品信息
     G(Product, application=application, type=1)
 
-    # 模拟部署结束, 触发信号
-    deployment = G(Deployment, app_environment=application.get_default_module().get_envs("prod"))
-    deployment.status = deployment_status
-    deployment.save()
+    # 模拟由部署触发发布流程
+    deployment = G(
+        Deployment,
+        app_environment=application.get_default_module().get_envs("prod"),
+        status=deployment_status,
+    )
+    publish_to_market_by_deployment(deployment)
 
     market_config.refresh_from_db()
     assert market_config.enabled == released_state

@@ -143,7 +143,6 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         # Get applications by given params
         applications = UserApplicationFilter(request.user).filter(
-            exclude_collaborated=params.get("exclude_collaborated"),
             include_inactive=params["include_inactive"],
             languages=params.get("language"),
             regions=params.get("region"),
@@ -152,6 +151,11 @@ class ApplicationViewSet(viewsets.ViewSet):
             type_=params.get("type"),
             order_by=[params.get("order_by")],
         )
+        # 查询我创建的应用时，也需要返回总的应用数量给前端
+        all_app_count = applications.count()
+        # 仅查询我创建的应用
+        if params.get("exclude_collaborated") is True:
+            applications = applications.filter(owner=request.user.pk)
 
         # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
@@ -184,9 +188,11 @@ class ApplicationViewSet(viewsets.ViewSet):
         ]
 
         # 统计普通应用、云原生应用、外链应用的数量
-        default_app_count = applications.filter(type__in=ApplicationType.normal_app_type()).count()
+        default_app_count = applications.filter(type=ApplicationType.DEFAULT).count()
         engineless_app_count = applications.filter(type=ApplicationType.ENGINELESS_APP).count()
         cloud_native_app_count = applications.filter(type=ApplicationType.CLOUD_NATIVE).count()
+        # 统计我创建的应用数量
+        my_app_count = applications.filter(owner=request.user.pk).count()
 
         serializer = slzs.ApplicationWithMarketSLZ(data, many=True)
         return paginator.get_paginated_response(
@@ -195,6 +201,8 @@ class ApplicationViewSet(viewsets.ViewSet):
                 "default_app_count": default_app_count,
                 "engineless_app_count": engineless_app_count,
                 "cloud_native_app_count": cloud_native_app_count,
+                "my_app_count": my_app_count,
+                "all_app_count": all_app_count,
             },
         )
 

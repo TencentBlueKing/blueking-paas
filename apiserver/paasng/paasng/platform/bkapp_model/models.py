@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import shlex
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
@@ -25,8 +25,10 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import HostAlias, SvcDiscEntryBkSaaS
 from paas_wl.utils.models import AuditedModel, TimestampedModel
-from paasng.platform.applications.models import Application
-from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
+from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.deployment import AutoscalingConfig
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
@@ -67,18 +69,6 @@ class ModuleProcessSpec(TimestampedModel):
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
-
-    # Deprecated: 仅用于 v1alpha1 的云原生应用
-    image = models.CharField(help_text="容器镜像, 仅用于 v1alpha1 的云原生应用", max_length=255, null=True)
-    image_pull_policy = models.CharField(
-        help_text="镜像拉取策略(仅用于 v1alpha1 的云原生应用)",
-        choices=ImagePullPolicy.get_choices(),
-        default=ImagePullPolicy.IF_NOT_PRESENT,
-        max_length=20,
-    )
-    image_credential_name = models.CharField(
-        help_text="镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)", max_length=64, null=True
-    )
 
     # Global settings
     target_replicas = models.IntegerField("期望副本数", default=1)
@@ -260,3 +250,17 @@ class DomainResolution(AuditedModel):
 
     nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
     host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")
+
+
+def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+    """Get SvcDiscConfig as env variables"""
+    try:
+        svc_disc = SvcDiscConfig.objects.get(application=env.application)
+    except SvcDiscConfig.DoesNotExist:
+        return {}
+
+    if not svc_disc.bk_saas:
+        return {}
+    return BkSaaSEnvVariableFactory(
+        [BkSaaSItem(bk_app_code=item.bkAppCode, module_name=item.moduleName) for item in svc_disc.bk_saas]
+    ).make()

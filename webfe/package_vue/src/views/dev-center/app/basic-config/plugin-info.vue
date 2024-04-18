@@ -295,9 +295,7 @@ export default {
     // 获取插件使用方列表
     async getPluginDistributors() {
       try {
-        const data = await this.$store.dispatch('plugin/getPluginDistributors', {
-          appCode: this.appCode,
-        });
+        const data = await this.$store.dispatch('plugin/getPluginDistributors');
         this.pluginDistributors = data || [];
       } catch (e) {
         this.$paasMessage({

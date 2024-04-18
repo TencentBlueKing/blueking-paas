@@ -15,8 +15,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arrow
 from django.conf import settings
@@ -26,7 +27,6 @@ from paas_wl.bk_app.cnative.specs.credentials import split_image
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.constants import SourceOrigin
@@ -55,6 +55,14 @@ def generate_image_repository(module: Module) -> str:
     return get_image_repository_template().format(app_code=application.code, module_name=module.name)
 
 
+def get_app_image_registry_info(module: Module) -> Tuple[str, bool]:
+    """Get the image registry info
+
+    :return: a Tuple[registry_full_addr, should_skip_tls_verify]
+    """
+    return settings.APP_DOCKER_REGISTRY_HOST, settings.APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY
+
+
 def generate_image_tag(module: Module, version: "VersionInfo") -> str:
     """Get the Image Tag for version"""
     cfg = BuildConfig.objects.get_or_create_by_module(module)
@@ -68,34 +76,26 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
         parts.append(arrow.now().format("YYMMDDHHmm"))
     if options.with_commit_id:
         parts.append(version.revision)
-    return "-".join(parts)
+    tag = "-".join(parts)
+    # 不符合 tag 正则的字符, 替换为 '-'
+    tag_regex = re.compile("[^a-zA-Z0-9_.-]")
+    tag = tag_regex.sub("-", tag)
+    # 去掉开头的 '-'
+    tag = re.sub("^-+", "", tag)
+    return tag
 
 
 def get_credential_refs(module: Module) -> List[ImageCredentialRef]:
     """get the valid user-defined image credential references"""
-
-    try:
-        build_config = BuildConfig.objects.get(module=module)
-    except BuildConfig.DoesNotExist:
-        pass
-    else:
-        if build_config.image_repository and build_config.image_credential_name:
-            return [
-                ImageCredentialRef(
-                    image=split_image(build_config.image_repository),
-                    credential_name=build_config.image_credential_name,
-                )
-            ]
-
-    # TODO v1alph1 版本迁移完成后, 删除下面的代码并重构当前函数
-    refs = []
-    for proc_spec in ModuleProcessSpec.objects.filter(module=module):
-        if proc_spec.image and proc_spec.image_credential_name:
-            refs.append(
-                ImageCredentialRef(image=split_image(proc_spec.image), credential_name=proc_spec.image_credential_name)
+    build_config = BuildConfig.objects.get(module=module)
+    if build_config.image_repository and build_config.image_credential_name:
+        return [
+            ImageCredentialRef(
+                image=split_image(build_config.image_repository),
+                credential_name=build_config.image_credential_name,
             )
-
-    return refs
+        ]
+    return []
 
 
 @dataclass

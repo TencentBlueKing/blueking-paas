@@ -540,7 +540,6 @@ class TestCreateCloudNativeApp:
         assert cfg.image_credential_name == image_credential_name
 
         process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
-        assert process_spec.image is None
         assert process_spec.command == ["bash", "/app/start_web.sh"]
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2

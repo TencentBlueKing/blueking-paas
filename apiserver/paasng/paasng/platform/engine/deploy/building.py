@@ -47,7 +47,11 @@ from paasng.platform.engine.configurations.building import (
     get_use_bk_ci_pipeline,
 )
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
+from paasng.platform.engine.configurations.image import (
+    RuntimeImageInfo,
+    generate_image_repository,
+    get_app_image_registry_info,
+)
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
@@ -309,7 +313,7 @@ class ApplicationBuilder(BaseBuilder):
         blocking current process.
         """
         env = self.deployment.app_environment
-        extra_envs = get_env_variables(env, deployment=self.deployment)
+        extra_envs = get_env_variables(env)
 
         # get slugbuilder and buildpacks from engine_app
         build_info = SlugbuilderInfo.from_engine_app(env.get_engine_app())
@@ -424,11 +428,14 @@ class DockerBuilder(BaseBuilder):
         app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
+
+        image_registry, skip_tls_verify = get_app_image_registry_info(env.module)
         # 注入构建环境所需环境变量
         extra_envs = {
             "DOCKERFILE_PATH": get_dockerfile_path(env.module),
             "BUILD_ARG": get_build_args(env.module),
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
+            "SKIP_TLS_VERIFY_REGISTRIES": image_registry if skip_tls_verify else "",
         }
 
         # Create the Build object and start a background build task

@@ -282,7 +282,7 @@ class MarketConfigSLZ(serializers.ModelSerializer):
         required=False,
         help_text="访问地址类型\n" + " ".join(map(str, ProductSourceUrlType.get_choices())),
     )
-    prefer_https = serializers.NullBooleanField(required=False, help_text="是否偏好 HTTPS")
+    prefer_https = serializers.BooleanField(required=False, help_text="是否偏好 HTTPS", allow_null=True)
 
     source_module_id = serializers.UUIDField(allow_null=True, required=False, help_text="绑定模块id", read_only=True)
     source_module_name = serializers.CharField(

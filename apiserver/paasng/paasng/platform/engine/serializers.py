@@ -153,7 +153,7 @@ class DeploymentSLZ(serializers.ModelSerializer):
 
 
 class DeploymentErrorTipsSLZ(serializers.Serializer):
-    matched_solutions_found = serializers.NullBooleanField(help_text="是否有匹配的 tips")
+    matched_solutions_found = serializers.BooleanField(help_text="是否有匹配的 tips", allow_null=True)
     possible_reason = serializers.CharField(help_text="可能导致部署错误的原因")
     helpers = serializers.DictField()
 

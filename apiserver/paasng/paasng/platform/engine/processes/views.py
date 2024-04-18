@@ -94,7 +94,7 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     )
     def open(self, request, code, module_name, environment, process_type, process_instance_name):
         slz = slzs.WebConsoleOpenSLZ(data=request.query_params)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
 
         # 必须调用 get_application() 方法才能触发权限校验
         _ = self.get_application()

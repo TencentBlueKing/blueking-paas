@@ -106,8 +106,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 // validate that there are no running hooks currently, return error if found any running hooks.
 func (r *DeployActionReconciler) validateNoRunningHooks(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
 	// Check pre-release hook
-	hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
-	if hook != nil && hook.Progressing() {
+	if hookres.IsPreReleaseProgressing(bkapp) {
 		_, err := hooks.CheckAndUpdatePreReleaseHookStatus(
 			ctx,
 			r.Client,

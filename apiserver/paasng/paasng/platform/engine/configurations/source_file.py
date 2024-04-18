@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Manage configurations related with source files"""
 import logging
 from pathlib import Path
@@ -92,7 +93,7 @@ class MetaDataFileReader:
             raise exceptions.GetProcfileError(error_msg)
 
         try:
-            procfile = yaml.load(content)
+            procfile = yaml.full_load(content)
         except Exception as e:
             raise exceptions.GetProcfileError('file "Procfile"\'s format is not YAML') from e
 
@@ -133,7 +134,7 @@ class MetaDataFileReader:
             raise exceptions.GetAppYamlError(error_msg)
 
         try:
-            app_description = yaml.load(content)
+            app_description = yaml.full_load(content)
         except Exception as e:
             raise exceptions.GetAppYamlError('file "app.yaml"\'s format is not YAML') from e
         if not isinstance(app_description, dict):

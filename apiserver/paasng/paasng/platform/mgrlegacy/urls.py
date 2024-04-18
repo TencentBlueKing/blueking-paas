@@ -72,4 +72,29 @@ urlpatterns = [
         views.ApplicationMigrationInfoAPIView.as_view({"get": "retrieve"}),
         name="api.applications.migration.info",
     ),
+    # 普通应用迁移到云原生应用
+    url(
+        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/migrate/$",
+        views.CNativeMigrationViewSet.as_view({"post": "migrate"}),
+    ),
+    url(
+        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/rollback/$",
+        views.CNativeMigrationViewSet.as_view({"post": "rollback"}),
+    ),
+    url(
+        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/processes/$",
+        views.CNativeMigrationViewSet.as_view({"get": "list_processes"}),
+    ),
+    url(
+        r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/processes/latest/$",
+        views.CNativeMigrationViewSet.as_view({"get": "get_latest_process"}),
+    ),
+    url(
+        r"^api/mgrlegacy/cloud-native/processes/(?P<process_id>\d+)/$",
+        views.CNativeMigrationViewSet.as_view({"get": "get_process_by_id"}),
+    ),
+    url(
+        r"^api/mgrlegacy/cloud-native/processes/(?P<process_id>\d+)/confirm/$",
+        views.CNativeMigrationViewSet.as_view({"put": "confirm"}),
+    ),
 ]

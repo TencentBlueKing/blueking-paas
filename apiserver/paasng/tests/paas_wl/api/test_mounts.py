@@ -388,6 +388,7 @@ class TestMountSourceViewSet:
             "environment_name": "prod",
             "source_type": "PersistentStorage",
             "persistent_storage_source": {"storage_size": "2Gi"},
+            "display_name": "display_name_test",
         }
         with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=False):
             response = api_client.post(url, request_body)
@@ -402,6 +403,7 @@ class TestMountSourceViewSet:
             assert response.status_code == 201
             assert response.data["environment_name"] == "prod"
             assert response.data["storage_size"] == "2Gi"
+            assert response.data["display_name"] == "display_name_test"
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_create_with_invalid_storage_size(self, api_client, bk_app):
@@ -416,6 +418,18 @@ class TestMountSourceViewSet:
             ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, True, bk_app)
             response = api_client.post(url, request_body)
             assert response.status_code == 400
+
+    @pytest.mark.usefixtures("_mount_sources")
+    def test_update(self, api_client, bk_app):
+        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/"
+        request_body = {
+            "source_name": "pvc",
+            "source_type": "PersistentStorage",
+            "display_name": "display_name_test",
+        }
+        response = api_client.put(url, request_body)
+        assert response.status_code == 200
+        assert response.data["display_name"] == "display_name_test"
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_destroy(self, api_client, bk_app, bk_prod_wl_app, bk_stag_wl_app):

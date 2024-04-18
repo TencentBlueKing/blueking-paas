@@ -155,9 +155,6 @@ class MainInfoMigration(BaseMigration):
         # 已验证 Django1.8 开发框架代码能在云原生应用运行时下正常部署
         initializer.bind_default_runtime()
 
-        # 初始化应用模型
-        initializer.initialize_app_model_resource()
-
     def migrate(self):
         # 第三方应用（非引擎应用）仅创建默认模块，不创建 engine 相关信息
         if self.context.legacy_app_proxy.is_third_app():

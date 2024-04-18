@@ -98,6 +98,7 @@ class ApplicationWithLogoSLZ(serializers.Serializer):
     name = serializers.CharField()
     code = serializers.CharField()
     language = serializers.CharField()
+    type = serializers.CharField(help_text="应用类型")
     logo_url = serializers.CharField(help_text="Logo 图片", read_only=True, source="get_logo_url")
 
 
@@ -234,3 +235,12 @@ class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
 
     provision_infos = ProvisionInfoSLZ(help_text="共享服务实例分配信息")
     specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())
+
+
+class ServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    environment = serializers.CharField(source="engine_app.env.environment")
+    credentials_enabled = serializers.BooleanField(help_text="是否使用凭证")
+
+
+class UpdateServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    credentials_enabled = serializers.BooleanField(help_text="是否使用凭证")

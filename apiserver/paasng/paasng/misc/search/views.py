@@ -43,9 +43,9 @@ class MixDocumentSearch(ViewSet):
                 },
             ]
         """
-        search_word = DocumentSearchWordSLZ(data=request.GET)
-        search_word.is_valid(True)
-        keyword = search_word.validated_data["keyword"]
+        slz = DocumentSearchWordSLZ(data=request.GET)
+        slz.is_valid(raise_exception=True)
+        keyword = slz.validated_data["keyword"]
         return Response(MixSearcher().search(keyword))
 
 

@@ -144,27 +144,17 @@
               </div>
             </div>
             <!-- 筛选 -->
-            <section class="app-filter-module">
+            <section :class="['app-filter-module', { 'en': isEnglishEnv }]">
               <bk-popover
                 theme="light navigation-message"
-                ext-cls="app-filter-popover-cls"
+                :ext-cls="`app-filter-popover-cls ${isEnglishEnv ? 'en' : ''}`"
                 placement="bottom"
                 :arrow="false"
-                offset="-14, 2"
-                :tippy-options="{ 'hideOnClick': false }"
+                offset="1, 2"
+                trigger="click"
               >
                 <div class="filter-view">
                   <div class="text">{{ $t(curFilterValue) }}</div>
-                  <div
-                    :class="[
-                      'filter-right-icon',
-                      { active: sortValue.indexOf('-') !== -1 }
-                    ]"
-                    v-bk-tooltips="{ content: filterTips }"
-                    @click.stop="handleTtogleOrder"
-                  >
-                    <i :class="['paasng-icon', sortValue.indexOf('-') !== -1 ? 'paasng-shengxu' : 'paasng-jiangxu']" />
-                  </div>
                 </div>
                 <template #content>
                   <ul class="filter-navigation-list">
@@ -179,8 +169,18 @@
                   </ul>
                 </template>
               </bk-popover>
+              <div
+                :class="[
+                  'filter-right-icon',
+                  { active: sortValue.indexOf('-') !== -1 }
+                ]"
+                v-bk-tooltips="{ content: filterTips }"
+                @click.stop="handleTtogleOrder"
+              >
+                <i :class="['paasng-icon', sortValue.indexOf('-') !== -1 ? 'paasng-shengxu' : 'paasng-jiangxu']" />
+              </div>
             </section>
-            <div class="paas-search">
+            <div :class="['app-list-search', { 'en': isEnglishEnv }]">
               <bk-input
                 v-model="filterKey"
                 :clearable="true"
@@ -265,7 +265,11 @@
                   </span>
                 </template>
               </bk-table-column>
-              <bk-table-column prop="language" :label="$t('语言')"></bk-table-column>
+              <bk-table-column prop="language" :label="$t('语言')">
+                <template slot-scope="{ row }">
+                  {{ row.language || '--' }}
+                </template>
+              </bk-table-column>
               <bk-table-column prop="created" :label="$t('创建时间')"></bk-table-column>
               <bk-table-column :label="$t('操作')">
                 <template slot-scope="{ row }">
@@ -384,7 +388,7 @@
             </span>
           </template>
         </bk-table-column>
-        <bk-table-column label="" :width="localLanguage === 'en' ? 440 : 260">
+        <bk-table-column label="" :width="isEnglishEnv ? 440 : 260">
           <template slot-scope="{ row }">
             <div
               v-if="!Object.keys(row.application.deploy_info).length"
@@ -627,7 +631,7 @@ export default {
       isFilterConditionPresent: false,
       filterRegion: [],
       appExtraData: {},
-      tableHeaderFilterValue: 'all',
+      tableHeaderFilterValue: 'normal',
     };
   },
   computed: {
@@ -645,6 +649,9 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    isEnglishEnv() {
+      return this.localLanguage === 'en';
     },
     isShowNotice() {
       return this.$store.state.isShowNotice;
@@ -741,7 +748,7 @@ export default {
 
     addModule(appItem) {
       this.$router.push({
-        name: 'appCreateModule',
+        name: appItem.application.type === 'cloud_native' ? 'appCreateCloudModule' : 'appCreateModule',
         params: {
           id: appItem.application.code,
         },
@@ -1013,6 +1020,25 @@ export default {
 <style lang="scss" scoped>
     $customize-disabled-color: #C4C6CC;
 
+    .app-list-search {
+      width: 320px;
+    }
+
+    @media (max-width: 1350px) {
+      .app-list-search {
+        width: 300px;
+      }
+      .app-list-search.en {
+        width: 260px;
+      }
+    }
+
+    @media (max-width: 1300px) {
+      .app-list-search.en {
+        width: 220px;
+      }
+    }
+
     .bk-apps-wrapper {
         width: calc(100% - 48px);
     }
@@ -1177,10 +1203,6 @@ export default {
     .paas-legacy-app {
         position: absolute;
         right: 482px;
-    }
-
-    .paas-search {
-        width: 320px;
     }
 
     .choose-box {
@@ -1461,48 +1483,61 @@ export default {
 
 <style lang="scss">
 section.app-filter-module {
+  display: flex;
   margin: 3px 16px 0;
   width: 117px;
   height: 32px;
   background: #EAEBF0;
   border-radius: 2px;
+  &.en {
+    width: 135px;
+  }
   .bk-tooltip {
+    flex: 1;
+    white-space: nowrap;
     display: block;
+    .tippy-active {
+      background: #FFFFFF;
+      border: 1px solid #3A84FF;
+      border-radius: 2px 0 0 2px;
+
+    }
   }
 
-  .filter-view {
-    width: 100%;
-    display: flex;
-  }
   .text {
     position: relative;
-    padding-left: 8px;
+    padding: 0 8px;
     font-size: 12px;
     color: #63656E;
     flex: 1;
     line-height: 32px;
     cursor: pointer;
-    &::after {
-      content: "";
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      height: 14px;
-      width: 1px;
-      background-color: #DCDEE5;
-    }
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
     &:hover {
       background: #DCDEE5;
       border-radius: 2px 0 0 2px;
     }
   }
   .filter-right-icon {
+    position: relative;
     cursor: pointer;
     width: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 14px;
+      width: 1px;
+      background-color: #DCDEE5;
+    }
 
     i {
       color: #979BA5;
@@ -1530,6 +1565,9 @@ section.app-filter-module {
   border-radius: 2px;
   height: 104px;
   padding: 4px 0;
+  &.en {
+    width: 105px;
+  }
   .tippy-tooltip.light-theme {
     height: 100%;
     transform: translateY(0px) !important;

@@ -13,6 +13,7 @@
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
           :data="tableList"
           size="small"
+          :outer-border="false"
           :pagination="pagination"
           @page-change="pageChange"
           @page-limit-change="limitChange"
@@ -25,7 +26,7 @@
           <bk-table-column :label="$t('服务名称')" width="300">
             <template slot-scope="{row, $index}">
               <div class="flex-row align-items-center">
-                <img class="row-img mr10" :src="row.logo" alt="">
+                <img class="row-img" :src="row.logo" alt="">
                 <p
                   class="row-title-text"
                   :class="row.isStartUp ? '' : 'text-disabled'" @click="handleToPage(row)">
@@ -744,8 +745,11 @@ export default {
       height: 22px;
       border-radius: 50%;
     }
-
+    .ps-switcher-wrapper {
+      margin-left: 0;
+    }
     .row-title-text{
+      margin-left: 8px;
       overflow:hidden; //超出的文本隐藏
       text-overflow:ellipsis; //溢出用省略号显示
       white-space:nowrap; //溢出不换行

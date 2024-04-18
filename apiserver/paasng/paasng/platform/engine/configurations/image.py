@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -75,7 +76,13 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
         parts.append(arrow.now().format("YYMMDDHHmm"))
     if options.with_commit_id:
         parts.append(version.revision)
-    return "-".join(parts)
+    tag = "-".join(parts)
+    # 不符合 tag 正则的字符, 替换为 '-'
+    tag_regex = re.compile("[^a-zA-Z0-9_.-]")
+    tag = tag_regex.sub("-", tag)
+    # 去掉开头的 '-'
+    tag = re.sub("^-+", "", tag)
+    return tag
 
 
 def get_credential_refs(module: Module) -> List[ImageCredentialRef]:

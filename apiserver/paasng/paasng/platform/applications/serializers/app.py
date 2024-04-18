@@ -28,7 +28,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.core.region.states import get_region
 from paasng.platform.applications.constants import AppLanguage, ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
-from paasng.platform.applications.models import Application, UserMarkedApplication
+from paasng.platform.applications.models import Application, ApplicationConfiguration, UserMarkedApplication
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.modules.constants import SourceOrigin
@@ -362,6 +362,57 @@ class ApplicationLogoSLZ(serializers.ModelSerializer):
         # Send signal to trigger extra processes for logo
         application_logo_updated.send(sender=instance, application=instance)
         return result
+
+
+class ApplicationConfigurationSLZ(serializers.ModelSerializer):
+    # 查询应用配置时，直接根据当前语言展示 helper_text，不需要按语言分开展示
+    helper_text = TranslatedCharField()
+    helper_link = serializers.CharField(help_text="助手的链接", allow_blank=True)
+
+    class Meta:
+        model = ApplicationConfiguration
+        fields = ["helper_text", "helper_link"]
+
+
+@i18n
+class ApplicationConfigurationCreateSLZ(serializers.ModelSerializer):
+    """创建应用配置信息，需要国际化的字段所有语言都进行初始化"""
+
+    helper_text = I18NExtend(serializers.CharField(help_text="助手名称"))
+    helper_link = serializers.CharField(help_text="助手的链接", allow_blank=True)
+
+    class Meta:
+        model = ApplicationConfiguration
+        exclude = ("application", "region", "created", "updated", "owner")
+
+    def validate(self, attrs):
+        super().validate(attrs)
+        if ApplicationConfiguration.objects.filter(application=self.context["application"]).exists():
+            raise ValidationError(_("应用已经注册配置信息"))
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data["application"] = self.context["application"]
+        return super(ApplicationConfigurationCreateSLZ, self).create(validated_data)
+
+
+@i18n
+class ApplicationConfigurationUpdateSLZ(serializers.Serializer):
+    """更新应用配置信息，按当前的语言修改需要国际化的字段"""
+
+    helper_text = I18NExtend(serializers.CharField(help_text="助手名称"))
+    helper_link = serializers.CharField(help_text="助手的链接", allow_blank=True)
+
+    def update(self, instance, validated_data):
+        # 目前前端没有设置多语言的修改入口，通过手动切换语言来修改对应语言的配置
+        if get_language() == "zh-cn":
+            instance.helper_text_zh_cn = validated_data["helper_text_zh_cn"]
+        elif get_language() == "en":
+            instance.helper_text_en = validated_data["helper_text_en"]
+        instance.helper_link = validated_data["helper_link"]
+        instance.save()
+        return instance
 
 
 class ApplicationMembersInfoSLZ(serializers.ModelSerializer):

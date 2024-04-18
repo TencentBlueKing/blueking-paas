@@ -101,6 +101,14 @@ urlpatterns = [
     ),
 ]
 
+# 应用配置
+urlpatterns += [
+    url(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/configuration/$",
+        views.ApplicationConfigurationViewSet.as_view({"get": "retrieve", "post": "create", "put": "update"}),
+        name="api.applications.configuration",
+    ),
+]
 
 # 标记
 urlpatterns += [

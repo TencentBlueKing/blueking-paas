@@ -17,6 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from .app import (
+    ApplicationConfigurationCreateSLZ,
+    ApplicationConfigurationSLZ,
+    ApplicationConfigurationUpdateSLZ,
     ApplicationFeatureFlagSLZ,
     ApplicationGroupFieldSLZ,
     ApplicationListDetailedSLZ,
@@ -51,6 +54,9 @@ from .member_role import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ, Rol
 from .validators import AppIDUniqueValidator
 
 __all__ = [
+    "ApplicationConfigurationCreateSLZ",
+    "ApplicationConfigurationSLZ",
+    "ApplicationConfigurationUpdateSLZ",
     "ApplicationFeatureFlagSLZ",
     "ApplicationGroupFieldSLZ",
     "ApplicationListDetailedSLZ",

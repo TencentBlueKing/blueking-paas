@@ -28,6 +28,7 @@ from django.core.exceptions import ObjectDoesNotExist, SuspiciousOperation
 from django.db import models
 from django.db.models import Q, QuerySet
 from pilkit.processors import ResizeToFill
+from translated_fields import TranslatedFieldWithFallback
 
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.region.models import get_region
@@ -559,3 +560,22 @@ class UserMarkedApplication(OwnerTimestampedModel):
     @property
     def code(self):
         return self.application.code
+
+
+class ApplicationConfiguration(OwnerTimestampedModel):
+    """应用网页上展示的平台名称、LOGO 等信息希望能在开发者中心统一配置后实时生效"""
+
+    application = models.OneToOneField(
+        Application, on_delete=models.CASCADE, verbose_name="蓝鲸应用", related_name="app_config", db_constraint=False
+    )
+    # 应用允许自定义助手的名称和联系地址，这些信息可用于页面出错时向用户展示的联系方式
+    helper_text = TranslatedFieldWithFallback(
+        models.CharField(
+            "助手展示信息",
+            max_length=64,
+            help_text="形如：联系 xx 助手",
+        )
+    )
+    helper_link = models.TextField(
+        verbose_name="助手的链接信息", blank=True, help_text="形如：wxwork://message?uin=12345"
+    )

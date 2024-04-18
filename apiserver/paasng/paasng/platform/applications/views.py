@@ -83,6 +83,7 @@ from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIE
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import (
     Application,
+    ApplicationConfiguration,
     ApplicationEnvironment,
     UserApplicationFilter,
     UserMarkedApplication,
@@ -1284,6 +1285,40 @@ class ApplicationLogoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """修改应用 Logo"""
         application = self.get_application()
         serializer = slzs.ApplicationLogoSLZ(data=request.data, instance=application)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class ApplicationConfigurationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    serializer_class = slzs.ApplicationConfigurationSLZ
+
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    def retrieve(self, request, code):
+        """查看应用配置相关信息"""
+        application = self.get_application()
+        instance = get_object_or_404(ApplicationConfiguration, application=application)
+        serializer = slzs.ApplicationConfigurationSLZ(instance=instance)
+        return Response(serializer.data)
+
+    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy="merge")
+    @swagger_auto_schema(request_body=slzs.ApplicationConfigurationCreateSLZ)
+    def create(self, request, code):
+        """创建应用配置信息"""
+        application = self.get_application()
+        serializer = slzs.ApplicationConfigurationCreateSLZ(data=request.data, context={"application": application})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy="merge")
+    @swagger_auto_schema(request_body=slzs.ApplicationConfigurationUpdateSLZ)
+    def update(self, request, code):
+        """修改应用配置信息"""
+        application = self.get_application()
+        instance = get_object_or_404(ApplicationConfiguration, application=application)
+
+        serializer = slzs.ApplicationConfigurationUpdateSLZ(data=request.data, instance=instance)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

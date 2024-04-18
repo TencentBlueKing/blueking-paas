@@ -63,17 +63,18 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
     if options.prefix:
         parts.append(options.prefix)
     if options.with_version:
-        # 不符合 tag 正则的字符, 替换为 '-'
-        tag_regex = re.compile("[^a-zA-Z0-9_.-]")
-        version_name = tag_regex.sub("-", version.version_name)
-        # 去掉开头的 '-'
-        version_name = re.sub("^-+", "", version_name)
-        parts.append(version_name)
+        parts.append(version.version_name)
     if options.with_build_time:
         parts.append(arrow.now().format("YYMMDDHHmm"))
     if options.with_commit_id:
         parts.append(version.revision)
-    return "-".join(parts)
+    tag = "-".join(parts)
+    # 不符合 tag 正则的字符, 替换为 '-'
+    tag_regex = re.compile("[^a-zA-Z0-9_.-]")
+    tag = tag_regex.sub("-", tag)
+    # 去掉开头的 '-'
+    tag = re.sub("^-+", "", tag)
+    return tag
 
 
 def get_credential_refs(module: Module) -> List[ImageCredentialRef]:

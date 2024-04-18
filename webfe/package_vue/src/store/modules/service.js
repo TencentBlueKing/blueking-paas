@@ -109,16 +109,16 @@ export default {
     /**
      * 获取增强服务环境变量信息
      */
-    getCredentialsDisabled({}, { appCode, moduleId, service }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/credentials_disabled/`;
+    getCredentialsEnabled({}, { appCode, moduleId, service }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/credentials_enabled/`;
       return http.get(url, config);
     },
 
     /**
      * 更新增强服务环境变量信息
      */
-    updateCredentialsDisabled({}, { appCode, moduleId, service, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/credentials_disabled/`;
+    updateCredentialsEnabled({}, { appCode, moduleId, service, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/credentials_enabled/`;
       return http.put(url, data, config);
     },
   },

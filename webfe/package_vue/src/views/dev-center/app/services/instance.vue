@@ -304,7 +304,7 @@ export default {
     this.init();
     this.fetchEnableSpecs();
     this.fetchServicesShareDetail();
-    this.getCredentialsDisabled();
+    this.getCredentialsEnabled();
     bus.$emit('show-usage-guide');
   },
   methods: {
@@ -522,16 +522,15 @@ export default {
       this.$refs.configInfoEdit?.handleSave();
     },
 
-    async getCredentialsDisabled() {
+    async getCredentialsEnabled() {
       try {
-        const res = await this.$store.dispatch('service/getCredentialsDisabled', {
+        const res = await this.$store.dispatch('service/getCredentialsEnabled', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           service: this.service,
         });
-        // 第一版不考虑环境情况默认取第一项, true禁用、false启用
-        const disabled = res.length ? res[0].credentials_disabled : true;
-        this.credentialsDisabled = !disabled;
+        // 第一版不考虑环境情况默认取第一项
+        this.credentialsDisabled = res.length ? res[0].credentials_enabled : false;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -542,10 +541,8 @@ export default {
 
     // 写入环境变量启用/禁用
     handleSwitcherChange() {
-      // false启用 、 true 当前为禁用状态
-      console.log('this.credentialsDisabled', this.credentialsDisabled);
       if (!this.credentialsDisabled) {
-        this.updateCredentialsDisabled();
+        this.updateCredentialsEnabled();
         return;
       }
       this.$bkInfo({
@@ -553,27 +550,27 @@ export default {
         title: this.$t('确认不写入环境变量'),
         subTitle: this.$t('选择不写入将无法通过环境变量获取实例凭证信息，请确保您了解此操作的影响。'),
         confirmFn: () => {
-          this.updateCredentialsDisabled();
+          this.updateCredentialsEnabled();
         },
       });
     },
 
     // 启用/停用写入环境变量
-    async updateCredentialsDisabled() {
+    async updateCredentialsEnabled() {
       try {
         const { credentialsDisabled } = this;
-        await this.$store.dispatch('service/updateCredentialsDisabled', {
+        await this.$store.dispatch('service/updateCredentialsEnabled', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           service: this.service,
-          data: { credentials_disabled: credentialsDisabled },
+          data: { credentials_enabled: !credentialsDisabled },
         });
         const successtTips = credentialsDisabled ? this.$t('已配置为不写入环境变量') : this.$t('已配置为写入环境变量');
         this.$paasMessage({
           theme: 'success',
           message: successtTips,
         });
-        this.getCredentialsDisabled();
+        this.getCredentialsEnabled();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

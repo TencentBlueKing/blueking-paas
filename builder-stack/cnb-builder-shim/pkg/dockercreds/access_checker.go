@@ -18,9 +18,12 @@
 package dockercreds
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -28,6 +31,32 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/pkg/errors"
 )
+
+// DefaultTransport is a copy of remote.DefaultTransport
+var DefaultTransport = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+	MaxIdleConnsPerHost:   50,
+}
+
+// InsecureSkipVerify let DefaultTransport to skip verify tls certs
+func InsecureSkipVerify() {
+	if DefaultTransport.TLSClientConfig == nil {
+		DefaultTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	} else {
+		DefaultTransport.TLSClientConfig.InsecureSkipVerify = true
+	}
+}
 
 // VerifyWriteAccess verifies write access to a container image with the given reference(tag or digest hash).
 // return an error if the keychain does not have write access to the image.
@@ -37,7 +66,7 @@ func VerifyWriteAccess(keychain authn.Keychain, reference string) error {
 		return errors.Wrapf(err, "Error parsing reference %q", reference)
 	}
 
-	if err = remote.CheckPushPermission(ref, keychain, http.DefaultTransport); err != nil {
+	if err = remote.CheckPushPermission(ref, keychain, DefaultTransport); err != nil {
 		return diagnoseIfTransportError(err)
 	}
 
@@ -52,7 +81,7 @@ func VerifyReadAccess(keychain authn.Keychain, reference string) error {
 		return errors.Wrapf(err, "Error parsing reference %q", reference)
 	}
 
-	if _, err = remote.Get(ref, remote.WithAuthFromKeychain(keychain), remote.WithTransport(http.DefaultTransport)); err != nil {
+	if _, err = remote.Get(ref, remote.WithAuthFromKeychain(keychain), remote.WithTransport(DefaultTransport)); err != nil {
 		return diagnoseIfTransportError(err)
 	}
 

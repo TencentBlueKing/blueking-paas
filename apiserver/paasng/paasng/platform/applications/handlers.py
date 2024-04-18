@@ -69,7 +69,7 @@ def initialize_application_members(sender, application: Application, **kwargs):
 
 @receiver(post_create_application)
 def turn_on_bk_log_feature(sender, application: Application, **kwargs):
-    """将符合灰度条件的应用查询日志的链路切换至应用平台"""
+    """将符合灰度条件的应用采集/查询日志的链路切换至应用平台"""
     if not AppSpecs(application).engine_enabled:
         # 如果应用未开启引擎功能, 则直接返回
         return
@@ -85,6 +85,7 @@ def turn_on_bk_log_feature(sender, application: Application, **kwargs):
 
     logger.debug("turn on ENABLE_BK_LOG_COLLECTOR flag for application %s", application)
     application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
+    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_CLIENT, True)
 
 
 @receiver(post_create_application)

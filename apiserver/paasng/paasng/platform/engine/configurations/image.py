@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arrow
 from django.conf import settings
@@ -53,6 +53,14 @@ def generate_image_repository(module: Module) -> str:
     """Get the image repository for storing container image"""
     application = module.application
     return get_image_repository_template().format(app_code=application.code, module_name=module.name)
+
+
+def get_app_image_registry_info(module: Module) -> Tuple[str, bool]:
+    """Get the image registry info
+
+    :return: a Tuple[registry_full_addr, should_skip_tls_verify]
+    """
+    return settings.APP_DOCKER_REGISTRY_HOST, settings.APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY
 
 
 def generate_image_tag(module: Module, version: "VersionInfo") -> str:

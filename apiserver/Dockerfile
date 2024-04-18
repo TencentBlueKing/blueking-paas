@@ -25,7 +25,7 @@ RUN EDITION=${EDITION} npm run build
 FROM python:3.8.13-slim-buster
 USER root
 
-RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev vim 
+RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim
 
 # Add buster-backports to sources.list
 RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
@@ -41,7 +41,6 @@ ENV LC_ALL=C.UTF-8 \
 
 RUN pip install --upgrade pip
 RUN pip install poetry==1.3.2
-
 
 # Change security level of openssl to lower value in order to avoid "CA_MD_TOO_WEAK" error
 # See https://stackoverflow.com/questions/52218876/how-to-fix-ssl-issue-ssl-ctx-use-certificate-ca-md-too-weak-on-python-zeep?rq=1

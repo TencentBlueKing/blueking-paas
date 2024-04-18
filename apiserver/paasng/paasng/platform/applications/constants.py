@@ -95,7 +95,9 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
 
     APPLICATION_DESCRIPTION = FeatureFlagField(label="部署时使用应用描述文件", default=True)
     MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=True)
-    ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案查询日志"), default=False)
+    ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
+    ENABLE_BK_LOG_CLIENT = FeatureFlagField(label=_("使用蓝鲸日志平台接口查询日志"), default=False)
+
     TOGGLE_EGRESS_BINDING = FeatureFlagField(label=_("开启出口 IP 管理"), default=False)
 
     # 持久存储挂载卷相关的 feature flag

@@ -103,6 +103,12 @@ urlpatterns = [
         views.ModuleServicesViewSet.as_view({"post": "bind"}),
         name="api.services.service_application_attachments.bind",
     ),
+    # Manager engine_app attachment
+    url(
+        make_app_pattern(f"/services/{SERVICE_UUID}/credentials_enabled/$", include_envs=False),
+        views.ServiceEngineAppAttachmentViewSet.as_view({"get": "list", "put": "update"}),
+        name="api.services.credentials_enabled",
+    ),
     # Service sharing APIs
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/shareable_modules/$", include_envs=False),

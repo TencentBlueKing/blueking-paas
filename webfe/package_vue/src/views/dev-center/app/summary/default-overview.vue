@@ -173,12 +173,10 @@
               :class="{ 'resource-usage': isCloudNativeApp }"
             >
               <div
-                v-if="isProcessDataReady && !isChartLoading"
                 class="search-chart-wrap"
               >
                 <!-- 进程列表 -->
                 <bk-select
-                  v-if="curEnvProcesses.length"
                   v-model="curProcessName"
                   style="width: 116px; font-weight: normal;"
                   class="fr collapse-select mb10 mr10"
@@ -195,7 +193,6 @@
                 </bk-select>
                 <!-- 环境列表，该环境没有模块信息，不需要显示 -->
                 <bk-select
-                  v-if="curProcessEnvList.length"
                   v-model="curEnvName"
                   style="width: 116px; font-weight: normal;"
                   class="fr collapse-select mb10 mr10"
@@ -210,6 +207,7 @@
                     :name="option.label"
                   />
                 </bk-select>
+                <!-- 模块列表 -->
                 <bk-select
                   v-model="curModuleName"
                   style="width: 116px; font-weight: normal;"
@@ -548,6 +546,16 @@ export default {
       if (!curEnvData.length) {
         this.curEnvName = this.curProcessEnvList.length !== 0 ? this.curProcessEnvList[0].name : 'stag';
       }
+    },
+    curAppModuleList: {
+      handler(modules) {
+        const isProcessListPresent = modules.find(module => module.name === this.curModuleName);
+        // 当前模块没有运行中的进程处理
+        if (!isProcessListPresent) {
+          this.curModuleName = modules[0].name;
+        }
+      },
+      deep: true,
     },
   },
   created() {

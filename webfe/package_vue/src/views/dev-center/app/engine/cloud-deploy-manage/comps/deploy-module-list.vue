@@ -161,9 +161,8 @@
               v-if="!deploymentInfo.isExpand" />
             <div
               class="operation-wrapper"
-              @click="handleChangePanel(deploymentInfo)"
               v-if="deploymentInfo.processes.length || deploymentInfo.proc_specs.length">
-              <div class="btn">
+              <div class="btn" @click="handleChangePanel(deploymentInfo)">
                 {{ deploymentInfo.isExpand ? $t('收起') : $t('展开详情') }}
                 <i class="paasng-icon paasng-ps-arrow-down" v-if="!deploymentInfo.isExpand"></i>
                 <i class="paasng-icon paasng-ps-arrow-up" v-else></i>
@@ -661,10 +660,13 @@ export default {
     justify-content: center;
     align-items: center;
     height: 40px;
-    cursor: pointer;
     .btn {
+      height: 100%;
+      line-height: 40px;
+      padding: 0 24px;
       font-size: 12px;
       color: #3A84FF;
+      cursor: pointer;
     }
   }
   .not-deployed {

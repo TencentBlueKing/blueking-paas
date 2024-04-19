@@ -301,18 +301,18 @@ class ApplicationViewSet(viewsets.ViewSet):
             if protection_status.activated:
                 raise error_codes.CANNOT_DELETE_APP.f(protection_status.reason)
 
-        # 审计记录在事务外创建, 避免由于数据库回滚而丢失
-        pre_delete_application.send(sender=Application, application=application, operator=self.request.user.pk)
-        with transaction.atomic():
-            self._delete_all_module(application)
-            self._delete_application(application)
-
         # 云原生清理应用 BkApp crd
         if application.type == ApplicationType.CLOUD_NATIVE:
             for module in modules:
                 envs = module.envs.all()
                 for env in envs:
                     delete_bkapp(env)
+
+        # 审计记录在事务外创建, 避免由于数据库回滚而丢失
+        pre_delete_application.send(sender=Application, application=application, operator=self.request.user.pk)
+        with transaction.atomic():
+            self._delete_all_module(application)
+            self._delete_application(application)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

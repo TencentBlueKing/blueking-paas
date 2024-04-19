@@ -445,6 +445,12 @@ export default {
           return e;
         });
         this.tableList = [...res.bound, ...res.shared, ...res.unbound];
+
+        // 处理服务->数据存储服务详情跳转
+        const redirectData = this.tableList.find(v => v.uuid === this.$route.params?.service);
+        if (redirectData) {
+          this.handleToPage(redirectData);
+        }
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

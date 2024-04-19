@@ -3,7 +3,8 @@
     id="app"
     :style="{
       '--app-notice-height': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT : 0}px`,
-      '--app-content-pd': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`
+      '--app-content-pd': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
+      'background-color': isDefaultBackgroundColor ? '#F5F7FA' : '',
     }"
   >
     <!-- 通知中心 -->
@@ -16,8 +17,11 @@
     <paas-header />
     <div
       style="min-height: calc(100% - 70px); overflow: auto;"
-      :style="{'padding-top': `${pluginPaddingTop}px`}"
-      :class="{ 'plugin-min-width': isPlugin }"
+      :style="{ 'padding-top': `${pluginPaddingTop}px` }"
+      :class="{
+        'plugin-min-width': isPlugin,
+        'full-screen-height-cls': isDefaultBackgroundColor
+      }"
     >
       <router-view />
     </div>
@@ -63,6 +67,9 @@ export default {
         return this.GLOBAL.NOTICE_HEIGHT;
       }
       return 0;
+    },
+    isDefaultBackgroundColor() {
+      return this.$route.meta?.isDefaultBackgroundColor;
     },
   },
   watch: {
@@ -154,6 +161,10 @@ export default {
       height: 40px;
       width: 100%;
       z-index: 1001;
+    }
+
+    .full-screen-height-cls {
+      background-color: #F5F7FA;
     }
 
     .gray-bg {

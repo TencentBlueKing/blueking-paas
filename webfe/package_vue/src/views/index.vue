@@ -203,7 +203,7 @@
                       style="margin-right: 10px;"
                       @click="toCloudAPI(recordItem)"
                     >
-                      {{ $t('申请云API权限') }}
+                      {{ $t('申请云 API 权限') }}
                     </bk-button>
                   </template>
                   <!-- <a href="javascript:" target="_blank">权限管理</a> -->

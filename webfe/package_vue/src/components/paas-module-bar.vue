@@ -115,6 +115,7 @@
       <div slot="footer">
         <bk-button
           theme="primary"
+          :loading="delAppDialog.isLoading"
           :disabled="!formRemoveValidated"
           @click="submitRemoveModule"
         >
@@ -260,6 +261,7 @@ export default defineComponent({
     };
 
     const submitRemoveModule = async () => {
+      delAppDialog.isLoading = true;
       try {
         await store.dispatch('module/deleteModule', {
           appCode: props.appCode,
@@ -289,6 +291,7 @@ export default defineComponent({
         });
       } finally {
         delAppDialog.visiable = false;
+        delAppDialog.isLoading = false;
       }
     };
 

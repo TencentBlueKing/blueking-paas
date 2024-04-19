@@ -381,6 +381,9 @@ const router = new Router({
       path: '/developer-center/apps/',
       name: 'myApplications',
       component: devCenterIndex,
+      meta: {
+        isDefaultBackgroundColor: true,
+      },
     },
     {
       path: '/developer-center/apps/my-monitor',
@@ -406,6 +409,9 @@ const router = new Router({
       path: '/developer-center/apps/:id/cloud-module/create',
       component: appCreateCloudModule,
       name: 'appCreateCloudModule',
+      meta: {
+        isDefaultBackgroundColor: true,
+      },
     },
     {
       path: '/developer-center/apps/migration/',

@@ -16,23 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from pathlib import Path
+from typing import List
 
-import pytest
-
-from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
+from pydantic import BaseModel, Field
 
 
-class TestPreparedSourcePackage:
-    @pytest.mark.parametrize(
-        ("file_path", "expected_basename"),
-        [
-            ("/var/本地日志3.log", "3.log"),
-            ("/var/app$3-.tar.gz", "app3.tar.gz"),
-        ],
-    )
-    def test_generate_storage_path(self, file_path, expected_basename, rf, bk_user):
-        request = rf.get("/")
-        request.user = bk_user
-        path = PreparedSourcePackage(request).generate_storage_path(file_path)
-        assert Path(path).name.endswith(expected_basename)
+class DockerExportedImageManifest(BaseModel):
+    config: str = Field(description="镜像信息文件相对路径", alias="Config")
+    layers: List[str] = Field(description="镜像层文件相对路径列表", alias="Layers")

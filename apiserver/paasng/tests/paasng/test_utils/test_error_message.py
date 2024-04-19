@@ -23,7 +23,7 @@ from paasng.accessories.servicehub.remote.exceptions import GetClusterEgressInfo
 from paasng.utils.error_message import find_coded_error_message, find_innermost_exception, wrap_validation_error
 
 
-class TestMsgError(Exception):
+class DummyMsgError(Exception):
     pass
 
 
@@ -31,7 +31,7 @@ class TestMsgError(Exception):
     ("exception", "expected"),
     [
         (GetClusterEgressInfoError("Detail Message"), "错误码: 4313021, 获取集群信息失败: Detail Message。"),
-        (TestMsgError("AAAAA"), None),
+        (DummyMsgError("AAAAA"), None),
         pytest.param("unexpected", "", marks=pytest.mark.xfail(raises=TypeError)),
     ],
 )
@@ -40,51 +40,51 @@ def test_find_coded_error_message(exception, expected):
 
 
 def a():
-    raise TestMsgError("A")
+    raise DummyMsgError("A")
 
 
 def b_in_a():
     try:
         a()
-    except TestMsgError as e:
-        raise TestMsgError("B") from e
+    except DummyMsgError as e:
+        raise DummyMsgError("B") from e
 
 
 def b():
     try:
         a()
-    except TestMsgError:
-        raise TestMsgError("B")
+    except DummyMsgError:
+        raise DummyMsgError("B")
 
 
 def c_in_b_in_a():
     try:
         b_in_a()
-    except TestMsgError as e:
-        raise TestMsgError("C") from e
+    except DummyMsgError as e:
+        raise DummyMsgError("C") from e
 
 
 def c_in_b():
     try:
         b()
-    except TestMsgError as e:
-        raise TestMsgError("C") from e
+    except DummyMsgError as e:
+        raise DummyMsgError("C") from e
 
 
 @pytest.mark.parametrize(
     ("trigger", "expected"),
     [
-        (a, TestMsgError("A")),
-        (b_in_a, TestMsgError("A")),
-        (c_in_b_in_a, TestMsgError("A")),
-        (b, TestMsgError("B")),
-        (c_in_b, TestMsgError("B")),
+        (a, DummyMsgError("A")),
+        (b_in_a, DummyMsgError("A")),
+        (c_in_b_in_a, DummyMsgError("A")),
+        (b, DummyMsgError("B")),
+        (c_in_b, DummyMsgError("B")),
     ],
 )
 def test_find_innermost_exception(trigger, expected):
     try:
         trigger()
-    except TestMsgError as e:
+    except DummyMsgError as e:
         assert str(find_innermost_exception(e)) == str(expected)  # noqa: PT017
 
 

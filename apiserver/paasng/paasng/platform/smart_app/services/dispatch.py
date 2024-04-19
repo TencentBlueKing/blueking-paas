@@ -16,92 +16,31 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Set
+from typing import Callable, List, Set
 
-from django.utils.translation import gettext_lazy as _
-from moby_distribution import ImageRef, LayerRef
-from moby_distribution.registry.utils import NamedImage, parse_image
-from rest_framework.exceptions import ValidationError
+from moby_distribution import ImageJSON, ImageRef, LayerRef
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.application.resources import ApplicationDesc
-from paasng.platform.declarative.deployment.resources import DeploymentDesc
-from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.modules.models.module import Module
-from paasng.platform.modules.models.runtime import AppSlugRunner
+from paasng.platform.modules.models import Module
 from paasng.platform.smart_app.conf import bksmart_settings
-from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.smart_app.patcher import SourceCodePatcher
+from paasng.platform.smart_app.constants import SMartPackageBuilderVersionFlag
+from paasng.platform.smart_app.entities import DockerExportedImageManifest
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.image_mgr import SMartImageManager
+from paasng.platform.smart_app.services.patcher import SourceCodePatcher
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
-
-
-def get_app_description(stat: SPStat) -> ApplicationDesc:
-    """Get application description object from source package stats
-
-    :raises: ValidationError when meta info is invalid or empty
-    """
-    if not stat.meta_info:
-        raise ValidationError(_("找不到任何有效的应用描述信息"))
-
-    try:
-        desc = get_desc_handler(stat.meta_info).app_desc
-    except DescriptionValidationError as e:
-        raise ValidationError(str(e))
-    return desc
-
-
-def get_deploy_description(stat: SPStat) -> DeploymentDesc:
-    """Get deployment description object from source package stats
-
-    :raises: ValidationError when meta info is invalid or empty
-    """
-    if not stat.meta_info:
-        raise ValidationError(_("找不到任何有效的应用描述信息"))
-
-    try:
-        desc = get_desc_handler(stat.meta_info).get_deploy_desc(None)
-    except DescriptionValidationError as e:
-        raise ValidationError(str(e))
-    return desc
-
-
-class SMartImageManager:
-    def __init__(self, module: Module):
-        self.module = module
-
-    def get_base_image_info(self) -> NamedImage:
-        """获取 S-Mart 应用的基础镜像的信息"""
-        if bksmart_settings.base_image.name and bksmart_settings.base_image.tag:
-            return NamedImage(
-                domain=bksmart_settings.registry.host,
-                name=bksmart_settings.base_image.name,
-                tag=bksmart_settings.base_image.tag,
-            )
-
-        default_runner = AppSlugRunner.objects.filter(region=self.module.region, is_default=True).first()
-        if not default_runner:
-            raise ValueError("Unknown base image for S-Mart")
-        named = parse_image(default_runner.image, default_registry=bksmart_settings.registry.host)
-        return named
-
-    def get_image_info(self, tag: str = "latest") -> NamedImage:
-        """获取当前 S-Mart 应用的镜像信息"""
-        return NamedImage(
-            domain=bksmart_settings.registry.host,
-            name=f"{bksmart_settings.registry.namespace}/{self.module.application.code}/{self.module.name}",
-            tag=tag,
-        )
-
 
 # A flag value for parallel patching, turned on by default. A unittest might patch this value to
 # alter the behaviour.
@@ -110,7 +49,7 @@ _PARALLEL_PATCHING = True
 
 def dispatch_package_to_modules(
     application: Application, tarball_filepath: PathLike, stat: SPStat, operator: User, modules: Set[str]
-):
+) -> List[SourcePackage]:
     """Dispatch package to those modules which mentioned in args modules"""
     # TODO: 优化分发镜像的逻辑(如果存在多个模块用同一个镜像层, 那么应该只上传一次镜像)
     with generate_temp_dir() as workplace:
@@ -118,10 +57,13 @@ def dispatch_package_to_modules(
 
         handler: Callable[[Module, Path, SPStat, User], SourcePackage]
         builder_flag = workplace / ".Version"
-
         if builder_flag.exists():
+            version = builder_flag.read_text().strip()
+            if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
+                handler = dispatch_cnb_image_to_registry
+            else:
+                handler = dispatch_slug_image_to_registry
             tasks = [(module, workplace, stat, operator) for module in application.modules.filter(name__in=modules)]
-            handler = dispatch_image_to_registry
         else:
             tasks = [
                 (module, Path(tarball_filepath), stat, operator)
@@ -141,9 +83,12 @@ def dispatch_package_to_modules(
             return packages
 
 
-def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User):
+def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User) -> SourcePackage:
     """Patch an uncompressed package and upload compressed tarball one blobstore,
-    then bind the package to provided module."""
+    then bind the package to provided module.
+
+    [deprecated] `patch_and_store_package` is a handler for legacy pacakge which only contain source code.
+    """
     logger.debug("Patching module for module '%s'", module.name)
     with generate_temp_dir() as workplace:
         dest = SourceCodePatcher.patch_tarball(module, tarball_path=tarball_filepath, working_dir=workplace, stat=stat)
@@ -159,11 +104,12 @@ def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat
         return source_package
 
 
-def dispatch_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User):
-    """Merge Image Layer to BaseImage, then push the new image to registry"""
-    logger.debug("dispatching image for module '%s', working '%s'", module.name, workplace)
+def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
+    """Merge image layer to base image, then push the new image to registry
 
-    client = bksmart_settings.registry.get_client()
+    [deprecated] `dispatch_slug_image_to_registry` is a handler for s-mart which is built with slug-pilot.
+    """
+    logger.debug("dispatching slug-image for module '%s', working at '%s'", module.name, workplace)
 
     desc_handler = get_desc_handler(stat.meta_info)
     deploy_desc = desc_handler.get_deploy_desc(module.name)
@@ -172,9 +118,10 @@ def dispatch_image_to_registry(module: Module, workplace: Path, stat: SPStat, op
     procfile_path = workplace / stat.relative_path / deploy_desc.source_dir / f"{module.name}.Procfile.tar.gz"
 
     mgr = SMartImageManager(module)
-    base_image = mgr.get_base_image_info()
+    base_image = mgr.get_slugrunner_image_info()
     new_image_info = mgr.get_image_info(tag=stat.version)
 
+    client = bksmart_settings.registry.get_client()
     image_ref = ImageRef.from_image(
         from_repo=base_image.name,
         from_reference=base_image.tag,
@@ -186,10 +133,63 @@ def dispatch_image_to_registry(module: Module, workplace: Path, stat: SPStat, op
     image_ref.add_layer(LayerRef(local_path=procfile_path))
 
     logger.debug("Start pushing Image.")
-    manifest = image_ref.push()
+    manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
     stat.name = stat.version
-    stat.sha256_signature = manifest.config.digest.replace("sha256:", "")
+    stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
+    policy = SPStoragePolicy(
+        path=new_image_info.name,
+        url=f"{new_image_info.domain}/{new_image_info.name}:{new_image_info.tag}",
+        stat=stat,
+        allow_overwrite=True,
+        engine="docker",
+    )
+    source_package = SourcePackage.objects.store(module, policy, operator=operator)
+    return source_package
+
+
+def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
+    """Merge image layer to base image, then push the new image to registry"""
+    logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
+
+    mgr = SMartImageManager(module)
+    base_image = mgr.get_cnb_runner_image_info()
+    new_image_info = mgr.get_image_info(tag=stat.version)
+
+    image_tarball = (workplace / module.name).with_suffix(".tgz")
+    with generate_temp_dir() as image_tmp_folder:
+        uncompress_directory(source_path=image_tarball, target_path=image_tmp_folder)
+        # 解析 manifest.json 文件的第一个镜像, 逐层上传
+        tarball_manifest = DockerExportedImageManifest(
+            **json.loads((image_tmp_folder / "manifest.json").read_text())[0]
+        )
+
+        client = bksmart_settings.registry.get_client()
+        image_ref = ImageRef.from_image(
+            from_repo=base_image.name,
+            from_reference=base_image.tag,
+            to_repo=new_image_info.name,
+            to_reference=new_image_info.tag,
+            client=client,
+        )
+
+        # merge image json at first.
+        # cnb_layers_image_json.config contains Env, default Entrypoint.
+        base_image_json = image_ref.image_json
+        cnb_layers_image_json = ImageJSON(**json.loads((image_tmp_folder / tarball_manifest.config).read_text()))
+        base_image_json.config = cnb_layers_image_json.config
+        image_ref._initial_config = base_image_json.json(
+            exclude_unset=True, exclude_defaults=True, separators=(",", ":")
+        )
+
+        for layer_path in tarball_manifest.layers:
+            image_ref.add_layer(LayerRef(local_path=image_tmp_folder / layer_path))
+        logger.debug("Start pushing Image.")
+
+        manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
+
+    stat.name = stat.version
+    stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
     policy = SPStoragePolicy(
         path=new_image_info.name,
         url=f"{new_image_info.domain}/{new_image_info.name}:{new_image_info.tag}",

@@ -1,0 +1,79 @@
+spec_version: 3
+app_version: "1.0"
+app:
+  region: "default"
+  bkAppCode: "TO_BE_CHANGED"
+  bkAppName: "TO_BE_CHANGED"
+  market:
+    introduction: "A demo application"
+    description: "Description of a demo application"
+    displayOptions:
+      width: 800
+      height: 600
+modules:
+  - name: "default"
+    isDefault: true
+    sourceDir: "main"
+    language: "Python"
+    spec:
+      hooks:
+        preRelease:
+          args:
+          - python
+          - "-c"
+          - 'import time;[print(i) or time.sleep(1) for i in range(10)]'
+      processes:
+        - name: web
+          command: null
+          args:
+          - python
+          - "-m"
+          - "uvicorn"
+          - "app:app"
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "5000"
+      svcDiscovery:
+        bkSaaS:
+        - bkAppCode: deploy-testcase
+          moduleName: default
+        - bkAppCode: test-mixcluster
+          moduleName: default
+      build:
+        buildpacks:
+        - name: bk-buildpack-python
+          version: v213
+  - name: "sidecar"
+    isDefault: false
+    sourceDir: "main"
+    language: "Python"
+    spec:
+      hooks:
+        preRelease:
+          args:
+          - python
+          - "-c"
+          - 'import time;[print(i) or time.sleep(1) for i in range(10)]'
+      processes:
+        - name: web
+          command: null
+          args:
+          - python
+          - "-m"
+          - "uvicorn"
+          - "app:app"
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "5000"
+      svcDiscovery:
+        bkSaaS:
+        - bkAppCode: deploy-testcase
+          moduleName: default
+        - bkAppCode: test-mixcluster
+          moduleName: default
+      build:
+        buildpacks:
+        - name: bk-buildpack-python
+          version: v213

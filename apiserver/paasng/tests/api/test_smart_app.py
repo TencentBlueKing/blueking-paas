@@ -71,7 +71,7 @@ class TestCreateSMartApp:
         # was never really committed.
         #
         # Disable parallel processing to let unittest pass.
-        with mock.patch("paasng.platform.smart_app.utils._PARALLEL_PATCHING", new=False), mock.patch(
+        with mock.patch("paasng.platform.smart_app.services.dispatch._PARALLEL_PATCHING", new=False), mock.patch(
             "moby_distribution.ImageRef.push"
         ) as mock_push:
             mock_push().config.digest.replace.return_value = ""

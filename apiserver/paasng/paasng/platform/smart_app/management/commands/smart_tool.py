@@ -32,8 +32,9 @@ from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.smart_app.utils import dispatch_package_to_modules, get_app_description
+from paasng.platform.smart_app.services.app_desc import get_app_description
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger("commands")

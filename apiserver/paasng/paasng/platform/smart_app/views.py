@@ -43,16 +43,17 @@ from paasng.platform.declarative.application.resources import ApplicationDesc, A
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.smart_app.detector import SourcePackageStatReader
 from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
-from paasng.platform.smart_app.prepared import PreparedSourcePackage
 from paasng.platform.smart_app.serializers import (
     AppDescriptionSLZ,
     PackageStashRequestSLZ,
     PackageStashResponseSLZ,
     PackageStashResponseWithDiffSLZ,
 )
-from paasng.platform.smart_app.utils import dispatch_package_to_modules, get_app_description
+from paasng.platform.smart_app.services.app_desc import get_app_description
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
+from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_package
 from paasng.platform.sourcectl.serializers import SourcePackageSLZ

@@ -22,16 +22,16 @@
           <p>
             <span
               v-bk-tooltips="$t('所有进程 CPU limit 的总和')"
-              class="tip"
+              v-dashed
             >CPU:</span>
-            {{ appInfo.data.cpuProd || '-- ' }}{{ $t('核（生产环境）') }}、{{ appInfo.data.cpuStag || '-- ' }}{{ $t('核（预发布）') }}
+            {{ appInfo.data.cpuProd || '-- ' }}{{ $t('核（生产环境）') }}、{{ appInfo.data.cpuStag || '-- ' }}{{ $t('核（预发布环境）') }}
           </p>
           <p>
             <span
               v-bk-tooltips="$t('所有进程 Memory limit 的总和')"
-              class="tip"
+              v-dashed
             >{{ $t('内存') }}:</span>
-            {{ appInfo.data.memProd || '-- ' }}G{{ $t('（生产环境 ）') }}、{{ appInfo.data.memStag || '-- ' }}G{{ $t('（预发布）') }}
+            {{ appInfo.data.memProd || '-- ' }}G{{ $t('（生产环境 ）') }}、{{ appInfo.data.memStag || '-- ' }}G{{ $t('（预发布环境）') }}
           </p>
         </div>
       </div>
@@ -267,11 +267,6 @@ export default {
                 display: flex;
                 flex-direction: column;
                 justify-content: space-around;
-                .tip {
-                    padding-bottom: 3px;
-                    // 虚线
-                    @include dashed(8px);
-                }
             }
         }
         .alarm  {

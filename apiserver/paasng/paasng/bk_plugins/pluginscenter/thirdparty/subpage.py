@@ -32,7 +32,7 @@ def can_enter_next_stage(
     sub_stage_definition = find_stage_by_id(pd, version, stage.stage_id)
 
     if not sub_stage_definition or not sub_stage_definition.api or not sub_stage_definition.api.result:
-        # 部分插件子页面嵌入的时候未提供查询状态 API，由前端通信完成
+        # 部分插件子页面嵌入的时候未提供查询状态 API，由前端 IFrame 通信,不需要后端轮询
         return False
 
     resp = utils.make_client(sub_stage_definition.api.result).call(

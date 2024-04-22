@@ -34,6 +34,7 @@ import { bus } from '@/common/bus';
 import paasHeader from '@/components/paas-header';
 import paasFooter from '@/components/paas-footer';
 import NoticeComponent from '@blueking/notice-component-vue2';
+import { showLoginModal as showLoginPopup } from '@blueking/login-modal';
 import '@blueking/notice-component-vue2/dist/style.css';
 
 export default {
@@ -118,31 +119,11 @@ export default {
       document.body.style.backgroundColor = this.isPlugin ? '#F5F6FA' : '';
     },
     // 打开登录窗口
-    openLoginWindow(w = 500, h = 420) {
+    openLoginWindow() {
       const loginCallbackURL = `${window.location.origin}/static/login_success.html?is_ajax=1`;
-      const loginURL = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/plain/?size=big&app_code=1&c_url=${loginCallbackURL}`;
-      // 宽/高
-      const screenWidth = window.screen.width;
-      const screenHeight = window.screen.height;
+      const loginUrl = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/plain/?size=big&app_code=1&c_url=${loginCallbackURL}`;
 
-      // 打开新窗口
-      this.loginWindow = window.open(loginURL, '_blank', `
-        width=${w},
-        height=${h},
-        top=${(screenHeight - h) / 2},
-        left=${(screenWidth - w) / 2},
-        channelmode=0,
-        directories=0,
-        fullscreen=0,
-        location=0,
-        menubar=0,
-        resizable=0,
-        scrollbars=0,
-        status=0,
-        titlebar=0,
-        toolbar=0,
-        close=0
-    `);
+      showLoginPopup({ loginUrl });
 
       if (this.loginWindow) this.loginWindow.focus();
     },

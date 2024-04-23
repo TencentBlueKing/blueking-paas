@@ -33,4 +33,4 @@ def validate_app_name(value: str):
 
 
 def validate_app_structure(value: Dict):
-    """deprecated function"""
+    """deprecated function. 被 migrations/0001_initial.py 引用"""

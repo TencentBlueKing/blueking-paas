@@ -51,7 +51,7 @@ class BuildConfigMigrator(CNativeBaseMigrator):
 
     def _can_migrate_or_raise(self):
         if self.app.type != ApplicationType.CLOUD_NATIVE.value:
-            raise PreCheckMigrationFailed("type migrate must be called before build config migrate")
+            raise PreCheckMigrationFailed(f"app({self.app.code}) type does not set to cloud_native")
 
     def _migrate(self):
         """migrate buildpacks/buildpack_builder/buildpack_runner of the app(module)"""

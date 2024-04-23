@@ -114,6 +114,7 @@ def rollback_cnative_to_default(rollback_process_id, last_migration_process_id):
     for m in last_migration_process.app.modules.all():
         for env in m.envs.all():
             wl_app = env.wl_app
+            # 限定了迁移不能发生在同一集群内, 因此可以直接删除命名空间
             NamespacesHandler.new_by_app(wl_app).delete(wl_app.namespace)
 
     migrate.rollback_cnative_to_default(
@@ -131,6 +132,7 @@ def confirm_migration(migration_process_id):
         for env in m.envs.all():
             manager = WlAppBackupManager(env)
             wl_app_backup = manager.get()
+            # 限定了迁移不能发生在同一集群内, 因此可以直接删除命名空间
             NamespacesHandler.new_by_app(wl_app_backup).delete(wl_app_backup.namespace)
             manager.delete()
 

@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 from typing import List, Optional
 
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
-from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.mgrlegacy.entities import ClusterLegacyData, DefaultAppLegacyData
 from paasng.platform.mgrlegacy.exceptions import PreCheckMigrationFailed
@@ -36,12 +35,11 @@ class ApplicationClusterMigrator(CNativeBaseMigrator):
 
         for m in self.app.modules.all():
             for env in m.envs.all():
-                wl_app = env.wl_app
                 legacy_data.clusters.append(
                     ClusterLegacyData(
                         module_name=m.name,
                         environment=env.environment,
-                        cluster_name=get_cluster_by_app(wl_app).name,
+                        cluster_name=env.wl_app.config_set.latest().cluster,
                     )
                 )
 
@@ -49,7 +47,7 @@ class ApplicationClusterMigrator(CNativeBaseMigrator):
 
     def _can_migrate_or_raise(self):
         if self.app.type != ApplicationType.CLOUD_NATIVE.value:
-            raise PreCheckMigrationFailed("type migrate must be called before cluster migrate")
+            raise PreCheckMigrationFailed(f"app({self.app.code}) type does not set to cloud_native")
 
     def _migrate(self):
         cnative_cluster = RegionClusterService(self.app.region).get_cnative_app_default_cluster()

@@ -36,7 +36,9 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestMigrateCNativeMigrationViewSet:
     def test_migrate(self, api_client, bk_app):
-        with mock.patch("paasng.platform.mgrlegacy.tasks.migrate_default_to_cnative.delay") as mock_task:
+        with mock.patch("paasng.platform.mgrlegacy.tasks.migrate_default_to_cnative.delay") as mock_task, mock.patch(
+            "paasng.platform.mgrlegacy.views.CNativeMigrationViewSet._can_migrate_or_raise"
+        ):
             mock_task.return_value = None
 
             response = api_client.post(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/migrate/")

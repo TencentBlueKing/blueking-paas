@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import re
 
 from django.db import models
 from django.utils.functional import cached_property
@@ -47,11 +46,7 @@ class App(UuidAuditedModel):
     @cached_property
     def scheduler_safe_name(self):
         """app name in scheduler backend"""
-        valid_pattern = r"^(?:[a-z0-9_-]+)-(?:prod|stag|dev)"
-        if sanitized_name := re.findall(valid_pattern, self.name):
-            return sanitized_name[0].replace("_", "0us0")
-
-        raise ValueError(f"invalid wl_app name: {self.name}")
+        return self.name.replace("_", "0us0")
 
     @property
     def scheduler_safe_name_with_region(self):

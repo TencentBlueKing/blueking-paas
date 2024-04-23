@@ -32,6 +32,7 @@ from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
+from paas_wl.infras.cluster.shim import RegionClusterService
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.workloads.networking.entrance.serializers import ModuleEntrancesSLZ
 from paasng.core.core.storages.sqlalchemy import console_db
@@ -263,11 +264,7 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """
         app = self.get_application()
 
-        if app.type == ApplicationType.CLOUD_NATIVE.value:
-            raise error_codes.APP_MIGRATION_FAILED.f("该应用已是云原生应用，无法迁移")
-
-        if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
-            raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
+        self._can_migrate_or_raise(app)
 
         migration_process = CNativeMigrationProcess.create_migration_process(app, request.user.pk)
         process_id = migration_process.id
@@ -335,6 +332,20 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         confirm_migration.delay(process.id)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def _can_migrate_or_raise(app):
+        if app.type == ApplicationType.CLOUD_NATIVE.value:
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用已是云原生应用，无法迁移")
+
+        if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
+
+        cnative_cluster_name = RegionClusterService(app.region).get_cnative_app_default_cluster().name
+        for m in app.modules.all():
+            for env in m.envs.all():
+                if env.wl_app.config_set.latest().cluster == cnative_cluster_name:
+                    raise error_codes.APP_MIGRATION_FAILED.f("该应用已在云原生集群中，无法迁移")
 
 
 class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

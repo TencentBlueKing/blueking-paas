@@ -309,8 +309,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
         page_data = []
-        # TODO: 查询结果里面同一个应用如果有多个 Module，就会在结果集中出现多次。应该升级为同时返回应用
-        # 与模块信息，前端也需要同时升级。
+        # 增强服务按模块级别启用，故需要同时返回应用信息与模块信息
         for obj in page:
             _data = {
                 "id": obj.pk,

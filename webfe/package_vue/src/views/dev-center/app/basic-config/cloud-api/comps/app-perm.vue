@@ -119,7 +119,6 @@
               :prop="isComponentApi ? 'system_name' : 'api_name'"
               :column-key="isComponentApi ? 'system_name' : 'api_name'"
               :filters="nameFilters"
-              :filter-method="nameFilterMethod"
               :filter-multiple="true"
             >
               <template slot-scope="props">
@@ -207,7 +206,6 @@
               prop="permission_status"
               column-key="status"
               :filters="statusFilters"
-              :filter-method="statusFilterMethod"
               :filter-multiple="true"
               :render-header="$renderHeader"
             >
@@ -408,6 +406,9 @@ export default {
         superiorId: '',
         superiorName: '',
       },
+      statusFilterValues: [],
+      nameFilterValues: [],
+      filterAllList: [],
     };
   },
   computed: {
@@ -434,6 +435,9 @@ export default {
     isRenewalDisabled() {
       return !this.selectedList.some(item => item.renewDisabled === false);
     },
+    isSesetTableList() {
+      return !this.nameFilterValues.length && !this.statusFilterValues.length;
+    },
   },
   watch: {
     '$route'() {
@@ -453,8 +457,14 @@ export default {
         this.updateTableEmptyConfig();
       }
     },
-    allData(value) {
+    allData() {
       this.tableKey = +new Date();
+    },
+    nameFilterValues() {
+      this.filterApiList(this.isComponentApi ? 'system_name' : 'api_name');
+    },
+    statusFilterValues() {
+      this.filterApiList('permission_status');
     },
   },
   created() {
@@ -499,8 +509,27 @@ export default {
       const { property } = column;
       return row[property] === value;
     },
+    // 设置对应筛选条件值
+    setFilterValues(filters) {
+      let target;
+      const fieldName = Object.keys(filters)[0];
+      switch (fieldName) {
+        case 'api_name':
+        case 'system_name':
+          target = 'nameFilterValues';
+          break;
+        case 'status':
+          target = 'statusFilterValues';
+          break;
+        default:
+          return;
+      }
+      // 设置目标变量的值
+      this[target] = filters[fieldName]?.length ? filters[fieldName] : [];
+    },
 
     filterChange(filters) {
+      this.setFilterValues(filters);
       Object.entries(filters).forEach((item) => {
         const [name, value] = item;
         this.allFilterData[name] = value;
@@ -621,6 +650,11 @@ export default {
              * @return {Array} 当前页数据
              */
     getDataByPage(page) {
+      let dataSource = this.allData;
+      // 存在筛选条件更改数据源为已筛选后的列表
+      if (this.nameFilterValues.length || this.statusFilterValues.length) {
+        dataSource = this.filterAllList;
+      }
       if (!page) {
         this.pagination.current = page = 1;
       }
@@ -629,10 +663,10 @@ export default {
       if (startIndex < 0) {
         startIndex = 0;
       }
-      if (endIndex > this.allData.length) {
-        endIndex = this.allData.length;
+      if (endIndex > dataSource.length) {
+        endIndex = dataSource.length;
       }
-      return this.allData.slice(startIndex, endIndex);
+      return dataSource.slice(startIndex, endIndex);
     },
 
     limitChange(currentLimit, prevLimit) {
@@ -791,14 +825,12 @@ export default {
       return description || '--';
     },
     clearFilterKey() {
+      this.nameFilterValues = [];
+      this.statusFilterValues = [];
       this.searchValue = '';
       this.isRenewalPerm = false;
       this.allFilterData = {};
-      this.$refs.permRef.clearFilter();
-      if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
-        const { tableHeader } = this.$refs.permRef.$refs;
-        clearFilter(tableHeader);
-      }
+      this.$refs.permRef?.clearFilter();
       this.fetchList();
     },
 
@@ -862,6 +894,45 @@ export default {
         superiorId: '',
         superiorName: '',
       });
+    },
+
+    // 通用筛选逻辑
+    getFilterAllList(data, fields, key) {
+      return data.filter(v => fields.includes(v[key]));
+    },
+
+    // 重置TableList
+    updateTableList(isReset) {
+      this.tableList = this.getDataByPage(1);
+      this.pagination.current = 1;
+      this.pagination.count = isReset ? this.allData.length : this.filterAllList.length;
+    },
+
+    // 根据条件筛选已申请权限
+    filterApiList(key) {
+      // 无筛选条件数据重置处理
+      if (this.isSesetTableList) {
+        this.updateTableList(true);
+        return;
+      }
+      const filterFields  = key === 'permission_status' ? this.statusFilterValues : this.nameFilterValues;
+      // 多筛选条件处理
+      if (this.statusFilterValues.length && this.nameFilterValues.length) {
+        this.filterAllList = this.getFilterAllList(this.filterAllList, filterFields, key);
+      } else {
+        // 当前筛选条件重置，但存在另外一组筛选条件
+        if (!filterFields.length) {
+          if (key === 'permission_status' && this.nameFilterValues.length) {
+            const fieldKey = this.isComponentApi ? 'system_name' : 'api_name';
+            this.filterAllList = this.getFilterAllList(this.allData, this.nameFilterValues, fieldKey);
+          } else if (key !== 'permission_status' && this.statusFilterValues.length) {
+            this.filterAllList = this.getFilterAllList(this.allData, this.statusFilterValues, 'permission_status');
+          }
+        } else {
+          this.filterAllList = this.getFilterAllList(this.allData, filterFields, key);
+        }
+      }
+      this.updateTableList();
     },
   },
 };

@@ -115,6 +115,7 @@
       <div slot="footer">
         <bk-button
           theme="primary"
+          :loading="delAppDialog.isLoading"
           :disabled="!formRemoveValidated"
           @click="submitRemoveModule"
         >
@@ -170,7 +171,7 @@ export default defineComponent({
       default: '',
     },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const route = router.currentRoute;
     const vm = getCurrentInstance();
     const active = ref(props.curModule.name || '');
@@ -212,7 +213,7 @@ export default defineComponent({
     const handleTabChange = async () => {
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
       await store.commit('updateCurAppModule', curModule);
-
+      emit('tab-change');
       const name = props.activeRouteName || props.firstModuleName;
       let { query } = route;
       if (name === 'appLog') {
@@ -260,6 +261,7 @@ export default defineComponent({
     };
 
     const submitRemoveModule = async () => {
+      delAppDialog.isLoading = true;
       try {
         await store.dispatch('module/deleteModule', {
           appCode: props.appCode,
@@ -289,6 +291,7 @@ export default defineComponent({
         });
       } finally {
         delAppDialog.visiable = false;
+        delAppDialog.isLoading = false;
       }
     };
 
@@ -320,6 +323,8 @@ export default defineComponent({
 </script>
 <style lang="scss" scoped>
 .module-bar-container {
+  position: relative;
+  z-index: 999;
   background: #fff;
   box-shadow: 0 3px 4px 0 #0000000a;
   .title {

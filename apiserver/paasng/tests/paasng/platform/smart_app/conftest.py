@@ -18,13 +18,14 @@ to the current version of the project delivered to anyone in the future.
 """
 import tarfile
 import zipfile
+from pathlib import Path
 from typing import Dict
 
 import pytest
 import yaml
 
-from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.smart_app.path import ZipPath
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.path import ZipPath
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML, gen_tar, gen_zip
 
@@ -69,3 +70,8 @@ def package_stat(request):
         return SourcePackageStatReader(request.getfixturevalue("zip_path").source.filename).read()
     else:
         return SourcePackageStatReader(request.getfixturevalue("tar_path")).read()
+
+
+@pytest.fixture()
+def assets_rootpath():
+    return Path(__file__).parent / "assets"

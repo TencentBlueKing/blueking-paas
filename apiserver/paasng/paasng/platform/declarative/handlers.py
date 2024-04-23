@@ -113,7 +113,7 @@ class CNativeAppDescriptionHandler:
             app_spec_v3.AppDescriptionSLZ,
             app_desc_json,
             instance,
-            context={"app_version": self.json_data.get("app_version"), "spec_version": AppSpecVersion.VER_2},
+            context={"app_version": self.json_data.get("app_version"), "spec_version": AppSpecVersion.VER_3},
         )
         return app_desc
 

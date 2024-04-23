@@ -38,7 +38,7 @@ from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.smart_app.path import PathProtocol
+from paasng.platform.smart_app.services.path import PathProtocol
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import BinaryTarClient, ZipClient
 
@@ -137,7 +137,6 @@ class SourcePackageStatReader:
         """Try extracting version from meta info"""
         if not meta_info:
             return None
-
         try:
             desc = get_desc_handler(meta_info).app_desc
         except DescriptionValidationError as e:

@@ -23,8 +23,8 @@ from typing import TYPE_CHECKING
 from blue_krill.storages.blobstore.exceptions import ObjectAlreadyExists
 from django.conf import settings
 
-from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.smart_app.patcher import SourceCodePatcher
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.patcher import SourceCodePatcher
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.downloader import download_file_via_url

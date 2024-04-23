@@ -98,6 +98,7 @@ class ApplicationWithLogoSLZ(serializers.Serializer):
     name = serializers.CharField()
     code = serializers.CharField()
     language = serializers.CharField()
+    type = serializers.CharField(help_text="应用类型")
     logo_url = serializers.CharField(help_text="Logo 图片", read_only=True, source="get_logo_url")
 
 

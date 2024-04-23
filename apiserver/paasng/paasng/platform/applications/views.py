@@ -38,6 +38,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from paas_wl.bk_app.cnative.specs.resource import delete_bkapp
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
 from paas_wl.infras.cluster.utils import get_cluster_by_app
@@ -299,6 +300,13 @@ class ApplicationViewSet(viewsets.ViewSet):
             protection_status = ModuleDeletionPreparer(module).perform()
             if protection_status.activated:
                 raise error_codes.CANNOT_DELETE_APP.f(protection_status.reason)
+
+        # 云原生清理应用 BkApp crd
+        if application.type == ApplicationType.CLOUD_NATIVE:
+            for module in modules:
+                envs = module.envs.all()
+                for env in envs:
+                    delete_bkapp(env)
 
         # 审计记录在事务外创建, 避免由于数据库回滚而丢失
         pre_delete_application.send(sender=Application, application=application, operator=self.request.user.pk)

@@ -22,10 +22,10 @@ import pytest
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.managers.app_metadata import update_metadata
-from paas_wl.bk_app.mgrlegacy import WlAppBackupManager
 from paas_wl.bk_app.processes.controllers import ProcessesInfo
 from paas_wl.bk_app.processes.entities import Status
 from paas_wl.bk_app.processes.kres_entities import Instance
+from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.entities import MigrationResult, ProcessDetails
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
@@ -82,11 +82,21 @@ class TestRollbackCNativeMigrationViewSet:
 class TestQueryProcessCNativeMigrationViewSet:
     def test_get_process_by_id(self, api_client, bk_app, bk_user):
         process = CNativeMigrationProcess.objects.create(
-            app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+            app=bk_app,
+            owner=bk_user.pk,
+            status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
+            details=ProcessDetails(
+                migrations=[
+                    MigrationResult(
+                        migrator_name="ApplicationTypeMigrator", is_succeeded=False, error_msg="invalid app type"
+                    ),
+                ],
+            ),
         )
         response = api_client.get(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/")
         assert response.data["status"] == "migration_succeeded"
         assert response.data["error_msg"] == ""
+        assert response.data["details"]["migrations"][0]["migrator_name"] == "ApplicationTypeMigrator"
 
     def test_get_process_by_id_404(self, api_client, bk_app, bk_user):
         response = api_client.get("/api/mgrlegacy/cloud-native/migration_processes/1/")
@@ -154,13 +164,13 @@ class TestConfirmCNativeMigrationViewSet:
 
 class TestDefaultAppProcessViewSet:
     @pytest.fixture()
-    def wl_app(self, bk_app, _with_wl_apps):
+    def wl_app(self, bk_app, _with_wl_apps, bk_stag_env):
         return bk_app.get_engine_app("stag", module_name="default").to_wl_obj()
 
     @pytest.fixture(autouse=True)
-    def _mock_get_wl_app(self, wl_app):
+    def _mock_get_wl_app(self, wl_app, bk_stag_env):
         update_metadata(wl_app, module_name="default")
-        WlAppBackupManager(wl_app).create()
+        WlAppBackupManager(bk_stag_env).create()
 
     @pytest.fixture()
     def processes_info(self, wl_app):
@@ -171,28 +181,22 @@ class TestDefaultAppProcessViewSet:
         return ProcessesInfo(processes=[process], rv_proc="282906629", rv_inst="282906629")
 
     def test_list(self, api_client, bk_app, processes_info):
-        with mock.patch(
-            "paasng.platform.mgrlegacy.views.DefaultAppProcessController.new_by_app",
-        ) as mock_new:
-            controller = mock.MagicMock()
-            mock_new.return_value = controller
-            controller.get_processes_info.return_value = processes_info
-
+        with mock.patch("paasng.platform.mgrlegacy.views.get_processes_info", return_value=processes_info):
             response = api_client.get(
                 f"/api/mgrlegacy/applications/{bk_app.code}/modules/default/envs/stag/processes/"
             )
             assert response.data["processes"]["items"][0]["type"] == "web"
 
     def test_update(self, api_client, bk_app):
-        with mock.patch("paasng.platform.mgrlegacy.views.DefaultAppProcessController.new_by_app") as mock_new:
-            controller = mock.MagicMock()
-            mock_new.return_value = controller
+        with mock.patch("paasng.platform.mgrlegacy.views.ProcessesHandler.new_by_app") as mock_new:
+            handler = mock.MagicMock()
+            mock_new.return_value = handler
 
             response = api_client.put(
                 f"/api/mgrlegacy/applications/{bk_app.code}/modules/default/envs/stag/processes/",
                 data={"process_type": "web", "operate_type": "stop"},
             )
-            controller.stop.assert_called()
+            handler.shutdown.assert_called()
             assert response.status_code == 204
 
 

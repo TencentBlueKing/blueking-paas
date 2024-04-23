@@ -19,13 +19,13 @@ to the current version of the project delivered to anyone in the future.
 from typing import Optional
 
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.mgrlegacy import WlAppBackupManager
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.entities import DefaultAppLegacyData
 from paasng.platform.mgrlegacy.exceptions import PreCheckMigrationFailed
 
 from .base import CNativeBaseMigrator
+from .wl_app import WlAppBackupManager
 
 
 class ApplicationTypeMigrator(CNativeBaseMigrator):
@@ -42,7 +42,7 @@ class ApplicationTypeMigrator(CNativeBaseMigrator):
         # 备份 wl_app
         for m in self.app.modules.all():
             for env in m.envs.all():
-                WlAppBackupManager(env.wl_app).create()
+                WlAppBackupManager(env).create()
 
         return super()._backup_legacy_data(legacy_data)
 
@@ -62,7 +62,7 @@ class ApplicationTypeMigrator(CNativeBaseMigrator):
         # 删除 wl_app 备份
         for m in self.app.modules.all():
             for env in m.envs.all():
-                WlAppBackupManager(env.wl_app).delete()
+                WlAppBackupManager(env).delete()
 
         self.app.type = self.migration_process.legacy_data.app_type
         self.app.save(update_fields=["type"])

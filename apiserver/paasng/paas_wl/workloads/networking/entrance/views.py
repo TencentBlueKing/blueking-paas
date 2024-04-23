@@ -33,7 +33,6 @@ from paas_wl.workloads.networking.entrance.allocator.domains import SubDomainAll
 from paas_wl.workloads.networking.entrance.allocator.subpaths import SubPathAllocator
 from paas_wl.workloads.networking.entrance.constants import AddressType
 from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
-from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, get_builtin_addr_preferred
 from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
@@ -44,6 +43,8 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
+
+from .entrance import get_entrances
 
 logger = logging.getLogger(__name__)
 
@@ -171,41 +172,7 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
     def list_all_entrances(self, request, code):
         """查看应用所有模块的访问入口"""
         application = self.get_application()
-        all_entrances = []
-        for module in application.modules.all():
-            module_entrances = {"name": module.name, "is_default": module.is_default, "envs": {}}
-            all_entrances.append(module_entrances)
-            for env in module.envs.all():
-                env_entrances = module_entrances["envs"].setdefault(env.environment, [])
-                addresses = []
-                # 每个环境仅展示一个内置访问地址
-                is_running, builtin_address = get_builtin_addr_preferred(env)
-                if builtin_address:
-                    addresses.append(builtin_address)
-                elif not is_running:
-                    # No builtin address found for the not running env means there must
-                    # be something wrong with the platform config, log it.
-                    logger.error(
-                        "cannot found builtin address, application: %s, module: %s(%s)",
-                        application.code,
-                        module.name,
-                        env.environment,
-                    )
-                else:
-                    # No builtin address found for the running env, this can be normal
-                    # when the module has no "web" process.
-                    pass
-
-                addresses.extend(LiveEnvAddresses(env).list_custom())
-                for address in addresses:
-                    env_entrances.append(
-                        {
-                            "module": module.name,
-                            "env": env.environment,
-                            "address": address,
-                            "is_running": is_running,
-                        }
-                    )
+        all_entrances = get_entrances(application)
         return Response(data=slzs.ModuleEntrancesSLZ(all_entrances, many=True).data)
 
     @swagger_auto_schema(response_serializer=slzs.AvailableEntranceSLZ(many=True), tags=["访问入口"])

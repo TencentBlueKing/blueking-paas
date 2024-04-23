@@ -26,7 +26,7 @@ from jsonfield import JSONField
 
 from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
-from paasng.utils.models import OwnerTimestampedModel, make_json_field
+from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_json_field
 
 from .entities import DefaultAppLegacyData, MigrationResult, ProcessDetails, RollbackResult
 
@@ -319,3 +319,11 @@ class MigrationRegister(type):
     @classmethod
     def get_class(cls, name):
         return cls.classes_map[name]
+
+
+class WlAppBackupRel(TimestampedModel):
+    """WlApp 的备份关系表"""
+
+    app = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
+    original_id = models.UUIDField(verbose_name="原 WlApp uuid")
+    backup_id = models.UUIDField(verbose_name="对应备份的 WlApp uuid")

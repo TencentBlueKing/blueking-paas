@@ -19,15 +19,17 @@ to the current version of the project delivered to anyone in the future.
 
 from django.forms.models import model_to_dict
 
-from paas_wl.bk_app.applications.models.app import NAME_BAK_SUFFIX, WlApp
+from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.bk_app.applications.models.config import Config
 from paas_wl.bk_app.applications.models.release import Release
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.mgrlegacy.models import WlAppBackupRel
 
 
 class WlAppBackupManager:
-    def __init__(self, original_wl_app: WlApp):
-        self.original_wl_app = original_wl_app
-        self.bak_name = f"{original_wl_app.name}{NAME_BAK_SUFFIX}"
+    def __init__(self, env: ModuleEnvironment):
+        self.env = env
+        self.original_wl_app = env.wl_app
 
     def create(self) -> WlApp:
         """create wl_app backup, include its latest config and latest release"""
@@ -35,8 +37,13 @@ class WlAppBackupManager:
 
         # 创建 WlApp 的副本
         wl_app_dict = model_to_dict(self.original_wl_app, exclude=uuid_audited_fields)
-        wl_app_dict["name"] = self.bak_name
+        wl_app_dict["name"] = f"{self.original_wl_app.name}-bak"
         wl_app = WlApp.objects.create(**wl_app_dict)
+
+        # 建立备份关系
+        WlAppBackupRel.objects.create(
+            app=self.env.application, original_id=self.original_wl_app.uuid, backup_id=wl_app.uuid
+        )
 
         # 创建对应的 Config 副本
         config_dict = model_to_dict(self.original_wl_app.config_set.latest(), exclude=uuid_audited_fields + ["app"])
@@ -55,10 +62,13 @@ class WlAppBackupManager:
         return wl_app
 
     def delete(self):
-        """delete wl_app backup from db"""
+        """delete wl_app backup from db, delete backup relationship at the same time"""
         # config and release will be deleted by cascade
-        WlApp.objects.filter(region=self.original_wl_app.region, name=self.bak_name).delete()
+        rel = WlAppBackupRel.objects.get(original_id=self.original_wl_app.uuid)
+        WlApp.objects.filter(uuid=rel.backup_id).delete()
+        rel.delete()
 
     def get(self) -> WlApp:
         """get wl_app backup from db"""
-        return WlApp.objects.get(region=self.original_wl_app.region, name=self.bak_name)
+        rel = WlAppBackupRel.objects.get(original_id=self.original_wl_app.uuid)
+        return WlApp.objects.get(uuid=rel.backup_id)

@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+import re
 
 from django.db import models
 from django.utils.functional import cached_property
@@ -27,8 +28,6 @@ from paas_wl.bk_app.applications.models import UuidAuditedModel
 from paas_wl.bk_app.applications.models.validators import validate_app_name, validate_app_structure
 
 logger = logging.getLogger(__name__)
-
-NAME_BAK_SUFFIX = "-bak"
 
 
 # Deprecated: 名称 App 容易与其他概念混淆，请使用别名 WlApp
@@ -45,15 +44,14 @@ class App(UuidAuditedModel):
     class Meta:
         unique_together = ("region", "name")
 
-    @property
+    @cached_property
     def scheduler_safe_name(self):
         """app name in scheduler backend"""
+        valid_pattern = r"^(?:[a-z0-9_-]+)-(?:prod|stag|dev)"
+        if sanitized_name := re.findall(valid_pattern, self.name):
+            return sanitized_name[0].replace("_", "0us0")
 
-        # NAME_BAK_SUFFIX 作为 name 的后缀, 用于 mgrlegacy 中备份 wl_app 实例. 但在生成 scheduler_safe_name 时需要清洗掉它
-        if self.name.endswith(NAME_BAK_SUFFIX):
-            return self.name[: -len(NAME_BAK_SUFFIX)].replace("_", "0us0")
-
-        return self.name.replace("_", "0us0")
+        raise ValueError(f"invalid wl_app name: {self.name}")
 
     @property
     def scheduler_safe_name_with_region(self):

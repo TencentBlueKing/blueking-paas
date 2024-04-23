@@ -16,19 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
-
-from paas_wl.bk_app.mgrlegacy import WlAppBackupManager
-
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-def test_backup_manager(wl_app):
-    manager = WlAppBackupManager(wl_app)
-    wl_app_backup = manager.create()
-
-    assert manager.get().name == wl_app_backup.name
-    assert manager.get().region == wl_app_backup.region
-    assert wl_app_backup.latest_config.cluster == wl_app.latest_config.cluster
-    assert wl_app_backup.namespace == wl_app.namespace
-    assert wl_app_backup.module_name == wl_app.module_name

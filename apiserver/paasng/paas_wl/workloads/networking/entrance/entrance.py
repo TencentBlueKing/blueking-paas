@@ -17,20 +17,18 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, get_builtin_addr_preferred
-from paasng.platform.applications.models import Application
+
+if TYPE_CHECKING:
+    from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
 
 
-def get_entrances(app: Application) -> List[Dict]:
-    """
-    查询应用所有模块的访问入口
-
-    直接复制 paas_wl.workloads.networking.entrance.views.AppEntranceViewSet.list_all_entrances 的实现
-    """
+def get_entrances(app: "Application") -> List[Dict]:
+    """查询应用所有模块的访问入口"""
     all_entrances = []
 
     for module in app.modules.all():

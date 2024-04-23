@@ -28,7 +28,8 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.bk_app.mgrlegacy import DefaultAppProcessController, WlAppBackupManager
+from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
+from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
@@ -39,6 +40,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 
 try:
@@ -343,11 +345,10 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def list(self, request, *args, **kwargs):
         """list all processes/instances.
 
-        参考 paas_wl.bk_app.processes.views.ListAndWatchProcsViewSet.list 实现
+        用于直接从集群中获取应用进程信息(不依赖应用进程 db 数据)
         """
         wl_app = self._get_wl_app()
-        process_controller = DefaultAppProcessController.new_by_app(wl_app)
-        processes_info = process_controller.get_processes_info()
+        processes_info = get_processes_info(wl_app)
 
         data = {
             "processes": {
@@ -365,7 +366,7 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def update(self, request, *args, **kwargs):
         """stop/start/scale process
 
-        参考 paas_wl.bk_app.processes.views.ProcessesViewSet.update 实现
+        用于直接向集群中下发管理应用进程的命令(不涉及查询和更新应用进程的 db 数据)
         """
         slz = UpdateProcessSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -377,24 +378,23 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         operate_type = validated_data["operate_type"]
 
         proc_config = get_mapper_proc_config_latest(wl_app, process_type)
-        process_controller = DefaultAppProcessController.new_by_app(wl_app)
+        handler = ProcessesHandler.new_by_app(wl_app)
 
         try:
             if operate_type == ProcessUpdateType.START:
-                process_controller.start(proc_config)
+                handler.scale(proc_config, 1)
             elif operate_type == ProcessUpdateType.STOP:
-                process_controller.stop(proc_config)
+                handler.shutdown(proc_config)
             else:
                 target_replicas = validated_data["target_replicas"]
-                process_controller.scale(proc_config, target_replicas)
+                handler.scale(proc_config, target_replicas)
         except Exception as e:
             raise wl_error_codes.PROCESS_OPERATE_FAILED.f(str(e))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _get_wl_app(self):
-        original_wl_app = self.get_wl_app_via_path()
-        return WlAppBackupManager(original_wl_app).get()
+        return WlAppBackupManager(self.get_env_via_path()).get()
 
 
 class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

@@ -24,7 +24,7 @@ from typing import Any, Dict
 from django.db import models
 from jsonfield import JSONField
 
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_json_field
 
@@ -324,6 +324,6 @@ class MigrationRegister(type):
 class WlAppBackupRel(TimestampedModel):
     """WlApp 的备份关系表"""
 
-    app = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
+    app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
     original_id = models.UUIDField(verbose_name="原 WlApp uuid")
     backup_id = models.UUIDField(verbose_name="对应备份的 WlApp uuid")

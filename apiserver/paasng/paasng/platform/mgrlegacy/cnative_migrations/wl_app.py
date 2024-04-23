@@ -42,7 +42,7 @@ class WlAppBackupManager:
 
         # 建立备份关系
         WlAppBackupRel.objects.create(
-            app=self.env.application, original_id=self.original_wl_app.uuid, backup_id=wl_app.uuid
+            app_environment=self.env, original_id=self.original_wl_app.uuid, backup_id=wl_app.uuid
         )
 
         # 创建对应的 Config 副本

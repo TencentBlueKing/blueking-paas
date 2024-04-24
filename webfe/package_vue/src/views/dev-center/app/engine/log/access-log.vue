@@ -52,7 +52,7 @@
         </div>
 
         <!-- 查询结果 start -->
-        <div ref="tableBox" v-bkloading="{ isLoading: isLogListLoading }" class="table-wrapper">
+        <div ref="tableBox" v-bkloading="{ isLoading: isLogListLoading }" class="table-wrapper log-scroll-cls">
           <table id="log-table" :key="renderIndex" class="ps-table ps-table-default ps-log-table">
             <thead>
               <tr>
@@ -188,10 +188,17 @@
             </tbody>
           </table>
         </div>
-        <div v-if="pagination.count" class="ps-page ml0 mr0">
+        <div v-if="pagination.count > 9" class="ps-page ml0 mr0">
           <bk-pagination
-            size="small" align="right" :current.sync="pagination.current" :count="pagination.count"
-            :limit="pagination.limit" @change="handlePageChange" @limit-change="handlePageSizeChange" />
+            size="small"
+            align="right"
+            :current.sync="pagination.current"
+            :count="pagination.count"
+            :limit="pagination.limit"
+            :show-total-count="true"
+            @change="handlePageChange"
+            @limit-change="handlePageSizeChange"
+          />
         </div>
       </div>
     </div>
@@ -202,7 +209,7 @@
 import xss from 'xss';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import logFilter from './comps/log-filter.vue';
-import { formatDate } from '@/common/tools';
+import { throttle } from 'lodash';
 
 const xssOptions = {
   whiteList: {
@@ -400,17 +407,15 @@ export default {
         this.contentHeight = height;
       }
       this.initTableBox();
-      window.onresize = () => {
-        this.initTableBox();
-      };
+      window.addEventListener('resize', throttle(this.initTableBox, 100));
     },
 
     initTableBox() {
-      setTimeout(() => {
+      if (this.$refs.logMain) {
         const width = this.$refs.logMain.getBoundingClientRect().width - 220;
         this.$refs.tableBox.style.width = `${width}px`;
         this.$refs.tableBox.style.maxWidth = `${width}px`;
-      }, 1000);
+      }
     },
 
     /**
@@ -828,7 +833,7 @@ export default {
     },
 
     formatTime(time) {
-      return time ? formatDate(time * 1000) : '--';
+      return time ? moment.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
     },
 
     handleTrigger(propObj) {
@@ -1218,7 +1223,17 @@ export default {
 
 .table-wrapper {
   width: auto;
-  overflow-x: auto;
+  overflow: auto;
+
+  &.log-scroll-cls {
+    max-height: 465px;
+
+    table thead {
+      position: sticky;
+      top: 0;
+      z-index: 99;
+    }
+  }
 }
 
 .tooltip-icon {

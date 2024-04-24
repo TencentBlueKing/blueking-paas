@@ -102,7 +102,7 @@
         <div
           ref="tableBox"
           v-bkloading="{ isLoading: isLogListLoading }"
-          class="table-wrapper"
+          class="table-wrapper log-scroll-cls"
         >
           <table
             id="log-table"
@@ -132,8 +132,9 @@
                             {{ field }}
                           </span>
                           <div
+                            :ref="`filterIcon${field}`"
                             class="paasng-icon paasng-funnel filter-icon"
-                            @click.stop.prevent="handleShowFilter(field)"
+                            @click.stop.prevent="handleShowFilter($event, field, 'icon')"
                           >
                             <div
                               v-if="fieldPopoverShow[field]"
@@ -292,8 +293,9 @@
             </tbody>
           </table>
         </div>
+        <!-- 条数过少不展示分页 -->
         <div
-          v-if="pagination.count"
+          v-if="pagination.count > 9"
           class="ps-page ml0 mr0"
         >
           <bk-pagination
@@ -302,6 +304,7 @@
             :current.sync="pagination.current"
             :count="pagination.count"
             :limit="pagination.limit"
+            :show-total-count="true"
             @change="handlePageChange"
             @limit-change="handlePageSizeChange"
           />
@@ -315,7 +318,7 @@
 import xss from 'xss';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import logFilter from './comps/log-filter.vue';
-import { formatDate } from '@/common/tools';
+import { throttle } from 'lodash';
 
 const xssOptions = {
   whiteList: {
@@ -530,19 +533,15 @@ export default {
         this.contentHeight = height;
       }
       this.initTableBox();
-      window.onresize = () => {
-        this.initTableBox();
-      };
+      window.addEventListener('resize', throttle(this.initTableBox, 100));
     },
 
     initTableBox() {
-      setTimeout(() => {
-        if (this.$refs.logMain) {
-          const width = this.$refs.logMain.getBoundingClientRect().width - 220;
-          this.$refs.tableBox.style.width = `${width}px`;
-          this.$refs.tableBox.style.maxWidth = `${width}px`;
-        }
-      }, 1000);
+      if (this.$refs.logMain) {
+        const width = this.$refs.logMain.getBoundingClientRect()?.width - 220;
+        this.$refs.tableBox.style.width = `${width}px`;
+        this.$refs.tableBox.style.maxWidth = `${width}px`;
+      }
     },
 
     /**
@@ -906,7 +905,7 @@ export default {
       this.$refs.logList.toggleRowExpansion(row);
     },
 
-    handleShowFilter(field) {
+    handleShowFilter(e, field) {
       if (!this.fieldPopoverShow[field]) {
         for (const key in this.fieldPopoverShow) {
           this.fieldPopoverShow[key] = false;
@@ -915,6 +914,10 @@ export default {
         this.filterKeyword = '';
         // eslint-disable-next-line no-plusplus
         this.renderIndex++;
+      } else {
+        if (this.$refs[`filterIcon${field}`][0] === e.target) {
+          this.handleCancelFilterChange(field);
+        }
       }
     },
 
@@ -939,7 +942,7 @@ export default {
     },
 
     formatTime(time) {
-      return time ? formatDate(time * 1000) : '--';
+      return time ? moment.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
     },
 
     // 获取清洗规则, 添加对应link
@@ -1339,6 +1342,17 @@ span.second {
 }
 .table-wrapper {
   width: auto;
+
+  &.log-scroll-cls {
+    max-height: 465px;
+    overflow: auto;
+
+    table thead {
+      position: sticky;
+      top: 0;
+      z-index: 99;
+    }
+  }
 }
 .tooltip-icon {
   cursor: pointer;

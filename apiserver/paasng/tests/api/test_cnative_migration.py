@@ -97,7 +97,9 @@ class TestQueryProcessCNativeMigrationViewSet:
         )
         response = api_client.get(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/")
         assert response.data["status"] == "migration_succeeded"
+        assert response.data["id"] == process.id
         assert response.data["error_msg"] == ""
+        assert response.data["is_active"] is False
         assert response.data["details"]["migrations"][0]["migrator_name"] == "ApplicationTypeMigrator"
 
     def test_get_process_by_id_404(self, api_client, bk_app, bk_user):

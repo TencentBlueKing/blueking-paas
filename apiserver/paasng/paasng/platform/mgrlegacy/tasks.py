@@ -22,6 +22,7 @@ from celery import shared_task
 
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.workloads.networking.entrance.entrance import get_entrances
+from paas_wl.workloads.networking.entrance.serializers import ModuleEntrancesSLZ
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy import migrate
 from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
@@ -100,10 +101,16 @@ def confirm_with_rollback_on_failure(migration_process_id):
 def migrate_default_to_cnative(migration_process_id):
     # 保存访问入口数据
     migration_process = CNativeMigrationProcess.objects.get(id=migration_process_id)
-    migration_process.legacy_data.entrances = get_entrances(migration_process.app)
-    migration_process.save(update_fields=["legacy_data"])
-
-    migrate.migrate_default_to_cnative(migration_process=migration_process)
+    try:
+        migration_process.legacy_data.entrances = ModuleEntrancesSLZ(
+            get_entrances(migration_process.app), many=True
+        ).data
+        migration_process.save(update_fields=["legacy_data"])
+    except Exception:
+        logger.exception("backup entrances failed: migration_process_id=%s", migration_process_id)
+        migration_process.finish_migration(False)
+    else:
+        migrate.migrate_default_to_cnative(migration_process=migration_process)
 
 
 @shared_task

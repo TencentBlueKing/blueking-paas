@@ -34,7 +34,6 @@ from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
 from paas_wl.infras.cluster.shim import RegionClusterService
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
-from paas_wl.workloads.networking.entrance.serializers import ModuleEntrancesSLZ
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -420,6 +419,6 @@ class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if last_process := CNativeMigrationProcess.objects.filter(
             app=app, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
         ).last():
-            return Response(data=ModuleEntrancesSLZ(last_process.legacy_data.entrances, many=True).data)
+            return Response(data=last_process.legacy_data.entrances)
 
         return Response(data=[])

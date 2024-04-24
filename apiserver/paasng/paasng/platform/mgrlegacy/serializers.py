@@ -138,7 +138,7 @@ class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = CNativeMigrationProcess
-        fields = ("status", "error_msg", "details", "created_at", "confirm_at")
+        fields = ("id", "status", "error_msg", "details", "created_at", "confirm_at", "is_active")
 
     def get_error_msg(self, obj: CNativeMigrationProcess) -> str:
         if obj.status == CNativeMigrationStatus.MIGRATION_FAILED.value:

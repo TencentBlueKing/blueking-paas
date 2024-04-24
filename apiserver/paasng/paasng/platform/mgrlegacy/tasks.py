@@ -102,9 +102,10 @@ def migrate_default_to_cnative(migration_process_id):
     # 保存访问入口数据
     migration_process = CNativeMigrationProcess.objects.get(id=migration_process_id)
     try:
-        migration_process.legacy_data.entrances = ModuleEntrancesSLZ(
-            get_entrances(migration_process.app), many=True
-        ).data
+        # data 是 ReturnList, 需要转成 list, 否则 legacy_data 在入库时, cattr.unstructure 报错
+        migration_process.legacy_data.entrances = list(
+            ModuleEntrancesSLZ(get_entrances(migration_process.app), many=True).data
+        )
         migration_process.save(update_fields=["legacy_data"])
     except Exception:
         logger.exception("backup entrances failed: migration_process_id=%s", migration_process_id)

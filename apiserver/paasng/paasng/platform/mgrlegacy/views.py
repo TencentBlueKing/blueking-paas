@@ -345,7 +345,7 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for m in app.modules.all():
             for env in m.envs.all():
                 if env.wl_app.config_set.latest().cluster == cnative_cluster_name:
-                    raise error_codes.APP_MIGRATION_FAILED.f("该应用已在云原生集群中，无法迁移")
+                    raise error_codes.APP_MIGRATION_FAILED.f("原集群和目标集群相同, 无法迁移")
 
 
 class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

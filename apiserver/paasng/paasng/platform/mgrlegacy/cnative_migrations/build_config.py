@@ -37,12 +37,18 @@ class BuildConfigMigrator(CNativeBaseMigrator):
 
         for m in self.app.modules.all():
             config = BuildConfig.objects.get_or_create_by_module(m)
+
+            buildpack_builder = config.buildpack_builder
+            buildpack_runner = config.buildpack_runner
+            if not buildpack_builder or not buildpack_runner:
+                raise ValueError(f"no buildpacks bound with module({m.name})")
+
             builds.append(
                 BuildLegacyData(
                     module_name=m.name,
                     buildpack_ids=list(config.buildpacks.values_list("id", flat=True)),
-                    buildpack_builder_id=config.buildpack_builder.id,
-                    buildpack_runner_id=config.buildpack_runner.id,
+                    buildpack_builder_id=buildpack_builder.id,
+                    buildpack_runner_id=buildpack_runner.id,
                 )
             )
 

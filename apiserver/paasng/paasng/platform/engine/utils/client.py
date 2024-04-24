@@ -17,7 +17,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """Engine services module
 """
-from typing import Dict
+from typing import Dict, Optional
 
 from django.utils.functional import cached_property
 
@@ -45,6 +45,7 @@ class EngineDeployClient:
         image: str,
         extra_envs: Dict[str, str],
         artifact_type: ArtifactType = ArtifactType.NONE,
+        artifact_metadata: Optional[Dict] = None,
     ) -> str:
         """Create the **fake** build for Image Type App"""
         build = Build.objects.create(
@@ -52,6 +53,7 @@ class EngineDeployClient:
             env_variables=extra_envs,
             image=image,
             artifact_type=artifact_type,
+            artifact_metadata=artifact_metadata or {},
         )
         return str(build.uuid)
 

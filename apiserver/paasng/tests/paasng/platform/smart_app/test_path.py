@@ -20,7 +20,7 @@ import zipfile
 
 import pytest
 
-from paasng.platform.smart_app.path import ZipPath
+from paasng.platform.smart_app.services.path import ZipPath
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_zip
 

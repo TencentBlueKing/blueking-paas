@@ -72,7 +72,7 @@ class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
     )
     def query(self, request: Request, code: Text):
         request_slz = EventRecordListQuerySLZ(data=request.data, partial=True)
-        request_slz.is_valid(True)
+        request_slz.is_valid(raise_exception=True)
 
         client = Client()
         params = request_slz.validated_data
@@ -92,7 +92,7 @@ class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
     )
     def app_summary(self, request: Request):
         request_slz = EventRecordAppSummaryQuerySLZ(data=request.query_params, partial=True)
-        request_slz.is_valid(True)
+        request_slz.is_valid(raise_exception=True)
 
         results = []
         applications = {i.code: i for i in UserApplicationFilter(request.user).filter(order_by=["name"])}
@@ -143,7 +143,7 @@ class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
     )
     def get(self, request: Request, code: Text, record: Text):
         request_slz = EventRecordMetricsQuerySLZ(data=request.query_params)
-        request_slz.is_valid(True)
+        request_slz.is_valid(raise_exception=True)
 
         client = Client()
         result = client.get_event_record_metrics(
@@ -168,7 +168,7 @@ class EventGenreView(ViewSet, ApplicationCodeInPathMixin):
     )
     def list(self, request: Request, code: Text):
         request_slz = EventGenreListQuerySLZ(data=request.query_params, partial=True)
-        request_slz.is_valid(True)
+        request_slz.is_valid(raise_exception=True)
 
         client = Client()
 

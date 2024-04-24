@@ -181,9 +181,9 @@ class SourcePackageSLZ(serializers.Serializer):
 class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
     package_url = serializers.URLField(help_text="源码包下载路径")
     version = serializers.CharField(help_text="源码包版本号", required=False, default=None)
-    allow_overwrite = serializers.NullBooleanField(help_text="是否允许覆盖原有的源码包", default=False)
+    allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)
 
 
 class SourcePackageUploadViaFileSLZ(serializers.Serializer):
     package = serializers.FileField(help_text="源码包文件")
-    allow_overwrite = serializers.NullBooleanField(help_text="是否允许覆盖原有的源码包", default=False)
+    allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)

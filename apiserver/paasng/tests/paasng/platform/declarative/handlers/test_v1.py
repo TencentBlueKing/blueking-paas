@@ -25,7 +25,6 @@ from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ServiceSpec
 from paasng.platform.declarative.constants import AppDescPluginType
-from paasng.platform.declarative.deployment.env_vars import EnvVariablesReader
 from paasng.platform.declarative.handlers import SMartDescriptionHandler, get_desc_handler
 from paasng.platform.declarative.models import DeploymentDescription
 
@@ -70,19 +69,6 @@ class TestSMartDescriptionHandler:
         SMartDescriptionHandler(app_desc).handle_app(bk_user)
         product = Product.objects.get(code=bk_app.code)
         assert product.displayoptions.width == 303
-
-    def test_deployment_normal(self, random_name, bk_deployment, app_desc):
-        app_desc.update(
-            {
-                "app_code": random_name,
-                "app_name": random_name,
-                "env": [{"key": "BKAPP_FOO", "value": "1"}],
-            }
-        )
-        SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
-
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert EnvVariablesReader(desc_obj).read_as_dict() == {"BKAPP_FOO": "1"}
 
     @pytest.mark.parametrize(
         ("memory", "expected_plan_name"),

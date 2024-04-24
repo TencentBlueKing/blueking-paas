@@ -11,7 +11,7 @@
         <i class="paasng-icon paasng-check-circle-shape" />
         <div class="bk-alert-content">
           <div class="bk-alert-title">
-            {{ $t('源码包上传成功，以下为从app_desc.yml文件中解析出的信息') }}
+            {{ $t('源码包上传成功，以下为从 app_desc.yml 文件中解析出的信息') }}
           </div>
           <div class="bk-alert-description" />
         </div>

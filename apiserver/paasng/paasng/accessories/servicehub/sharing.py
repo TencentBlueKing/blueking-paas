@@ -122,10 +122,11 @@ class ServiceSharingManager:
         """Destroy a shared relationship"""
         SharedServiceAttachment.objects.filter(module=self.module, service_id=service.uuid).delete()
 
-    def get_env_variables(self, env: ModuleEnvironment) -> Dict[str, str]:
+    def get_env_variables(self, env: ModuleEnvironment, filter_enabled: bool = False) -> Dict[str, str]:
         """Get all env variables shared from other modules
 
         :param env: ModuleEnvironment object, must belongs to self.module
+        :param filter_enabled: Whether to filter enabled service instances
         """
         if env.module != self.module:
             raise RuntimeError("Invalid env object, must belongs to self.module")
@@ -133,7 +134,7 @@ class ServiceSharingManager:
         ret = {}
         for referenced_info in self.list_all_shared_info():
             ref_env = referenced_info.ref_module.get_envs(env.environment)
-            env_variables = mixed_service_mgr.get_env_vars(ref_env.engine_app, referenced_info.service)
+            env_variables = mixed_service_mgr.get_env_vars(ref_env.engine_app, referenced_info.service, filter_enabled)
             ret.update(env_variables)
         return ret
 

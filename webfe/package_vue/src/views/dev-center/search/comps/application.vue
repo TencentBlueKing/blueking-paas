@@ -47,7 +47,7 @@
               style="margin-left: 80px;"
               @click="toCloudAPI(appItem)"
             >
-              {{ $t('申请云API权限') }}
+              {{ $t('申请云 API 权限') }}
               <i class="paasng-icon paasng-keys" />
             </bk-button>
           </div>
@@ -100,61 +100,60 @@
   </div>
 </template>
 <script>
-    export default {
-        name: '',
-        props: {
-            data: {
-                type: Array,
-                default: () => []
-            }
-        },
-        data () {
-            return {
-                defaultImg: '/static/images/default_logo.png'
-            };
-        },
-        methods: {
-            toPage (appItem) {
-                if (appItem.config_info.engine_enabled) {
-                    this.toAppSummary(appItem);
-                    return;
-                }
-                this.toAppBaseInfo(appItem);
-            },
-
-            toAppSummary (appItem) {
-                this.$router.push({
-                    name: 'appSummary',
-                    params: {
-                        id: appItem.code,
-                        moduleId: appItem.modules.find(item => item.is_default).name
-                    }
-                });
-            },
-
-            toAppBaseInfo (appItem) {
-                this.$router.push({
-                    name: 'appBaseInfo',
-                    params: {
-                        id: appItem.code
-                    }
-                });
-            },
-
-            visitLink (data, env) {
-                window.open(data.deploy_info[env].url);
-            },
-
-            toCloudAPI (item) {
-                this.$router.push({
-                    name: 'appCloudAPI',
-                    params: {
-                        id: item.code
-                    }
-                });
-            }
-        }
+export default {
+  props: {
+    data: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  data() {
+    return {
+      defaultImg: '/static/images/default_logo.png',
     };
+  },
+  methods: {
+    toPage(appItem) {
+      if (appItem.config_info.engine_enabled) {
+        this.toAppSummary(appItem);
+        return;
+      }
+      this.toAppBaseInfo(appItem);
+    },
+
+    toAppSummary(appItem) {
+      this.$router.push({
+        name: 'appSummary',
+        params: {
+          id: appItem.code,
+          moduleId: appItem.modules.find(item => item.is_default).name,
+        },
+      });
+    },
+
+    toAppBaseInfo(appItem) {
+      this.$router.push({
+        name: 'appBaseInfo',
+        params: {
+          id: appItem.code,
+        },
+      });
+    },
+
+    visitLink(data, env) {
+      window.open(data.deploy_info[env].url);
+    },
+
+    toCloudAPI(item) {
+      this.$router.push({
+        name: 'appCloudAPI',
+        params: {
+          id: item.code,
+        },
+      });
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .apps-table-wrapper {

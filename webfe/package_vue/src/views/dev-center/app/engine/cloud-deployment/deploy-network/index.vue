@@ -72,7 +72,7 @@ export default {
     async getServiceDiscoveryData() {
       try {
         const res = await this.$store.dispatch('deploy/getServiceDiscoveryData', { appCode: this.appCode });
-        this.serviceData.list = res.bk_saas.map(v => ({ key: v.bk_app_code, value: v.module_name }));
+        this.serviceData.list = res.bk_saas.map(v => ({ key: v.bk_app_code, value: v.module_name || '--' }));
         // 服务发现表单数据
         this.serviceFormData = res.bk_saas || [];
       } catch (error) {

@@ -83,7 +83,7 @@
             class="value"
             v-bk-overflow-tips
           >
-            {{ pluginUsers.length ? pluginUsers.join(',') : '--' }}
+            {{ pluginUsers.length ? pluginUsers.map(v => v.name).join(',') : '--' }}
           </div>
         </li>
       </ul>
@@ -244,7 +244,7 @@ export default {
       this.pluginformData.introduction = this.curPluginData.introduction;
       this.pluginformData.contact = this.curPluginData.contact;
       this.pluginformData.tag = this.curPluginData.tag;
-      this.pluginformData.distributors = this.pluginUsers;
+      this.pluginformData.distributors = this.pluginUsers.map(item => item.code_name);
     },
     // 取消
     handleCancel() {
@@ -284,7 +284,7 @@ export default {
         const res = await this.$store.dispatch('plugin/getAuthorizedPlugins', {
           appCode: this.appCode,
         });
-        this.pluginUsers = res.map(item => item.code_name);
+        this.pluginUsers = res || [];
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -295,9 +295,7 @@ export default {
     // 获取插件使用方列表
     async getPluginDistributors() {
       try {
-        const data = await this.$store.dispatch('plugin/getPluginDistributors', {
-          appCode: this.appCode,
-        });
+        const data = await this.$store.dispatch('plugin/getPluginDistributors');
         this.pluginDistributors = data || [];
       } catch (e) {
         this.$paasMessage({

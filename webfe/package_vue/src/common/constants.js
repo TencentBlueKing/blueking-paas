@@ -261,3 +261,12 @@ export const PERSISTENT_STORAGE_SIZE_MAP = {
   '2Gi': '2GB',
   '4Gi': '4GB',
 };
+
+/**
+ * 应用类型
+ */
+export const PAAS_APP_TYPE = {
+  default: '普通应用',
+  cloud_native: '云原生应用',
+  engineless_app: '外链应用',
+};

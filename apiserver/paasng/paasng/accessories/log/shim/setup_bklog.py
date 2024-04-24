@@ -44,7 +44,7 @@ from paasng.infras.bk_log.definitions import (
     StorageConfig,
 )
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.applications.constants import AppFeatureFlag, AppLanguage
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 
@@ -119,12 +119,10 @@ def update_or_create_es_search_config(
 
     :param str message_field: 日志查询字段, 默认值 log 是日志平台的原始日志字段
     """
-    module = env.module
+    application = env.application
     assert collector_config.collector_config
-    # 与 ELK 方案共用 ES 存储, 需要预先在日志平台配置
-    host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
 
-    monitor_space, _ = get_or_create_bk_monitor_space(module.application)
+    monitor_space, _ = get_or_create_bk_monitor_space(application)
     # Note: 修改以下的 ElasticSearchParams 只对新创建的查询配置生效
     # 日志平台的索引规则:
     # 对于 biz_id 是 业务ID 的采集项: ${biz_id}_bklog_${name_en}_*
@@ -144,20 +142,27 @@ def update_or_create_es_search_config(
         r"|otelServiceName|otelTraceID|environment|process_id|stream|__ext_json\..*",
     )
 
-    search_config, _ = ElasticSearchConfig.objects.get_or_create(
-        collector_config_id=collector_config.collector_config.id,
-        # 日志平台封装的接口不满足需求, 目前所有日志查询都是走 ES 查询
-        backend_type="es",
-        defaults={
+    if application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_CLIENT):
+        defaults = {
+            "backend_type": "bkLog",
+            "bk_log_config": {
+                "scenarioID": "log",
+            },
+            "search_params": search_params,
+        }
+    else:
+        # 使用日志平台采集日志, 但使用 ES 查询日志, 需要保证日志平台的 storage_id 与 ELK 方案的 ES 为同一个 ES
+        host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
+        defaults = {
+            "backend_type": "es",
             "elastic_search_host": host,
             "search_params": search_params,
-        },
-    )
+        }
 
-    # 如果 settings 的 ES Host 配置被修改, 需要同步到 DB
-    if search_config.elastic_search_host != host:
-        search_config.elastic_search_host = host
-        search_config.save(update_fields=["elastic_search_host"])
+    search_config, _ = ElasticSearchConfig.objects.update_or_create(
+        collector_config_id=collector_config.collector_config.id,
+        defaults=defaults,
+    )
 
     config, _ = ProcessLogQueryConfig.objects.get_or_create(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
     if collector_config.log_type == "stdout":

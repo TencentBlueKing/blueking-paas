@@ -160,20 +160,27 @@ class DeploymentStateMgr:
         if write_to_stream and err_detail:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
-        post_phase_end.send(self, status=status, phase=self.phase_type)
-        self.stream.close()
+        # Update the status of the deployment and the env obj.
         self.update(status=status.value, err_detail=err_detail)
-
-        # Record operation
-        ModuleEnvironmentOperations.objects.filter(object_uid=self.deployment.id).update(status=status.value)
-
         env_obj = self.deployment.app_environment
         if status == JobStatus.SUCCESSFUL and env_obj.is_offlined:
             env_obj.restore_archived()
 
-        # INFO: Must call the publish after the environment has been restored from "archived" status
+        # End the deploy phase by sending signal, this should cause the clients that are watching
+        # for new events to be notified about the end of the release phase. Those clients may
+        # request for the latest released information after being notified.
+        #
+        # NOTE: To avoid returning obsolete release information, we must end the phase AFTER
+        # the deployment has been updated.
+        post_phase_end.send(self, status=status, phase=self.phase_type)
+        self.stream.close()
+
+        # NOTE: Must call the publish after the environment has been restored from "archived" status
         # or the publish may fail because it doesn't consider the application is in running status.
         publish_to_market_by_deployment(self.deployment)
+
+        # Record operation
+        ModuleEnvironmentOperations.objects.filter(object_uid=self.deployment.id).update(status=status.value)
 
         # Release deploy lock
         try:

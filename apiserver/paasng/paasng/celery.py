@@ -24,8 +24,25 @@ import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "paasng.settings")
 
 from celery import Celery
+from celery.signals import setup_logging
 
 app = Celery("paasng")
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
+
+
+@setup_logging.connect
+def config_loggers(*args, **kwargs):
+    """Re-configure the logging using the django settings instead of letting celery
+    hijack the root logger.
+
+    ref: https://stackoverflow.com/questions/48289809/celery-logger-configuration
+    """
+    from logging.config import dictConfig
+
+    from django.conf import settings
+
+    dictConfig(settings.LOGGING)
+
+
 app.autodiscover_tasks()

@@ -47,9 +47,9 @@ class TestConfigVar:
         ],
     )
     def test_input(self, bk_module, environment_name, bk_env, data, expected):
-        v = slzs.ConfigVarSLZ(data=dict(environment_name=environment_name, **data), context={"module": bk_module})
-        v.is_valid(True)
-        assert v.validated_data == dict(
+        slz = slzs.ConfigVarSLZ(data=dict(environment_name=environment_name, **data), context={"module": bk_module})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data == dict(
             environment=bk_env,
             module=bk_module,
             environment_id=getattr(bk_env, "pk", -1),
@@ -62,8 +62,8 @@ class TestConfigVar:
         [dict(key="FOO", value="bar", description="baz")],
     )
     def test_output(self, bk_module, environment_name, bk_env, data):
-        v = slzs.ConfigVarSLZ(dict(module=bk_module, environment=bk_env, **data))
-        assert v.data == dict(environment_name=environment_name, module=bk_module.pk, **data)
+        slz = slzs.ConfigVarSLZ(dict(module=bk_module, environment=bk_env, **data))
+        assert slz.data == dict(environment_name=environment_name, module=bk_module.pk, **data)
 
 
 @pytest.mark.django_db()

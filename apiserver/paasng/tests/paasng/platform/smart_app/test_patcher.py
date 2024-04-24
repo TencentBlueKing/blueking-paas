@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import tarfile
 from unittest import mock
 
@@ -26,9 +27,9 @@ from blue_krill.contextlib import nullcontext as does_not_raise
 from paasng.platform.declarative import constants
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.smart_app.patcher import SourceCodePatcher
-from paasng.platform.smart_app.path import LocalFSPath
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.patcher import SourceCodePatcher
+from paasng.platform.smart_app.services.path import LocalFSPath
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML
 
@@ -264,7 +265,7 @@ class TestSourcePackagePatcher:
         with tarfile.open(patched_tar) as tar, ctx:
             fp = tar.extractfile(target)
             assert fp
-            data = yaml.load(fp.read())
+            data = yaml.full_load(fp.read())
             assert data == expected
 
     @pytest.mark.parametrize(

@@ -26,7 +26,9 @@ class ListBkPluginsSLZ(serializers.Serializer):
     """Serializer for listing bk_plugins"""
 
     search_term = serializers.CharField(help_text="按名字或 code 过滤，默认不过滤", default="", required=False)
-    has_deployed = serializers.NullBooleanField(help_text="按已部署状态过滤", default=None, required=False)
+    has_deployed = serializers.BooleanField(
+        help_text="按已部署状态过滤", default=None, required=False, allow_null=True
+    )
     order_by = serializers.CharField(default="-created")
     distributor_code_name = serializers.CharField(help_text="按已授权使用方代号过滤", default=None, required=False)
     tag_id = serializers.IntegerField(

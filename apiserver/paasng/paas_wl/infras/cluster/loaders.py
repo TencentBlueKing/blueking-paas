@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import os
 from collections import defaultdict
 from typing import Dict, Iterable, List, Optional
@@ -89,7 +90,7 @@ class LegacyKubeConfigLoader(KubeConfigLoader):
     def from_file(cls, filename):
         with open(filename) as f:
             return LegacyKubeConfigLoader(
-                config_dict=yaml.load(f), config_base_path=os.path.abspath(os.path.dirname(filename))
+                config_dict=yaml.full_load(f), config_base_path=os.path.abspath(os.path.dirname(filename))
             )
 
     def _get_tag_from_context(self, context: dict) -> str:

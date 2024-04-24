@@ -292,6 +292,10 @@ class BaseServiceMgr(metaclass=ABCMeta):
     def find_by_name(self, name: str, region: str) -> ServiceObj:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
+        raise NotImplementedError
+
 
 class BasePlanMgr:
     """Base class for plan manager"""

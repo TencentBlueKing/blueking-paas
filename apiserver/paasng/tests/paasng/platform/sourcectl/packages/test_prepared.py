@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from paasng.platform.smart_app.prepared import PreparedSourcePackage
+from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 
 
 class TestPreparedSourcePackage:

@@ -15,8 +15,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arrow
 from django.conf import settings
@@ -34,7 +35,7 @@ from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.conf import bksmart_settings
-from paasng.platform.smart_app.utils import SMartImageManager
+from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.models import RepoBasicAuthHolder
 
 if TYPE_CHECKING:
@@ -54,6 +55,14 @@ def generate_image_repository(module: Module) -> str:
     return get_image_repository_template().format(app_code=application.code, module_name=module.name)
 
 
+def get_app_image_registry_info(module: Module) -> Tuple[str, bool]:
+    """Get the image registry info
+
+    :return: a Tuple[registry_full_addr, should_skip_tls_verify]
+    """
+    return settings.APP_DOCKER_REGISTRY_HOST, settings.APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY
+
+
 def generate_image_tag(module: Module, version: "VersionInfo") -> str:
     """Get the Image Tag for version"""
     cfg = BuildConfig.objects.get_or_create_by_module(module)
@@ -67,7 +76,13 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
         parts.append(arrow.now().format("YYMMDDHHmm"))
     if options.with_commit_id:
         parts.append(version.revision)
-    return "-".join(parts)
+    tag = "-".join(parts)
+    # 不符合 tag 正则的字符, 替换为 '-'
+    tag_regex = re.compile("[^a-zA-Z0-9_.-]")
+    tag = tag_regex.sub("-", tag)
+    # 去掉开头的 '-'
+    tag = re.sub("^-+", "", tag)
+    return tag
 
 
 def get_credential_refs(module: Module) -> List[ImageCredentialRef]:
@@ -157,7 +172,7 @@ class RuntimeImageInfo:
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
-            from paasng.platform.smart_app.utils import SMartImageManager
+            from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 
             named = SMartImageManager(self.module).get_image_info(version_info.revision)
             return f"{named.domain}/{named.name}:{named.tag}"

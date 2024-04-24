@@ -242,8 +242,10 @@ class WrapUsernameAsUserMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
-    def get_user(self, request, api_name=None, bk_username=None, verified=False, **credentials):
-        return auth.authenticate(request, api_name=api_name, bk_username=bk_username, verified=verified, **credentials)
+    def get_user(self, request, gateway_name=None, bk_username=None, verified=False, **credentials):
+        return auth.authenticate(
+            request, gateway_name=gateway_name, bk_username=bk_username, verified=verified, **credentials
+        )
 
     def __call__(self, request):
         jwt_info = getattr(request, "jwt", None)
@@ -264,7 +266,7 @@ class WrapUsernameAsUserMiddleware:
                 if bk_username:
                     request.user = self.get_user(
                         request,
-                        api_name=jwt_info.api_name,
+                        gateway_name=jwt_info.gateway_name,
                         bk_username=bk_username,
                         verified=req_app.verified,
                     )

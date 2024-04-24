@@ -1164,6 +1164,8 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking
 # S-Mart 基础镜像信息
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
 SMART_IMAGE_TAG = "heroku-18-v1.6.1"
+SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
+SMART_CNB_IMAGE_TAG = "heroku-18-v1.4.0"
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
@@ -1173,6 +1175,8 @@ BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 # ------------------
 # App 镜像仓库的 Registry 的域名
 APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "index.docker.io")
+# 是否跳过校验 App 镜像仓库的证书
+APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY = settings.get("APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY", False)
 # App 镜像仓库的命名空间, 即在 Registry 中的项目名
 APP_DOCKER_REGISTRY_NAMESPACE = settings.get("APP_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号

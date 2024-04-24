@@ -93,10 +93,13 @@ class ImageReleaseMgr(DeployStep):
                 # advanced_options.build_id 为空有 2 种可能情况
                 # 1. s-mart 应用
                 # 2. 仅托管镜像的应用(包含云原生应用和旧镜像应用)
+                use_cnb = False
                 if is_smart_app:
                     # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
                     perform_result = self.handle_smart_app_description()
-                    proc_data_from_desc = getattr(perform_result, "loaded_processes", None)
+                    if perform_result is not None:
+                        proc_data_from_desc = perform_result.loaded_processes
+                        use_cnb = perform_result.is_use_cnb()
                     processes = list(
                         get_processes(deployment=self.deployment, proc_data_from_desc=proc_data_from_desc).values()
                     )
@@ -120,6 +123,9 @@ class ImageReleaseMgr(DeployStep):
                     extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
                     # 需要兼容 s-mart 应用
                     artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
+                    artifact_metadata={
+                        "use_cnb": use_cnb,
+                    },
                 )
 
             self.deployment.update_fields(

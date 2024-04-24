@@ -16,20 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from functools import partial
-
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
-
-# In legacy architecture, all workloads's APIs starts with a fixed prefix "/svc_workloads" and use
-# a slightly different format. While the prefix is not required in the new architecture, we have
-# to keep it to maintain backward-compatibility.
-#
-# This function helps up to build paths with the legacy prefix.
-#
-# TODO: Remove the 'svc_workloads' prefix and clean up the URL paths.
-make_app_pattern_legacy_wl = partial(make_app_pattern, prefix="svc_workloads/api/processes/applications/")
 
 urlpatterns = [
     re_path(
@@ -62,13 +51,5 @@ urlpatterns = [
         make_app_pattern(r"/processes/watch/$"),
         views.ListAndWatchProcsViewSet.as_view({"get": "watch"}),
         name="api.watch_processes",
-    ),
-    # The list API with "/svc_workloads/" prefix has been registered in the API Gateway,
-    # So we will leave it as is until we modify the API Gateway config in the future.
-    # TODO: Remove this API.
-    re_path(
-        make_app_pattern_legacy_wl(r"/processes/list/$"),
-        views.ListAndWatchProcsViewSet.as_view({"get": "list"}),
-        name="api.list_processes",
     ),
 ]

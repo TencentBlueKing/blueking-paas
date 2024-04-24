@@ -19,17 +19,26 @@ to the current version of the project delivered to anyone in the future.
 from unittest import mock
 
 import pytest
+from kubernetes.dynamic import ResourceField
 
+from paas_wl.bk_app.applications.managers.app_metadata import update_metadata
+from paas_wl.bk_app.processes.controllers import ProcessesInfo
+from paas_wl.bk_app.processes.entities import Status
+from paas_wl.bk_app.processes.kres_entities import Instance
+from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.entities import MigrationResult, ProcessDetails
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
+from tests.paas_wl.bk_app.processes.test_controllers import make_process
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestMigrateCNativeMigrationViewSet:
     def test_migrate(self, api_client, bk_app):
-        with mock.patch("paasng.platform.mgrlegacy.tasks.migrate_default_to_cnative.delay") as mock_task:
+        with mock.patch("paasng.platform.mgrlegacy.tasks.migrate_default_to_cnative.delay") as mock_task, mock.patch(
+            "paasng.platform.mgrlegacy.views.CNativeMigrationViewSet._can_migrate_or_raise"
+        ):
             mock_task.return_value = None
 
             response = api_client.post(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/migrate/")
@@ -75,14 +84,26 @@ class TestRollbackCNativeMigrationViewSet:
 class TestQueryProcessCNativeMigrationViewSet:
     def test_get_process_by_id(self, api_client, bk_app, bk_user):
         process = CNativeMigrationProcess.objects.create(
-            app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+            app=bk_app,
+            owner=bk_user.pk,
+            status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
+            details=ProcessDetails(
+                migrations=[
+                    MigrationResult(
+                        migrator_name="ApplicationTypeMigrator", is_succeeded=False, error_msg="invalid app type"
+                    ),
+                ],
+            ),
         )
-        response = api_client.get(f"/api/mgrlegacy/cloud-native/processes/{process.id}/")
+        response = api_client.get(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/")
         assert response.data["status"] == "migration_succeeded"
+        assert response.data["id"] == process.id
         assert response.data["error_msg"] == ""
+        assert response.data["is_active"] is False
+        assert response.data["details"]["migrations"][0]["migrator_name"] == "ApplicationTypeMigrator"
 
     def test_get_process_by_id_404(self, api_client, bk_app, bk_user):
-        response = api_client.get("/api/mgrlegacy/cloud-native/processes/1/")
+        response = api_client.get("/api/mgrlegacy/cloud-native/migration_processes/1/")
         assert response.status_code == 404
 
     def test_get_latest_process(self, api_client, bk_app, bk_user):
@@ -97,7 +118,9 @@ class TestQueryProcessCNativeMigrationViewSet:
             status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
         )
 
-        response = api_client.get(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/processes/latest/")
+        response = api_client.get(
+            f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/migration_processes/latest/"
+        )
         assert response.data["status"] == "migration_succeeded"
 
     def list_processes(self, api_client, bk_app, bk_user):
@@ -121,7 +144,7 @@ class TestQueryProcessCNativeMigrationViewSet:
             app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
         )
 
-        response = api_client.get(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/processes/")
+        response = api_client.get(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/migration_processes/")
         assert response.data[0]["status"] == "migration_succeeded"
         assert response.data[1]["status"] == "migration_failed"
         assert response.data[1]["error_msg"] == "cnb buildpacks versions incompatible"
@@ -132,12 +155,87 @@ class TestConfirmCNativeMigrationViewSet:
         process = CNativeMigrationProcess.objects.create(
             app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
         )
-        response = api_client.put(f"/api/mgrlegacy/cloud-native/processes/{process.id}/confirm/")
+        response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
         assert response.status_code == 204
 
     def test_confirm_failed(self, api_client, bk_app, bk_user):
         process = CNativeMigrationProcess.objects.create(
             app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_FAILED.value
         )
-        response = api_client.put(f"/api/mgrlegacy/cloud-native/processes/{process.id}/confirm/")
+        response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
         assert response.data["detail"] == "应用迁移确认失败: 该应用记录未表明应用已成功迁移, 无法确认"
+
+
+class TestDefaultAppProcessViewSet:
+    @pytest.fixture()
+    def wl_app(self, bk_app, _with_wl_apps, bk_stag_env):
+        return bk_app.get_engine_app("stag", module_name="default").to_wl_obj()
+
+    @pytest.fixture(autouse=True)
+    def _mock_get_wl_app(self, wl_app, bk_stag_env):
+        update_metadata(wl_app, module_name="default")
+        WlAppBackupManager(bk_stag_env).create()
+
+    @pytest.fixture()
+    def processes_info(self, wl_app):
+        process = make_process(wl_app, "web")
+        process.metadata = ResourceField({"resourceVersion": "1", "name": "test"})
+        process.status = Status(replicas=1, success=1, failed=0)
+        process.instances = [Instance(wl_app, name="test", process_type="web")]
+        return ProcessesInfo(processes=[process], rv_proc="282906629", rv_inst="282906629")
+
+    def test_list(self, api_client, bk_app, processes_info):
+        with mock.patch("paasng.platform.mgrlegacy.views.get_processes_info", return_value=processes_info):
+            response = api_client.get(
+                f"/api/mgrlegacy/applications/{bk_app.code}/modules/default/envs/stag/processes/"
+            )
+            assert response.data["processes"]["items"][0]["type"] == "web"
+
+    def test_update(self, api_client, bk_app):
+        with mock.patch("paasng.platform.mgrlegacy.views.ProcessesHandler.new_by_app") as mock_new:
+            handler = mock.MagicMock()
+            mock_new.return_value = handler
+
+            response = api_client.put(
+                f"/api/mgrlegacy/applications/{bk_app.code}/modules/default/envs/stag/processes/",
+                data={"process_type": "web", "operate_type": "stop"},
+            )
+            handler.shutdown.assert_called()
+            assert response.status_code == 204
+
+
+class TestDefaultAppEntranceViewSet:
+    @pytest.fixture(autouse=True)
+    def _save_entrances(self, bk_app, bk_user):
+        process = CNativeMigrationProcess.objects.create(
+            app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+        )
+        process.legacy_data.entrances = [
+            {
+                "name": "default",
+                "is_default": True,
+                "envs": {
+                    "stag": [
+                        {
+                            "address": {"id": 1, "type": "subdomain", "url": "http://app.stag.example.com"},
+                            "module": "default",
+                            "is_running": True,
+                            "env": "stag",
+                        }
+                    ],
+                    "prod": [
+                        {
+                            "address": {"id": 2, "type": "subdomain", "url": "http://app.prod.example.com"},
+                            "module": "default",
+                            "is_running": True,
+                            "env": "prod",
+                        }
+                    ],
+                },
+            }
+        ]
+        process.save(update_fields=["legacy_data"])
+
+    def test_list_all_entrances(self, api_client, bk_app):
+        response = api_client.get(f"/api/mgrlegacy/applications/{bk_app.code}/entrances/")
+        assert response.status_code == 200

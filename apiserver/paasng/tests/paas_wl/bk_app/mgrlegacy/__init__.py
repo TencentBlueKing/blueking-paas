@@ -16,21 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import re
-from typing import Dict
-
-from django.conf import settings
-from rest_framework.exceptions import ValidationError
-
-
-def validate_app_name(value: str):
-    """
-    Check that the value follows the kubernetes name constraints
-    """
-    match = re.match(settings.STR_APP_NAME, value)
-    if not match:
-        raise ValidationError("App name illegal, can only contains a-z, 0-9, -, _")
-
-
-def validate_app_structure(value: Dict):
-    """deprecated function. 被 migrations/0001_initial.py 引用"""

@@ -16,8 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict, List
+
 from rest_framework import serializers
 
+from paas_wl.bk_app.processes.serializers import InstanceListSLZ, ProcessListSLZ
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.utils.i18n.serializers import DjangoTranslatedCharField
@@ -131,10 +134,11 @@ class ApplicationMigrationInfoSLZ(serializers.Serializer):
 
 class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
     error_msg = serializers.SerializerMethodField(help_text="错误信息")
+    details = serializers.SerializerMethodField(help_text="详情")
 
     class Meta:
         model = CNativeMigrationProcess
-        fields = ("status", "error_msg", "created_at", "confirm_at")
+        fields = ("id", "status", "error_msg", "details", "created_at", "confirm_at", "is_active")
 
     def get_error_msg(self, obj: CNativeMigrationProcess) -> str:
         if obj.status == CNativeMigrationStatus.MIGRATION_FAILED.value:
@@ -144,3 +148,16 @@ class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
             # 仅有一个有效的错误信息
             return next((m.error_msg for m in obj.details.rollbacks if m.error_msg), "")
         return ""
+
+    def get_details(self, obj: CNativeMigrationProcess) -> Dict[str, List]:
+        return {
+            "migrations": [
+                {"migrator_name": m.migrator_name, "is_succeeded": m.is_succeeded, "error_msg": m.error_msg}
+                for m in obj.details.migrations
+            ]
+        }
+
+
+class ListProcessesSLZ(serializers.Serializer):
+    processes = ProcessListSLZ()
+    instances = InstanceListSLZ()

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 # type: ignore
 """PaaS apiserver service settings
 
@@ -44,7 +45,7 @@ import copy
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
@@ -57,6 +58,7 @@ from .utils import (
     get_default_keepalive_options,
     get_paas_service_jwt_clients,
     get_service_remote_endpoints,
+    is_in_celery_worker,
     is_redis_backend,
     is_redis_sentinel_backend,
 )
@@ -352,67 +354,129 @@ MESSAGE_TAGS = {messages.ERROR: "danger"}
 
 LOG_LEVEL = settings.get("LOG_LEVEL", default="INFO")
 
-# 配置该 handler 后，所有日志等将被送往该 Redis 管道
-LOGGING_REDIS_HANDLER = settings.get("LOGGING_REDIS_HANDLER")
+# Get the logging directory config, if configured the logs will be written to local directory
+# in the configured format(json/text).
+#
+# 存放日志文件的目录，默认不打印任何日志文件
+LOGGING_DIRECTORY = settings.get("LOGGING_DIRECTORY", default=None)
+# 日志文件格式，可选值为：json/text
+LOGGING_FILE_FORMAT = settings.get("LOGGING_FILE_FORMAT", default="json")
 
-if not LOGGING_REDIS_HANDLER:
-    _redis_handler = {"level": "DEBUG", "class": "logging.NullHandler"}
+if LOGGING_DIRECTORY is None:
+    logging_to_console = True
+    logging_directory = None
 else:
-    _redis_handler = LOGGING_REDIS_HANDLER
+    logging_to_console = False
+    # The dir allows both absolute and relative path, when it's relative, combine
+    # the value with project's base directory
+    logging_directory = Path(BASE_DIR) / Path(LOGGING_DIRECTORY)
+    logging_directory.mkdir(exist_ok=True)
 
-_default_handlers = ["console", "logstash_redis"]
+# 是否总是打印日志到控制台，默认关闭
+LOGGING_ALWAYS_CONSOLE = settings.get("LOGGING_ALWAYS_CONSOLE", default=False)
+if LOGGING_ALWAYS_CONSOLE:
+    logging_to_console = True
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "%(levelname)s [%(asctime)s] [%(request_id)s] %(name)s(ln:%(lineno)d): %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-        "simple": {"format": "%(levelname)s %(message)s"},
-    },
-    "filters": {
-        "request_id": {"()": "paasng.utils.logging.RequestIDFilter"},
-    },
-    "handlers": {
-        "null": {"level": LOG_LEVEL, "class": "logging.NullHandler"},
-        "mail_admins": {"level": LOG_LEVEL, "class": "django.utils.log.AdminEmailHandler"},
+
+def build_logging_config(log_level: str, to_console: bool, file_directory: Optional[Path], file_format: str) -> Dict:
+    """Build the global logging config dict.
+
+    :param log_level: The log level.
+    :param to_console: If True, output the logs to the console.
+    :param file_directory: If the value is not None, output the logs to the given directory.
+    :param file_format: The format of the logging file, "json" or "text".
+    :return: The logging config dict.
+    """
+
+    def _build_file_handler(log_path: Path, filename: str, format: str) -> Dict:
+        formatter = "verbose_json" if format == "json" else "verbose"
+        return {
+            "class": "concurrent_log_handler.ConcurrentRotatingFileHandler",
+            "level": log_level,
+            "formatter": formatter,
+            "filename": str(log_path / filename),
+            # Set max file size to 100MB
+            "maxBytes": 100 * 1024 * 1024,
+            "backupCount": 5,
+            "filters": ["request_id"],
+        }
+
+    handlers = []
+    handlers_config: Dict[str, Any] = {
+        "null": {"level": log_level, "class": "logging.NullHandler"},
+        "mail_admins": {"level": log_level, "class": "django.utils.log.AdminEmailHandler"},
         "console": {
-            "level": LOG_LEVEL,
+            "level": log_level,
             "class": "logging.StreamHandler",
             "formatter": "verbose",
             "filters": ["request_id"],
         },
-        "logstash_redis": _redis_handler,
-    },
-    "root": {"handlers": _default_handlers, "level": LOG_LEVEL, "propagate": False},
-    "loggers": {
-        "django": {"handlers": ["null"], "level": LOG_LEVEL, "propagate": False},
-        "django.request": {"handlers": _default_handlers, "level": "ERROR", "propagate": False},
-        "django.security": {"level": "INFO"},
-        # 常用模块日志级别
-        "paasng": {"level": "NOTSET"},
-        "commands": {"handlers": _default_handlers, "level": LOG_LEVEL, "propagate": False},
-        # 设置第三方模块日志级别，避免日志过多
-        "bkpaas_auth": {"level": "WARNING"},
-        "apscheduler": {"level": "WARNING"},
-        "requests": {"level": "ERROR"},
-        "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
-        "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
-        "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
-        "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
-        "iam": {"level": settings.get("IAM_LOG_LEVEL", "ERROR"), "handlers": _default_handlers, "propagate": False},
-    },
-}
-
-if settings.get("LOGGING_ENABLE_SQL_QUERIES", False):
-    LOGGING["loggers"]["django.db.backends"] = {  # type: ignore
-        "handlers": _default_handlers,
-        "level": LOG_LEVEL,
-        "propagate": True,
     }
+    if to_console:
+        handlers.append("console")
 
+    if file_directory:
+        if file_format in ("json", "text"):
+            base_filename = "main-celery" if is_in_celery_worker() else "main"
+            filename = f"{base_filename}-{file_format}.log"
+            handlers.append("file")
+            handlers_config["file"] = _build_file_handler(file_directory, filename, file_format)
+        else:
+            raise ValueError(f"Invalid file_format: {file_format}")
+
+    logging_dict = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "verbose": {
+                "format": "%(levelname)s [%(asctime)s] [%(request_id)s] %(name)s(ln:%(lineno)d): %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            },
+            "verbose_json": {
+                "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+                "fmt": (
+                    "%(levelname)s %(asctime)s %(pathname)s %(lineno)d %(funcName)s %(process)d %(thread)d %(message)s"
+                ),
+            },
+            "simple": {"format": "%(levelname)s %(message)s"},
+        },
+        "filters": {
+            "request_id": {"()": "paasng.utils.logging.RequestIDFilter"},
+        },
+        "handlers": handlers_config,
+        "root": {"handlers": handlers, "level": log_level, "propagate": False},
+        "loggers": {
+            "django": {"handlers": ["null"], "level": log_level, "propagate": False},
+            "django.request": {"handlers": handlers, "level": "ERROR", "propagate": False},
+            "django.security": {"level": "INFO"},
+            # 常用模块日志级别
+            "paasng": {"level": "NOTSET"},
+            "commands": {"handlers": handlers, "level": log_level, "propagate": False},
+            # 设置第三方模块日志级别，避免日志过多
+            "bkpaas_auth": {"level": "WARNING"},
+            "apscheduler": {"level": "WARNING"},
+            "requests": {"level": "ERROR"},
+            "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
+            "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+            "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+            "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+            "iam": {
+                "level": settings.get("IAM_LOG_LEVEL", "ERROR"),
+                "handlers": handlers,
+                "propagate": False,
+            },
+        },
+    }
+    if settings.get("LOGGING_ENABLE_SQL_QUERIES", False):
+        logging_dict["loggers"]["django.db.backends"] = {  # type: ignore
+            "handlers": handlers,
+            "level": log_level,
+            "propagate": True,
+        }
+    return logging_dict
+
+
+LOGGING = build_logging_config(LOG_LEVEL, logging_to_console, logging_directory, LOGGING_FILE_FORMAT)
 
 # 通知插件
 NOTIFICATION_PLUGIN_CLASSES = settings.get(

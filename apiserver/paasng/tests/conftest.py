@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import atexit
 import logging
 import urllib.parse
@@ -78,7 +79,7 @@ logger = logging.getLogger(__file__)
 # The default region for testing
 DEFAULT_REGION = settings.DEFAULT_REGION_NAME
 svn_lock_fn = Path(__file__).parent / ".svn"
-# A random cluster name for running unittests
+# A random cluster name for running unit tests
 cluster_name_fn = Path(__file__).parent / ".random"
 with FileLock(str(cluster_name_fn.absolute()) + ".lock"):
     if cluster_name_fn.is_file():

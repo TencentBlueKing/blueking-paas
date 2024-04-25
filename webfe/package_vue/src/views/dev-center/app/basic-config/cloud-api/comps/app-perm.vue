@@ -528,7 +528,28 @@ export default {
       this[target] = filters[fieldName]?.length ? filters[fieldName] : [];
     },
 
+    // 表格多选无数据时筛选项丢失处理
+    handleTableFilterOptionMissing() {
+      if (!this.$refs.permRef?.$refs?.tableHeader) return;
+      const filterPanelsRef = this.$refs.permRef?.$refs?.tableHeader?.filterPanels || {};
+      const filterKeys = ['api_name', 'system_name'];
+
+      Object.keys(filterPanelsRef).forEach((key) => {
+        const { selected, column } = filterPanelsRef[key] || {};
+        // 根据组件中的数据更新本地数据
+        if (filterKeys.includes(column?.key)) {
+          this.nameFilterValues = selected || [];
+        } else {
+          this.statusFilterValues = selected || [];
+        }
+      });
+    },
+
     filterChange(filters) {
+      if (!this.isSesetTableList && !Object.keys(filters).length) {
+        this.handleTableFilterOptionMissing();
+        return;
+      }
       this.setFilterValues(filters);
       Object.entries(filters).forEach((item) => {
         const [name, value] = item;
@@ -915,10 +936,11 @@ export default {
         this.updateTableList(true);
         return;
       }
-      const filterFields  = key === 'permission_status' ? this.statusFilterValues : this.nameFilterValues;
+      const filterFields = key === 'permission_status' ? this.statusFilterValues : this.nameFilterValues;
       // 多筛选条件处理
       if (this.statusFilterValues.length && this.nameFilterValues.length) {
-        this.filterAllList = this.getFilterAllList(this.filterAllList, filterFields, key);
+        const curFilterList = this.getFilterAllList(this.allData, this.nameFilterValues, this.isComponentApi ? 'system_name' : 'api_name');
+        this.filterAllList = this.getFilterAllList(curFilterList, this.statusFilterValues, 'permission_status');
       } else {
         // 当前筛选条件重置，但存在另外一组筛选条件
         if (!filterFields.length) {

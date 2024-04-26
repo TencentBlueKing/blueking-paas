@@ -62,7 +62,7 @@ test: ## Run unittest
 
 
 .PHONY: integration
-integration:  ## Run Intergration Test
+integration:  ## Run Integration Test
 
 
 ##@ Misc

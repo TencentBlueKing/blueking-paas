@@ -25,6 +25,7 @@
 ### ⚠️ 注意事项
 
 本项目使用了 submodule, 在执行 `make` 命令前, 请确保已初始化 submodule
+
 ```bash
 ❯ git submodule init
 ❯ git submodule update

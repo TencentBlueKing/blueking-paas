@@ -17,12 +17,12 @@ stack-jammy:  ## Build builder/runner stack (base on heroku-22) **experimental**
 
 
 .PHONY: builder-bionic
-builder-bionic: stack-bionic buildpacks ## Build cnb builder (base on heroku-18)
+builder-bionic: stack-bionic buildpacks  ## Build cnb builder (base on heroku-18)
 	pack builder create $(BUILDER_IMAGE_NAME):$(BUILDER_TAG) --config ./heroku-18.toml --pull-policy=if-not-present
 
 
 .PHONY: builder-jammy
-builder-jammy: stack-jammy buildpacks ## Build cnb builder (base on heroku-22) **experimental**
+builder-jammy: stack-jammy buildpacks  ## Build cnb builder (base on heroku-22) **experimental**
 	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-jammy:$(BUILDER_TAG) --config ./heroku-22.toml --pull-policy=if-not-present
 
 
@@ -36,7 +36,8 @@ buildpacks: ## Build cnb buildpacks
 
 ##@ Test 
 .PHONY: integration
-integration:  ## Run Intergration Test
+integration:  ## Run Integration Test
+	echo "Not implemented yet..."
 
 
 .PHONY: help

@@ -3,6 +3,7 @@
 蓝鲸 SaaS 应用（Python 语言）构建工具, 基于 [heroku-buildpack-python](https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-python).
 
 # 项目结构
+
 ```bash
 .
 ├── buildpack      -- heroku-buildpack-python
@@ -71,7 +72,7 @@ OPTIONS:
 2. 在蓝盾流水线上执行发布, 将自动归档至蓝盾制品库
 3. 修改 PaaS 3.0 引用的构建工具下载链接
 
-# 特性开关
+## 特性开关
 
 python buildpack 可通过环境变量开启部分特性
 

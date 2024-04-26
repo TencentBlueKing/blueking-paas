@@ -309,9 +309,6 @@ export default {
       this.pluginInfoConfig.isLoading = true;
       const data = cloneDeep(this.pluginformData);
       data.contact = data.contact.join();
-      if (!data.distributors.length) {
-        delete data.distributors;
-      }
 
       try {
         await this.$store.dispatch('plugin/updatePluginBseInfo', {

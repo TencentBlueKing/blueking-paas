@@ -91,7 +91,7 @@ class CreateDeploymentSLZ(serializers.Serializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
 
-        if attrs["version_type"] == VersionType.IMAGE.value and not self._is_sha256(attrs.get("revision")):
+        if attrs["version_type"] == VersionType.IMAGE.value and not self._is_image_digest(attrs.get("revision")):
             # 云原生应用选择已构建的镜像部署时, version_type 传入了 image
             # 这里加上强制校验, 保证 image 类型被正确使用(仅用于云原生应用选择已构建镜像时),
             # 否则会导致 Deployment.get_version_info 抛出 ValueError("unknown version info")
@@ -99,7 +99,7 @@ class CreateDeploymentSLZ(serializers.Serializer):
         return attrs
 
     @staticmethod
-    def _is_sha256(revision):
+    def _is_image_digest(revision):
         if not revision:
             return False
 

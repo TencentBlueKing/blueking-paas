@@ -29,17 +29,14 @@ debug-image:  ## Build `kaniko-executor` image
 	IMAGE_NAME=$(IMAGE_NAME) IMAGE_TAG=$(IMAGE_TAG) docker buildx bake kaniko-debug-executor -f docker-build/docker-bake.hcl
 
 
-
-
-
 ##@ Test
 .PHONY: test
 test: ## Run unittest
 	go test ./...
 
 .PHONY: integration
-integration:  ## Run Intergration Test
-
+integration:  ## Run Integration Test
+	echo "Not implemented yet..."
 
 ##@ Misc
 .PHONY: lint

@@ -76,7 +76,10 @@ class CreateDeploymentSLZ(serializers.Serializer):
     """创建部署"""
 
     version_type = serializers.ChoiceField(
-        choices=VersionType.get_choices(), required=True, help_text="版本类型, 如 branch/tag/trunk"
+        choices=VersionType.get_choices(),
+        required=True,
+        error_messages={"invalid_choice": f"Invalid choice. Valid choices are {VersionType.get_values()}"},
+        help_text="版本类型, 如 branch/tag/trunk",
     )
     version_name = serializers.CharField(
         required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"

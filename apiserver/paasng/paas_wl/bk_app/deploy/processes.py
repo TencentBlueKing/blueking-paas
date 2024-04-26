@@ -122,8 +122,11 @@ class AppProcessesController:
         spec_updater = ProcSpecUpdater(self.env, proc_type)
         spec_updater.change_replicas(target_replicas)
 
-        # Update the module specs also to keep the bkapp model in sync.
-        ModuleProcessSpecManager(self.env.module).set_replicas(proc_type, self.env.environment, target_replicas)
+        # 旧镜像应用需要同步副本数到 ModuleProcessSpec 中
+        try:
+            ModuleProcessSpecManager(self.env.module).set_replicas(proc_type, self.env.environment, target_replicas)
+        except Exception:
+            logger.exception(f"Failed to sync replicas to ModuleProcessSpec for app({self.env.application.code})")
 
         proc_spec = spec_updater.spec_object
         try:

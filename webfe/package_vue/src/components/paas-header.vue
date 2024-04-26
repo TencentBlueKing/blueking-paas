@@ -3,69 +3,38 @@
     v-en-class="'en-header-cls'"
     :class="['ps-header','clearfix', 'top-bar-wrapper', { 'bk-header-static': is_static }]"
   >
-    <div class="ps-header-visible clearfix">
-      <router-link
-        :to="{ name: 'index' }"
-        class="ps-logo"
-      >
-        <span class="logo-warp">
-          <img
-            src="/static/images/logo.svg"
-            alt=""
-          >
-          <span class="logo-text">{{ $t('蓝鲸开发者中心') }}</span>
-        </span>
-      </router-link>
-      <ul class="ps-nav">
-        <li
-          v-for="(item,index) in headerStaticInfo.list.nav"
-          :key="index"
-          :class="{ 'active': curpage === index }"
-          @mouseover.stop.prevent="showSubNav(index, item)"
-          @mouseout.stop.prevent="hideSubNav"
+    <div class="ps-header-visible">
+      <section class="nav-left-wrapper">
+        <router-link
+          :to="{ name: 'index' }"
+          class="ps-logo"
         >
-          <router-link
-            v-if="index === 0"
-            :to="{ name: 'index' }"
+          <span class="logo-warp">
+            <img
+              src="/static/images/logo.svg"
+              alt=""
+            >
+            <span class="logo-text">{{ $t('蓝鲸开发者中心') }}</span>
+          </span>
+        </router-link>
+        <ul class="ps-nav" ref="navListRef">
+          <li
+            v-for="(item, index) in displayNavList"
+            :key="index"
+            :class="{ 'active': curpage === index }"
+            @mouseover.stop.prevent="showSubNav(index, item)"
+            @mouseout.stop.prevent="hideSubNav"
           >
-            {{ item.text }}
-          </router-link>
-          <router-link
-            v-else-if="index === 1"
-            :class="{ 'has-angle': index !== 1 }"
-            :to="{ name: 'myApplications' }"
-          >
-            {{ item.text }}
-          </router-link>
-          <router-link
-            v-else-if="(index === 2 && userFeature.ALLOW_PLUGIN_CENTER)"
-            :to="{ name: 'plugin' }"
-          >
-            {{ item.text }}
-          </router-link>
-          <a
-            v-else-if="(item.text === $t('API 网关'))"
-            :href="link"
-            target="_blank"
-          >
-            {{ item.text }}
-          </a>
-          <a
-            v-else
-            :class="{ 'has-angle': index !== 0 }"
-            href="javascript:;"
-          >
-            {{ item.text }}<i
-              v-show="index !== 0"
-              class="paasng-icon paasng-angle-down"
-            />
-          </a>
-          <!-- <span
-            v-if="isShowInput"
-            class="line"
-          /> -->
-        </li>
-      </ul>
+            <router-link v-if="item.type === 'router-link'" :to="item.to">
+              {{ item.text }}
+            </router-link>
+            <a v-else :href="item.href" :target="item.target">
+              {{ item.text }}
+              <i v-show="item.showIcon" class="paasng-icon paasng-angle-down" />
+            </a>
+          </li>
+        </ul>
+      </section>
       <!-- 右侧 -->
       <ul
         v-if="userInitialized && !user.isAuthenticated"
@@ -90,7 +59,7 @@
           <a
             class="login-button"
             href="javascript:"
-            @click="open_login_dialog()"
+            @click="openLoginDialog()"
           > {{ $t('登录') }} </a>
         </li>
       </ul>
@@ -107,7 +76,7 @@
                 classes: 'ps-header-dropdown exclude-drop',
                 tetherOptions: {
                   targetOffset: '0px 30px'
-                }, beforeClose
+                },
               }"
             >
               <div
@@ -426,7 +395,6 @@ export default {
       curSubNav: [],
       loginFlag: false,
       user,
-      userInfoShow: false,
       backgroundHidden: false,
       navHideController: 0,
       navShowController: 0,
@@ -460,6 +428,10 @@ export default {
     },
     curAppInfo() {
       return this.$store.state.curAppInfo;
+    },
+    displayNavList() {
+      const nav = this.headerStaticInfo.list.nav || [];
+      return this.transformNavData(nav);
     },
   },
   watch: {
@@ -503,7 +475,7 @@ export default {
           path: to,
         });
       }
-      this.hideSubNav(0);
+      this.hideSubNav();
     },
     handleToMonitor() {
       this.$router.push({
@@ -512,9 +484,6 @@ export default {
     },
     clearInputValue() {
       this.filterKey = '';
-    },
-    beforeClose(event, instance) {
-      // return !instance.target.contains(event.target)
     },
     // enter键 选择事件回调
     enterCallBack(event) {
@@ -611,7 +580,7 @@ export default {
         this.is_static = false;
       }
     },
-    hideSubNav(timeout = 300) {
+    hideSubNav() {
       clearTimeout(this.navShowController);
       this.navHideController = setTimeout(() => {
         this.navIndex = 0;
@@ -621,35 +590,18 @@ export default {
     // 二级导航mouseover
     showSubNav(index, item) {
       clearTimeout(this.navHideController);
-      if (index === 0 || index === 1 || index === 2 || (index === 3 && this.userFeature.ALLOW_PLUGIN_CENTER)) {
-        this.navIndex = index;
-      } else {
+      if (item?.showIcon) {
+        if (!item) return;
         this.navShowController = setTimeout(() => {
           this.navIndex = index;
           this.navText = item.text;
-          switch (index) {
-            case 3:
-              if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-                this.curSubNav = this.headerStaticInfo.list.subnav_service;
-              }
-              break;
-            case 4:
-              if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-                this.curSubNav = this.headerStaticInfo.list.subnav_doc;
-              } else {
-                this.curSubNav = this.headerStaticInfo.list.subnav_service;
-              }
-              break;
-            case 5:
-              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
-              break;
-            default:
-              this.curSubNav = [];
-          }
+          this.curSubNav = this.headerStaticInfo.list.subnav_service;
         }, 500);
+      } else {
+        this.navIndex = index;
       }
     },
-    open_login_dialog() {
+    openLoginDialog() {
       bus.$emit('show-login-modal');
     },
     // 路由页面重定向时导航标记
@@ -665,34 +617,13 @@ export default {
         noteIndex = 2;
       }
       if (this.$route.path.indexOf('/developer-center/service') !== -1) {
-        noteIndex = 3;
+        noteIndex = this.displayNavList.findIndex(v => v.text === this.$t('服务')) || 3;
       }
-      switch (noteIndex) {
-        case 0:
-          this.backgroundHidden = false;
-          this.curpage = 0;
-          break;
-        case 1:
-          this.backgroundHidden = false;
-          this.curpage = 1;
-          break;
-        case 2:
-          this.backgroundHidden = false;
-          this.curpage = 2;
-          break;
-        case 3:
-          this.backgroundHidden = false;
-          this.curpage = 3;
-          break;
-        default:
-          this.curpage = -1;
-      }
-    },
-    userInfoSlide(n) {
-      if (n) {
-        this.userInfoShow = true;
+      if (noteIndex !== -1) {
+        this.backgroundHidden = false;
+        this.curpage = noteIndex;
       } else {
-        this.userInfoShow = false;
+        this.curpage = -1;
       }
     },
     logout() {
@@ -731,6 +662,57 @@ export default {
     },
     handlerLogVersion() {
       this.showLogVersion = true;
+    },
+    // 重组导航数据
+    transformNavData(navData) {
+      const navList = navData.map((item, index) => {
+        let transformedItem = {
+          text: item.text,
+          type: 'external-link', // 默认为外部链接
+          href: 'javascript:;',
+          target: '_self',
+          showIcon: true,
+        };
+        switch (index) {
+          case 0:
+            transformedItem = {
+              ...transformedItem,
+              type: 'router-link',
+              to: { name: 'index' },
+              showIcon: false,
+            };
+            break;
+          case 1:
+            transformedItem = {
+              ...transformedItem,
+              type: 'router-link',
+              to: { name: 'myApplications' },
+              showIcon: false,
+            };
+            break;
+          case 2:
+            transformedItem = {
+              ...transformedItem,
+              type: 'router-link',
+              to: { name: 'plugin' },
+              showIcon: false,
+            };
+            break;
+          case 3:
+            transformedItem = {
+              ...transformedItem,
+              showIcon: false,
+              href: this.link,
+            };
+            break;
+        }
+        return transformedItem;
+      });
+      // 应用开关过滤插件开发
+      if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
+        return navList.filter(e => e.text !== this.$t('插件开发'));
+      }
+      return navList;
     },
   },
 };
@@ -776,7 +758,6 @@ export default {
         top: var(--app-notice-height);
         width: 100%;
         z-index: 1001;
-        min-width: 1440px;
         transition: all .5s;
         background: #182132;
         box-sizing: border-box;
@@ -810,10 +791,9 @@ export default {
         }
 
         .ps-logo {
-            float: left;
-            width: 296px;
+            width: 242px;
             position: relative;
-            margin: 0 0 0 20px;
+            margin-left: 16px;
             padding: 10px 0;
             .logo-warp{
               display: flex;
@@ -847,6 +827,14 @@ export default {
         position: relative;
         z-index: 99;
         min-width: 1200px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+
+        .nav-left-wrapper {
+          display: flex;
+          flex: 1;
+        }
     }
 
     .ps-header a {
@@ -858,14 +846,18 @@ export default {
     }
 
     .ps-nav {
+        flex: 1;
+        display: flex;
         overflow: hidden;
-        float: left;
-    }
 
-    .ps-nav li {
-        float: left;
-        position: relative;
-        margin-right: 40px;
+        li {
+            flex-shrink: 0;
+            margin-right: 32px;
+
+            &:last-child {
+              margin-right: 0;
+            }
+        }
     }
 
     .ps-nav li> a {
@@ -895,9 +887,6 @@ export default {
     }
 
     .ps-nav li .paasng-icon.paasng-angle-down {
-        position: absolute;
-        right: 0;
-        top: 21px;
         font-size: 10px;
         font-weight: bold;
         transform: scale(0.8);
@@ -905,7 +894,6 @@ export default {
 
     .ps-head-right {
         position: relative;
-        float: right;
         margin: 0;
         padding: 8px 10px;
         display: flex;
@@ -1347,7 +1335,6 @@ export default {
             color: #96A2B9 !important;
         }
     }
-
 </style>
 <style lang="scss">
 .top-bar-popover .tippy-backdrop {

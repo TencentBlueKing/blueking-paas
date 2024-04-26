@@ -311,4 +311,7 @@ export default {
 .hide-pd-bottom {
   padding-bottom: 0;
 }
+.plugiun-highly-adaptive {
+  min-width: 0;
+}
 </style>

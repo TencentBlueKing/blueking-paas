@@ -121,6 +121,10 @@ class AppProcessesController:
 
         spec_updater = ProcSpecUpdater(self.env, proc_type)
         spec_updater.change_replicas(target_replicas)
+
+        # Update the module specs also to keep the bkapp model in sync.
+        ModuleProcessSpecManager(self.env.module).set_replicas(proc_type, self.env.environment, target_replicas)
+
         proc_spec = spec_updater.spec_object
         try:
             proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)

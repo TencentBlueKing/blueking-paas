@@ -445,6 +445,24 @@ class VersionInfo:
 
         样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="package")
 
+    对于云原生镜像而言:
+        revision 为空串
+        version_name 是镜像的 tag
+        version_type 是 Literal[tag]
+
+        样例数据: VersionInfo(revision="", version_name="v1", version_type="tag")
+
+    对于云原生应用选择已构建的镜像部署时(模块本身非镜像):
+        revision 当前的 sha256 digest
+        version_name 是镜像的 tag
+        version_type 是 Literal[image]
+
+        样例数据:
+        VersionInfo(revision="sha256:a2c6683598be55e2ddd7be53acd820b68cf8db95f84e38cd511f0683feb114a8",
+        version_name="master-2404091749", version_type="image")
+        返回给前端时, 会进行源码构建追溯成:
+        VersionInfo(revision="1304382d8c60220869624cc6b", version_name="master", version_type="branch")
+
     对于镜像仓库而言(旧的镜像应用)
         revision 是镜像的 tag *注: 这里没有实现成 存储镜像hash 是因为暂时没有地方用到*
         version_name 是镜像的 tag

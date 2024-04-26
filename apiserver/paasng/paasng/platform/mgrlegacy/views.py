@@ -25,14 +25,22 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone as django_timezone
 from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
+from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
+from paas_wl.bk_app.processes.constants import ProcessUpdateType
+from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
+from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.infras.accounts.permissions.application import check_application_perm
+from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 
 try:
@@ -40,6 +48,7 @@ try:
 except ImportError:
     from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 
+from paas_wl.utils.error_codes import error_codes as wl_error_codes
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
@@ -48,6 +57,7 @@ from paasng.platform.mgrlegacy.serializers import (
     CNativeMigrationProcessSLZ,
     LegacyAppSLZ,
     LegacyAppStateSLZ,
+    ListProcessesSLZ,
     MigrationProcessConfirmSLZ,
     MigrationProcessCreateSLZ,
     MigrationProcessDetailSLZ,
@@ -55,6 +65,7 @@ from paasng.platform.mgrlegacy.serializers import (
     QueryMigrationAppSLZ,
 )
 from paasng.platform.mgrlegacy.tasks import (
+    confirm_migration,
     confirm_with_rollback_on_failure,
     migrate_default_to_cnative,
     migrate_with_rollback_on_failure,
@@ -243,6 +254,8 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     普通应用向云原生应用迁移的相关接口
     """
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def migrate(self, request, code):
         """迁移普通应用到云原生应用
 
@@ -250,11 +263,7 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """
         app = self.get_application()
 
-        if app.type == ApplicationType.CLOUD_NATIVE.value:
-            raise error_codes.APP_MIGRATION_FAILED.f("该应用已是云原生应用，无法迁移")
-
-        if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
-            raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
+        self._can_migrate_or_raise(app)
 
         migration_process = CNativeMigrationProcess.create_migration_process(app, request.user.pk)
         process_id = migration_process.id
@@ -319,6 +328,97 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if process.status != CNativeMigrationStatus.MIGRATION_SUCCEEDED.value:
             raise error_codes.APP_MIGRATION_CONFIRMED_FAILED.f("该应用记录未表明应用已成功迁移, 无法确认")
 
-        process.confirm()
-        # TODO 增加清理普通应用的集群操作
+        confirm_migration.delay(process.id)
+
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def _can_migrate_or_raise(app):
+        if app.type == ApplicationType.CLOUD_NATIVE.value:
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用已是云原生应用，无法迁移")
+
+        if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
+
+        cnative_cluster_name = RegionClusterService(app.region).get_cnative_app_default_cluster().name
+        for m in app.modules.all():
+            for env in m.envs.all():
+                if env.wl_app.config_set.latest().cluster == cnative_cluster_name:
+                    raise error_codes.APP_MIGRATION_FAILED.f("原集群和目标集群相同, 无法迁移")
+
+
+class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用进程管理接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def list(self, request, *args, **kwargs):
+        """list all processes/instances.
+
+        用于直接从集群中获取应用进程信息(不依赖应用进程 db 数据)
+        """
+        wl_app = self._get_wl_app()
+        processes_info = get_processes_info(wl_app)
+
+        data = {
+            "processes": {
+                "items": processes_info.processes,
+                "metadata": {"resource_version": processes_info.rv_proc},
+            },
+            "instances": {
+                "items": [inst for proc in processes_info.processes for inst in proc.instances],
+                "metadata": {"resource_version": processes_info.rv_inst},
+            },
+        }
+
+        return Response(ListProcessesSLZ(data).data)
+
+    def update(self, request, *args, **kwargs):
+        """stop/start/scale process
+
+        用于直接向集群中下发管理应用进程的命令(不涉及查询和更新应用进程的 db 数据)
+        """
+        slz = UpdateProcessSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        wl_app = self._get_wl_app()
+
+        process_type = validated_data["process_type"]
+        operate_type = validated_data["operate_type"]
+
+        proc_config = get_mapper_proc_config_latest(wl_app, process_type)
+        handler = ProcessesHandler.new_by_app(wl_app)
+
+        try:
+            if operate_type == ProcessUpdateType.START:
+                handler.scale(proc_config, 1)
+            elif operate_type == ProcessUpdateType.STOP:
+                handler.shutdown(proc_config)
+            else:
+                target_replicas = validated_data["target_replicas"]
+                handler.scale(proc_config, target_replicas)
+        except Exception as e:
+            raise wl_error_codes.PROCESS_OPERATE_FAILED.f(str(e))
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _get_wl_app(self):
+        return WlAppBackupManager(self.get_env_via_path()).get()
+
+
+class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用访问地址查询接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def list_all_entrances(self, request, code):
+        """查看应用所有模块的访问入口"""
+        app = self.get_application()
+
+        if last_process := CNativeMigrationProcess.objects.filter(
+            app=app, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+        ).last():
+            return Response(data=last_process.legacy_data.entrances)
+
+        return Response(data=[])

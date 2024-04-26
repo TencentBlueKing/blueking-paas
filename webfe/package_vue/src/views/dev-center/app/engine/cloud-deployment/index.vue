@@ -204,7 +204,10 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    '$route'(newRoute) {
+      if (this.active !== newRoute.name) {
+        this.handleGoPage(newRoute.name);
+      }
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
       this.$store.commit('cloudApi/updatePageEdit', false);

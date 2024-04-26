@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List
+from typing import Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -50,6 +50,7 @@ class DefaultAppLegacyData(BaseModel):
     app_type: str = ApplicationType.DEFAULT.value
     clusters: List[ClusterLegacyData] = Field(default_factory=list)
     builds: List[BuildLegacyData] = Field(default_factory=list)
+    entrances: List[Dict] = Field(default_factory=list)
 
 
 @register

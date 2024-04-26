@@ -16,21 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import re
-from typing import Dict
+import pytest
 
-from django.conf import settings
-from rest_framework.exceptions import ValidationError
+from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
+from paas_wl.bk_app.processes.kres_entities import Instance
+from tests.paas_wl.bk_app.processes.test_controllers import make_process
 
-
-def validate_app_name(value: str):
-    """
-    Check that the value follows the kubernetes name constraints
-    """
-    match = re.match(settings.STR_APP_NAME, value)
-    if not match:
-        raise ValidationError("App name illegal, can only contains a-z, 0-9, -, _")
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def validate_app_structure(value: Dict):
-    """deprecated function. 被 migrations/0001_initial.py 引用"""
+def test_get_processes_info(wl_app, mock_reader):
+    mock_reader.set_processes([make_process(wl_app, "web"), make_process(wl_app, "worker")])
+    mock_reader.set_instances(
+        [
+            Instance(app=wl_app, name="web-test", process_type="web"),
+            Instance(app=wl_app, name="worker-test", process_type="worker"),
+        ]
+    )
+    info = get_processes_info(wl_app)
+    assert info.processes[0].type == "web"
+    assert info.processes[1].type == "worker"
+    assert info.processes[0].instances[0].name == "web-test"

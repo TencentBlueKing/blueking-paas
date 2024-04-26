@@ -211,11 +211,12 @@
 
     toServiceInner(item) {
       this.$router.push({
-        name: 'appServiceInner',
+        name: item.application.type === 'cloud_native' ? 'appServices' : 'appServiceInner',
         params: {
           service: item.service,
           id: item.application.code,
           category_id: this.curCategoryId,
+          moduleId: item.module_name,
         },
       });
     },
@@ -232,10 +233,11 @@
 
     userDetail(item) {
       this.$router.push({
-        name: 'appServiceInner',
+        name: item.application.type === 'cloud_native' ? 'appServices' : 'appServiceInner',
         params: {
           service: item.service,
           id: item.application.code,
+          moduleId: item.module_name,
         },
       });
     },

@@ -17,11 +17,13 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import pytest
+from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.mgrlegacy.cnative_migrations.application import ApplicationTypeMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.build_config import BuildConfigMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.cluster import ApplicationClusterMigrator
+from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
@@ -32,14 +34,17 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestApplicationTypeMigrator:
-    def test_migrate_and_rollback(self, bk_app, migration_process):
+    def test_migrate_and_rollback(self, bk_app, bk_stag_env, migration_process):
         ApplicationTypeMigrator(migration_process).migrate()
         assert bk_app.type == ApplicationType.CLOUD_NATIVE.value
         assert bk_app.get_engine_app("stag").to_wl_obj().type == ApplicationType.CLOUD_NATIVE.value
+        assert WlAppBackupManager(bk_stag_env).get().region == bk_app.region
 
         ApplicationTypeMigrator(migration_process).rollback()
         assert bk_app.type == ApplicationType.DEFAULT.value
         assert bk_app.get_engine_app("stag").to_wl_obj().type == ApplicationType.DEFAULT.value
+        with pytest.raises(ObjectDoesNotExist):
+            WlAppBackupManager(bk_stag_env).get()
 
 
 class TestApplicationClusterMigrator:

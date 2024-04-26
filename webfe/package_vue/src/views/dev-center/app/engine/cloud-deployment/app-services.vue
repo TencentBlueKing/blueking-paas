@@ -13,6 +13,7 @@
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
           :data="tableList"
           size="small"
+          :outer-border="false"
           :pagination="pagination"
           @page-change="pageChange"
           @page-limit-change="limitChange"
@@ -25,7 +26,7 @@
           <bk-table-column :label="$t('服务名称')" width="300">
             <template slot-scope="{row, $index}">
               <div class="flex-row align-items-center">
-                <img class="row-img mr10" :src="row.logo" alt="">
+                <img class="row-img" :src="row.logo" alt="">
                 <p
                   class="row-title-text"
                   :class="row.isStartUp ? '' : 'text-disabled'" @click="handleToPage(row)">
@@ -33,7 +34,7 @@
                 </p>
                 <i
                   v-if="$index === rowIndex"
-                  class="row-icon paasng-icon paasng-page-fill pl5 mt5"
+                  class="row-icon paasng-icon paasng-process-file pl5"
                   v-bk-tooltips="{content: $t('使用指南')}"
                   @click="handleShowGuideDialog(row)" />
               </div>
@@ -46,9 +47,7 @@
           >
             <template slot-scope="{row}">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.stag">
-                <i
-                  class="paasng-icon paasng-correct success-icon"
-                />
+                <i class="paasng-icon paasng-correct success-icon" />
               </span>
               <span v-else>--</span>
             </template>
@@ -60,9 +59,7 @@
           >
             <template slot-scope="{row}">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.prod">
-                <i
-                  class="paasng-icon paasng-correct success-icon"
-                />
+                <i class="paasng-icon paasng-correct success-icon" />
               </span>
               <span v-else>--</span>
             </template>
@@ -79,7 +76,7 @@
                   </span>
                 </bk-tag>
               </span>
-              <span v-else>--</span>
+              <span v-else>{{ $t('无') }}</span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -131,16 +128,23 @@
                   :disabled="isSmartApp"
                 />
               </div>
-              <div id="switcher-tooltip">
-                <div v-for="item in startData" :key="item.id" class="item" @click="handleSwitcherOpen(item)">
-                  {{ item.label }}
+              <!-- 解决单元格溢出问题 ... -->
+              <div v-show="false">
+                <div id="switcher-tooltip">
+                  <div
+                    v-for="item in startData"
+                    :key="item.id"
+                    class="item"
+                    @click="handleSwitcherOpen(item)">
+                    {{ item.label }}
+                  </div>
                 </div>
               </div>
-
             </template>
           </bk-table-column>
         </bk-table>
       </div>
+
       <shared-dialog
         :data="curData"
         :show.sync="isShowDialog"
@@ -323,7 +327,7 @@ export default {
       isShowStartDialog: false,
       switcherTips: {
         allowHtml: true,
-        width: 140,
+        offset: '40, 0',
         trigger: 'click',
         theme: 'light',
         content: '#switcher-tooltip',
@@ -441,6 +445,12 @@ export default {
           return e;
         });
         this.tableList = [...res.bound, ...res.shared, ...res.unbound];
+
+        // 处理服务->数据存储服务详情跳转
+        const redirectData = this.tableList.find(v => v.uuid === this.$route.params?.service);
+        if (redirectData) {
+          this.handleToPage(redirectData);
+        }
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -493,7 +503,6 @@ export default {
 
 
     handleSwitcherOpen(payload) {
-      console.log(this.curIndex, this.$refs[`tooltipsHtml${this.curIndex}`]);
       // eslint-disable-next-line no-underscore-dangle
       this.$refs[`tooltipsHtml${this.curIndex}`]._tippy.hide();
       if (payload.value === 'start') {  // 直接启动
@@ -742,8 +751,11 @@ export default {
       height: 22px;
       border-radius: 50%;
     }
-
+    .ps-switcher-wrapper {
+      margin-left: 0;
+    }
     .row-title-text{
+      margin-left: 8px;
       overflow:hidden; //超出的文本隐藏
       text-overflow:ellipsis; //溢出用省略号显示
       white-space:nowrap; //溢出不换行
@@ -755,8 +767,13 @@ export default {
       cursor: unset;
     }
     .row-icon{
-      cursor: pointer;
-      color: #3A84FF;
+      color: #63656E;
+      margin-top: 3px;
+
+      &:hover {
+        cursor: pointer;
+        color: #3A84FF;
+      }
     }
 
     .success-icon{
@@ -779,10 +796,16 @@ export default {
         }
     }
     #switcher-tooltip{
+      padding: 4px 0px;
+      border: 1px solid #DCDEE5;
+      border-radius: 2px;
       .item{
-        padding: 10px 0;
+        padding: 0 12px;
         cursor: pointer;
-        padding: 10px 14px;
+        height: 32px;
+        line-height: 32px;
+        color: #63656E;
+        font-size: 12px;
         &:hover {
           background: #F5F7FA;
         }

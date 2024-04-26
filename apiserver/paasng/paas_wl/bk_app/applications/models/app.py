@@ -43,7 +43,7 @@ class App(UuidAuditedModel):
     class Meta:
         unique_together = ("region", "name")
 
-    @property
+    @cached_property
     def scheduler_safe_name(self):
         """app name in scheduler backend"""
         return self.name.replace("_", "0us0")
@@ -79,9 +79,7 @@ class App(UuidAuditedModel):
 
     @property
     def use_dev_sandbox(self) -> bool:
-        if self.name.endswith("-dev"):
-            return True
-        return False
+        return self.name.endswith("-dev")
 
     def __str__(self) -> str:
         return f"<{self.name}, region: {self.region}, type: {self.type}>"

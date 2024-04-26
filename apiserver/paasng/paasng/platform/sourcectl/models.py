@@ -471,6 +471,7 @@ class VersionInfo:
         样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="tag")
     """
 
+    # TODO 在 VersionInfo 构建阶段增加值校验
     revision: str
     version_name: str
     version_type: str

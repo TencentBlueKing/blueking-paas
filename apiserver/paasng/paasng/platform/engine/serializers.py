@@ -93,7 +93,8 @@ class CreateDeploymentSLZ(serializers.Serializer):
 
         if attrs["version_type"] == VersionType.IMAGE.value and not self._is_sha256(attrs.get("revision")):
             # 云原生应用选择已构建的镜像部署时, version_type 传入了 image
-            # 这里加上强制校验, 保证 image 类型被正确使用, 否则会导致 Deployment.get_version_info 异常
+            # 这里加上强制校验, 保证 image 类型被正确使用(仅用于云原生应用选择已构建镜像时),
+            # 否则会导致 Deployment.get_version_info 抛出 ValueError("unknown version info")
             raise ValidationError(_("version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"))
         return attrs
 

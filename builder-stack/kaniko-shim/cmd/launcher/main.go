@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -154,7 +153,7 @@ func main() {
 		logger.Error(err, "    !! Failed to start build process")
 		os.Exit(1)
 	}
-	if err := cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		logger.Error(err, "    !! Build failed")
 		os.Exit(1)
 	}
@@ -167,11 +166,10 @@ func main() {
 			case <-time.After(30 * time.Second):
 				fmt.Print(".")
 			case <-signal:
-
 			}
 		}
 	}()
-	if err := cmd.Wait(); err != nil {
+	if err = cmd.Wait(); err != nil {
 		logger.Error(err, "    !! Build failed")
 		os.Exit(1)
 	}
@@ -204,7 +202,7 @@ func fetchSource(logger logr.Logger, contextDir string) error {
 	return nil
 }
 
-// setupDockerConfigJson: 初始化 dockerconfig json(拉取镜像和上传镜像的凭证)
+// setupDockerConfigJson: 初始化 /kaniko/.docker/config.json (拉取镜像和上传镜像的凭证)
 func setupDockerConfigJson(dockerConfigJson string) error {
 	if err := os.MkdirAll(filepath.Dir(DockerConfigJsonPath), os.ModeDir); err != nil {
 		return errors.Wrapf(err, "failed to setup %s", DockerConfigJsonPath)
@@ -213,7 +211,7 @@ func setupDockerConfigJson(dockerConfigJson string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to decode DockerConfigJson from env")
 	}
-	if err := ioutil.WriteFile(DockerConfigJsonPath, content, 0755); err != nil {
+	if err = os.WriteFile(DockerConfigJsonPath, content, 0755); err != nil {
 		return errors.Wrapf(err, "failed to write %s", DockerConfigJsonPath)
 	}
 	return nil

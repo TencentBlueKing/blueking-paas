@@ -60,7 +60,7 @@ class WlAppBackupManager:
         try:
             release = Release.objects.get_latest(self.original_wl_app)
             release_dict = model_to_dict(release, exclude=uuid_audited_fields + ["app"])
-            release_dict["app"] = wl_app
+            release_dict.update({"app": wl_app, "build": release.build, "config": release.config})
             Release.objects.create(**release_dict)
         except Release.DoesNotExist:
             pass

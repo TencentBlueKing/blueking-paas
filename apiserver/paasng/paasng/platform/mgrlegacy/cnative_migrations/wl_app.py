@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Optional
 
 from django.db import transaction
 from django.forms.models import model_to_dict
@@ -23,8 +24,35 @@ from django.forms.models import model_to_dict
 from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.bk_app.applications.models.config import Config
 from paas_wl.bk_app.applications.models.release import Release
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.mgrlegacy.entities import DefaultAppLegacyData
+from paasng.platform.mgrlegacy.exceptions import PreCheckMigrationFailed
 from paasng.platform.mgrlegacy.models import WlAppBackupRel
+
+from .base import CNativeBaseMigrator
+
+
+class WlAppBackupMigrator(CNativeBaseMigrator):
+    def _can_migrate_or_raise(self):
+        if self.app.type != ApplicationType.DEFAULT.value:
+            raise PreCheckMigrationFailed(f"app({self.app.code}) type is not default")
+
+    def _generate_legacy_data(self) -> Optional[DefaultAppLegacyData]:
+        """generate legacy data"""
+        return None
+
+    def _migrate(self):
+        """迁移备份 wl_app"""
+        for m in self.app.modules.all():
+            for env in m.envs.all():
+                WlAppBackupManager(env).create()
+
+    def _rollback(self):
+        """回滚删除 wl_app 备份"""
+        for m in self.app.modules.all():
+            for env in m.envs.all():
+                WlAppBackupManager(env).delete()
 
 
 class WlAppBackupManager:
@@ -73,9 +101,13 @@ class WlAppBackupManager:
     def delete(self):
         """delete wl_app backup from db, delete backup relationship at the same time"""
         # config and release will be deleted by cascade
-        rel = WlAppBackupRel.objects.get(original_id=self.original_wl_app.uuid)
-        WlApp.objects.filter(uuid=rel.backup_id).delete()
-        rel.delete()
+        try:
+            rel = WlAppBackupRel.objects.get(original_id=self.original_wl_app.uuid)
+        except WlAppBackupRel.DoesNotExist:
+            return
+        else:
+            WlApp.objects.filter(uuid=rel.backup_id).delete()
+            rel.delete()
 
     def get(self) -> WlApp:
         """get wl_app backup from db"""

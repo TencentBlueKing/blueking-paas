@@ -49,6 +49,7 @@ class TestMigrateAndRollback:
         assert bk_app.type == ApplicationType.CLOUD_NATIVE.value
         assert bk_app.get_engine_app("stag").to_wl_obj().latest_config.cluster == CNATIVE_CLUSTER_NAME
         assert [result.migrator_name for result in migration_process.details.migrations] == [
+            "WlAppBackupMigrator",
             "ApplicationTypeMigrator",
             "ApplicationClusterMigrator",
             "BuildConfigMigrator",
@@ -63,6 +64,7 @@ class TestMigrateAndRollback:
             "BuildConfigMigrator",
             "ApplicationClusterMigrator",
             "ApplicationTypeMigrator",
+            "WlAppBackupMigrator",
         ]
 
     def test_migrate_failed(self, bk_app, migration_process):
@@ -77,6 +79,7 @@ class TestMigrateAndRollback:
             assert bk_app.get_engine_app("stag").to_wl_obj().latest_config.cluster == CLUSTER_NAME_FOR_TESTING
 
             assert [result.migrator_name for result in migration_process.details.migrations] == [
+                "WlAppBackupMigrator",
                 "ApplicationTypeMigrator",
                 "ApplicationClusterMigrator",
                 "BuildConfigMigrator",
@@ -84,4 +87,5 @@ class TestMigrateAndRollback:
             assert [result.migrator_name for result in migration_process.details.rollbacks] == [
                 "ApplicationClusterMigrator",
                 "ApplicationTypeMigrator",
+                "WlAppBackupMigrator",
             ]

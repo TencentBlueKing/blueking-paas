@@ -343,7 +343,10 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         cnative_cluster_name = RegionClusterService(app.region).get_cnative_app_default_cluster().name
         for m in app.modules.all():
             for env in m.envs.all():
-                if env.wl_app.config_set.latest().cluster == cnative_cluster_name:
+                cluster_name = env.wl_app.config_set.latest().cluster
+                if not cluster_name:
+                    raise error_codes.APP_MIGRATION_FAILED.f(f"应用模块({m.name})未绑定有效集群, 无法迁移")
+                elif cluster_name == cnative_cluster_name:
                     raise error_codes.APP_MIGRATION_FAILED.f("原集群和目标集群相同, 无法迁移")
 
 

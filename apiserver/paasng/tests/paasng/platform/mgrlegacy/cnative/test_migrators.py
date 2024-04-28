@@ -24,6 +24,7 @@ from paasng.platform.mgrlegacy.cnative_migrations.application import Application
 from paasng.platform.mgrlegacy.cnative_migrations.build_config import BuildConfigMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.cluster import ApplicationClusterMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager, WlAppBackupMigrator
+from paasng.platform.mgrlegacy.models import WlAppBackupRel
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
@@ -37,6 +38,7 @@ class TestWlAppBackupMigrator:
     def test_migrate_and_rollback(self, bk_app, bk_stag_env, migration_process):
         WlAppBackupMigrator(migration_process).migrate()
         assert WlAppBackupManager(bk_stag_env).get().region == bk_app.region
+        assert WlAppBackupRel.objects.get(backup_id=WlAppBackupManager(bk_stag_env).get().uuid)
 
         WlAppBackupMigrator(migration_process).rollback()
         with pytest.raises(ObjectDoesNotExist):

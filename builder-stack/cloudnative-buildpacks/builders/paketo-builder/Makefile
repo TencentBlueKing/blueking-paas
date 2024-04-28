@@ -11,7 +11,7 @@ builder:  ## Build cnb builder
 
 ##@ Test 
 .PHONY: integration
-integration:  ## Run Intergration Test
+integration:  ## Run Integration Test
 
 
 .PHONY: help

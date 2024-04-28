@@ -35,13 +35,12 @@ class ApplicationClusterMigrator(CNativeBaseMigrator):
 
         for m in self.app.modules.all():
             for env in m.envs.all():
-                legacy_data.clusters.append(
-                    ClusterLegacyData(
-                        module_name=m.name,
-                        environment=env.environment,
-                        cluster_name=env.wl_app.config_set.latest().cluster,
+                if cluster_name := env.wl_app.config_set.latest().cluster:
+                    legacy_data.clusters.append(
+                        ClusterLegacyData(module_name=m.name, environment=env.environment, cluster_name=cluster_name)
                     )
-                )
+                else:
+                    raise PreCheckMigrationFailed(f"no valid cluster bound with module({m.name})")
 
         return legacy_data
 

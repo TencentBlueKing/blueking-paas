@@ -59,6 +59,9 @@
             if (is_ajax && is_ajax[1]) {
                 // parent.bus.$emit('close-login-modal')
                 window.opener.bus.$emit('close-login-modal')
+                setTimeout(() => {
+                    window.close()
+                }, 200);
             }
         })
     </script>

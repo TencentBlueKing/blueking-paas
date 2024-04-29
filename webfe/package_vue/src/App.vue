@@ -49,7 +49,6 @@ export default {
       showLoginModal: false,
       isPlugin: false,
       apiUrl: `${BACKEND_URL}/notice/announcements/`,
-      loginWindow: null,
     };
   },
   computed: {
@@ -95,13 +94,6 @@ export default {
     });
     bus.$on('close-login-modal', () => {
       this.showLoginModal = false;
-      setTimeout(() => {
-        if (this.loginWindow) {
-          this.loginWindow.close();
-          this.loginWindow = null;
-        }
-        window.location.reload();
-      }, 300);
     });
   },
   methods: {
@@ -124,8 +116,6 @@ export default {
       const loginUrl = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/plain/?size=big&app_code=1&c_url=${loginCallbackURL}`;
 
       showLoginPopup({ loginUrl });
-
-      if (this.loginWindow) this.loginWindow.focus();
     },
   },
 };

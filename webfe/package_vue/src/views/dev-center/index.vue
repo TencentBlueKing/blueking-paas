@@ -568,7 +568,7 @@ export default {
       },
       // 搜索词
       filterKey: '',
-      sortValue: 'name',
+      sortValue: 'code',
       // fetchParams
       fetchParams: {
         // 等于 filterKey
@@ -581,7 +581,7 @@ export default {
         include_inactive: false,
         // limit
         limit: 0,
-        order_by: 'name',
+        order_by: 'code',
       },
       // app数量, 不考虑筛选情况
       appNumInfo: {
@@ -613,7 +613,7 @@ export default {
       },
       curFilterValue: '应用ID',
       filterList: [
-        { text: '应用ID', value: 'name' },
+        { text: '应用ID', value: 'code' },
         { text: '创建时间', value: 'created' },
         { text: '操作时间', value: 'latest_operated_at' },
       ],

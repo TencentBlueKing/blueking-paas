@@ -31,6 +31,7 @@ class Test__import_domain_resolution:
             "spec": {
                 "domainResolution": {
                     "nameservers": ["127.0.0.1"],
+                    "hostAliases": [{"ip": "1.1.1.1", "hostnames": ["bk_app_code_test"]}],
                 },
                 "processes": [],
             }
@@ -48,4 +49,27 @@ class Test__import_domain_resolution:
         assert domain_res.nameservers == ["127.0.0.1"]
         assert ret.created_num == 1
         assert ret.updated_num == 0
+        assert ret.deleted_num == 0
+
+        # test update
+        manifest["spec"]["domainResolution"]["nameservers"] = ["127.0.0.1", "127.0.0.2"]  # type: ignore
+        manifest["spec"]["domainResolution"]["hostAliases"] = [  # type: ignore
+            {"ip": "1.1.1.1", "hostnames": ["bk_app_code_test"]},
+            {"ip": "1.1.1.2", "hostnames": ["bk_app_code_test"]},
+        ]
+
+        spec_slz = BkAppSpecInputSLZ(data=manifest["spec"])
+        spec_slz.is_valid(raise_exception=True)
+        validated_data = spec_slz.validated_data
+
+        ret = import_domain_resolution(
+            bk_module,
+            validated_data["domainResolution"],
+        )
+
+        domain_res = DomainResolution.objects.get(application=bk_module.application)
+        assert len(domain_res.nameservers) == 2
+        assert len(domain_res.host_aliases) == 2
+        assert ret.created_num == 0
+        assert ret.updated_num == 1
         assert ret.deleted_num == 0

@@ -51,3 +51,22 @@ class Test__import_svc_discoverys:
 
         assert len(svc_disc.bk_saas) == 2
         assert ret.created_num == 1
+
+        manifest["spec"]["svcDiscovery"]["bkSaaS"] = [  # type: ignore
+            {"bkAppCode": "bk-iam"},
+            {"bkAppCode": "bk-sops", "moduleName": "bk-backend"},
+            {"bkAppCode": "bk-sops", "moduleName": "bk-frontend"},
+        ]
+
+        spec_slz = BkAppSpecInputSLZ(data=manifest["spec"])
+        spec_slz.is_valid(raise_exception=True)
+        validated_data = spec_slz.validated_data
+
+        ret = import_svc_discovery(
+            bk_module,
+            validated_data["svcDiscovery"],
+        )
+
+        svc_disc = SvcDiscConfig.objects.get(application=bk_module.application)
+        assert len(svc_disc.bk_saas) == 3
+        assert ret.updated_num == 1

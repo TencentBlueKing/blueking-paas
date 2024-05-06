@@ -24,6 +24,8 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 
 from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin
 
@@ -50,6 +52,11 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
         ):
             raise ValidationError("image_repository is not consistent with source_repo_url")
 
+        if attrs["is_plugin_app"]:
+            source_init_template = attrs["source_config"]["source_init_template"]
+            if not Template.objects.filter(name=source_init_template, type=TemplateType.PLUGIN).exists():
+                raise ValidationError("source_init_template is not a template for plugin applications")
+
         self._validate_image_credential(build_config.image_credential)
 
         return attrs
@@ -60,10 +67,3 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
 
         if not image_credential.get("password") or not image_credential.get("username"):
             raise ValidationError("image credential missing valid username and password")
-
-    def to_internal_value(self, data: Dict):
-        data = super().to_internal_value(data)
-        # TODO 前端创建插件应用传了正确的 source_init_template 后，去掉这段兼容逻辑
-        if data["is_plugin_app"]:
-            data["source_config"]["source_init_template"] = "bk-saas-plugin-python"
-        return data

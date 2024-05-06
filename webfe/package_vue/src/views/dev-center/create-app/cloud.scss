@@ -208,9 +208,16 @@
 }
 .plugin-container{
   background: #FAFBFD;
-  padding: 20px 20px 5px 20px;
-  height: 80px;
+  padding: 20px;
   margin-left: 100px;
+
+  .plugin-item {
+    margin-top: 16px;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
 }
 .construction-manner {
   display: flex;

@@ -59,7 +59,7 @@
 </template>
 
 <script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
-import _ from 'lodash';
+import { cloneDeep } from 'lodash';
 
 export default {
   data() {
@@ -120,15 +120,11 @@ export default {
     },
   },
   watch: {
-    curAppInfo() {
-      this.init();
-    },
     'curAppInfo.feature': {
       handler(newValue, oldValue) {
         if (!Object.keys(newValue).length) {
-          this.curAppInfo.feature = _.cloneDeep(oldValue);
+          this.curAppInfo.feature = cloneDeep(oldValue);
         }
-        this.init();
       },
       deep: true,
     },

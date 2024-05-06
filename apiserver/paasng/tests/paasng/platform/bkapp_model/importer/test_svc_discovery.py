@@ -54,7 +54,6 @@ class Test__import_svc_discoverys:
 
         manifest["spec"]["svcDiscovery"]["bkSaaS"] = [  # type: ignore
             {"bkAppCode": "bk-iam"},
-            {"bkAppCode": "bk-sops", "moduleName": "bk-backend"},
             {"bkAppCode": "bk-sops", "moduleName": "bk-frontend"},
         ]
 

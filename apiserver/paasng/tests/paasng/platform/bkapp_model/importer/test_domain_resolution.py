@@ -52,10 +52,10 @@ class Test__import_domain_resolution:
         assert ret.deleted_num == 0
 
         # test update
-        manifest["spec"]["domainResolution"]["nameservers"] = ["127.0.0.1", "127.0.0.2"]  # type: ignore
+        manifest["spec"]["domainResolution"]["nameservers"] = ["127.0.0.2", "127.0.0.3"]  # type: ignore
         manifest["spec"]["domainResolution"]["hostAliases"] = [  # type: ignore
-            {"ip": "1.1.1.1", "hostnames": ["bk_app_code_test"]},
             {"ip": "1.1.1.2", "hostnames": ["bk_app_code_test"]},
+            {"ip": "1.1.1.3", "hostnames": ["bk_app_code_test"]},
         ]
 
         spec_slz = BkAppSpecInputSLZ(data=manifest["spec"])
@@ -68,8 +68,8 @@ class Test__import_domain_resolution:
         )
 
         domain_res = DomainResolution.objects.get(application=bk_module.application)
-        assert len(domain_res.nameservers) == 2
-        assert len(domain_res.host_aliases) == 2
+        assert len(domain_res.nameservers) == 3
+        assert len(domain_res.host_aliases) == 3
         assert ret.created_num == 0
         assert ret.updated_num == 1
         assert ret.deleted_num == 0

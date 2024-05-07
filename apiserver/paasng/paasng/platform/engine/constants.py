@@ -145,7 +145,7 @@ class DeployConditions(ChoicesEnum):
 class RuntimeType(str, StructuredEnum):
     BUILDPACK = EnumField("buildpack", label=_("使用 Buildpacks 构建"))
     DOCKERFILE = EnumField("dockerfile", label=_("使用 Dockerfile 构建"))
-    CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image")
+    CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image(云原生和旧镜像应用)")
 
 
 class ImagePullPolicy(str, StructuredEnum):
@@ -174,3 +174,13 @@ class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):
     """Built-in envs without prefix in the app runtime"""
 
     PORT = EnumField("PORT", label=_("目标端口号，值为 5000"))
+
+
+class VersionType(str, StructuredEnum):
+    """版本类型. 对应 VersionInfo.version_type"""
+
+    TAG = EnumField("tag", label="用于 Git 仓库、云原生镜像应用、旧镜像应用")
+    BRANCH = EnumField("branch", label="用于 SVN 仓库、Git 仓库")
+    TRUNK = EnumField("trunk", label="用于 SVN 仓库")
+    IMAGE = EnumField("image", label="用于云原生应用选择已构建的镜像部署时")
+    PACKAGE = EnumField("package", label="用于 lesscode 应用和 S-Mart 应用")

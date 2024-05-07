@@ -41,6 +41,7 @@ class SourceOrigin(int, StructuredEnum):
     AUTHORIZED_VCS = EnumField(1, "Authorized VCS")
     BK_LESS_CODE = EnumField(2, "BK-Lesscode")
     S_MART = EnumField(3, "S-Mart")
+    # 旧镜像应用(非云原生)
     IMAGE_REGISTRY = EnumField(4, "Image Registry")
     # 场景模板
     SCENE = EnumField(5, "Scene")

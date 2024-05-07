@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest import mock
@@ -86,13 +87,13 @@ class TestGeneralGitController:
 
             c = BareGitRepoController.init_by_module(bk_module, "admin")
 
-            with generate_temp_dir() as working_dir, pytest.raises(GitCommandExecutionError) as exp:
+            with generate_temp_dir() as working_dir, pytest.raises(GitCommandExecutionError) as exc:
                 c.export(
                     working_dir, version_info=VersionInfo(revision="foo", version_type="branch", version_name="master")
                 )
             httpd.shutdown()
 
-            value = exp.value
+            value = exc.value
             message = value.args[0]
             assert f"http://localhost:{httpd.server_port}/foo.git" in message
             assert "admin:********" in message

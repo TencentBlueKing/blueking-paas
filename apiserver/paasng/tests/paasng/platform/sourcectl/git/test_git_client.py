@@ -164,12 +164,14 @@ class TestGitClient:
 
     def test_err_stdout_as_exc(self, client):
         """Test the sensitive information is scrubbed."""
-        command = GitCloneCommand("git", repository=MutableURL("http://user:pass@example.com/foo.git"))
+        # Use a password contains escaped special characters, orig user/pass: foo/pass@%wd
+        command = GitCloneCommand("git", repository=MutableURL("https://foo:pass%40%25wd@example.com/foo.git"))
         stdout = dedent(
             """\
-            Cloning into 'blueapps'...
-            fatal: Authentication failed for 'http://user:pass@example.com/foo.git'
+            Cloning into '.'...
+            fatal: Authentication failed for 'https://foo:pass%40%25wd@example.com/foo.git'
         """
         )
         exc = client.err_stdout_as_exc(stdout, command, -1)
-        assert "user:pass" not in str(exc), "The sensitive information should be scrubbed."
+        assert "foo:pass%40%25wd" not in str(exc), "The sensitive information should be scrubbed."
+        assert "failed for 'https://example.com/foo.git'" in str(exc)

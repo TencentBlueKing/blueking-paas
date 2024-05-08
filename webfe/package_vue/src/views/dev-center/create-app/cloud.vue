@@ -236,11 +236,7 @@
                           <bk-radio :value="item.name"> {{ item.display_name }} </bk-radio>
                         </label>
                         <p class="f12 mt5">
-                          <a
-                            target="_blank"
-                            :href="item.repo_url"
-                            style="color: #3a84ff"
-                          >{{ item.description }}</a>
+                          {{ item.description }}
                         </p>
                       </li>
                     </bk-radio-group>

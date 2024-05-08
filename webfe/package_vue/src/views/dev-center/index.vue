@@ -375,9 +375,21 @@
         </bk-table-column>
         <bk-table-column :label="$t('应用类型')">
           <template slot-scope="{ row }">
-            <span :class="{ 'off-shelf': !row.application.is_active }">
-              {{ $t(PAAS_APP_TYPE[row.application.type]) }}
-            </span>
+            <!-- 外部版不展示 -->
+            <div class="app-type-wrapper">
+              <span :class="{ 'off-shelf': !row.application.is_active }">
+                {{ $t(PAAS_APP_TYPE[row.application.type]) }}
+              </span>
+              <!-- 是否显示迁移应用icon, 需要后台提供字段 -->
+              <div
+                v-if="row.application.type === 'default' && row.application.region_name !== '外部版'"
+                v-bk-tooltips="{ content: $t('点击可迁移为云原生应用') }"
+                class="migration-wrapper"
+                @click.stop="showAppMigrationDialog(row.application)"
+              >
+                <i class="paasng-icon paasng-qianyi-mianxing" />
+              </div>
+            </div>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -469,12 +481,19 @@
         </bk-table-column>
       </bk-table>
     </paas-content-loader>
+
+    <!-- 普通应用迁移至云原生应用弹窗 -->
+    <app-migration-dialog
+      v-model="appMigrationDialogConfig.visible"
+      :data="appMigrationDialogConfig.data"
+    />
   </div>
 </template>
 
 <script>import auth from '@/auth';
 import i18n from '@/language/i18n';
 import tebleHeaderFilters from '@/components/teble-header-filters';
+import appMigrationDialog from '@/components/app-migration-dialog';
 import { PAAS_APP_TYPE } from '@/common/constants';
 
 const APP_TYPE_MAP = [
@@ -510,6 +529,9 @@ const FILTER_TIP = {
 };
 
 export default {
+  components: {
+    appMigrationDialog,
+  },
   // Get userHasApp before render
   beforeRouteEnter(to, from, next) {
     const promise = auth.requestHasApp();
@@ -634,6 +656,10 @@ export default {
       filterRegion: [],
       appExtraData: {},
       tableHeaderFilterValue: 'normal',
+      appMigrationDialogConfig: {
+        visible: false,
+        data: {},
+      },
     };
   },
   computed: {
@@ -1033,6 +1059,11 @@ export default {
         this.filterKey = '';
       }
     },
+
+    showAppMigrationDialog(data) {
+      this.appMigrationDialogConfig.visible = true;
+      this.appMigrationDialogConfig.data = data;
+    },
   },
 };
 </script>
@@ -1079,6 +1110,29 @@ export default {
         .right-text {
             margin-left: 14px;
         }
+    }
+
+    .app-type-wrapper {
+      display: flex;
+      align-items: center;
+
+      .migration-wrapper {
+        margin-left: 1px;
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        text-align: center;
+        transform: translateY(2px);
+        border-radius: 2px;
+
+        i {
+          font-size: 14px;
+          color: #3A84FF;
+        }
+        &:hover {
+          background-color: #E1ECFF;
+        }
+      }
     }
 
     .shaixuan,

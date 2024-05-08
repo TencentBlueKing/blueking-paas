@@ -18,15 +18,9 @@
             <div class="overflow-app-metedata">
               <strong
                 v-bk-overflow-tips
-                class="app-title"
+                :class="['app-title', { 'not-migrated': !isMigrationEntryShown }]"
               >{{ appInfo.name }}</strong>
-              <div
-                v-if="platformFeature.REGION_DISPLAY"
-                :class="['overview-region region-tag',
-                         { inner: appInfo.region === 'ieod', clouds: appInfo.region === 'clouds' }]"
-              >
-                <span>{{ appInfo.region_name }}</span>
-              </div>
+              <div v-if="isMigrationEntryShown" class="migrate-tag">{{ $t('迁移中') }}...</div>
             </div>
             <p
               v-bk-overflow-tips
@@ -166,6 +160,12 @@ export default {
     searchAppList,
   },
   mixins: [appBaseMixin],
+  props: {
+    isMigrationEntryShown: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       isFocused: false,
@@ -406,6 +406,10 @@ export default {
             margin-top: -3px;
             line-height: 14px;
             font-weight: normal;
+        }
+
+        .app-title.not-migrated {
+            max-width: 120px;
         }
     }
 
@@ -658,6 +662,22 @@ export default {
             color: #7d01ff;
         }
     }
+
+    .migrate-tag {
+      position: relative;
+      display: inline-block;
+      top: -6px;
+      margin-left: 4px;
+      height: 16px;
+      line-height: 16px;
+      padding: 0 4px;
+      font-weight: 400;
+      background: #FFE8C3;
+      border-radius: 2px;
+      font-size: 10px;
+      color: #FE9C00;
+    }
+
     .app-collect-btn {
         position: absolute;
         width: 16px;

@@ -55,7 +55,7 @@ class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
         if attrs["is_plugin_app"]:
             source_init_template = attrs["source_config"]["source_init_template"]
             if not Template.objects.filter(name=source_init_template, type=TemplateType.PLUGIN).exists():
-                raise ValidationError("source_init_template is not a template for plugin applications")
+                raise ValidationError(f"{source_init_template} is not a template for plugin applications")
 
         self._validate_image_credential(build_config.image_credential)
 

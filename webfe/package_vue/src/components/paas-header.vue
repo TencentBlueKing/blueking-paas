@@ -794,7 +794,8 @@ export default {
             width: 242px;
             position: relative;
             margin-left: 16px;
-            padding: 10px 0;
+            display: flex;
+            align-items: center;
             .logo-warp{
               display: flex;
               align-items: center;

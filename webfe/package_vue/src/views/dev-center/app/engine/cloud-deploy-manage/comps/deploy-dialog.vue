@@ -1042,14 +1042,14 @@ export default {
           // 可以自己编辑选择镜像
           if (!this.allowMultipleImage) {
             params = {
-              version_type: 'image',
+              version_type: 'tag',
               version_name: this.tagData.tagValue,
               advanced_options: advancedOptions,
             };
             this.deploymentInfoBackUp.version_info.version_name = this.tagData.tagValue;
           } else {
             params = {
-              version_type: 'manifest',
+              version_type: 'tag',
               version_name: 'manifest',
               advanced_options: advancedOptions,
             };

@@ -16,9 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import datetime
 from collections import defaultdict
 from pathlib import Path
+from textwrap import dedent
 from unittest.mock import patch
 
 import pytest
@@ -159,3 +161,17 @@ class TestGitClient:
 
             assert isinstance(command, GitCommand)
             assert command.to_cmd() == ["git", "show", "-s", "--format=%ct/%B", "9n8b7u6y5t"]
+
+    def test_err_stdout_as_exc(self, client):
+        """Test the sensitive information is scrubbed."""
+        # Use a password contains escaped special characters, orig user/pass: foo/pass@%wd
+        command = GitCloneCommand("git", repository=MutableURL("https://foo:pass%40%25wd@example.com/foo.git"))
+        stdout = dedent(
+            """\
+            Cloning into '.'...
+            fatal: Authentication failed for 'https://foo:pass%40%25wd@example.com/foo.git'
+        """
+        )
+        exc = client.err_stdout_as_exc(stdout, command, -1)
+        assert "foo:pass%40%25wd" not in str(exc), "The sensitive information should be scrubbed."
+        assert "failed for 'https://example.com/foo.git'" in str(exc)

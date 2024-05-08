@@ -18,26 +18,7 @@
         class="app-container middle overview"
         :class="{ 'enhanced-service': !isTab }"
       >
-        <template v-if="!isTab">
-          <div
-            class="top-return-bar flex-row align-items-center"
-            @click="handleGoBack"
-          >
-            <i
-              class="paasng-icon paasng-arrows-left icon-cls-back mr5"
-            />
-            <h4>{{ $t('返回上一页') }}</h4>
-          </div>
-          <!-- 动态数据 -->
-          <bk-alert
-            v-if="instanceTipsConfig.isShow"
-            class="instance-alert-cls"
-            type="info"
-            :title="instanceTipsConfig.tips">
-          </bk-alert>
-        </template>
-
-        <section :class="['deploy-panel', 'deploy-main', 'mt5', { 'instance-details-cls': !isTab }]">
+        <section :class="['deploy-panel', 'deploy-main', { 'instance-details-cls': !isTab }]">
           <!-- 增强服务实例详情隐藏tab -->
           <bk-tab
             v-show="isTab"
@@ -61,7 +42,7 @@
             ></bk-tab-panel>
           </bk-tab>
 
-          <div class="deploy-content">
+          <div :class="['deploy-content', { 'details-router-cls': !isTab }]">
             <router-view
               :ref="routerRefs"
               :key="renderIndex"
@@ -70,22 +51,11 @@
               @cancel="handleCancel"
               @hide-tab="isTab = false"
               @tab-change="handleGoPage"
-              @set-markdown="setMarkdown"
-              @set-tooltips="setTooltips"
-              @set-loading="setMarkdownLoading"
+              @route-back="handleGoBack"
             />
           </div>
         </section>
-
-
       </paas-content-loader>
-
-      <usage-guide
-        v-if="isShowUsageGuide && isCloudNativeApp"
-        :data="serviceMarkdown"
-        :is-cloud-native="isCloudNativeApp"
-        :is-loading="isMarkdownLoading"
-      />
     </section>
 
     <bk-dialog
@@ -109,15 +79,12 @@
 <script>import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
-import usageGuide from '@/components/usage-guide';
 import { throttle } from 'lodash';
-import { bus } from '@/common/bus';
 
 export default {
   components: {
     moduleTopBar,
     deployYaml,
-    usageGuide,
   },
   mixins: [appBaseMixin],
   data() {
@@ -145,10 +112,6 @@ export default {
       isTab: true,
       dialogCloudAppData: [],
       topBarIndex: 0,
-      isShowUsageGuide: false,
-      serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
-      instanceTipsConfig: {},
-      isMarkdownLoading: false,
     };
   },
   computed: {
@@ -211,9 +174,6 @@ export default {
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
       this.$store.commit('cloudApi/updatePageEdit', false);
-      if (this.isShowUsageGuide) {
-        this.handleCloseUsageGuide();
-      }
     },
     appCode() {
       this.topBarIndex += 1;
@@ -228,12 +188,6 @@ export default {
         name: this.active || this.firstTabActiveName,
       });
     }
-    bus.$on('show-usage-guide', () => {
-      this.isShowUsageGuide = true;
-    });
-    bus.$on('close-usage-guide', () => {
-      this.isShowUsageGuide = false;
-    });
   },
   mounted() {
     this.handleWindowResize();
@@ -278,7 +232,6 @@ export default {
     handleGoBack() {
       this.handleGoPage('appServices');
       this.isTab = true;
-      this.handleCloseUsageGuide();
     },
 
     handleWindowResize() {
@@ -297,25 +250,8 @@ export default {
       }
     },
 
-    handleCloseUsageGuide() {
-      this.isShowUsageGuide = false;
-    },
-
     handleTabChange() {
-      this.handleCloseUsageGuide();
       this.isTab = true;
-    },
-
-    setMarkdown(markdown) {
-      this.serviceMarkdown = markdown;
-    },
-
-    setTooltips(data) {
-      this.instanceTipsConfig = data;
-    },
-
-    setMarkdownLoading(loading) {
-      this.isMarkdownLoading = loading;
     },
   },
 };
@@ -330,6 +266,8 @@ export default {
   .enhanced-service {
     flex: 1;
     min-width: 0;
+    padding: 0;
+    margin: 0;
   }
 }
 
@@ -384,25 +322,14 @@ export default {
   box-shadow: 0 2px 4px 0 #1919290d;
 
   &.instance-details-cls {
-    height: auto;
+    // 高度问题·
+    height: 100%;
     min-height: auto;
-  }
-}
+    background: #F5F7FA;
 
-.top-return-bar {
-  background: #F5F7FA;
-  cursor: pointer;
-  margin-bottom: 16px;
-  h4 {
-    font-size: 14px;
-    color: #313238;
-    font-weight: 400;
-    padding: 0;
-  }
-  .icon-cls-back{
-    color: #3A84FF;
-    font-size: 14px;
-    font-weight: bold;
+    .details-router-cls {
+      height: 100%;
+    }
   }
 }
 .instance-alert-cls {

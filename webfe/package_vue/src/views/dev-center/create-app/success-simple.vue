@@ -8,7 +8,7 @@
           <p>
             <i class="paasng-icon paasng-check-1 text-success" />
           </p>
-          <p>{{ $t('恭喜，应用 simale') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
           <p>
             <bk-button
               :theme="'primary'"
@@ -41,7 +41,7 @@ export default {
   data() {
     const appCode = this.$route.params.id;
     return {
-      appCode: appCode,
+      appCode,
       application: {},
     };
   },

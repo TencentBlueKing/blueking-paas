@@ -35,7 +35,7 @@ paths:
   /bkapps/applications/lesscode/:
     post:
       operationId: create_lesscode_app
-      description: 创建蓝鲸可视化开发平台应用
+      description: 创建蓝鲸运维开发平台应用
       tags:
       - 应用/模块信息查询
       responses:

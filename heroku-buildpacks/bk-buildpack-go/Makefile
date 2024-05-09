@@ -33,14 +33,12 @@ test:  ## 单元测试 - 执行前需要先 patch
 .PHONY: patch
 patch:
 	patch buildpack/bin/compile patchs/buildpack/bin/compile.patch
-	patch buildpack/files.json patchs/buildpack/files.json.patch
 	rsync -a --delete ./hooks buildpack/
 
 
 .PHONY: unpatch
 unpatch:
 	patch -R buildpack/bin/compile patchs/buildpack/bin/compile.patch
-	patch -R buildpack/files.json patchs/buildpack/files.json.patch
 	rm -r buildpack/hooks
 
 

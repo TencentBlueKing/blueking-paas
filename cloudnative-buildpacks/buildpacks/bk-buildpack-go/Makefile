@@ -1,7 +1,7 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 NAME := bk-buildpack-go
-VERSION := v168
+VERSION ?= v191
 
 ##@ Build
 .PHONY: package
@@ -12,7 +12,7 @@ package: package-heroku-buildpack ## package the buildpack
 
 .PHONY: package-heroku-buildpack
 package-heroku-buildpack: init-submodule ## 打包 heroku-buildpack
-	cd target && make pack version=v168
+	cd target && make pack version=$(VERSION)
 
 
 .PHONY: init-submodule

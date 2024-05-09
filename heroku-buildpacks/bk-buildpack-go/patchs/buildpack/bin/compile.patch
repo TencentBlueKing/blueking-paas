@@ -1,19 +1,19 @@
 13a14,15
 > source "${buildpack}/hooks/pre-compile"
 > 
-428,429c430,438
+427,428c429,437
 <   # For an explanation of what this is doing, see https://dave.cheney.net/2014/09/14/go-list-your-swiss-army-knife
 <   go list -find "${FLAGS[@]}" -f '{{ if eq .Name "main" }} {{.ImportPath}} {{ end }}' ./...
 ---
->   # beego migration 目录需要使用 bee 命令编译(否则必然构建失败)
->   # 使用 go mod 不指定入口会遍历所有 package main, 导致错误对 beego migration 进行编译
->   # 因此对于 beego 框架, 如未指定 GO_INSTALL_PACKAGE_SPEC, 默认使用应用名作为构建入口
->   if [ "${GO_BKAPP_FRAMEWORK}" == "1" ] && [ -z "${GO_INSTALL_PACKAGE_SPEC}" ]; then
->     echo ${BKPAAS_APP_ID}
->   else
->     # For an explanation of what this is doing, see https://dave.cheney.net/2014/09/14/go-list-your-swiss-army-knife
->     go list -f '{{ if eq .Name "main" }} {{.ImportPath}} {{ end }}' ./...
->   fi
-718a728,729
+>     # beego migration 目录需要使用 bee 命令编译(否则必然构建失败)
+>     # 使用 go mod 不指定入口会遍历所有 package main, 导致错误对 beego migration 进行编译
+>     # 因此对于 beego 框架, 如未指定 GO_INSTALL_PACKAGE_SPEC, 默认使用应用名作为构建入口
+>     if [ "${GO_BKAPP_FRAMEWORK}" == "1" ] && [ -z "${GO_INSTALL_PACKAGE_SPEC}" ]; then
+>         echo ${BKPAAS_APP_ID}
+>     else
+>         # For an explanation of what this is doing, see https://dave.cheney.net/2014/09/14/go-list-your-swiss-army-knife
+>         go list -f '{{ if eq .Name "main" }} {{.ImportPath}} {{ end }}' ./...
+>     fi
+717a727,728
 > 
 > source "${buildpack}/hooks/post-compile"

@@ -37,12 +37,12 @@
 
 ### 云原生构建工具
 
-请参考 [cnb-builder-shim/README.md](cnb-builder-shim/README.md)，依赖“云原生 builder 镜像”。
+请参考 [cnb-builder-shim/README.md](./cnb-builder-shim/README.md)，依赖“云原生 builder 镜像”。
 
 ### 云原生 builder 镜像
 
-请参考 [cloudnative-buildpacks/README.md](cloudnative-buildpacks/README.md)。
+请参考 [cloudnative-buildpacks/README.md](./cloudnative-buildpacks/README.md)。
 
 ### 容器镜像构建工具（kaniko builder）
 
-请参考 [kaniko-shim/README.md](kaniko-shim/README.md)。
+请参考 [kaniko-shim/README.md](./kaniko-shim/README.md)。

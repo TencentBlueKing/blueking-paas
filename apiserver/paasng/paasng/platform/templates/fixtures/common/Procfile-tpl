@@ -1,4 +1,0 @@
-{% spaceless %}
-{% for name, command in processes.items %}{{ name }}: {{command}}
-{% endfor %}
-{% endspaceless %}

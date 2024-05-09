@@ -16,8 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import os
+import re
 import socket
+import sys
 from typing import Dict, List, Optional, Tuple, Union
 
 from blue_krill.secure.dj_environ import SecureEnv
@@ -194,3 +197,22 @@ def is_redis_sentinel_backend(backend: Optional[Union[Tuple, List, str]]) -> boo
 
     value = backend[0] if isinstance(backend, (list, tuple)) else backend
     return value.startswith("sentinel://")
+
+
+def is_in_celery_worker(argv: Optional[List] = None) -> bool:
+    """Check if current module is running inside the celery worker.
+    An valid celery command: "celery -A paasng worker -l info"
+
+    :param argv: The command args list, default to sys.argv.
+    """
+    argv = argv or sys.argv
+    found_celery, found_worker = False, False
+    for arg in argv:
+        # The celery command might be an absolute path, use search instead of equal
+        if re.search(r"\bcelery$", arg):
+            found_celery = True
+            continue
+        if arg == "worker" and found_celery:
+            found_worker = True
+            break
+    return found_celery and found_worker

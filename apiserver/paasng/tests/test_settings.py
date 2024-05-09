@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import os
 from unittest import mock
 
@@ -28,6 +29,7 @@ from paasng.settings.utils import (
     get_database_conf,
     get_paas_service_jwt_clients,
     get_service_remote_endpoints,
+    is_in_celery_worker,
 )
 
 
@@ -110,3 +112,15 @@ def test_get_service_remote_endpoints(settings):
     eps = get_service_remote_endpoints(settings)
     assert len(eps) == 1
     assert eps[0]["name"] == "svc_rabbitmq"
+
+
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [
+        (["celery", "-A", "paasng", "worker", "-l", "info"], True),
+        (["/usr/local/bin/celery", "-A", "paasng", "worker", "-l", "info"], True),
+        (["python", "manage.py", "runserver"], False),
+    ],
+)
+def test_is_in_celery_worker(argv, expected):
+    assert is_in_celery_worker(argv) is expected

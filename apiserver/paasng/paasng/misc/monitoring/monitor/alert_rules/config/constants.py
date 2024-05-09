@@ -26,7 +26,8 @@ from .entities import AlertCode
 RUN_ENVS = AppEnvironment.get_values()
 
 RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get("service_name", "rabbitmq")
-
+BKREPO_SERVICE_NAME = settings.BKREPO_MONITOR_CONF.get("service_name", "bkrepo")
+GCS_MYSQL_SERVICE_NAME = settings.GCS_MYSQL_MONITOR_CONF.get("service_name", "gcs_mysql")
 
 DEFAULT_RULE_CONFIGS = {
     AlertCode.HIGH_CPU_USAGE.value: {
@@ -53,5 +54,15 @@ DEFAULT_RULE_CONFIGS = {
         "display_name": _("队列消息数过多"),
         "metric_label_names": ["vhost"],
         "threshold_expr": ">= 2000",  # 超过 2000 条
+    },
+    AlertCode.HIGH_BKREPO_QUOTA_USAGE.value: {
+        "display_name": _("BKREPO 存储使用量过高"),
+        "metric_label_names": ["private_bucket", "public_bucket"],
+        "threshold_expr": ">= 90",  # 超过 90%
+    },
+    AlertCode.GCS_MYSQL_SLOW_QUERY.value: {
+        "display_name": _("GCS-MySQL 慢查询新增"),
+        "metric_label_names": ["user"],
+        "threshold_expr": "> 0",  # 慢查询增长超过 0
     },
 }

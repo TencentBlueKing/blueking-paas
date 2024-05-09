@@ -91,6 +91,10 @@ class AsCodeClient:
             # 涉及到 rabbitmq 的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
             if "rabbitmq" in conf.alert_code:
                 ctx["rabbitmq_metric_name_prefix"] = settings.RABBITMQ_MONITOR_CONF.get("metric_name_prefix", "")
+            if "bkrepo" in conf.alert_code:
+                ctx["bkrepo_metric_name_prefix"] = settings.BKREPO_MONITOR_CONF.get("metric_name_prefix", "")
+            if "gcs_mysql" in conf.alert_code:
+                ctx["gcs_mysql_metric_name_prefix"] = settings.GCS_MYSQL_MONITOR_CONF.get("metric_name_prefix", "")
 
             configs[f"rule/{conf.alert_rule_name}.yaml"] = j2_env.get_template(f"{conf.alert_code}.yaml.j2").render(
                 **ctx

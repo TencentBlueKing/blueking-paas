@@ -1240,6 +1240,10 @@ BKMONITOR_METRIC_RELABELINGS = settings.get("BKMONITOR_METRIC_RELABELINGS", [])
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # Rabbitmq 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'rabbitmq'}
 RABBITMQ_MONITOR_CONF = settings.get("RABBITMQ_MONITOR_CONF", {})
+# Bkrepo 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'bkrepo'}
+BKREPO_MONITOR_CONF = settings.get("BKREPO_MONITOR_CONF", {})
+# Gcs_mysql 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'gcs_mysql'}
+GCS_MYSQL_MONITOR_CONF = settings.get("GCS_MYSQL_MONITOR_CONF", {})
 # 蓝鲸监控网关的环境
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get("BK_MONITOR_APIGW_SERVICE_STAGE", "stage")
 

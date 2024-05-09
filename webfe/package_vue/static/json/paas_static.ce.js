@@ -310,20 +310,25 @@ export const PAAS_STATIC_CONFIG = {
         "list": {
             "nav": [
                 {
-                    "text": staticI18n.$t('首页'),
+                  "text": staticI18n.$t('首页'),
+                  "name": "homePage",
                 },
                 {
-                    "text": staticI18n.$t("应用开发"),
-                    "url": "apps"
+                  "text": staticI18n.$t('应用开发'),
+                  "url": "apps",
+                  "name": "appDevelopment",
                 },
                 {
-                    "text": staticI18n.$t("插件开发")
+                    "text": staticI18n.$t('插件开发'),
+                    "name": "pluginDevelopment",
                 },
                 {
-                    "text": staticI18n.$t("API 网关")
+                    "text": staticI18n.$t("API 网关"),
+                    "name": "apiGateway",
                 },
                 {
-                    "text": staticI18n.$t("服务")
+                  "text": staticI18n.$t("服务"),
+                  "name": "services",
                 }
             ],
             "api_subnav_service": [

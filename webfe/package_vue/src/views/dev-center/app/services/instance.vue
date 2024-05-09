@@ -174,6 +174,22 @@
               </bk-table-column>
             </bk-table>
           </section>
+
+          <div class="delete-service-wrapper mt16">
+            <span v-bk-tooltips="{ content: $t('S-mart应用暂不支持删除增强服务'), disabled: !isSmartApp }">
+              <bk-button
+                theme="danger"
+                :disabled="isSmartApp"
+                @click="showDeleteServiceDialog"
+              >
+                {{ $t('删除服务') }}
+              </bk-button>
+            </span>
+            <p>
+              <i class="paasng-icon paasng-paas-remind-fill mr5"></i>
+              {{ $t('所有已申请实例的相关数据将被销毁。应用与服务之间的绑定关系也会被解除。') }}
+            </p>
+          </div>
         </div>
 
         <!-- 使用指南 -->
@@ -230,6 +246,55 @@
         </bk-button>
       </template>
     </bk-dialog>
+
+    <!-- 删除服务 -->
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="$t('确认删除实例？')"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      @after-leave="formRemoveConfirmCode = ''"
+    >
+      <form
+        class="ps-form"
+        style="min-height: 63px;"
+        @submit.prevent="submitRemoveInstance"
+      >
+        <div class="spacing-x1">
+          {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+        <bk-alert
+          v-if="delAppDialog.moduleList.length > 0"
+          style="margin-top: 10px;"
+          type="error"
+          :title="errorTips"
+        />
+      </form>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveInstance"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
   </div>
 </template>
 
@@ -239,7 +304,6 @@ import appTopBar from '@/components/paas-app-bar';
 import ConfigEdit from './comps/config-edit';
 import usageGuide from '@/components/usage-guide';
 import $ from 'jquery';
-import { bus } from '@/common/bus';
 
 export default {
   components: {
@@ -313,6 +377,15 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    isSmartApp() {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+    },
+    formRemoveValidated() {
+      return this.appCode === this.formRemoveConfirmCode;
+    },
+    errorTips() {
+      return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
     },
   },
   watch: {
@@ -625,6 +698,42 @@ export default {
       };
       data ? updateExpand() : setTimeout(updateExpand, 200);
     },
+
+    showDeleteServiceDialog() {
+      this.delAppDialog.visiable = true;
+      this.fetchServicesShareDetail();
+    },
+
+    async submitRemoveInstance() {
+      try {
+        await this.$store.dispatch('service/deleteService', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+        });
+        this.delAppDialog.visiable = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除服务实例成功'),
+        });
+        if (this.isCloudNativeApp) {
+          this.handleGoBack();
+          return;
+        }
+        this.$router.push({
+          name: 'appService',
+          params: {
+            id: this.$route.params.id,
+          },
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+        this.delAppDialog.visiable = false;
+      }
+    },
   },
 };
 
@@ -824,6 +933,21 @@ export default {
             color: #3A84FF;
             font-size: 14px;
             font-weight: bold;
+          }
+        }
+
+        .delete-service-wrapper {
+          display: flex;
+          align-items: center;
+          margin-top: 16px;
+          p {
+            color: #63656E;
+            font-size: 12px;
+            margin-left: 13px;
+            i {
+              font-size: 14px;
+              color: #FFB848;
+            }
           }
         }
       }

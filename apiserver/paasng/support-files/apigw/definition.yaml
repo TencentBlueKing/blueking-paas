@@ -8,9 +8,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.2.0
-  title: "Standardize documents according to the BK specification"
-  comment: "Standardize documents according to the BK specification"
+  version: 1.3.0
+  title: "Enable app permission verification for all APIs."
+  comment: "Enable app permission verification for all APIs."
 
 
 stage:
@@ -33,6 +33,7 @@ grant_permissions:
   - bk_app_code: bk_monitorv3
   - bk_app_code: bk_dataweb
   - bk_app_code: bk_bkdata
+  - bk_app_code: bk-notice
 
 strategies: []
 

@@ -13,6 +13,7 @@
         :placement="'right'"
         :max="980"
         :collapsible="true"
+        initial-divide="30%"
         ext-cls="instance-resize-layout-cls"
         style="width: 100%;height: 100%;"
         @collapse-change="handleCollapseChange">
@@ -203,7 +204,7 @@
         />
 
         <div
-          :class="['floating-button', { expand: !isExpand }]"
+          :class="['floating-button', { expand: isExpand }]"
           slot="collapse-trigger"
           @click="handleSetCollapse">
           <span :class="{ 'vertical-rl': localLanguage === 'en' }">{{ $t('使用指南') }}</span>

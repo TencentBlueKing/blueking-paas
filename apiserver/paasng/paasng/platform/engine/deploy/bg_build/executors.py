@@ -365,10 +365,10 @@ class PipelineBuildProcessExecutor(DeployStep):
                 continue
 
             # 只保留 [Install plugin] 到 [Output] 之间的日志，不需要其他的
-            if "[Install plugin]" in log.message:
-                start_following = True
             if "[Output]" in log.message:
                 break
+            if "[Install plugin]" in log.message:
+                start_following = True
 
             if start_following:
                 # 移除蓝盾日志中的级别 Tag，如 ##[error], ##[info] 等

@@ -210,9 +210,11 @@ export default {
       ].join('\n');
     },
     pluginTips() {
+      const queryTemplate = this.$route.query?.template;
+      const s = queryTemplate === 'bk-saas-plugin-go' ? 'bk-plugin-framework-go' : 'bk-plugin-framework-python';
       return [
         'pip install cookiecutter',
-        'cookiecutter https://github.com/TencentBlueKing/bk-plugin-framework-python/ --directory template',
+        `cookiecutter https://github.com/TencentBlueKing/${s}/ --directory template`,
       ].join('\n');
     },
     initTips() {

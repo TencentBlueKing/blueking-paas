@@ -230,23 +230,16 @@
                   class="plugin-container"
                 >
                   <ul class="establish-main-list">
-                    <li>
-                      <label class="pointer">
-                        <bk-radio-group v-model="isOpenSupportPlus">
-                          <bk-radio
-                            :value="'yes'"
-                            disabled
-                          > {{ $t('Python 语言') }} </bk-radio>
-                        </bk-radio-group>
-                      </label>
-                      <p class="f12">
-                        <a
-                          target="_blank"
-                          :href="GLOBAL.LINK.BK_PLUGIN"
-                          style="color: #3a84ff"
-                        >Python + bk-plugin-framework，{{ $t('集成插件开发框架，插件版本管理，插件运行时等模块') }}</a>
-                      </p>
-                    </li>
+                    <bk-radio-group v-model="curPluginTemplate">
+                      <li class="plugin-item" v-for="item in pluginTmpls" :key="item.name">
+                        <label class="pointer">
+                          <bk-radio :value="item.name"> {{ item.display_name }} </bk-radio>
+                        </label>
+                        <p class="f12 mt5">
+                          {{ item.description }}
+                        </p>
+                      </li>
+                    </bk-radio-group>
                   </ul>
                 </div>
               </bk-form>
@@ -800,8 +793,9 @@ export default {
       },
       curCodeSource: 'default',
       activeIndex: 1,
-      isOpenSupportPlus: 'yes',
       isShowAdvancedOptions: false,
+      pluginTmpls: [],
+      curPluginTemplate: '',
     };
   },
   computed: {
@@ -869,6 +863,9 @@ export default {
     curExtendConfig() {
       return this.gitExtendConfig[this.sourceControlTypeItem];
     },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
   },
   watch: {
     'formData.sourceOrigin'(value) {
@@ -908,6 +905,9 @@ export default {
     isShowAdvancedOptions(value) {
       this.$store.commit('createApp/updateAdvancedOptions', value);
     },
+    'platformFeature.REGION_DISPLAY'() {
+      this.getPluginTmpls();
+    },
   },
   mounted() {
     this.init();
@@ -918,6 +918,7 @@ export default {
         this.fetchLanguageInfo(),
         this.fetchSourceControlTypesData(),
         this.fetchAdvancedOptions(),
+        this.getPluginTmpls(),
       ]);
       // 收集依赖
       const data = this.collectDependencies();
@@ -1185,12 +1186,12 @@ export default {
       }
       this.formLoading = true;
       const params = {
-        is_plugin_app: !!this.isBkPlugin,
+        is_plugin_app: this.isBkPlugin,
         region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
         source_config: {
-          source_init_template: this.formData.sourceInitTemplate,
+          source_init_template: this.isBkPlugin ? this.curPluginTemplate : this.formData.sourceInitTemplate,
           source_control_type: this.sourceControlTypeItem,
           source_repo_url: this.formData.sourceRepoUrl,
           source_origin: this.sourceOrigin,
@@ -1312,6 +1313,7 @@ export default {
           path,
           query: {
             method: params.bkapp_spec.build_config.build_method,
+            template: params.source_config.source_init_template,
             objectKey,
           },
         });
@@ -1442,6 +1444,23 @@ export default {
     async handleBeforeFunction() {
       const data = this.collectDependencies();
       return this.$isSidebarClosed(JSON.stringify(data));
+    },
+
+    // 获取蓝鲸插件模板信息
+    async getPluginTmpls() {
+      try {
+        const region = this.platformFeature?.REGION_DISPLAY ? 'ieod' : 'default';
+        const res = await this.$store.dispatch('cloudApi/getPluginTmpls', {
+          region,
+        });
+        this.curPluginTemplate = res[0]?.name || '';
+        this.pluginTmpls = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };

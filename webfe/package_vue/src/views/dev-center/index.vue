@@ -234,7 +234,7 @@
           <template slot-scope="{ row }">
             <div
               :class="['star-wrapper', { 'off-shelf': !row.application.is_active }]"
-              @click="toggleAppMarked(row)"
+              @click.stop="toggleAppMarked(row)"
             >
               <span
                 class="star-icon"

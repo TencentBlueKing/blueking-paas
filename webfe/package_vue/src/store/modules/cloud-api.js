@@ -223,5 +223,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/oauth/token/prod/`;
       return http.get(url, config);
     },
+
+    /**
+     * 获取蓝鲸插件模板信息
+     * @param {Object} params 请求参数：region
+     */
+    getPluginTmpls({}, { region }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/plugin/tmpls/?region=${region}`;
+      return http.get(url, config);
+    },
   },
 };

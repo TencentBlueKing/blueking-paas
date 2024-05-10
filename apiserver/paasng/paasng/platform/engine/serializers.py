@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
 from datetime import datetime
 
 import yaml
@@ -37,6 +38,7 @@ from paasng.platform.engine.constants import (
     JobStatus,
     MetricsType,
     RuntimeType,
+    VersionType,
 )
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
@@ -73,7 +75,12 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
 class CreateDeploymentSLZ(serializers.Serializer):
     """创建部署"""
 
-    version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
+    version_type = serializers.ChoiceField(
+        choices=VersionType.get_choices(),
+        required=True,
+        error_messages={"invalid_choice": f"Invalid choice. Valid choices are {VersionType.get_values()}"},
+        help_text="版本类型, 如 branch/tag/trunk",
+    )
     version_name = serializers.CharField(
         required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"
     )
@@ -83,6 +90,23 @@ class CreateDeploymentSLZ(serializers.Serializer):
     )
 
     advanced_options = DeploymentAdvancedOptionsSLZ(required=False, default={})
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if attrs["version_type"] == VersionType.IMAGE.value and not self._is_image_digest(attrs.get("revision")):
+            # 云原生应用选择已构建的镜像部署时, version_type 传入了 image
+            # 这里加上强制校验, 保证 image 类型被正确使用(仅用于云原生应用选择已构建镜像时),
+            # 否则会导致 Deployment.get_version_info 抛出 ValueError("unknown version info")
+            raise ValidationError(_("version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"))
+        return attrs
+
+    @staticmethod
+    def _is_image_digest(revision):
+        if not revision:
+            return False
+
+        return bool(re.match(r"^sha256:[0-9a-f]{64}$", revision))
 
 
 class CreateDeploymentResponseSLZ(serializers.Serializer):

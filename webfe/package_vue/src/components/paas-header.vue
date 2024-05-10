@@ -665,7 +665,7 @@ export default {
     },
     // 重组导航数据
     transformNavData(navData) {
-      const navList = navData.map((item, index) => {
+      const navList = navData.map((item) => {
         let transformedItem = {
           text: item.text,
           type: 'external-link', // 默认为外部链接
@@ -673,8 +673,8 @@ export default {
           target: '_self',
           showIcon: true,
         };
-        switch (index) {
-          case 0:
+        switch (item.name) {
+          case 'homePage':
             transformedItem = {
               ...transformedItem,
               type: 'router-link',
@@ -682,7 +682,7 @@ export default {
               showIcon: false,
             };
             break;
-          case 1:
+          case 'appDevelopment':
             transformedItem = {
               ...transformedItem,
               type: 'router-link',
@@ -690,7 +690,7 @@ export default {
               showIcon: false,
             };
             break;
-          case 2:
+          case 'pluginDevelopment':
             transformedItem = {
               ...transformedItem,
               type: 'router-link',
@@ -698,7 +698,7 @@ export default {
               showIcon: false,
             };
             break;
-          case 3:
+          case 'apiGateway':
             transformedItem = {
               ...transformedItem,
               showIcon: false,
@@ -710,7 +710,7 @@ export default {
       });
       // 应用开关过滤插件开发
       if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-        return navList.filter(e => e.text !== this.$t('插件开发'));
+        return navList.filter(e => e.name !== 'pluginDevelopment');
       }
       return navList;
     },
@@ -794,7 +794,8 @@ export default {
             width: 242px;
             position: relative;
             margin-left: 16px;
-            padding: 10px 0;
+            display: flex;
+            align-items: center;
             .logo-warp{
               display: flex;
               align-items: center;

@@ -443,8 +443,7 @@ class TestCreateBkPlugin:
         ("source_init_template", "language"),
         [
             ("bk-saas-plugin-python", "Python"),
-            # TODO 目前兼容前端，不管参数 source_init_template 传什么值，都会固定为 bk-saas-plugin-python
-            ("bk-saas-plugin-go", "Python"),
+            ("bk-saas-plugin-go", "Go"),
         ],
     )
     def test_normal(self, api_client, mock_wl_services_in_creation, settings, bk_user, source_init_template, language):

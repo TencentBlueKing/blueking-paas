@@ -172,7 +172,7 @@
               <div
                 :class="[
                   'filter-right-icon',
-                  { active: sortValue.indexOf('-') !== -1 }
+                  { active: filterActive }
                 ]"
                 v-bk-tooltips="{ content: filterTips }"
                 @click.stop="handleTtogleOrder"
@@ -183,10 +183,12 @@
             <div :class="['app-list-search', { 'en': isEnglishEnv }]">
               <bk-input
                 v-model="filterKey"
-                :clearable="true"
-                :right-icon="'paasng-icon paasng-search'"
+                clearable
+                :placeholder="$t('输入应用名称、ID，按Enter搜索')"
+                :right-icon="'bk-icon icon-search'"
                 @enter="searchApp"
-              />
+                @right-icon-click="handleRightIconClick">
+              </bk-input>
             </div>
 
             <div
@@ -221,7 +223,7 @@
         @page-limit-change="handlePageLimitChange"
         @row-mouse-enter="(index) => curHoverRowIndex = index"
         @row-mouse-leave="curHoverRowIndex = -1"
-        @row-click="toPage">
+        @cell-click="handleCellClick">
         <div slot="empty">
           <table-empty
             :keyword="tableEmptyConf.keyword"
@@ -498,12 +500,12 @@ const APP_TYPE_MAP = [
 ];
 
 const FILTER_TIP = {
-  name: 'A - Z',
-  '-name': 'Z - A',
-  created: '最新',
-  '-created': '最早',
-  latest_operated_at: '最新',
-  '-latest_operated_at': '最早',
+  code: 'A - Z',
+  '-code': 'Z - A',
+  created: '最早',
+  '-created': '最新',
+  latest_operated_at: '最早',
+  '-latest_operated_at': '最新',
 };
 
 export default {
@@ -614,8 +616,8 @@ export default {
       curFilterValue: '应用ID',
       filterList: [
         { text: '应用ID', value: 'code' },
-        { text: '创建时间', value: 'created' },
-        { text: '操作时间', value: 'latest_operated_at' },
+        { text: '创建时间', value: '-created' },
+        { text: '操作时间', value: '-latest_operated_at' },
       ],
       pagination: {
         current: 1,
@@ -658,6 +660,9 @@ export default {
     },
     filterTips() {
       return FILTER_TIP[this.sortValue];
+    },
+    filterActive() {
+      return this.sortValue.includes('code') ? this.sortValue.indexOf('-') !== -1 : !(this.sortValue.indexOf('-') !== -1);
     },
   },
   watch: {
@@ -1012,6 +1017,18 @@ export default {
           },
         },
       });
+    },
+
+    // 右侧icon搜索
+    handleRightIconClick() {
+      this.fetchAppList();
+    },
+
+    // 单元格点击处理
+    handleCellClick(row, column) {
+      if (column.property === 'name') {
+        this.toPage(row);
+      }
     },
   },
 };

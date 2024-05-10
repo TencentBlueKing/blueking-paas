@@ -2592,4 +2592,5 @@ export default {
   访问预发布环境: 'Access Pre-release Environment',
   访问生产环境: 'Access Production Environment',
   旧版应用迁移: 'Legacy APP Migration',
+  '如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过API网关）调用插件的API、并将插件能力集成到自己的系统中。': 'If you authorize your plugin to a user, they will be able to access the basic information of your plugin, call its API through the API gateway, and integrate the plugin capabilities into their own system.',
 };

@@ -365,9 +365,8 @@ class PipelineBuildProcessExecutor(DeployStep):
                 continue
 
             # 只保留 [Install plugin] 到 [Output] 之间的日志，不需要其他的
-            if not start_following and "[Install plugin]" in log.message:
+            if "[Install plugin]" in log.message:
                 start_following = True
-                continue
             if "[Output]" in log.message:
                 break
 

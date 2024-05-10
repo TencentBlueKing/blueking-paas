@@ -155,6 +155,12 @@
 <script>
 import { cloneDeep } from 'lodash';
 const defaultStateData = {
+  WlAppBackupMigrator: {
+    icon: 'paasng-ellipsis',
+    title: '备份应用配置',
+    status: 'not-executed',
+    errorMsg: '',
+  },
   ApplicationTypeMigrator: {
     icon: 'paasng-ellipsis',
     title: '变更应用类型',

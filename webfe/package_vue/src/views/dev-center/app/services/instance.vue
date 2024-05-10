@@ -13,7 +13,7 @@
         :placement="'right'"
         :max="980"
         :collapsible="true"
-        initial-divide="30%"
+        :initial-divide="asideWidth"
         ext-cls="instance-resize-layout-cls"
         style="width: 100%;height: 100%;"
         @collapse-change="handleCollapseChange">
@@ -58,8 +58,8 @@
             <!-- 编辑 -->
             <div class="instance-info" v-if="specifications.length">
               <div class="item" v-for="item in specifications" :key="item.name">
-                <span>{{ item.name }}：</span>
-                <span class="value" v-bk-overflow-tips>{{ item.value }}</span>
+                <span>{{ $t(item.name) }}：</span>
+                <span class="value" v-bk-overflow-tips>{{ $t(item.value) }}</span>
               </div>
               <span
                 v-bk-tooltips="{ content: $t('增强服务实例已分配，不能再修改配置信息'), disabled: canEditConfig }"
@@ -387,6 +387,9 @@ export default {
     },
     errorTips() {
       return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
+    },
+    asideWidth() {
+      return window.innerWidth > 1440 ? '32%' : '26%';
     },
   },
   watch: {
@@ -1247,7 +1250,7 @@ export default {
       .floating-button {
         position: absolute;
         left: -24px;
-        top: 50%;
+        top: calc(50% - 40px);
         transform: translateY(-50%);
         width: 24px;
         padding: 11px 0;

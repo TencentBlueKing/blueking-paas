@@ -367,7 +367,6 @@
 
 <script>import auth from '@/auth';
 import { bus } from '@/common/bus';
-import { bk_logout as bkLogout } from '../../static/js/bklogout';
 import selectEventMixin from '@/components/searching/selectEventMixin';
 import searchAppList from '@/components/searching/searchAppList';
 import Dropdown from '@/components/ui/Dropdown';
@@ -627,8 +626,7 @@ export default {
       }
     },
     logout() {
-      bkLogout.logout();
-      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${window.location.href}`;
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${encodeURIComponent(window.location.href)}`;
     },
     async switchLanguage(language) {
       const data = new URLSearchParams();

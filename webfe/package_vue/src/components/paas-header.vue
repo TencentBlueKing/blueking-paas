@@ -628,7 +628,7 @@ export default {
     },
     logout() {
       bkLogout.logout();
-      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?c_url=${window.location.href}`;
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${window.location.href}`;
     },
     async switchLanguage(language) {
       const data = new URLSearchParams();

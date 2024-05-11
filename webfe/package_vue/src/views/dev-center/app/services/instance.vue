@@ -91,7 +91,7 @@
                 <template slot-scope="{ $index }">
                   #{{ $index + 1 }}
                 </template></bk-table-column>
-              <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="300">
+              <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="380">
                 <template slot-scope="{ row, $index }">
                   <template
                     v-if="row.service_instance.config.hasOwnProperty('is_done')
@@ -389,7 +389,7 @@ export default {
       return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
     },
     asideWidth() {
-      return window.innerWidth > 1440 ? '32%' : '26%';
+      return window.innerWidth <= 1366 ? '28%' : '32%';
     },
   },
   watch: {
@@ -920,6 +920,7 @@ export default {
     .instance-detail {
       .bk-resize-layout-border {
         border-top-color: transparent;
+        border-bottom-color: transparent;
       }
       .instance-container-cls {
         margin: 16px 24px 0;
@@ -1205,8 +1206,9 @@ export default {
         }
     }
     .config-width {
-        width: 88%;
+        width: 85%;
         display: inline-block;
+        white-space: nowrap;
     }
     .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
         color: #999;
@@ -1250,7 +1252,7 @@ export default {
       .floating-button {
         position: absolute;
         left: -24px;
-        top: calc(50% - 40px);
+        top: 50%;
         transform: translateY(-50%);
         width: 24px;
         padding: 11px 0;

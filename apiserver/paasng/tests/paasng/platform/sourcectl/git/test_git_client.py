@@ -138,6 +138,18 @@ class TestGitClient:
             mock_run.return_value = cmd_result
             assert client.list_remote("http://example.com/foo.git") == expected
 
+    def test_list_remote_with_warning_and_invalid(self, client):
+        # The command output a warning message sometimes
+        with patch.object(client, "run") as mock_run:
+            mock_run.return_value = dedent(
+                """\
+                warning: redirecting to http://example.com/foo.git/
+                0123456789   HEAD
+                <some random invalid output>
+"""
+            )
+            assert client.list_remote("http://example.com/foo.git") == [("0123456789", "HEAD")]
+
     @pytest.mark.parametrize(
         ("commits", "expected"),
         [

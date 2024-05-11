@@ -76,5 +76,18 @@ class DeployHookType(str, StructuredEnum):
 
 
 class BuildPackType(str, StructuredEnum):
-    GIT = EnumField("git", label="git")
+    # legacy heroku buildpack format, just a tarball
     TAR = EnumField("tar", label="tar")
+
+    # oci-embedded is a virtual type, just used to enable user select buildpack embedded in builder image
+    OCI_EMBEDDED = EnumField("oci-embedded", label="oci-embedded")
+    # cnb buildpack OCI format, support "image" or "file"
+    # TODO?: 在将 cnb buildpack 已镜像或文件形式分发到公共储存后，让 cnb-builder-shim 支持从远程地址拉群 buildpack
+    # P.S. cnb 不强制要求将 buildpack 打到 builder 镜像里, 现在这样做只是没有公共存储可用，打到镜像里省事
+    OCI_IMAGE = EnumField("oci-image", label="oci-image")
+    OCI_FILE = EnumField("oci-file", label="oci-file")
+
+
+class AppImageType(str, StructuredEnum):
+    LEGACY = EnumField("legacy", label="legacy")
+    CNB = EnumField("cnb", label="cnb")

@@ -27,7 +27,7 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.platform.modules.constants import BuildPackType
+from paasng.platform.modules.constants import AppImageType, BuildPackType
 from paasng.utils.models import TimestampedModel
 
 if TYPE_CHECKING:
@@ -233,6 +233,8 @@ class AppImage(TimestampedModel):
     display_name = TranslatedFieldWithFallback(
         models.CharField(verbose_name="展示名称", max_length=64, default="", blank=True)
     )
+    type = models.CharField(verbose_name="镜像类型", max_length=32, choices=AppImageType.get_choices())
+
     image = models.CharField(verbose_name="镜像", max_length=256)
     tag = models.CharField(verbose_name="标签", max_length=32)
     # 这个影响用户能否在设置中看见，处理当前版本未就绪/不建议使用/私有定制的情况

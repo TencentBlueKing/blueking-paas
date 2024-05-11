@@ -82,8 +82,9 @@ class Command(BaseCommand):
                     AppManger(session).delete_by_name(name=filter_value)
                 else:
                     AppManger(session).delete_by_code(code=filter_value)
-            except Exception:
+            except Exception as e:
                 logger.exception(f"{filter_key} 为 {filter_value} 从 PaaS2.0 中删除失败.")
+                self.stdout.write(self.style.ERROR(f"{filter_key} 为 {filter_value} 从 PaaS2.0 中删除失败: {e}"))
                 return
 
         # 删除权限中心相关数据

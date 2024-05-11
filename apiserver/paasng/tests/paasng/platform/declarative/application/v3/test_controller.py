@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import Dict
 
 import pytest
@@ -362,7 +363,7 @@ class TestServicesField:
         decorator.with_module(
             random_name + "1",
             is_default=False,
-            module_spec={"addons": [{"name": "mysql", "sharedFrom": random_name}]},
+            module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name}]},
         )(app_desc)
 
         controller = AppDeclarativeController(bk_user)
@@ -381,7 +382,7 @@ class TestServicesField:
         decorator.with_module(
             random_name + "1",
             is_default=False,
-            module_spec={"addons": [{"name": "mysql", "sharedFrom": random_name + "2"}]},
+            module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name + "2"}]},
         )(app_desc)
         with pytest.raises(DescriptionValidationError):
             get_app_description(app_desc)

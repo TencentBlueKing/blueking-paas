@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Shared service across modules"""
 import logging
 from typing import Dict, Iterable, Optional, Sequence
@@ -41,7 +42,10 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceSharingManager:
-    """Manage shared service attachments by module"""
+    """Manage shared service attachments by module
+
+    :param module: The module that shares other module's service
+    """
 
     def __init__(self, module: Module):
         self.module = module
@@ -55,9 +59,9 @@ class ServiceSharingManager:
     def create(self, service: ServiceObj, ref_module: Module) -> SharedServiceAttachment:
         """Create a shared service relationship from given module
 
-        :param ref_module: referenced module
-        :raises `ReferencedAttachmentNotFound` when referenced relationship not found, `SharedAttachmentAlreadyExists`
-            when shared attachment already exists
+        :param ref_module: referenced module that holds the REAL service binding relationship.
+        :raises ReferencedAttachmentNotFound: when referenced relationship not found
+        :raises SharedAttachmentAlreadyExists: when shared attachment already exists
         """
         if ref_module == self.module:
             raise RuntimeError("module can not share from itself")

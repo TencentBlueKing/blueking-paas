@@ -187,6 +187,7 @@
                 :placeholder="$t('输入应用名称、ID，按Enter搜索')"
                 :right-icon="'bk-icon icon-search'"
                 @enter="searchApp"
+                @keyup="handleKeyUp"
                 @right-icon-click="handleRightIconClick">
               </bk-input>
             </div>
@@ -1028,6 +1029,13 @@ export default {
     handleCellClick(row, column) {
       if (column.property === 'name') {
         this.toPage(row);
+      }
+    },
+
+    handleKeyUp(value, event) {
+      // 支持 delete 删除
+      if ((event.key === 'Delete') && this.filterKey !== '') {
+        this.filterKey = '';
       }
     },
   },

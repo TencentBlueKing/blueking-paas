@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
@@ -78,6 +79,27 @@ class TestEnvVars:
 
         import_manifest(bk_module, base_manifest)
         assert ConfigVar.objects.count() == 2
+
+
+class TestAddons:
+    def test_invalid_value(self, bk_module, base_manifest):
+        base_manifest["spec"]["addons"] = [{"foo": "bar"}]
+        with pytest.raises(ManifestImportError) as e:
+            import_manifest(bk_module, base_manifest)
+
+        assert "addons.0.name" in str(e)
+
+    def test_invalid_spec(self, bk_module, base_manifest):
+        base_manifest["spec"]["addons"] = [{"name": "mysql", "specs": [{"foo": "bar"}]}]
+        with pytest.raises(ManifestImportError) as e:
+            import_manifest(bk_module, base_manifest)
+
+        assert "addons.0.specs" in str(e)
+
+    def test_normal(self, bk_module, base_manifest):
+        base_manifest["spec"]["addons"] = [{"name": "mysql"}]
+        import_manifest(bk_module, base_manifest)
+        # TODO: Add assertion to verify the addons have been imported successfully
 
 
 class TestMounts:

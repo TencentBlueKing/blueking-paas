@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
@@ -44,6 +45,21 @@ class EnvVarOverlayInputSLZ(BaseEnvVarFields):
     def to_internal_value(self, data) -> bk_app.EnvVarOverlay:
         d = super().to_internal_value(data)
         return bk_app.EnvVarOverlay(**d)
+
+
+class AddonSpecInputSLZ(serializers.Serializer):
+    """Validate the items in the `addons.specs` field."""
+
+    key = serializers.CharField(required=True)
+    value = serializers.CharField(required=True)
+
+
+class AddonInputSLZ(serializers.Serializer):
+    """Validate the items in the `addons` field."""
+
+    name = serializers.CharField(required=True)
+    specs = serializers.ListField(child=AddonSpecInputSLZ(), default=None)
+    sharedFromModule = serializers.CharField(default=None)
 
 
 class BaseMountFields(serializers.Serializer):
@@ -218,6 +234,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     build = BuildInputSLZ(allow_null=True, default=None)
     processes = serializers.ListField(child=ProcessInputSLZ())
     configuration = ConfigurationInputSLZ(required=False)
+    addons = serializers.ListField(child=AddonInputSLZ(), required=False, allow_empty=True)
     mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)
     hooks = HooksInputSLZ(allow_null=True, default=None)
     envOverlay = EnvOverlayInputSLZ(required=False)

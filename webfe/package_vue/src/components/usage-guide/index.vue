@@ -1,7 +1,11 @@
 <template>
-  <div :class="['usage-guide-wrapper', { 'not-cloud-native-app': !isCloudNative }]">
+  <div
+    :class="['usage-guide-wrapper', { 'not-cloud-native-app': !isCloudNative }]"
+  >
+    <!-- 设置相对高度防止出现双重滚动条 -->
     <div
       class="usage-guide-content"
+      :class="isCloudNative ? 'cloud-guide-height' : 'default-guide-height'"
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
     >
       <div
@@ -45,6 +49,7 @@ export default {
 .usage-guide-wrapper {
   position: relative;
   height: 100%;
+  background: #fff;
   &.not-cloud-native-app {
     .usage-guide-content {
       padding: 24px 24px 80px;
@@ -62,5 +67,15 @@ export default {
   overflow-y: auto;
   box-shadow: 0 2px 4px 0 #1919290d;
   padding-bottom: 50px;
+  box-shadow: none;
+  &.cloud-guide-height {
+    height: calc(100vh - 158px);
+  }
+  &.default-guide-height {
+    height: calc(100vh - 105px);
+  }
+}
+.markdown-body {
+  font-size: 12px;
 }
 </style>

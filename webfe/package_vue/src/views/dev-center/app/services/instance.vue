@@ -13,6 +13,7 @@
         :placement="'right'"
         :max="980"
         :collapsible="true"
+        :initial-divide="asideWidth"
         ext-cls="instance-resize-layout-cls"
         style="width: 100%;height: 100%;"
         @collapse-change="handleCollapseChange">
@@ -57,8 +58,8 @@
             <!-- 编辑 -->
             <div class="instance-info" v-if="specifications.length">
               <div class="item" v-for="item in specifications" :key="item.name">
-                <span>{{ item.name }}：</span>
-                <span class="value" v-bk-overflow-tips>{{ item.value }}</span>
+                <span>{{ $t(item.name) }}：</span>
+                <span class="value" v-bk-overflow-tips>{{ $t(item.value) }}</span>
               </div>
               <span
                 v-bk-tooltips="{ content: $t('增强服务实例已分配，不能再修改配置信息'), disabled: canEditConfig }"
@@ -90,7 +91,7 @@
                 <template slot-scope="{ $index }">
                   #{{ $index + 1 }}
                 </template></bk-table-column>
-              <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="300">
+              <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="380">
                 <template slot-scope="{ row, $index }">
                   <template
                     v-if="row.service_instance.config.hasOwnProperty('is_done')
@@ -203,7 +204,7 @@
         />
 
         <div
-          :class="['floating-button', { expand: !isExpand }]"
+          :class="['floating-button', { expand: isExpand }]"
           slot="collapse-trigger"
           @click="handleSetCollapse">
           <span :class="{ 'vertical-rl': localLanguage === 'en' }">{{ $t('使用指南') }}</span>
@@ -386,6 +387,9 @@ export default {
     },
     errorTips() {
       return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
+    },
+    asideWidth() {
+      return window.innerWidth <= 1366 ? '28%' : '32%';
     },
   },
   watch: {
@@ -916,6 +920,7 @@ export default {
     .instance-detail {
       .bk-resize-layout-border {
         border-top-color: transparent;
+        border-bottom-color: transparent;
       }
       .instance-container-cls {
         margin: 16px 24px 0;
@@ -1201,8 +1206,9 @@ export default {
         }
     }
     .config-width {
-        width: 88%;
+        width: 85%;
         display: inline-block;
+        white-space: nowrap;
     }
     .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
         color: #999;

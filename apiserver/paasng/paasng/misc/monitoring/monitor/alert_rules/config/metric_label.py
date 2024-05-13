@@ -47,10 +47,10 @@ def get_vhost(app_code: str, run_env: str, module_name: Optional[str] = None) ->
     return ""
 
 
-def get_private_bucket(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+def get_bkrepo_private_bucket(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
     """获取 bkrepo 增强服务实例对应的 private bucket"""
     if not module_name:
-        raise ValueError(f"get_private_bucket(app_code: {app_code}): module_name is required")
+        raise ValueError(f"get_bkrepo_private_bucket(app_code: {app_code}): module_name is required")
 
     env_vars = _get_service_env_vars(app_code, run_env, BKREPO_SERVICE_NAME, module_name)
     if env_vars:
@@ -59,10 +59,10 @@ def get_private_bucket(app_code: str, run_env: str, module_name: Optional[str] =
     return ""
 
 
-def get_public_bucket(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+def get_bkrepo_public_bucket(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
     """获取 bkrepo 增强服务实例对应的 public bucket"""
     if not module_name:
-        raise ValueError(f"get_public_bucket(app_code: {app_code}): module_name is required")
+        raise ValueError(f"get_bkrepo_public_bucket(app_code: {app_code}): module_name is required")
 
     env_vars = _get_service_env_vars(app_code, run_env, BKREPO_SERVICE_NAME, module_name)
     if env_vars:
@@ -71,10 +71,10 @@ def get_public_bucket(app_code: str, run_env: str, module_name: Optional[str] = 
     return ""
 
 
-def get_user(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+def get_gcs_mysql_user(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
     """获取 gcs mysql 增强服务实例对应的 user"""
     if not module_name:
-        raise ValueError(f"get_user(app_code: {app_code}): module_name is required")
+        raise ValueError(f"get_gcs_mysql_user(app_code: {app_code}): module_name is required")
 
     env_vars = _get_service_env_vars(app_code, run_env, GCS_MYSQL_SERVICE_NAME, module_name)
     if env_vars:
@@ -108,7 +108,7 @@ def get_cluster_id(app_code: str, run_env: str, module_name: Optional[str] = Non
     return cluster_info["bcs_cluster_id"]
 
 
-@functools.lru_cache(maxsize=32)
+@functools.lru_cache(maxsize=8)
 def _get_service_env_vars(
     app_code: str, run_env: str, service_name: str, module_name: Optional[str] = None
 ) -> Dict[str, str]:
@@ -154,9 +154,9 @@ LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[[str, str, Optional[str]], str]] = {
     "namespace": get_namespace,
     "vhost": get_vhost,
     "bcs_cluster_id": get_cluster_id,
-    "private_bucket": get_private_bucket,
-    "public_bucket": get_public_bucket,
-    "user": get_user,
+    "bkrepo_private_bucket": get_bkrepo_private_bucket,
+    "bkrepo_public_bucket": get_bkrepo_public_bucket,
+    "gcs_mysql_user": get_gcs_mysql_user,
 }
 
 

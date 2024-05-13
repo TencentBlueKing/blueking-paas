@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'ceil(max by (user) (increase({{ gcs_mysql_metric_name_prefix }}gcs_slow_query_logs_total{user="{{ metric_labels['user'] }}"}[10m])))''
+  - metric: 'ceil(max by (user) (increase({{ gcs_mysql_metric_name_prefix }}gcs_slow_query_logs_total{user="{{ metric_labels['gcs_mysql_user'] }}"}[10m])))''
     interval: 60 # 单位 s
 
 detect: # 检测配置

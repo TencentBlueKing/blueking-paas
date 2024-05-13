@@ -57,12 +57,12 @@ DEFAULT_RULE_CONFIGS = {
     },
     AlertCode.HIGH_BKREPO_QUOTA_USAGE.value: {
         "display_name": _("BKREPO 存储使用量过高"),
-        "metric_label_names": ["private_bucket", "public_bucket"],
+        "metric_label_names": ["bkrepo_private_bucket", "bkrepo_public_bucket"],
         "threshold_expr": ">= 90",  # 超过 90%
     },
     AlertCode.GCS_MYSQL_SLOW_QUERY.value: {
         "display_name": _("GCS-MySQL 慢查询新增"),
-        "metric_label_names": ["user"],
+        "metric_label_names": ["gcs_mysql_user"],
         "threshold_expr": "> 0",  # 慢查询增长超过 0
     },
 }

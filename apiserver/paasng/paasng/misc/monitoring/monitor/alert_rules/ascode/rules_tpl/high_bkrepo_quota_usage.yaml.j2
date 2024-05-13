@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'max by (repo_name) (max_over_time({{ bkrepo_metric_name_prefix }}bkrepo_quota_used_rate_metrics{repo_name=~"{{ metric_labels['private_bucket'] }}|{{ metric_labels['public_bucket'] }}"}[1m]))'
+  - metric: 'max by (repo_name) (max_over_time({{ bkrepo_metric_name_prefix }}bkrepo_quota_used_rate_metrics{repo_name=~"{{ metric_labels['bkrepo_private_bucket'] }}|{{ metric_labels['bkrepo_public_bucket'] }}"}[1m]))'
     interval: 60 # 单位 s
 
 detect: # 检测配置

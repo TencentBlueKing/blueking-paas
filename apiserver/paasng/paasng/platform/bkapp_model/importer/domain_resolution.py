@@ -26,39 +26,30 @@ from .entities import CommonImportResult
 def import_domain_resolution(module: Module, domain_res: DomainResolutionSpec) -> CommonImportResult:
     """Import domain resolution relations, existing data that is not in the input list may be removed.
 
-    :param domin_res: DomainResolution Object
+    :param domain_res: DomainResolution Object
     :return: A result object.
     """
     ret = CommonImportResult()
 
-    try:
-        domain_config = DomainResolution.objects.get(application=module.application)
-    except DomainResolution.DoesNotExist:
-        domain_config = None
-
-    if domain_config and not domain_res.nameservers and not domain_res.hostAliases:
-        domain_config.delete()
-        ret.deleted_num += 1
+    if not domain_res.nameservers and not domain_res.hostAliases:
+        ret.deleted_num = DomainResolution.objects.filter(application=module.application).delete()
         return ret
 
-    if domain_config:
-        updated_nameservers = list(set(domain_config.nameservers) | set(domain_res.nameservers))
-        if updated_nameservers != domain_config.nameservers:
-            domain_config.nameservers = updated_nameservers
-            domain_config.save(update_fields=["nameservers"])
-            ret.updated_num = 1
+    try:
+        domain_config = DomainResolution.objects.get(application=module.application)
+        nameservers = list(set(domain_config.nameservers) | set(domain_res.nameservers))
+        host_aliases = list(set(domain_config.host_aliases) | set(domain_res.hostAliases))
+    except DomainResolution.DoesNotExist:
+        nameservers = domain_res.nameservers
+        host_aliases = domain_res.hostAliases
 
-        updated_host_aliases = list(set(domain_config.host_aliases) | set(domain_res.hostAliases))
-        if updated_host_aliases != domain_config.host_aliases:
-            domain_config.host_aliases = updated_host_aliases
-            domain_config.save(update_fields=["host_aliases"])
-            ret.updated_num = 1
-    else:
-        DomainResolution.objects.create(
-            application=module.application,
-            nameservers=domain_res.nameservers,
-            host_aliases=domain_res.hostAliases,
-        )
-        ret.created_num += 1
+    _, created = DomainResolution.objects.update_or_create(
+        application=module.application,
+        defaults={
+            "nameservers": nameservers,
+            "host_aliases": host_aliases,
+        },
+    )
+    ret.incr_by_created_flag(created)
 
     return ret

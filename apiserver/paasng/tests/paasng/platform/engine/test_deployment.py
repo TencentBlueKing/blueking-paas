@@ -50,13 +50,11 @@ class TestDeploymentVersion:
         deployment = G(
             Deployment,
             app_environment=bk_stag_env,
-            source_version_type="image",
+            source_version_type="tag",
             source_version_name="v1.2.3",
             source_revision="hash",
         )
-        assert deployment.get_version_info() == VersionInfo(
-            revision="hash", version_name="v1.2.3", version_type="image"
-        )
+        assert deployment.get_version_info() == VersionInfo(revision="hash", version_name="v1.2.3", version_type="tag")
 
     def test_image(self, bk_module, bk_stag_env, bk_prod_env):
         """测试发布历史镜像时, 查询镜像对应的源码版本信息"""

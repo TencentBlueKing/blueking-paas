@@ -179,7 +179,7 @@ class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):
 class VersionType(str, StructuredEnum):
     """版本类型. 对应 VersionInfo.version_type"""
 
-    TAG = EnumField("tag", label="用于 Git 仓库、云原生镜像应用、旧镜像应用")
+    TAG = EnumField("tag", label="用于 Git 仓库、云原生镜像应用、旧镜像应用、镜像模式的 S-Mart 应用")
     BRANCH = EnumField("branch", label="用于 SVN 仓库、Git 仓库")
     TRUNK = EnumField("trunk", label="用于 SVN 仓库")
     IMAGE = EnumField("image", label="用于云原生应用选择已构建的镜像部署时")

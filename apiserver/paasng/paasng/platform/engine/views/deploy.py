@@ -41,7 +41,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.constants import RuntimeType, VersionType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
@@ -174,7 +174,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # TODO: 解决这种奇怪的问题, 不管是让 initialize_deployment 不依赖 VersionInfo 或者让这里构造的 VersionInfo 变得有意义
             image_tag = build.image_tag or ""
             return VersionInfo(
-                version_type="image",
+                version_type=VersionType.IMAGE.value,
                 version_name=image_tag,
                 revision=image_tag,
             )

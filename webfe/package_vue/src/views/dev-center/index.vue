@@ -1625,8 +1625,10 @@ section.app-filter-module {
   &>.bk-table-body-wrapper>table tbody>tr {
     height: 56px;
 
-    &.hover-row {
-      cursor: pointer;
+    &.hover-row  {
+      td:nth-child(3) {
+        cursor: pointer;
+      }
     }
   }
 

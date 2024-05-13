@@ -107,6 +107,11 @@
             },
             updateDraggable: function (builder) {
                 this.unselectedBuildPack = Object.values(this.buildpacks).filter(item => builder.buildpacks.indexOf(item.id) === -1 && item.region === builder.region)
+                if (builder.type === "legacy") {
+                    this.unselectedBuildPack = this.unselectedBuildPack.filter(item => ["tar"].indexOf(item.type) >= 0)
+                } else {
+                    this.unselectedBuildPack = this.unselectedBuildPack.filter(item => item.type.startsWith("oci"))
+                }
                 this.selectedBuildPack = Object.values(this.buildpacks).filter(item => builder.buildpacks.indexOf(item.id) !== -1)
             },
             submitDialog: async function () {

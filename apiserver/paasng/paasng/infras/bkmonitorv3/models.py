@@ -24,9 +24,12 @@ from paasng.utils.models import UuidAuditedModel
 
 
 class BKMonitorSpace(UuidAuditedModel):
+    # 同一个应用 ID ，蓝鲸监控会返回相同的 space_id
+    # 为了防止因为 space_id 的 unique 约束导致重新创建应用在部署时报错
+    # 必须在删除应用时级联删除所有依赖的数据
     application = models.OneToOneField(
         Application,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
         db_constraint=False,

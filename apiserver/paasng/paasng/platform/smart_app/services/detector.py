@@ -99,12 +99,8 @@ class SourcePackageStatReader:
         relative_path = "./"
 
         with self.accessor(self.path) as archive:
-            try:
-                # 根据约定, application description file 应当在应用的外层目录, 排序后可以更快地找到 application description file
-                existed_filenames = sorted(archive.list())
-            except RuntimeError:
-                logger.warning("file: %s is not a valid tar file.", self.path)
-                return relative_path, {}
+            # 根据约定, application description file 应当在应用的外层目录, 排序后可以更快地找到 application description file
+            existed_filenames = sorted(archive.list())
 
             for spec_version, filename in product([AppSpecVersion.VER_2, AppSpecVersion.VER_1], existed_filenames):
                 result = AppYamlDetector.detect(filename, spec_version)

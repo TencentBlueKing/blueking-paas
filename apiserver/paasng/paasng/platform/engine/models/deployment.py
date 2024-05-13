@@ -260,7 +260,7 @@ class Deployment(OperationVersionBase):
         :raise ValueError: 当无法获取到版本信息时抛此异常
         """
         # s-mart 镜像应用, 对平台而言还是源码包部署
-        if self.source_version_type != "image":
+        if self.source_version_type != VersionType.IMAGE.value:
             version_type = self.source_version_type
             version_name = self.source_version_name
             # Backward compatibility

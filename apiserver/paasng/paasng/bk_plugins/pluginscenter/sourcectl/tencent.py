@@ -110,7 +110,7 @@ class PluginRepoAccessor:
         """
         if ":" not in smart_revision:
             return smart_revision
-        version_type, version_name = smart_revision.split(":")
+        _, version_name = smart_revision.split(":")
         commit = self.get_last_commit(self.project, version_name)
         return commit["id"]
 

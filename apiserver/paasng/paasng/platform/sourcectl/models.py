@@ -445,6 +445,13 @@ class VersionInfo:
 
         样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="package")
 
+    对于采用了镜像模式的 S-Mart 应用:
+        revision 是当前包的 semver
+        version_name 是镜像的 tag
+        version_type 是 Literal[tag]
+
+        样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="tag")
+
     对于云原生镜像而言:
         revision 为空串
         version_name 是镜像的 tag

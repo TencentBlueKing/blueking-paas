@@ -33,7 +33,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.applications.models import Application
-from paasng.platform.engine.constants import JobStatus
+from paasng.platform.engine.constants import JobStatus, VersionType
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.utils.output import Style
@@ -44,12 +44,13 @@ from paasng.utils.error_codes import error_codes
 
 REVISION_HELP_TEXT = """\
 revision 描述需要部署的版本.
-对于 git/svn 应用, 支持部署 branch or tag, 对于 s-mart 应用, 仅支持 package.
+对于 git/svn 应用, 支持部署 branch or tag, 对于 s-mart 应用, 支持 package or tag.
 
 Example:
 git/svn tag: 'tag:你的标签'
 git/svn branch: 'branch:你的分支名'
-s-mart: 'package:源码包版本号'
+s-mart(二进制): 'package:源码包版本号'
+s-mart(镜像): 'tag:镜像 tag'
 """
 logger = logging.getLogger("commands")
 
@@ -109,6 +110,9 @@ class Command(BaseCommand):
         version_service = get_version_service(module, operator=operator.pk)
 
         version_type, version_name = smart_revision.split(":", 1)
+        if version_type == VersionType.IMAGE.value:
+            raise DeployError("不支持 --revision 以 image: 开头的版本")
+
         revision = version_service.extract_smart_revision(smart_revision)
         version_info = VersionInfo(revision, version_name, version_type)
 

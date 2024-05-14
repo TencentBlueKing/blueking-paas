@@ -175,7 +175,7 @@ class RuntimeImageInfo:
         elif (
             self.module.get_source_origin() == SourceOrigin.S_MART
             and version_info.version_type != VersionType.PACKAGE.value
-        ):
+        ):  # version_type 为 package 时, 表示采用二进制 slug.tgz 方案; image(已废弃) 和 tag 时, 表示镜像层方案
             from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 
             named = SMartImageManager(self.module).get_image_info(version_info.revision)

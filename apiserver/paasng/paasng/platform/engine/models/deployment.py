@@ -30,6 +30,7 @@ from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSU
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus, VersionType
 from paasng.platform.engine.models.base import OperationVersionBase
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import make_json_field, make_legacy_json_field
@@ -260,7 +261,9 @@ class Deployment(OperationVersionBase):
         :raise ValueError: 当无法获取到版本信息时抛此异常
         """
         # s-mart 镜像应用, 对平台而言还是源码包部署
-        if self.source_version_type != VersionType.IMAGE.value:
+        # module.source_origin == SourceOrigin.S_MART 不可删除, 因为存在 source_version_type 值为 image 的旧数据
+        module = self.app_environment.module
+        if self.source_version_type != VersionType.IMAGE.value or module.source_origin == SourceOrigin.S_MART:
             version_type = self.source_version_type
             version_name = self.source_version_name
             # Backward compatibility

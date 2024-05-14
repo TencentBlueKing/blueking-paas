@@ -367,7 +367,6 @@
 
 <script>import auth from '@/auth';
 import { bus } from '@/common/bus';
-import { bk_logout as bkLogout } from '../../static/js/bklogout';
 import selectEventMixin from '@/components/searching/selectEventMixin';
 import searchAppList from '@/components/searching/searchAppList';
 import Dropdown from '@/components/ui/Dropdown';
@@ -627,8 +626,7 @@ export default {
       }
     },
     logout() {
-      bkLogout.logout();
-      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?c_url=${window.location.href}`;
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${encodeURIComponent(window.location.href)}`;
     },
     async switchLanguage(language) {
       const data = new URLSearchParams();
@@ -665,7 +663,7 @@ export default {
     },
     // 重组导航数据
     transformNavData(navData) {
-      const navList = navData.map((item, index) => {
+      const navList = navData.map((item) => {
         let transformedItem = {
           text: item.text,
           type: 'external-link', // 默认为外部链接
@@ -673,8 +671,8 @@ export default {
           target: '_self',
           showIcon: true,
         };
-        switch (index) {
-          case 0:
+        switch (item.name) {
+          case 'homePage':
             transformedItem = {
               ...transformedItem,
               type: 'router-link',
@@ -682,7 +680,7 @@ export default {
               showIcon: false,
             };
             break;
-          case 1:
+          case 'appDevelopment':
             transformedItem = {
               ...transformedItem,
               type: 'router-link',
@@ -690,7 +688,7 @@ export default {
               showIcon: false,
             };
             break;
-          case 2:
+          case 'pluginDevelopment':
             transformedItem = {
               ...transformedItem,
               type: 'router-link',
@@ -698,7 +696,7 @@ export default {
               showIcon: false,
             };
             break;
-          case 3:
+          case 'apiGateway':
             transformedItem = {
               ...transformedItem,
               showIcon: false,
@@ -710,7 +708,7 @@ export default {
       });
       // 应用开关过滤插件开发
       if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-        return navList.filter(e => e.text !== this.$t('插件开发'));
+        return navList.filter(e => e.name !== 'pluginDevelopment');
       }
       return navList;
     },

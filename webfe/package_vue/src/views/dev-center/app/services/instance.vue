@@ -13,6 +13,7 @@
         :placement="'right'"
         :max="980"
         :collapsible="true"
+        :initial-divide="asideWidth"
         ext-cls="instance-resize-layout-cls"
         style="width: 100%;height: 100%;"
         @collapse-change="handleCollapseChange">
@@ -57,8 +58,8 @@
             <!-- 编辑 -->
             <div class="instance-info" v-if="specifications.length">
               <div class="item" v-for="item in specifications" :key="item.name">
-                <span>{{ item.name }}：</span>
-                <span class="value" v-bk-overflow-tips>{{ item.value }}</span>
+                <span>{{ $t(item.name) }}：</span>
+                <span class="value" v-bk-overflow-tips>{{ $t(item.value) }}</span>
               </div>
               <span
                 v-bk-tooltips="{ content: $t('增强服务实例已分配，不能再修改配置信息'), disabled: canEditConfig }"
@@ -90,7 +91,7 @@
                 <template slot-scope="{ $index }">
                   #{{ $index + 1 }}
                 </template></bk-table-column>
-              <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="300">
+              <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="380">
                 <template slot-scope="{ row, $index }">
                   <template
                     v-if="row.service_instance.config.hasOwnProperty('is_done')
@@ -174,6 +175,22 @@
               </bk-table-column>
             </bk-table>
           </section>
+
+          <div class="delete-service-wrapper mt16">
+            <span v-bk-tooltips="{ content: $t('S-mart应用暂不支持删除增强服务'), disabled: !isSmartApp }">
+              <bk-button
+                theme="danger"
+                :disabled="isSmartApp"
+                @click="showDeleteServiceDialog"
+              >
+                {{ $t('删除服务') }}
+              </bk-button>
+            </span>
+            <p>
+              <i class="paasng-icon paasng-paas-remind-fill mr5"></i>
+              {{ $t('所有已申请实例的相关数据将被销毁。应用与服务之间的绑定关系也会被解除。') }}
+            </p>
+          </div>
         </div>
 
         <!-- 使用指南 -->
@@ -187,7 +204,7 @@
         />
 
         <div
-          :class="['floating-button', { expand: !isExpand }]"
+          :class="['floating-button', { expand: isExpand }]"
           slot="collapse-trigger"
           @click="handleSetCollapse">
           <span :class="{ 'vertical-rl': localLanguage === 'en' }">{{ $t('使用指南') }}</span>
@@ -230,6 +247,55 @@
         </bk-button>
       </template>
     </bk-dialog>
+
+    <!-- 删除服务 -->
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="$t('确认删除实例？')"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      @after-leave="formRemoveConfirmCode = ''"
+    >
+      <form
+        class="ps-form"
+        style="min-height: 63px;"
+        @submit.prevent="submitRemoveInstance"
+      >
+        <div class="spacing-x1">
+          {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+        <bk-alert
+          v-if="delAppDialog.moduleList.length > 0"
+          style="margin-top: 10px;"
+          type="error"
+          :title="errorTips"
+        />
+      </form>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveInstance"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
   </div>
 </template>
 
@@ -239,7 +305,6 @@ import appTopBar from '@/components/paas-app-bar';
 import ConfigEdit from './comps/config-edit';
 import usageGuide from '@/components/usage-guide';
 import $ from 'jquery';
-import { bus } from '@/common/bus';
 
 export default {
   components: {
@@ -313,6 +378,18 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    isSmartApp() {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+    },
+    formRemoveValidated() {
+      return this.appCode === this.formRemoveConfirmCode;
+    },
+    errorTips() {
+      return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
+    },
+    asideWidth() {
+      return window.innerWidth <= 1366 ? '28%' : '32%';
     },
   },
   watch: {
@@ -625,6 +702,42 @@ export default {
       };
       data ? updateExpand() : setTimeout(updateExpand, 200);
     },
+
+    showDeleteServiceDialog() {
+      this.delAppDialog.visiable = true;
+      this.fetchServicesShareDetail();
+    },
+
+    async submitRemoveInstance() {
+      try {
+        await this.$store.dispatch('service/deleteService', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+        });
+        this.delAppDialog.visiable = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除服务实例成功'),
+        });
+        if (this.isCloudNativeApp) {
+          this.handleGoBack();
+          return;
+        }
+        this.$router.push({
+          name: 'appService',
+          params: {
+            id: this.$route.params.id,
+          },
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+        this.delAppDialog.visiable = false;
+      }
+    },
   },
 };
 
@@ -807,6 +920,7 @@ export default {
     .instance-detail {
       .bk-resize-layout-border {
         border-top-color: transparent;
+        border-bottom-color: transparent;
       }
       .instance-container-cls {
         margin: 16px 24px 0;
@@ -824,6 +938,21 @@ export default {
             color: #3A84FF;
             font-size: 14px;
             font-weight: bold;
+          }
+        }
+
+        .delete-service-wrapper {
+          display: flex;
+          align-items: center;
+          margin-top: 16px;
+          p {
+            color: #63656E;
+            font-size: 12px;
+            margin-left: 13px;
+            i {
+              font-size: 14px;
+              color: #FFB848;
+            }
           }
         }
       }
@@ -1077,8 +1206,9 @@ export default {
         }
     }
     .config-width {
-        width: 88%;
+        width: 85%;
         display: inline-block;
+        white-space: nowrap;
     }
     .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
         color: #999;

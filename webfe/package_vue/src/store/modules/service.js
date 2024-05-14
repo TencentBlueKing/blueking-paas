@@ -121,5 +121,13 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/credentials_enabled/`;
       return http.put(url, data, config);
     },
+
+    /**
+     * 删除/停用增强服务
+     */
+    deleteService({}, { appCode, moduleId, service }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/`;
+      return http.delete(url, {}, config);
+    },
   },
 };

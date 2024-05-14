@@ -186,18 +186,33 @@ class GitClient:
         :param remote: 远端名称，默认为 origin
         :return: 命令执行结果，包含 (commit_id, ref) 的列表
         """
-        # The "cwd" is pointless for running this command, always use current dir.
-        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
-        output = self.run(command)
         results = []
-        for raw_line in output.splitlines():
+        for raw_line in self.list_remote_raw(url).splitlines():
             line = raw_line.strip()
             if not line:
                 continue
+            # Known contents which should be skipped
+            if line.startswith("warning:"):
+                continue
 
-            commit_id, ref_name = line.split(None)
+            try:
+                commit_id, ref_name = line.split(None)
+            except ValueError:
+                logger.warning('Failed to parse git branch from ls-remote output, line: "%s"', line)
+                continue
             results.append((commit_id, ref_name))
         return results
+
+    def list_remote_raw(self, url: Union[str, MutableURL]) -> str:
+        """通过 ls-remote 命令，直接获取远端仓库的 branch 与 tag 等信息。返回命令原始执行结果。
+
+        :param path: 项目路径
+        :param remote: 远端名称，默认为 origin
+        :return: 命令原始执行结果
+        """
+        # The "cwd" is pointless for running this command, always use current dir.
+        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
+        return self.run(command)
 
     def list_refs(self, path: Path) -> Generator[Ref, None, None]:
         """获取所有分支和标签。

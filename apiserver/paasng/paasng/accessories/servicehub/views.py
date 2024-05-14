@@ -444,6 +444,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     result = definition.as_dict()
                     result["value"] = specs.get(definition.name)
                     alloc["specifications"].append(result)
+
         return svc_allocation_map
 
 

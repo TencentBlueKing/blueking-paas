@@ -67,10 +67,20 @@ _cnative_supported_alert_codes = SupportedAlertCodes(
     module_scoped_codes=[],
 )
 
-# 普通应用支持的告警码
+# rabbitmq 增强服务监控
 if settings.RABBITMQ_MONITOR_CONF.get("enabled", False):
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
     _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
+
+# bkrepo 增强服务监控
+if settings.BKREPO_MONITOR_CONF.get("enabled", False):
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_BKREPO_QUOTA_USAGE.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_BKREPO_QUOTA_USAGE.value)
+
+# gcs-mysql 增强服务监控
+if settings.GCS_MYSQL_MONITOR_CONF.get("enabled", False):
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.GCS_MYSQL_SLOW_QUERY.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.GCS_MYSQL_SLOW_QUERY.value)
 
 
 def get_supported_alert_codes(app_type: str) -> SupportedAlertCodes:

@@ -30,28 +30,56 @@ from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.modules.constants import ModuleName
 
-from .constants import RABBITMQ_SERVICE_NAME
+from .constants import BKREPO_SERVICE_NAME, GCS_MYSQL_SERVICE_NAME, RABBITMQ_SERVICE_NAME
 
 logger = logging.getLogger(__name__)
 
 
 def get_vhost(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    """获取 RabbitMQ 增强服务实例对应的 vhost"""
     if not module_name:
         raise ValueError(f"get_vhost(app_code: {app_code}): module_name is required")
 
-    app = Application.objects.get(code=app_code)
-
-    try:
-        svc_obj = mixed_service_mgr.find_by_name(name=RABBITMQ_SERVICE_NAME, region=app.region)
-    except ServiceObjNotFound as e:
-        logger.info(e)
-        return ""
-
-    app_module = app.get_module(module_name)
-    if env_vars := mixed_service_mgr.get_env_vars(app_module.get_envs(run_env).engine_app, svc_obj):
+    env_vars = _get_service_env_vars(app_code, run_env, RABBITMQ_SERVICE_NAME, module_name)
+    if env_vars:
         return env_vars["RABBITMQ_VHOST"]
 
-    logger.info(f"RabbitMQ service not bounded with app: {app_code}, module: {module_name}")
+    return ""
+
+
+def get_bkrepo_private_bucket(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    """获取 bkrepo 增强服务实例对应的 private bucket"""
+    if not module_name:
+        raise ValueError(f"get_bkrepo_private_bucket(app_code: {app_code}): module_name is required")
+
+    env_vars = _get_service_env_vars(app_code, run_env, BKREPO_SERVICE_NAME, module_name)
+    if env_vars:
+        return env_vars["BKREPO_PRIVATE_BUCKET"]
+
+    return ""
+
+
+def get_bkrepo_public_bucket(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    """获取 bkrepo 增强服务实例对应的 public bucket"""
+    if not module_name:
+        raise ValueError(f"get_bkrepo_public_bucket(app_code: {app_code}): module_name is required")
+
+    env_vars = _get_service_env_vars(app_code, run_env, BKREPO_SERVICE_NAME, module_name)
+    if env_vars:
+        return env_vars["BKREPO_PUBLIC_BUCKET"]
+
+    return ""
+
+
+def get_gcs_mysql_user(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
+    """获取 gcs mysql 增强服务实例对应的 user"""
+    if not module_name:
+        raise ValueError(f"get_gcs_mysql_user(app_code: {app_code}): module_name is required")
+
+    env_vars = _get_service_env_vars(app_code, run_env, GCS_MYSQL_SERVICE_NAME, module_name)
+    if env_vars:
+        return env_vars["GCS_MYSQL_USER"]
+
     return ""
 
 
@@ -80,6 +108,27 @@ def get_cluster_id(app_code: str, run_env: str, module_name: Optional[str] = Non
     return cluster_info["bcs_cluster_id"]
 
 
+@functools.lru_cache(maxsize=8)
+def _get_service_env_vars(
+    app_code: str, run_env: str, service_name: str, module_name: Optional[str] = None
+) -> Dict[str, str]:
+    """获取增强服务实例对应的环境变量"""
+    app = Application.objects.get(code=app_code)
+
+    try:
+        svc_obj = mixed_service_mgr.find_by_name(name=service_name, region=app.region)
+    except ServiceObjNotFound as e:
+        logger.info(e)
+        return {}
+
+    app_module = app.get_module(module_name)
+    if env_vars := mixed_service_mgr.get_env_vars(app_module.get_envs(run_env).engine_app, svc_obj):
+        return env_vars
+
+    logger.info(f"service {service_name} not bounded with app: {app_code}, module: {module_name}")
+    return {}
+
+
 @functools.lru_cache(maxsize=32)
 def _get_namespace_cache(app_code: str, run_env: str, module_name: str) -> str:
     return ApplicationEnvironment.objects.get(
@@ -105,6 +154,9 @@ LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[[str, str, Optional[str]], str]] = {
     "namespace": get_namespace,
     "vhost": get_vhost,
     "bcs_cluster_id": get_cluster_id,
+    "bkrepo_private_bucket": get_bkrepo_private_bucket,
+    "bkrepo_public_bucket": get_bkrepo_public_bucket,
+    "gcs_mysql_user": get_gcs_mysql_user,
 }
 
 

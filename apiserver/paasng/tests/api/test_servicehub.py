@@ -16,12 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import datetime
 from unittest import mock
 
 import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment
+from paasng.accessories.servicehub.services import ServiceInstanceObj
 from paasng.accessories.services.models import Service
 
 pytestmark = pytest.mark.django_db
@@ -37,6 +39,15 @@ class TestServiceEngineAppAttachmentViewSet:
             )
 
         return side_effect
+
+    def create_mock_rel(self, service, credentials_enabled, create_time: "datetime.datetime", **credentials):
+        rel = mock.MagicMock()
+        rel.get_instance.return_value = ServiceInstanceObj(
+            uuid=service.uuid, credentials=credentials, config={}, create_time=create_time
+        )
+        rel.get_service.return_value = service
+        rel.db_obj.credentials_enabled = credentials_enabled
+        return rel
 
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_attachment_by_engine_app")
@@ -63,3 +74,24 @@ class TestServiceEngineAppAttachmentViewSet:
         assert response.status_code == 200
         assert response.data[0]["credentials_enabled"] is False
         assert response.data[1]["credentials_enabled"] is False
+
+    @mock.patch("paasng.accessories.servicehub.manager.MixedServiceMgr.list_provisioned_rels")
+    def test_config_vars(self, list_provisioned_rels, api_client, bk_app, bk_module):
+        service = G(Service)
+        credentials_disabled_service = G(Service)
+        list_provisioned_rels.return_value = [
+            self.create_mock_rel(service, True, datetime.datetime(2020, 1, 1), a=1, b=1),
+            # 增强服务环境变量不写入
+            self.create_mock_rel(credentials_disabled_service, False, datetime.datetime(2020, 1, 1), c=1),
+        ]
+
+        response = api_client.get(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/config_vars/",
+        )
+        assert response.status_code == 200
+        # 返回的增强服务名称列表
+        return_svc_names = list(response.data["result"].keys())
+        assert service.display_name in return_svc_names
+        assert set(response.data["result"][service.display_name]) == {"a", "b"}
+        # 增强服务环境变量设置为不写入则不返回
+        assert credentials_disabled_service.display_name not in return_svc_names

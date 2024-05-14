@@ -99,6 +99,17 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
             services_info[env.environment] = ServicesInfo.get_detail(env.engine_app)["services_info"]
         return Response(data=slzs.ModuleServiceInfoSLZ(services_info).data)
 
+    def list_provisioned_config_var_keys(self, request, code, module_name):
+        """获取已经生效的增强服务环境变量 KEY"""
+        module = self.get_module_via_path()
+
+        # config_var_key_dict 内容示例： {"svc_name": ["key1", "key2"]}
+        config_var_key_dict: Dict[str, List[str]] = {}
+        for env in module.get_envs():
+            config_var_key_dict.update(ServiceSharingManager(env.module).get_env_keys(env, filter_enabled=True))
+            config_var_key_dict.update(mixed_service_mgr.get_env_keys(env.engine_app, filter_enabled=True))
+        return Response({"result": config_var_key_dict})
+
 
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与蓝鲸应用模块相关的增强服务接口"""
@@ -433,7 +444,6 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     result = definition.as_dict()
                     result["value"] = specs.get(definition.name)
                     alloc["specifications"].append(result)
-
         return svc_allocation_map
 
 

@@ -741,14 +741,14 @@ class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
     )
     def update_stage_status(self, request, pd_id, plugin_id, release_id, stage_id):
         """更新步骤状态"""
+        slz = serializers.PluginStageStatusSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
         plugin = self.get_plugin_instance()
         release = plugin.all_versions.get(pk=release_id)
         if release.current_stage.stage_id != stage_id:
             raise error_codes.CANNOT_RERUN_ONGOING_STEPS.f(_("仅支持更新当前阶段状态"))
-
-        slz = serializers.PluginStageStatusSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
 
         stage = release.all_stages.get(stage_id=stage_id)
         stage.update_status(data["status"], data["message"])

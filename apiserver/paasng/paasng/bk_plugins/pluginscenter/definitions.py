@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
+from paasng.bk_plugins.pluginscenter import constants
 from paasng.utils.structure import register
 
 if TYPE_CHECKING:
@@ -215,13 +216,17 @@ class ReleaseStageDefinition(BaseModel):
 
     id: str
     name: str
-    invokeMethod: Literal["deployAPI", "pipeline", "subpage", "itsm", "builtin", "canaryWithItsm"] = Field(
-        description="触发方式"
+    invokeMethod: Literal[
+        constants.ReleaseStageInvokeMethod.DEPLOY_API,
+        constants.ReleaseStageInvokeMethod.PIPELINE,
+        constants.ReleaseStageInvokeMethod.SUBPAGE,
+        constants.ReleaseStageInvokeMethod.ITSM,
+        constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM,
+        constants.ReleaseStageInvokeMethod.BUILTIN,
+    ] = Field(description="触发方式")
+    statusPollingMethod: Literal[constants.StatusPollingMethod.API, constants.StatusPollingMethod.FRONTEND] = Field(
+        default="api", description="阶段的状态轮询方式"
     )
-    statusPollingMethod: Literal[
-        "api",
-        "frontend",
-    ] = Field(default="api", description="阶段的状态轮询方式")
     api: Optional[PluginReleaseAPI] = Field(
         description="invokeMethod 为 deployAPI 时必填，invokeMethod 为 subpage 且 statusPollingMethod 为 api 时必填"
     )

@@ -300,7 +300,10 @@ class PluginReleaseStage(AuditedModel):
     stage_name = models.CharField(verbose_name="阶段名称", max_length=16, help_text="冗余字段, 用于减少查询次数")
     invoke_method = models.CharField(verbose_name="触发方式", max_length=16, help_text="冗余字段, 用于减少查询次数")
     status_polling_method = models.CharField(
-        verbose_name="阶段的状态轮询方式", max_length=16, default="", help_text="冗余字段, 用于减少查询次数"
+        verbose_name="阶段的状态轮询方式",
+        max_length=16,
+        default=constants.StatusPollingMethod.API,
+        help_text="冗余字段, 用于减少查询次数",
     )
 
     status = models.CharField(verbose_name="发布状态", default=constants.PluginReleaseStatus.INITIAL, max_length=16)

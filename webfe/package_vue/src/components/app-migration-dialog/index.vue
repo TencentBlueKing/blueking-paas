@@ -154,28 +154,29 @@
 
 <script>
 import { cloneDeep } from 'lodash';
+import i18n from '@/language/i18n.js';
 const defaultStateData = {
   WlAppBackupMigrator: {
     icon: 'paasng-ellipsis',
-    title: '备份应用配置',
+    title: i18n.t('备份应用配置'),
     status: 'not-executed',
     errorMsg: '',
   },
   ApplicationTypeMigrator: {
     icon: 'paasng-ellipsis',
-    title: '变更应用类型',
+    title: i18n.t('变更应用类型'),
     status: 'not-executed',
     errorMsg: '',
   },
   ApplicationClusterMigrator: {
     icon: 'paasng-ellipsis',
-    title: '配置部署集群',
+    title: i18n.t('配置部署集群'),
     status: 'not-executed',
     errorMsg: '',
   },
   BuildConfigMigrator: {
     icon: 'paasng-ellipsis',
-    title: '迁移构建配置',
+    title: i18n.t('迁移构建配置'),
     status: 'not-executed',
     errorMsg: '',
   },

@@ -579,6 +579,17 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "appMigrationInfo",
+                "label": staticI18n.$t("迁移信息"),
+                "matchRouters": ["appMigrationInfo"],
+                "iconfontName": "metrics",
+                "supportModule": true,
+                "destRoute": {
+                  "name": "appMigrationInfo"
+                },
+                "children": []
+            },
+            {
                 "name": "cloudAppImageManage",
                 "label": staticI18n.$t("镜像管理"),
                 "matchRouters": [

@@ -98,11 +98,15 @@ export default {
         'cloudAppImageList',
         'cloudAppBuildHistory',
         'networkConfig',
+        // 迁移信息
+        'appMigrationInfo',
       ],
       allNavItems: [],
       region: 'ieod',
       roleAllowRouters: {
         administrator: [
+          // 迁移信息
+          'appMigrationInfo',
           // 概览
           'cloudAppSummary',
           // 应用编排
@@ -163,6 +167,8 @@ export default {
           'networkConfig',
         ],
         developer: [
+          // 迁移信息
+          'appMigrationInfo',
           // 概览
           'cloudAppSummary',
           // 应用编排
@@ -325,6 +331,11 @@ export default {
           });
         }
 
+        // 迁移中的应用展示迁移信息
+        if (!this.isMigrationEntryShown) {
+          navTree = navTree.filter(nav => nav.name !== 'appMigrationInfo');
+        }
+
         // 当角色为开发者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'developer') {
           navTree = navTree.filter(nav => this.roleAllowRouters.developer.includes(nav.name));
@@ -440,6 +451,8 @@ export default {
         'cloudAppImageList',
         'cloudAppBuildHistory',
         'networkConfig',
+        // 迁移信息
+        'appMigrationInfo',
       ];
 
       this.navTree.forEach((nav) => {

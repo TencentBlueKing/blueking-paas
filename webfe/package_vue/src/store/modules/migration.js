@@ -58,5 +58,21 @@ export default {
       const url = `${BACKEND_URL}/api/mgrlegacy/cloud-native/migration_processes/${id}/confirm/`;
       return http.put(url, {}, config);
     },
+
+    /**
+     * 获取进程列表
+     */
+    getProcessesList({}, { appCode, moduleId, env }, config = {}) {
+      const url = `${BACKEND_URL}/api/mgrlegacy/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+     * 启停进程（包括扩缩容）
+     */
+    updateProcess({}, { appCode, moduleId, env, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/mgrlegacy/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/`;
+      return http.put(url, data, config);
+    },
   },
 };

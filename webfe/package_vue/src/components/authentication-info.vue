@@ -1,6 +1,6 @@
 <template>
   <div v-if="canViewSecret" class="basic-info-item">
-    <section class="info-card-style mt16">
+    <section :class="['mt16', { 'info-card-style': !isPluginDev }]">
       <div class="title">
         {{ $t('密钥信息') }}
       </div>
@@ -109,7 +109,7 @@
       </section>
     </section>
     <!-- 环境变量默认密钥 -->
-    <div class="info-card-style mt16" v-if="defaultSecret !== undefined">
+    <div :class="['mt16', { 'info-card-style': !isPluginDev }]" v-if="defaultSecret !== undefined">
       <div class="title no-margin">{{ $t('环境变量默认密钥') }}</div>
       <div class="default-secret-info">
         <div class="info">
@@ -422,6 +422,9 @@ export default {
     // 是否可以新增密钥
     isAddNewSecret() {
       return this.appSecretList.length < 2;
+    },
+    isPluginDev() {
+      return this.$route.path.includes('/plugin-center');
     },
   },
   watch: {

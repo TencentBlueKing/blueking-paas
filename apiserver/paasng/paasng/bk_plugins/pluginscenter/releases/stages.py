@@ -130,6 +130,7 @@ class BaseStageController:
             "status": self.stage.status,
             "fail_message": self.stage.fail_message,
             "invoke_method": self.stage.invoke_method,
+            "status_polling_method": self.stage.status_polling_method,
         }
         return basic_info
 

@@ -102,6 +102,10 @@ urlpatterns = [
         views.PluginReleaseStageViewSet.as_view({"post": "rerun"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/status/",
+        views.PluginReleaseStageViewSet.as_view({"post": "update_stage_status"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/market/",
         views.PluginMarketViewSet.as_view({"get": "retrieve", "post": "upsert"}),
     ),

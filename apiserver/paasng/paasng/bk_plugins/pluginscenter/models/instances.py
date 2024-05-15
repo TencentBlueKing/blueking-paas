@@ -277,6 +277,7 @@ class PluginRelease(AuditedModel):
                 stage_id=stage.id,
                 stage_name=stage.name,
                 invoke_method=stage.invokeMethod,
+                status_polling_method=stage.statusPollingMethod,
                 defaults={
                     "next_stage": next_stage,
                     "status": constants.PluginReleaseStatus.INITIAL,
@@ -298,6 +299,9 @@ class PluginReleaseStage(AuditedModel):
     stage_id = models.CharField(verbose_name="阶段标识", max_length=32)
     stage_name = models.CharField(verbose_name="阶段名称", max_length=16, help_text="冗余字段, 用于减少查询次数")
     invoke_method = models.CharField(verbose_name="触发方式", max_length=16, help_text="冗余字段, 用于减少查询次数")
+    status_polling_method = models.CharField(
+        verbose_name="阶段的状态轮询方式", max_length=16, default="", help_text="冗余字段, 用于减少查询次数"
+    )
 
     status = models.CharField(verbose_name="发布状态", default=constants.PluginReleaseStatus.INITIAL, max_length=16)
     fail_message = models.TextField(verbose_name="错误原因")

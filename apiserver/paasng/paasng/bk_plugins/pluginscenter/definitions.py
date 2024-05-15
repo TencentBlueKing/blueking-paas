@@ -218,7 +218,13 @@ class ReleaseStageDefinition(BaseModel):
     invokeMethod: Literal["deployAPI", "pipeline", "subpage", "itsm", "builtin", "canaryWithItsm"] = Field(
         description="触发方式"
     )
-    api: Optional[PluginReleaseAPI] = Field(description="类型为 api/subpage 时必填")
+    statusPollingMethod: Literal[
+        "api",
+        "frontend",
+    ] = Field(default="api", description="阶段的状态轮询方式")
+    api: Optional[PluginReleaseAPI] = Field(
+        description="invokeMethod 为 deployAPI 时必填，invokeMethod 为 subpage 且 statusPollingMethod 为 api 时必填"
+    )
     pipelineId: Optional[str] = Field(description="类型为 pipeline 时必填")
     pageUrl: Optional[str] = Field(description="类型为 subpage 时必填")
     pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")

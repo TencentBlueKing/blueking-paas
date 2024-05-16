@@ -26,20 +26,30 @@ from .entities import CommonImportResult
 def import_domain_resolution(module: Module, domain_res: DomainResolutionSpec) -> CommonImportResult:
     """Import domain resolution relations, existing data that is not in the input list may be removed.
 
-    :param domin_res: DomainResolution Object
+    :param domain_res: DomainResolution Object
     :return: A result object.
     """
     ret = CommonImportResult()
+
     if not domain_res.nameservers and not domain_res.hostAliases:
         ret.deleted_num = DomainResolution.objects.filter(application=module.application).delete()
         return ret
 
+    try:
+        domain_config = DomainResolution.objects.get(application=module.application)
+        nameservers = list(set(domain_config.nameservers) | set(domain_res.nameservers))
+        host_aliases = list(set(domain_config.host_aliases) | set(domain_res.hostAliases))
+    except DomainResolution.DoesNotExist:
+        nameservers = domain_res.nameservers
+        host_aliases = domain_res.hostAliases
+
     _, created = DomainResolution.objects.update_or_create(
         application=module.application,
         defaults={
-            "nameservers": domain_res.nameservers,
-            "host_aliases": domain_res.hostAliases,
+            "nameservers": nameservers,
+            "host_aliases": host_aliases,
         },
     )
     ret.incr_by_created_flag(created)
+
     return ret

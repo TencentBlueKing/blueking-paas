@@ -30,14 +30,20 @@ def import_svc_discovery(module: Module, svc_disc: SvcDiscConfigSpec) -> CommonI
     :return: A result object.
     """
     ret = CommonImportResult()
+
     if not svc_disc.bkSaaS:
         ret.deleted_num = SvcDiscConfig.objects.filter(application=module.application).delete()
-        return ret
+
+    try:
+        svc_config = SvcDiscConfig.objects.get(application=module.application)
+        bk_saas = list(set(svc_config.bk_saas) | set(svc_disc.bkSaaS))
+    except SvcDiscConfig.DoesNotExist:
+        bk_saas = svc_disc.bkSaaS
 
     _, created = SvcDiscConfig.objects.update_or_create(
         application=module.application,
-        defaults={"bk_saas": svc_disc.bkSaaS},
+        defaults={"bk_saas": bk_saas},
     )
-
     ret.incr_by_created_flag(created)
+
     return ret

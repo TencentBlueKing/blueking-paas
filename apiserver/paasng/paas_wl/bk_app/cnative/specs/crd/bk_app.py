@@ -283,6 +283,14 @@ class HostAlias(BaseModel):
     ip: str
     hostnames: List[str]
 
+    def __hash__(self):
+        return hash((self.ip, tuple(sorted(self.hostnames))))
+
+    def __eq__(self, other):
+        if isinstance(other, HostAlias):
+            return self.ip == other.ip and sorted(self.hostnames) == sorted(other.hostnames)
+        return False
+
 
 @register
 class DomainResolution(BaseModel):
@@ -298,6 +306,14 @@ class SvcDiscEntryBkSaaS(BaseModel):
 
     bkAppCode: str
     moduleName: Optional[str] = None
+
+    def __hash__(self):
+        return hash((self.bkAppCode, self.moduleName))
+
+    def __eq__(self, other):
+        if isinstance(other, SvcDiscEntryBkSaaS):
+            return self.bkAppCode == other.bkAppCode and self.moduleName == other.moduleName
+        return False
 
 
 class SvcDiscConfig(BaseModel):

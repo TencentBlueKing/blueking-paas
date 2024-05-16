@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import Dict
 
 import pytest
@@ -91,7 +92,7 @@ class TestValidateBadCase:
             decorator.with_module(
                 module_name="foo",
                 is_default=True,
-                module_spec={"addons": [{"name": "openai", "sharedFrom": "bar"}]},
+                module_spec={"addons": [{"name": "openai", "sharedFromModule": "bar"}]},
             ),
         )
         with pytest.raises(

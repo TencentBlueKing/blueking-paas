@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Resource Definition of `BkApplication` kind.
 
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
@@ -269,11 +270,16 @@ class BkAppAddonSpec(BaseModel):
 
 
 class BkAppAddon(BaseModel):
-    """Addon for BkApp"""
+    """Addon for BkApp
+
+    :param name: The name of the addon.
+    :param specs: The specs of the addon.
+    :param sharedFromModule: The module name the addon is shared from.
+    """
 
     name: str
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
-    sharedFrom: Optional[str] = None
+    sharedFromModule: Optional[str] = None
 
 
 @register

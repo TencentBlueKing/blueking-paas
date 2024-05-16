@@ -50,7 +50,7 @@ class EnvVarOverlayInputSLZ(BaseEnvVarFields):
 class AddonSpecInputSLZ(serializers.Serializer):
     """Validate the items in the `addons.specs` field."""
 
-    key = serializers.CharField(required=True)
+    name = serializers.CharField(required=True)
     value = serializers.CharField(required=True)
 
 

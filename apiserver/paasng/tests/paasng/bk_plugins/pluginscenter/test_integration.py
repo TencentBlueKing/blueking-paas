@@ -228,6 +228,7 @@ class TestReleaseStages:
             "status": "pending",
             "fail_message": "",
             "invoke_method": "deployAPI",
+            "status_polling_method": "api",
             "detail": {
                 "steps": [{"id": "step-1", "name": "步骤1", "status": "successful"}],
                 "finished": True,

@@ -28,7 +28,7 @@ from jsonfield import JSONField
 
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
+from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus, VersionType
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
@@ -260,9 +260,10 @@ class Deployment(OperationVersionBase):
 
         :raise ValueError: 当无法获取到版本信息时抛此异常
         """
-        module = self.app_environment.module
         # s-mart 镜像应用, 对平台而言还是源码包部署
-        if self.source_version_type != "image" or module.source_origin == SourceOrigin.S_MART:
+        # module.source_origin == SourceOrigin.S_MART 不可删除, 因为存在 source_version_type 值为 image 的旧数据
+        module = self.app_environment.module
+        if self.source_version_type != VersionType.IMAGE.value or module.source_origin == SourceOrigin.S_MART:
             version_type = self.source_version_type
             version_name = self.source_version_name
             # Backward compatibility
@@ -273,7 +274,7 @@ class Deployment(OperationVersionBase):
 
         # 查询第一个引用 build_id 的 Deployment
         ref = Deployment.objects.filter(build_id=self.build_id).exclude(id=self.id).order_by("created").first()
-        if not ref or ref.source_version_type == "image":
+        if not ref or ref.source_version_type == VersionType.IMAGE.value:
             raise ValueError("unknown version info")
         return ref.get_version_info()
 

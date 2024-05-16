@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 import os
 import re
@@ -66,6 +67,12 @@ class GitCommand:
     def to_cmd(self, obscure: bool = False) -> List[str]:
         return [self.git_filepath, self.command, *self.args]
 
+    def get_sensitive_texts(self) -> List[str]:
+        """Get sensitive texts in the current command, the texts must not be displayed
+        to the user or written to the logs.
+        """
+        return []
+
     def __str__(self):
         return " ".join(self.to_cmd(obscure=True))
 
@@ -95,6 +102,20 @@ class GitCloneCommand(GitCommand):
         cmd = super().to_cmd(obscure=obscure)
         cmd.extend([str(self.repository.obscure()) if obscure else str(self.repository), self.target_directory])
         return cmd
+
+    def get_sensitive_texts(self) -> List[str]:
+        """Get sensitive texts in the current command, the texts must not be displayed
+        to the user or written to the logs.
+        """
+        netloc = self.repository.netloc
+        if not netloc:
+            return []
+
+        user_info, have_info, _ = netloc.rpartition("@")
+        if not have_info:
+            return []
+        # Consider the user info as sensitive because it contains password
+        return [user_info + "@"]
 
 
 class GitClient:
@@ -165,18 +186,33 @@ class GitClient:
         :param remote: 远端名称，默认为 origin
         :return: 命令执行结果，包含 (commit_id, ref) 的列表
         """
-        # The "cwd" is pointless for running this command, always use current dir.
-        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
-        output = self.run(command)
         results = []
-        for raw_line in output.splitlines():
+        for raw_line in self.list_remote_raw(url).splitlines():
             line = raw_line.strip()
             if not line:
                 continue
+            # Known contents which should be skipped
+            if line.startswith("warning:"):
+                continue
 
-            commit_id, ref_name = line.split(None)
+            try:
+                commit_id, ref_name = line.split(None)
+            except ValueError:
+                logger.warning('Failed to parse git branch from ls-remote output, line: "%s"', line)
+                continue
             results.append((commit_id, ref_name))
         return results
+
+    def list_remote_raw(self, url: Union[str, MutableURL]) -> str:
+        """通过 ls-remote 命令，直接获取远端仓库的 branch 与 tag 等信息。返回命令原始执行结果。
+
+        :param path: 项目路径
+        :param remote: 远端名称，默认为 origin
+        :return: 命令原始执行结果
+        """
+        # The "cwd" is pointless for running this command, always use current dir.
+        command = GitCommand(git_filepath=self._git_filepath, command="ls-remote", args=[str(url)], cwd=os.getcwd())
+        return self.run(command)
 
     def list_refs(self, path: Path) -> Generator[Ref, None, None]:
         """获取所有分支和标签。
@@ -313,9 +349,24 @@ class GitClient:
                 raise GitCommandExecutionError(
                     f"Command failed: cmd <{command}> execution timeout({self._default_timeout}s)"
                 )
-            if proc.returncode != success_code:
-                raise GitCommandExecutionError(
-                    f"Command failed with ({proc.returncode}):\n>>> {command}\n{stdout.decode()}"
-                )
 
-            return force_text(stdout)
+            str_stdout = force_text(stdout)
+            if proc.returncode != success_code:
+                raise self.err_stdout_as_exc(str_stdout, command, proc.returncode)
+            return str_stdout
+
+    @staticmethod
+    def err_stdout_as_exc(stdout: str, command: GitCommand, return_code: int) -> GitCommandExecutionError:
+        """Turn the stdout to an exception object, sensitive texts will be removed.
+
+        :param stdout: The stdout message when running git.
+        :param command: The git command object that generated the error.
+        :param return_code: The return code of the command.
+        """
+        # Remove sensitive information form the command
+        for text in command.get_sensitive_texts():
+            # Use \b to match word boundary only
+            stdout = re.sub(rf"\b{text}\b", "", stdout)
+
+        # TODO: Add more logics to remove other sensitive information
+        return GitCommandExecutionError(f"Command failed with ({return_code}):\n>>> {command}\n{stdout}")

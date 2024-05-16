@@ -8,161 +8,209 @@
     />
 
     <section :class="['instance-detail', { 'default-instance-detail-cls': !isCloudNativeApp }]">
-      <div class="instance-container-cls">
-        <bk-alert
-          v-if="delAppDialog.moduleList.length > 0 && !isCloudNativeApp"
-          style="margin-bottom: 10px;"
-          type="info"
-          :title="pageTips"
-        />
+      <bk-resize-layout
+        ref="resizeLayoutRef"
+        :placement="'right'"
+        :max="980"
+        :collapsible="true"
+        :initial-divide="asideWidth"
+        ext-cls="instance-resize-layout-cls"
+        style="width: 100%;height: 100%;"
+        @collapse-change="handleCollapseChange">
+        <div class="instance-container-cls" slot="main">
+          <!-- 云原生 -->
+          <div
+            v-if="isCloudNativeApp"
+            @click="handleGoBack"
+            class="top-return-bar flex-row align-items-center"
+          >
+            <i
+              class="paasng-icon paasng-arrows-left icon-cls-back mr5"
+            />
+            <h4>{{ $t('返回上一页') }}</h4>
+          </div>
 
-        <section class="instance-tab-container">
-          <p class="title">{{ $t('实例详情') }}</p>
-          <!-- 写入环境变量 -->
-          <div class="env-variables-wrapper">
-            <span class="sub-title">{{ $t('写入环境变量') }}</span>
-            <div @click.stop="handleSwitcherChange">
-              <bk-switcher
-                v-model="credentialsDisabled"
-                theme="primary"
-                size="small"
-                :pre-check="() => false"
-              ></bk-switcher>
-            </div>
-            <span class="tips">
-              <i class="paasng-icon paasng-info-line mr5"></i>
-              {{ $t('若不写入，将无法从环境变量获取实例的凭证信息') }}
-            </span>
-          </div>
-          <!-- 编辑 -->
-          <div class="instance-info" v-if="specifications.length">
-            <div class="item" v-for="item in specifications" :key="item.name">
-              <span>{{ item.name }}：</span>
-              <span class="value" v-bk-overflow-tips>{{ item.value }}</span>
-            </div>
-            <span
-              v-bk-tooltips="{ content: $t('增强服务实例已分配，不能再修改配置信息'), disabled: canEditConfig }"
-              :class="['edit-icon', { 'disabled': !canEditConfig }]"
-              @click="handleEditInstance">
-              <i class="paasng-icon paasng-edit-2"></i>
-            </span>
-          </div>
-          <bk-table
-            :data="instanceList"
-            v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
-            size="large"
-            style="margin-top: 15px;"
-            ext-cls="instance-details-table-cls"
-            :outer-border="false">
-            <div slot="empty" class="paas-loading-panel">
-              <div class="text">
-                <table-empty
-                  class="table-empty-cls"
-                  :empty-title="$t('暂无增强服务配置信息')"
-                  empty
-                />
-                <p class="sub-title">
-                  {{ $t('服务启用后，将在下一次部署过程中申请实例，请先进行应用部署。') }}
-                </p>
+          <bk-alert
+            v-if="delAppDialog.moduleList.length > 0"
+            style="margin-bottom: 16px;"
+            type="info"
+            :title="pageTips"
+          />
+
+          <section class="instance-tab-container">
+            <p class="title">{{ $t('实例详情') }}</p>
+            <!-- 写入环境变量 -->
+            <div class="env-variables-wrapper">
+              <span class="sub-title">{{ $t('写入环境变量') }}</span>
+              <div @click.stop="handleSwitcherChange">
+                <bk-switcher
+                  v-model="credentialsDisabled"
+                  theme="primary"
+                  size="small"
+                  :pre-check="() => false"
+                ></bk-switcher>
               </div>
+              <span class="tips">
+                <i class="paasng-icon paasng-info-line mr5"></i>
+                {{ $t('若不写入，将无法从环境变量获取实例的凭证信息') }}
+              </span>
             </div>
-            <bk-table-column :label="$t('实例 ID')" width="100">
-              <template slot-scope="{ $index }">
-                #{{ $index + 1 }}
-              </template></bk-table-column>
-            <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="300">
-              <template slot-scope="{ row, $index }">
-                <template
-                  v-if="row.service_instance.config.hasOwnProperty('is_done')
-                    && !row.service_instance.config.is_done">
-                  <p class="mt15 mb15">
-                    {{ $t('服务正在创建中，请通过“管理入口”查看进度') }}
+            <!-- 编辑 -->
+            <div class="instance-info" v-if="specifications.length">
+              <div class="item" v-for="item in specifications" :key="item.name">
+                <span>{{ $t(item.name) }}：</span>
+                <span class="value" v-bk-overflow-tips>{{ $t(item.value) }}</span>
+              </div>
+              <span
+                v-bk-tooltips="{ content: $t('增强服务实例已分配，不能再修改配置信息'), disabled: canEditConfig }"
+                :class="['edit-icon', { 'disabled': !canEditConfig }]"
+                @click="handleEditInstance">
+                <i class="paasng-icon paasng-edit-2"></i>
+              </span>
+            </div>
+            <bk-table
+              :data="instanceList"
+              v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+              size="large"
+              style="margin-top: 15px;"
+              ext-cls="instance-details-table-cls"
+              :outer-border="false">
+              <div slot="empty" class="paas-loading-panel">
+                <div class="text">
+                  <table-empty
+                    class="table-empty-cls"
+                    :empty-title="$t('暂无增强服务配置信息')"
+                    empty
+                  />
+                  <p class="sub-title">
+                    {{ $t('服务启用后，将在下一次部署过程中申请实例，请先进行应用部署。') }}
                   </p>
-                </template>
-                <template v-else>
-                  <section class="credential-information">
-                    <div
-                      v-for="(value, key) in row.service_instance.credentials"
-                      :key="key"
-                      class="config-width"
-                    >
-                      <span class="gray">{{ key }}: </span><span class="break-all">{{ value }}</span><br>
-                    </div>
-                    <div
-                      v-for="(key, fieldsIndex) in row.service_instance.sensitive_fields"
-                      :key="fieldsIndex"
-                    >
-                      <span class="gray">{{ key }}: </span>******
-                      <i
-                        v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
-                        class="paasng-icon paasng-question-circle"
-                      />
-                    </div>
-                    <div
-                      v-for="(value, key) in row.service_instance.hidden_fields"
-                      :key="key"
-                    >
-                      <span class="gray">{{ key }}: </span>
-                      <span
-                        v-if="hFieldstoggleStatus[$index][key]"
-                        class="break-all"
-                      >
-                        {{ value }}
-                      </span>
-                      <span
-                        v-else
-                        class="break-all"
-                      >******</span>
-                      <button
-                        v-bk-tooltips="$t('敏感字段，点击后显示')"
-                        class="btn-display-hidden-field ps-btn ps-btn-default ps-btn-xs"
-                        @click="$set(hFieldstoggleStatus[$index], key, !hFieldstoggleStatus[$index][key])"
-                      >
-                        {{ hFieldstoggleText[hFieldstoggleStatus[$index][key] || false] }}
-                      </button>
-                    </div>
-                  </section>
-                  <div
-                    v-if="!row.service_instance.sensitive_fields.length"
-                    class="copy-container"
-                  >
-                    <i class="paasng-icon paasng-general-copy" @click="handleCopy(row)" />
-                  </div>
-                </template>
-              </template>
-            </bk-table-column>
-            <bk-table-column :label="$t('使用环境')" prop="ip">
-              <template slot-scope="{ row }">
-                {{ row.environment_name }}
-              </template>
-            </bk-table-column>
-            <bk-table-column :label="$t('操作')" :width="localLanguage === 'en' ? 180 : 150">
-              <template slot-scope="{ row }">
-                <p>
-                  <template v-if="row.service_instance.config.admin_url">
-                    <a
-                      :href="row.service_instance.config.admin_url"
-                      class="blue"
-                      target="_blank"
-                    > {{ $t('查看管理入口') }} </a>
+                </div>
+              </div>
+              <bk-table-column :label="$t('实例 ID')" width="100">
+                <template slot-scope="{ $index }">
+                  #{{ $index + 1 }}
+                </template></bk-table-column>
+              <bk-table-column :label="$t('凭证信息')" prop="ip" min-width="380">
+                <template slot-scope="{ row, $index }">
+                  <template
+                    v-if="row.service_instance.config.hasOwnProperty('is_done')
+                      && !row.service_instance.config.is_done">
+                    <p class="mt15 mb15">
+                      {{ $t('服务正在创建中，请通过“管理入口”查看进度') }}
+                    </p>
                   </template>
                   <template v-else>
-                    --
+                    <section class="credential-information">
+                      <div
+                        v-for="(value, key) in row.service_instance.credentials"
+                        :key="key"
+                        class="config-width"
+                      >
+                        <span class="gray">{{ key }}: </span><span class="break-all">{{ value }}</span><br>
+                      </div>
+                      <div
+                        v-for="(key, fieldsIndex) in row.service_instance.sensitive_fields"
+                        :key="fieldsIndex"
+                      >
+                        <span class="gray">{{ key }}: </span>******
+                        <i
+                          v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
+                          class="paasng-icon paasng-question-circle"
+                        />
+                      </div>
+                      <div
+                        v-for="(value, key) in row.service_instance.hidden_fields"
+                        :key="key"
+                      >
+                        <span class="gray">{{ key }}: </span>
+                        <span
+                          v-if="hFieldstoggleStatus[$index][key]"
+                          class="break-all"
+                        >
+                          {{ value }}
+                        </span>
+                        <span
+                          v-else
+                          class="break-all"
+                        >******</span>
+                        <button
+                          v-bk-tooltips="$t('敏感字段，点击后显示')"
+                          class="btn-display-hidden-field ps-btn ps-btn-default ps-btn-xs"
+                          @click="$set(hFieldstoggleStatus[$index], key, !hFieldstoggleStatus[$index][key])"
+                        >
+                          {{ hFieldstoggleText[hFieldstoggleStatus[$index][key] || false] }}
+                        </button>
+                      </div>
+                    </section>
+                    <div
+                      v-if="!row.service_instance.sensitive_fields.length"
+                      class="copy-container"
+                    >
+                      <i class="paasng-icon paasng-general-copy" @click="handleCopy(row)" />
+                    </div>
                   </template>
-                </p>
-              </template>
-            </bk-table-column>
-          </bk-table>
-        </section>
-      </div>
+                </template>
+              </bk-table-column>
+              <bk-table-column :label="$t('使用环境')" prop="ip">
+                <template slot-scope="{ row }">
+                  {{ row.environment_name }}
+                </template>
+              </bk-table-column>
+              <bk-table-column :label="$t('操作')" :width="localLanguage === 'en' ? 180 : 150">
+                <template slot-scope="{ row }">
+                  <p>
+                    <template v-if="row.service_instance.config.admin_url">
+                      <a
+                        :href="row.service_instance.config.admin_url"
+                        class="blue"
+                        target="_blank"
+                      > {{ $t('查看管理入口') }} </a>
+                    </template>
+                    <template v-else>
+                      --
+                    </template>
+                  </p>
+                </template>
+              </bk-table-column>
+            </bk-table>
+          </section>
 
-      <!-- 使用指南 -->
-      <usage-guide
-        v-if="!isCloudNativeApp"
-        :data="compiledMarkdown"
-        :is-cloud-native="isCloudNativeApp"
-        :is-loading="isTableLoading"
-      />
+          <div class="delete-service-wrapper mt16">
+            <span v-bk-tooltips="{ content: $t('S-mart应用暂不支持删除增强服务'), disabled: !isSmartApp }">
+              <bk-button
+                theme="danger"
+                :disabled="isSmartApp"
+                @click="showDeleteServiceDialog"
+              >
+                {{ $t('删除服务') }}
+              </bk-button>
+            </span>
+            <p>
+              <i class="paasng-icon paasng-paas-remind-fill mr5"></i>
+              {{ $t('所有已申请实例的相关数据将被销毁。应用与服务之间的绑定关系也会被解除。') }}
+            </p>
+          </div>
+        </div>
+
+        <!-- 使用指南 -->
+        <usage-guide
+          slot="aside"
+          :class="{ isExpand: !isExpand }"
+          :data="compiledMarkdown"
+          :is-cloud-native="isCloudNativeApp"
+          :is-loading="isTableLoading"
+          @set-collapse="handleSetCollapse"
+        />
+
+        <div
+          :class="['floating-button', { expand: isExpand }]"
+          slot="collapse-trigger"
+          @click="handleSetCollapse">
+          <span :class="{ 'vertical-rl': localLanguage === 'en' }">{{ $t('使用指南') }}</span>
+          <i class="paasng-icon paasng-angle-line-up"></i>
+        </div>
+      </bk-resize-layout>
     </section>
 
     <bk-dialog
@@ -199,6 +247,55 @@
         </bk-button>
       </template>
     </bk-dialog>
+
+    <!-- 删除服务 -->
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="$t('确认删除实例？')"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      @after-leave="formRemoveConfirmCode = ''"
+    >
+      <form
+        class="ps-form"
+        style="min-height: 63px;"
+        @submit.prevent="submitRemoveInstance"
+      >
+        <div class="spacing-x1">
+          {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+        <bk-alert
+          v-if="delAppDialog.moduleList.length > 0"
+          style="margin-top: 10px;"
+          type="error"
+          :title="errorTips"
+        />
+      </form>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveInstance"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
   </div>
 </template>
 
@@ -208,7 +305,6 @@ import appTopBar from '@/components/paas-app-bar';
 import ConfigEdit from './comps/config-edit';
 import usageGuide from '@/components/usage-guide';
 import $ from 'jquery';
-import { bus } from '@/common/bus';
 
 export default {
   components: {
@@ -258,6 +354,7 @@ export default {
       },
       isTableLoading: false,
       credentialsDisabled: false,
+      isExpand: true,
     };
   },
   computed: {
@@ -282,6 +379,18 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    isSmartApp() {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+    },
+    formRemoveValidated() {
+      return this.appCode === this.formRemoveConfirmCode;
+    },
+    errorTips() {
+      return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList.map(item => item.name).join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
+    },
+    asideWidth() {
+      return window.innerWidth <= 1366 ? '28%' : '32%';
+    },
   },
   watch: {
     '$route'() {
@@ -305,7 +414,6 @@ export default {
     this.fetchEnableSpecs();
     this.fetchServicesShareDetail();
     this.getCredentialsEnabled();
-    bus.$emit('show-usage-guide');
   },
   methods: {
     async fetchServicesShareDetail() {
@@ -578,6 +686,58 @@ export default {
         });
       }
     },
+
+    // 返回上一级
+    handleGoBack() {
+      this.$emit('route-back', 'appServices');
+    },
+
+    handleSetCollapse() {
+      this.$refs.resizeLayoutRef?.setCollapse();
+    },
+
+    handleCollapseChange(data) {
+      const updateExpand = () => {
+        this.isExpand = !data;
+      };
+      data ? updateExpand() : setTimeout(updateExpand, 200);
+    },
+
+    showDeleteServiceDialog() {
+      this.delAppDialog.visiable = true;
+      this.fetchServicesShareDetail();
+    },
+
+    async submitRemoveInstance() {
+      try {
+        await this.$store.dispatch('service/deleteService', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+        });
+        this.delAppDialog.visiable = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除服务实例成功'),
+        });
+        if (this.isCloudNativeApp) {
+          this.handleGoBack();
+          return;
+        }
+        this.$router.push({
+          name: 'appService',
+          params: {
+            id: this.$route.params.id,
+          },
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+        this.delAppDialog.visiable = false;
+      }
+    },
   },
 };
 
@@ -757,10 +917,50 @@ export default {
         }
     }
 
+    .instance-detail {
+      .bk-resize-layout-border {
+        border-top-color: transparent;
+        border-bottom-color: transparent;
+      }
+      .instance-container-cls {
+        margin: 16px 24px 0;
+        .top-return-bar {
+          background: #F5F7FA;
+          cursor: pointer;
+          margin-bottom: 16px;
+          h4 {
+            font-size: 14px;
+            color: #313238;
+            font-weight: 400;
+            padding: 0;
+          }
+          .icon-cls-back{
+            color: #3A84FF;
+            font-size: 14px;
+            font-weight: bold;
+          }
+        }
+
+        .delete-service-wrapper {
+          display: flex;
+          align-items: center;
+          margin-top: 16px;
+          p {
+            color: #63656E;
+            font-size: 12px;
+            margin-left: 13px;
+            i {
+              font-size: 14px;
+              color: #FFB848;
+            }
+          }
+        }
+      }
+    }
+
     .default-instance-detail-cls {
       display: flex;
       .instance-container-cls {
-        margin: 16px 24px 0;
         flex: 1;
       }
     }
@@ -1006,8 +1206,9 @@ export default {
         }
     }
     .config-width {
-        width: 88%;
+        width: 85%;
         display: inline-block;
+        white-space: nowrap;
     }
     .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
         color: #999;
@@ -1041,6 +1242,46 @@ export default {
       .paas-loading-panel .text {
         .sub-title {
           font-size: 12px;
+        }
+      }
+    }
+    .instance-resize-layout-cls {
+      .bk-resize-layout-aside .bk-resize-layout-aside-content {
+        overflow: unset;
+      }
+      .floating-button {
+        position: absolute;
+        left: -24px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 24px;
+        padding: 11px 0;
+        text-align: center;
+        font-size: 12px;
+        color: #63656e;
+        line-height: 13px;
+        background: #fafbfd;
+        border: 1px solid #dcdee5;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        &.expand {
+          i {
+            transform: rotateZ(90deg);
+          }
+        }
+        i {
+          margin-top: 5px;
+          color: #979ba5;
+          transform: rotateZ(-90deg);
+        }
+        &:hover {
+          color: #3A84FF;
+          i {
+            color: #3A84FF;
+          }
+        }
+        .vertical-rl {
+          writing-mode: vertical-rl;
         }
       }
     }

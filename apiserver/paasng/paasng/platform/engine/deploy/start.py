@@ -22,7 +22,7 @@ from typing import Dict, Optional
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import OperationTypes, RuntimeType
+from paasng.platform.engine.constants import OperationTypes, RuntimeType, VersionType
 from paasng.platform.engine.deploy.building import start_build, start_build_error_callback
 from paasng.platform.engine.deploy.image_release import release_without_build
 from paasng.platform.engine.models.deployment import Deployment
@@ -135,7 +135,7 @@ class DeployTaskRunner:
             return False
         elif (
             self.module.get_source_origin() == SourceOrigin.S_MART
-            and self.deployment.version_info.version_type == "image"
+            and self.deployment.version_info.version_type == VersionType.TAG.value
         ):
             return False
         # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布, 则无需构建

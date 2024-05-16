@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 import operator
 from typing import TYPE_CHECKING, Generator, Iterator, List, Optional, Tuple
@@ -77,7 +78,7 @@ class BareGitRepoController:
         """检查仓库权限"""
         try:
             # 使用 ls-remote 来提速
-            self.client.list_remote(self.repo_url)
+            self.client.list_remote_raw(self.repo_url)
         except GitCommandExecutionError as e:
             if "authentication failed" in str(e).lower():
                 raise BasicAuthError("wrong username or password")

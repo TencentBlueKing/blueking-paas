@@ -28,10 +28,13 @@ USER root
 RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim 
 
 # Add buster-backports to sources.list
-RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+RUN echo "deb http://archive.debian.org/debian buster-backports main" >> /etc/apt/sources.list
 # Install git from backports, because the version(git:v2.20.1) in buster will leak usernames from the url
 # And this bug is fixed in v2.22.0, so we should install git from buster-backports, which is v2.30.2-1
 # See more info at: https://packages.debian.org/buster-backports/git
+# 
+# Update(2024-05-07): The GitClient class has added a new logic to remove sensitive information
+# in the git command output, so a newer git version is no longer required to fix the username leakage.
 RUN apt-get update && apt-get -y install -t buster-backports git
 
 RUN mkdir ~/.pip &&  printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf

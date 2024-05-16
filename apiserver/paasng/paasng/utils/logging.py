@@ -28,6 +28,7 @@ from .local import local
 logger = logging.getLogger("console")
 
 
+# TODO: Remove this class
 class LogstashRedisHandler(logging.Handler):
     def __init__(self, redis_url, queue_name="", message_type="logstash", tags=None):
         """

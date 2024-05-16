@@ -112,7 +112,7 @@ class GitHubRepoController(BaseGitRepoController):
         """解析组合 revision 信息（如 branch:master, tag:v1.2），获取更加具体的 commit id（hash）"""
         if ":" not in smart_revision:
             return smart_revision
-        version_type, version_name = smart_revision.split(":")
+        _, version_name = smart_revision.split(":")
         commit = self.api_client.repo_last_commit(self.project, version_name)
         return commit["sha"]
 

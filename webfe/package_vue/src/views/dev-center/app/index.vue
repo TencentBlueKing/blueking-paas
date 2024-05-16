@@ -5,7 +5,7 @@
         <div class="overview">
           <div
             class="overview-main"
-            :style="{ 'min-height': `${minHeight}px` }"
+            :style="{ 'min-height': $route.meta.notMinHeight ? 'auto' : `${minHeight}px` }"
           >
             <div class="overview-fleft">
               <app-quick-nav />
@@ -13,7 +13,12 @@
               <paas-app-nav v-else />
             </div>
             <!-- 特殊页面样式无需指定padding-bottom -->
-            <div :class="['overview-fright', { 'not-padding-bottom': $route.path.includes('service_inner/') }] ">
+            <div
+              :class="[
+                'overview-fright',
+                { 'not-min-height': $route.meta.notMinHeight },
+                { 'not-padding-bottom': $route.path.includes('service_inner/') }]"
+            >
               <router-view
                 v-if="userVisitEnable && appVisitEnable"
                 :app-info="appInfo"
@@ -355,5 +360,9 @@ export default {
 
     .not-padding-bottom {
       padding-bottom: 0;
+    }
+
+    .not-min-height {
+      min-height: auto;
     }
 </style>

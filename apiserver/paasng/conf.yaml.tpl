@@ -26,15 +26,16 @@
 ## 日志等级，高于或等于该等级的日志才会被记录
 # LOG_LEVEL: INFO
 
-## Redis 日志存储配置，若不配置，则不会向 redis 写日志
-# LOGGING_REDIS_HANDLER:
-#   class: paas_wl.utils.log.LogstashRedisHandler
-#   level: DEBUG
-#   message_type: python-logstash
-#   queue_name: enginev3_log_list
-#   redis_url: redis://localhost:6379/0
-#   tags:
-#     - example
+# 用于存放日志文件的目录，默认值为空，表示不使用任何文件，所有日志直接输出到控制台。
+# 可配置为有效目录，支持相对或绝对地址，比如："logs" 或 "/var/lib/app_logs/"。
+# 配置本选项后，原有的控制台日志输出将关闭。
+# LOGGING_DIRECTORY: null
+
+# 日志文件所使用的格式，默认为 json，可选值：json、text
+# LOGGING_FILE_FORMAT: "json"
+
+# 是否总是打印日志到控制台，默认为否，仅当配置了日志目录，仍需控制台日志时使用
+# LOGGING_ALWAYS_CONSOLE: false
 
 ## 是否记录代码与数据库互动有关的信息，如请求执行的应用程序级别的 SQL 语句，默认值为 False
 # LOGGING_ENABLE_SQL_QUERIES: false
@@ -646,11 +647,19 @@
 # ENABLE_BK_MONITOR_APIGW: false
 ## 蓝鲸监控网关的环境
 # BK_MONITOR_APIGW_SERVICE_STAGE: prod
-## 监控 RabbitMQ 的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
+## 监控增强服务的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
 # RABBITMQ_MONITOR_CONF:
 #    enabled: true
 #    metric_name_prefix: ''
 #    service_name: 'rabbitmq'
+# BKREPO_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'bkrepo'
+# GCS_MYSQL_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'gcs_mysql'
 
 ## ------------------------------------ 蓝鲸日志配置 ------------------------------------
 # 默认的日志采集器类型, 可选值 "ELK", "BK_LOG"

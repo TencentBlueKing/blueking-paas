@@ -192,7 +192,7 @@ class ViewBuilder:
 
 slugbuilder_viewbuilder = ViewBuilder(
     name="SlugBuilder管理",
-    query_set=AppSlugBuilder.objects.order_by("region"),
+    query_set=AppSlugBuilder.objects.order_by("region", "type"),
     list_template="admin42/platformmgr/runtime/slugbuilder_list.html",
     list_path="admin.slugbuilder.list",
     form_template="admin42/platformmgr/runtime/bootstrap_form.html",
@@ -206,7 +206,7 @@ SlugBuilderDeleteView = slugbuilder_viewbuilder.delete_view()
 
 slugrunner_viewbuilder = ViewBuilder(
     name="SlugRunner管理",
-    query_set=AppSlugRunner.objects.order_by("region"),
+    query_set=AppSlugRunner.objects.order_by("region", "type"),
     list_template="admin42/platformmgr/runtime/slugrunner_list.html",
     list_path="admin.slugrunner.list",
     form_template="admin42/platformmgr/runtime/bootstrap_form.html",
@@ -220,7 +220,7 @@ SlugRunnerDeleteView = slugrunner_viewbuilder.delete_view()
 
 buildpack_viewbuilder = ViewBuilder(
     name="BuildPack管理",
-    query_set=AppBuildPack.objects.order_by("region"),
+    query_set=AppBuildPack.objects.order_by("region", "type", "language", "version"),
     list_template="admin42/platformmgr/runtime/buildpack_list.html",
     list_path="admin.buildpack.list",
     form_template="admin42/platformmgr/runtime/bootstrap_form.html",

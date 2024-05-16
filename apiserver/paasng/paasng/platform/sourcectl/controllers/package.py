@@ -86,7 +86,7 @@ class PackageController:
         items = [
             AlternativeVersion(
                 name=info.package_name,
-                type="package" if info.storage_engine != "docker" else "image",
+                type="package" if info.storage_engine != "docker" else "tag",
                 revision=info.version,
                 url=info.storage_url,
                 last_update=info.updated,
@@ -105,7 +105,7 @@ class PackageController:
         info = self.module.packages.get(version=version)
         return AlternativeVersion(
             name=info.package_name,
-            type="package" if info.storage_engine != "docker" else "image",
+            type="package" if info.storage_engine != "docker" else "tag",
             revision=info.version,
             url=info.storage_url,
             last_update=info.updated,
@@ -118,7 +118,7 @@ class PackageController:
     def extract_smart_revision(self, smart_revision: str) -> str:
         if ":" not in smart_revision:
             return smart_revision
-        version_type, package_name = smart_revision.split(":", 1)
+        _, package_name = smart_revision.split(":", 1)
         # NOTE: 为了兼容 svn/git 的交互协议, 允许通过传递 package_name 来部署最后一个以 package_name 命名的版本。
         if self.module.packages.filter(package_name=package_name).exists():
             return self.module.packages.filter(package_name=package_name).last().version

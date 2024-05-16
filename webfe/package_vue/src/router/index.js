@@ -708,6 +708,9 @@ const router = new Router({
               path: 'service/:category_id/service_inner/:service',
               component: appServicesInstance,
               name: 'cloudAppServiceInnerWithModule',
+              meta: {
+                notMinHeight: true,
+              },
             },
             {
               path: ':id/:moduleId/service/:category_id/service_inner_shared/:service',
@@ -900,6 +903,9 @@ const router = new Router({
           path: ':id/:moduleId/service/:category_id/service_inner/:service',
           component: appServicesInstance,
           name: 'appServiceInner',
+          meta: {
+            notMinHeight: true,
+          },
         },
         {
           path: ':id/service/:category_id/service_inner/:service',

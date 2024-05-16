@@ -1342,17 +1342,6 @@ span.second {
 }
 .table-wrapper {
   width: auto;
-
-  &.log-scroll-cls {
-    max-height: 465px;
-    overflow: auto;
-
-    table thead {
-      position: sticky;
-      top: 0;
-      z-index: 99;
-    }
-  }
 }
 .tooltip-icon {
   cursor: pointer;

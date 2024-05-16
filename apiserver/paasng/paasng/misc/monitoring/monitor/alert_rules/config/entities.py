@@ -25,3 +25,5 @@ class AlertCode(str, StructuredEnum):
     POD_RESTART = "pod_restart"
     OOM_KILLED = "oom_killed"
     HIGH_RABBITMQ_QUEUE_MESSAGES = "high_rabbitmq_queue_messages"
+    GCS_MYSQL_SLOW_QUERY = "gcs_mysql_slow_query"
+    HIGH_BKREPO_QUOTA_USAGE = "high_bkrepo_quota_usage"

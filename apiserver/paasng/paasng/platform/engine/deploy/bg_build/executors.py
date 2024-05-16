@@ -358,9 +358,19 @@ class PipelineBuildProcessExecutor(DeployStep):
         # Q：为什么不在轮询过程中，按分块获取日志（做流式效果）
         # A：经测试，通过获取 log_num 再分块获取日志，会丢失部分日志，这是难以接受的，
         #    因此采用最后全量拉日志的方式，轮询过程中添加日志提示用户耐心等待流水线执行
+        start_following = False
         for log in self.ctl.retrieve_full_log(pb).logs:
             # 注：丢弃流水线/构建机启动相关日志，只保留构建组件的日志
-            if log.tag.startswith("e-") and log.jobId.startswith("c-"):
+            if not (log.tag.startswith("e-") and log.jobId.startswith("c-")):
+                continue
+
+            # 只保留 [Install plugin] 到 [Output] 之间的日志，不需要其他的
+            if "[Output]" in log.message:
+                break
+            if "[Install plugin]" in log.message:
+                start_following = True
+
+            if start_following:
                 # 移除蓝盾日志中的级别 Tag，如 ##[error], ##[info] 等
                 self.stream.write_message(re.sub(self.bk_ci_log_level_tag_regex, "", log.message))
 

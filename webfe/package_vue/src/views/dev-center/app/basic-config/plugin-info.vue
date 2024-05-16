@@ -32,16 +32,21 @@
         <li class="item">
           <div class="label">{{ $t('联系人员') }}：</div>
           <div class="value" v-bk-overflow-tips="{ content: curPluginData.contact?.join() }">
-            <user
-              v-if="curPluginData.contact.length"
-              ref="member_selector"
-              v-model="curPluginData.contact"
-              :disabled="true"
-              placeholder=""
-              class="disabled-plugin-member-cls"
-            />
-            <span v-else>--</span>
-            <!-- {{ curPluginData.contact.join() || '--' }} -->
+            <!-- 区分环境 -->
+            <span v-if="!curPluginData.contact?.length">--</span>
+            <template v-else>
+              <span v-if="GLOBAL.USERS_URL">
+                {{ curPluginData.contact?.join() }}
+              </span>
+              <user
+                v-else
+                ref="member_selector"
+                v-model="curPluginData.contact"
+                :disabled="true"
+                placeholder=""
+                class="disabled-plugin-member-cls"
+              />
+            </template>
           </div>
         </li>
         <li class="item">
@@ -78,7 +83,11 @@
           </div>
         </li>
         <li class="item">
-          <div class="label">{{ $t('插件使用方') }}：</div>
+          <div class="label">
+            <span
+              v-bk-tooltips.bottom="$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过API网关）调用插件的API、并将插件能力集成到自己的系统中。')"
+              v-dashed>{{ $t('插件使用方') }}</span>：
+          </div>
           <div
             class="value"
             v-bk-overflow-tips
@@ -309,9 +318,6 @@ export default {
       this.pluginInfoConfig.isLoading = true;
       const data = cloneDeep(this.pluginformData);
       data.contact = data.contact.join();
-      if (!data.distributors.length) {
-        delete data.distributors;
-      }
 
       try {
         await this.$store.dispatch('plugin/updatePluginBseInfo', {

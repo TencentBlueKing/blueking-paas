@@ -1223,17 +1223,7 @@ export default {
 
 .table-wrapper {
   width: auto;
-  overflow: auto;
-
-  &.log-scroll-cls {
-    max-height: 465px;
-
-    table thead {
-      position: sticky;
-      top: 0;
-      z-index: 99;
-    }
-  }
+  overflow-x: auto;
 }
 
 .tooltip-icon {

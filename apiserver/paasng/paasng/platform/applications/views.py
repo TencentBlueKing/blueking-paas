@@ -107,7 +107,9 @@ from paasng.platform.applications.utils import (
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.platform.mgrlegacy.constants import LegacyAppState
+from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, LegacyAppState
+from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
+from paasng.platform.mgrlegacy.serializers import CNativeMigrationProcessSLZ
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.protections import ModuleDeletionPreparer
@@ -184,6 +186,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                 "marked": application.id in marked_application_ids,
                 # 应用市场访问地址信息
                 "market_config": MarketConfig.objects.get_or_create_by_app(application)[0],
+                "migration_status": self._get_migration_status(application),
             }
             for application in page_applications
         ]
@@ -249,6 +252,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                     application=application, owner=request.user.pk
                 ).exists(),
                 "web_config": web_config,
+                "migration_status": self._get_migration_status(application),
             }
         )
 
@@ -378,6 +382,21 @@ class ApplicationViewSet(viewsets.ViewSet):
         data = get_app_overview(application)
 
         return Response(data)
+
+    @staticmethod
+    def _get_migration_status(app: Application) -> Optional[Dict[str, str]]:
+        try:
+            process = CNativeMigrationProcess.objects.filter(app=app).latest()
+        except CNativeMigrationProcess.DoesNotExist:
+            if app.type == ApplicationType.DEFAULT.value:
+                # 普通应用没有迁移记录, 返回 {"status": "default"}, 表示待迁移
+                return {"status": CNativeMigrationStatus.DEFAULT.value, "error_msg": ""}
+            # 返回 None 表示应用不需要迁移
+            return None
+        else:
+            slz = CNativeMigrationProcessSLZ(process)
+            # 返回迁移记录中的迁移状态
+            return {"status": slz.data["status"], "error_msg": slz.data["error_msg"]}
 
 
 class ApplicationCreateViewSet(viewsets.ViewSet):

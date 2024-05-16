@@ -161,3 +161,4 @@ class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
 class ListProcessesSLZ(serializers.Serializer):
     processes = ProcessListSLZ()
     instances = InstanceListSLZ()
+    process_packages = serializers.ListField(required=False, child=serializers.DictField())

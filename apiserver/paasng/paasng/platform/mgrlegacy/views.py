@@ -32,6 +32,7 @@ from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
+from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.cluster.shim import RegionClusterService
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paasng.core.core.storages.sqlalchemy import console_db
@@ -372,6 +373,7 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "items": [inst for proc in processes_info.processes for inst in proc.instances],
                 "metadata": {"resource_version": processes_info.rv_inst},
             },
+            "process_packages": ProcessManager(self.get_env_via_path()).list_processes_specs(),
         }
 
         return Response(ListProcessesSLZ(data).data)

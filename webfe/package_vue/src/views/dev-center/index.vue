@@ -606,7 +606,6 @@ export default {
         clouds: this.$t('混合云版'),
         default: this.$t('默认'),
       },
-      isFilter: false,
       type: 'default',
       curAppType: '',
       curAppTypeActive: 'all',
@@ -669,10 +668,7 @@ export default {
   watch: {
     filterKey(newVal, oldVal) {
       if (newVal === '' && oldVal !== '') {
-        if (this.isFilter) {
-          this.fetchAppList();
-          this.isFilter = false;
-        }
+        this.fetchAppList();
       }
     },
     filterRegion() {
@@ -814,7 +810,6 @@ export default {
       if (this.filterKey === '') {
         return;
       }
-      this.isFilter = true;
       this.fetchAppList();
     },
 

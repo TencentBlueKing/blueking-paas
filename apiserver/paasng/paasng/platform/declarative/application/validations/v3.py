@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import Dict, List
 
 from django.utils.translation import gettext_lazy as _
@@ -116,7 +117,7 @@ class ModuleDescriptionSLZ(serializers.Serializer):
                 {
                     "name": addon.name,
                     "specs": {spec.name: spec.value for spec in addon.specs},
-                    "shared_from": addon.sharedFrom,
+                    "shared_from": addon.sharedFromModule,
                 }
             )
 

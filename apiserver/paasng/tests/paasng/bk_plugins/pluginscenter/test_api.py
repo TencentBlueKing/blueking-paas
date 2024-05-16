@@ -68,6 +68,40 @@ class TestArchived:
         assert resp.json()["detail"] != error_codes.PLUGIN_ARCHIVED.message
 
 
+class TestPluginApi:
+    @pytest.mark.parametrize(
+        ("is_current_stage", "update_status", "status_code", "stage_status"),
+        [
+            (False, PluginReleaseStatus.SUCCESSFUL.value, 400, ""),
+            (True, PluginReleaseStatus.SUCCESSFUL.value, 200, PluginReleaseStatus.SUCCESSFUL.value),
+            (True, PluginReleaseStatus.FAILED.value, 200, PluginReleaseStatus.FAILED.value),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_update_status(
+        self,
+        api_client,
+        pd,
+        plugin,
+        release,
+        subpage_stage,
+        is_current_stage,
+        update_status,
+        status_code,
+        stage_status,
+        iam_policy_client,
+    ):
+        if is_current_stage:
+            release.current_stage = subpage_stage
+            release.save()
+
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/stages/{subpage_stage.stage_id}/status/"
+        resp = api_client.post(url, data={"status": update_status})
+        assert resp.status_code == status_code
+        if resp.status_code == 200:
+            assert resp.json()["status"] == stage_status
+
+
 class TestSysApis:
     @pytest.mark.parametrize(
         ("current_status", "approve_result", "stage_status"),

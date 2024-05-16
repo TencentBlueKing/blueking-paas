@@ -15,7 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
+
 import logging
 import shlex
 from abc import ABC, abstractmethod
@@ -31,7 +31,6 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     BKAPP_NAME_ANNO_KEY,
     BKAPP_REGION_ANNO_KEY,
-    BKPAAS_ADDONS_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -71,6 +70,7 @@ from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
 from paasng.platform.bkapp_model.models import (
@@ -115,11 +115,18 @@ class AddonsManifestConstructor(ManifestConstructor):
     """Construct the "addons" part."""
 
     def apply_to(self, model_res: BkAppResource, module: Module):
-        names = [svc.name for svc in mixed_service_mgr.list_binded(module)]
-        # Modify both annotations and spec
-        model_res.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(names)
-        for name in names:
-            model_res.spec.addons.append(BkAppAddon(name=name))
+        annot_names = []
+
+        # TODO: Add specs support
+        # Process bound services
+        for svc in mixed_service_mgr.list_binded(module):
+            annot_names.append(svc.name)
+            model_res.spec.addons.append(BkAppAddon(name=svc.name))
+
+        # Process shared services
+        for info in ServiceSharingManager(module).list_all_shared_info():
+            annot_names.append(info.service.name)
+            model_res.spec.addons.append(BkAppAddon(name=info.service.name, sharedFromModule=info.ref_module.name))
 
 
 class AccessControlManifestConstructor(ManifestConstructor):

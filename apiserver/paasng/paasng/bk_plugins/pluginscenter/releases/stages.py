@@ -130,6 +130,7 @@ class BaseStageController:
             "status": self.stage.status,
             "fail_message": self.stage.fail_message,
             "invoke_method": self.stage.invoke_method,
+            "status_polling_method": self.stage.status_polling_method,
         }
         return basic_info
 
@@ -358,10 +359,15 @@ class SubPageStage(BaseStageController):
 
         page_url = self.format_page_url(stage_def)
 
-        # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
-        can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release, self.stage)
-        if can_proceed:
-            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        if self.stage.status != constants.PluginReleaseStatus.SUCCESSFUL:
+            # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
+            can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release, self.stage)
+            if can_proceed:
+                # 如果可以进入下一个阶段，则更新当前阶段的状态为成功
+                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        else:
+            can_proceed = True
+
         return {
             **basic_info,
             "detail": {

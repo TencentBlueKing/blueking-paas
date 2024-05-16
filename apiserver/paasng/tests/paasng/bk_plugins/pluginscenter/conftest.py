@@ -66,7 +66,10 @@ def pd():
             },
             "gradualReleaseStrategy": ["bkciProject", "organization"],
         },
-        release_stages=[{"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"}],
+        release_stages=[
+            {"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"},
+            {"id": "test", "name": "在线测试", "invokeMethod": "subpage"},
+        ],
         test_release_revision={
             "revisionType": "all",
             "versionNo": "branch-timestamp",
@@ -208,6 +211,12 @@ def release(plugin):
     )
     release.initial_stage_set()
     return release
+
+
+@pytest.fixture()
+def subpage_stage(release):
+    stage = PluginReleaseStage.objects.filter(release=release, invoke_method="subpage").first()
+    return stage
 
 
 @pytest.fixture()

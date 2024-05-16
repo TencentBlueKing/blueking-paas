@@ -128,7 +128,7 @@ class DockerRegistryController:
     def extract_smart_revision(self, smart_revision: str) -> str:
         if ":" not in smart_revision:
             return smart_revision
-        version_type, version_name = smart_revision.split(":")
+        _, version_name = smart_revision.split(":")
         return version_name
 
     def build_url(self, version_info: VersionInfo) -> str:

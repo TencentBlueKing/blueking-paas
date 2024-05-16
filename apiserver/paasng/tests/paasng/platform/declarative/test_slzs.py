@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import Dict
 
 import pytest
@@ -103,7 +104,7 @@ class TestAppDescriptionSLZ:
                 language="nodejs",
                 module_spec={
                     "processes": [{"name": "web", "command": ["npm", "run", "server"]}],
-                    "addons": [{"name": "mysql", "sharedFrom": "python"}],
+                    "addons": [{"name": "mysql", "sharedFromModule": "python"}],
                 },
             ),
             v3_decorator.with_module(

@@ -795,7 +795,8 @@ def create_custom_app():
 
 
 @pytest.fixture()
-def create_module(bk_app):
+def bk_module_2(bk_app):
+    """Another module other than the default one, for testing."""
     module = Module.objects.create(region=bk_app.region, application=bk_app, name=generate_random_string(length=8))
     initialize_module(module)
     return module

@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import functools
 from unittest import mock
 
@@ -29,6 +30,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     VolumeSourceType,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import (
+    BkAppAddon,
     BkAppHooks,
     BkAppResource,
     BkAppSpec,
@@ -49,6 +51,7 @@ from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.manifest import (
     DEFAULT_SLUG_RUNNER_ENTRYPOINT,
@@ -126,17 +129,24 @@ class TestAddonsManifestConstructor:
     def test_empty(self, bk_module, blank_resource):
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
-        annots = blank_resource.metadata.annotations
-        assert annots["bkapp.paas.bk.tencent.com/addons"] == "[]"
         assert len(blank_resource.spec.addons) == 0
 
     def test_with_addons(self, bk_module, blank_resource, local_service):
         mixed_service_mgr.bind_service(local_service, bk_module)
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
-        annots = blank_resource.metadata.annotations
-        assert annots["bkapp.paas.bk.tencent.com/addons"] == '["mysql"]'
         assert len(blank_resource.spec.addons) == 1
+        assert blank_resource.spec.addons[0] == BkAppAddon(name="mysql")
+
+    def test_with_shared_addons(self, bk_module, bk_module_2, blank_resource, local_service):
+        # Let bk_module share a service with bk_module_2
+        mixed_service_mgr.bind_service(local_service, bk_module_2)
+        ServiceSharingManager(bk_module).create(local_service, bk_module_2)
+
+        AddonsManifestConstructor().apply_to(blank_resource, bk_module)
+
+        assert len(blank_resource.spec.addons) == 1
+        assert blank_resource.spec.addons[0] == BkAppAddon(name="mysql", sharedFromModule=bk_module_2.name)
 
 
 class TestEnvVarsManifestConstructor:

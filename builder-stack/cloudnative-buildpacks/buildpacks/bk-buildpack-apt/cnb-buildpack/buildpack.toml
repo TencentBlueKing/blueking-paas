@@ -1,9 +1,0 @@
-api = "0.4"
-
-[buildpack]
-  id = "bk-buildpack-apt"
-  version = "v2"
-  name = "bk-buildpack-apt"
-
-[[stacks]]
-id = "*"

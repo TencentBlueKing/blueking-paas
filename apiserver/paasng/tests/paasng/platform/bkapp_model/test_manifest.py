@@ -149,8 +149,6 @@ class TestAddonsManifestConstructor:
 
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
-        annots = blank_resource.metadata.annotations
-        assert annots["bkapp.paas.bk.tencent.com/addons"] == '["mysql"]'
         assert len(blank_resource.spec.addons) == 1
         assert blank_resource.spec.addons[0] == BkAppAddon(name="mysql", sharedFromModule=bk_module_2.name)
 

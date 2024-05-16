@@ -382,7 +382,7 @@
               </span>
               <!-- 是否显示迁移应用icon, 需要后台提供字段 -->
               <div
-                v-if="row.application.type === 'default' && row.application.region_name !== '外部版'"
+                v-if="row.migration_status !== null"
                 v-bk-tooltips="{ content: $t('点击可迁移为云原生应用') }"
                 class="migration-wrapper"
                 @click.stop="showAppMigrationDialog(row.application)"

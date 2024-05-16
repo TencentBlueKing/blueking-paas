@@ -144,7 +144,6 @@ export default {
         visible: false,
         data: {},
       },
-      isMigrationEntryShown: false,
     };
   },
   computed: {
@@ -158,6 +157,10 @@ export default {
     isShowNotice() {
       return this.$store.state.isShowNotice;
     },
+    isMigrationEntryShown() {
+      // migration_status.status === confirmed 表示已确定迁移
+      return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status !== 'confirmed';
+    },
   },
   watch: {
     $route: {
@@ -168,7 +171,7 @@ export default {
         this.checkPermission();
       },
     },
-    'curAppInfo.feature'(conf) {
+    'curAppInfo.feature'() {
       this.checkPermission();
     },
     appCode() {
@@ -301,10 +304,6 @@ export default {
   methods: {
     initNavInfo() {
       this.retrieveAppInfo();
-
-      if (this.curAppInfo.application?.region_name !== '外部版') {
-        this.getMigrationProcessesLatest();
-      }
     },
     // Retrieve app informations
     retrieveAppInfo() {
@@ -344,23 +343,6 @@ export default {
         if (!this.curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE) {
           this.appVisitEnable = false;
           this.appPermissionMessage = this.$t('应用未开启“配置豁免路径”的功能');
-        }
-      }
-    },
-    // 获取当前应用最近的迁移状态
-    async getMigrationProcessesLatest() {
-      console.log('拉取记录');
-      try {
-        const res = await this.$store.dispatch('migration/getMigrationProcessesLatest', {
-          appCode: this.appCode,
-        });
-        // 已确定迁移不展示icon
-        this.isMigrationEntryShown = res.status !== 'confirmed';
-      } catch (e) {
-        // 接口 404 表示当前应用未迁移
-        if (e.status === 404) {
-          this.isMigrationEntryShown = false;
-          return;
         }
       }
     },

@@ -284,6 +284,7 @@ export default {
       if (isReload) {
         this.navTree = await this.initNavByRegion(appNav.cloudList);
         await this.initRouterPermission();
+        this.redirectRoute(this.curRouteName);
       }
 
       await this.selectRouterByName(this.curRouteName);
@@ -733,6 +734,19 @@ export default {
         visible: true,
         data: this.curAppInfo.application,
       });
+    },
+
+    // 当前应用切换为无迁移信息应用，跳转至概览
+    redirectRoute(routeName) {
+      const isCloudApp = this.curAppInfo.application?.type === 'cloud_native';
+      if (routeName === 'appMigrationInfo' && isCloudApp && !this.isMigrationEntryShown) {
+        this.$router.push({
+          name: 'cloudAppSummary',
+          params: {
+            id: this.curAppInfo.application.code,
+          },
+        });
+      }
     },
   },
 };

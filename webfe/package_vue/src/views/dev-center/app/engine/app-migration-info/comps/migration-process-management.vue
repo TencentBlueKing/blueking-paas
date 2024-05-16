@@ -610,6 +610,9 @@ export default {
     };
   },
   watch: {
+    $route() {
+      this.init();
+    },
     curLogTimeRange() {
       this.loadInstanceLog();
     },
@@ -618,13 +621,17 @@ export default {
     },
   },
   created() {
-    this.getProcessesList();
-    this.getAutoScalFlag();
+    this.init();
   },
   beforeDestroy() {
     this.stopPolling();
   },
   methods: {
+    init() {
+      if (!this.curAppInfo.migration_status) return;
+      this.getProcessesList();
+      this.getAutoScalFlag();
+    },
     handlerModuleChange() {
       this.getProcessesList();
     },

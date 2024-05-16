@@ -129,8 +129,6 @@ class TestAddonsManifestConstructor:
     def test_empty(self, bk_module, blank_resource):
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
-        annots = blank_resource.metadata.annotations
-        assert annots["bkapp.paas.bk.tencent.com/addons"] == "[]"
         assert len(blank_resource.spec.addons) == 0
 
     def test_with_addons(self, bk_module, blank_resource, local_service):

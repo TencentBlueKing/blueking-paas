@@ -447,6 +447,7 @@ export default {
     },
     // 部署
     handleToDeploy() {
+      this.handleCancel();
       this.$router.push({
         name: 'cloudAppDeployManageStag',
         params: {

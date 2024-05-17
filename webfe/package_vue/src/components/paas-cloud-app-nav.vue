@@ -251,6 +251,10 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
+    // 是否展示迁移信息
+    isMigrationInfoShown() {
+      return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status === 'migration_succeeded';
+    },
   },
   watch: {
     curAppInfo() {
@@ -333,7 +337,7 @@ export default {
         }
 
         // 迁移中的应用展示迁移信息
-        if (!this.isMigrationEntryShown) {
+        if (!this.isMigrationInfoShown) {
           navTree = navTree.filter(nav => nav.name !== 'appMigrationInfo');
         }
 
@@ -739,7 +743,7 @@ export default {
     // 当前应用切换为无迁移信息应用，跳转至概览
     redirectRoute(routeName) {
       const isCloudApp = this.curAppInfo.application?.type === 'cloud_native';
-      if (routeName === 'appMigrationInfo' && isCloudApp && !this.isMigrationEntryShown) {
+      if (routeName === 'appMigrationInfo' && isCloudApp && !this.isMigrationInfoShown) {
         this.$router.push({
           name: 'cloudAppSummary',
           params: {

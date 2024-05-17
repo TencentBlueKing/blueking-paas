@@ -5,7 +5,9 @@
       :active="active"
       :nav-list="panels"
       :module-id="curModuleId"
+      :is-migration-progress="true"
       @change="handleTabChange"
+      @migration-dialog="handleMigrationDialog"
     />
     <section class="migration-info-main">
       <!-- 进程管理 -->
@@ -15,6 +17,12 @@
         <visit-config />
       </section>
     </section>
+
+    <!-- 普通应用迁移至云原生应用弹窗 -->
+    <app-migration-dialog
+      v-model="appMigrationDialogConfig.visible"
+      :data="appMigrationDialogConfig.data"
+    />
   </div>
 </template>
 <script>
@@ -22,6 +30,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import migrationProcessManagement from './comps/migration-process-management.vue';
 import visitConfig from '@/views/dev-center/app/engine/entry-config/comps/visit-config.vue';
+import appMigrationDialog from '@/components/app-migration-dialog';
 
 export default {
   name: 'AppMigrationInfo',
@@ -29,6 +38,7 @@ export default {
     cloudAppTopBar,
     migrationProcessManagement,
     visitConfig,
+    appMigrationDialog,
   },
   mixins: [appBaseMixin],
   data() {
@@ -38,6 +48,10 @@ export default {
         { name: 'migrationProcessManagement', label: this.$t('进程管理') },
         { name: 'moduleAddress', label: this.$t('访问地址') },
       ],
+      appMigrationDialogConfig: {
+        visible: false,
+        data: {},
+      },
     };
   },
   created() {
@@ -58,6 +72,10 @@ export default {
       } else {
         this.handleTabChange(this.panels[0].name, false);
       }
+    },
+    handleMigrationDialog(visible) {
+      this.appMigrationDialogConfig.visible = visible;
+      this.appMigrationDialogConfig.data = this.curAppInfo.application;
     },
   },
 };

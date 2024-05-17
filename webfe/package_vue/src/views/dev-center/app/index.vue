@@ -9,7 +9,7 @@
           >
             <!-- 在这里获取当前应用的迁移状态 -->
             <div class="overview-fleft">
-              <app-quick-nav :is-migration-entry-shown="isMigrationEntryShown" />
+              <app-quick-nav :is-migrating="isMigrating" />
               <paas-cloud-app-nav
                 v-if="type === 'cloud_native'"
                 :is-migration-entry-shown="isMigrationEntryShown"
@@ -157,9 +157,15 @@ export default {
     isShowNotice() {
       return this.$store.state.isShowNotice;
     },
+    // 是否正在迁移中
+    isMigrating() {
+      const showMigration = ['default', 'confirmed'];
+      return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
+    },
+    // 是否迁移云原生弹窗按钮
     isMigrationEntryShown() {
-      // migration_status.status === confirmed 表示已确定迁移
-      return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status !== 'confirmed';
+      const showMigration = ['migration_succeeded', 'confirmed'];
+      return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
     },
   },
   watch: {

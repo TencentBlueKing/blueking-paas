@@ -18,9 +18,13 @@
             <div class="overflow-app-metedata">
               <strong
                 v-bk-overflow-tips
-                :class="['app-title', { 'not-migrated': !isMigrationEntryShown }]"
+                :class="['app-title', { 'not-migrated': !isMigrating }]"
               >{{ appInfo.name }}</strong>
-              <div v-if="isMigrationEntryShown" class="migrate-tag">{{ $t('迁移中') }}...</div>
+              <div
+                v-if="isMigrating"
+                v-bk-tooltips="$t('迁移云原生应用中…')"
+                class="migrate-tag">
+                {{ $t('迁移中') }}...</div>
             </div>
             <p
               v-bk-overflow-tips
@@ -161,7 +165,7 @@ export default {
   },
   mixins: [appBaseMixin],
   props: {
-    isMigrationEntryShown: {
+    isMigrating: {
       type: Boolean,
       default: false,
     },

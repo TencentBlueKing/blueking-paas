@@ -17,6 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+import tarfile
+from os import PathLike
+from pathlib import Path
 from typing import List, cast
 
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError, UploadFailedError
@@ -136,6 +139,10 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 logger.exception("S-Mart package does not exist!")
                 raise error_codes.PREPARED_PACKAGE_NOT_FOUND
 
+            # 若下载的源码包不是 tarball, 则认为下载的文件不完整
+            if not self.is_tar_file(filepath):
+                raise error_codes.FAILED_TO_DOWNLOAD_COMPLETELY
+
             # Step 2. create application, module
             stat = SourcePackageStatReader(filepath).read()
             if not stat.version:
@@ -177,6 +184,15 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             raise ValidationError(_("缺失应用市场配置（market)!"))
         if app_desc.spec_version == AppSpecVersion.VER_1:
             raise error_codes.MISSING_DESCRIPTION_INFO.f(_("请检查源码包是否存在 app_desc.yaml 文件"))
+
+    @staticmethod
+    def is_tar_file(filepath: PathLike) -> bool:
+        """检查指定路径的文件是否为 tar 包"""
+        try:
+            with tarfile.open(Path(filepath), "r"):
+                return True
+        except tarfile.TarError:
+            return False
 
 
 @method_decorator(name="list", decorator=swagger_auto_schema(tags=["源码包管理", "S-Mart"]))
@@ -279,11 +295,12 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 raise error_codes.MISSING_VERSION_INFO
 
             if stat.sha256_signature != signature:
-                # NOTE: 防御性日志, 先不处理这种情景, 仅记录下来
                 logger.error(
                     "the provided digital signature is inconsistent with "
                     "the digital signature of the actually saved source code package."
                 )
+                # SHA256 验证失败, 文件下载不完整
+                raise error_codes.FAILED_TO_DOWNLOAD_COMPLETELY
 
             # Step 2. handle app(create module if necessary)
             handler = get_desc_handler(stat.meta_info)

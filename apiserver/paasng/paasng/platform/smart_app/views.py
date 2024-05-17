@@ -299,6 +299,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 raise error_codes.MISSING_VERSION_INFO
 
             if stat.sha256_signature != signature:
+                # NOTE: 防御性日志, 先不处理这种情景, 仅记录下来
                 logger.error(
                     "the provided digital signature is inconsistent with "
                     "the digital signature of the actually saved source code package."

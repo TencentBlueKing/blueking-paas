@@ -131,8 +131,15 @@ class PluginBasicInfoDefinition(BaseModel):
 
     id: FieldSchema = Field(description="插件 ID")
     name: FieldSchema = Field(description="插件名称")
-    releaseMethod: Literal["code", "sourcePackage", "image"] = Field(description="插件发布方式")
+    releaseMethod: Literal[
+        constants.PluginReleaseMethod.CODE,
+        constants.PluginReleaseMethod.SOURCE_PACKAGE,
+        constants.PluginReleaseMethod.IMAGE,
+    ] = Field(description="插件发布方式")
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")
+    accessMode: Literal[
+        constants.PluginBasicInfoAccessMode.READONLY, constants.PluginBasicInfoAccessMode.READWRITE
+    ] = Field(default=constants.PluginBasicInfoAccessMode.READWRITE, description="插件基本信息查看模式")
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     extraFieldsEn: Dict[str, FieldSchema] = Field(
@@ -144,6 +151,8 @@ class PluginBasicInfoDefinition(BaseModel):
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
     overviewPage: Optional[PluginoverviewPage] = Field(description="概览页面嵌入地址")
+    description: str = Field(description="基本信息页面的提示信息", default="")
+    publisher_description: str = Field(description="基本信息页面-发布者的提示信息", default="")
 
 
 @register
@@ -174,7 +183,7 @@ class PluginMarketInfoDefinition(BaseModel):
         "platform(仅存储在插件开发中心)、"
         "both(插件开发中心和第三方系统都存储, 需提供 create/update API)"
     )
-    category: PluginBackendAPIResource = Field(description="市场类型分类查询接口")
+    category: Optional[PluginBackendAPIResource] = Field(description="市场类型分类查询接口")
     api: Optional[PluginBackendAPI] = Field(description="插件市场信息操作接口集")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     extraFieldsEn: Dict[str, FieldSchema] = Field(

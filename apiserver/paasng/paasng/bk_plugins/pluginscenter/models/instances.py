@@ -83,6 +83,7 @@ class PluginInstance(UuidAuditedModel):
         choices=constants.PluginStatus.get_choices(),
         default=constants.PluginStatus.WAITING_APPROVAL,
     )
+    publisher = models.CharField(verbose_name="插件发布者", max_length=64, default="")
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
     is_deleted = models.BooleanField(default=False, help_text="是否已删除")

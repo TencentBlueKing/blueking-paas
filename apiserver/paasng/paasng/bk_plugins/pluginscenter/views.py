@@ -319,6 +319,34 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
+    @_permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.EDIT_PLUGIN])]
+    )
+    def update_publisher(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        slz = serializers.PluginPublisher(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        plugin.publisher = validated_data["publisher"]
+        plugin.save()
+
+        if pd.basic_info_definition.api.update:
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 修改发布者
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.PUBLISHER,
+        )
+        return Response(data=self.get_serializer(plugin).data)
+
+    @atomic
     @swagger_auto_schema(request_body=serializers.PluginInstanceLogoSLZ)
     @_permission_classes(
         [

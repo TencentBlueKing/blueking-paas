@@ -35,6 +35,8 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     CONFIGURATION_MANAGE = FeatureFlagField(label="配置管理", default=True)
     STDOUT_LOG = FeatureFlagField(label="标准输出日志", default=True)
     ACCESS_LOG = FeatureFlagField(label="访问日志日志", default=True)
+    MARKET_INFO = FeatureFlagField(label="市场信息", default=True)
+    PUBLISHER_INFO = FeatureFlagField(label="发布者", default=False)
 
 
 class PluginFeatureFlagsManager:

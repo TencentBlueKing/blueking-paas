@@ -791,3 +791,9 @@ class PluginStageStatusSLZ(serializers.Serializer):
 
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices())
     message = serializers.CharField(default="")
+
+
+class PluginPublisher(serializers.Serializer):
+    """插件发布者"""
+
+    publisher = serializers.CharField(help_text="插件发布者")

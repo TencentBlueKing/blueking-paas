@@ -101,6 +101,13 @@ class TestPluginApi:
         if resp.status_code == 200:
             assert resp.json()["status"] == stage_status
 
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_update_publisher(self, api_client, pd, plugin, iam_policy_client):
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/publisher/"
+
+        resp = api_client.post(url, data={"publisher": "xxxxx"})
+        assert resp.status_code == 200
+
 
 class TestSysApis:
     @pytest.mark.parametrize(

@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Core components for deploy workflow"""
 import logging
 import time
@@ -48,6 +49,7 @@ from paasng.utils.error_message import find_coded_error_message
 if TYPE_CHECKING:
     from paasng.platform.engine.models.phases import DeployPhase
     from paasng.platform.engine.models.steps import DeployStep as DeployStepModel
+    from paasng.platform.sourcectl.models import VersionInfo
 
 logger = logging.getLogger(__name__)
 
@@ -318,7 +320,7 @@ class DeployStep:
         self.engine_app = deployment.get_engine_app()
         self.module_environment = deployment.app_environment
         self.engine_client = EngineDeployClient(self.engine_app)
-        self.version_info = deployment.version_info
+        self.version_info: "VersionInfo" = deployment.version_info
 
         self.stream = stream or get_default_stream(deployment)
         self.state_mgr = DeploymentStateMgr(deployment=self.deployment, stream=self.stream, phase_type=self.phase_type)

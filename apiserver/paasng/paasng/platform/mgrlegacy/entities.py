@@ -16,15 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.structure import register
-
-if TYPE_CHECKING:
-    from paasng.platform.modules.constants import SourceOrigin
 
 
 @register
@@ -42,7 +40,7 @@ class BuildLegacyData(BaseModel):
 
     module_name: str
 
-    source_origin: "SourceOrigin"
+    source_origin: Optional[SourceOrigin] = None
     source_repo_id: Optional[int] = None
     source_type: Optional[str] = None
 

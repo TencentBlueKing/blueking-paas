@@ -54,13 +54,13 @@ class BuildConfigMigrator(CNativeBaseMigrator):
             raise PreCheckMigrationFailed(f"app({self.app.code}) type does not set to cloud_native")
 
     def _migrate(self):
-        """migrate buildpacks/buildpack_builder/buildpack_runner of the app(module)"""
+        """migrate build config for the app(module)"""
         for m in self.app.modules.all():
             runtime_migrator = _ModuleRuntimeMigrator.get_by_module(m)
             runtime_migrator.migrate()
 
     def _rollback(self):
-        """rollback to legacy buildpacks/buildpack_builder/buildpack_runner"""
+        """rollback to legacy build config"""
         builds: List[BuildLegacyData] = self.migration_process.legacy_data.builds
         build_map = {b.module_name: b for b in builds}
 
@@ -105,7 +105,7 @@ class _ModuleRuntimeMigrator(ABC):
         """rollback to legacy runtime config"""
 
 
-class _BuildPackRuntimeMigrator(_ModuleRuntimeMigrator):
+class _BuildPackMigrator(_ModuleRuntimeMigrator):
     """buildpack(slug-pilot) 应用运行时迁移器"""
 
     runtime_type = RuntimeType.BUILDPACK
@@ -126,6 +126,7 @@ class _BuildPackRuntimeMigrator(_ModuleRuntimeMigrator):
         )
 
     def migrate(self):
+        """migrate the module's buildpacks/buildpack_builder/buildpack_runner"""
         # 清理旧的构建信息
         binder = ModuleRuntimeBinder(self.module)
         binder.clear_runtime()
@@ -135,6 +136,7 @@ class _BuildPackRuntimeMigrator(_ModuleRuntimeMigrator):
         module_initializer.bind_default_runtime()
 
     def rollback(self, legacy_data: BuildLegacyData):
+        """rollback to legacy buildpacks/buildpack_builder/buildpack_runner"""
         # 清理旧的构建信息
         binder = ModuleRuntimeBinder(self.module)
         binder.clear_runtime()
@@ -147,7 +149,7 @@ class _BuildPackRuntimeMigrator(_ModuleRuntimeMigrator):
             binder.bind_buildpack(AppBuildPack.objects.get(id=bp_id))
 
 
-class _ImageRegistryRuntimeMigrator(_ModuleRuntimeMigrator):
+class _ImageRegistryMigrator(_ModuleRuntimeMigrator):
     """旧镜像应用运行时迁移器"""
 
     runtime_type = RuntimeType.CUSTOM_IMAGE
@@ -161,6 +163,7 @@ class _ImageRegistryRuntimeMigrator(_ModuleRuntimeMigrator):
         )
 
     def migrate(self):
+        """migrate the module's image_repository/build_method/source_config"""
         config = BuildConfig.objects.get_or_create_by_module(self.module)
         config.image_repository = self.module.get_source_obj().get_repo_url()
         config.build_method = RuntimeType.CUSTOM_IMAGE.value
@@ -172,6 +175,7 @@ class _ImageRegistryRuntimeMigrator(_ModuleRuntimeMigrator):
         self.module.save(update_fields=["source_repo_id", "source_type", "source_origin"])
 
     def rollback(self, legacy_data: BuildLegacyData):
+        """rollback to legacy image_repository/build_method/source_config"""
         self.module.source_repo_id = legacy_data.source_repo_id
         self.module.source_type = legacy_data.source_type
         self.module.source_origin = legacy_data.source_origin

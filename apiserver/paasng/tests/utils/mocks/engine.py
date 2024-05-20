@@ -91,6 +91,9 @@ def mock_cluster_service(ingress_config: Optional[Dict] = None, replaced_ingress
         def has_cluster(self, cluster_name):
             return cluster.name == cluster_name
 
+        def get_cnative_app_default_cluster(self):
+            return Cluster.objects.get(name=settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER)
+
     class StubEnvClusterService:
         def get_cluster(self):
             return cluster

@@ -136,13 +136,14 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
             build = Build.objects.get(pk=build_id)
 
+        version_info = self._get_version_info(request.user, module, params, build=build)
         deployment = None
         try:
             with coordinator.release_on_error():
                 deployment = initialize_deployment(
                     env=env,
                     operator=request.user.pk,
-                    version_info=self._get_version_info(request.user, module, params, build=build),
+                    version_info=version_info,
                     advanced_options=params["advanced_options"],
                 )
                 coordinator.set_deployment(deployment)

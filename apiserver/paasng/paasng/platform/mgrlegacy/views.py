@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import logging
+from typing import Dict, List, Optional, Union
 
 from django.conf import settings
 from django.http import Http404, JsonResponse
@@ -28,13 +29,17 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
+from paas_wl.workloads.networking.egress.serializers import RCStateAppBindingSLZ, RegionClusterStateSLZ
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -52,6 +57,7 @@ except ImportError:
 from paas_wl.utils.error_codes import error_codes as wl_error_codes
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.platform.mgrlegacy.serializers import (
     ApplicationMigrationInfoSLZ,
@@ -74,6 +80,7 @@ from paasng.platform.mgrlegacy.tasks import (
     rollback_migration_process,
 )
 from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms
+from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -427,3 +434,91 @@ class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             return Response(data=last_process.legacy_data.entrances)
 
         return Response(data=[])
+
+
+class RetrieveChecklistInfosViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """获取普通应用迁移前的 Checklist 数据(如是否绑定了出口 IP 等)"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def get(self, request, code):
+        app = self.get_application()
+
+        app_root_domains = []
+        app_namespaces = []
+        app_rcs_bindings = []
+
+        for m in app.modules.all():
+            for env in m.envs.all():
+                wl_app = env.wl_app
+                app_root_domains.extend(self._get_app_root_domains(wl_app))
+                app_namespaces.append(self._get_namespace(m, env, wl_app))
+                if binding := self._get_rcs_binding(m, env, wl_app):
+                    app_rcs_bindings.append(binding)
+
+        # 目前仅有一个云原生集群
+        cnative_cluster = RegionClusterService(app.region).get_cnative_app_default_cluster()
+        root_domains = {
+            # 当前普通应用的子域名
+            "legacy": list(set(app_root_domains)),
+            # 迁移后的云原生应用的子域名
+            "cnative": [d.name for d in cnative_cluster.ingress_config.app_root_domains],
+        }
+
+        namespaces = None
+        # 当前普通应用的命名空间(排除掉默认模块命名空间)
+        legacy_namespaces = [
+            {"environment": n["environment"], "namespace": n["namespace"]}
+            for n in app_namespaces
+            if not n["is_cnative"]
+        ]
+        if legacy_namespaces:
+            namespaces = {
+                # 当前普通应用的命名空间, 它们需要根据环境调整为迁移后的命名空间
+                "legacy": legacy_namespaces,
+                # 迁移后的云原生应用的命名空间(即默认模块的命名空间)
+                "cnative": [
+                    {"environment": n["environment"], "namespace": n["namespace"]}
+                    for n in app_namespaces
+                    if n["is_cnative"]
+                ],
+            }
+
+        rcs_bindings = None
+        if app_rcs_bindings:
+            state = RegionClusterState.objects.filter(region=app.region, cluster_name=cnative_cluster.name).latest()
+            node_ip_addresses = RegionClusterStateSLZ(state).data["node_ip_addresses"]
+            rcs_bindings = {
+                # 当前应用绑定的出口 IP 信息
+                "legacy": app_rcs_bindings,
+                # 迁移后的云原生应用, 绑定的出口 IP 信息
+                "cnative": {"ip_addresses": [node["internal_ip_address"] for node in node_ip_addresses]},
+            }
+
+        return Response(data={"root_domains": root_domains, "namespaces": namespaces, "rcs_bindings": rcs_bindings})
+
+    @staticmethod
+    def _get_rcs_binding(m: Module, env: ModuleEnvironment, wl_app: WlApp) -> Optional[Dict]:
+        """根据模块和环境, 获取绑定的出口 IP 信息"""
+        try:
+            binding = RCStateAppBinding.objects.get(app=wl_app)
+        except RCStateAppBinding.DoesNotExist:
+            return None
+        else:
+            node_ip_addresses = RCStateAppBindingSLZ(binding).data["state"]["node_ip_addresses"]
+            return {
+                "module_name": m.name,
+                "environment": env.environment,
+                "ip_addresses": [node["internal_ip_address"] for node in node_ip_addresses],
+            }
+
+    @staticmethod
+    def _get_namespace(m: Module, env: ModuleEnvironment, wl_app: WlApp) -> Dict[str, Union[str, bool]]:
+        # 默认模块的命名空间规则与云原生应用一致
+        return {"is_cnative": m.is_default, "environment": env.environment, "namespace": wl_app.namespace}
+
+    @staticmethod
+    def _get_app_root_domains(wl_app: WlApp) -> List[str]:
+        """获取应用的访问域名(子域名)"""
+        cluster = get_cluster_by_app(wl_app)
+        return [d.name for d in cluster.ingress_config.app_root_domains]

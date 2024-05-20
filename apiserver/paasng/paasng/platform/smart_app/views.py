@@ -290,20 +290,16 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 logger.exception("S-Mart package does not exist！")
                 raise error_codes.PREPARED_PACKAGE_NOT_FOUND
 
-            # 若下载的源码包不是 tarball, 则认为下载的文件不完整
-            if not self.is_tar_file(filepath):
-                raise error_codes.FAILED_TO_DOWNLOAD_COMPLETELY
-
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
-
             if stat.sha256_signature != signature:
-                # NOTE: 防御性日志, 先不处理这种情景, 仅记录下来
                 logger.error(
                     "the provided digital signature is inconsistent with "
                     "the digital signature of the actually saved source code package."
                 )
+                # 下载的文件不完整
+                raise error_codes.FAILED_TO_DOWNLOAD_COMPLETELY
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Step 2. handle app(create module if necessary)
             handler = get_desc_handler(stat.meta_info)
@@ -329,12 +325,3 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 logger.exception("Failed to access container registry!")
                 raise error_codes.FAILED_TO_PUSH_IMAGE.f(e.message)
         return Response(status=status.HTTP_201_CREATED)
-
-    @staticmethod
-    def is_tar_file(filepath: PathLike) -> bool:
-        """检查指定路径的文件是否为 tar 包"""
-        try:
-            with tarfile.open(Path(filepath), "r"):
-                return True
-        except tarfile.TarError:
-            return False

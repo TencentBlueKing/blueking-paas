@@ -96,6 +96,10 @@
           </div>
         </li>
       </ul>
+      <div class="plugin-tips">
+        <i class="paasng-icon paasng-info-line"></i>
+        {{ $t('只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}
+      </div>
     </section>
     <!-- 编辑态 -->
     <section
@@ -416,6 +420,12 @@ export default {
   border-radius: 2px;
   background: #fafbfd;
   cursor: not-allowed;
+}
+.plugin-tips {
+  margin-left: 130px;
+  font-size: 12px;
+  color: #979BA5;
+  line-height: 20px;
 }
 </style>
 

@@ -132,4 +132,6 @@ class TestBuildConfigMigrator:
 
         image_config = BuildConfig.objects.get(module=image_repository_module)
         assert image_config.image_repository is None
-        assert Module.objects.get(id=image_repository_module.id).source_origin == SourceOrigin.IMAGE_REGISTRY.value
+        legacy_image_repository_module = Module.objects.get(id=image_repository_module.id)
+        assert legacy_image_repository_module.source_origin == SourceOrigin.IMAGE_REGISTRY.value
+        assert legacy_image_repository_module.get_source_obj().get_repo_url() == "https://example.com/image"

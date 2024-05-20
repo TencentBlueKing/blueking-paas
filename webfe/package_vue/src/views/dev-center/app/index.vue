@@ -151,13 +151,6 @@ export default {
     appCode() {
       this.initNavInfo();
     },
-    '$store.state.navType': {
-      async handler(newValue) {
-        const { code: appCode, moduleId } = newValue;
-        const curAppInfo = await store.dispatch('getAppInfo', { appCode, moduleId });
-        this.type = curAppInfo.application.type;
-      },
-    },
   },
   /**
          * 进入当前组件时请求应用信息
@@ -212,12 +205,11 @@ export default {
         curAppInfo = await store.dispatch('getAppInfo', { appCode, moduleId });
         await store.dispatch('getAppFeature', { appCode });
         console.log('beforeRouteEnter: getAppInfo');
-        // 切换 navType
-        this.type = curAppInfo.application.type;
       } else {
         curAppInfo = store.state.appInfo[appCode];
         store.commit('updateCurAppByCode', { appCode, moduleId });
       }
+      this.type = curAppInfo.application.type;
 
       // 如果不带moduleId, 以默认模块作一次重定向
       if (!moduleId) {

@@ -13,14 +13,14 @@
             <bk-button
               :theme="'primary'"
               class="mr10"
-              @click="handlePageJump('appDeploy')"
+              @click="handlePageJump(application?.type === 'default' ? 'appDeployForStag' : 'cloudAppDeployManageStag')"
             >
               {{ $t('部署应用') }}
             </bk-button>
             <bk-button
               :theme="'default'"
               type="submit"
-              @click="handlePageJump('appSummary')"
+              @click="handlePageJump(application?.type === 'default' ? 'appSummary' : 'cloudAppSummary')"
             >
               {{ $t('应用概览') }}
             </bk-button>
@@ -40,7 +40,7 @@ export default {
   data() {
     const appCode = this.$route.params.id;
     return {
-      appCode: appCode,
+      appCode,
       application: {},
     };
   },

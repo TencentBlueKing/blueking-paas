@@ -33,7 +33,6 @@
         class="form-edit mt20 pb20 border-b" v-if="isBasePageEdit">
         <bk-form
           :model="buildConfig"
-          :rules="rules"
           ref="baseInfoRef"
         >
           <bk-form-item
@@ -44,7 +43,8 @@
           <bk-form-item
             :label="`${$t('镜像仓库')}：`"
             :required="true"
-            :property="'image'"
+            :property="'image_repository'"
+            :rules="rules.image"
             error-display-type="normal"
           >
             <bk-input
@@ -120,7 +120,7 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            regex: /^([a-z0-9]+(?:[.-][a-z0-9]+)*\.[a-z]{2,})?(?::\d{1,5})?\/(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
             message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
             trigger: 'blur',
           },

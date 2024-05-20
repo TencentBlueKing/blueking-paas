@@ -28,10 +28,11 @@ from jsonfield import JSONField
 
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus, VersionType
+from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import make_json_field, make_legacy_json_field
 

@@ -399,7 +399,9 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             version_service = get_version_service(module, operator=request.user.pk)
             alternative_versions = slzs.AlternativeVersionSLZ(
-                version_service.list_alternative_versions(), many=True
+                version_service.list_alternative_versions(),
+                many=True,
+                context={"is_smart_app": application.is_smart_app},
             ).data
         except UserNotBindedToSourceProviderError:
             raise error_codes.NEED_TO_BIND_OAUTH_INFO

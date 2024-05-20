@@ -41,7 +41,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.engine.constants import RuntimeType, VersionType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
@@ -66,6 +66,7 @@ from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service

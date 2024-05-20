@@ -576,6 +576,17 @@ export const PAAS_STATIC_CONFIG = {
         "message": staticI18n.$t("应用左侧导航"),
         "cloudList": [
             {
+                "name": "appMigrationInfo",
+                "label": staticI18n.$t("迁移信息"),
+                "matchRouters": ["appMigrationInfo"],
+                "iconfontName": "qianyi-xianxing",
+                "supportModule": true,
+                "destRoute": {
+                  "name": "appMigrationInfo"
+                },
+                "children": []
+            },
+            {
                 "name": "cloudAppSummary",
                 "label": staticI18n.$t("概览"),
                 "matchRouters": ["appSummaryEmpty", "cloudAppSummary"],
@@ -583,17 +594,6 @@ export const PAAS_STATIC_CONFIG = {
                 "supportModule": true,
                 "destRoute": {
                   "name": "cloudAppSummary"
-                },
-                "children": []
-            },
-            {
-                "name": "appMigrationInfo",
-                "label": staticI18n.$t("迁移信息"),
-                "matchRouters": ["appMigrationInfo"],
-                "iconfontName": "metrics",
-                "supportModule": true,
-                "destRoute": {
-                  "name": "appMigrationInfo"
                 },
                 "children": []
             },

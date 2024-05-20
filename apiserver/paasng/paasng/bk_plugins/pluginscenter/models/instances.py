@@ -397,6 +397,24 @@ class PluginVisibleRange(AuditedModel):
     plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
     bkci_project = models.JSONField(verbose_name="蓝盾项目ID", default=list)
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+    is_in_approval = models.BooleanField(verbose_name="是否在审批中", default=False)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+
+    @property
+    def itsm_bkci_project(self):
+        if not self.itsm_detail:
+            return None
+
+        fields_dict = {item["key"]: item["value"] for item in self.itsm_detail.fields}
+        return fields_dict.get("bkci_project")
+
+    @property
+    def itsm_organization(self):
+        if not self.itsm_detail:
+            return None
+
+        fields_dict = {item["key"]: item["value"] for item in self.itsm_detail.fields}
+        return fields_dict.get("organization")
 
 
 class OperationRecord(AuditedModel):

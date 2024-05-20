@@ -26,7 +26,7 @@ from rest_framework.viewsets import GenericViewSet
 from paasng.bk_plugins.pluginscenter import constants, serializers, shim
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.authentication import ItsmBasicAuthentication
-from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.bk_plugins.pluginscenter.models import PluginInstance, PluginVisibleRange
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,6 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
     def itsm_create_callback(self, request, pd_id, plugin_id):
         """创建插件审批回调，更新插件状态并完成插件创建相关操作"""
-        logger.error("itsm test, request.data: %s", request.data)
         serializer = serializers.ItsmApprovalSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -77,6 +76,30 @@ class PluginCallBackApiViewSet(GenericViewSet):
         # 更新插件的状态
         plugin.status = plugin_status
         plugin.save(update_fields=["status", "updated"])
+        return Response({"message": "success", "code": 0, "data": None, "result": True})
+
+    def itsm_visible_range_callback(self, request, pd_id, plugin_id):
+        """插件可见范围修改审批回调"""
+        serializer = serializers.ItsmApprovalSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        plugin = self.get_plugin_instance()
+
+        ticket_status = serializer.validated_data["current_status"]
+        approve_result = serializer.validated_data["approve_result"]
+
+        visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+
+        if ticket_status in ItsmTicketStatus.terminated_status():
+            visible_range_obj.is_in_approval = False
+        else:
+            visible_range_obj.is_in_approval = True
+
+        # 单据结束且结果为审批成功, 则更新 DB 中的可见范围
+        if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
+            visible_range_obj.bkci_project = visible_range_obj.itsm_bkci_project
+            visible_range_obj.organization = visible_range_obj.itsm_organization
+        visible_range_obj.save()
         return Response({"message": "success", "code": 0, "data": None, "result": True})
 
     def _convert_release_status(

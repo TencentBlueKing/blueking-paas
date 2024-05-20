@@ -46,7 +46,10 @@ from paasng.bk_plugins.pluginscenter.filters import PluginInstancePermissionFilt
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import submit_create_approval_ticket
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    submit_create_approval_ticket,
+    submit_visible_range_ticket,
+)
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginBasicInfoDefinition,
@@ -55,6 +58,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStrategy,
+    PluginVisibleRange,
 )
 from paasng.bk_plugins.pluginscenter.permissions import IsPluginCreator, PluginCenterFeaturePermission
 from paasng.bk_plugins.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
@@ -319,6 +323,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
+    @swagger_auto_schema(request_body=serializers.PluginPublisher)
     @_permission_classes(
         [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.EDIT_PLUGIN])]
     )
@@ -1169,3 +1174,50 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
             subject=constants.SubjectTypes.CONFIG_INFO,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, GenericViewSet):
+    serializer_class = serializers.PluginVisibleRangeSLZ
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.EDIT_PLUGIN]),
+    ]
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.PluginVisibleRangeUpdateSLZ)
+    def update(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+
+        visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+        if visible_range_obj.is_in_approval:
+            raise error_codes.VISIBLE_RANGE_IN_APPROVAL
+
+        slz = serializers.PluginVisibleRangeUpdateSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        # 仅创建 ITSM 审批单据并将状态设置为审批中，单据审批成功后才将可见范围的数据同步到 DB
+        itsm_detail = submit_visible_range_ticket(
+            pd,
+            plugin,
+            request.user.username,
+            visible_range_obj,
+            validated_data["bkci_project"],
+            validated_data["organization"],
+        )
+
+        # 更新可见范围状态
+        visible_range_obj.is_in_approval = True
+        visible_range_obj.itsm_detail = itsm_detail
+        visible_range_obj.save()
+
+        # 操作记录: 修改发布者
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.VISIBLE_RANGE,
+        )
+        return Response(data=self.get_serializer(visible_range_obj).data)

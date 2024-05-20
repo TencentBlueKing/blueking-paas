@@ -48,6 +48,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStage,
+    PluginVisibleRange,
 )
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -797,3 +798,16 @@ class PluginPublisher(serializers.Serializer):
     """插件发布者"""
 
     publisher = serializers.CharField(help_text="插件发布者")
+
+
+class PluginVisibleRangeSLZ(serializers.ModelSerializer):
+    itsm_detail = ItsmDetailSLZ()
+
+    class Meta:
+        model = PluginVisibleRange
+        fields = "__all__"
+
+
+class PluginVisibleRangeUpdateSLZ(serializers.Serializer):
+    bkci_project = serializers.ListField(child=serializers.CharField(), help_text="格式：['1111', '222222']")
+    organization = serializers.ListField(child=serializers.DictField())

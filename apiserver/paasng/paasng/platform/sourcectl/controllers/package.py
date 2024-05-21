@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from paasng.platform.modules.models.module import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, VersionInfo
 from paasng.platform.sourcectl.package.client import BasePackageClient, get_client
 
@@ -86,7 +87,7 @@ class PackageController:
         items = [
             AlternativeVersion(
                 name=info.package_name,
-                type="package" if info.storage_engine != "docker" else "tag",
+                type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
                 revision=info.version,
                 url=info.storage_url,
                 last_update=info.updated,
@@ -105,7 +106,7 @@ class PackageController:
         info = self.module.packages.get(version=version)
         return AlternativeVersion(
             name=info.package_name,
-            type="package" if info.storage_engine != "docker" else "tag",
+            type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
             revision=info.version,
             url=info.storage_url,
             last_update=info.updated,

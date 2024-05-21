@@ -28,7 +28,7 @@ from paas_wl.bk_app.cnative.specs.credentials import split_image
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.engine.constants import RuntimeType, VersionType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -37,6 +37,7 @@ from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepoBasicAuthHolder
 
 if TYPE_CHECKING:

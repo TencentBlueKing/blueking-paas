@@ -38,7 +38,6 @@ from paasng.platform.engine.constants import (
     JobStatus,
     MetricsType,
     RuntimeType,
-    VersionType,
 )
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
@@ -47,6 +46,7 @@ from paasng.platform.engine.models.offline import OfflineOperation
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.phases_steps.display_blocks import DeployDisplayBlockRenderer
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes

@@ -205,7 +205,7 @@
               v-for="(branch, index) in branchList"
               :key="index"
               class="option-group"
-              :name="branch.name"
+              :name="branch.displayName"
             >
               <bk-button
                 ext-cls="paas-branch-btn"
@@ -797,6 +797,7 @@ export default {
             branchesList.push({
               id: branch.type,
               name: branch.type,
+              displayName: branch.display_type,
               children: [obj],
             });
           } else {

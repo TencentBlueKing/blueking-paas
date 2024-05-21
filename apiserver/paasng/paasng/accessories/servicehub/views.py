@@ -108,7 +108,7 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         for env in module.get_envs():
             env_key_dict.update(ServiceSharingManager(env.module).get_enabled_env_keys(env))
             env_key_dict.update(mixed_service_mgr.get_enabled_env_keys(env.engine_app))
-        return Response({"data": env_key_dict})
+        return Response(data=env_key_dict)
 
 
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

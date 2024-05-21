@@ -89,8 +89,8 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern("/services/config_vars/$", include_envs=False),
-        views.ModuleServiceAttachmentsViewSet.as_view({"get": "list_provisioned_config_var_keys"}),
-        name="api.services.list_config_vars",
+        views.ModuleServiceAttachmentsViewSet.as_view({"get": "list_provisioned_env_keys"}),
+        name="api.services.list_provisioned_env_keys",
     ),
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/specs$", include_envs=False),

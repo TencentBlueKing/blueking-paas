@@ -90,8 +90,8 @@ class TestServiceEngineAppAttachmentViewSet:
         )
         assert response.status_code == 200
         # 返回的增强服务名称列表
-        return_svc_names = list(response.data["result"].keys())
+        return_svc_names = list(response.data["data"].keys())
         assert service.display_name in return_svc_names
-        assert set(response.data["result"][service.display_name]) == {"a", "b"}
+        assert set(response.data["data"][service.display_name]) == {"a", "b"}
         # 增强服务环境变量设置为不写入则不返回
         assert credentials_disabled_service.display_name not in return_svc_names

@@ -138,12 +138,11 @@ class ServiceSharingManager:
             ret.update(env_variables)
         return ret
 
-    def get_env_keys(self, env: ModuleEnvironment, filter_enabled: bool) -> Dict[str, List[str]]:
+    def get_enabled_env_keys(self, env: ModuleEnvironment) -> Dict[str, List[str]]:
         """
         Retrieve all environment variable keys shared from other modules.
 
         :param env: ModuleEnvironment object that must belong to self.module
-        :param filter_enabled: Whether to filter enabled service instances
         :return: Dictionary of service display names to their respective env keys list.
         """
         if env.module != self.module:
@@ -153,7 +152,7 @@ class ServiceSharingManager:
         for referenced_info in self.list_all_shared_info():
             ref_env = referenced_info.ref_module.get_envs(env.environment)
             ref_service = referenced_info.service
-            env_keys = mixed_service_mgr.get_env_vars(ref_env.engine_app, ref_service, filter_enabled)
+            env_keys = mixed_service_mgr.get_env_vars(ref_env.engine_app, ref_service, True)
 
             result[ref_service.display_name] = list(env_keys.keys())
 

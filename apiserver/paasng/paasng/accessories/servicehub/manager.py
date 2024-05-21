@@ -246,17 +246,16 @@ class MixedServiceMgr:
             result.update(i.credentials)
         return result
 
-    def get_env_keys(self, engine_app: EngineApp, filter_enabled: bool) -> Dict[str, List[str]]:
+    def get_enabled_env_keys(self, engine_app: EngineApp) -> Dict[str, List[str]]:
         """
         Get all provisioned services environment keys
 
         :param engine_app: EngineApp object
-        :param filter_enabled: Whether to filter enabled service instances
         :return: Dictionary of service display names to list of their environment keys
         """
         provisioned_rels = self.list_provisioned_rels(engine_app)
-        # 可通过 filter_enabled 指定是否返回不写入环境变量的凭证的信息
-        filtered_rels = [rel for rel in provisioned_rels if not filter_enabled or rel.db_obj.credentials_enabled]
+        # 凭证的信息写入环境变量的增强服务才展示
+        filtered_rels = [rel for rel in provisioned_rels if rel.db_obj.credentials_enabled]
 
         results = {}
         for rel in filtered_rels:

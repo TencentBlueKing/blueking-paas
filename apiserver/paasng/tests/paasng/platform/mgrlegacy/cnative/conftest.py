@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
 from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
@@ -52,7 +53,7 @@ def _set_default_cluster(settings, bk_app):
         G(Cluster, name=CLUSTER_NAME_FOR_TESTING, region=bk_app.region)
 
     G(Cluster, name=CNATIVE_CLUSTER_NAME, region=bk_app.region)
-    settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CNATIVE_CLUSTER_NAME
+    settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = CNATIVE_CLUSTER_NAME
 
 
 @pytest.fixture()

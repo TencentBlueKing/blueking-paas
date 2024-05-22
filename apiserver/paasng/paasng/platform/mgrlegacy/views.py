@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import datetime
 import logging
 from typing import Dict, List, Optional
@@ -36,7 +37,6 @@ from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
 from paas_wl.bk_app.processes.shim import ProcessManager
-from paas_wl.infras.cluster.shim import RegionClusterService
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
@@ -81,7 +81,7 @@ from paasng.platform.mgrlegacy.tasks import (
     rollback_cnative_to_default,
     rollback_migration_process,
 )
-from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms
+from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms, get_cnative_target_cluster
 from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
@@ -350,7 +350,7 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
             raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
 
-        cnative_cluster_name = RegionClusterService(app.region).get_cnative_app_default_cluster().name
+        cnative_cluster_name = get_cnative_target_cluster(app.region).name
         for m in app.modules.all():
             for env in m.envs.all():
                 cluster_name = env.wl_app.config_set.latest().cluster
@@ -467,7 +467,7 @@ class RetrieveChecklistInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
                     app_rcs_bindings.append(binding)
 
         # 目前仅有一个云原生集群
-        cnative_cluster = RegionClusterService(app.region).get_cnative_app_default_cluster()
+        cnative_cluster = get_cnative_target_cluster(app.region)
         root_domains = {
             # 当前普通应用的子域名
             "legacy": list(set(app_root_domains)),

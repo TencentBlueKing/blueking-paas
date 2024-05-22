@@ -140,8 +140,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 raise error_codes.PREPARED_PACKAGE_NOT_FOUND
 
             # 若下载的源码包不是 tarball, 则认为下载的文件不完整
-            if not self.is_tar_file(filepath):
-                raise error_codes.FAILED_TO_DOWNLOAD_COMPLETELY
+            if not self.is_valid_tar_file(filepath):
+                raise error_codes.FILE_CORRUPTED_ERROR.f(_("文件下载不完整"))
 
             # Step 2. create application, module
             stat = SourcePackageStatReader(filepath).read()
@@ -186,7 +186,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             raise error_codes.MISSING_DESCRIPTION_INFO.f(_("请检查源码包是否存在 app_desc.yaml 文件"))
 
     @staticmethod
-    def is_tar_file(filepath: PathLike) -> bool:
+    def is_valid_tar_file(filepath: PathLike) -> bool:
         """检查指定路径的文件是否为 tar 包"""
         try:
             with tarfile.open(Path(filepath), "r"):
@@ -296,8 +296,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                     "the provided digital signature is inconsistent with "
                     "the digital signature of the actually saved source code package."
                 )
-                # 下载的文件不完整
-                raise error_codes.FAILED_TO_DOWNLOAD_COMPLETELY
+                raise error_codes.FILE_CORRUPTED_ERROR.f(_("文件签名不一致"))
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 

@@ -106,8 +106,11 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         # env_key_dict 内容示例： {"svc_name": ["key1", "key2"]}
         env_key_dict: Dict[str, List[str]] = {}
         for env in module.get_envs():
-            env_key_dict.update(ServiceSharingManager(env.module).get_enabled_env_keys(env))
-            env_key_dict.update(mixed_service_mgr.get_enabled_env_keys(env.engine_app))
+            env_key_dict = {
+                **env_key_dict,
+                **ServiceSharingManager(env.module).get_enabled_env_keys(env),
+                **mixed_service_mgr.get_enabled_env_keys(env.engine_app),
+            }
         return Response(data=env_key_dict)
 
 

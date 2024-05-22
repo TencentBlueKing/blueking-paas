@@ -86,7 +86,7 @@ class TestServiceEngineAppAttachmentViewSet:
         ]
 
         response = api_client.get(
-            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/config_vars/",
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/config_var_keys/",
         )
         assert response.status_code == 200
         # 返回的增强服务名称列表

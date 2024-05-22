@@ -255,10 +255,10 @@ class MixedServiceMgr:
         """
         provisioned_rels = self.list_provisioned_rels(engine_app)
         # 凭证的信息写入环境变量的增强服务才展示
-        filtered_rels = [rel for rel in provisioned_rels if rel.db_obj.credentials_enabled]
+        enabled_rels = [rel for rel in provisioned_rels if rel.db_obj.credentials_enabled]
 
         results = {}
-        for rel in filtered_rels:
+        for rel in enabled_rels:
             service_name = rel.get_service().display_name
             instance_credentials_keys = list(rel.get_instance().credentials.keys())
             results[service_name] = instance_credentials_keys

@@ -246,6 +246,25 @@ class MixedServiceMgr:
             result.update(i.credentials)
         return result
 
+    def get_enabled_env_keys(self, engine_app: EngineApp) -> Dict[str, List[str]]:
+        """
+        Get all provisioned services environment keys
+
+        :param engine_app: EngineApp object
+        :return: Dictionary of service display names to list of their environment keys
+        """
+        provisioned_rels = self.list_provisioned_rels(engine_app)
+        # 凭证的信息写入环境变量的增强服务才展示
+        enabled_rels = [rel for rel in provisioned_rels if rel.db_obj.credentials_enabled]
+
+        results = {}
+        for rel in enabled_rels:
+            service_name = rel.get_service().display_name
+            instance_credentials_keys = list(rel.get_instance().credentials.keys())
+            results[service_name] = instance_credentials_keys
+
+        return results
+
     def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
         for mgr in self.mgr_instances:
             try:

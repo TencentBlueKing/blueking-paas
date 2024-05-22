@@ -1013,6 +1013,8 @@ DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", {DEFAULT_REGION_
 BK_CI_PAAS_PROJECT_ID = settings.get("BK_CI_PAAS_PROJECT_ID", "bk_paas3")
 # 云原生应用构建流水线 ID
 BK_CI_BUILD_PIPELINE_ID = settings.get("BK_CI_BUILD_PIPELINE_ID", "")
+# 云原生应用构建流水线调用用户（应使用虚拟账号）
+BK_CI_CLIENT_USERNAME = settings.get("BK_CI_CLIENT_USERNAME", "blueking")
 
 # ------------
 # 增强服务相关

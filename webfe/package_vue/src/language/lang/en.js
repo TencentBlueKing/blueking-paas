@@ -2595,4 +2595,5 @@ export default {
   '增强服务实例已分配，不能再修改配置信息': 'The enhanced service instance has been allocated and configuration information cannot be modified anymore.',
   新建测试版本: 'Create Test Version',
   提交并开始测试: 'Submit and Start Testing',
+  '环境变量不生效，KEY 与增强服务（Sentry）内置环境变量冲突': 'Environmental variables do not take effect, KEY conflicts with built-in environmental variables of enhanced service (Sentry)',
 };

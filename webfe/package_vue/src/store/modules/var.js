@@ -28,67 +28,66 @@ export default {
   mutations: {},
   actions: {
     /**
-         * 获取所有运行时基础镜像
-         */
-    getAllImages({  }, { appCode, moduleId }) {
+     * 获取所有运行时基础镜像
+     */
+    getAllImages({}, { appCode, moduleId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/list/`;
       return http.get(url);
     },
 
     /**
-         * 获取运行时基础信息
-         */
-    getRuntimeInfo({  }, { appCode, moduleId }) {
+     * 获取运行时基础信息
+     */
+    getRuntimeInfo({}, { appCode, moduleId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
       return http.get(url);
     },
 
     /**
-         * 保存运行时基础信息
-         */
-    updateRuntimeInfo({  }, { appCode, moduleId, data }) {
+     * 保存运行时基础信息
+     */
+    updateRuntimeInfo({}, { appCode, moduleId, data }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
       return http.post(url, data);
     },
 
     /**
-         * 从模块导入环境变量
-         * @param {Object} params 包括appCode, moduleId, sourceModuleName
-         */
-    exportModuleEnv({  }, { appCode, moduleId, sourceModuleName }) {
+     * 从模块导入环境变量
+     * @param {Object} params 包括appCode, moduleId, sourceModuleName
+     */
+    exportModuleEnv({}, { appCode, moduleId, sourceModuleName }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/clone_from/${sourceModuleName}`;
       return http.post(url, {});
     },
 
     /**
-         * 应用基本信息
-         */
-    getBasicInfo({  }, { appCode }) {
+     * 应用基本信息
+     */
+    getBasicInfo({}, { appCode }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/app/`;
       return http.get(url);
     },
 
     /**
-         * 应用运行时信息
-         */
-    getBkPlatformInfo({  }, { appCode }) {
+     * 应用运行时信息
+     */
+    getBkPlatformInfo({}, { appCode }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/bk_platform/`;
       return http.get(url);
     },
 
     /**
-         * 蓝鲸体系内平台信息
-         */
-    getAppRuntimeInfo({  }, { appCode }) {
+     * 蓝鲸体系内平台信息
+     */
+    getAppRuntimeInfo({}, { appCode }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/runtime/`;
       return http.get(url);
     },
 
-
     /**
      * 保存环境变量数据
      */
-    saveEnvItem({ }, { appCode, moduleId, data }) {
+    saveEnvItem({}, { appCode, moduleId, data }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/batch/`;
       return http.post(url, data);
     },
@@ -96,7 +95,7 @@ export default {
     /**
      * 新增单个环境变量
      */
-    createdEnvVariable({ }, { appCode, moduleId, data }) {
+    createdEnvVariable({}, { appCode, moduleId, data }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/`;
       return http.post(url, data);
     },
@@ -104,7 +103,7 @@ export default {
     /**
      * 修改单个环境变量
      */
-    updateEnvVariable({ }, { appCode, moduleId, varId, data }) {
+    updateEnvVariable({}, { appCode, moduleId, varId, data }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/${varId}/`;
       return http.put(url, data);
     },
@@ -112,9 +111,17 @@ export default {
     /**
      * 删除单个环境变量
      */
-    deleteEnvVariable({ }, { appCode, moduleId, varId }) {
+    deleteEnvVariable({}, { appCode, moduleId, varId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/${varId}/`;
       return http.delete(url, {});
+    },
+
+    /**
+     * 获取增强服务内置环境变量
+     */
+    getConfigVarKeys({}, { appCode, moduleId }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/config_var_keys/`;
+      return http.get(url, {});
     },
   },
 };

@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import copy
 from typing import List, Optional, Tuple
 
@@ -24,7 +25,6 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.configurations.image import generate_image_repository
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
 
@@ -100,16 +100,20 @@ def get_image_info(module: Module) -> Tuple[str, Optional[str]]:
     :return: Tuple[镜像仓库, Optional[访问凭证名]], 只有仅托管镜像的云原生应用会返回 "访问凭证名"
     :raises: ValueError 如果模块无法查询到镜像仓库地址
     """
+    app = module.application
     build_cfg = BuildConfig.objects.get_or_create_by_module(module)
+
     if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
-        if module.application.type == ApplicationType.CLOUD_NATIVE:
+        if app.type == ApplicationType.CLOUD_NATIVE:
+            # Return the credential name
             return build_cfg.image_repository, build_cfg.image_credential_name
         return module.get_source_obj().get_repo_url() or "", None
     elif build_cfg.build_method == RuntimeType.DOCKERFILE:
         return generate_image_repository(module), None
-    elif module.get_source_origin() == SourceOrigin.S_MART:
-        raise ValueError
+    elif app.is_smart_app:
+        raise ValueError("S-mart app not supported")
+
     mgr = ModuleRuntimeManager(module)
     if mgr.is_cnb_runtime:
         return generate_image_repository(module), None
-    raise ValueError
+    raise ValueError("Unsupported module")

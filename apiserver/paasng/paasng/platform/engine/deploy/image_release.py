@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Optional
 
@@ -43,7 +44,6 @@ from paasng.platform.engine.signals import post_phase_end, pre_phase_start
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import get_app_description_handler, get_processes
 from paasng.platform.engine.workflow import DeployProcedure, DeployStep
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ class ImageReleaseMgr(DeployStep):
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
 
         module = self.module_environment.module
-        is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
+        is_smart_app = module.application.is_smart_app
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure("解析应用进程信息", phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id

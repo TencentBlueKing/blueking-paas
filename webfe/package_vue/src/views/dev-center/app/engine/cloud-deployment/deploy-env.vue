@@ -117,32 +117,41 @@
             prop="key"
           >
             <template slot-scope="{ row, $index }">
-              <div
-                v-if="isPageEdit || row.isEdit"
-                class="table-colum-cls"
-              >
-                <bk-form
-                  :label-width="0"
-                  form-type="inline"
-                  :ref="`envRefKey${$index}`"
-                  class="env-from-cls"
-                  :model="row"
+              <div class="var-key-wrapper">
+                <div
+                  v-if="isPageEdit || row.isEdit"
+                  class="table-colum-cls"
                 >
-                  <bk-form-item
-                    :required="true"
-                    :property="'key'"
-                    :rules="rules.key"
+                  <bk-form
+                    :label-width="0"
+                    form-type="inline"
+                    :ref="`envRefKey${$index}`"
+                    class="env-from-cls"
+                    :model="row"
                   >
-                    <bk-input
-                      v-model="row.key"
-                      class="env-input-cls"
-                      @enter="handleInputEvent(row, $index)"
-                      @blur="handleInputEvent(row, $index)"
-                    ></bk-input>
-                  </bk-form-item>
-                </bk-form>
+                    <bk-form-item
+                      :required="true"
+                      :property="'key'"
+                      :rules="rules.key"
+                    >
+                      <bk-input
+                        v-model="row.key"
+                        class="env-input-cls"
+                        @enter="handleInputEvent(row, $index)"
+                        @blur="handleInputEvent(row, $index)"
+                      ></bk-input>
+                    </bk-form-item>
+                  </bk-form>
+                </div>
+                <template v-else>
+                  <div>{{ row.key }}</div>
+                  <i
+                    v-if="row.isPresent"
+                    class="paasng-icon paasng-remind"
+                    v-bk-tooltips="{ content: $t('环境变量不生效，KEY 与增强服务（Sentry）内置环境变量冲突'), width: 200 }">
+                  </i>
+                </template>
               </div>
-              <div v-else>{{ row.key }}</div>
             </template>
           </bk-table-column>
 
@@ -648,6 +657,7 @@ export default {
       envEnums: ENV_ENUM,
       isBatchEdit: false,
       activeEnvValue: 'all',
+      builtInEnvVars: {},
     };
   },
   computed: {
@@ -671,20 +681,42 @@ export default {
     this.init();
   },
   methods: {
-    init() {
+    async init() {
       this.isLoading = true;
+      await this.getConfigVarKeys();
       this.getEnvVarList();
     },
-    getEnvVarList() {
+    // 是否已存在该环境变量
+    isEnvVarAlreadyExists(varKey) {
+      let flag = false;
+      // 检查是否已存在该环境变量
+      for (const key in this.builtInEnvVars) {
+        if (this.builtInEnvVars[key].includes(varKey)) {
+          flag = true;
+          break;
+        }
+      }
+      return flag;
+    },
+    getEnvVarList(isUpdate = true) {
       this.isTableLoading = true;
       this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`).then((response) => {
-        this.envVarList = [...response];
+        if (isUpdate) this.envVarList = [...response];
         // 添加自定义属性
         this.envVarList.forEach((v) => {
           this.$set(v, 'isEdit', false);
+          this.$set(v, 'isPresent', this.isEnvVarAlreadyExists(v.key));
+          if (!v.id) {
+            const id = response.find(item => item.key === v.key)?.id;
+            this.$set(v, 'id', id);
+          }
         });
         this.envLocalVarList = cloneDeep(this.envVarList);
-        this.handleFilterEnv(this.activeEnvValue);
+        if (isUpdate) {
+          this.handleFilterEnv(this.activeEnvValue);
+        } else {
+          this.$store.commit('cloudApi/updatePageEdit', false);
+        }
       }, (errRes) => {
         const errorMsg = errRes.message;
         this.$paasMessage({
@@ -772,6 +804,7 @@ export default {
       // 删除冗余数据
       delete data.isEdit;
       delete data.isAdd;
+      delete data.isPresent;
       try {
         await this.$store.dispatch('envVar/createdEnvVariable', {
           appCode: this.appCode,
@@ -798,6 +831,7 @@ export default {
     async updateEnvVariable(data, i) {
       // 删除冗余数据
       delete data.isEdit;
+      delete data.isPresent;
       try {
         await this.$store.dispatch('envVar/updateEnvVariable', {
           appCode: this.appCode,
@@ -829,6 +863,7 @@ export default {
         params.forEach((v) => {
           delete v.is_global;
           delete v.isEdit;
+          delete v.isPresent;
         });
 
         await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });
@@ -841,12 +876,8 @@ export default {
           theme: 'success',
           message: this.$t(`${tipsType}环境变量成功`),
         });
-        this.envVarList.forEach((v) => {
-          this.$set(v, 'isEdit', false);
-        });
-        // 更新本地数据
-        this.envLocalVarList = cloneDeep(this.envVarList);
-        this.$store.commit('cloudApi/updatePageEdit', false);
+        // 批量更新不打乱当前顺序，重新复制当前新建id
+        this.getEnvVarList(false);
       } catch (error) {
         const errorMsg = error.message;
         this.$paasMessage({
@@ -1363,6 +1394,22 @@ export default {
         this.getEnvVarList();
       }
     },
+
+    // 获取增强服务内置环境变量
+    async getConfigVarKeys() {
+      try {
+        const varKeys = await this.$store.dispatch('envVar/getConfigVarKeys', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.builtInEnvVars = varKeys;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
@@ -1863,6 +1910,16 @@ a.is-disabled {
 .variable-table-cls {
   /deep/ .bk-table-empty-block {
     display: none;
+  }
+  .var-key-wrapper {
+    display: flex;
+    align-items: center;
+    i {
+      margin-left: 5px;
+      font-size: 14px;
+      color: #EA3636;
+      transform: translateY(0);
+    }
   }
 }
 .mr6 {

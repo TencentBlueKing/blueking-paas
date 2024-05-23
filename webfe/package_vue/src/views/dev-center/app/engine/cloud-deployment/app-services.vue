@@ -796,7 +796,6 @@ export default {
         }
     }
     #switcher-tooltip{
-      padding: 4px 0px;
       border: 1px solid #DCDEE5;
       border-radius: 2px;
       .item{
@@ -808,6 +807,12 @@ export default {
         font-size: 12px;
         &:hover {
           background: #F5F7FA;
+        }
+        &:first-child {
+          margin-top: 4px;
+        }
+        &:last-child {
+          margin-bottom: 4px;
         }
       }
     }

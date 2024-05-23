@@ -113,10 +113,6 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = application.get_module(module_name)
         env = module.get_envs(environment)
 
-        coordinator = DeploymentCoordinator(env)
-        if not coordinator.acquire_lock():
-            raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
-
         roles = fetch_user_roles(application.code, request.user.username)
         try:
             env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=env, roles=roles)
@@ -137,6 +133,11 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             build = Build.objects.get(pk=build_id)
 
         version_info = self._get_version_info(request.user, module, params, build=build)
+
+        coordinator = DeploymentCoordinator(env)
+        if not coordinator.acquire_lock():
+            raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
+
         deployment = None
         try:
             with coordinator.release_on_error():

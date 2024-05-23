@@ -246,7 +246,7 @@ class TestDefaultAppEntranceViewSet:
         assert response.status_code == 200
 
 
-class TestChecklistInfosViewSet:
+class TestChecklistInfoViewSet:
     @pytest.fixture()
     def _set_default_cluster(self, settings, bk_app):
         cluster_name = get_random_string(6)
@@ -281,7 +281,7 @@ class TestChecklistInfosViewSet:
         )
 
     def test_get(self, api_client, bk_app):
-        response = api_client.get(f"/api/mgrlegacy/applications/{bk_app.code}/checklist_infos/")
+        response = api_client.get(f"/api/mgrlegacy/applications/{bk_app.code}/checklist_info/")
         assert response.status_code == 200
         assert response.data["namespaces"] is None
         assert response.data["rcs_bindings"]["legacy"][0]["ip_addresses"] == ["127.0.0.1"]

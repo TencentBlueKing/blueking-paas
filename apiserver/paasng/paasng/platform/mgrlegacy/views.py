@@ -18,13 +18,14 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import logging
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 from django.conf import settings
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone as django_timezone
 from django.utils.translation import gettext as _
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -61,6 +62,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.platform.mgrlegacy.serializers import (
     ApplicationMigrationInfoSLZ,
+    ChecklistInfoSLZ,
     CNativeMigrationProcessSLZ,
     LegacyAppSLZ,
     LegacyAppStateSLZ,
@@ -436,23 +438,31 @@ class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data=[])
 
 
-class RetrieveChecklistInfosViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """获取普通应用迁移前的 Checklist 数据(如是否绑定了出口 IP 等)"""
+class RetrieveChecklistInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用迁移前的 Checklist 数据查询接口"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
+    @swagger_auto_schema(tags=["api"], responses={"200": ChecklistInfoSLZ()})
     def get(self, request, code):
+        """获取普通应用迁移前的 Checklist 数据:
+        - 迁移前后差异化的根域名
+        - 迁移前后差异化的命名空间(值为 null 表示无差异)
+        - 迁移前后差异化的出口 IP 信息(值为 null 表示未绑定出口 IP)
+        """
         app = self.get_application()
 
-        app_root_domains = []
-        app_namespaces = []
-        app_rcs_bindings = []
+        app_root_domains: List[str] = []
+        app_namespaces: List[Dict] = []
+        app_rcs_bindings: List[Dict] = []
 
         for m in app.modules.all():
             for env in m.envs.all():
                 wl_app = env.wl_app
                 app_root_domains.extend(self._get_app_root_domains(wl_app))
-                app_namespaces.append(self._get_namespace(m, env, wl_app))
+                app_namespaces.append(
+                    {"is_default_module": m.is_default, "environment": env.environment, "namespace": wl_app.namespace}
+                )
                 if binding := self._get_rcs_binding(m, env, wl_app):
                     app_rcs_bindings.append(binding)
 
@@ -466,11 +476,11 @@ class RetrieveChecklistInfosViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
         }
 
         namespaces = None
-        # 当前普通应用的命名空间(排除掉默认模块命名空间)
+        # 当前普通应用的命名空间(不包括默认模块命名空间)
         legacy_namespaces = [
             {"environment": n["environment"], "namespace": n["namespace"]}
             for n in app_namespaces
-            if not n["is_cnative"]
+            if not n["is_default_module"]
         ]
         if legacy_namespaces:
             namespaces = {
@@ -480,7 +490,7 @@ class RetrieveChecklistInfosViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
                 "cnative": [
                     {"environment": n["environment"], "namespace": n["namespace"]}
                     for n in app_namespaces
-                    if n["is_cnative"]
+                    if n["is_default_module"]
                 ],
             }
 
@@ -495,7 +505,8 @@ class RetrieveChecklistInfosViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
                 "cnative": {"ip_addresses": [node["internal_ip_address"] for node in node_ip_addresses]},
             }
 
-        return Response(data={"root_domains": root_domains, "namespaces": namespaces, "rcs_bindings": rcs_bindings})
+        slz = ChecklistInfoSLZ({"root_domains": root_domains, "namespaces": namespaces, "rcs_bindings": rcs_bindings})
+        return Response(slz.data)
 
     @staticmethod
     def _get_rcs_binding(m: Module, env: ModuleEnvironment, wl_app: WlApp) -> Optional[Dict]:
@@ -511,11 +522,6 @@ class RetrieveChecklistInfosViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
                 "environment": env.environment,
                 "ip_addresses": [node["internal_ip_address"] for node in node_ip_addresses],
             }
-
-    @staticmethod
-    def _get_namespace(m: Module, env: ModuleEnvironment, wl_app: WlApp) -> Dict[str, Union[str, bool]]:
-        # 默认模块的命名空间规则与云原生应用一致
-        return {"is_cnative": m.is_default, "environment": env.environment, "namespace": wl_app.namespace}
 
     @staticmethod
     def _get_app_root_domains(wl_app: WlApp) -> List[str]:

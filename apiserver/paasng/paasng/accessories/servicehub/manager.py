@@ -259,7 +259,8 @@ class MixedServiceMgr:
 
         results = {}
         for rel in enabled_rels:
-            service_name = rel.get_service().display_name
+            # display_name 会被国际化处理为殊字符串类型（__proxy__类型），必须首先将它们转化为标准的字符串
+            service_name = str(rel.get_service().display_name)
             instance_credentials_keys = list(rel.get_instance().credentials.keys())
             results[service_name] = instance_credentials_keys
 

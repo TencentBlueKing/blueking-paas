@@ -47,8 +47,11 @@ def rollback_process(bk_app):
 
 @pytest.fixture(autouse=True)
 def _set_default_cluster(settings, bk_app):
+    # 考虑 tests/paas_wl/conftest.py 中的 create_default_cluster(), 这里加上存在性判断
+    if not Cluster.objects.filter(name=CLUSTER_NAME_FOR_TESTING).exists():
+        G(Cluster, name=CLUSTER_NAME_FOR_TESTING, region=bk_app.region)
+
     G(Cluster, name=CNATIVE_CLUSTER_NAME, region=bk_app.region)
-    G(Cluster, name=CLUSTER_NAME_FOR_TESTING, region=bk_app.region)
     settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CNATIVE_CLUSTER_NAME
 
 

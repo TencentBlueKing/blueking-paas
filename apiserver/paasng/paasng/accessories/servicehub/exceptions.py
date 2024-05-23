@@ -62,3 +62,7 @@ class DuplicatedServiceBoundError(BaseServicesException):
     """
     when user try to create a sharing relation for an already bound service or verse-vise. Raise this error
     """
+
+
+class BindServiceNoPlansError(Exception):
+    """When binding a service, appropriate plans cannot be found for all environments."""

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Any, Dict, List
 
@@ -33,6 +34,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.servicehub import serializers as slzs
 from paasng.accessories.servicehub.exceptions import (
+    BindServiceNoPlansError,
     ReferencedAttachmentNotFound,
     ServiceObjNotFound,
     SharedAttachmentAlreadyExists,
@@ -143,9 +145,14 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         try:
             rel_pk = mixed_service_mgr.bind_service(service_obj, module, specs)
-        except Exception as e:
+        except BindServiceNoPlansError as e:
+            logger.warning(
+                "No plans can be found for service %s, specs: %s, environment: %s.", service_obj.uuid, specs, str(e)
+            )
+            raise error_codes.CANNOT_BIND_SERVICE.f(_("当前配置规格不可用"))
+        except Exception:
             logger.exception("bind service %s to module %s error.", service_obj.uuid, module.name)
-            raise error_codes.CANNOT_BIND_SERVICE.f(f"{e}")
+            raise error_codes.CANNOT_BIND_SERVICE.f("Unknown error")
 
         for env in module.envs.all():
             for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app, service_obj):

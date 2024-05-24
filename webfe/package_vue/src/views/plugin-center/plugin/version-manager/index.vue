@@ -636,6 +636,12 @@ export default {
         const res = await this.$store.dispatch('plugin/getPluginAccessEntry', {
           pluginId: this.pluginId,
         });
+        // 已下架
+        if (res.is_offlined) {
+          this.isAccessDisabled = true;
+          this.accessDisabledTips = this.$t('该插件已下架。如需继续使用，请创建新版本。');
+          return;
+        }
         this.pluginDefaultInfo = res;
         this.isAccessDisabled = false;
       } catch (e) {

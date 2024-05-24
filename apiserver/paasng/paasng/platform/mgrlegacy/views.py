@@ -486,7 +486,7 @@ class RetrieveChecklistInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
             namespaces = {
                 # 当前普通应用的命名空间, 它们需要根据环境调整为迁移后的命名空间
                 "legacy": legacy_namespaces,
-                # 迁移后的云原生应用的命名空间(即默认模块的命名空间)
+                # 迁移后的云原生应用的命名空间(普通应用默认模块的命名空间即云原生命名空间)
                 "cnative": [
                     {"environment": n["environment"], "namespace": n["namespace"]}
                     for n in app_namespaces

@@ -757,6 +757,10 @@ export default {
         this.isLoading = false;
       }
     },
+    // 排序
+    sortingRules(a, b) {
+      return new Date(b.last_update).getTime() - new Date(a.last_update).getTime();
+    },
     async getModuleBranches(favBranchName) {
       this.isBranchesLoading = true;
       this.branchErrorTips = '';
@@ -771,10 +775,14 @@ export default {
           moduleId: this.curModuleId,
         });
 
+        // last_update有值，根据时间排序
+        if (res.results[0]?.last_update) {
+          res.results.sort(this.sortingRules);
+        }
+
         //  Smart 应用(预发布/生产)显示最新分支
         if (this.isSmartApp) {
-          const sortList = res.results.sort(this.sortData);
-          this.branchValue = `${sortList[0].type}:${sortList[0].name}`;
+          this.branchValue = `${res.results[0]?.type}:${res.results[0]?.name}`;
         }
         this.branchesData = res.results;
         const branchesList = [];

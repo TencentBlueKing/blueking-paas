@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import datetime
 from json import dumps
 from typing import Dict
@@ -26,7 +27,7 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.constants import Category
-from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.exceptions import BindServiceNoPlansError, ServiceObjNotFound
 from paasng.accessories.servicehub.local import LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
@@ -263,7 +264,7 @@ class TestLocalRabbitMQMgr(BaseTestCaseWithApp):
         mgr = LocalServiceMgr()
         service = mgr.get(self.svc.uuid, region=self.module.region)
 
-        with self.assertRaisesMessage(RuntimeError, "can not bind a plan"):
+        with pytest.raises(BindServiceNoPlansError):
             mgr.bind_service(service, self.module)
 
     def test_list_by_category(self):

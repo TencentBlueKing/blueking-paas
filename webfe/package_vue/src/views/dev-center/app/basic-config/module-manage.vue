@@ -983,17 +983,17 @@ export default {
   watch: {
     appInfo() {
       // 云原生应用无需请求模块接口
-      if (this.curAppModule.repo && this.curAppModule.repo.type) {
+      if (!this.isCloudNativeApp) {
         this.init();
       }
     },
     '$route'() {
       this.resetParams();
-      if (this.curAppModule.repo && this.curAppModule.repo.type) {
+      if (!this.isCloudNativeApp) {
         this.init();
       }
     },
-    'curAppModule.name'(val) {
+    'curAppModule.name'() {
       this.getLessCode();
     },
     'curAppModule.repo'(repo) {

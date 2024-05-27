@@ -45,7 +45,7 @@ class EventDeserializer(AppEntityDeserializer["Event"]):
                 kind=involved_object.kind,
                 name=involved_object.name,
                 namespace=getattr(involved_object, "namespace", None),
-                apiVersion=involved_object.apiVersion,
+                api_version=involved_object.apiVersion,
             ),
             source=Source(
                 component=kube_data.source.component,
@@ -69,7 +69,7 @@ class EventSerializer(AppEntitySerializer["Event"]):
                 "kind": obj.involved_object.kind,
                 "name": obj.involved_object.name,
                 "namespace": obj.involved_object.namespace,
-                "apiVersion": obj.involved_object.apiVersion,
+                "apiVersion": obj.involved_object.api_version,
             },
             "source": {
                 "component": obj.source.component,

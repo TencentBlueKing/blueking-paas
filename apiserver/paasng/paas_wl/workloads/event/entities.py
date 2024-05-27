@@ -22,7 +22,7 @@ from typing import Optional
 
 @dataclass
 class InvolvedObject:
-    apiVersion: str
+    api_version: str
     kind: str
     name: str
     namespace: Optional[str] = None

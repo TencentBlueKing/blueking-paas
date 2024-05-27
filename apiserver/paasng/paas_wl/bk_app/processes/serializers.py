@@ -134,7 +134,7 @@ class SourceSerializer(serializers.Serializer):
 
 
 class InvolvedObjectSerializer(serializers.Serializer):
-    apiVersion = serializers.CharField(help_text="事件相关对象的 API 版本")
+    api_version = serializers.CharField(help_text="事件相关对象的 API 版本")
     kind = serializers.CharField(help_text="事件相关对象的类型")
     name = serializers.CharField(help_text="事件相关对象的名称")
     namespace = serializers.CharField(required=False, allow_null=True, help_text="事件相关对象的命名空间")

@@ -107,6 +107,8 @@ from paasng.platform.applications.utils import (
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
+from paasng.platform.evaluation.constants import OperationIssueType
+from paasng.platform.evaluation.models import AppOperationReport
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
@@ -280,6 +282,17 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         serializer = slzs.ApplicationMinimalSLZ(applications, many=True)
         return Response({"count": len(applications), "results": serializer.data})
+
+    @swagger_auto_schema(
+        tags=["applications"],
+        operation_description="获取闲置的应用列表",
+        responses={200: slzs.IdleApplicationListOutputSLZ(many=True)},
+    )
+    def list_idle(self, request):
+        """获取闲置的应用列表"""
+        app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
+        reports = AppOperationReport.objects.filter(app__code__in=app_codes, issue_type=OperationIssueType.IDLE)
+        return Response(data=slzs.IdleApplicationListOutputSLZ(reports, many=True).data)
 
     def destroy(self, request, code):
         """

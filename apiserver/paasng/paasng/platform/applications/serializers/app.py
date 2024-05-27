@@ -16,12 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
+from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -31,8 +32,12 @@ from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.evaluation.constants import OperationIssueType
+from paasng.platform.evaluation.models import AppOperationReport
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
+from paasng.utils import dictx
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.validators import RE_APP_SEARCH
 
@@ -142,6 +147,60 @@ class SearchApplicationSLZ(serializers.Serializer):
     keyword = serializers.RegexField(RE_APP_SEARCH, max_length=20, default="", allow_blank=False)
     include_inactive = serializers.BooleanField(default=False)
     prefer_marked = serializers.BooleanField(default=True)
+
+
+class IdleEnvironmentSLZ(serializers.Serializer):
+    env_name = serializers.ChoiceField(help_text="环境", choices=AppEnvName.get_choices())
+    cpu_usage_avg = serializers.FloatField(help_text="CPU 平均使用率")
+    memory_usage_avg = serializers.FloatField(help_text="内存平均使用率")
+    latest_deployed_at = serializers.DateTimeField(help_text="最近部署时间")
+
+
+class IdleModuleSLZ(serializers.Serializer):
+    module_name = serializers.CharField(help_text="模块名称")
+    idle_envs = serializers.ListField(help_text="闲置环境列表", child=IdleEnvironmentSLZ())
+
+
+class IdleApplicationListOutputSLZ(serializers.Serializer):
+    code = serializers.CharField(help_text="应用 Code", source="app.code")
+    name = serializers.CharField(help_text="应用名称", source="app.name")
+
+    administrators = serializers.SerializerMethodField(help_text="应用管理员列表")
+    idle_modules = serializers.SerializerMethodField(help_text="闲置模块列表")
+
+    @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
+    def get_administrators(self, obj: AppOperationReport) -> List[str]:
+        return obj.app.get_administrators()
+
+    @swagger_serializer_method(serializer_or_field=IdleModuleSLZ(many=True))
+    def get_idle_modules(self, obj: AppOperationReport) -> List[Dict[str, Any]]:
+        idle_modules = []
+
+        for module_name, mod_evaluate_result in obj.evaluate_result["modules"].items():
+            idle_envs = []
+            for env_name, env_evaluate_result in mod_evaluate_result["envs"].items():
+                if env_evaluate_result["issue_type"] == OperationIssueType.IDLE:
+                    path = f"modules.{module_name}.envs.{env_name}"
+                    env_res_summary = dictx.get_items(obj.res_summary, path)
+                    env_deploy_summary = dictx.get_items(obj.deploy_summary, path)
+                    idle_envs.append(
+                        {
+                            "env_name": env_name,
+                            "cpu_usage_avg": env_res_summary["cpu_usage_avg"],
+                            "memory_usage_avg": env_res_summary["memory_usage_avg"],
+                            "latest_deployed_at": env_deploy_summary["latest_deployed_at"],
+                        }
+                    )
+
+            if idle_envs:
+                idle_modules.append(
+                    {
+                        "module_name": module_name,
+                        "idle_envs": IdleEnvironmentSLZ(idle_envs, many=True).data,
+                    }
+                )
+
+        return IdleModuleSLZ(idle_modules, many=True).data
 
 
 class EnvironmentDeployInfoSLZ(serializers.Serializer):

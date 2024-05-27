@@ -106,4 +106,9 @@ urlpatterns = [
         r"^api/mgrlegacy/applications/(?P<code>[^/]+)/entrances/$",
         views.DefaultAppEntranceViewSet.as_view({"get": "list_all_entrances"}),
     ),
+    # 普通应用迁移前的 checklist 数据(如是否绑定了出口 IP 等)
+    url(
+        r"^api/mgrlegacy/applications/(?P<code>[^/]+)/checklist_info/$",
+        views.RetrieveChecklistInfoViewSet.as_view({"get": "get"}),
+    ),
 ]

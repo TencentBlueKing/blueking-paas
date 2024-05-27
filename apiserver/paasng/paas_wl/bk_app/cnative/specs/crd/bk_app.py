@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Resource Definition of `BkApplication` kind.
 
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
@@ -269,11 +270,16 @@ class BkAppAddonSpec(BaseModel):
 
 
 class BkAppAddon(BaseModel):
-    """Addon for BkApp"""
+    """Addon for BkApp
+
+    :param name: The name of the addon.
+    :param specs: The specs of the addon.
+    :param sharedFromModule: The module name the addon is shared from.
+    """
 
     name: str
     specs: List[BkAppAddonSpec] = Field(default_factory=list)
-    sharedFrom: Optional[str] = None
+    sharedFromModule: Optional[str] = None
 
 
 @register
@@ -282,6 +288,14 @@ class HostAlias(BaseModel):
 
     ip: str
     hostnames: List[str]
+
+    def __hash__(self):
+        return hash((self.ip, tuple(sorted(self.hostnames))))
+
+    def __eq__(self, other):
+        if isinstance(other, HostAlias):
+            return self.ip == other.ip and sorted(self.hostnames) == sorted(other.hostnames)
+        return False
 
 
 @register
@@ -298,6 +312,14 @@ class SvcDiscEntryBkSaaS(BaseModel):
 
     bkAppCode: str
     moduleName: Optional[str] = None
+
+    def __hash__(self):
+        return hash((self.bkAppCode, self.moduleName))
+
+    def __eq__(self, other):
+        if isinstance(other, SvcDiscEntryBkSaaS):
+            return self.bkAppCode == other.bkAppCode and self.moduleName == other.moduleName
+        return False
 
 
 class SvcDiscConfig(BaseModel):

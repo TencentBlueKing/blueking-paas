@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -29,13 +30,13 @@ from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepoBasicAuthHolder
 
 if TYPE_CHECKING:
@@ -171,7 +172,9 @@ class RuntimeImageInfo:
             app_image_repository = generate_image_repository(self.module)
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
-        elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
+        elif (
+            self.application.is_smart_app and version_info.version_type != VersionType.PACKAGE.value
+        ):  # version_type 为 package 时, 表示采用二进制 slug.tgz 方案; image(已废弃) 和 tag 时, 表示镜像层方案
             from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 
             named = SMartImageManager(self.module).get_image_info(version_info.revision)

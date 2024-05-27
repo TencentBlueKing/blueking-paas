@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.models import Cluster
 
@@ -50,6 +51,8 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
 
 
 def get_dev_sandbox_cluster(app: WlApp) -> Cluster:
-    # 目前云原生集群的 k8s 版本 >= 1.20.x, 因此默认选择云原生集群作为开发容器集群, 以减少 ingress 等资源版本的兼容问题
-    # TODO Cluster 增加新字段（配置项）来标记功能所使用的集群（以及配置整个功能开关等）
-    return RegionClusterService(app.region).get_cnative_app_default_cluster()
+    # 当前直接使用 region 下的默认集群，注意：
+    #   - 功能要求 k8s 版本 >= 1.20.x, 版本过低可能会导致 ingress 等资源出现版本兼容问题
+    #
+    # TODO：Cluster 增加新字段（配置项）来标记功能所使用的集群（以及配置整个功能开关等）
+    return RegionClusterService(app.region).get_default_cluster()

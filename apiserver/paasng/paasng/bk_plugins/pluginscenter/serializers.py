@@ -784,3 +784,10 @@ class PluginReleaseTypeSLZ(serializers.Serializer):
     """插件发布类型"""
 
     type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)
+
+
+class PluginStageStatusSLZ(serializers.Serializer):
+    """插件状态"""
+
+    status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices())
+    message = serializers.CharField(default="")

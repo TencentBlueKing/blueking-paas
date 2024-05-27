@@ -16,13 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from rest_framework.permissions import IsAuthenticated
 
+from paas_wl.infras.cluster.shim import RegionClusterService
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.utils.configs import get_region_aware
 
 
 class OperatorManageView(GenericTemplateView):
@@ -36,13 +37,8 @@ class OperatorManageView(GenericTemplateView):
         if "view" not in kwargs:
             kwargs["view"] = self
 
-        cnative_default_cluster = {}
-        for region in get_all_regions():
-            try:
-                cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
-            except KeyError:
-                cluster_name = "--"
-            cnative_default_cluster[region] = cluster_name
-
-        kwargs["cnative_default_cluster"] = cnative_default_cluster
+        # "Cnative default" cluster == THE default cluster
+        kwargs["cnative_default_cluster"] = {
+            region: RegionClusterService(region).get_default_cluster().name for region in get_all_regions()
+        }
         return kwargs

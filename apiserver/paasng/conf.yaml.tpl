@@ -170,8 +170,8 @@
 # IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT: true
 ## 是否默认允许创建云原生应用
 # IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT: false
-## 云原生应用的默认集群名称
-# CLOUD_NATIVE_APP_DEFAULT_CLUSTER: ""
+## 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
+# MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER: ""
 ## 是否允许创建蓝鲸插件应用
 # IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 ## 新建的 lesscode 应用是否为云原生应用
@@ -647,11 +647,19 @@
 # ENABLE_BK_MONITOR_APIGW: false
 ## 蓝鲸监控网关的环境
 # BK_MONITOR_APIGW_SERVICE_STAGE: prod
-## 监控 RabbitMQ 的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
+## 监控增强服务的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
 # RABBITMQ_MONITOR_CONF:
 #    enabled: true
 #    metric_name_prefix: ''
 #    service_name: 'rabbitmq'
+# BKREPO_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'bkrepo'
+# GCS_MYSQL_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'gcs_mysql'
 
 ## ------------------------------------ 蓝鲸日志配置 ------------------------------------
 # 默认的日志采集器类型, 可选值 "ELK", "BK_LOG"

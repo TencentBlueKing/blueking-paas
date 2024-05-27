@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from pathlib import Path
 from typing import Dict
 from unittest import mock
@@ -59,8 +60,8 @@ def wl_namespaces(bk_stag_env, bk_prod_env, _with_wl_apps) -> Dict[str, str]:
 
 
 @pytest.fixture()
-def create_module_for_alert(create_module, _with_wl_apps):
-    return create_module
+def create_module_for_alert(bk_module_2, _with_wl_apps):
+    return bk_module_2
 
 
 @pytest.fixture()

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """TestDoubles for paasng.platform.engine module"""
 from contextlib import contextmanager
 from typing import Dict, Optional
@@ -83,8 +84,14 @@ def mock_cluster_service(ingress_config: Optional[Dict] = None, replaced_ingress
         def get_default_cluster(self):
             return cluster
 
-        def get_cluster_by_name(self, cluster_name):
+        def get_cluster_by_name(self, cluster_name: str):
             if cluster_name != cluster.name:
+                # When testing "mgrlegacy" related features, the function might be called
+                # with a name other than the default cluster. In this case, return the
+                # right cluster.
+                if cluster_name == settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER:
+                    return Cluster.objects.get(name=cluster_name)
+
                 raise Cluster.DoesNotExist
             return cluster
 

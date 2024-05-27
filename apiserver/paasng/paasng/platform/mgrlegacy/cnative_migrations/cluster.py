@@ -16,12 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import List, Optional
 
-from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.mgrlegacy.entities import ClusterLegacyData, DefaultAppLegacyData
 from paasng.platform.mgrlegacy.exceptions import PreCheckMigrationFailed
+from paasng.platform.mgrlegacy.utils import get_cnative_target_cluster
 
 from .base import CNativeBaseMigrator
 
@@ -49,9 +51,9 @@ class ApplicationClusterMigrator(CNativeBaseMigrator):
             raise PreCheckMigrationFailed(f"app({self.app.code}) type does not set to cloud_native")
 
     def _migrate(self):
-        cnative_cluster = RegionClusterService(self.app.region).get_cnative_app_default_cluster()
+        cnative_cluster_name = get_cnative_target_cluster(self.app.region).name
         for env in self.app.get_app_envs():
-            EnvClusterService(env).bind_cluster(cnative_cluster.name)
+            EnvClusterService(env).bind_cluster(cnative_cluster_name)
 
     def _rollback(self):
         clusters: List[ClusterLegacyData] = self.migration_process.legacy_data.clusters

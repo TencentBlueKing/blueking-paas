@@ -16,9 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Shared service across modules"""
 import logging
-from typing import Dict, Iterable, Optional, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -41,7 +42,10 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceSharingManager:
-    """Manage shared service attachments by module"""
+    """Manage shared service attachments by module
+
+    :param module: The module that shares other module's service
+    """
 
     def __init__(self, module: Module):
         self.module = module
@@ -55,9 +59,9 @@ class ServiceSharingManager:
     def create(self, service: ServiceObj, ref_module: Module) -> SharedServiceAttachment:
         """Create a shared service relationship from given module
 
-        :param ref_module: referenced module
-        :raises `ReferencedAttachmentNotFound` when referenced relationship not found, `SharedAttachmentAlreadyExists`
-            when shared attachment already exists
+        :param ref_module: referenced module that holds the REAL service binding relationship.
+        :raises ReferencedAttachmentNotFound: when referenced relationship not found
+        :raises SharedAttachmentAlreadyExists: when shared attachment already exists
         """
         if ref_module == self.module:
             raise RuntimeError("module can not share from itself")
@@ -137,6 +141,27 @@ class ServiceSharingManager:
             env_variables = mixed_service_mgr.get_env_vars(ref_env.engine_app, referenced_info.service, filter_enabled)
             ret.update(env_variables)
         return ret
+
+    def get_enabled_env_keys(self, env: ModuleEnvironment) -> Dict[str, List[str]]:
+        """
+        Retrieve all environment variable keys shared from other modules.
+
+        :param env: ModuleEnvironment object that must belong to self.module
+        :return: Dictionary of service display names to their respective env keys list.
+        """
+        if env.module != self.module:
+            raise RuntimeError("Invalid env object, must belong to self.module")
+
+        result = {}
+        for referenced_info in self.list_all_shared_info():
+            ref_env = referenced_info.ref_module.get_envs(env.environment)
+            ref_service = referenced_info.service
+            env_keys = mixed_service_mgr.get_env_vars(ref_env.engine_app, ref_service, True)
+            # display_name 会被国际化处理为殊字符串类型（__proxy__类型），必须首先将它们转化为标准的字符串
+            service_name = str(ref_service.display_name)
+            result[service_name] = list(env_keys.keys())
+
+        return result
 
 
 def extract_shared_info(attachment: SharedServiceAttachment) -> Optional[SharedServiceInfo]:

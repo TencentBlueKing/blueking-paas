@@ -15,11 +15,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import Dict
 
 import yaml
 from rest_framework.exceptions import ValidationError
 
+from paasng.platform.bkapp_model.importer.addons import import_addons
 from paasng.platform.bkapp_model.importer.build import import_build
 from paasng.platform.bkapp_model.importer.domain_resolution import import_domain_resolution
 from paasng.platform.bkapp_model.importer.env_overlays import import_env_overlays
@@ -77,6 +79,8 @@ def import_manifest(module: Module, input_data: Dict):
         import_hooks(module, hooks)
     if env_vars or overlay_env_vars:
         import_env_vars(module, env_vars, overlay_env_vars)
+    if addons := validated_data.get("addons"):
+        import_addons(module, addons)
     if mounts or overlay_mounts:
         import_mounts(module, mounts, overlay_mounts)
     if svc_discovery := validated_data.get("svcDiscovery"):

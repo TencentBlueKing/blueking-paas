@@ -648,8 +648,8 @@ IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_SMART_APP_B
 # 是否默认允许创建云原生应用
 IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT", False)
 
-# 云原生应用的默认集群名称
-CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
+# 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
+MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = settings.get("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", "")
 
 # 新建的 lesscode 应用是否为云原生应用
 LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE_TYPE", True)
@@ -1013,6 +1013,8 @@ DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", {DEFAULT_REGION_
 BK_CI_PAAS_PROJECT_ID = settings.get("BK_CI_PAAS_PROJECT_ID", "bk_paas3")
 # 云原生应用构建流水线 ID
 BK_CI_BUILD_PIPELINE_ID = settings.get("BK_CI_BUILD_PIPELINE_ID", "")
+# 云原生应用构建流水线调用用户（应使用虚拟账号）
+BK_CI_CLIENT_USERNAME = settings.get("BK_CI_CLIENT_USERNAME", "blueking")
 
 # ------------
 # 增强服务相关
@@ -1304,6 +1306,10 @@ BKMONITOR_METRIC_RELABELINGS = settings.get("BKMONITOR_METRIC_RELABELINGS", [])
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # Rabbitmq 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'rabbitmq'}
 RABBITMQ_MONITOR_CONF = settings.get("RABBITMQ_MONITOR_CONF", {})
+# Bkrepo 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'bkrepo'}
+BKREPO_MONITOR_CONF = settings.get("BKREPO_MONITOR_CONF", {})
+# Gcs_mysql 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'gcs_mysql'}
+GCS_MYSQL_MONITOR_CONF = settings.get("GCS_MYSQL_MONITOR_CONF", {})
 # 蓝鲸监控网关的环境
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get("BK_MONITOR_APIGW_SERVICE_STAGE", "stage")
 

@@ -33,6 +33,7 @@ from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
 
@@ -135,7 +136,7 @@ class DeployTaskRunner:
             return False
         elif (
             self.module.get_source_origin() == SourceOrigin.S_MART
-            and self.deployment.version_info.version_type == "image"
+            and self.deployment.version_info.version_type == VersionType.TAG.value
         ):
             return False
         # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布, 则无需构建

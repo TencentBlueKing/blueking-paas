@@ -167,3 +167,10 @@ class PluginReleaseStrategy(str, StructuredEnum):
 
     GRAY = EnumField("gray", label=_("灰度发布"))
     FULL = EnumField("full", label=_("全量发布"))
+
+
+class StatusPollingMethod(str, StructuredEnum):
+    """发布阶段的状态轮询方式"""
+
+    API = EnumField("api", label=_("后台 API 轮询"))
+    FRONTEND = EnumField("frontend", label=_("前端轮询，如通过 Iframe message 通信等"))

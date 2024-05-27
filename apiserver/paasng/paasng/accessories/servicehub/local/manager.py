@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Local services manager
 """
 import json
@@ -33,6 +34,7 @@ from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.servicehub import constants
 from paasng.accessories.servicehub.exceptions import (
+    BindServiceNoPlansError,
     CanNotModifyPlan,
     ProvisionInstanceError,
     ServiceObjNotFound,
@@ -482,7 +484,10 @@ class LocalServiceBinder:
 
     @atomic()
     def bind(self, module: Module, specs: Optional[Dict[str, str]] = None):
-        """Create the binding relationship in local database"""
+        """Create the binding relationship in local database.
+
+        :raises BindServiceNoPlansError: When no appropriate plans can be found.
+        """
         specs_helper = ServiceSpecificationHelper(
             definitions=self.service.specifications, plans=self.service.get_plans(is_active=True)
         )
@@ -495,7 +500,11 @@ class LocalServiceBinder:
 
         # bind plans to each engineApp without provision
         for env in module.envs.all():  # type: ModuleEnvironment
-            plan = cast(LocalPlanObj, self._get_plan_by_env(env, plans))
+            plan = self._get_plan_by_env(env.environment, plans)
+            if not plan:
+                raise BindServiceNoPlansError(env.environment)
+
+            plan = cast(LocalPlanObj, plan)
             self._bind_for_env(env, plan)
 
         return svc_module_attachment
@@ -509,14 +518,18 @@ class LocalServiceBinder:
         return svc_module_attachment
 
     @staticmethod
-    def _get_plan_by_env(env: ModuleEnvironment, plans: List[PlanObj]) -> PlanObj:
-        """Return the first plan which matching the given env."""
+    def _get_plan_by_env(environment: str, plans: List[PlanObj]) -> Optional[PlanObj]:
+        """Return the first plan that matching the given env.
+
+        :param environment: The environment name.
+        :return: A plan object, None if no matching plan can be found.
+        """
         plans = sorted(plans, key=lambda i: ("restricted_envs" in i.properties), reverse=True)
 
         for plan in plans:
-            if "restricted_envs" not in plan.properties or env.environment in plan.properties["restricted_envs"]:
+            if "restricted_envs" not in plan.properties or environment in plan.properties["restricted_envs"]:
                 return plan
-        raise RuntimeError("can not bind a plan")
+        return None
 
     def _bind_for_env(self, env: ModuleEnvironment, plan: LocalPlanObj):
         svc_engine_app_attachment, created = ServiceEngineAppAttachment.objects.get_or_create(

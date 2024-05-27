@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,34 +15,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
-from paasng.platform.bkapp_model.models import SvcDiscConfig
+
+import logging
+from typing import List
+
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppAddon
 from paasng.platform.modules.models import Module
 
 from .entities import CommonImportResult
 
+logger = logging.getLogger(__name__)
 
-def import_svc_discovery(module: Module, svc_disc: SvcDiscConfigSpec) -> CommonImportResult:
-    """Import svc discovery relations, existing data that is not in the input list may be removed.
 
-    :param svc_disc: SvcDiscConfig Object
+def import_addons(module: Module, addons: List[BkAppAddon]) -> CommonImportResult:
+    """Import addon configs, existing services that is not in the input list may be removed.
+
+    :param addons: The addons.
     :return: A result object.
     """
-    ret = CommonImportResult()
-
-    if not svc_disc.bkSaaS:
-        ret.deleted_num = SvcDiscConfig.objects.filter(application=module.application).delete()
-
-    try:
-        svc_config = SvcDiscConfig.objects.get(application=module.application)
-        bk_saas = list(set(svc_config.bk_saas) | set(svc_disc.bkSaaS))
-    except SvcDiscConfig.DoesNotExist:
-        bk_saas = svc_disc.bkSaaS
-
-    _, created = SvcDiscConfig.objects.update_or_create(
-        application=module.application,
-        defaults={"bk_saas": bk_saas},
-    )
-    ret.incr_by_created_flag(created)
-
-    return ret
+    # TODO: Implement import for addons
+    logger.warning("Import addons is not implemented, skip.")
+    return CommonImportResult()

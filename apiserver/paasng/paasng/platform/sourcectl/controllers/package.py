@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from paasng.platform.modules.models.module import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, VersionInfo
 from paasng.platform.sourcectl.package.client import BasePackageClient, get_client
 
@@ -86,7 +87,7 @@ class PackageController:
         items = [
             AlternativeVersion(
                 name=info.package_name,
-                type="package" if info.storage_engine != "docker" else "image",
+                type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
                 revision=info.version,
                 url=info.storage_url,
                 last_update=info.updated,
@@ -105,7 +106,7 @@ class PackageController:
         info = self.module.packages.get(version=version)
         return AlternativeVersion(
             name=info.package_name,
-            type="package" if info.storage_engine != "docker" else "image",
+            type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
             revision=info.version,
             url=info.storage_url,
             last_update=info.updated,
@@ -118,7 +119,7 @@ class PackageController:
     def extract_smart_revision(self, smart_revision: str) -> str:
         if ":" not in smart_revision:
             return smart_revision
-        version_type, package_name = smart_revision.split(":", 1)
+        _, package_name = smart_revision.split(":", 1)
         # NOTE: 为了兼容 svn/git 的交互协议, 允许通过传递 package_name 来部署最后一个以 package_name 命名的版本。
         if self.module.packages.filter(package_name=package_name).exists():
             return self.module.packages.filter(package_name=package_name).last().version

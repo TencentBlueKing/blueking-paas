@@ -88,6 +88,11 @@ urlpatterns = [
         name="api.modules.services.info",
     ),
     re_path(
+        make_app_pattern("/services/config_var_keys/$", include_envs=False),
+        views.ModuleServiceAttachmentsViewSet.as_view({"get": "list_provisioned_env_keys"}),
+        name="api.services.list_provisioned_env_keys",
+    ),
+    re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/specs$", include_envs=False),
         views.ModuleServicesViewSet.as_view({"get": "retrieve_specs"}),
         name="api.services.list_specs_by_application",

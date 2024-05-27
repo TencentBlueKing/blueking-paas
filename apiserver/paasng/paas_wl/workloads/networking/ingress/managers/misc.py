@@ -54,9 +54,16 @@ class AppDefaultIngresses:
         yield SubPathAppIngressMgr(self.app)
 
         # Independent domain managers
-        env = ModuleEnvironment.objects.get(engine_app_id=self.app.pk)
-        for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
-            yield CustomDomainIngressMgr(domain)
+        try:
+            env = ModuleEnvironment.objects.get(engine_app_id=self.app.pk)
+        except ModuleEnvironment.DoesNotExist:
+            logger.warning(
+                f"app({self.app.name}) has no ApplicationEnvironment queryset, "
+                f"skip custom domain ingress managers. Check whether the app was backup data"
+            )
+        else:
+            for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
+                yield CustomDomainIngressMgr(domain)
 
     def sync_ignore_empty(self, default_service_name: Optional[str] = None):
         """Sync current ingress resources to apiserver,

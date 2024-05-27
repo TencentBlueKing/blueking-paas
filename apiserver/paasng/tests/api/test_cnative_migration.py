@@ -19,16 +19,21 @@ to the current version of the project delivered to anyone in the future.
 from unittest import mock
 
 import pytest
+from django.utils.crypto import get_random_string
+from django_dynamic_fixture import G
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.managers.app_metadata import update_metadata
 from paas_wl.bk_app.processes.controllers import ProcessesInfo
 from paas_wl.bk_app.processes.entities import Status
 from paas_wl.bk_app.processes.kres_entities import Instance
+from paas_wl.infras.cluster.models import Cluster
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.entities import MigrationResult, ProcessDetails
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
+from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.bk_app.processes.test_controllers import make_process
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -239,3 +244,45 @@ class TestDefaultAppEntranceViewSet:
     def test_list_all_entrances(self, api_client, bk_app):
         response = api_client.get(f"/api/mgrlegacy/applications/{bk_app.code}/entrances/")
         assert response.status_code == 200
+
+
+class TestChecklistInfoViewSet:
+    @pytest.fixture()
+    def _set_default_cluster(self, settings, bk_app):
+        cluster_name = get_random_string(6)
+        G(Cluster, name=cluster_name, region=bk_app.region)
+        G(Cluster, name=CLUSTER_NAME_FOR_TESTING, region=bk_app.region)
+        settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = cluster_name
+
+    @pytest.fixture(autouse=True)
+    def _set_rcs_binding(self, _set_default_cluster, settings, bk_app, _with_wl_apps, bk_stag_env):
+        wl_app = bk_app.get_engine_app("stag", module_name="default").to_wl_obj()
+        state = RegionClusterState.objects.create(
+            region=wl_app.region,
+            cluster_name=CLUSTER_NAME_FOR_TESTING,
+            nodes_data=[
+                {
+                    "metadata": {"name": "node-a"},
+                    "status": {"addresses": [{"address": "127.0.0.1", "type": "InternalIP"}]},
+                }
+            ],
+        )
+        RCStateAppBinding.objects.create(app=wl_app, state=state)
+
+        RegionClusterState.objects.create(
+            region=wl_app.region,
+            cluster_name=settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER,
+            nodes_data=[
+                {
+                    "metadata": {"name": "node-b"},
+                    "status": {"addresses": [{"address": "192.168.0.1", "type": "InternalIP"}]},
+                }
+            ],
+        )
+
+    def test_get(self, api_client, bk_app):
+        response = api_client.get(f"/api/mgrlegacy/applications/{bk_app.code}/checklist_info/")
+        assert response.status_code == 200
+        assert response.data["namespaces"] is None
+        assert response.data["rcs_bindings"]["legacy"][0]["ip_addresses"] == ["127.0.0.1"]
+        assert response.data["rcs_bindings"]["cnative"]["ip_addresses"] == ["192.168.0.1"]

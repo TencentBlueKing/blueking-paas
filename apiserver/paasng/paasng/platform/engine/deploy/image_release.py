@@ -26,7 +26,6 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
@@ -40,6 +39,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
+from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.signals import post_phase_end, pre_phase_start
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import get_app_description_handler, get_processes
@@ -81,7 +81,7 @@ class ImageReleaseMgr(DeployStep):
             build_id = self.deployment.advanced_options.build_id
             if build_id:
                 # 托管源码的应用在发布历史镜像时, advanced_options.build_id 不为空
-                deployment = (
+                deployment: Deployment = (
                     Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
                 )
                 if not deployment:

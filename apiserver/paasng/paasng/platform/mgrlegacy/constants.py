@@ -131,6 +131,7 @@ class CNativeMigrationStatus(str, StructuredEnum):
     ON_ROLLBACK = "on_rollback"
     ROLLBACK_SUCCEEDED = "rollback_succeeded"
     ROLLBACK_FAILED = "rollback_failed"
+    NO_NEED_MIGRATION = "no_need_migration"
 
 
 try:

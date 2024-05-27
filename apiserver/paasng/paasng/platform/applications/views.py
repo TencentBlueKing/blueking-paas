@@ -108,6 +108,7 @@ from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.mgrlegacy.constants import LegacyAppState
+from paasng.platform.mgrlegacy.migrate import get_migration_process_status
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.protections import ModuleDeletionPreparer
@@ -184,6 +185,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                 "marked": application.id in marked_application_ids,
                 # 应用市场访问地址信息
                 "market_config": MarketConfig.objects.get_or_create_by_app(application)[0],
+                "migration_status": get_migration_process_status(application),
             }
             for application in page_applications
         ]
@@ -249,6 +251,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                     application=application, owner=request.user.pk
                 ).exists(),
                 "web_config": web_config,
+                "migration_status": get_migration_process_status(application),
             }
         )
 

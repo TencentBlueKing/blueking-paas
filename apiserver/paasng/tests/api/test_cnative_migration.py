@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from unittest import mock
 
 import pytest
@@ -252,7 +253,7 @@ class TestChecklistInfoViewSet:
         cluster_name = get_random_string(6)
         G(Cluster, name=cluster_name, region=bk_app.region)
         G(Cluster, name=CLUSTER_NAME_FOR_TESTING, region=bk_app.region)
-        settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = cluster_name
+        settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = cluster_name
 
     @pytest.fixture(autouse=True)
     def _set_rcs_binding(self, _set_default_cluster, settings, bk_app, _with_wl_apps, bk_stag_env):
@@ -271,7 +272,7 @@ class TestChecklistInfoViewSet:
 
         RegionClusterState.objects.create(
             region=wl_app.region,
-            cluster_name=settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER,
+            cluster_name=settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER,
             nodes_data=[
                 {
                     "metadata": {"name": "node-b"},

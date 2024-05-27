@@ -40,5 +40,5 @@ class ItsmTicketStatus(str, StructuredEnum):
     REVOKED = EnumField("REVOKED", label=_("被撤销"))
 
     @classmethod
-    def terminated_status(cls):
+    def completed_status(cls):
         return [cls.FINISHED, cls.TERMINATED, cls.REVOKED]

@@ -56,8 +56,8 @@ class ErrorCodes:
     # 日志查询异常
     QUERY_ES_ERROR = ErrorCode(_("日志系统异常, 请稍后重试"))
 
-    # 可见范围正在审批中，无法修改
-    VISIBLE_RANGE_IN_APPROVAL = ErrorCode(_("可见范围审批中, 无法修改"))
+    # 可见范围修改失败
+    VISIBLE_RANGE_UPDATE_FAIELD = ErrorCode(_("可见范围修改失败"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

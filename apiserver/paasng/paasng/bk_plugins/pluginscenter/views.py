@@ -1192,7 +1192,7 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
 
         visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
         if visible_range_obj.is_in_approval:
-            raise error_codes.VISIBLE_RANGE_IN_APPROVAL
+            raise error_codes.VISIBLE_RANGE_UPDATE_FAIELD.f(_("可见范围修改失败：正在审批中"))
 
         slz = serializers.PluginVisibleRangeUpdateSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

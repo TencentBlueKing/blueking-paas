@@ -400,21 +400,23 @@ class PluginVisibleRange(AuditedModel):
     is_in_approval = models.BooleanField(verbose_name="是否在审批中", default=False)
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
 
-    @property
-    def itsm_bkci_project(self):
+    @cached_property
+    def itsm_detail_fields(self):
         if not self.itsm_detail:
             return None
+        return {item["key"]: item["value"] for item in self.itsm_detail.fields}
 
-        fields_dict = {item["key"]: item["value"] for item in self.itsm_detail.fields}
-        return fields_dict.get("bkci_project")
+    @property
+    def itsm_bkci_project(self):
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("bkci_project")
+        return None
 
     @property
     def itsm_organization(self):
-        if not self.itsm_detail:
-            return None
-
-        fields_dict = {item["key"]: item["value"] for item in self.itsm_detail.fields}
-        return fields_dict.get("organization")
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("organization")
+        return None
 
 
 class OperationRecord(AuditedModel):

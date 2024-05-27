@@ -90,7 +90,7 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
         visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
 
-        if ticket_status in ItsmTicketStatus.terminated_status():
+        if ticket_status in ItsmTicketStatus.completed_status():
             visible_range_obj.is_in_approval = False
         else:
             visible_range_obj.is_in_approval = True

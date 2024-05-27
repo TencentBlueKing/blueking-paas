@@ -130,14 +130,14 @@ class InstanceListSLZ(serializers.Serializer):
 
 class SourceSerializer(serializers.Serializer):
     component = serializers.CharField(help_text="生成事件系统组件")
-    host = serializers.CharField(allow_null=True, help_text="发生事件的主机名")
+    host = serializers.CharField(required=False, allow_null=True, help_text="发生事件的主机名")
 
 
 class InvolvedObjectSerializer(serializers.Serializer):
     apiVersion = serializers.CharField(help_text="事件相关对象的 API 版本")
     kind = serializers.CharField(help_text="事件相关对象的类型")
     name = serializers.CharField(help_text="事件相关对象的名称")
-    namespace = serializers.CharField(allow_null=True, help_text="事件相关对象的命名空间")
+    namespace = serializers.CharField(required=False, allow_null=True, help_text="事件相关对象的命名空间")
 
 
 class EventSerializer(serializers.Serializer):

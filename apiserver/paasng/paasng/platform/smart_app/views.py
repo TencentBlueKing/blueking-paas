@@ -139,9 +139,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 logger.exception("S-Mart package does not exist!")
                 raise error_codes.PREPARED_PACKAGE_NOT_FOUND
 
-            # 若下载的源码包不是 tarball, 则认为下载的文件不完整
             if not self.is_valid_tar_file(filepath):
-                raise error_codes.FILE_CORRUPTED_ERROR.f(_("文件下载不完整"))
+                raise error_codes.FILE_CORRUPTED_ERROR.f(_("源码文件加载不完整，请重试或联系管理员"))
 
             # Step 2. create application, module
             stat = SourcePackageStatReader(filepath).read()

@@ -457,6 +457,24 @@ class AppEntityReader(Generic[AET]):
             items.append(item)
         return ResourceList[AET](items=items, metadata=ret.metadata)
 
+    def list_by_app_with_fields(self, app: WlApp, fields: Optional[Dict] = None) -> ResourceList[AET]:
+        """List all app's resources,  return results including metadata
+
+        :param fields: fields for filtering results
+        """
+        fields = fields or {}
+        deserializer = self._make_deserializer(app)
+        with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:
+            ret = kres_client.ops_field.list(namespace=self._get_namespace(app), fields=fields)
+
+        items = []
+        for kube_data in ret.items:
+            item = deserializer.deserialize(app, kube_data)
+            # Set _kube_data
+            item._kube_data = kube_data
+            items.append(item)
+        return ResourceList[AET](items=items, metadata=ret.metadata)
+
     def watch_by_app(
         self, app: WlApp, labels: Optional[Dict] = None, ignore_unknown_objs: bool = False, **kwargs
     ) -> Iterator[WatchEvent[AET]]:

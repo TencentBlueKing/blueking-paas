@@ -159,6 +159,7 @@ class BaseKresource:
         self.api_version = api_version
         self.ops_name = NameBasedOperations(self, self.request_timeout)
         self.ops_label = LabelBasedOperations(self, self.request_timeout)
+        self.ops_field = FieldBasedOperations(self, self.request_timeout)
 
     # Make shortcuts: proxy a collection of methods to self.ops_name(name
     # based operations) for convenience.
@@ -506,6 +507,51 @@ class LabelBasedOperations(BaseOperations):
         :param labels: dict of labels
         """
         return ",".join("{}={}".format(key, value) for key, value in labels.items())
+
+
+class FieldBasedOperations(BaseOperations):
+    """All operations in this class are based on field_selector"""
+
+    def list(self, fields: Dict, namespace: Namespace = None) -> KubeObjectList:
+        """list resources by fields
+
+        :param fields: fields dict
+        :param namespace: Resource namespace, only required for is_namespaced resource
+        :returns: Various kinds of kubernetes lists
+        """
+        list_resp = self.resource.get(
+            field_selector=self.make_fields_string(fields), namespace=namespace, **self.default_kwargs
+        )
+        return KubeObjectList(list_resp)
+
+    @staticmethod
+    def make_fields_string(fields: Dict) -> str:
+        """Turn a fields dict into string format
+
+        :param fields: dict of fields
+        Example:
+        Input:
+            input_dict = {
+                "involvedObject": {"name": "xxx", "kind": "Pod"},
+                "reason": "BackOff"
+            }
+        Output:
+            'involvedObject.name=xxx,involvedObject.kind=Pod,reason=BackOff'
+        """
+        field_selectors = []
+
+        # 递归函数用于处理字典嵌套的情况
+        def process_dict(d, prefix=""):
+            for key, value in d.items():
+                # 如果值是字典，递归处理
+                if isinstance(value, dict):
+                    process_dict(value, prefix=f"{prefix}{key}.")
+                else:
+                    field_selectors.append(f"{prefix}{key}={value}")
+
+        process_dict(fields)
+
+        return ",".join(field_selectors)
 
 
 # Individual resource types start

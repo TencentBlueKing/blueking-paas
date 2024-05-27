@@ -230,7 +230,9 @@ def get_cnative_target_cluster(region: str) -> Cluster:
         configured in the given region.
     """
     try:
-        return get_region_aware("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", region)
+        target_cluster_name = get_region_aware("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", region)
     except KeyError:
         logger.warning("Get mgrlegacy target cluster failed, return default instead, region: %s.", region)
         return RegionClusterService(region).get_default_cluster()
+
+    return RegionClusterService(region).get_cluster_by_name(target_cluster_name)

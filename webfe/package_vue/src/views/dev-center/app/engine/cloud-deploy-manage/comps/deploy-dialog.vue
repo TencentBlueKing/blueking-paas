@@ -782,7 +782,7 @@ export default {
 
         //  Smart 应用(预发布/生产)显示最新分支
         if (this.isSmartApp) {
-          this.branchValue = `${res.results[0]?.type}:${res.results[0]?.name}`;
+          this.branchValue = res.results.length ? `${res.results[0]?.type}:${res.results[0]?.name}` : '';
         }
         this.branchesData = res.results;
         const branchesList = [];

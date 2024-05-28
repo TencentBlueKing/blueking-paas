@@ -149,58 +149,55 @@ class SearchApplicationSLZ(serializers.Serializer):
     prefer_marked = serializers.BooleanField(default=True)
 
 
-class IdleEnvironmentSLZ(serializers.Serializer):
+class IdleModuleEnvSLZ(serializers.Serializer):
+    module_name = serializers.CharField(help_text="模块名称")
     env_name = serializers.ChoiceField(help_text="环境", choices=AppEnvName.get_choices())
+    cpu_quota = serializers.IntegerField(help_text="CPU 配额")
+    memory_quota = serializers.IntegerField(help_text="内存配额")
     cpu_usage_avg = serializers.FloatField(help_text="CPU 平均使用率")
-    memory_usage_avg = serializers.FloatField(help_text="内存平均使用率")
     latest_deployed_at = serializers.DateTimeField(help_text="最近部署时间")
 
 
-class IdleModuleSLZ(serializers.Serializer):
-    module_name = serializers.CharField(help_text="模块名称")
-    idle_envs = serializers.ListField(help_text="闲置环境列表", child=IdleEnvironmentSLZ())
-
-
-class IdleApplicationListOutputSLZ(serializers.Serializer):
+class IdleApplicationSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用 Code", source="app.code")
     name = serializers.CharField(help_text="应用名称", source="app.name")
 
     administrators = serializers.SerializerMethodField(help_text="应用管理员列表")
-    idle_modules = serializers.SerializerMethodField(help_text="闲置模块列表")
+    module_envs = serializers.SerializerMethodField(help_text="闲置模块 & 环境列表")
 
     @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
     def get_administrators(self, obj: AppOperationReport) -> List[str]:
         return obj.app.get_administrators()
 
-    @swagger_serializer_method(serializer_or_field=IdleModuleSLZ(many=True))
-    def get_idle_modules(self, obj: AppOperationReport) -> List[Dict[str, Any]]:
-        idle_modules = []
+    @swagger_serializer_method(serializer_or_field=IdleModuleEnvSLZ(many=True))
+    def get_module_envs(self, obj: AppOperationReport) -> List[Dict[str, Any]]:
+        idle_module_envs = []
 
         for module_name, mod_evaluate_result in obj.evaluate_result["modules"].items():
-            idle_envs = []
             for env_name, env_evaluate_result in mod_evaluate_result["envs"].items():
-                if env_evaluate_result["issue_type"] == OperationIssueType.IDLE:
-                    path = f"modules.{module_name}.envs.{env_name}"
-                    env_res_summary = dictx.get_items(obj.res_summary, path)
-                    env_deploy_summary = dictx.get_items(obj.deploy_summary, path)
-                    idle_envs.append(
-                        {
-                            "env_name": env_name,
-                            "cpu_usage_avg": env_res_summary["cpu_usage_avg"],
-                            "memory_usage_avg": env_res_summary["memory_usage_avg"],
-                            "latest_deployed_at": env_deploy_summary["latest_deployed_at"],
-                        }
-                    )
+                if env_evaluate_result["issue_type"] != OperationIssueType.IDLE:
+                    continue
 
-            if idle_envs:
-                idle_modules.append(
+                path = f"modules.{module_name}.envs.{env_name}"
+                env_res_summary = dictx.get_items(obj.res_summary, path)
+                env_deploy_summary = dictx.get_items(obj.deploy_summary, path)
+                idle_module_envs.append(
                     {
                         "module_name": module_name,
-                        "idle_envs": IdleEnvironmentSLZ(idle_envs, many=True).data,
+                        "env_name": env_name,
+                        "cpu_quota": env_res_summary["cpu_limits"],
+                        "memory_quota": env_res_summary["mem_limits"],
+                        "cpu_usage_avg": env_res_summary["cpu_usage_avg"],
+                        "latest_deployed_at": env_deploy_summary["latest_deployed_at"],
                     }
                 )
 
-        return IdleModuleSLZ(idle_modules, many=True).data
+        return IdleModuleEnvSLZ(idle_module_envs, many=True).data
+
+
+class IdleApplicationListOutputSLZ(serializers.Serializer):
+    collected_at = serializers.DateTimeField(help_text="采集时间")
+    applications = serializers.ListField(help_text="应用列表", child=IdleApplicationSLZ())
 
 
 class EnvironmentDeployInfoSLZ(serializers.Serializer):

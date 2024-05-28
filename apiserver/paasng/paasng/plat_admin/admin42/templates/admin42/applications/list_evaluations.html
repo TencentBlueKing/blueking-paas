@@ -3,7 +3,15 @@
 {% load admin_utils %}
 
 {% block main_content %}
-<div id="evaluation-list" class="p20">
+<div id="evaluation-list" class="p10">
+    <div class="mb15" v-if="collect_task">
+        <h5>最新采集任务:</h5>
+        <span>开始时间：$[collect_task.start_at]</span>
+        <span class="ml25">耗时：$[collect_task.duration]</span>
+        <span class="ml25">总 / 成 / 败：$[collect_task.total_count] /$[collect_task.succeed_count] / $[collect_task.failed_count]</span>
+        <span class="ml25">状态：$[collect_task.status]</span>
+    </div>
+    <hr/>
     <div class="mb15" style="display: flex; justify-content: space-between">
         <bk-input
             placeholder="输入应用 Code 或名称，按 Enter 进行模糊搜索"
@@ -18,7 +26,7 @@
         </bk-button>
     </div>
     <div class="mb15">
-        <p>按问题类型过滤：</p>
+        <h5>按问题类型过滤：</h5>
         <bk-radio-group v-model="issueType" @change="handleSearch">
             <bk-radio value="" class="m5">
                 <i class="bk-icon">不过滤</i>
@@ -125,8 +133,8 @@
         </bk-container>
         <h4 class="mt20">模块进程</h4>
         <bk-collapse accordion>
-            <bk-collapse-item v-for="module in dialog.form.res_summary.modules" :name="module.module_name">
-                $[ module.module_name ]
+            <bk-collapse-item v-for="(module, module_name) in dialog.form.res_summary.modules" :name="module_name">
+                $[ module_name ]
                 <div slot="content">
                     <bk-tab type="unborder-card">
                         <bk-tab-panel
@@ -135,7 +143,7 @@
                             :key="index">
                             <bk-container :col="5" v-for="proc in getEnvProcs(module, panel.name)" v-if="proc.quota">
                                 <bk-row>
-                                    <bk-col><label class="m10">进程名称:</label><b>$[proc.name]</b></bk-col>
+                                    <bk-col><label class="m10">进程名称:</label><b> $[proc.name] </b></bk-col>
                                     <bk-col><label class="m10">副本数量:</label> $[proc.replicas]</bk-col>
                                     <bk-col><label class="m10">资源套餐:</label> $[proc.current_plan]</bk-col>
                                 </bk-row>
@@ -177,6 +185,7 @@
 
 {% block main_script %}
 <script>
+const collect_task = {{ latest_collect_task | to_json }}
 const pagination = {{ pagination | to_json }}
 const data = {{ usage_report_list | to_json }}
 const SEARCH_PARAM = "search_term"
@@ -199,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return {
                 data,
                 pagination,
+                collect_task,
                 appOverviewUrl: '{% url "admin.applications.detail.overview" "app_code" %}',
                 dataExportUrl: '{% url "admin.applications.operation_evaluation.export" %}',
                 SEARCH_PARAM,
@@ -228,10 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.visible = true
             },
             getEnvProcs(module, tab_name) {
-                if (tab_name === "prod") {
-                    return module.prod_procs
-                }
-                return module.stag_procs
+                return module.envs[tab_name].procs
             },
             handleSortChange({column, prop, order}) {
                 if (!prop) {

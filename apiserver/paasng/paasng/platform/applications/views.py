@@ -21,6 +21,7 @@ import logging
 import random
 import string
 from collections import Counter, defaultdict
+from datetime import datetime
 from io import BytesIO
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional
@@ -108,7 +109,7 @@ from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.models import AppOperationReport
+from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
@@ -286,13 +287,23 @@ class ApplicationViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["applications"],
         operation_description="获取闲置的应用列表",
-        responses={200: slzs.IdleApplicationListOutputSLZ(many=True)},
+        responses={200: slzs.IdleApplicationListOutputSLZ()},
     )
     def list_idle(self, request):
         """获取闲置的应用列表"""
         app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
-        reports = AppOperationReport.objects.filter(app__code__in=app_codes, issue_type=OperationIssueType.IDLE)
-        return Response(data=slzs.IdleApplicationListOutputSLZ(reports, many=True).data)
+
+        latest_collected_at = datetime.now()
+        if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            latest_collected_at = collect_task.start_at
+
+        resp_data = {
+            "collected_at": latest_collected_at,
+            "applications": AppOperationReport.objects.filter(
+                app__code__in=app_codes, issue_type=OperationIssueType.IDLE
+            ),
+        }
+        return Response(data=slzs.IdleApplicationListOutputSLZ(resp_data).data)
 
     def destroy(self, request, code):
         """

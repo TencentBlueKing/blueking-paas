@@ -169,3 +169,22 @@ def valid_date_type(arg_date_str) -> datetime.date:
     except ValueError:
         msg = "Given Datetime ({0}) not valid! Expected format, 'YYYY-MM-DD'!".format(arg_date_str)
         raise ValueError(msg)
+
+
+def humanize_timedelta(delta):
+    """humanize timedelta"""
+    if not delta:
+        return "0s"
+
+    days = delta.days
+    hours, remainder = divmod(delta.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if days > 0:
+        return f"{days}d{hours}h{minutes}m{seconds}s"
+    elif hours > 0:
+        return f"{hours}h{minutes}m{seconds}s"
+    elif minutes > 0:
+        return f"{minutes}m{seconds}s"
+
+    return f"{seconds}s"

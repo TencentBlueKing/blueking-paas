@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
 
 from paas_wl.bk_app.dev_sandbox.controller import _DevWlAppCreator
@@ -23,11 +24,6 @@ from paas_wl.bk_app.dev_sandbox.entities import Resources, ResourceSpec, Runtime
 from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
 from paas_wl.infras.cluster.models import Cluster
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
-
-
-@pytest.fixture(autouse=True)
-def _set_default_cluster(settings):
-    settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
 
 
 @pytest.fixture()

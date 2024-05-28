@@ -161,3 +161,30 @@ class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
 class ListProcessesSLZ(serializers.Serializer):
     processes = ProcessListSLZ()
     instances = InstanceListSLZ()
+    process_packages = serializers.ListField(required=False, child=serializers.DictField())
+
+
+class ChecklistInfoSLZ(serializers.Serializer):
+    """普通应用迁移云原生应用前的差异化数据"""
+
+    class RootDomainsDiffSLZ(serializers.Serializer):
+        """迁移前后的差异化子域名"""
+
+        legacy = serializers.ListField(help_text="迁移前旧普通应用的子域名", child=serializers.CharField())
+        cnative = serializers.ListField(help_text="迁移后云原生应用的子域名", child=serializers.CharField())
+
+    class NamespacesDiffSLZ(serializers.Serializer):
+        """迁移前后的差异化命名空间"""
+
+        legacy = serializers.ListField(help_text="迁移前旧普通应用的命名空间", child=serializers.DictField())
+        cnative = serializers.ListField(help_text="迁移后云原生应用的命名空间", child=serializers.DictField())
+
+    class RCSBindingsDiffSLZ(serializers.Serializer):
+        """迁移前后的差异化绑定出口"""
+
+        legacy = serializers.ListField(help_text="迁移前旧普通应用的绑定出口信息", child=serializers.DictField())
+        cnative = serializers.DictField(help_text="迁移后云原生应用的绑定出口信息")
+
+    root_domains = RootDomainsDiffSLZ(read_only=True, help_text="迁移前后差异化的子域名")
+    namespaces = NamespacesDiffSLZ(read_only=True, help_text="迁移前后差异化的命名空间. None 表示无差异")
+    rcs_bindings = RCSBindingsDiffSLZ(read_only=True, help_text="迁移前后差异化的出口 IP 信息. None 表示未绑定出口 IP")

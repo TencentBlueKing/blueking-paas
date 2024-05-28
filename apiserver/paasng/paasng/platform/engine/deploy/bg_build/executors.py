@@ -54,7 +54,6 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.utils.output import DeployStream, Style
 from paasng.platform.engine.workflow import DeployStep
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
@@ -261,9 +260,7 @@ class PipelineBuildProcessExecutor(DeployStep):
 
         self.bp = bp
         self.wl_app: "WlApp" = bp.app
-        # 注：蓝盾只提供了正式环境的 API
-        bk_username = get_username_by_bkpaas_user_id(bp.owner)
-        self.ctl = BkCIPipelineClient(bk_username=bk_username)
+        self.ctl = BkCIPipelineClient(bk_username=settings.BK_CI_CLIENT_USERNAME)
 
     def execute(self, metadata: Dict):
         """Execute the build process"""

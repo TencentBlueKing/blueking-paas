@@ -133,10 +133,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
             build = Build.objects.get(pk=build_id)
 
-        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
-            version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
-        else:
-            version_info = self._get_version_info(request.user, module, params, build=build)
+        version_info = self._get_version_info(request.user, module, params, build=build)
 
         coordinator = DeploymentCoordinator(env)
         if not coordinator.acquire_lock():
@@ -169,18 +166,18 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict, build: Optional[Build] = None) -> VersionInfo:
         """Get VersionInfo from user inputted params"""
+        version_name = params["version_name"]
+
+        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+            return VersionInfo(version_type=VersionType.TAG.value, version_name=version_name, revision="")
+
         if build is not None:
             # 为了让 initialize_deployment 中依赖 VersionInfo 的逻辑能正常运行, 这里根据 build 构造 VersionInfo
             # 但实际上这个 VersionInfo 里的信息并未被使用
             # TODO: 解决这种奇怪的问题, 不管是让 initialize_deployment 不依赖 VersionInfo 或者让这里构造的 VersionInfo 变得有意义
             image_tag = build.image_tag or ""
-            return VersionInfo(
-                version_type=VersionType.IMAGE.value,
-                version_name=image_tag,
-                revision=image_tag,
-            )
+            return VersionInfo(version_type=VersionType.IMAGE.value, version_name=image_tag, revision=image_tag)
 
-        version_name = params["version_name"]
         version_type = params["version_type"]
         revision = params.get("revision", None)
         try:

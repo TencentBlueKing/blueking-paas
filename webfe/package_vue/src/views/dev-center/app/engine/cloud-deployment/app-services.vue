@@ -332,7 +332,7 @@ export default {
         theme: 'light',
         content: '#switcher-tooltip',
         placement: 'bottom',
-        extCls: 'tips-cls',
+        extCls: 'services-tips-cls',
       },
       startData: [{ value: 'start', label: this.$t('直接启用') }, { value: 'shared', label: this.$t('从其他模块共享') }],
       isShowDialog: false,
@@ -796,7 +796,6 @@ export default {
         }
     }
     #switcher-tooltip{
-      padding: 4px 0px;
       border: 1px solid #DCDEE5;
       border-radius: 2px;
       .item{
@@ -809,16 +808,23 @@ export default {
         &:hover {
           background: #F5F7FA;
         }
+        &:first-child {
+          margin-top: 4px;
+        }
+        &:last-child {
+          margin-bottom: 4px;
+        }
       }
     }
 
 </style>
 <style lang="scss">
-    .tips-cls{
+    .services-tips-cls{
       .tippy-arrow{
           display: none !important;
         }
-      .tippy-tooltip{
+      .tippy-tooltip,
+      .tippy-content{
         padding: 0 !important;
       }
     }

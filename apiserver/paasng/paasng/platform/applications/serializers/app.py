@@ -317,6 +317,7 @@ class ApplicationWithMarketSLZ(serializers.Serializer):
     product = ProductSLZ(read_only=True)
     marked = serializers.BooleanField(read_only=True)
     market_config = MarketConfigSLZ(read_only=True)
+    migration_status = serializers.JSONField(read_only=True)
 
 
 class ApplicationMinimalSLZ(serializers.ModelSerializer):

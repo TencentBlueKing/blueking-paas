@@ -88,6 +88,8 @@ class SchemaViewSet(ViewSet):
         for pd in PluginDefinition.objects.all():
             basic_info_definition = pd.basic_info_definition
             pd_data = serializers.PluginDefinitionSLZ(pd).data
+            basic_info = serializers.PluginBasicInfoDefinitionSLZ(basic_info_definition).data
+
             extra_fields = basic_info_definition.extra_fields
             # 当前语言为英文，且定义了英文字段则返回英文字段的定义
             if get_language() == "en" and basic_info_definition.extra_fields:
@@ -95,6 +97,7 @@ class SchemaViewSet(ViewSet):
             schemas.append(
                 {
                     "plugin_type": pd_data,
+                    "basic_info": basic_info,
                     "schema": {
                         "id": basic_info_definition.id_schema.dict(exclude_unset=True),
                         "name": basic_info_definition.name_schema.dict(exclude_unset=True),

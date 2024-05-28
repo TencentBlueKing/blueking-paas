@@ -43,6 +43,7 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_a
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
+    PluginBasicInfoDefinition,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfo,
@@ -160,6 +161,31 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
             "test_release_revision",
             "test_release_stages",
             "log_config",
+        )
+
+
+class PluginBasicInfoDefinitionSLZ(serializers.ModelSerializer):
+    description = TranslatedCharField()
+    publisher_description = TranslatedCharField()
+
+    class Meta:
+        model = PluginBasicInfoDefinition
+        exclude = (
+            "id",
+            "pd",
+            "created",
+            "updated",
+            "id_schema",
+            "name_schema",
+            "init_templates",
+            "release_method",
+            "repository_group",
+            "api",
+            "sync_members",
+            "extra_fields",
+            "extra_fields_en",
+            "extra_fields_order",
+            "overview_page",
         )
 
 

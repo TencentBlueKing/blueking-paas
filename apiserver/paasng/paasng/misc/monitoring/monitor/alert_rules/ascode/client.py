@@ -23,8 +23,10 @@ from typing import Dict, List, Optional
 
 import jinja2
 from django.conf import settings
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.smart_advisor.models import DocumentaryLink
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.monitoring.monitor.alert_rules.config import RuleConfig
@@ -73,6 +75,25 @@ class AsCodeClient:
                     f"app_code({self.app_code})"
                 )
 
+    def _add_metric_name_prefixes(self, ctx: dict, alert_code: str):
+        """根据告警代码添加需要的指标前缀到上下文中"""
+        alert_config_mapping = {
+            "rabbitmq": settings.RABBITMQ_MONITOR_CONF,
+            "bkrepo": settings.BKREPO_MONITOR_CONF,
+            "gcs_mysql": settings.GCS_MYSQL_MONITOR_CONF,
+        }
+        for code, config in alert_config_mapping.items():
+            if code in alert_code:
+                ctx[f"{code}_metric_name_prefix"] = config.get("metric_name_prefix", "")
+
+    def _add_docs_url(self, ctx: dict, alert_code: str):
+        """根据告警代码添加需要的文档信息"""
+        # 根据告警代码获取对应的文档链接
+        doc_link_name = f"{alert_code}_monitor_doc"
+        doc_link = DocumentaryLink.objects.filter(Q(title_en=doc_link_name) | Q(title_zh_cn=doc_link_name)).first()
+        if doc_link:
+            ctx["doc_url"] = f"操作文档: {doc_link.location}"
+
     def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:
 
@@ -88,14 +109,10 @@ class AsCodeClient:
         for conf in rule_configs:
             ctx = conf.to_dict()
             ctx["notice_group_name"] = self.default_notice_group_name
-            # 涉及到 rabbitmq 的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
-            if "rabbitmq" in conf.alert_code:
-                ctx["rabbitmq_metric_name_prefix"] = settings.RABBITMQ_MONITOR_CONF.get("metric_name_prefix", "")
-            if "bkrepo" in conf.alert_code:
-                ctx["bkrepo_metric_name_prefix"] = settings.BKREPO_MONITOR_CONF.get("metric_name_prefix", "")
-            if "gcs_mysql" in conf.alert_code:
-                ctx["gcs_mysql_metric_name_prefix"] = settings.GCS_MYSQL_MONITOR_CONF.get("metric_name_prefix", "")
-
+            # 涉及到增强服务的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
+            self._add_metric_name_prefixes(ctx, conf.alert_code)
+            # 为通知添加操作文档链接，若未在'管理后台--智能顾问--文档管理'配置文档则不添加
+            self._add_docs_url(ctx, conf.alert_code)
             configs[f"rule/{conf.alert_rule_name}.yaml"] = j2_env.get_template(f"{conf.alert_code}.yaml.j2").render(
                 **ctx
             )

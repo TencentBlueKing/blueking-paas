@@ -254,7 +254,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
     def retrieve(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance(allow_archive=True)
-        return Response(data=self.get_serializer(plugin).data)
+        return Response(data=serializers.PluginInstanceDetailSLZ(plugin).data)
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubUpdatePluginSLZ)

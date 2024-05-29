@@ -267,15 +267,17 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     can_reactivate = serializers.ReadOnlyField()
     has_test_version = serializers.ReadOnlyField()
 
+    class Meta:
+        model = PluginInstance
+        exclude = ("pd", "uuid")
+
+
+class PluginInstanceDetailSLZ(PluginInstanceSLZ):
     def to_representation(self, instance):
         # 注入当前用户的角色信息
         if (request := self.context.get("request")) and request.user.is_authenticated:
             setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
         return super().to_representation(instance)
-
-    class Meta:
-        model = PluginInstance
-        exclude = ("pd", "uuid")
 
 
 class PluginInstanceLogoSLZ(serializers.ModelSerializer):

@@ -226,6 +226,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             language=validated_data["template"].language,
             **validated_data,
             creator=request.user.pk,
+            # 插件发布者默认是工具创建者
+            publisher=request.user.username,
             # 如果插件不需要审批，则状态设置为开发中
             status=plugin_status,
         )

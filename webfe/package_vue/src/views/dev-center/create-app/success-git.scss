@@ -6,7 +6,8 @@
 
     .biz-create-success {
         background: #F5F7FA;
-        padding: 74px 0 20px 0;
+        padding-bottom: 20px;
+        padding-top: calc(var(--app-notice-height) + 74px);
     }
     .success-wrapper {
         .info,

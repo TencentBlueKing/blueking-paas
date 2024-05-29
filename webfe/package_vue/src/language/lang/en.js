@@ -2597,4 +2597,5 @@ export default {
   提交并开始测试: 'Submit and Start Testing',
   '环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突': 'Environmental variables do not take effect, KEY conflicts with the built-in environmental variables of the {s} enhanced service',
   重启次数: 'Restart Count',
+  测试报告: 'Test report',
 };

@@ -844,5 +844,7 @@ class PluginVisibleRangeSLZ(serializers.ModelSerializer):
 
 
 class PluginVisibleRangeUpdateSLZ(serializers.Serializer):
-    bkci_project = serializers.ListField(child=serializers.CharField(), help_text="格式：['1111', '222222']")
-    organization = serializers.ListField(child=serializers.DictField())
+    bkci_project = serializers.ListField(
+        child=serializers.CharField(), help_text="格式：['1111', '222222']", allow_blank=True, allow_null=True
+    )
+    organization = serializers.ListField(child=serializers.DictField(), allow_blank=True, allow_null=True)

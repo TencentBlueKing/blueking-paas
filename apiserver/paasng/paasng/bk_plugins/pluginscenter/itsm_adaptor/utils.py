@@ -103,8 +103,8 @@ def submit_visible_range_ticket(
     plugin: PluginInstance,
     operator: str,
     visible_range_obj: "PluginVisibleRange",
-    bkci_project: list,
-    organization: list,
+    bkci_project: Optional[list],
+    organization: Optional[list],
 ) -> "ItsmDetail":
     # 查询上线审批服务ID
     service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.VISIBLE_RANGE_APPROVAL).service_id
@@ -115,9 +115,9 @@ def submit_visible_range_ticket(
 
     visible_range_fields = [
         {"key": "bkci_project", "value": bkci_project},
-        {"key": "organization", "value": organization},
+        {"key": "organization", "value": _get_organization_display_name(organization)},
         {"key": "current_bkci_project", "value": visible_range_obj.bkci_project},
-        {"key": "current_organization", "value": visible_range_obj.organization},
+        {"key": "current_organization", "value": _get_organization_display_name(visible_range_obj.organization)},
     ]
 
     # 组装提单数据,包含插件的基本信息、可见范围修改前的值，修改后的值
@@ -215,3 +215,10 @@ def _get_advanced_fields(
         },
     ]
     return fields
+
+
+def _get_organization_display_name(organization: Optional[list]) -> str:
+    if not organization:
+        return ""
+    organization_names = [r["name"] for r in organization]
+    return ";".join(organization_names)

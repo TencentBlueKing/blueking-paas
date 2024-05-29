@@ -288,7 +288,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         return Response({"count": len(applications), "results": serializer.data})
 
     @swagger_auto_schema(
-        tags=["applications"],
+        tags=["应用列表"],
         operation_description="获取闲置的应用列表",
         responses={200: slzs.IdleApplicationListOutputSLZ()},
     )

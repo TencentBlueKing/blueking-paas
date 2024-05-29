@@ -8,10 +8,10 @@
         <h5>最新采集任务:</h5>
         <span>开始时间：$[collect_task.start_at]</span>
         <span class="ml25">耗时：$[collect_task.duration]</span>
-        <span class="ml25">总 / 成 / 败：$[collect_task.total_count] /$[collect_task.succeed_count] / $[collect_task.failed_count]</span>
+        <span class="ml25">总 / 成 / 败：$[collect_task.total_count] / $[collect_task.succeed_count] / $[collect_task.failed_count]</span>
         <span class="ml25">状态：$[collect_task.status]</span>
+        <hr/>
     </div>
-    <hr/>
     <div class="mb15" style="display: flex; justify-content: space-between">
         <bk-input
             placeholder="输入应用 Code 或名称，按 Enter 进行模糊搜索"
@@ -185,7 +185,7 @@
 
 {% block main_script %}
 <script>
-const collect_task = {{ latest_collect_task | to_json }}
+const collect_task = {{ latest_collect_task | default:"null" | safe }}
 const pagination = {{ pagination | to_json }}
 const data = {{ usage_report_list | to_json }}
 const SEARCH_PARAM = "search_term"

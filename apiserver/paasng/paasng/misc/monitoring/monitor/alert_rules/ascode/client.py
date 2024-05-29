@@ -23,10 +23,10 @@ from typing import Dict, List, Optional
 
 import jinja2
 from django.conf import settings
-from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accessories.smart_advisor.models import DocumentaryLink
+from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
+from paasng.accessories.smart_advisor.tags import get_dynamic_tag
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.monitoring.monitor.alert_rules.config import RuleConfig
@@ -88,11 +88,10 @@ class AsCodeClient:
 
     def _add_docs_url(self, ctx: dict, alert_code: str):
         """根据告警代码添加需要的文档信息"""
-        # 根据告警代码获取对应的文档链接
-        doc_link_name = f"{alert_code}_monitor_doc"
-        doc_link = DocumentaryLink.objects.filter(Q(title_en=doc_link_name) | Q(title_zh_cn=doc_link_name)).first()
-        if doc_link:
-            ctx["doc_url"] = f"操作文档: {doc_link.location}"
+        tag = get_dynamic_tag(f"saas_monitor:{alert_code}")
+        links = DocumentaryLinkAdvisor().search_by_tags([tag], limit=1)
+        if links:
+            ctx["doc_url"] = f"操作文档: {links[0].location}"
 
     def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:

@@ -16,17 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
-from django.test import TestCase
 
 from paasng.infras.accounts.oauth.constants import ScopeType
 from paasng.infras.accounts.oauth.models import Scope
 
 
-class TestScope(TestCase):
-    def setUp(self):
-        pass
-
+class TestScope:
     def test_match_different_scope(self):
         scope = Scope.parse_from_str("group:v3-test-group")
         assert scope.type == ScopeType.GROUP

@@ -16,54 +16,53 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
-from django.test import TestCase
 
 from paasng.misc.monitoring.metrics.clients import BkPromResult
 from paasng.misc.monitoring.metrics.clients.prometheus import PromResult
 
 
-class TestPromResult(TestCase):
-    def setUp(self) -> None:
-        self.fake_range_result = {
-            "status": "success",
-            "data": {
-                "resultType": "matrix",
-                "result": [
-                    {
-                        "metric": {"container_name": "cl5"},
-                        "values": [
-                            [1590000844, "0.005465409366663229"],
-                            [1590001444, "0.0046846496000010045"],
-                            [1590002044, "0.004948108500001069"],
-                        ],
-                    },
-                    {
-                        "metric": {"container_name": "ieod-bkapp-career-stag"},
-                        "values": [
-                            [1590000844, "0.0003452615666667214"],
-                            [1590001444, "0.00040326460000083365"],
-                            [1590002044, "0.0003675630666667947"],
-                            [1590003044, "0.0003675630666667947"],
-                        ],
-                    },
-                ],
-            },
-        }
+class TestPromResult:
+    fake_range_result = {
+        "status": "success",
+        "data": {
+            "resultType": "matrix",
+            "result": [
+                {
+                    "metric": {"container_name": "cl5"},
+                    "values": [
+                        [1590000844, "0.005465409366663229"],
+                        [1590001444, "0.0046846496000010045"],
+                        [1590002044, "0.004948108500001069"],
+                    ],
+                },
+                {
+                    "metric": {"container_name": "ieod-bkapp-career-stag"},
+                    "values": [
+                        [1590000844, "0.0003452615666667214"],
+                        [1590001444, "0.00040326460000083365"],
+                        [1590002044, "0.0003675630666667947"],
+                        [1590003044, "0.0003675630666667947"],
+                    ],
+                },
+            ],
+        },
+    }
 
-        self.fake_no_range_result = {
-            "status": "success",
-            "data": {
-                "resultType": "matrix",
-                "result": [
-                    {"metric": {"container_name": "cl5"}, "value": [1590000844, "0.005465409366663229"]},
-                    {
-                        "metric": {"container_name": "ieod-bkapp-career-stag"},
-                        "value": [1590000844, "0.0003452615666667214"],
-                    },
-                ],
-            },
-        }
+    fake_no_range_result = {
+        "status": "success",
+        "data": {
+            "resultType": "matrix",
+            "result": [
+                {"metric": {"container_name": "cl5"}, "value": [1590000844, "0.005465409366663229"]},
+                {
+                    "metric": {"container_name": "ieod-bkapp-career-stag"},
+                    "value": [1590000844, "0.0003452615666667214"],
+                },
+            ],
+        },
+    }
 
     def test_from_dict(self):
         """测试 dict 转换对象"""
@@ -156,35 +155,34 @@ class TestPromResult(TestCase):
         assert len(r1["values"]) == 4
 
 
-class TestBkPrometheusResult(TestCase):
-    def setUp(self) -> None:
-        self.fake_range_series = [
-            {
-                "alias": "_result0",
-                "metric_field": "_result_",
-                "unit": "",
-                "target": 'container_name="web-proc"',
-                "dimensions": {"container_name": "web-proc"},
-                "datapoints": [
-                    [1073741824, 1673257360000],
-                    [1073741824, 1673257370000],
-                    [1073741824, 1673257380000],
-                ],
-            },
-            {
-                "alias": "_result1",
-                "metric_field": "_result_",
-                "unit": "",
-                "target": 'container_name="celery-proc"',
-                "dimensions": {"container_name": "celery-proc"},
-                "datapoints": [
-                    [1073741824, 1673257280000],
-                    [1073741824, 1673257290000],
-                    [1073741824, 1673257300000],
-                    [1073741824, 1673257310000],
-                ],
-            },
-        ]
+class TestBkPrometheusResult:
+    fake_range_series = [
+        {
+            "alias": "_result0",
+            "metric_field": "_result_",
+            "unit": "",
+            "target": 'container_name="web-proc"',
+            "dimensions": {"container_name": "web-proc"},
+            "datapoints": [
+                [1073741824, 1673257360000],
+                [1073741824, 1673257370000],
+                [1073741824, 1673257380000],
+            ],
+        },
+        {
+            "alias": "_result1",
+            "metric_field": "_result_",
+            "unit": "",
+            "target": 'container_name="celery-proc"',
+            "dimensions": {"container_name": "celery-proc"},
+            "datapoints": [
+                [1073741824, 1673257280000],
+                [1073741824, 1673257290000],
+                [1073741824, 1673257300000],
+                [1073741824, 1673257310000],
+            ],
+        },
+    ]
 
     def test_from_series(self):
         """测试根据 series 创建 BkPromResult 对象"""

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 from operator import attrgetter
 from unittest import mock
@@ -50,7 +51,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestQueryDefaultApps:
-    """TestCases for querying apps in default platform"""
+    """Test cases for querying apps in default platform"""
 
     def test_normal(self, bk_app):
         results = query_default_apps_by_ids(
@@ -77,7 +78,7 @@ class TestQueryDefaultApps:
 
 
 class TestQueryLegacyApps:
-    """TestCases for querying apps in legacy platform"""
+    """Test cases for querying apps in legacy platform"""
 
     def test_normal(self):
         app = create_legacy_application()
@@ -88,7 +89,7 @@ class TestQueryLegacyApps:
 
 
 class TestQueryUniApps:
-    """TestCases for quering apps in both platforms"""
+    """Test cases for querying apps in both platforms"""
 
     def test_mixed_platforms(self, bk_app):
         legacy_app = create_legacy_application()
@@ -130,7 +131,7 @@ class TestQueryUniApps:
 
 
 class TestGetContactInfo:
-    """TestCases for getting app's contact info"""
+    """Test cases for getting app's contact info"""
 
     def test_normal(self, bk_app):
         contact_info = get_contact_info(bk_app)

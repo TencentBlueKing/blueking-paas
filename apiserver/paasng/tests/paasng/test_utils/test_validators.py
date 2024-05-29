@@ -16,54 +16,36 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 
 from paasng.utils.validators import DnsSafeNameValidator, ReservedWordValidator
 
 
-class TestReservedWordValidator(TestCase):
-    def setUp(self) -> None:
-        self.validator = ReservedWordValidator("保留字测试样例")
-        self.positive_sample = [
-            "v20190731-001",
-            "abc",
-            "a-b",
-            "paas-ng",
-        ]
-        # 保留字测试失败样本集
-        self.negative_sample = ["paas-ng-dot-backend", "v201907310us0001", "abc--def--ghi"]
+class TestReservedWordValidator:
+    @pytest.mark.parametrize("input_str", ["v20190731-001", "abc", "a-b", "paas-ng"])
+    def test_valid_input(self, input_str):
+        validator = ReservedWordValidator("保留字测试样例")
+        assert validator(input_str) is None
 
-    def test_positive_sample(self):
-        for sample in self.positive_sample:
-            assert self.validator(sample) is None
-
-    def test_negative_sample(self):
-        for sample in self.negative_sample:
-            with pytest.raises(ValidationError) as exec_info:
-                self.validator(sample)
-            assert exec_info.value.message == self.validator.message
+    @pytest.mark.parametrize("input_str", ["paas-ng-dot-backend", "v201907310us0001", "abc--def--ghi"])
+    def test_invalid_input(self, input_str):
+        validator = ReservedWordValidator("保留字测试样例")
+        with pytest.raises(ValidationError) as exec_info:
+            validator(input_str)
+        assert exec_info.value.message == validator.message
 
 
-class TestDnsSafeNameValidator(TestCase):
-    def setUp(self) -> None:
-        self.validator = DnsSafeNameValidator("DNS安全名称测试样例")
-        self.positive_sample = [
-            "v20190731-001",
-            "abc",
-            "a-b",
-            "paas-ng",
-        ]
-        # DNS安全名称测试失败样本集
-        self.negative_sample = ["20190731", "abc-", "-abc", "9bb"]
+class TestDnsSafeNameValidator:
+    @pytest.mark.parametrize("input_str", ["v20190731-001", "abc", "a-b", "paas-ng"])
+    def test_valid_input(self, input_str):
+        validator = DnsSafeNameValidator("DNS安全名称测试样例")
+        assert validator(input_str) is None
 
-    def test_positive_sample(self):
-        for sample in self.positive_sample:
-            assert self.validator(sample) is None
-
-    def test_negative_sample(self):
-        for sample in self.negative_sample:
-            with pytest.raises(ValidationError) as exec_info:
-                self.validator(sample)
-            assert exec_info.value.message == self.validator.message
+    @pytest.mark.parametrize("input_str", ["20190731", "abc-", "-abc", "9bb"])
+    def test_negative_sample(self, input_str):
+        validator = DnsSafeNameValidator("DNS安全名称测试样例")
+        with pytest.raises(ValidationError) as exec_info:
+            validator(input_str)
+        assert exec_info.value.message == validator.message

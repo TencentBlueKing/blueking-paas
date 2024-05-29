@@ -6,102 +6,16 @@
       :is-loading="isLoading"
       placeholder="plugin-base-info-loading"
     >
-      <section class="basic-info-container card-style">
-        <div class="basic-info-item">
-          <div class="title">
-            {{ $t('基本信息-title') }}
-          </div>
-          <div class="info">
-            {{ $t('管理员、开发者可以修改插件名称等基本信息') }}
-          </div>
-          <div class="content no-border">
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px">
-                <label class="title-label logo no-border-bottom">{{ $t('应用logo') }}</label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px)">
-                <div class="logo-uploader item-logn-content">
-                  <div class="preview">
-                    <img :src="curPluginInfo.logo || '/static/images/default_logo.png'" />
-                  </div>
-                  <div
-                    v-if="isChangePluginLogo"
-                    class="preview-btn pl20"
-                  >
-                    <template>
-                      <div>
-                        <bk-button
-                          :theme="'default'"
-                          class="upload-btn mt5"
-                        >
-                          {{ $t('更换图片') }}
-                          <input
-                            type="file"
-                            accept="image/jpeg, image/png"
-                            value=""
-                            name="logo"
-                            @change="handlerUploadFile"
-                          />
-                        </bk-button>
-                        <p
-                          class="tip"
-                          style="line-height: 1"
-                        >
-                          {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
-                        </p>
-                      </div>
-                    </template>
-                  </div>
-                </div>
-              </bk-form-item>
-              <bk-form-item style="width: 180px">
-                <label class="title-label no-border-bottom">{{ $t('插件 ID') }}</label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px); transform: translateX(-1px)">
-                <div class="item-content first-item-content">
-                  {{ pluginInfo.id || '--' }}
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form plugin-name-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px">
-                <label class="title-label">{{ $t('插件名称') }}</label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px)">
-                <bk-input
-                  v-if="isFormEdited.nameInput"
-                  ref="nameInput"
-                  v-model="pluginInfo.name_zh_cn"
-                  :placeholder="$t('请输入插件名称')"
-                  ext-cls="paas-info-app-name-cls"
-                  :clearable="false"
-                  :maxlength="20"
-                  @blur="updatePluginBaseInfo('nameInput')"
-                />
-                <div
-                  v-else
-                  class="plugin-name-box"
-                >
-                  <span>{{ pluginInfo.name_zh_cn }}</span>
-                  <i
-                    v-bk-tooltips="$t('编辑')"
-                    class="paasng-icon paasng-edit-2 plugin-name-icon"
-                    @click="showEdit('nameInput')"
-                  />
-                </div>
-              </bk-form-item>
-            </bk-form>
-          </div>
-        </div>
+      <section class="basic-info-container">
+        <!-- 基本信息 -->
+        <plugin-base-info
+          :plugin-info="pluginInfo"
+          @get-base-info="getPluginBaseInfo"
+          @updata-log="handleUpdataLog"
+        />
 
         <!-- 更多信息 -->
-        <div class="basic-info-item mt15" v-if="isMoreInfo">
+        <div class="basic-info-item mt16 card-style" v-if="isMoreInfo">
           <div class="title">
             {{ $t('更多信息') }}
             <span
@@ -116,206 +30,58 @@
         </div>
 
         <!-- 市场信息 -->
-        <div class="basic-info-item mt15">
-          <div class="title">
-            {{ $t('市场信息') }}
-            <span
-              class="market-edit"
-              @click="toMarketInfo"
-            >
-              <i class="paasng-icon paasng-edit-2" />
-              {{ $t('编辑') }}
-            </span>
-          </div>
-          <div class="info">
-            {{ $t('用于插件市场展示的信息') }}
-          </div>
-          <div class="content no-border">
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px">
-                <label class="title-label">{{ $t('应用分类') }}</label>
-              </bk-form-item>
-              <bk-form-item
-                style="width: calc(100% - 180px)"
-                :class="{ 'input-show-index': isFormEdited.classifyInput }"
-              >
-                <bk-input
-                  ref="classifyInput"
-                  :value="marketInfo.category ? marketInfo.category : marketDefault"
-                  :readonly="!isFormEdited.classifyInput"
-                  ext-cls="paas-info-app-name-cls"
-                  :clearable="false"
-                />
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px">
-                <label class="title-label">{{ $t('应用简介') }}</label>
-              </bk-form-item>
-              <bk-form-item
-                style="width: calc(100% - 180px)"
-                :class="{ 'input-show-index': isFormEdited.profileInput }"
-              >
-                <div
-                  v-bk-tooltips="{
-                    content: marketInfo.introduction ? marketInfo.introduction : marketDefault,
-                    disabled: !marketInfo.introduction
-                  }"
-                  class="introductory"
-                >
-                  <bk-input
-                    ref="profileInput"
-                    :value="marketInfo.introduction ? marketInfo.introduction : marketDefault"
-                    :readonly="!isFormEdited.profileInput"
-                    ext-cls="paas-info-app-name-cls"
-                    :clearable="false"
-                  />
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              :class="['info-special-form', 'user-select-wrapper', { 'user-cls': !marketInfo.contactArr.length }]"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px">
-                <label class="title-label">{{ $t('应用联系人') }}</label>
-              </bk-form-item>
-              <bk-form-item
-                style="width: calc(100% - 180px)"
-                :class="{ 'mask-layer': !isFormEdited.contactsInput }"
-              >
-                <user
-                  v-if="marketInfo.contactArr.length"
-                  ref="contactsInput"
-                  v-model="marketInfo.contactArr"
-                />
-                <bk-input
-                  v-else
-                  ref="profileInput"
-                  :value="marketDefault"
-                  :readonly="true"
-                  ext-cls="paas-info-app-name-cls"
-                  :clearable="false"
-                />
-                <div
-                  v-if="!isFormEdited.contactsInput"
-                  class="user-mask-layer"
-                />
-              </bk-form-item>
-            </bk-form>
-            <!-- 富文本 -->
-            <bk-form
-              class="info-special-form info-textarea"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px">
-                <label
-                  class="title-label editor-label"
-                  :style="`height: ${infoHeight}px;`"
-                >
-                  {{ $t('详细描述') }}
-                </label>
-              </bk-form-item>
-              <bk-form-item
-                style="width: calc(100% - 180px)"
-                :class="{ 'input-show-index': isFormEdited.descriptionInput }"
-              >
-                <div class="content-box">
-                  <div
-                    :class="[
-                      'display-description',
-                      { 'description-ellipsis': editorLabelHeight },
-                      isUnfold ? 'unfold' : 'up',
-                    ]"
-                  >
-                    <div
-                      ref="editorRef"
-                      v-html="marketInfo.description ? marketInfo.description : marketDefault"
-                    />
-                  </div>
-                  <span
-                    v-if="editorLabelHeight === 'down'"
-                    class="unfold-btn"
-                    @click="changeInfoUnfold"
-                  >
-                    {{ isUnfold ? $t('收起') : $t('展开') }}
-                    <i :class="['paasng-icon', isUnfold ? 'paasng-angle-line-up' : 'paasng-angle-line-down']" />
-                  </span>
-                </div>
-              </bk-form-item>
-            </bk-form>
-          </div>
-        </div>
+        <plugin-market-info
+          class="mt16"
+          :market-info="marketInfo"
+        />
 
         <!-- 插件使用方 -->
-        <div
+        <section
           v-if="pluginFeatureFlags.PLUGIN_DISTRIBUTER"
-          class="basic-info-item"
-        >
-          <div class="title">
-            {{ $t('插件使用方') }}
-          </div>
-          <div class="info">
-            {{ tipsInfo }}
-          </div>
-          <div class="content no-border">
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px">
-                <label class="title-label">{{ $t('蓝鲸网关') }}</label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px); border-top: 1px solid #dcdee5">
-                <div class="item-content border-bottm-none">
-                  <span
-                    v-if="apiGwName"
-                    style="color: #3a84ff"
-                  >
-                    {{ $t('已绑定到') + apiGwName }}
-                  </span>
-                  <span
-                    v-else
-                    style="color: #979ba5"
-                  >
-                    {{ $t('暂未找到已同步网关') }}
-                  </span>
-                  <i
-                    v-bk-tooltips="$t('网关维护者默认为应用管理员')"
-                    class="paasng-icon paasng-info-circle tooltip-icon"
+          class="plugin-users-info card-style mt16">
+          <p class="title">{{ $t('插件使用方') }}</p>
+          <p class="description">{{ tipsInfo }}</p>
+          <ul class="plugin-detail-wrapper">
+            <li class="item-info">
+              <div class="describe">
+                {{ $t('蓝鲸网关') }}
+              </div>
+              <div class="right-content">
+                <span
+                  v-if="apiGwName"
+                  style="color: #3a84ff"
+                >
+                  {{ $t('已绑定到') + apiGwName }}
+                </span>
+                <span
+                  v-else
+                  style="color: #979ba5"
+                >
+                  {{ $t('暂未找到已同步网关') }}
+                </span>
+                <i
+                  v-bk-tooltips="$t('网关维护者默认为应用管理员')"
+                  class="paasng-icon paasng-info-circle tooltip-icon ml5"
+                />
+              </div>
+            </li>
+            <li class="item-info">
+              <div class="describe regular-stream">
+                {{ $t('插件使用方') }}
+              </div>
+              <div class="plugin-users">
+                <div>
+                  <bk-transfer
+                    :target-list="targetPluginList"
+                    :source-list="pluginList"
+                    :display-key="'name'"
+                    :setting-key="'code_name'"
+                    :show-overflow-tips="false"
+                    :empty-content="promptContent"
+                    :title="titleArr"
+                    @change="transferChange"
                   />
                 </div>
-              </bk-form-item>
-            </bk-form>
-            <bk-form
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px; height: 480px">
-                <label class="title-label plugin-info">
-                  <p style="height: 26px">{{ $t('插件使用方') }}</p>
-                </label>
-              </bk-form-item>
-              <bk-form-item
-                class="pluginEmploy"
-                style="width: calc(100% - 180px)"
-              >
-                <bk-transfer
-                  :target-list="targetPluginList"
-                  :source-list="pluginList"
-                  :display-key="'name'"
-                  :setting-key="'code_name'"
-                  :show-overflow-tips="false"
-                  :empty-content="promptContent"
-                  :title="titleArr"
-                  @change="transferChange"
-                />
                 <div class="mt20">
                   <bk-button
                     :theme="'primary'"
@@ -341,52 +107,44 @@
                   </p>
                   <p>{{ $t('除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}</p>
                 </div>
-              </bk-form-item>
-            </bk-form>
-          </div>
-        </div>
+              </div>
+            </li>
+          </ul>
+        </section>
 
         <!-- 鉴权信息 -->
         <authentication-info v-if="pluginFeatureFlags.APP_SECRETS" />
 
         <!-- archivedStatus为 true && can_reactivate 为 true 展示上架 -->
-        <div class="basic-info-item" v-if="isArchivedStatus && offlineStatus">
-          <div class="title">
+        <div class="plugin-operation-wrapper" v-if="isArchivedStatus && offlineStatus">
+          <bk-button
+            theme="primary"
+            @click="handleShowPublishPopup"
+          >
             {{ $t('上架插件') }}
-          </div>
+          </bk-button>
+          <i class="paasng-icon paasng-paas-remind-fill"></i>
           <div class="info">
             {{ $t('插件上架后，可在插件市场重新查看该插件的信息') }}
-          </div>
-          <div class="content no-border">
-            <bk-button
-              theme="primary"
-              @click="handleShowPublishPopup"
-            >
-              {{ $t('上架插件') }}
-            </bk-button>
           </div>
         </div>
 
         <!-- archivedStatus为 true && can_reactivate 为 false 下架操作禁止用 -->
-        <div class="basic-info-item" v-else>
-          <div class="title">
+        <div class="plugin-operation-wrapper" v-else>
+          <bk-button
+            theme="danger"
+            :disabled="isArchivedStatus && !offlineStatus"
+            @click="showRemovePlugin"
+          >
             {{ $t('下架插件') }}
-          </div>
+          </bk-button>
+          <i class="paasng-icon paasng-paas-remind-fill"></i>
+          <span
+            v-if="isArchivedStatus && !offlineStatus"
+            class="offline-tip"
+          >{{ $t('插件已下架') }}</span>
           <div class="info">
             {{ $t('插件下架后，插件市场不再展示该插件信息') }}
-          </div>
-          <div class="content no-border">
-            <bk-button
-              theme="danger"
-              :disabled="isArchivedStatus && !offlineStatus"
-              @click="showRemovePlugin"
-            >
-              {{ $t('下架插件') }}
-            </bk-button>
-            <span
-              v-if="isArchivedStatus && !offlineStatus"
-              class="offline-tip"
-            >{{ $t('插件已下架') }}</span>
           </div>
         </div>
       </section>
@@ -399,7 +157,6 @@
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
-      :loading="delPluginDialog.isLoading"
       @after-leave="hookAfterClose"
     >
       <div class="ps-form">
@@ -424,8 +181,9 @@
       <template slot="footer">
         <bk-button
           theme="primary"
+          :loading="delPluginDialog.isLoading"
           :disabled="!formRemoveValidated"
-          @click="lowerShelfPlugin"
+          @click="confirmRemoval"
         >
           {{ $t('确定') }}
         </bk-button>
@@ -441,26 +199,21 @@
   </div>
 </template>
 
-<script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+<script>
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import paasPluginTitle from '@/components/pass-plugin-title';
-import user from '@/components/user';
 import authenticationInfo from '@/components/authentication-info.vue';
-import xss from 'xss';
 import MoreInfo from './comps/more-info.vue';
+import pluginBaseInfo from './comps/base-info-item.vue';
+import pluginMarketInfo from './comps/market-info-item.vue';
 // import 'BKSelectMinCss';
-
-const xssOptions = {
-  whiteList: {
-    'bk-highlight-mark': [],
-  },
-};
-const logXss = new xss.FilterXSS(xssOptions);
 export default {
   components: {
     authenticationInfo,
-    user,
     paasPluginTitle,
     MoreInfo,
+    pluginBaseInfo,
+    pluginMarketInfo,
   },
   mixins: [pluginBaseMixin],
   data() {
@@ -484,27 +237,14 @@ export default {
       marketInfo: {
         contactArr: [],
       },
-      marketDefault: '--',
-      resMarketInfo: {},
       // 市场信息只读
-      isMarketInfo: true,
       formRemovePluginId: '',
-      isUnfold: false,
       delPluginDialog: {
         visiable: false,
         isLoading: false,
       },
       titleArr: [this.$t('可选的插件使用方'), this.$t('已授权给以下使用方')],
       promptContent: [this.$t('无数据'), this.$t('未选择已授权使用方')],
-      editorConfig: {
-        visible: false,
-        position: {
-          top: 100,
-        },
-      },
-      editorValue: '',
-      editorLabelHeight: '',
-      editorHeight: '',
       apiGwName: '',
       TargetDataFirst: true,
       PluginDataAllFirst: true,
@@ -526,18 +266,6 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
-    },
-    infoHeight() {
-      return this.isUnfold ? Number(this.editorHeight) + 32 : 232;
-    },
-    // 是否可以更换插件logo
-    isChangePluginLogo() {
-      // administrator 的角色id 是 2
-      return this.curPluginInfo.role && [2].indexOf(this.curPluginInfo.role.id) !== -1;
-    },
-    // 更多信息
-    moreInfoFields() {
-      return this.curPluginInfo.extra_fields;
     },
     isArchivedStatus() {
       return this.curPluginInfo.status === 'archived';
@@ -599,12 +327,6 @@ export default {
         this.marketInfo = res;
         const contactformat = !res.contact ? [] : res.contact.split(',');
         this.$set(this.marketInfo, 'contactArr', contactformat);
-        res.contactArr = contactformat;
-        this.resMarketInfo = JSON.stringify(res);
-        this.$nextTick(() => {
-          this.editorLabelHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight > 200 ? 'down' : '';
-          this.editorHeight = (this.$refs.editorRef && this.$refs.editorRef.offsetHeight) || 232;
-        });
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -614,33 +336,6 @@ export default {
         setTimeout(() => {
           this.isLoading = false;
         }, 200);
-      }
-    },
-
-    // 保存基本信息
-    async updatePluginBaseInfo(ref) {
-      if (this.resPluginInfo.name_zh_cn === this.pluginInfo.name_zh_cn) {
-        this.cancelBasicInfo(ref, 'reset');
-        return;
-      }
-      const data = {
-        name: this.pluginInfo.name_zh_cn,
-      };
-      const query = this.formattParams();
-      try {
-        await this.$store.dispatch('plugin/updatePluginBaseInfo', { ...query, data });
-        this.getPluginBaseInfo();
-        this.cancelBasicInfo(ref);
-        this.$bkMessage({
-          theme: 'success',
-          message: this.$t('基本信息修改成功！'),
-        });
-      } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-        this.cancelBasicInfo(ref, 'reset');
       }
     },
 
@@ -687,52 +382,8 @@ export default {
       }
     },
 
-    // 插件开发
-    showEdit(key) {
-      this.isFormEdited[key] = true;
-      if (key === 'contactsInput') {
-        this.$nextTick(() => {
-          this.$refs.contactsInput.$refs.member_selector.handleClick();
-        });
-        return;
-      }
-      this.$nextTick(() => {
-        this.$refs[key].focus();
-      });
-    },
-
-    dialogAfterLeave() {
-      this.isFormEdited.descriptionInput = false;
-    },
-
-    // ref inputRef(可修改), key当前更改的值
-    cancelBasicInfo(ref, isReset) {
-      // 重置数据
-      if (isReset) {
-        this.resetData(ref);
-      }
-      this.isFormEdited[ref] = false;
-    },
-
-    resetData(ref) {
-      // 基本信息
-      if (ref === 'nameInput') {
-        this.pluginInfo.name_zh_cn = this.resPluginInfo.name_zh_cn;
-      }
-      const marketData = JSON.parse(this.resMarketInfo);
-      // 市场信息
-      if (ref === 'classifyInput') {
-        this.marketInfo.category = marketData.category;
-      }
-      if (ref === 'profileInput') {
-        this.marketInfo.introduction = marketData.introduction;
-      }
-      if (ref === 'descriptionInput') {
-        this.marketInfo.description = logXss.process(marketData.description);
-      }
-      if (ref === 'contactsInput') {
-        this.marketInfo.contactArr = marketData.contactArr;
-      }
+    handleUpdataLog() {
+      this.$emit('current-plugin-info-updated');
     },
 
     showRemovePlugin() {
@@ -744,7 +395,8 @@ export default {
       this.formRemovePluginId = '';
     },
 
-    async lowerShelfPlugin() {
+    async confirmRemoval() {
+      this.delPluginDialog.isLoading = true;
       try {
         await this.$store.dispatch('plugin/lowerShelfPlugin', {
           pdId: this.pdId,
@@ -764,14 +416,9 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      } finally {
+        this.delPluginDialog.isLoading = false;
       }
-    },
-
-    // 编辑页
-    toMarketInfo() {
-      this.$router.push({
-        name: 'marketInfoEdit',
-      });
     },
 
     // 更多信息编辑
@@ -783,10 +430,6 @@ export default {
           schema: this.pluginSchema,
         },
       });
-    },
-
-    changeInfoUnfold() {
-      this.isUnfold = !this.isUnfold;
     },
 
     // 获取可选插件适用方
@@ -924,24 +567,11 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.basic-info-container {
-  padding: 24px;
-}
-.desc-flex {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  padding-bottom: 5px;
-  .title {
-    color: #313238;
-    font-size: 14px;
-    font-weight: bold;
-    line-height: 1;
-    margin-bottom: 0px !important;
-  }
+.mt16 {
+  margin-top: 16px;
 }
 .basic-info-item {
-  margin-bottom: 35px;
+  padding: 24px;
   .title {
     color: #313238;
     font-size: 14px;
@@ -957,30 +587,6 @@ export default {
     margin-top: 20px;
     border: 1px solid #dcdee5;
     border-radius: 2px;
-    &.no-border {
-      border: none;
-    }
-    .info-special-form:nth-child(2) {
-      position: relative;
-      top: -5px;
-    }
-    .info-special-form:nth-child(3) {
-      position: relative;
-      top: -11px;
-    }
-    .info-special-form:nth-child(4) {
-      position: relative;
-      top: -16px;
-      z-index: 99;
-    }
-    .info-special-form:nth-child(5) {
-      position: relative;
-      top: -16px;
-    }
-    .info-special-form:nth-child(6) {
-      position: relative;
-      top: -20px;
-    }
     .input-show-index {
       z-index: 10;
     }
@@ -1018,80 +624,9 @@ export default {
       background: #fafbfd;
     }
 
-    .logo {
-      height: 105px;
-      line-height: 105px;
-    }
-
-    .no-border-bottom {
-      border-bottom: none;
-    }
-
     .plugin-info {
       height: 460px;
       padding-top: 20px;
-    }
-
-    .content-item {
-      position: relative;
-      height: 60px;
-      line-height: 60px;
-      border-bottom: 1px solid #dcdee5;
-      label {
-        display: inline-block;
-        position: relative;
-        top: -1px;
-        width: 180px;
-        height: 60px;
-        border-right: 1px solid #dcdee5;
-        color: #313238;
-        vertical-align: middle;
-        .basic-p {
-          padding-left: 30px;
-        }
-        .title-p {
-          line-height: 30px;
-          text-align: center;
-          &.tip {
-            font-size: 12px;
-            color: #979ba5;
-          }
-        }
-      }
-      .item-practical-content {
-        display: inline-block;
-        padding-left: 20px;
-        max-width: calc(100% - 180px);
-        text-overflow: ellipsis;
-        overflow: hidden;
-        white-space: nowrap;
-        vertical-align: top;
-
-        .edit-input {
-          display: inline-block;
-          position: relative;
-          top: -1px;
-        }
-
-        .edit-button {
-          display: inline-block;
-          position: absolute;
-          right: 10px;
-        }
-
-        .edit {
-          position: relative;
-          color: #63656e;
-          font-weight: bold;
-          cursor: pointer;
-          &:hover {
-            color: #3a84ff;
-          }
-        }
-      }
-    }
-    .content-item:last-child {
-      border-bottom: none;
     }
     .pre-release-wrapper,
     .production-wrapper {
@@ -1150,105 +685,9 @@ export default {
         }
       }
     }
-    .ip-tips {
-      margin-top: 7px;
-      color: #63656e;
-      font-size: 12px;
-      i {
-        color: #ff9c01;
-      }
-    }
   }
 }
 
-.logo-uploader {
-  // margin-bottom: 15px;
-  display: flex;
-  overflow: hidden;
-
-  .preview {
-    img {
-      width: 64px;
-      height: 64px;
-      border-radius: 2px;
-    }
-  }
-
-  .upload-btn {
-    width: 100px;
-    overflow: hidden;
-    margin-bottom: 10px;
-    input {
-      position: absolute;
-      left: 0;
-      top: 0;
-      z-index: 10;
-      height: 100%;
-      min-height: 40px;
-      width: 100%;
-      opacity: 0;
-      cursor: pointer;
-    }
-  }
-}
-.plugin-type {
-  display: flex;
-  align-items: center;
-}
-.action-box {
-  width: 88px !important;
-  z-index: 11 !important;
-}
-.description-edit {
-  top: 10px;
-}
-.detail-doc {
-  color: #3a84ff;
-  cursor: pointer;
-}
-.edit-wrapper {
-  height: 280px;
-  .editor {
-    height: 240px;
-  }
-}
-.display-description {
-  position: relative;
-}
-.content-box {
-  font-size: 12px;
-  border: 1px solid #dcdee5;
-  background: #fff;
-  padding: 0 5px 30px 25px;
-  border-radius: 0 2px 2px 0;
-  .unfold {
-    overflow: auto;
-    min-height: 200px;
-    overflow-x: hidden;
-  }
-  .up {
-    height: 200px;
-    overflow: hidden;
-  }
-  .is-down {
-    transform-origin: 50% 50%;
-    // transform: rotate(-180deg);
-  }
-}
-.unfold-btn {
-  position: absolute;
-  bottom: 0;
-  right: 10px;
-  cursor: pointer;
-  color: #3a84ff;
-  i {
-    transform-origin: 50% 50%;
-    transform: translateX(-2px);
-  }
-}
-.description-ellipsis {
-  display: -webkit-box;
-}
 .user-select-wrapper {
   .user-mask-layer {
     position: absolute;
@@ -1260,9 +699,6 @@ export default {
     width: 100%;
     border: 1px solid #dcdee5;
   }
-}
-.user-select-wrapper.user-cls .user-mask-layer {
-  border-bottom: none;
 }
 .market-edit,
 .plugin-name-icon-cls {
@@ -1277,54 +713,6 @@ export default {
     transform: translateX(2px);
   }
 }
-.plugin-name-icon-cls {
-  i {
-    transform: translateX(9px);
-  }
-}
-// .edit-cls {
-//     display: inline-block;
-//     width: 100%;
-//     height: 100%;
-// }
-.edit-box-cls {
-  cursor: pointer;
-  color: #979ba5;
-  i {
-    transform: translateX(8px);
-  }
-  .text {
-    font-size: 12px;
-  }
-  &:hover {
-    color: #3a84ff;
-  }
-}
-.plugin-name-form {
-  top: -4px !important;
-}
-.plugin-name-box {
-  font-size: 12px;
-  padding: 0 10px 0 25px;
-  height: 42px;
-  line-height: 42px;
-  border-right: 1px solid #dcdee5;
-  border-bottom: 1px solid #dcdee5;
-  .plugin-name-icon {
-    margin-left: 5px;
-    cursor: pointer;
-    color: #3a84ff;
-    font-size: 16px;
-  }
-}
-.border-bottm-none {
-  border-bottom: none !important;
-}
-.pluginEmploy {
-  height: 460px;
-  padding: 20px 24px 0;
-  border: 1px solid #dcdee5;
-}
 .explain {
   margin-top: 20px;
   p {
@@ -1337,50 +725,88 @@ export default {
   color: #979ba5;
   margin-left: 10px;
 }
+.plugin-users-info {
+  padding: 24px;
+  .title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #313238;
+    line-height: 22px;
+  }
+  .description {
+    margin-top: 4px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #979ba5;
+    line-height: 20px;
+  }
+  .plugin-detail-wrapper {
+      border: 1px solid #dcdee5;
+      .item-info {
+        display: flex;
+        min-height: 42px;
+        border-top: 1px solid #dcdee5;
+        &:first-child {
+          border-top: none;
+        }
+        .describe,
+        .right-content {
+          display: flex;
+          align-items: center;
+          font-size: 12px;
+        }
+        .describe {
+          flex-shrink: 0;
+          justify-content: center;
+          width: 180px;
+          color: #313238;
+          line-height: normal;
+          background: #fafbfd;
+
+          &.regular-stream {
+            display: block;
+            padding-top: 16px;
+            text-align: center;
+          }
+        }
+        .plugin-users {
+          width: 100%;
+          padding: 16px;
+          border-left: 1px solid #dcdee5;
+          &.no-padding-lf {
+            padding-left: 0;
+          }
+        }
+        .right-content {
+          flex-wrap: wrap;
+          line-height: 1.5;
+          word-break: break-all;
+          flex: 1;
+          color: #63656e;
+          padding-left: 16px;
+          border-left: 1px solid #dcdee5;
+        }
+      }
+    }
+}
+
+.plugin-operation-wrapper {
+  display: flex;
+  align-items: center;
+  margin-top: 24px;
+  font-size: 12px;
+  color: #63656E;
+
+  i {
+    margin: 0 5px 0 16px;
+    font-size: 14px;
+    color: #FF9C01;
+  }
+}
 </style>
 <style lang="scss">
-.plugin-base-info section .content .content-item label {
-  background: #fafbfd;
-}
-.plugin-base-info section .content .content-item label.first-label {
-  border-bottom: 1px solid #dcdee5;
-}
 .content .paas-info-app-name-cls .bk-form-input {
   font-size: 12px !important;
-}
-.plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-name {
-  height: 32px;
-  line-height: 32px;
-  font-size: 12px;
-}
-.plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-angle {
-  top: 4px;
-}
-.member-cls {
-  .bk-tag-selector {
-    min-height: 41px;
-    .bk-tag-input {
-      height: 41px !important;
-      padding-left: 20px;
-      border-top: 0;
-      border-color: #dcdee5;
-      margin-top: 1px;
-      .placeholder {
-        top: 5px;
-        left: 25px;
-      }
-      .clear-icon {
-        margin-right: 19px !important;
-        display: none;
-      }
-    }
-
-    .active {
-      border-color: #3a84ff !important;
-      border-top: 1px solid #3a84ff;
-      border-radius: 0 2px 2px 0;
-    }
-  }
 }
 .right-main {
   .cls-bk-input {

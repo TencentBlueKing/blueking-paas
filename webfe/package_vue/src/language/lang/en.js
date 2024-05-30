@@ -2598,4 +2598,7 @@ export default {
   '环境变量不生效，KEY 与增强服务（Sentry）内置环境变量冲突': 'Environmental variables do not take effect, KEY conflicts with built-in environmental variables of enhanced service (Sentry)',
   '环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突': 'Environmental variables do not take effect, KEY conflicts with the built-in environmental variables of the {s} enhanced service',
   重启次数: 'Restart Count',
+  测试报告: 'Test report',
+  终止测试: 'Terminate Test',
+  授权期限: 'Authorization Period',
 };

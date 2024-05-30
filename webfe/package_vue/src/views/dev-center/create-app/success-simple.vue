@@ -74,7 +74,8 @@ export default {
 
   .biz-create-success {
     background: #f5f7fa;
-    padding: 74px 0 20px 0;
+    padding-bottom: 20px;
+    padding-top: calc(var(--app-notice-height) + 74px);
   }
   .success-wrapper {
     .info {

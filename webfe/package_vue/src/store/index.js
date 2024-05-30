@@ -182,8 +182,9 @@ const mutations = {
     state.curAppInfo.name = product.name;
     state.curAppInfo.application.name = product.name;
   },
-  updateCurAppProductLogo(state, logo) {
-    state.curAppInfo.application.logo_url = logo;
+  updateCurAppBaseInfo(state, data) {
+    state.curAppInfo.application.logo_url = data.logo_url;
+    state.curAppInfo.application.name = data.name_zh_cn;
   },
   updateCurAppMarketPublished(state, flag) {
     if (state.curAppInfo.application && state.curAppInfo.application.config_info) {

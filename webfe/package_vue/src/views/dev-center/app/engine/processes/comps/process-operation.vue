@@ -180,6 +180,7 @@
                 <thead>
                   <th> {{ $t('实例名称') }} </th>
                   <th> {{ $t('状态') }} </th>
+                  <th> {{ $t('重启次数') }} </th>
                   <th> {{ $t('创建时间') }} </th>
                   <th style="min-width: 250px;">
                     {{ $t('操作') }}
@@ -205,6 +206,9 @@
                           v-bk-tooltips="{content: getInstanceStateToolTips(instance)}"
                           v-dashed="9"
                         >{{ instance.rich_status }}</span>
+                      </td>
+                      <td class="restarts">
+                        {{ instance.restart_count }}
                       </td>
                       <td class="time">
                         <template v-if="instance.date_time !== 'Invalid date'">

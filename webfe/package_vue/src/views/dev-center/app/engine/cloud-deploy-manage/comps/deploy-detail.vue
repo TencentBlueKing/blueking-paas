@@ -54,24 +54,17 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('实例名称')"
-          class-name="table-colum-instance-cls"
+          class-name="table-colum-instance-cls colum-instance-name"
         >
           <template slot-scope="{ row }">
             <div v-if="row.instances.length">
               <div
-                class="instance-item-cls cell-container"
+                class="instance-item-cls cell-container instance-name"
                 :class="row.isExpand ? 'expand' : 'close'"
                 v-for="instance in row.instances"
                 :key="instance.process_name"
-                @mouseenter="handleMouseEnter(instance.display_name)"
-                @mouseleave="rowDisplayName = ''"
               >
-                <div
-                  class="content"
-                  :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                >
-                  {{ instance.display_name }}
-                </div>
+                <div class="text-ellipsis" v-bk-overflow-tips>{{ instance.display_name }}</div>
               </div>
             </div>
             <div v-else class="instance-item-cls-empty cell-container">--</div>
@@ -85,18 +78,13 @@
                 :class="row.isExpand ? 'expand' : 'close'"
                 v-for="instance in row.instances"
                 :key="instance.process_name"
-                @mouseenter="handleMouseEnter(instance.display_name)"
-                @mouseleave="rowDisplayName = ''"
               >
-                <div
-                  class="content"
-                  :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                >
-                  <div
+                <div class="text-ellipsis">
+                  <span
                     class="dot"
                     :class="instance.rich_status"
                   >
-                  </div>
+                  </span>
                   <span v-bk-tooltips="instance.state_message || ''">
                     <em
                       v-dashed="{disabled: instance.rich_status === 'Running'}"
@@ -111,6 +99,24 @@
             <div v-else class="instance-item-cls-empty cell-container">--</div>
           </template>
         </bk-table-column>
+        <bk-table-column
+          :label="$t('重启次数')"
+          class-name="table-colum-instance-cls"
+          width="80">
+          <template slot-scope="{ row }">
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                {{ instance.restart_count }}
+              </div>
+            </div>
+            <div v-else class="instance-item-cls-empty cell-container">--</div>
+          </template>
+        </bk-table-column>
         <bk-table-column :label="$t('创建时间')" class-name="table-colum-instance-cls">
           <template slot-scope="{ row }">
             <div v-if="row.instances.length">
@@ -119,16 +125,9 @@
                 :class="row.isExpand ? 'expand' : 'close'"
                 v-for="instance in row.instances"
                 :key="instance.process_name"
-                @mouseenter="handleMouseEnter(instance.display_name)"
-                @mouseleave="rowDisplayName = ''"
               >
                 <template v-if="instance.date_time !== 'Invalid date'">
-                  <div
-                    class="content"
-                    :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                  >
-                    {{ $t('创建于') }} {{ instance.date_time }}
-                  </div>
+                  <div class="text-ellipsis">{{ $t('创建于') }} {{ instance.date_time }}</div>
                 </template>
                 <template v-else>
                   --
@@ -138,15 +137,16 @@
             <div v-else class="instance-item-cls-empty cell-container">--</div>
           </template>
         </bk-table-column>
-        <bk-table-column label="" class-name="table-colum-instance-cls">
+        <bk-table-column
+          label=""
+          class-name="table-colum-instance-cls"
+          width="140">
           <template slot-scope="{ row }">
             <div
               class="instance-item-cls cell-container operation-column"
               :class="row.isExpand ? 'expand' : 'close'"
               v-for="instance in row.instances"
               :key="instance.process_name"
-              @mouseenter="handleMouseEnter(instance.display_name)"
-              @mouseleave="rowDisplayName = ''"
             >
               <bk-button
                 class="mr10"
@@ -650,7 +650,6 @@ export default {
         title: '',
         link: '',
       },
-      rowDisplayName: '',
       // EventSource handler
       serverProcessEvent: undefined,
       scaleTargetReplicas: 0,
@@ -1506,10 +1505,6 @@ export default {
         bus.$emit('get-release-info');
       }
     },
-
-    handleMouseEnter(name) {
-      this.rowDisplayName = name;
-    },
   },
 };
 </script>
@@ -1618,13 +1613,7 @@ export default {
         padding: 0;
 
         .instance-item-cls-empty{
-          position: absolute;
-          width: 50%;
-          left: 65%;
-          top: 50%;
-          text-align: left;
-          padding-left: 5px;
-          transform: translate(-50%, -50%);
+          padding: 0 10px;
         }
 
         .operation-column {
@@ -1635,27 +1624,21 @@ export default {
         .instance-item-cls  {
           border-bottom: 1px solid #dfe0e5;
           transition: .25s ease;
+          padding: 0 10px;
 
-          .content {
-            position: absolute;
-            width: calc(50% + 5px);
-            left: 65%;
-            top: 50%;
-            transform: translate(calc(-50% + 7px), -50%);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
+          &.instance-name {
+            padding-left: 30px;
           }
 
           .instance-item-status {
             padding-bottom: 2px;
           }
 
-          // .hoverBackground {
-          //   background-color: #FAFBFD;
-          // }
+          .text-ellipsis {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+          }
 
           &:last-child {
             border-bottom: none;
@@ -1678,15 +1661,13 @@ export default {
           }
         }
       }
+
+      &.colum-instance-name .bk-table-header-label {
+        padding-left: 30px;
+      }
+
       .bk-table-header-label {
-        // display: flex;
-        // justify-content: center;
-        position: absolute;
-        width: 50%;
-        left: 65%;
-        top: 50%;
-        padding-left: 5px;
-        transform: translate(-50%, -50%);
+        padding: 0 10px;
       }
     }
     .table-colum-operation-cls {
@@ -1751,6 +1732,7 @@ export default {
     z-index: 99;
     cursor: pointer;
     .image-icon{
+      display: block;
       width: 14px;
       height: 14px;
     }
@@ -1780,15 +1762,18 @@ export default {
     width: 13px;
     height: 13px;
     border-radius: 50%;
-    margin-right: 8px;
+    margin-right: 5px;
     flex-shrink: 0;
+    transform: translateY(2px);
 
-    &.Failed {
+    &.Failed,
+    &.Error {
       background: #EA3636;
       border: 3px solid #fce0e0;
     }
     &.interrupted,
-    &.Pending {
+    &.Pending,
+    &.CrashLoopBackOff {
       background: #FF9C01;
       border: 3px solid #ffefd6;
     }

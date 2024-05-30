@@ -217,8 +217,9 @@ def _get_advanced_fields(
     return fields
 
 
-def _get_organization_display_name(organization: Optional[list]) -> str:
+def _get_organization_display_name(organization) -> str:
     if not organization:
         return ""
+
     organization_names = [r["name"] for r in organization]
     return ";".join(organization_names)

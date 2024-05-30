@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from string import ascii_uppercase
 from textwrap import dedent
 from typing import List
@@ -96,7 +97,7 @@ class TestGetConfigVars:
 
 
 class TestFilterByEnvironmentName:
-    """TestCases for ConfigVar.objects.filter_by_environment_name"""
+    """Test cases for ConfigVar.objects.filter_by_environment_name"""
 
     @pytest.mark.parametrize(
         ("environment_name", "length", "keys"),

@@ -945,7 +945,7 @@ BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get("BK_PLUGIN_APIGW_SERVICE_STAGE", "p
 BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE = settings.get("BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE", "default")  # 用户类型
 
 # 插件仓库的可见范围:私有项目 visibility_level = 0; 公共项目 visibility_level = 10
-PLUGIN_VISIBILTY_LEVEL = 10
+PLUGIN_VISIBILTY_LEVEL = settings.get("PLUGIN_VISIBILTY_LEVEL", 10)
 
 # -------------
 # 引擎相关配置项

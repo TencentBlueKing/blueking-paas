@@ -20,13 +20,17 @@ import pytest
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.mgrlegacy.cnative_migrations.application import ApplicationTypeMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.build_config import BuildConfigMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.cluster import ApplicationClusterMigrator
 from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager, WlAppBackupMigrator
 from paasng.platform.mgrlegacy.models import WlAppBackupRel
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.models.module import Module
+from paasng.platform.sourcectl.docker.models import get_or_create_repo_obj
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
 from .conftest import CNATIVE_CLUSTER_NAME
@@ -83,8 +87,31 @@ class TestBuildConfigMigrator:
         yield
         ApplicationTypeMigrator(migration_process).rollback()
 
+    @pytest.fixture()
+    def image_repository_module(self, bk_app):
+        repo_obj = get_or_create_repo_obj(bk_app, "docker", "https://example.com/image", ".")
+        return Module.objects.create(
+            application=bk_app,
+            name="image-repository",
+            region=bk_app.region,
+            owner=bk_app.owner,
+            creator=bk_app.creator,
+            source_origin=SourceOrigin.IMAGE_REGISTRY.value,
+            source_type="docker",
+            source_repo_id=repo_obj.id,
+        )
+
     def test_migrate_and_rollback(
-        self, bk_app, bk_module, migration_process, cnb_builder, cnb_runner, buildpack, slugbuilder, slugrunner
+        self,
+        bk_app,
+        bk_module,
+        image_repository_module,
+        migration_process,
+        cnb_builder,
+        cnb_runner,
+        buildpack,
+        slugbuilder,
+        slugrunner,
     ):
         BuildConfigMigrator(migration_process).migrate()
         config = BuildConfig.objects.get(module=bk_module)
@@ -92,8 +119,19 @@ class TestBuildConfigMigrator:
         assert config.buildpack_builder == cnb_builder
         assert config.buildpack_runner == cnb_runner
 
+        image_config = BuildConfig.objects.get(module=image_repository_module)
+        assert image_config.image_repository == "https://example.com/image"
+        assert image_config.build_method == RuntimeType.CUSTOM_IMAGE.value
+        assert Module.objects.get(id=image_repository_module.id).source_origin == SourceOrigin.CNATIVE_IMAGE.value
+
         BuildConfigMigrator(migration_process).rollback()
         config = BuildConfig.objects.get(module=bk_module)
         assert config.buildpacks.filter(id=buildpack.id).exists()
         assert config.buildpack_builder == slugbuilder
         assert config.buildpack_runner == slugrunner
+
+        image_config = BuildConfig.objects.get(module=image_repository_module)
+        assert image_config.image_repository is None
+        legacy_image_repository_module = Module.objects.get(id=image_repository_module.id)
+        assert legacy_image_repository_module.source_origin == SourceOrigin.IMAGE_REGISTRY.value
+        assert legacy_image_repository_module.get_source_obj().get_repo_url() == "https://example.com/image"

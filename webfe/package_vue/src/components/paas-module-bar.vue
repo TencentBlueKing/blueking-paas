@@ -136,6 +136,7 @@ import store from '@/store';
 import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
 import { bus } from '@/common/bus';
+import i18n from '@/language/i18n';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -207,7 +208,7 @@ export default defineComponent({
     const isSmartApp = computed(() => curAppModule.source_origin === vm.proxy.GLOBAL.APP_TYPES.SMART_APP);
 
     // 新建模块禁用提示
-    const disableTips = computed(() => (isSmartApp.value ? 'S-mart 应用不允许在页面上新建模块' : '当前应用不允许创建其他模块'));
+    const disableTips = computed(() => (isSmartApp.value ? i18n.t('S-mart 应用不允许在页面上新建模块') : i18n.t('当前应用不允许创建其他模块')));
 
     // 切换tab
     const handleTabChange = async () => {
@@ -269,7 +270,7 @@ export default defineComponent({
         });
         bkMessage({
           theme: 'success',
-          message: '模块删除成功',
+          message: i18n.t('模块删除成功'),
         });
         await store.dispatch('getAppInfo', {
           appCode: props.appCode,

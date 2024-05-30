@@ -567,5 +567,14 @@ export default {
       const url = `${BACKEND_URL}/api/bk_plugins/${appCode}/profile/`;
       return http.patch(url, data, config);
     },
+
+    /**
+     * 更新步骤状态
+     * @param {Object} params 请求参数：pdId, pluginId, releaseId, stageId
+     */
+    updateStepStatus({ commit, state }, { pdId, pluginId, releaseId, stageId, data }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/stages/${stageId}/status/`;
+      return http.post(url, data, config);
+    },
   },
 };

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Optional
 
@@ -25,7 +26,6 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
-from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
@@ -39,11 +39,11 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
+from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.signals import post_phase_end, pre_phase_start
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import get_app_description_handler, get_processes
 from paasng.platform.engine.workflow import DeployProcedure, DeployStep
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
@@ -75,13 +75,13 @@ class ImageReleaseMgr(DeployStep):
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
 
         module = self.module_environment.module
-        is_smart_app = module.get_source_origin() == SourceOrigin.S_MART
+        is_smart_app = module.application.is_smart_app
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure("解析应用进程信息", phase=preparation_phase):
             build_id = self.deployment.advanced_options.build_id
             if build_id:
                 # 托管源码的应用在发布历史镜像时, advanced_options.build_id 不为空
-                deployment = (
+                deployment: Deployment = (
                     Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
                 )
                 if not deployment:

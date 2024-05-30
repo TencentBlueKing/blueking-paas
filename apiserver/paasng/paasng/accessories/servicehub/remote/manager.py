@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """The universal services module, handles both services from database and remote REST API
 """
 import json
@@ -33,6 +34,7 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.shim import get_cluster_egress_info
 from paasng.accessories.servicehub import constants, exceptions
+from paasng.accessories.servicehub.exceptions import BindServiceNoPlansError
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient
 from paasng.accessories.servicehub.remote.collector import RemoteSpecDefinitionUpdateSLZ, refresh_remote_service
@@ -732,7 +734,10 @@ class RemoteServiceBinder:
 
     @atomic()
     def bind(self, module: Module, specs: Optional[Dict[str, str]] = None):
-        """Create the binding relationship in local database"""
+        """Create the binding relationship in local database.
+
+        :raises BindServiceNoPlansError: When no appropriate plans can be found.
+        """
         specs_helper = ServiceSpecificationHelper(
             self.service.specifications,
             list(ServicePlansHelper.from_service(self.service).get_by_region(module.region)),
@@ -746,7 +751,11 @@ class RemoteServiceBinder:
 
         # bind plans to each engineApp without creating
         for env in module.envs.all():  # type: ModuleEnvironment
-            plan = cast(RemotePlanObj, self._get_plan_by_env(env, plans))
+            plan = self._get_plan_by_env(env.environment, plans)
+            if not plan:
+                raise BindServiceNoPlansError(env.environment)
+
+            plan = cast(RemotePlanObj, plan)
             self._bind_for_env(env, plan)
         return svc_module_attachment
 
@@ -759,14 +768,18 @@ class RemoteServiceBinder:
         return attachment
 
     @staticmethod
-    def _get_plan_by_env(env: ModuleEnvironment, plans: List[PlanObj]) -> PlanObj:
-        """Return the first plan which matching the given env."""
+    def _get_plan_by_env(environment: str, plans: List[PlanObj]) -> Optional[PlanObj]:
+        """Return the first plan that matching the given env.
+
+        :param environment: The environment name.
+        :return: A plan object, None if no matching plan can be found.
+        """
         plans = sorted(plans, key=lambda i: ("restricted_envs" in i.properties), reverse=True)
 
         for plan in plans:
-            if "restricted_envs" not in plan.properties or env.environment in plan.properties["restricted_envs"]:
+            if "restricted_envs" not in plan.properties or environment in plan.properties["restricted_envs"]:
                 return plan
-        raise RuntimeError("can not bind a plan")
+        return None
 
     def _bind_for_env(self, env: ModuleEnvironment, plan: RemotePlanObj):
         attachment, created = RemoteServiceEngineAppAttachment.objects.get_or_create(

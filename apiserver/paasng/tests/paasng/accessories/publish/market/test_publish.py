@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from unittest import mock
 
 import pytest
@@ -49,7 +50,7 @@ def _with_all_deployed():
 
 
 class TestAppPublishPreparer:
-    """TestCases for AppPublishPreparer"""
+    """Test cases for AppPublishPreparer"""
 
     app_extra_fields = {"source_init_template": "dj18_with_auth"}
 

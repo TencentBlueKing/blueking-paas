@@ -16,11 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.structure import register
 
 
@@ -38,9 +39,14 @@ class BuildLegacyData(BaseModel):
     """Build config info before migration"""
 
     module_name: str
-    buildpack_ids: List[int]
-    buildpack_builder_id: int
-    buildpack_runner_id: int
+
+    source_origin: Optional[SourceOrigin] = None
+    source_repo_id: Optional[int] = None
+    source_type: Optional[str] = None
+
+    buildpack_ids: Optional[List[int]] = None
+    buildpack_builder_id: Optional[int] = None
+    buildpack_runner_id: Optional[int] = None
 
 
 @register

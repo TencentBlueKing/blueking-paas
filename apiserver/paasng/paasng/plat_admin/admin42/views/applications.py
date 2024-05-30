@@ -40,6 +40,7 @@ from paasng.infras.iam.helpers import (
 from paasng.plat_admin.admin42.serializers.application import (
     ApplicationDetailSLZ,
     ApplicationSLZ,
+    AppOperationReportCollectionTaskOutputSLZ,
     AppOperationReportListInputSLZ,
     AppOperationReportOutputSLZ,
     BindEnvClusterSLZ,
@@ -54,7 +55,7 @@ from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
 from paasng.platform.engine.constants import ClusterType
 from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.models import AppOperationReport
+from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.utils.error_codes import error_codes
 
 
@@ -154,6 +155,12 @@ class ApplicationOperationEvaluationView(ApplicationOperationReportMixin, Generi
         self.paginator.default_limit = 10
 
         kwargs = super().get_context_data(**kwargs)
+
+        kwargs["latest_collect_task"] = None
+        # 获取最近一次同步任务
+        if latest_collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            kwargs["latest_collect_task"] = AppOperationReportCollectionTaskOutputSLZ(latest_collect_task).data
+
         kwargs["usage_report_list"] = AppOperationReportOutputSLZ(
             self.paginate_queryset(self.get_queryset()), many=True
         ).data
@@ -202,7 +209,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
             "最新操作人",
             "最新操作时间",
             "问题类型",
-            "问题详情",
+            "问题描述",
             "应用管理员",
         ]
 
@@ -229,7 +236,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
                     rp.latest_operator if rp.latest_operator else "--",
                     rp.latest_operated_at.strftime("%Y-%m-%d %H:%M:%S") if rp.latest_operated_at else "--",
                     str(OperationIssueType.get_choice_label(rp.issue_type)),
-                    ", ".join(rp.issues),
+                    ", ".join(rp.evaluation_result["issues"]) if rp.evaluation_result else "--",
                     administrators,
                 ]
             )

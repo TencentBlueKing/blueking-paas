@@ -262,7 +262,7 @@ export default {
      * 侧导航初始化入口
      */
     async init(isReload = true) {
-      if (!this.curAppInfo.application) return;
+      if (!this.curAppInfo.application || this.curAppInfo.application.type !== 'cloud_native') return;
       const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
 
       if (isReload) {

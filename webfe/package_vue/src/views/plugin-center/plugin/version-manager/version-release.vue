@@ -161,6 +161,8 @@ export default {
         height: '100%',
       },
       excludeCardStyleList: ['deploy', 'itsm', 'test'],
+      isWebPolling: true,
+      messageStatus: '',
     };
   },
   computed: {
@@ -287,6 +289,9 @@ export default {
         bus.$emit('release-stage-changes', value);
       }
     },
+    messageStatus(status) {
+      this.updateStepStatus(status);
+    },
   },
   async created() {
     this.stepAllStages = this.curAllStages;
@@ -299,8 +304,22 @@ export default {
       // 关闭基本信息编辑态
       bus.$emit('release-stage-changes', 'leave');
     });
+    // 在接收消息的页面中设置监听器
+    window.addEventListener('message', this.messageEvent);
+  },
+  beforeDestroy() {
+    clearTimeout(this.timeId);
   },
   methods: {
+    messageEvent(event) {
+      if (!event.data || event.data?.type !== 'design-test') return;
+      const status = event.data.data;
+      if (status === 'success') {
+        this.messageStatus = 'successful';
+      } else if (status === 'fail') {
+        this.messageStatus = 'failed';
+      }
+    },
     async pollingReleaseStageDetail() {
       if (this.clickStageId) {
         clearTimeout(this.timeId);
@@ -354,8 +373,9 @@ export default {
         }
         const res = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
         this.stageData = res;
-        // 所有阶段都需要进行轮询 && 手动切换不用轮询
-        if (this.stageData.status === 'pending' && !curStepStageId) {
+        // status_polling_method === 'frontend' 前端IFrame通信，其他状态都需要进行轮询 && 手动切换不用轮询
+        this.isWebPolling = res.status_polling_method !== 'frontend';
+        if (this.isWebPolling && this.stageData.status === 'pending' && !curStepStageId) {
           this.pollingReleaseStageDetail();
         }
         switch (this.stageData.stage_id) {
@@ -570,6 +590,28 @@ export default {
       await this.getReleaseDetail();
       // 获取当前步骤信息
       this.getReleaseStageDetail(!isPolling ? data.id : '');
+    },
+
+    // 请求接口更新步骤状态
+    async updateStepStatus(status) {
+      try {
+        await this.$store.dispatch('plugin/updateStepStatus', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: this.releaseId,
+          stageId: this.stageId,
+          data: {
+            // successful、failed、pending、initial、interrupted
+            status,
+          },
+        });
+        this.getReleaseStageDetail();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };

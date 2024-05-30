@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Any, Dict, List
 
@@ -33,6 +34,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.servicehub import serializers as slzs
 from paasng.accessories.servicehub.exceptions import (
+    BindServiceNoPlansError,
     ReferencedAttachmentNotFound,
     ServiceObjNotFound,
     SharedAttachmentAlreadyExists,
@@ -99,6 +101,20 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
             services_info[env.environment] = ServicesInfo.get_detail(env.engine_app)["services_info"]
         return Response(data=slzs.ModuleServiceInfoSLZ(services_info).data)
 
+    def list_provisioned_env_keys(self, request, code, module_name):
+        """获取已经生效的增强服务环境变量 KEY"""
+        module = self.get_module_via_path()
+
+        # env_key_dict 内容示例： {"svc_name": ["key1", "key2"]}
+        env_key_dict: Dict[str, List[str]] = {}
+        for env in module.get_envs():
+            env_key_dict = {
+                **env_key_dict,
+                **ServiceSharingManager(env.module).get_enabled_env_keys(env),
+                **mixed_service_mgr.get_enabled_env_keys(env.engine_app),
+            }
+        return Response(data=env_key_dict)
+
 
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与蓝鲸应用模块相关的增强服务接口"""
@@ -129,9 +145,14 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         try:
             rel_pk = mixed_service_mgr.bind_service(service_obj, module, specs)
-        except Exception as e:
+        except BindServiceNoPlansError as e:
+            logger.warning(
+                "No plans can be found for service %s, specs: %s, environment: %s.", service_obj.uuid, specs, str(e)
+            )
+            raise error_codes.CANNOT_BIND_SERVICE.f(_("当前配置规格不可用"))
+        except Exception:
             logger.exception("bind service %s to module %s error.", service_obj.uuid, module.name)
-            raise error_codes.CANNOT_BIND_SERVICE.f(f"{e}")
+            raise error_codes.CANNOT_BIND_SERVICE.f("Unknown error")
 
         for env in module.envs.all():
             for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app, service_obj):

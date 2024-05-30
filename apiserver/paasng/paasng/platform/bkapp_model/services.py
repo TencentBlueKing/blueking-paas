@@ -16,9 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional
 
-from django.utils.translation import gettext_lazy as _
+from typing import Dict, List, Optional
 
 from paas_wl.bk_app.applications.api import (
     create_app_ignore_duplicated,
@@ -34,8 +33,6 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
 from paasng.platform.modules.models import Module
-from paasng.utils.configs import get_region_aware
-from paasng.utils.error_codes import error_codes
 
 # Model-Resource
 default_environments: List[str] = [AppEnvName.STAG.value, AppEnvName.PROD.value]
@@ -60,8 +57,9 @@ def initialize_simple(
     :param target_port: Custom target port
     """
     if not cluster_name:
-        cluster_name = get_default_cluster_name(module.region)
+        cluster_name = RegionClusterService(module.region).get_default_cluster().name
 
+    assert cluster_name
     model_res = create_cnative_app_model_resource(module, image, api_version, command, args, target_port)
     create_engine_apps(module.application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
@@ -103,16 +101,3 @@ def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> E
         owner=owner,
         region=region,
     )
-
-
-def get_default_cluster_name(region: str) -> str:
-    """Get default cluster name from settings, and valid if we have this cluster."""
-    try:
-        default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
-    except Exception as e:
-        raise error_codes.CANNOT_CREATE_APP.f(_("暂无可用集群, 请联系管理员")) from e
-
-    try:
-        return RegionClusterService(region).get_cluster_by_name(default_cluster_name).name
-    except Exception:
-        raise error_codes.CANNOT_CREATE_APP.f(_(f"集群 {default_cluster_name} 未就绪, 请联系管理员"))

@@ -16,11 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
@@ -117,12 +119,21 @@ class SvnAccountCreateSLZ(serializers.ModelSerializer):
 class AlternativeVersionSLZ(serializers.Serializer):
     name = serializers.CharField()
     type = serializers.CharField()
+    display_type = serializers.SerializerMethodField()
     revision = serializers.CharField()
     url = serializers.CharField()
     last_update = serializers.DateTimeField()
     message = serializers.CharField(help_text="tag description or commit message")
 
     extra = serializers.JSONField(default=dict)
+
+    def get_display_type(self, obj):
+        # smart 保持前端展示为 image. 相关背景 pr:
+        # https://github.com/TencentBlueKing/blueking-paas/pull/1306/files
+        # https://github.com/TencentBlueKing/blueking-paas/pull/1308/files
+        if self.context.get("is_smart_app") and obj.type == VersionType.TAG.value:
+            return VersionType.IMAGE.value
+        return obj.type
 
 
 class PageNumberPaginationSLZ(serializers.Serializer):
@@ -169,7 +180,7 @@ class RepoBackendModifySLZ(serializers.Serializer):
 class SourcePackageSLZ(serializers.Serializer):
     id = serializers.IntegerField(help_text="主键")
     version = serializers.CharField(help_text="版本信息")
-    package_name = serializers.CharField(help_text="源码包名称")
+    package_name = serializers.CharField(help_text="源码包文件名")
     package_size = serializers.CharField(help_text="源码包大小")
     sha256_signature = serializers.CharField(help_text="sha256数字签名")
     is_deleted = serializers.BooleanField(help_text="源码包是否已被清理")

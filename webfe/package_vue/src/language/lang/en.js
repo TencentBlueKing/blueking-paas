@@ -2375,7 +2375,6 @@ export default {
   大小: 'Size',
   部署记录: 'Deployment record',
   部署到: 'Deploy to',
-  '大小（B）': 'Size(B)',
   目前仅支持基于源码构建的镜像: 'Currently only images built based on source code are supported',
   '钩子命令在构建目录下的 app_desc.yaml 文件中定义。': 'Hook commands are defined in the app_desc.yaml file in the build directory.',
   '确认删除该环境变量？': 'Are you sure to delete this environment variable?',
@@ -2594,4 +2593,8 @@ export default {
   旧版应用迁移: 'Legacy APP Migration',
   '如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过API网关）调用插件的API、并将插件能力集成到自己的系统中。': 'If you authorize your plugin to a user, they will be able to access the basic information of your plugin, call its API through the API gateway, and integrate the plugin capabilities into their own system.',
   '增强服务实例已分配，不能再修改配置信息': 'The enhanced service instance has been allocated and configuration information cannot be modified anymore.',
+  新建测试版本: 'Create Test Version',
+  提交并开始测试: 'Submit and Start Testing',
+  '环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突': 'Environmental variables do not take effect, KEY conflicts with the built-in environmental variables of the {s} enhanced service',
+  重启次数: 'Restart Count',
 };

@@ -34,8 +34,8 @@ export default {
          *
          * @param {Object} params appCode, moduleNamet
          */
-    getImageList({ commit, state }, { appCode, moduleName, pageParams }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/build/artifact/image?${json2Query(pageParams)}`;
+    getImageList({}, { appCode, moduleName, pageParams }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/build/artifact/image/?${json2Query(pageParams)}`;
       return http.get(url, config);
     },
     /**
@@ -43,7 +43,7 @@ export default {
          *
          * @param {Object} params appCode, moduleNamet
          */
-    getImageDetail({ commit, state }, { appCode, moduleName, buildId }, config = {}) {
+    getImageDetail({}, { appCode, moduleName, buildId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/build/artifact/image/${buildId}`;
       return http.get(url, config);
     },
@@ -52,7 +52,7 @@ export default {
          *
          * @param {Object} params appCode, moduleNamet
          */
-    getBuildhistoryList({ commit, state }, { appCode, moduleName, pageParams }, config = {}) {
+    getBuildhistoryList({}, { appCode, moduleName, pageParams }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/build_process?${json2Query(pageParams)}`;
       return http.get(url, config);
     },
@@ -62,7 +62,7 @@ export default {
          *
          * @param {Object} params appCode, moduleNamet
          */
-    getBuildDetail({ commit, state }, { appCode, moduleName, id }, config = {}) {
+    getBuildDetail({}, { appCode, moduleName, id }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/deployments/${id}/result`;
       return http.get(url, config);
     },

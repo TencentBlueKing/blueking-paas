@@ -16,7 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""TestCases for Engine APIS
+
+"""Tests for Engine APIS
 """
 import logging
 from unittest import mock
@@ -26,11 +27,11 @@ from django.urls import reverse
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.engine.constants import VersionType
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
+from paasng.platform.sourcectl.constants import VersionType
 
 logger = logging.getLogger(__name__)
 pytestmark = pytest.mark.django_db

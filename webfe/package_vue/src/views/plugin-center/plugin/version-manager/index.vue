@@ -384,7 +384,7 @@ export default {
       return this.$store.state.curUserInfo;
     },
     isNewVersionDisabled() {
-      return this.isOfficialVersion ? this.curIsPending : false;
+      return this.isOfficialVersion ? !!this.curIsPending : false;
     },
     // 当前版本状态
     curVersionStatus() {
@@ -636,6 +636,12 @@ export default {
         const res = await this.$store.dispatch('plugin/getPluginAccessEntry', {
           pluginId: this.pluginId,
         });
+        // 已下架
+        if (res.is_offlined) {
+          this.isAccessDisabled = true;
+          this.accessDisabledTips = this.$t('该插件已下架。如需继续使用，请创建新版本。');
+          return;
+        }
         this.pluginDefaultInfo = res;
         this.isAccessDisabled = false;
       } catch (e) {
@@ -763,8 +769,7 @@ export default {
   }
   .item-info {
     display: flex;
-    height: 40px;
-    line-height: 40px;
+    min-height: 40px;
     border-top: 1px solid #dfe0e5;
 
     &:last-child {
@@ -782,6 +787,7 @@ export default {
     }
 
     .describe {
+      flex-shrink: 0;
       flex-direction: row-reverse;
       width: 130px;
       text-align: right;
@@ -792,6 +798,10 @@ export default {
       background: #fafbfd;
     }
     .content {
+      width: 454px;
+      flex-wrap: wrap;
+      line-height: 1.5;
+      word-break: break-all;
       flex: 1;
       font-size: 12px;
       color: #63656e;

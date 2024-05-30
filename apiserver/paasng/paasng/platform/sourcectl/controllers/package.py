@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 import shutil
 from os import PathLike
@@ -23,6 +24,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from paasng.platform.modules.models.module import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, VersionInfo
 from paasng.platform.sourcectl.package.client import BasePackageClient, get_client
 
@@ -85,8 +87,8 @@ class PackageController:
         qs = SourcePackage.default_objects.filter(module_id=self.module.pk).order_by("created")
         items = [
             AlternativeVersion(
-                name=info.package_name,
-                type="package" if info.storage_engine != "docker" else "tag",
+                name=info.version,
+                type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
                 revision=info.version,
                 url=info.storage_url,
                 last_update=info.updated,
@@ -104,8 +106,8 @@ class PackageController:
         _, version = self.extract_version_info(version_info)
         info = self.module.packages.get(version=version)
         return AlternativeVersion(
-            name=info.package_name,
-            type="package" if info.storage_engine != "docker" else "tag",
+            name=info.version,
+            type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
             revision=info.version,
             url=info.storage_url,
             last_update=info.updated,
@@ -118,14 +120,15 @@ class PackageController:
     def extract_smart_revision(self, smart_revision: str) -> str:
         if ":" not in smart_revision:
             return smart_revision
+
         _, package_name = smart_revision.split(":", 1)
         # NOTE: 为了兼容 svn/git 的交互协议, 允许通过传递 package_name 来部署最后一个以 package_name 命名的版本。
-        if self.module.packages.filter(package_name=package_name).exists():
-            return self.module.packages.filter(package_name=package_name).last().version
-
+        if obj_by_pkg_name := self.module.packages.filter(package_name=package_name).last():
+            return obj_by_pkg_name.version
         # NOTE: 与 LessCode 那边约定, 通过 url 上传包时会用 version 来取代 package_name, 因此这里做一个兼容。
-        if self.module.packages.filter(version=package_name).exists():
-            return package_name
+        elif obj_by_version := self.module.packages.filter(version=package_name).last():
+            return obj_by_version.version
+
         raise SourcePackage.DoesNotExist
 
     def build_url(self, version_info: VersionInfo) -> str:

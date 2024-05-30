@@ -169,7 +169,7 @@
                   :disabled="isReleaseDisabled"
                   @click="submitVersionForm"
                 >
-                  {{ $t('提交并发布') }}
+                  {{ isOfficialVersion ? $t('提交并发布') : $t('提交并开始测试') }}
                 </bk-button>
               </div>
             </bk-form-item>
@@ -412,7 +412,7 @@ export default {
       this.$refs.versionForm.validate().then(() => {
         // 新建版本info弹窗
         this.$bkInfo({
-          title: `${this.$t('确认新建版本')}：${this.curVersion.version}`,
+          title: `${this.isOfficialVersion ? this.$t('确认新建版本') : this.$t('新建测试版本')}：${this.curVersion.version}`,
           subHeader: this.bkInfoRander(),
           confirmFn: this.handlerConfirm,
           cancelFn: this.handlerCancel,

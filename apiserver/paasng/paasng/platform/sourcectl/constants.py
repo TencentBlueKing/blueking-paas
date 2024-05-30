@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from blue_krill.data_types.enum import FeatureFlagField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, FeatureFlagField, StructuredEnum
 
 from paasng.infras.accounts.constants import AccountFeatureFlag
 
@@ -43,3 +43,13 @@ def register_new_sourcectl_type(name: str, feature_flag: FeatureFlagField):
     :param feature_flag: 用于控制该源码系统的黑/白名单
     """
     AccountFeatureFlag.register_ext_feature_flag(feature_flag)
+
+
+class VersionType(str, StructuredEnum):
+    """版本类型. 对应 VersionInfo.version_type"""
+
+    TAG = EnumField("tag", label="用于 Git 仓库、云原生镜像应用、旧镜像应用、镜像模式的 S-Mart 应用")
+    BRANCH = EnumField("branch", label="用于 SVN 仓库、Git 仓库")
+    TRUNK = EnumField("trunk", label="用于 SVN 仓库")
+    IMAGE = EnumField("image", label="仅用于云原生应用选择已构建的镜像部署时")
+    PACKAGE = EnumField("package", label="用于 lesscode 应用和二进制的 S-Mart 应用")

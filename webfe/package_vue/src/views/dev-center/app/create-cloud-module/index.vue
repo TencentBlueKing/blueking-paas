@@ -123,7 +123,6 @@
                   >
                   </bk-input>
                 </div>
-                <p slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</p>
               </bk-form-item>
 
               <bk-form-item
@@ -629,15 +628,8 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            regex: /^([a-z0-9]+(?:[.-][a-z0-9]+)*\.[a-z]{2,})?(?::\d{1,5})?\/(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
             message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
-            trigger: 'blur',
-          },
-          {
-            validator(val) {
-              return !val.includes(':');
-            },
-            message: this.$t('镜像地址中不能包含版本(tag)信息'),
             trigger: 'blur',
           },
         ],

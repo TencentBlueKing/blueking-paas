@@ -364,7 +364,7 @@ export default {
       // 插件访问入口禁用
       isAccessDisabled: false,
       accessDisabledTips: '',
-      curVersionType: 'prod',
+      curVersionType: 'test',
       user: {},
     };
   },
@@ -428,7 +428,7 @@ export default {
         this.curVersionType = 'prod';
         this.handlerChangeRouter();
       } else {
-        this.curVersionType = this.$route.query.type || 'prod';
+        this.curVersionType = this.$route.query.type || 'test';
       }
       this.getVersionList();
       // 获取当前用户信息

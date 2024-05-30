@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Dict, Optional
 
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -35,7 +34,7 @@ class EnvSummary:
     """环境资源使用数据"""
 
     latest_deployer: Optional[str] = None
-    latest_deployed_at: Optional[datetime] = None
+    latest_deployed_at: Optional[str] = None
 
 
 @dataclass
@@ -73,5 +72,5 @@ class AppDeploymentCollector:
         latest_deployment = Deployment.objects.filter(app_environment=env).order_by("-created").first()
         return EnvSummary(
             latest_deployer=get_username_by_bkpaas_user_id(latest_deployment.operator) if latest_deployment else None,
-            latest_deployed_at=latest_deployment.created if latest_deployment else None,
+            latest_deployed_at=latest_deployment.created.strftime("%Y-%m-%d %H:%M:%S") if latest_deployment else None,
         )

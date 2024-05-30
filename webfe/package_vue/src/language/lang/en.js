@@ -2600,4 +2600,5 @@ export default {
   重启次数: 'Restart Count',
   测试报告: 'Test report',
   终止测试: 'Terminate Test',
+  授权期限: 'Authorization Period',
 };

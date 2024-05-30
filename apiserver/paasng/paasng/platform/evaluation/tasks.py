@@ -137,7 +137,7 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
         if idx % 20 == 0:
             task.succeed_count = succeed_cnt
             task.failed_count = len(failed_app_codes)
-            task.save(update_fields=["success_count", "failed_count"])
+            task.save(update_fields=["succeed_count", "failed_count"])
 
     task.succeed_count = succeed_cnt
     task.failed_count = len(failed_app_codes)

@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Dict, Generator, List, Tuple
 
+import arrow
 from django.conf import settings
 from django.utils import timezone
 
@@ -121,12 +122,13 @@ class AppOperationEvaluator:
             self.result.issues.append("应用最近半年没有操作记录")
             self.result.issue_type = OperationIssueType.MAINTAINLESS
 
+        t_180_days_ago = timezone.now() - timedelta(days=180)
         # 环境纬度评估
         for mod_name, mod in self.deploy_summary.modules.items():
             for env_name, env in mod.envs.items():
                 env_result = self.result.modules[mod_name].envs[env_name]
                 # 注：没有部署记录的，算未部署，不算缺少维护
-                if env.latest_deployed_at and env.latest_deployed_at < timezone.now() - timedelta(days=180):
+                if env.latest_deployed_at and arrow.get(env.latest_deployed_at).datetime < t_180_days_ago:
                     env_result.issues.append("该环境最近半年没有部署记录")
                     env_result.issue_type = OperationIssueType.MAINTAINLESS
 
@@ -156,7 +158,7 @@ class AppOperationEvaluator:
         # 无访问记录，说明是不活跃应用
         if not (self.report.pv and self.report.uv):
             self.result.issue_type = OperationIssueType.UNVISITED
-            self.result.issues.append("应用最近 30 天没有访问记录")
+            self.result.issues.append(f"应用最近 {self.visit_summary.time_range} 没有访问记录")
 
         # 环境纬度评估
         for mod_name, mod in self.visit_summary.modules.items():
@@ -167,7 +169,7 @@ class AppOperationEvaluator:
 
                 env_result = self.result.modules[mod_name].envs[env_name]
                 env_result.issue_type = OperationIssueType.UNVISITED
-                env_result.issues.append("该环境最近 30 天没有访问记录")
+                env_result.issues.append(f"该环境最近 {self.visit_summary.time_range} 没有访问记录")
 
                 # 如果没有访问量，且检测到资源使用率基本没有波动，则说明该环境闲置（没有后台任务）
                 is_low_cpu_usage, any_proc_running = True, False
@@ -181,7 +183,7 @@ class AppOperationEvaluator:
                         break
 
                 if is_low_cpu_usage and any_proc_running:
-                    env_result.issues.append("CPU 使用率低于 1% 且近 7 天使用量没有波动")
+                    env_result.issues.append(f"CPU 使用率低于 1% 且近 {self.res_summary.time_range} 使用量没有波动")
                     env_result.issue_type = OperationIssueType.IDLE
                     self.result.issue_type = OperationIssueType.IDLE
 

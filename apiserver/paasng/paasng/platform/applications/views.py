@@ -21,7 +21,6 @@ import logging
 import random
 import string
 from collections import Counter, defaultdict
-from datetime import datetime
 from io import BytesIO
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional
@@ -296,7 +295,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         """获取闲置的应用列表"""
         app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
 
-        latest_collected_at = datetime.now()
+        latest_collected_at = None
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
             latest_collected_at = collect_task.start_at
 

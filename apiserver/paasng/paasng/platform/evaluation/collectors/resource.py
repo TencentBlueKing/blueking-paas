@@ -119,6 +119,8 @@ class AppSummary:
 
     app_code: str
     app_type: str
+    time_step: str
+    time_range: str
     modules: Dict[str, ModuleSummary]
 
 
@@ -128,6 +130,8 @@ class AppResQuotaCollector:
     def __init__(self, app: Application, step: str = "15m", time_range_str: str = "7d"):
         self.app = app
         self.query_metrics = [MetricsType.CPU.value, MetricsType.MEM.value]
+        self.time_step = step
+        self.time_range_str = time_range_str
         # 查询历史 7 天的数据，数据采样间隔为 15m，需要注意的是：如果中间发布过，则数据长度可能不足
         self.time_range = MetricSmartTimeRange(step=step, time_range_str=time_range_str)
         # 初始化云原生应用 资源配额方案 -> request 映射表
@@ -138,7 +142,13 @@ class AppResQuotaCollector:
 
     def collect(self) -> AppSummary:
         module_summaries = {module.name: self._calc_module_summary(module) for module in self.app.modules.all()}
-        return AppSummary(app_code=self.app.code, app_type=self.app.type, modules=module_summaries)
+        return AppSummary(
+            app_code=self.app.code,
+            app_type=self.app.type,
+            time_step=self.time_step,
+            time_range=self.time_range_str,
+            modules=module_summaries,
+        )
 
     def _calc_module_summary(self, module: Module) -> ModuleSummary:
         stag_env = module.get_envs(AppEnvName.STAG)

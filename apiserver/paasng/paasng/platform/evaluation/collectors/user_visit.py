@@ -52,6 +52,7 @@ class AppSummary:
 
     app_code: str
     app_type: str
+    time_range: str
     modules: Dict[str, ModuleSummary]
 
 
@@ -64,7 +65,9 @@ class AppUserVisitCollector:
 
     def collect(self) -> AppSummary:
         module_summaries = {module.name: self._calc_module_summary(module) for module in self.app.modules.all()}
-        return AppSummary(app_code=self.app.code, app_type=self.app.type, modules=module_summaries)
+        return AppSummary(
+            app_code=self.app.code, app_type=self.app.type, time_range=f"{self.days}d", modules=module_summaries
+        )
 
     def _calc_module_summary(self, module: Module) -> ModuleSummary:
         stag_env = module.get_envs(AppEnvName.STAG)

@@ -1209,6 +1209,8 @@ export default {
         width: 85%;
         display: inline-block;
         white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
     .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
         color: #999;
@@ -1223,13 +1225,11 @@ export default {
     }
 
     .instance-details-table-cls {
-      .bk-table-body .cell {
-        display: inline-table;
-      }
       .bk-table-row.bk-table-row-last td {
         border-bottom: none;
       }
       .credential-information {
+        overflow: hidden;
       }
       .gray {
         color: #c4c6cc;

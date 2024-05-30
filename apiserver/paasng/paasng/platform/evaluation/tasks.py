@@ -100,6 +100,9 @@ def _update_or_create_operation_report(app: Application):
         "latest_operator": latest_operation.get_operator() if latest_operation else None,
         "latest_operation": latest_operation.get_operate_display() if latest_operation else None,
         "deploy_summary": asdict(deploy_summary),
+        # 应用开发者 / 管理员
+        "administrators": app.get_administrators(),
+        "developers": app.get_developers(),
         "collected_at": timezone.now(),
     }
     report, _ = AppOperationReport.objects.update_or_create(app=app, defaults=defaults)

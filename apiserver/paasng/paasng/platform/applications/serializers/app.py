@@ -162,12 +162,9 @@ class IdleApplicationSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用 Code", source="app.code")
     name = serializers.CharField(help_text="应用名称", source="app.name")
 
-    administrators = serializers.SerializerMethodField(help_text="应用管理员列表")
+    administrators = serializers.JSONField(help_text="应用管理员列表")
+    developers = serializers.JSONField(help_text="应用开发者列表")
     module_envs = serializers.SerializerMethodField(help_text="闲置模块 & 环境列表")
-
-    @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
-    def get_administrators(self, obj: AppOperationReport) -> List[str]:
-        return obj.app.get_administrators()
 
     @swagger_serializer_method(serializer_or_field=IdleModuleEnvSLZ(many=True))
     def get_module_envs(self, obj: AppOperationReport) -> List[Dict[str, Any]]:

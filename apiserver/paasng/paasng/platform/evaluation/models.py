@@ -62,6 +62,9 @@ class AppOperationReport(models.Model):
     latest_operator = models.CharField(verbose_name="最新操作人", max_length=128, null=True)
     latest_operation = models.CharField(verbose_name="最新操作内容", max_length=128, null=True)
     deploy_summary = models.JSONField(verbose_name="部署详情汇总", default=dict)
+    # 应用开发者 / 管理员
+    administrators = models.JSONField(verbose_name="应用管理员", default=list)
+    developers = models.JSONField(verbose_name="应用开发者", default=list)
     # 汇总
     issue_type = models.CharField(verbose_name="问题类型", default=OperationIssueType.NONE, max_length=32)
     evaluate_result = models.JSONField(verbose_name="评估结果", default=dict)

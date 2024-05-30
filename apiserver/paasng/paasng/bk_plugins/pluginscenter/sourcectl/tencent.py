@@ -260,9 +260,7 @@ class PluginRepoInitializer:
                 "name": plugin.id,
                 "namespace_id": self._get_namespace_id(),
                 "description": plugin.name,
-                # 私有项目 visibility_level = 0
-                # 公共项目 visibility_level = 10
-                "visibility_level": 10,
+                "visibility_level": settings.PLUGIN_VISIBILTY_LEVEL,
             },
         )
         validate_response(resp)

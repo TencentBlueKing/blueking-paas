@@ -155,7 +155,7 @@ class IdleModuleEnvSLZ(serializers.Serializer):
     cpu_quota = serializers.IntegerField(help_text="CPU 配额")
     memory_quota = serializers.IntegerField(help_text="内存配额")
     cpu_usage_avg = serializers.FloatField(help_text="CPU 平均使用率")
-    latest_deployed_at = serializers.DateTimeField(help_text="最近部署时间")
+    latest_deployed_at = serializers.CharField(help_text="最近部署时间")
 
 
 class IdleApplicationSLZ(serializers.Serializer):

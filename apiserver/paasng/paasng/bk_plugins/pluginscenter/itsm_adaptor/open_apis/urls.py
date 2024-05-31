@@ -32,4 +32,9 @@ urlpatterns = [
         "open/api/itsm/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/",
         views.PluginCallBackApiViewSet.as_view({"post": "itsm_stage_callback"}),
     ),
+    # 可见范围修改回调 API
+    path(
+        "open/api/itsm/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/visible_range/",
+        views.PluginCallBackApiViewSet.as_view({"post": "itsm_visible_range_callback"}),
+    ),
 ]

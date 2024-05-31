@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -178,7 +178,7 @@ class ItsmClient:
         # 返回导入的服务ID
         return resp.get("data", {}).get("id")
 
-    def create_ticket(self, service_id: int, creator: str, callback_url: str, fields: List[dict]) -> ItsmDetail:
+    def create_ticket(self, service_id: int, creator: str, callback_url: str, fields: list) -> ItsmDetail:
         """创建申请单据"""
         data = {
             "service_id": service_id,

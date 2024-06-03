@@ -16,10 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import NamedTuple
 
 import pytest
-from django.test import TestCase
 from rest_framework import viewsets
 from rest_framework.test import APIRequestFactory
 
@@ -29,23 +29,25 @@ from paasng.infras.accounts.utils import ForceAllowAuthedApp
 
 pytestmark = pytest.mark.django_db
 
+request_factory = APIRequestFactory(enforce_csrf_checks=False)
 
-class TestPrivateTokenAuthenticationMiddleware(TestCase):
-    def setUp(self):
-        self.request_factory = APIRequestFactory(enforce_csrf_checks=False)
-        self.get_response = lambda request: None
 
+def get_response(request):
+    return None
+
+
+class TestPrivateTokenAuthenticationMiddleware:
     def test_no_token_provided(self):
-        request = self.request_factory.get("/")
+        request = request_factory.get("/")
 
-        middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
+        middleware = PrivateTokenAuthenticationMiddleware(get_response)
         middleware(request)
         assert not hasattr(request, "user")
 
     def test_random_invalid_token(self):
-        request = self.request_factory.get("/")
+        request = request_factory.get("/")
 
-        middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
+        middleware = PrivateTokenAuthenticationMiddleware(get_response)
         middleware(request)
         assert not hasattr(request, "user")
 
@@ -54,9 +56,9 @@ class TestPrivateTokenAuthenticationMiddleware(TestCase):
         token = UserPrivateToken.objects.create_token(user=user, expires_in=None)
 
         # Provide token in query string
-        request = self.request_factory.get("/", {"private_token": token.token})
+        request = request_factory.get("/", {"private_token": token.token})
 
-        middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
+        middleware = PrivateTokenAuthenticationMiddleware(get_response)
         middleware(request)
         assert request.user.username == "foo_user"
         assert request.user.is_authenticated
@@ -66,19 +68,12 @@ class TestPrivateTokenAuthenticationMiddleware(TestCase):
         token = UserPrivateToken.objects.create_token(user=user, expires_in=None)
 
         # Provide token in query string
-        request = self.request_factory.get("/", HTTP_AUTHORIZATION=f"Bearer {token.token}")
+        request = request_factory.get("/", HTTP_AUTHORIZATION=f"Bearer {token.token}")
 
-        middleware = PrivateTokenAuthenticationMiddleware(self.get_response)
+        middleware = PrivateTokenAuthenticationMiddleware(get_response)
         middleware(request)
         assert request.user.username == "foo_user"
         assert request.user.is_authenticated
-
-
-request_factory = APIRequestFactory(enforce_csrf_checks=False)
-
-
-def get_response(request):
-    return None
 
 
 class SimpleApp(NamedTuple):

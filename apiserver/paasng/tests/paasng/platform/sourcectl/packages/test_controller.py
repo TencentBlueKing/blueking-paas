@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
 import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
@@ -166,7 +167,6 @@ class TestPackageRepoController:
             package.refresh_from_db()
             expected[idx]["url"] = package.storage_url
             expected[idx]["last_update"] = package.updated
-            expected[idx]["name"] = str(file_path.name)
             expected[idx]["extra"]["package_size"] = package.package_size
             expected[idx]["extra"]["is_deleted"] = package.is_deleted
 

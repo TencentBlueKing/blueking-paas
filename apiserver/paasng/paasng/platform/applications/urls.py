@@ -62,17 +62,22 @@ urlpatterns = [
     url(
         r"^api/bkapps/applications/lists/detailed$",
         views.ApplicationViewSet.as_view({"get": "list_detailed"}),
-        name="api.applications",
+        name="api.applications.lists.detailed",
     ),
     url(
         r"^api/bkapps/applications/lists/minimal$",
         views.ApplicationViewSet.as_view({"get": "list_minimal"}),
-        name="api.applications",
+        name="api.applications.lists.minimal",
     ),
     url(
         r"^api/bkapps/applications/lists/search$",
         views.ApplicationViewSet.as_view({"get": "list_search"}),
-        name="api.applications",
+        name="api.applications.lists.search",
+    ),
+    url(
+        r"^api/bkapps/applications/lists/idle/$",
+        views.ApplicationViewSet.as_view({"get": "list_idle"}),
+        name="api.applications.lists.idle",
     ),
     url(
         r"^api/bkapps/applications/(?P<code>[^/]+)/overview/$",

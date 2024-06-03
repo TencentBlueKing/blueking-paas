@@ -2025,7 +2025,8 @@ export default {
   确认新建版本: 'Confirm New Version',
   '代码更新时间：': 'Code update time: ',
   '代码提交日志：': 'Code submission log: ',
-  确认终止发布版本: 'Confirm end of release version',
+  确认终止发布版本: 'Confirm Termination of Release Version',
+  确认终止测试版本: 'Confirm Termination of Test Version',
   构建失败: 'Build failed',
   '开始编辑...': 'Start editing...',
   插件至少有一个管理员: 'The plugin has at least one administrator',
@@ -2595,4 +2596,8 @@ export default {
   '增强服务实例已分配，不能再修改配置信息': 'The enhanced service instance has been allocated and configuration information cannot be modified anymore.',
   新建测试版本: 'Create Test Version',
   提交并开始测试: 'Submit and Start Testing',
+  '环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突': 'Environmental variables do not take effect, KEY conflicts with the built-in environmental variables of the {s} enhanced service',
+  重启次数: 'Restart Count',
+  测试报告: 'Test report',
+  终止测试: 'Terminate Test',
 };

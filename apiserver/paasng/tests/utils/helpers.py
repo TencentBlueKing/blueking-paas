@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import copy
 import datetime
 import random
@@ -25,7 +26,6 @@ from typing import Any, Callable, ContextManager, Dict, List, Optional
 from unittest import mock
 
 from django.conf import settings
-from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
@@ -125,35 +125,6 @@ def initialize_module(module, repo_type=None, repo_url="", additional_modules=No
         module.save()
         module_initializer.initialize_vcs_with_template(repo_type, repo_url)
         setup_module_log_model(module_id=module.pk)
-
-
-class BaseTestCaseWithApp(TestCase):
-    """Base class with an application was pre-created"""
-
-    application: Application
-    app_region = settings.DEFAULT_REGION_NAME
-    app_code = "utest-app"
-    app_extra_fields: Dict[str, Any] = {}
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.user = create_user()
-
-        name = cls.app_code.replace("-", "")
-        fields = dict(name=name, language="Python", region=cls.app_region)
-        fields.update(cls.app_extra_fields)
-
-        cls.application = G(Application, owner=cls.user.pk, code=cls.app_code, **fields)
-        cls.default_repo_url = "svn://svn.localhost:1773/app"
-        initialize_application(cls.application, repo_url=cls.default_repo_url)
-        cls.module = cls.application.get_default_module()
-
-        # Update the region field after initialize to avoide exceptions
-        cls.application.region = cls.app_region
-        cls.application.save()
-        cls.module.region = cls.app_region
-        cls.module.save()
 
 
 def create_app(

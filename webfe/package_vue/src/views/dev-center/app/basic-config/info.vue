@@ -396,6 +396,7 @@ export default {
     // 更新基本信息
     async updateAppBasicInfo() {
       try {
+        this.appBaseInfoConfig.isLoading = true;
         const data = new FormData();
         data.append('name', this.localeAppInfo.name);
         if (this.appBaseInfoConfig.logoData) {
@@ -411,8 +412,7 @@ export default {
         });
         this.resetAppBaseInfoConfig();
         this.localeAppInfo.logo = res.logo_url;
-        this.$emit('current-app-info-updated');
-        this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
+        this.$store.commit('updateCurAppBaseInfo', res);
       } catch (e) {
         this.localeAppInfo.name = this.curAppName;
         this.$paasMessage({
@@ -421,6 +421,7 @@ export default {
         });
       } finally {
         this.$refs.appNmaeRef?.clearError();
+        this.appBaseInfoConfig.isLoading = false;
       }
     },
 
@@ -565,7 +566,6 @@ export default {
     // 基本信息提交
     handleSubmitBaseInfo() {
       this.$refs.formNameRef?.validate().then(async () => {
-        this.appBaseInfoConfig.isLoading = true;
         this.updateAppBasicInfo();
       }, (e) => {
         console.error(e);

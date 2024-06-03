@@ -44,6 +44,7 @@ class PluginRequestSLZ(serializers.Serializer):
     repository = serializers.CharField(help_text="源码仓库")
     operator = serializers.SerializerMethodField()
     logo_url = serializers.CharField(source="get_logo_url", required=False)
+    publisher = serializers.CharField(required=False)
 
     def get_operator(self, obj) -> str:
         return self.context["operator"]

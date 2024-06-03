@@ -16,38 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .definitions import (
-    PluginBasicInfoDefinition,
-    PluginConfigInfoDefinition,
-    PluginDefinition,
-    PluginMarketInfoDefinition,
-    PluginVisibleRangeDefinition,
-)
-from .instances import (
-    ApprovalService,
-    OperationRecord,
-    PluginConfig,
-    PluginInstance,
-    PluginMarketInfo,
-    PluginRelease,
-    PluginReleaseStage,
-    PluginReleaseStrategy,
-    PluginVisibleRange,
-)
 
-__all__ = [
-    "PluginDefinition",
-    "PluginBasicInfoDefinition",
-    "PluginConfigInfoDefinition",
-    "PluginMarketInfoDefinition",
-    "PluginVisibleRangeDefinition",
-    "PluginInstance",
-    "PluginConfig",
-    "PluginMarketInfo",
-    "PluginRelease",
-    "PluginReleaseStage",
-    "ApprovalService",
-    "OperationRecord",
-    "PluginReleaseStrategy",
-    "PluginVisibleRange",
-]
+from .deployment import AppDeploymentCollector
+from .resource import AppResQuotaCollector
+from .user_visit import AppUserVisitCollector
+
+__all__ = ["AppDeploymentCollector", "AppResQuotaCollector", "AppUserVisitCollector"]

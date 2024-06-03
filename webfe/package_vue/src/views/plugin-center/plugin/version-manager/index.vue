@@ -162,7 +162,7 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('操作')"
-          :width="localLanguage === 'en' ? 280 : 200"
+          :width="localLanguage === 'en' ? 320 : 240"
         >
           <template slot-scope="{ row }">
             <template v-if="isOfficialVersion">
@@ -195,10 +195,19 @@
             <bk-button
               v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
               theme="primary"
+              class="mr10"
               text
               @click="handleRelease(row, 'reset')"
             >
               {{ $t('重新发布') }}
+            </bk-button>
+            <bk-button
+              v-if="row.report_url"
+              theme="primary"
+              text
+              @click="toTestReportPage(row.report_url)"
+            >
+              {{ $t('测试报告') }}
             </bk-button>
           </template>
         </bk-table-column>
@@ -355,7 +364,7 @@ export default {
       // 插件访问入口禁用
       isAccessDisabled: false,
       accessDisabledTips: '',
-      curVersionType: 'prod',
+      curVersionType: 'test',
       user: {},
     };
   },
@@ -419,7 +428,7 @@ export default {
         this.curVersionType = 'prod';
         this.handlerChangeRouter();
       } else {
-        this.curVersionType = this.$route.query.type || 'prod';
+        this.curVersionType = this.$route.query.type || 'test';
       }
       this.getVersionList();
       // 获取当前用户信息
@@ -636,6 +645,12 @@ export default {
         const res = await this.$store.dispatch('plugin/getPluginAccessEntry', {
           pluginId: this.pluginId,
         });
+        // 已下架
+        if (res.is_offlined) {
+          this.isAccessDisabled = true;
+          this.accessDisabledTips = this.$t('该插件已下架。如需继续使用，请创建新版本。');
+          return;
+        }
         this.pluginDefaultInfo = res;
         this.isAccessDisabled = false;
       } catch (e) {
@@ -673,6 +688,10 @@ export default {
       const username = this.curUserInfo.username || this.user.username;
       this.filterCreator = username;
       this.getVersionList();
+    },
+
+    toTestReportPage(url) {
+      window.open(url, '_blank');
     },
   },
 };

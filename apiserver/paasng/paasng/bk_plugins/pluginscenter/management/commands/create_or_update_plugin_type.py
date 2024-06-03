@@ -96,6 +96,9 @@ class Command(BaseCommand):
                 "extra_fields_order": pd_data.spec.basicInfo.extraFieldsOrder,
                 "overview_page": pd_data.spec.basicInfo.overviewPage,
                 "sync_members": pd_data.spec.basicInfo.syncMembers,
+                "access_mode": pd_data.spec.basicInfo.accessMode,
+                "description_zh_cn": pd_data.spec.basicInfo.description,
+                "publisher_description_zh_cn": pd_data.spec.basicInfo.publisher_description,
             },
         )
 

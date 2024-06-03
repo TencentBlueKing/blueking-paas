@@ -21,7 +21,7 @@ from typing import Dict, List
 from django.db import models
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.bk_plugins.pluginscenter.constants import PluginReleaseType
+from paasng.bk_plugins.pluginscenter.constants import PluginBasicInfoAccessMode, PluginReleaseType
 from paasng.bk_plugins.pluginscenter.definitions import (
     FieldSchema,
     PluginBackendAPI,
@@ -91,6 +91,9 @@ class PluginBasicInfoDefinition(AuditedModel):
     id_schema = FieldSchemaField()
     name_schema = FieldSchemaField()
     init_templates = PluginCodeTemplateListField(help_text="初始化模板")
+    access_mode = models.CharField(
+        verbose_name="基本信息查看模式", max_length=16, default=PluginBasicInfoAccessMode.READWRITE
+    )
     release_method = models.CharField(verbose_name="发布方式", max_length=16)
     repository_group = models.CharField(verbose_name="插件代码初始化仓库组", max_length=255)
     api: PluginBackendAPI = PluginBackendAPIField()
@@ -99,6 +102,8 @@ class PluginBasicInfoDefinition(AuditedModel):
     extra_fields_en = PluginExtraFieldField(default=dict)
     extra_fields_order = models.JSONField(default=list)
     overview_page = PluginoverviewPageField(null=True)
+    description = TranslatedFieldWithFallback(models.TextField(default=""))
+    publisher_description = TranslatedFieldWithFallback(models.TextField(default=""))
 
     @classmethod
     def get_languages(cls) -> List[str]:
@@ -118,7 +123,7 @@ class PluginMarketInfoDefinition(AuditedModel):
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="market_info_definition"
     )
     storage = models.CharField(verbose_name="存储方式", max_length=16)
-    category: PluginBackendAPIResource = PluginBackendAPIResourceField()
+    category: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
     extra_fields_en = PluginExtraFieldField(default=dict)

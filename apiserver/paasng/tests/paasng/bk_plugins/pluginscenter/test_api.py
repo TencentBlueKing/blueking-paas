@@ -16,12 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
 
 from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, PluginStatus
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.views import PluginCallBackApiViewSet
+from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail, PluginVisibleRange
 
 pytestmark = pytest.mark.django_db
 PluginCallBackApiViewSet.authentication_classes = []  # type: ignore
@@ -101,6 +104,54 @@ class TestPluginApi:
         if resp.status_code == 200:
             assert resp.json()["status"] == stage_status
 
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_update_publisher(self, api_client, pd, plugin, iam_policy_client):
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/publisher/"
+
+        resp = api_client.post(url, data={"publisher": "xxxxx"})
+        assert resp.status_code == 200
+
+    @pytest.mark.parametrize(
+        (
+            "is_in_approval",
+            "status_code",
+        ),
+        [
+            (False, 200),
+            (True, 400),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_update_visible_range(
+        self, api_client, pd, plugin, is_in_approval, status_code, iam_policy_client, visible_range_approval_service
+    ):
+        PluginVisibleRange.objects.update_or_create(plugin=plugin, defaults={"is_in_approval": is_in_approval})
+
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/visible_range/"
+
+        with mock.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.create_ticket",
+            return_value=ItsmDetail(fields=[], sn="1111", ticket_url="http://1111"),
+        ):
+            resp = api_client.post(
+                url,
+                data={
+                    "bkci_project": ["1111", "22222"],
+                    "organization": [
+                        {"id": 1, "type": "user", "name": "admin", "display_name": "admin"},
+                        {
+                            "id": 3,
+                            "type": "department",
+                            "name": "xxxx部门",
+                            "display_name": "xxxx部门",
+                        },
+                    ],
+                },
+            )
+        assert resp.status_code == status_code
+        if status_code == 200:
+            assert resp.json()["is_in_approval"] is True
+
 
 class TestSysApis:
     @pytest.mark.parametrize(
@@ -151,3 +202,60 @@ class TestSysApis:
         assert resp_data["result"] is True
         plugin.refresh_from_db()
         assert plugin.status == plugin_status
+
+    @pytest.mark.parametrize(
+        ("current_status", "approve_result", "is_in_approval", "is_data_updated"),
+        [
+            # 单据结束、审批结果为不同意：可见范围的审批状态设为 False，但是不更新可见范围的数据
+            (ItsmTicketStatus.FINISHED.value, False, False, False),
+            # 单据结束、审批结果为同意：可见范围的审批状态设为 False，且更新可见范围的数据
+            (ItsmTicketStatus.FINISHED.value, True, False, True),
+            # # 单据未结束：可见范围的审批状态设为 False，也不更新可见范围的数据
+            (ItsmTicketStatus.RUNNING.value, False, True, False),
+            (ItsmTicketStatus.SUSPENDED.value, True, True, False),
+        ],
+    )
+    def test_itsm_visible_range_callback(
+        self, api_client, pd, plugin, current_status, approve_result, is_in_approval, is_data_updated
+    ):
+        new_bkci_project = ["11111", "22222", "33333"]
+        new_organization = [
+            {"id": 1, "type": "user", "name": "admin", "display_name": "admin"},
+            {
+                "id": 3,
+                "type": "department",
+                "name": "xxxx部门",
+                "display_name": "xxxx部门",
+            },
+        ]
+        visible_range_obj, _ = PluginVisibleRange.objects.update_or_create(
+            plugin=plugin,
+            defaults={
+                "itsm_detail": ItsmDetail(
+                    fields=[
+                        {"key": "bkci_project", "value": new_bkci_project},
+                        {"key": "organization", "value": new_organization},
+                    ],
+                    sn="1111",
+                    ticket_url="http://1111",
+                )
+            },
+        )
+        callback_url = "/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
+
+        callback_data = CALLBACK_DATA
+        callback_data["current_status"] = current_status
+        callback_data["approve_result"] = approve_result
+        resp_data = api_client.post(callback_url, callback_data).json()
+
+        assert resp_data["code"] == 0
+        assert resp_data["result"] is True
+
+        visible_range_obj.refresh_from_db()
+        assert visible_range_obj.is_in_approval == is_in_approval
+        if is_data_updated:
+            assert visible_range_obj.bkci_project == new_bkci_project
+            assert visible_range_obj.organization == new_organization
+        else:
+            assert visible_range_obj.bkci_project != new_bkci_project
+            assert visible_range_obj.organization != new_organization

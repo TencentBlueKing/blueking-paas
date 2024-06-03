@@ -649,7 +649,7 @@ class BkAppHookHandler:
         self.namespace = app.namespace
         self.hook_name = hook_name
 
-    def wait_for_logs_readiness(self, timeout: float = 20):
+    def wait_for_logs_readiness(self, timeout: float = 900):
         """Waits for hook pod to become ready for retrieving logs
 
         :param timeout: max timeout

@@ -43,11 +43,13 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_a
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
+    PluginBasicInfoDefinition,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStage,
+    PluginVisibleRange,
 )
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -162,6 +164,31 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
         )
 
 
+class PluginBasicInfoDefinitionSLZ(serializers.ModelSerializer):
+    description = TranslatedCharField()
+    publisher_description = TranslatedCharField()
+
+    class Meta:
+        model = PluginBasicInfoDefinition
+        exclude = (
+            "id",
+            "pd",
+            "created",
+            "updated",
+            "id_schema",
+            "name_schema",
+            "init_templates",
+            "release_method",
+            "repository_group",
+            "api",
+            "sync_members",
+            "extra_fields",
+            "extra_fields_en",
+            "extra_fields_order",
+            "overview_page",
+        )
+
+
 class PluginDefinitionBasicSLZ(serializers.ModelSerializer):
     id = serializers.CharField(source="identifier")
     name = TranslatedCharField()
@@ -198,6 +225,13 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
     complete_time = serializers.ReadOnlyField()
+    report_url = serializers.SerializerMethodField(read_only=True)
+
+    def get_report_url(self, instance) -> Optional[str]:
+        release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
+        if release_definition.reportFromat:
+            return release_definition.reportFromat.format(plugin_id=instance.plugin.id, version_id=instance.version)
+        return None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -233,15 +267,17 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     can_reactivate = serializers.ReadOnlyField()
     has_test_version = serializers.ReadOnlyField()
 
+    class Meta:
+        model = PluginInstance
+        exclude = ("pd", "uuid")
+
+
+class PluginInstanceDetailSLZ(PluginInstanceSLZ):
     def to_representation(self, instance):
         # 注入当前用户的角色信息
         if (request := self.context.get("request")) and request.user.is_authenticated:
             setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
         return super().to_representation(instance)
-
-    class Meta:
-        model = PluginInstance
-        exclude = ("pd", "uuid")
 
 
 class PluginInstanceLogoSLZ(serializers.ModelSerializer):
@@ -791,3 +827,24 @@ class PluginStageStatusSLZ(serializers.Serializer):
 
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices())
     message = serializers.CharField(default="")
+
+
+class PluginPublisher(serializers.Serializer):
+    """插件发布者"""
+
+    publisher = serializers.CharField(help_text="插件发布者")
+
+
+class PluginVisibleRangeSLZ(serializers.ModelSerializer):
+    itsm_detail = ItsmDetailSLZ()
+
+    class Meta:
+        model = PluginVisibleRange
+        fields = "__all__"
+
+
+class PluginVisibleRangeUpdateSLZ(serializers.Serializer):
+    bkci_project = serializers.ListField(
+        child=serializers.CharField(), help_text="格式：['1111', '222222']", required=False, allow_null=True
+    )
+    organization = serializers.ListField(child=serializers.DictField(), required=False, allow_null=True)

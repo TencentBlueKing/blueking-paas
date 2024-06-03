@@ -83,6 +83,7 @@ class PluginInstance(UuidAuditedModel):
         choices=constants.PluginStatus.get_choices(),
         default=constants.PluginStatus.WAITING_APPROVAL,
     )
+    publisher = models.CharField(verbose_name="插件发布者", max_length=64, default="")
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
     is_deleted = models.BooleanField(default=False, help_text="是否已删除")
@@ -396,6 +397,26 @@ class PluginVisibleRange(AuditedModel):
     plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
     bkci_project = models.JSONField(verbose_name="蓝盾项目ID", default=list)
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+    is_in_approval = models.BooleanField(verbose_name="是否在审批中", default=False)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+
+    @cached_property
+    def itsm_detail_fields(self):
+        if not self.itsm_detail:
+            return None
+        return {item["key"]: item["value"] for item in self.itsm_detail.fields}
+
+    @property
+    def itsm_bkci_project(self):
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("bkci_project")
+        return None
+
+    @property
+    def itsm_organization(self):
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("organization")
+        return None
 
 
 class OperationRecord(AuditedModel):

@@ -451,8 +451,11 @@ func validateProbe(pField *field.Path, probe *corev1.Probe) *field.Error {
 		if probe.HTTPGet.Path == "" {
 			return field.Invalid(pField.Child("path"), probe.HTTPGet.Path, "path must not be empty")
 		}
-		if probe.HTTPGet.Port.Type == intstr.Int && probe.HTTPGet.Port.IntValue() == 0 ||
-			probe.HTTPGet.Port.Type == intstr.String && probe.HTTPGet.Port.String() == "" {
+		if probe.HTTPGet.Port.Type != intstr.Int {
+			return field.Invalid(pField.Child("port"), probe.HTTPGet.Port, "port must be an integer currently")
+		}
+		port := probe.HTTPGet.Port.IntValue()
+		if port < 1 || port > 65535 {
 			return field.Invalid(pField.Child("port"), probe.HTTPGet.Port, "port must be between 1 and 65535")
 		}
 	}
@@ -461,9 +464,12 @@ func validateProbe(pField *field.Path, probe *corev1.Probe) *field.Error {
 		if probe.Exec != nil || probe.HTTPGet != nil {
 			return field.Invalid(pField, probe, "only one probe type can be specified")
 		}
-		if probe.HTTPGet.Port.Type == intstr.Int && probe.HTTPGet.Port.IntValue() == 0 ||
-			probe.HTTPGet.Port.Type == intstr.String && probe.HTTPGet.Port.String() == "" {
-			return field.Invalid(pField.Child("port"), probe.HTTPGet.Port, "port must be between 1 and 65535")
+		if probe.TCPSocket.Port.Type != intstr.Int {
+			return field.Invalid(pField.Child("port"), probe.TCPSocket.Port, "port must be an integer currently")
+		}
+		port := probe.TCPSocket.Port.IntValue()
+		if port < 1 || port > 65535 {
+			return field.Invalid(pField.Child("port"), probe.TCPSocket.Port, "port must be between 1 and 65535")
 		}
 	}
 

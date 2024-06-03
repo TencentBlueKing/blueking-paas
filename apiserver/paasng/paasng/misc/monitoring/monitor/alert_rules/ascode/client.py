@@ -75,23 +75,23 @@ class AsCodeClient:
                     f"app_code({self.app_code})"
                 )
 
-    def _add_metric_name_prefixes(self, ctx: dict, alert_code: str):
+    def _update_metric_name_prefixes(self, ctx: dict, alert_code: str):
         """根据告警代码添加需要的指标前缀到上下文中"""
         alert_config_mapping = {
             "rabbitmq": settings.RABBITMQ_MONITOR_CONF,
             "bkrepo": settings.BKREPO_MONITOR_CONF,
             "gcs_mysql": settings.GCS_MYSQL_MONITOR_CONF,
         }
-        for code, config in alert_config_mapping.items():
-            if code in alert_code:
-                ctx[f"{code}_metric_name_prefix"] = config.get("metric_name_prefix", "")
+        for code_snippet, config in alert_config_mapping.items():
+            if code_snippet in alert_code:
+                ctx[f"{code_snippet}_metric_name_prefix"] = config.get("metric_name_prefix", "")
 
-    def _add_docs_url(self, ctx: dict, alert_code: str):
+    def _update_docs_url(self, ctx: dict, alert_code: str):
         """根据告警代码添加需要的文档信息"""
         tag = get_dynamic_tag(f"saas_monitor:{alert_code}")
         links = DocumentaryLinkAdvisor().search_by_tags([tag], limit=1)
         if links:
-            ctx["doc_url"] = f"操作文档: {links[0].location}"
+            ctx["doc_url"] = f"处理建议: {links[0].location}"
 
     def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:
@@ -109,9 +109,9 @@ class AsCodeClient:
             ctx = conf.to_dict()
             ctx["notice_group_name"] = self.default_notice_group_name
             # 涉及到增强服务的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
-            self._add_metric_name_prefixes(ctx, conf.alert_code)
+            self._update_metric_name_prefixes(ctx, conf.alert_code)
             # 为通知添加操作文档链接，若未在'管理后台--智能顾问--文档管理'配置文档则不添加
-            self._add_docs_url(ctx, conf.alert_code)
+            self._update_docs_url(ctx, conf.alert_code)
             configs[f"rule/{conf.alert_rule_name}.yaml"] = j2_env.get_template(f"{conf.alert_code}.yaml.j2").render(
                 **ctx
             )

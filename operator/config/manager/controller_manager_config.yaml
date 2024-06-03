@@ -11,12 +11,18 @@ webhook:
 leaderElection:
   leaderElect: true
   resourceName: e56dbef1.bk.tencent.com
+zapOpts:
+  zapDevel: false
 platform:
   bkAppCode: "bk_paas3"
   bkAppSecret: ""
   bkAPIGatewayURL: ""
   sentryDSN: ""
   ingressClassName: ""
+  maxProcessesPerModule: 16
+  resRequests:
+    procDefaultCPURequest: 100m
+    procDefaultMemRequest: 64Mi
 ingressPlugin:
   accessControl:
     redisConfigKey: ""

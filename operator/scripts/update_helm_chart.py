@@ -46,6 +46,7 @@ filepath_conf = {
     'controller/deployment.yaml': ['deployment.yaml'],
     'controller/config.yaml': ['manager-config.yaml'],
     'controller/service.yaml': ['metrics-service.yaml'],
+    'controller/metrics-monitor.yaml': ['metrics-monitor.yaml'],
     'controller/leader-election-rbac.yaml': ['leader-election-rbac.yaml'],
     'controller/manager-rbac.yaml': ['manager-rbac.yaml'],
     'controller/metrics-reader-rbac.yaml': ['metrics-reader-rbac.yaml'],
@@ -60,9 +61,6 @@ filepath_conf = {
     'certificate/serving-cert.yaml': ['serving-cert.yaml'],
     # 包含需要使用自动生成的证书的模板，统一渲染避免重复调用 genCA 导致的证书不一致问题
     'certificate/certificate.yaml': ['certificate.yaml'],
-    # metrics
-    'metrics/custom-metrics-service.yaml': ['custom-metrics-service.yaml'],
-    'metrics/custom-metrics-service-monitor.yaml': ['custom-metrics-service-monitor.yaml'],
 }
 
 # 格式：文件路径: [(src_str1, dst_str1), (src_str2, dst_str2)]
@@ -154,6 +152,11 @@ content_patch_conf = {
         (
             'secretName: webhook-server-cert',
             'secretName: bkpaas-webhook-server-cert',
+        ),
+        # 替换启动命令
+        (
+            "- --config=controller_manager_config.yaml",
+            "- --config=controller_manager_config.yaml\n        - -zap-devel={{ .Values.controller.zapOpts.zapDevel }}"
         ),
     ],
     'serving-cert.yaml': [
@@ -450,6 +453,46 @@ data:
         '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n',
         '{{- end -}}\n',
     ),
+    'manager-config.yaml': WrapContent(
+        '',
+        wrap_multiline_str(
+            4,
+            '''
+            {{- if .Values.platformConfig.maxProcessesPerModule }}
+            maxProcesses: {{ .Values.platformConfig.maxProcessesPerModule }}
+            {{- end }}
+            resRequests:
+              procDefaultCPURequest: "{{ .Values.resRequests.procDefaultCPURequest }}"
+              procDefaultMemRequest: "{{ .Values.resRequests.procDefaultMemRequest }}"
+            '''
+        ).lstrip("\n")
+    ),
+    'metrics-monitor.yaml': WrapContent(
+        '',
+        '''
+{{- if .Values.serviceMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "bkpaas-app-operator.fullname" . }}-controller-manager-metrics-monitor
+  labels:
+    control-plane: controller-manager
+  {{- include "bkpaas-app-operator.labels" . | nindent 4 }}
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    path: /metrics
+    port: https
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+{{- end -}}
+        '''.lstrip()
+    )
 }
 
 
@@ -517,6 +560,10 @@ class HelmChartUpdater:
         """对部分文件追加/填充内容"""
         for filepath, wrap_contents in content_wrap_conf.items():
             fp = self.chart_source_dir / TMPL_DIR / filepath
+            # 如果不存在，则创建空文件
+            if not os.path.exists(fp):
+                open(fp, 'w').close()
+
             file_contents = fp.read_text()
             contents = wrap_contents.front + file_contents + wrap_contents.back
             fp.write_text(contents)
@@ -610,6 +657,7 @@ class HelmChartUpdater:
 
         # manager 配置相关
         values['controller'] = values['managerConfig']['controllerManagerConfigYaml']
+        values['controller']['zapOpts'] = {'zapDevel': 'false'}
         del values['managerConfig']
 
         # 白名单控制配置挪到顶层
@@ -624,6 +672,9 @@ class HelmChartUpdater:
         # 平台配置挪到顶层，依旧保留 Config 后缀以兼容存量 values
         values['platformConfig'] = values['controller']['platform']
         del values['controller']['platform']
+
+        # service monitor
+        values['serviceMonitor'] = {"enabled": False}
 
         # 证书管理相关
         values['cert'] = {

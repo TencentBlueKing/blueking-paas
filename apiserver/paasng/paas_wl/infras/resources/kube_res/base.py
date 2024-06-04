@@ -295,7 +295,7 @@ class NamespaceScopedReader(Generic[AET]):
         labels = labels or {}
         deserializer = self._make_deserializer(cluster_name)
         with self.kres(cluster_name, api_version=deserializer.get_apiversion()) as kres_client:
-            ret = kres_client.ops_label.list(namespace=namespace, labels=labels)
+            ret = kres_client.ops_batch.list(namespace=namespace, labels=labels)
 
         items = []
         for kube_data in ret.items:
@@ -335,7 +335,7 @@ class NamespaceScopedReader(Generic[AET]):
         deserializer = self._make_deserializer(cluster_name)
         with self.kres(cluster_name, api_version=deserializer.get_apiversion()) as kres_client:
             try:
-                for raw_event in kres_client.ops_label.create_watch_stream(
+                for raw_event in kres_client.ops_batch.create_watch_stream(
                     namespace=namespace, labels=labels, **kwargs
                 ):
                     # When client given a staled resource_version, the watch stream will return an ERROR event
@@ -439,33 +439,19 @@ class AppEntityReader(Generic[AET]):
         """List all app's resources"""
         return self.list_by_app_with_meta(app, labels=labels).items
 
-    def list_by_app_with_meta(self, app: WlApp, labels: Optional[Dict] = None) -> ResourceList[AET]:
+    def list_by_app_with_meta(
+        self, app: WlApp, labels: Optional[Dict] = None, fields: Optional[Dict] = None
+    ) -> ResourceList[AET]:
         """List all app's resources,  return results including metadata
 
         :param labels: labels for filtering results
-        """
-        labels = labels or {}
-        deserializer = self._make_deserializer(app)
-        with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:
-            ret = kres_client.ops_label.list(namespace=self._get_namespace(app), labels=labels)
-
-        items = []
-        for kube_data in ret.items:
-            item = deserializer.deserialize(app, kube_data)
-            # Set _kube_data
-            item._kube_data = kube_data
-            items.append(item)
-        return ResourceList[AET](items=items, metadata=ret.metadata)
-
-    def list_by_app_with_fields(self, app: WlApp, fields: Optional[Dict] = None) -> ResourceList[AET]:
-        """List all app's resources,  return results including metadata
-
         :param fields: fields for filtering results
         """
+        labels = labels or {}
         fields = fields or {}
         deserializer = self._make_deserializer(app)
         with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:
-            ret = kres_client.ops_field.list(namespace=self._get_namespace(app), fields=fields)
+            ret = kres_client.ops_batch.list(namespace=self._get_namespace(app), labels=labels, fields=fields)
 
         items = []
         for kube_data in ret.items:
@@ -495,7 +481,7 @@ class AppEntityReader(Generic[AET]):
         deserializer = self._make_deserializer(app)
         with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:
             try:
-                for raw_event in kres_client.ops_label.create_watch_stream(
+                for raw_event in kres_client.ops_batch.create_watch_stream(
                     namespace=self._get_namespace(app), labels=labels, **kwargs
                 ):
                     # When client given a staled resource_version, the watch stream will return an ERROR event

@@ -20,7 +20,7 @@ import datetime
 import json
 import logging
 from operator import attrgetter
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
@@ -38,6 +38,7 @@ from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_f
 from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.bk_app.processes.serializers import (
+    EventSerializer,
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
     ModuleScopedData,
@@ -55,7 +56,6 @@ from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
-from paas_wl.workloads.event.kres_entities import Event
 from paas_wl.workloads.event.reader import event_kmodel
 from paas_wl.workloads.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
@@ -230,17 +230,11 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
             container.processes.append(process)
             if deployment_id:
                 if bkapp_release_id:
-                    for inst in process.instances:
-                        if inst.version == bkapp_release_id:
-                            container.instances.append(inst)
-                            events = event_kmodel.list_by_app_instance_name(inst.app, inst.name)
-                            container.events[inst.name] = events.items
-
+                    container.instances.extend(
+                        [inst for inst in process.instances if inst.version == bkapp_release_id]
+                    )
             else:
                 container.instances.extend(process.instances)
-                for inst in process.instances:
-                    events = event_kmodel.list_by_app_instance_name(inst.app, inst.name)
-                    container.events[inst.name] = events.items
 
         return Response(
             NamespaceScopedListWatchRespSLZ(
@@ -350,11 +344,6 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             release = wl_app.release_set.get(pk=release_id)
             insts = [inst for inst in insts if inst.version == release.version]
 
-        events: Dict[str, List[Event]] = {}
-        for inst in insts:
-            inst_events = event_kmodel.list_by_app_instance_name(inst.app, inst.name)
-            events[inst.name] = inst_events.items
-
         data = {
             "processes": {
                 "items": processes_status.processes,
@@ -365,7 +354,6 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 "items": insts,
                 "metadata": {"resource_version": processes_status.rv_inst},
             },
-            "events": events,
         }
         processes_specs = ProcessManager(env).list_processes_specs()
         if wl_app.type == WlAppType.CLOUD_NATIVE:
@@ -410,3 +398,17 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def process_event(wl_app: WlApp, event: WatchEvent) -> Dict:
         """Process event payload to Dict of primitive datatypes."""
         return WatchEventSLZ(event, context={"wl_app": wl_app}).data
+
+
+class InstanceEventsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """适用于所有类型应用，应用进程事件相关视图。"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(response_serializer=EventSerializer(many=True))
+    def list(self, request, code, module_name, environment, instance_name):
+        """获取进程实例的相关事件"""
+        wl_app = self.get_wl_app_via_path()
+
+        events = event_kmodel.list_by_app_instance_name(wl_app, instance_name).items
+        return Response(EventSerializer(events, many=True).data)

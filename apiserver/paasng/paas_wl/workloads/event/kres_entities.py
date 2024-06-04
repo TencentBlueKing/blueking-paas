@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from dataclasses import dataclass
 
 from paas_wl.infras.resources.base.kres import KEvent
@@ -25,17 +24,25 @@ from paas_wl.infras.resources.kube_res.base import AppEntity
 from .entities import InvolvedObject, Source
 from .kres_slzs import EventDeserializer, EventSerializer
 
-logger = logging.getLogger(__name__)
-
 
 @dataclass
 class Event(AppEntity):
+    """应用事件
+
+    :param reason: 事件产生的原因
+    :param count: 事件发生的次数
+    :param type: 事件的类型，常见类型有 "Normal" 和 "Warning"
+    :param message: 事件发生的详细信息
+    :param source: 报告该事件的组件，可以是进程或节点
+    :param involved_object: 与该事件相关的对象
+    """
+
     reason: str
     count: int
     type: str
     message: str
-    firstTimestamp: str
-    lastTimestamp: str
+    first_timestamp: str
+    last_timestamp: str
     source: Source
     involved_object: InvolvedObject
 

@@ -35,7 +35,6 @@ from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.infras.resources.kube_res.base import WatchEvent
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paas_wl.workloads.event.kres_entities import Event
 from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paasng.platform.engine.constants import JobStatus, RuntimeType
 from paasng.platform.engine.models import Deployment, OfflineOperation
@@ -145,8 +144,8 @@ class EventSerializer(serializers.Serializer):
     count = serializers.IntegerField(help_text="事件发生的次数")
     type = serializers.CharField(help_text="事件的类型")
     message = serializers.CharField(help_text="事件内容")
-    firstTimestamp = serializers.CharField()
-    lastTimestamp = serializers.CharField()
+    first_timestamp = serializers.CharField()
+    last_timestamp = serializers.CharField()
     source = SourceSerializer(help_text="事件来源")
     involved_object = InvolvedObjectSerializer(help_text="事件相关的对象")
 
@@ -156,11 +155,6 @@ class ListWatcherRespSLZ(serializers.Serializer):
 
     processes = ProcessListSLZ()
     instances = InstanceListSLZ()
-    events = serializers.DictField(
-        child=serializers.ListField(child=EventSerializer()),
-        help_text="实例相关事件",
-        required=False,
-    )
     cnative_proc_specs = serializers.ListField(required=False, child=serializers.DictField())
     process_packages = serializers.ListField(required=False, child=serializers.DictField())
 
@@ -232,11 +226,6 @@ class NamespaceScopedListWatchRespPartSLZ(serializers.Serializer):
     processes = ProcessForDisplaySLZ(many=True)
     instances = InstanceForDisplaySLZ(many=True)
     proc_specs = serializers.ListField(child=serializers.DictField())
-    events = serializers.DictField(
-        child=serializers.ListField(child=EventSerializer()),
-        help_text="实例相关事件",
-        required=False,
-    )
 
     total_available_instance_count = serializers.IntegerField(help_text="总运行实例数")
     total_desired_replicas = serializers.IntegerField(help_text="总期望实例数")
@@ -271,7 +260,6 @@ class ModuleScopedData:
     processes: List[Process] = field(default_factory=list)
     instances: List[Instance] = field(default_factory=list)
     proc_specs: List[Dict] = field(default_factory=list)
-    events: Dict[str, List[Event]] = field(default_factory=dict)
 
     @property
     def total_available_instance_count(self) -> int:

@@ -27,7 +27,7 @@ class EventReader(AppEntityReader[Event]):
 
     def list_by_app_instance_name(self, app: WlApp, app_instance_name: str) -> ResourceList[Event]:
         fields = {"involvedObject": {"name": app_instance_name}}
-        return self.list_by_app_with_fields(app, fields=fields)
+        return self.list_by_app_with_meta(app, fields=fields)
 
 
 event_kmodel = EventReader(Event)

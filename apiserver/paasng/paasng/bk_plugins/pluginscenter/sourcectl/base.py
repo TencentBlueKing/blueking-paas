@@ -113,8 +113,9 @@ class TemplateRender:
                 shutil.move(str(item), str(dest_dir / item.name))
 
 
-def generate_context(instance: PluginInstance):
-    return {
+def generate_context(instance: PluginInstance) -> dict:
+    """初始化插件模板代码时传的参数"""
+    context = {
         "project_name": instance.id,
         "app_code": instance.id,
         "plugin_desc": instance.name,
@@ -125,3 +126,7 @@ def generate_context(instance: PluginInstance):
         "apigw_cors_allow_methods": "GET,POST,PUT,PATCH,HEAD,DELETE,OPTIONS",
         "apigw_cors_allow_headers": "Accept,Cache-Control,Content-Type,Keep-Alive,Origin,User-Agent,X-Requested-With",
     }
+    # 创建插件的时候提供了额外字段，渲染插件模板的时候也一并将参数传过去
+    if extra_fields := instance.extra_fields:
+        context.update(extra_fields)
+    return context

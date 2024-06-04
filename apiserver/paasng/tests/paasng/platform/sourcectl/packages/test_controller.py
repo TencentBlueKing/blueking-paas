@@ -17,6 +17,8 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+import tarfile
+
 import pytest
 import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
@@ -149,12 +151,16 @@ class TestPackageRepoController:
             ),
         ],
     )
-    def test_list_alternative_versions(self, package_module, versions, expected):
+    def test_list_alternative_versions(self, package_module, versions, expected, tmp_path):
+        # Write an empty tarfile to avoid file format exception when the reader is trying to
+        # parse the file.
+        file_path = tmp_path / "foo.tgz"
+        with tarfile.open(file_path, "w:gz"):
+            pass
+
         for idx, version_info in enumerate(versions):
-            with generate_temp_file() as file_path:
-                file_path.write_text("")
-                stat = SourcePackageStatReader(file_path).read()
-                stat.version = version_info.revision
+            stat = SourcePackageStatReader(file_path).read()
+            stat.version = version_info.revision
             package = SourcePackage.objects.store(
                 package_module,
                 SPStoragePolicy(

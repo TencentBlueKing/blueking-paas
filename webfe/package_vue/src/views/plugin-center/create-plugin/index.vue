@@ -515,6 +515,7 @@ export default {
     },
     // 选中具体插件类型
     changePluginType(value) {
+      this.schemaFormData = {};
       this.resetPluinParams();
       this.form.pd_id = value;
       this.pluginTypeData = this.pluginTypeList.find(e => e.plugin_type.id === value);

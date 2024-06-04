@@ -143,7 +143,7 @@ class BinaryTarClient(BasePackageClient):
             )
             _, stderr = p.communicate()
             if p.returncode != 0:
-                if self._stderr_is_invalid_format(stderr):
+                if self._is_invalid_file_format_error(stderr):
                     raise InvalidPackageFileFormatError()
                 raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
             return (temp_dir / filename).read_bytes()
@@ -174,15 +174,15 @@ class BinaryTarClient(BasePackageClient):
         )
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            if self._stderr_is_invalid_format(stderr):
+            if self._is_invalid_file_format_error(stderr):
                 raise InvalidPackageFileFormatError()
             raise RuntimeError(f"Failed to read from the tarball, error: {stderr!r}")
         items = stdout.strip().split("\n")
         return items if not tarfile_like else [item.rstrip(os.path.sep) for item in items]
 
     @staticmethod
-    def _stderr_is_invalid_format(message: str) -> bool:
-        """Check if the stderr message represents an invalid file format."""
+    def _is_invalid_file_format_error(message: str) -> bool:
+        """Check if the stderr message indicates an invalid file format."""
         if re.search(r"tar:.* not look like a tar archive", message):
             return True
         return False

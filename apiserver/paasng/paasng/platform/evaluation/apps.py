@@ -21,3 +21,7 @@ from django.apps import AppConfig
 
 class EvaluationConfig(AppConfig):
     name = "paasng.platform.evaluation"
+    verbose_name = "Evaluations"
+
+    def ready(self):
+        from . import handlers  # noqa: F401

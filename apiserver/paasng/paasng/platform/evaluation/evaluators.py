@@ -163,6 +163,11 @@ class AppOperationEvaluator:
         # 环境纬度评估
         for mod_name, mod in self.visit_summary.modules.items():
             for env_name, env in mod.envs.items():
+                # 这个环境没有运行中的进程的，跳过
+                env_res_summary = self.res_summary.modules[mod_name].envs[env_name]
+                if not (env_res_summary.cpu_requests and env_res_summary.mem_requests):
+                    continue
+
                 # 有访问记录，跳过
                 if env.pv and env.uv:
                     continue
@@ -186,6 +191,10 @@ class AppOperationEvaluator:
                     env_result.issues.append(f"CPU 使用率低于 1% 且近 {self.res_summary.time_range} 使用量没有波动")
                     env_result.issue_type = OperationIssueType.IDLE
                     self.result.issue_type = OperationIssueType.IDLE
+                    self.result.issues.append(
+                        f"模块 {mod_name} 环境 {env_name} 近 {self.visit_summary.time_range} 没有访问记录"
+                        + f" 且 近 {self.res_summary.time_range} CPU 使用率低于 1%"
+                    )
 
     def _evaluate_by_process_status(self):
         # 应用纬度
@@ -207,7 +216,7 @@ class AppOperationEvaluator:
                     env_result.issue_type = OperationIssueType.UNDEPLOY
 
                 env_res_summary = self.res_summary.modules[mod_name].envs[env_name]
-                if not env_res_summary.cpu_requests and env_res_summary.mem_requests:
+                if not (env_res_summary.cpu_requests and env_res_summary.mem_requests):
                     env_result.issues.append("该环境无运行中的进程")
                     env_result.issue_type = OperationIssueType.UNDEPLOY
 

@@ -153,7 +153,7 @@ class AppResQuotaCollector:
     def _calc_module_summary(self, module: Module) -> ModuleSummary:
         stag_env = module.get_envs(AppEnvName.STAG)
         prod_env = module.get_envs(AppEnvName.PROD)
-        return ModuleSummary(envs={env.environment: self._calc_env_summary(stag_env) for env in [stag_env, prod_env]})
+        return ModuleSummary(envs={env.environment: self._calc_env_summary(env) for env in [stag_env, prod_env]})
 
     def _calc_env_summary(self, env: ModuleEnvironment) -> EnvSummary:
         proc_summaries = []

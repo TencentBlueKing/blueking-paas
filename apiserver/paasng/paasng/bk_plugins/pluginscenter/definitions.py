@@ -198,9 +198,12 @@ class PluginMarketInfoDefinition(BaseModel):
 class ReleaseRevisionDefinition(BaseModel):
     """发布版本定义"""
 
-    revisionType: Literal["all", "master", "tag", "tested_version"] = Field(
-        description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)"
-    )
+    revisionType: Literal[
+        constants.PluginRevisionType.ALL,
+        constants.PluginRevisionType.MASTER,
+        constants.PluginRevisionType.TAG,
+        constants.PluginRevisionType.TESTED_VERSION,
+    ] = Field(description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)")
     revisionPattern: Optional[str] = Field(description="代码版本正则表达式模板, 留空则不校验")
     revisionPolicy: Optional[Literal["disallow_released_source_version", "disallow_releasing_source_version"]] = Field(
         description="代码版本选择策略, 留空则不校验"

@@ -73,6 +73,7 @@ from paasng.bk_plugins.pluginscenter.thirdparty import market as market_api
 from paasng.bk_plugins.pluginscenter.thirdparty.configuration import sync_config
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import update_instance
 from paasng.bk_plugins.pluginscenter.thirdparty.members import sync_members
+from paasng.bk_plugins.pluginscenter.utils import get_testd_versions
 from paasng.utils.api_docs import openapi_empty_schema
 from paasng.utils.i18n import to_translated_field
 from paasng.utils.views import permission_classes as _permission_classes
@@ -571,14 +572,9 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         if type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
-        version_type = request.data["source_version_type"]
-        version_name = request.data["source_version_name"]
-        source_hash = get_plugin_repo_accessor(plugin).extract_smart_revision(f"{version_type}:{version_name}")
-
         slz = serializers.make_create_release_version_slz_class(plugin, type)(
             data=request.data,
             context={
-                "source_hash": source_hash,
                 "previous_version": getattr(plugin.all_versions.get_latest_succeeded(), "version", None),
             },
         )
@@ -586,8 +582,9 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         data = slz.validated_data
 
         release_strategy = data.pop("release_strategy", None)
+
         release = PluginRelease.objects.create(
-            plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
+            plugin=plugin, source_location=plugin.repository, creator=request.user.pk, **data
         )
         if release_strategy:
             PluginReleaseStrategy.objects.create(release=release, **release_strategy)
@@ -690,19 +687,21 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance()
         release_definition = pd.get_release_revision_by_type(type)
-        if release_definition.revisionType == "master":
+        if release_definition.revisionType == constants.PluginRevisionType.MASTER:
             versions = [build_master_placeholder()]
-        elif release_definition.revisionType == "tag":
+        elif release_definition.revisionType == constants.PluginRevisionType.TAG:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=False, include_tag=True
             )
+        elif release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
+            versions = get_testd_versions(plugin, release_definition.revisionType)
         else:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=True, include_tag=True
             )
 
         semver_choices = None
-        current_release = plugin.all_versions.get_latest_succeeded()
+        current_release = plugin.all_versions.filter(type=type).get_latest_succeeded()
         if release_definition.versionNo == constants.PluginReleaseVersionRule.AUTOMATIC:
             current_version_no = semver.VersionInfo.parse(getattr(current_release, "version", "0.0.0"))
             semver_choices = {

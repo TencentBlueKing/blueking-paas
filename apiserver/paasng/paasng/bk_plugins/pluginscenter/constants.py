@@ -182,3 +182,12 @@ class StatusPollingMethod(str, StructuredEnum):
 
     API = EnumField("api", label=_("后台 API 轮询"))
     FRONTEND = EnumField("frontend", label=_("前端轮询，如通过 Iframe message 通信等"))
+
+
+class PluginRevisionType(str, StructuredEnum):
+    """代码版本类型"""
+
+    ALL = EnumField("all", label=_("不限制"))
+    MASTER = EnumField("master", label=_("仅可选择主分支发布"))
+    TAG = EnumField("tag", label=_("Tag 发布"))
+    TESTED_VERSION = EnumField("tested_version", label=_("已经测试通过的版本"))

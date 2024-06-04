@@ -98,7 +98,7 @@ class TestReleaseStages:
             ).count()
             == 1
         )
-        with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+        with mock.patch("paasng.bk_plugins.pluginscenter.utils.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
             # 创建测试版本发布
             resp = api_client.post(
@@ -125,7 +125,7 @@ class TestReleaseStages:
             ).count()
             == 0
         )
-        with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+        with mock.patch("paasng.bk_plugins.pluginscenter.utils.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
             # 创建正式版本发布
             resp = api_client.post(

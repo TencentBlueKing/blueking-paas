@@ -106,6 +106,7 @@
               :placeholder="$t(pdIdPlaceholder)"
               :maxlength="pdIdMaxLength"
               :show-word-limit="true"
+              :spellcheck="false"
             />
           </bk-form-item>
           <bk-form-item
@@ -120,6 +121,7 @@
               :placeholder="$t(namePlaceholder)"
               :maxlength="nameMaxLength"
               :show-word-limit="true"
+              :spellcheck="false"
             />
           </bk-form-item>
           <bk-form-item
@@ -528,6 +530,7 @@ export default {
       this.schema = { type: 'object', required: this.getRequiredFields(properties), properties };
       this.$nextTick(() => {
         this.handleBottomAdsorption();
+        this.closeSpellcheck();
       });
     },
     // 切换插件重置参数
@@ -634,6 +637,12 @@ export default {
       const viewportHeight = window.innerHeight - reserveHeight;
       this.isSticky = contentHeight > viewportHeight;
     }, 220),
+
+    // 去除拼写波浪线提示
+    closeSpellcheck() {
+      const textarea = document.querySelector('.bk-form textarea');
+      textarea && textarea.setAttribute('spellcheck', false);
+    },
   },
 };
 </script>

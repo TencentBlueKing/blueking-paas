@@ -155,6 +155,7 @@
                 v-model="curVersion.comment"
                 :rows="5"
                 type="textarea"
+                :spellcheck="false"
               />
             </bk-form-item>
             <bk-form-item label="">

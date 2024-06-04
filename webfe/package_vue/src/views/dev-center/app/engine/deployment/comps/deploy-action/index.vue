@@ -3215,7 +3215,7 @@ export default {
 
     getBranchInfoType() {
       const branchInfo = this.branchesMap[this.branchSelection];
-      this.branchInfoType = branchInfo.type;
+      this.branchInfoType = branchInfo.display_type;
     },
 
     async getLessCode() {

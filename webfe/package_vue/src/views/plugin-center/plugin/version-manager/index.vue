@@ -66,7 +66,7 @@
             v-model="keyword"
             class="fr"
             :clearable="true"
-            :placeholder="inputPlaceholder"
+            :placeholder="$t('版本/代码分支')"
             :right-icon="'bk-icon icon-search'"
             :style="{ width: `${isOfficialVersion ? 480 : 300}px` }"
             @enter="handleSearch"
@@ -381,9 +381,6 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
-    },
-    inputPlaceholder() {
-      return this.isOfficialVersion ? this.$t('版本号/代码分支/代码 Commit/创建人/发布进度') : this.$t('代码分支/代码 Commit/创建人/测试进度');
     },
     // 正式版
     isOfficialVersion() {

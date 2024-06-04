@@ -1963,7 +1963,7 @@ export default {
   发布进度: 'Release progress',
   重新发布: 'Republish',
   发布状态: 'Release status',
-  '版本号/代码分支/代码 Commit/创建人/发布进度': 'Version/Branch/Code Commit/Author/Deployment Progress',
+  '版本/代码分支': 'Version/Code Branch',
   '成员姓名/名称': 'Member Name/Title',
   已有发布任务进行中: 'There are already publishing tasks in progress',
   版本号类型: 'Version No. Type',

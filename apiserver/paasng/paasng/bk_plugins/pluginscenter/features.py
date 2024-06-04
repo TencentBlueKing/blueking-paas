@@ -37,6 +37,7 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     ACCESS_LOG = FeatureFlagField(label="访问日志日志", default=True)
     MARKET_INFO = FeatureFlagField(label="市场信息", default=True)
     PUBLISHER_INFO = FeatureFlagField(label="发布者", default=False)
+    LOWER_REPO_NAME = FeatureFlagField(label="代码仓库名称转为小写字母", default=False)
 
 
 class PluginFeatureFlagsManager:

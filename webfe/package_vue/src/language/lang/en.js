@@ -1583,7 +1583,7 @@ export default {
   前端jQuery组件库: 'Front-end jQuery component library',
   '提供表单、表格、富文本、按钮等丰富的UI组件，包括PC版、移动版。': 'Provides rich UI components such as forms, tables, rich text, buttons, etc., including PC version and mobile version.',
   前端Vue组件库: 'Front-end Vue component library',
-  '基于Vue 2.0，提供按钮、下拉选框、日期选择器、对话框等常用组件。': 'Based on Vue 2.0, it provides common components such as buttons, drop-down boxes, date pickers, and dialog boxes.',
+  '基于 Vue2.0、Vue3.0，提供按钮、下拉选框、日期选择器、对话框等常用组件。': 'Provides common components such as buttons, dropdown boxes, date pickers, and dialogs based on Vue 2.0 and Vue 3.0.',
   前端套餐样例库: 'Front-end package sample library',
   '提供成套的样例页面，即拿即用。': 'A complete set of sample pages is provided, ready to use.',
   '蓝鲸前端开发脚手架（BKUI_CLI）': 'BlueKing front-end development scaffolding (BKUI_CLI)',

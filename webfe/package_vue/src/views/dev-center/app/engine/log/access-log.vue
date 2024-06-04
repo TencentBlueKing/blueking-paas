@@ -157,7 +157,9 @@
                     </td>
                     <template v-for="field of fieldSelectedList">
                       <td :key="field" class="field">
-                        <div>{{log.detail[field] || '--' }}</div>
+                        <!-- eslint-disable-next-line vue/no-v-html -->
+                        <div v-if="log.detail[field]" v-html="log.detail[field]"></div>
+                        <span v-else>--</span>
                       </td>
                     </template>
                   </tr>

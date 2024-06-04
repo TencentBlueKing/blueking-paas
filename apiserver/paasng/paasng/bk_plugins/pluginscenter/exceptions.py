@@ -56,6 +56,9 @@ class ErrorCodes:
     # 日志查询异常
     QUERY_ES_ERROR = ErrorCode(_("日志系统异常, 请稍后重试"))
 
+    # 可见范围修改失败
+    VISIBLE_RANGE_UPDATE_FAIELD = ErrorCode(_("可见范围修改失败"))
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

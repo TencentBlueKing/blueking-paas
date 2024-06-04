@@ -28,7 +28,7 @@
             @click="showInfoCancelRelease"
           >
             <i class="paasng-icon paasng-stop-2" />
-            {{ $t('终止发布') }}
+            {{ isOfficialVersion ? $t('终止发布') : $t('终止测试') }}
           </bk-button>
         </div>
       </div>
@@ -490,8 +490,8 @@ export default {
 
     showInfoCancelRelease() {
       this.$bkInfo({
-        title: `${this.$t('确认终止发布版本')}${this.curVersion} ？`,
-        width: 480,
+        title: `${this.$t(`确认终止${this.isOfficialVersion ? '发布' : '测试'}版本`)}${this.curVersion} ？`,
+        width: 540,
         maskClose: true,
         confirmFn: () => {
           this.handlerCancelRelease();
@@ -556,6 +556,9 @@ export default {
     goVersionManager() {
       this.$router.push({
         name: 'pluginVersionManager',
+        query: {
+          type: this.isOfficialVersion ? 'prod' : 'test',
+        },
       });
     },
 

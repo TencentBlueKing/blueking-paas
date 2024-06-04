@@ -96,6 +96,7 @@ export default {
         const { elements } = this.curStages[1].containers[0];
         // stages[1].containers[0].elements 左侧数据
         elements.forEach((v) => {
+          if (v.additionalOptions?.elementPostInfo) return;
           const seconds = Math.floor(v.elapsed / 1000);
           this.timeLineList.push({
             content: `${seconds > 1 ? seconds : '<1'}s`,

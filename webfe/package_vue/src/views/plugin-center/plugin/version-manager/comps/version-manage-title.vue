@@ -31,7 +31,7 @@ export default {
     },
     type: {
       type: String,
-      default: 'prod',
+      default: 'test',
     },
     isShowTab: {
       type: Boolean,
@@ -41,8 +41,8 @@ export default {
   data() {
     return {
       tabList: [
-        { title: '版本发布', key: 'prod' },
         { title: '测试记录', key: 'test' },
+        { title: '版本发布', key: 'prod' },
       ],
     };
   },

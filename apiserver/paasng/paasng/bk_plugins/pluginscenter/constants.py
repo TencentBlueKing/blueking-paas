@@ -28,6 +28,13 @@ class PluginReleaseMethod(str, StructuredEnum):
     IMAGE = EnumField("image", label="镜像发布")
 
 
+class PluginBasicInfoAccessMode(str, StructuredEnum):
+    """插件基本信息查看模式"""
+
+    READONLY = EnumField("readonly", label="只读")
+    READWRITE = EnumField("readwrite", label="读写")
+
+
 class PluginReleaseVersionRule(str, StructuredEnum):
     """插件发布版本号规则"""
 
@@ -153,6 +160,7 @@ class SubjectTypes(str, StructuredEnum):
     MARKET_INFO = EnumField("market_info", label=_("市场信息"))
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))
+    PUBLISHER = EnumField("publisher", label=_("发布者"))
 
 
 class PluginReleaseType(str, StructuredEnum):

@@ -273,7 +273,6 @@ export default {
       handler(newVal) {
         this.visible = newVal;
         if (newVal) {
-          console.log('22', this.migrationFailureTip);
           this.isMainLoading = true;
           this.getMigrationProcessesLatest();
         }
@@ -334,7 +333,7 @@ export default {
         this.isStopPolling = res.status !== 'on_migration';
         this.migrationData = res;
         this.processId = res.id;
-        this.currentStep = 2;
+        this.currentStep = res.status === 'rollback_succeeded' ? 1 : 2;
         // 是否正在迁移
         this.isMigrating = res.status === 'on_migration';
         if (this.isMigrating && !this.isPollingLatest) {
@@ -366,6 +365,7 @@ export default {
         });
         this.processId = res.process_id;
         this.currentStep = 2;
+        this.queryMigrationStatus();
         // 查询状态
         this.pollingStatus();
       } catch (e) {

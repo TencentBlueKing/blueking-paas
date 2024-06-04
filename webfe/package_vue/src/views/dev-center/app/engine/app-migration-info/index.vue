@@ -8,7 +8,16 @@
       :is-migration-progress="true"
       @change="handleTabChange"
       @migration-dialog="handleMigrationDialog"
-    />
+    >
+      <div slot="right">
+        <bk-button
+          :theme="'default'"
+          type="submit"
+          @click="handleRollbackApp">
+          {{ $t('回退应用') }}
+        </bk-button>
+      </div>
+    </cloud-app-top-bar>
     <section class="migration-info-main">
       <!-- 进程管理 -->
       <migration-process-management v-if="active === 'migrationProcessManagement'" />
@@ -23,6 +32,12 @@
       v-model="appMigrationDialogConfig.visible"
       :data="appMigrationDialogConfig.data"
     />
+
+    <!-- 回退应用弹窗 -->
+    <rollback-app-dialog
+      v-model="rollbackAppDialogConfig.visible"
+      :app-code="appCode"
+    />
   </div>
 </template>
 <script>
@@ -31,6 +46,7 @@ import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import migrationProcessManagement from './comps/migration-process-management.vue';
 import visitConfig from '@/views/dev-center/app/engine/entry-config/comps/visit-config.vue';
 import appMigrationDialog from '@/components/app-migration-dialog';
+import rollbackAppDialog from './comps/rollback-app-dialog.vue';
 
 export default {
   name: 'AppMigrationInfo',
@@ -39,6 +55,7 @@ export default {
     migrationProcessManagement,
     visitConfig,
     appMigrationDialog,
+    rollbackAppDialog,
   },
   mixins: [appBaseMixin],
   data() {
@@ -51,6 +68,9 @@ export default {
       appMigrationDialogConfig: {
         visible: false,
         data: {},
+      },
+      rollbackAppDialogConfig: {
+        visible: false,
       },
     };
   },
@@ -76,6 +96,10 @@ export default {
     handleMigrationDialog(visible) {
       this.appMigrationDialogConfig.visible = visible;
       this.appMigrationDialogConfig.data = this.curAppInfo.application;
+    },
+    // 回退应用
+    handleRollbackApp() {
+      this.rollbackAppDialogConfig.visible = true;
     },
   },
 };

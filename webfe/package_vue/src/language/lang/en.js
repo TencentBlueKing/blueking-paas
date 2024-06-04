@@ -2612,4 +2612,12 @@ export default {
   查看迁移文档: 'View Migration Documentation',
   迁移风险: 'Migration Risk',
   部署应用并验证功能: 'Deploy Applications and Verify Functionality',
+  回退: 'Rollback',
+  回退应用: 'Rollback Application',
+  回退为普通应用中: 'Rolling Back to Regular Application',
+  '回退完成后到“应用引擎-进程管理”页面检查每个进程状态': 'Check the status of each process on the "Application Engine - Process Management" page after rollback is complete',
+  回退应用失败: 'Application Rollback Failed',
+  失败原因: 'Failure Reason',
+  确认回退应用: 'Confirm Application Rollback',
+  '回退后会将当前应用回退到普通应用的状态，并撤销所有云原生应用部署而分配的资源': 'After rollback, the current application will be reverted to the state of a regular application, and all resources allocated for cloud-native application deployment will be revoked',
 };

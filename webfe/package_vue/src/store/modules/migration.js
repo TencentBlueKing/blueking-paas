@@ -74,5 +74,13 @@ export default {
       const url = `${BACKEND_URL}/api/mgrlegacy/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/`;
       return http.put(url, data, config);
     },
+
+    /**
+     * 应用回退
+     */
+    rollback({}, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/mgrlegacy/cloud-native/applications/${appCode}/rollback/`;
+      return http.post(url, {}, config);
+    },
   },
 };

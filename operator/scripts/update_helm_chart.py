@@ -209,9 +209,24 @@ content_patch_conf = {
             ),
         ),
         (
+            # 默认资源 Limits 配置挪到 values 顶层
+            '.Values.controller.resLimits',
+            '.Values.resLimits',
+        ),
+        (
+            # 默认资源 Requests 配置挪到 values 顶层
+            '.Values.controller.resRequests',
+            '.Values.resRequests',
+        ),
+        (
             # 自动扩缩容配置挪到 values 顶层
             '.Values.controller.autoscaling',
             '.Values.autoscaling',
+        ),
+        (
+            # 最大进程数量配置挪到 values 顶层
+            '.Values.controller.maxProcesses',
+            '.Values.maxProcesses',
         ),
         (
             # 平台配置挪到 values 顶层，依旧保留 Config 后缀以兼容存量 values
@@ -453,20 +468,6 @@ data:
         '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n',
         '{{- end -}}\n',
     ),
-    'manager-config.yaml': WrapContent(
-        '',
-        wrap_multiline_str(
-            4,
-            '''
-            {{- if .Values.platformConfig.maxProcessesPerModule }}
-            maxProcesses: {{ .Values.platformConfig.maxProcessesPerModule }}
-            {{- end }}
-            resRequests:
-              procDefaultCPURequest: "{{ .Values.resRequests.procDefaultCPURequest }}"
-              procDefaultMemRequest: "{{ .Values.resRequests.procDefaultMemRequest }}"
-            '''
-        ).lstrip("\n")
-    ),
     'metrics-monitor.yaml': WrapContent(
         '',
         '''
@@ -666,12 +667,13 @@ class HelmChartUpdater:
         values['paasAnalysis'] = {'enabled': False}
         del values['controller']['ingressPlugin']
 
-        values['autoscaling'] = {'enabled': False}
-        del values['controller']['autoscaling']
+        values['resLimits'] = values['controller'].pop('resLimits')
+        values['resRequests'] = values['controller'].pop('resRequests')
+        values['autoscaling'] = values['controller'].pop('autoscaling')
+        values['maxProcesses'] = values['controller'].pop('maxProcesses')
 
         # 平台配置挪到顶层，依旧保留 Config 后缀以兼容存量 values
-        values['platformConfig'] = values['controller']['platform']
-        del values['controller']['platform']
+        values['platformConfig'] = values['controller'].pop('platform')
 
         # service monitor
         values['serviceMonitor'] = {"enabled": False}

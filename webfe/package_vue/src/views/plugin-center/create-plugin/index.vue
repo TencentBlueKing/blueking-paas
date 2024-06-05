@@ -368,7 +368,8 @@ export default {
   watch: {
     'form.plugin_id'(value) {
       if (this.pluginTypeData.schema.repository_group && value) {
-        this.form.repositoryTemplateUrl = `${this.pluginTypeData.schema.repository_group}${value}.git`;
+        const repository = `${this.pluginTypeData.schema.repository_group}${value}.git`;
+        this.form.repositoryTemplateUrl = this.replaceTemplateContent(repository, value.toLocaleLowerCase());;
       }
     },
     'form.pd_id'(value) {
@@ -513,6 +514,15 @@ export default {
       this.pdIdPlaceholder = this.$t(this.curPluginInfo.schema.id.description) || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
       this.namePlaceholder = this.$t(this.curPluginInfo.schema.name.description) || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
     },
+    /**
+     * 将输入字符串中 {{...}} 包含的内容替换为指定的替换字符串
+     * @param {string} str - 原字符串
+     * @param {string} replacement - 替换字符串，默认为 'webtest'
+     * @returns {string} - 返回替换后的字符串
+     */
+    replaceTemplateContent(str, replacement = '') {
+      return str.replace(/\{\{[^}]+\}\}/g, replacement);
+    },
     // 选中具体插件类型
     changePluginType(value) {
       this.schemaFormData = {};
@@ -522,6 +532,8 @@ export default {
       this.form.repositoryTemplateUrl = this.form.plugin_id
         ? `${this.pluginTypeData.schema.repository_group}${this.form.plugin_id}.git`
         : this.pluginTypeData.schema.repository_template;
+      // 格式化数据
+      this.form.repositoryTemplateUrl = this.replaceTemplateContent(this.form.repositoryTemplateUrl, value.toLocaleLowerCase());
       this.pluginLanguage = this.pluginTypeData.schema.init_templates;
       this.extraFields = this.pluginTypeData.schema.extra_fields;
       // schema 排序

@@ -335,12 +335,13 @@ export default {
   },
   watch: {
     'curVersion.source_versions'() {
+      const versionData = this.sourceVersions.find(item => item.name === this.curVersion.source_versions) || {};
+      this.curVersion.comment = versionData.message;
       if (this.curVersion.version_no === 'revision' || this.curVersion.version_no === 'commit-hash') {
-        const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
         if (this.curVersion.version_no === 'revision') {
-          this.curVersion.version = versionData[0].name;
+          this.curVersion.version = versionData.name;
         } else {
-          this.curVersion.version = versionData[0].revision;
+          this.curVersion.version = versionData.revision;
         }
       }
     },
@@ -377,6 +378,7 @@ export default {
         // source_versions 会存在 [] 情况
         if (res.revision_policy === null) {
           this.curVersion.source_versions = res.source_versions[0]?.name || '';
+          this.curVersion.comment = res.source_versions[0]?.message || '';
         } else {
           this.curVersion.source_versions = '';
         }
@@ -559,6 +561,8 @@ export default {
       if (this.curVersionData.version_no === 'branch-timestamp') {
         const timestamp = Date.now();
         this.curVersion.version = `${v}-${timestamp}`;
+        const curVersionData = this.sourceVersions.find(item => item.name === v) || {};
+        this.curVersion.comment = curVersionData.message;
       }
     },
   },

@@ -188,8 +188,8 @@
                 :right-icon="'bk-icon icon-search'"
                 @enter="searchApp"
                 @keyup="handleKeyUp"
-                @right-icon-click="handleRightIconClick">
-              </bk-input>
+                @right-icon-click="handleRightIconClick"
+              />
             </div>
 
             <div

@@ -1964,7 +1964,7 @@ export default {
   重新发布: 'Republish',
   发布状态: 'Release status',
   '版本/代码分支': 'Version/Code Branch',
-  '成员姓名/名称': 'Member Name/Title',
+  请输入成员姓名搜索: 'Please enter member name to search',
   已有发布任务进行中: 'There are already publishing tasks in progress',
   版本号类型: 'Version No. Type',
   版本日志: 'Release Log',

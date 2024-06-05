@@ -142,10 +142,12 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
             highlight_query = dsl.to_dict()
             search = search.query(dsl)
 
-            # 除非指定了 time_field 的排序规则, 否则总是按照 desc 排序
-            sort_params = {time_field: {"order": "desc"}}
+            sort_params = {}
             if query_conditions.sort:
                 sort_params.update({k: {"order": v} for k, v in query_conditions.sort.items()})
+
+            sort_params.setdefault(time_field, {"order": "desc"})
+
             search = search.sort(sort_params)
 
         # 顺序很重要, querystring 在 simple dsl 里, highlight_fields 必须在 search.query(dsl) 后面

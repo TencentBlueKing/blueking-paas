@@ -141,6 +141,10 @@ class PluginInstance(UuidAuditedModel):
     def has_test_version(self) -> bool:
         return self.pd.test_release_revision is not None
 
+    @property
+    def latest_release_strategy(self):
+        return self.release_strategies.latest()
+
     class Meta:
         unique_together = ("pd", "id")
 
@@ -347,7 +351,7 @@ class PluginReleaseStrategy(AuditedModel):
     """插件版本的发布策略"""
 
     release = models.ForeignKey(
-        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategy"
+        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategies"
     )
     strategy = models.CharField(
         verbose_name="发布策略", max_length=32, choices=constants.PluginReleaseStrategy.get_choices()
@@ -371,6 +375,7 @@ class PluginReleaseStrategy(AuditedModel):
     #     }
     # ]
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
 
 
 class ApprovalService(UuidAuditedModel):

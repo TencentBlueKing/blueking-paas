@@ -28,7 +28,6 @@ from paasng.bk_plugins.pluginscenter.models import (
     ApprovalService,
     PluginDefinition,
     PluginInstance,
-    PluginMarketInfo,
     PluginRelease,
 )
 
@@ -68,14 +67,9 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     if current_stage.status != PluginReleaseStatus.INITIAL:
         raise ValueError("itsm stage is not an initialization state and cannot be triggered")
 
-    # 查询插件的市场信息，用户填充申请单据
-    market_info = None
-    if hasattr(plugin, "pluginmarketinfo"):
-        market_info = plugin.pluginmarketinfo
-
     # 组装提单数据,包含插件的基本信息和版本信息
     basic_fields = _get_basic_fields(pd, plugin)
-    advanced_fields = _get_advanced_fields(pd, plugin, version, market_info)
+    advanced_fields = _get_advanced_fields(pd, plugin, version)
     title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
     fields = basic_fields + advanced_fields + title_fields
 
@@ -96,6 +90,35 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     current_stage.status = PluginReleaseStatus.PENDING
     current_stage.itsm_detail = itsm_detail
     current_stage.save(update_fields=["status", "itsm_detail"])
+
+
+def submit_canary_release_ticket(
+    pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, operator: str
+) -> "ItsmDetail":
+    """提交灰度发布申请单据"""
+    # # 可见范围
+    # visible_range_obj, _c = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+    # # 发布策略
+    # release_strategy = version.release.latest_release_strategy
+
+    # 组装提单数据,包含插件的基本信息和灰度发布信息
+    basic_fields = _get_basic_fields(pd, plugin)
+    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
+    fields = basic_fields + title_fields
+
+    # 查询上线审批服务ID
+    service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.CANARY_APPROVAL.value).service_id
+
+    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
+    paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
+    callback_url = (
+        f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/canary/"
+    )
+
+    # 提交 itsm 申请单据
+    client = ItsmClient()
+    itsm_detail = client.create_ticket(service_id, operator, callback_url, fields)
+    return itsm_detail
 
 
 def submit_visible_range_ticket(
@@ -192,9 +215,7 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
     return fields
 
 
-def _get_advanced_fields(
-    pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, market_info: Optional[PluginMarketInfo]
-) -> List[dict]:
+def _get_advanced_fields(pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease) -> List[dict]:
     """获取插件的版本、市场相关字段信息，可用于上线申请提单"""
     fields = [
         {

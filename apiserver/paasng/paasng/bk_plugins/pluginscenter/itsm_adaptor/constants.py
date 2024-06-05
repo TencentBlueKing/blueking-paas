@@ -26,6 +26,7 @@ class ApprovalServiceName(str, StructuredEnum):
     CREATE_APPROVAL = EnumField("create_approval", label=_("插件上线审批"))
     ONLINE_APPROVAL = EnumField("online_approval", label=_("插件创建审批流程"))
     VISIBLE_RANGE_APPROVAL = EnumField("visible_range_approval", label=_("插件可见范围修改审批流程"))
+    CANARY_APPROVAL = EnumField("canary_approval", label=_("插件灰度发布审批流程"))
 
 
 class ItsmTicketStatus(str, StructuredEnum):

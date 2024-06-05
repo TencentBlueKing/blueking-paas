@@ -588,6 +588,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         )
         if release_strategy:
             PluginReleaseStrategy.objects.create(release=release, **release_strategy)
+
         PluginReleaseExecutor(release).initial(operator=request.user.username)
 
         # 操作记录: 新建 xx 版本

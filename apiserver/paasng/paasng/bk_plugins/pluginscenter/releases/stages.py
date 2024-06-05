@@ -30,7 +30,11 @@ from paasng.bk_plugins.pluginscenter.bk_devops.client import PipelineController
 from paasng.bk_plugins.pluginscenter.bk_devops.constants import PipelineBuildStatus
 from paasng.bk_plugins.pluginscenter.definitions import ReleaseStageDefinition, find_stage_by_id
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    get_ticket_status,
+    submit_canary_release_ticket,
+    submit_online_approval_ticket,
+)
 from paasng.bk_plugins.pluginscenter.models import PluginReleaseStage
 from paasng.bk_plugins.pluginscenter.serializers import ItsmTicketInfoSlz, PluginMarketInfoSLZ
 from paasng.bk_plugins.pluginscenter.sourcectl import get_plugin_repo_accessor
@@ -211,6 +215,37 @@ class ItsmStage(BaseStageController):
             **basic_info,
             "detail": ItsmTicketInfoSlz(ticket_info).data,
         }
+
+
+class CanaryWithItsm(BaseStageController):
+    invoke_method = constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM
+
+    def execute(self, operator: str):
+        current_stage = self.release.current_stage
+        if not current_stage or current_stage.invoke_method != constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM:
+            raise ValueError("this stage is not invoked by canary with itsm")
+        if current_stage.status != constants.PluginReleaseStatus.INITIAL:
+            raise ValueError("canary with its stage is not an initialization state and cannot be triggered")
+        if not self.release.latest_release_strategy:
+            raise ValueError("canary with its stage is not an initialization state and cannot be triggered")
+
+        itsm_detail = submit_canary_release_ticket(self.pd, self.plugin, self.release, operator)
+
+        current_stage.status = constants.PluginReleaseStatus.PENDING
+        current_stage.itsm_detail = itsm_detail
+        current_stage.save(update_fields=["status", "itsm_detail"])
+
+    # def render_to_view(self) -> Dict:
+    #     basic_info = super().render_to_view()
+    #     assert self.stage.itsm_detail
+    #     ticket_info = get_ticket_status(self.stage.itsm_detail.sn)
+    #     ticket_info["fields"] = self.stage.itsm_detail.fields
+    #     self.stage.refresh_from_db()
+    #     return {
+    #         **basic_info,
+    #         "detail": ItsmTicketInfoSlz(ticket_info).data,
+    #         "release_strategy": PluginReleaseStrategy(self.release.latest_release_strategy).data,
+    #     }
 
 
 class PipelineStage(BaseStageController):

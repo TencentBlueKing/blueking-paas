@@ -868,3 +868,9 @@ class PluginVisibleRangeUpdateSLZ(serializers.Serializer):
         child=serializers.CharField(), help_text="格式：['1111', '222222']", required=False, allow_null=True
     )
     organization = serializers.ListField(child=serializers.DictField(), required=False, allow_null=True)
+
+
+class PluginReleaseStrategySLZ(serializers.ModelSerializer):
+    class Meta:
+        model = PluginReleaseStrategy
+        fields = "__all__"

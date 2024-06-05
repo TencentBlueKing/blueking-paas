@@ -20,7 +20,7 @@ from typing import Dict, Union
 
 from blue_krill.data_types.enum import FeatureFlag, FeatureFlagField
 
-from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
 
 
 class PluginFeatureFlag(FeatureFlag):  # type: ignore
@@ -40,16 +40,27 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     LOWER_REPO_NAME = FeatureFlagField(label="代码仓库名称转为小写字母", default=False)
 
 
-class PluginFeatureFlagsManager:
-    def __init__(self, plugin: PluginInstance):
-        self.plugin = plugin
-        self.pd = plugin.pd
+class FeatureFlagsManagerBase:
+    def __init__(self, features):
+        self.features = features
 
     def list_all_features(self) -> Dict[str, bool]:
         feature_flag = PluginFeatureFlag.get_default_flags()
-        for feature in self.pd.features:
+        for feature in self.features:
             feature_flag[feature.name] = feature.value
         return feature_flag
 
     def has_feature(self, feature_name: Union[str, PluginFeatureFlag]) -> bool:
         return self.list_all_features().get(feature_name, False)
+
+
+class PluginFeatureFlagsManager(FeatureFlagsManagerBase):
+    def __init__(self, plugin: PluginInstance):
+        super().__init__(plugin.pd.features)
+        self.plugin = plugin
+
+
+class PluginDefinitionFlagsManager(FeatureFlagsManagerBase):
+    def __init__(self, pd: PluginDefinition) -> None:
+        super().__init__(pd.features)
+        self.pd = pd

@@ -81,7 +81,7 @@
                                     v-model="env.cluster_name"
                                     style="width: 250px;"
                                     @change="bindAppEnvCluster(module.name, env.environment, env.cluster_name)">
-                                   <bk-option v-for="choice in cluster_choices"
+                                   <bk-option v-for="choice in clusterChoices"
                                         :key="choice.id"
                                         :id="choice.id"
                                         :name="choice.name">
@@ -101,6 +101,9 @@
                                             </template>
                                             <template v-else>
                                                 <b style="color: #2dcb56;">在运行</b>
+                                                <span style="margin-left: 13px" v-if="envUrls[env.id]">
+                                                    <a :href="envUrls[env.id]" target="_blank">[访问]</a>
+                                                </span>
                                             </template>
                                         </bk-col>
                                         <bk-col>
@@ -150,7 +153,8 @@
 {% block main_script %}
 <script>
     const data = {{ application | to_json }}
-    const cluster_choices = {{ cluster_choices | to_json }}
+    const clusterChoices = {{ cluster_choices | to_json }}
+    const envUrls = {{ env_urls | to_json }}
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
 
     const URLRouter = {
@@ -165,6 +169,8 @@
             data: function () {
                 return {
                     application: data,
+                    clusterChoices: clusterChoices,
+                    envUrls: envUrls,
                     USER_IS_ADMIN_IN_APP,
                 }
             },

@@ -255,6 +255,7 @@
           </template>
         </bk-table-column>
         <bk-table-column
+          v-if="isOperationShown"
           :label="$t('操作')"
           :width="120"
           fixed="right"
@@ -387,6 +388,12 @@ import { ENV_ENUM } from '@/common/constants';
 import { copy } from '@/common/tools';
 export default {
   mixins: [appBaseMixin],
+  props: {
+    isOperationShown: {
+      type: Boolean,
+      default: true,
+    },
+  },
   data() {
     return {
       type: '',

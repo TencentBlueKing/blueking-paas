@@ -239,6 +239,7 @@ export default {
         isReMigrateLoading: false,
       },
       appChecklistInfo: {},
+      initStatus: '',
     };
   },
   computed: {
@@ -285,12 +286,13 @@ export default {
   },
   watch: {
     value: {
-      handler(newVal) {
+      async handler(newVal) {
         this.visible = newVal;
         if (newVal) {
           this.isMainLoading = true;
-          this.getMigrationProcessesLatest();
-          Promise.all([this.getMigrationProcessesLatest(), this.getChecklistInfo()]);
+          await Promise.all([this.getMigrationProcessesLatest(), this.getChecklistInfo()]);
+          // 初始状态
+          this.initStatus = this.migrationData.status;
         }
       },
       immediate: true,
@@ -319,11 +321,32 @@ export default {
     handleAreAllChecked(data) {
       return Object.values(data).every(value => value === true);
     },
+    // 刷新操作
+    handleWindowReload() {
+      // 当前状态与进入时的初始状态不同，且为迁移成功状态，需要刷新当前页
+      if (this.initStatus !== this.migrationData.status && (this.isMigrationStepSuccessful || this.isMigrationConfirmed)) {
+        if (this.$route.name === 'myApplications') {
+          // 列表页直接刷新
+          window.location.reload();
+        } else {
+          this.$router.push({
+            name: 'appSummary',
+            params: {
+              id: this.appCode,
+            },
+          });
+          window.location.reload();
+        }
+      }
+    },
     // 弹窗关闭处理
-    handleCancel() {
+    async handleCancel(isReload = true) {
       this.$emit('change', false);
       // 停止轮询
       clearInterval(this.timerId);
+      if (isReload) {
+        await this.handleWindowReload();
+      }
       this.reset();
     },
     reset() {
@@ -473,18 +496,6 @@ export default {
           message: this.$t('迁移成功'),
         });
         this.handleCancel();
-        if (this.$route.name === 'myApplications') {
-          // 列表页直接刷新
-          window.location.reload();
-        } else {
-          this.$router.push({
-            name: 'appSummary',
-            params: {
-              id: this.appCode,
-            },
-          });
-          window.location.reload();
-        }
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -508,7 +519,7 @@ export default {
       // 重新获取当前应用信息
       const appCode = this.data.code;
       await Promise.all([this.$store.dispatch('getAppInfo', { appCode }), this.$store.dispatch('getAppFeature', { appCode })]);
-      this.handleCancel();
+      this.handleCancel(false);
       this.$router.push({
         name: 'cloudAppDeployManageStag',
         params: {

@@ -34,6 +34,8 @@
         size="small"
         ext-cls="app-process-table-cls"
         v-bkloading="{ isLoading: isProcessTableLoading, zIndex: 10 }"
+        :row-key="rowKey"
+        @expand-change="handleExpandChange"
       >
         <bk-table-column
           type="expand"
@@ -393,6 +395,16 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+      }
+    },
+    // 行key
+    rowKey(row) {
+      return row.module_name;
+    },
+    handleExpandChange(row, expandedRows) {
+      if (expandedRows.length) {
+        // 展开实例重新获取进程信息
+        this.getProcessesList(false);
       }
     },
   },

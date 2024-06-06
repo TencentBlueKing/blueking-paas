@@ -159,12 +159,12 @@ export default {
     },
     // 是否正在迁移中
     isMigrating() {
-      const showMigration = ['default', 'confirmed'];
+      const showMigration = ['default', 'no_need_migration', 'rollback_succeeded', 'confirmed'];
       return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
     },
     // 是否迁移云原生弹窗按钮
     isMigrationEntryShown() {
-      const showMigration = ['migration_succeeded', 'confirmed'];
+      const showMigration = ['no_need_migration', 'migration_succeeded', 'confirmed'];
       return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
     },
   },

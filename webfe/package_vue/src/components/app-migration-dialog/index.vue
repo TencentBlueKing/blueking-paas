@@ -21,7 +21,9 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.address"></bk-checkbox>
             <span class="title">{{ $t('变更应用访问地址') }}</span>
-            <!-- <span class="tips">{{ $t('如 bk-audit.bkapps.woa.com 变更为：bk-audit.bkapps-sz1.woa.com') }}</span> -->
+            <span class="tips" v-bk-overflow-tips>
+              {{ $t(`如 {l} 变更为：{c}`, { l: appChecklistInfo.rootDomainsLegacy || '--', c: appChecklistInfo.rootDomainsCnative || '--' }) }}
+            </span>
           </div>
           <div class="content">
             <p>1. {{ $t('应用间不同模块间若通过 API 访问，需要修改调用地址') }}</p>
@@ -33,9 +35,22 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
+            <span class="tips" v-bk-overflow-tips>
+              {{ $t(`如 {l} 变更为：{c}`, { l: appChecklistInfo.namespaceLegacy || '--', c: appChecklistInfo.namespaceCnative || '--' }) }}
+            </span>
           </div>
           <div class="content">
-            {{ $t('可搜索应用代码、环境变量中是否有以下内容来确认') }}
+            {{ $t('可搜索应用代码、环境变量中是否有以下内容来确认') }}：
+            <p>{{ appChecklistInfo.namespaceLegacyStr }}</p>
+          </div>
+        </div>
+        <div class="info-item" v-if="appChecklistInfo.rcs_bindings">
+          <div class="title-wrapper">
+            <bk-checkbox v-model="migrationRisk.ip" disabled></bk-checkbox>
+            <span class="title">{{ $t('变更出口 IP ') }}</span>
+          </div>
+          <div class="content">
+            {{ $t('当前应用绑定了出口 IP，暂不支持迁移。并且无法勾选') }}
           </div>
         </div>
         <bk-alert type="warning" class="alert-tip-cls" :show-icon="false">
@@ -82,19 +97,9 @@
             <!-- 重新部署 -->
             </div>
             <div class="content">
-              如果有 Celery 等后台任务，同时部署 2 分可能会导致任务抢占，请确认影响
+              {{ $t('如果有 Celery 等后台任务，同时部署 2 分可能会导致任务抢占，请确认影响') }}
             </div>
           </div>
-          <!-- 后续接口添加 -->
-          <!-- <div class="info-item">
-            <div class="title-wrapper">
-              <bk-checkbox v-model="verifyFunctionality.ip"></bk-checkbox>
-              <span class="title">{{ $t('域名解析到 IP') }}</span>
-            </div>
-            <div class="content">
-              --
-            </div>
-          </div> -->
           <bk-alert type="warning" class="alert-tip-cls" :show-icon="false">
             <div slot="title" class="alert-warning">
               <i class="paasng-icon paasng-remind"></i>
@@ -213,6 +218,7 @@ export default {
       migrationRisk: {
         address: false,
         process: false,
+        ip: false,
       },
       verifyFunctionality: {
         module: false,
@@ -224,6 +230,7 @@ export default {
       dialogConfig: {
         isReMigrateLoading: false,
       },
+      appChecklistInfo: {},
     };
   },
   computed: {
@@ -275,6 +282,7 @@ export default {
         if (newVal) {
           this.isMainLoading = true;
           this.getMigrationProcessesLatest();
+          Promise.all([this.getMigrationProcessesLatest(), this.getChecklistInfo()]);
         }
       },
       immediate: true,
@@ -357,6 +365,37 @@ export default {
         }, 500);
       }
     },
+    // 迁移前的 check_list 信息接口
+    async getChecklistInfo() {
+      try {
+        const res = await this.$store.dispatch('migration/getChecklistInfo', {
+          appCode: this.data.code,
+        });
+        this.appChecklistInfo = res;
+        // root_domains 变更应用访问地址
+        if (res.root_domains) {
+          const { legacy, cnative } = res.root_domains;
+          this.appChecklistInfo.rootDomainsLegacy = legacy.length ? legacy.map(v => `*.${v}`).join() : '--';
+          this.appChecklistInfo.rootDomainsCnative = cnative.length ? cnative.map(v => `*.${v}`).join() : '--';
+        }
+        // namespaces 变更进程间通信地址
+        if (res.namespaces) {
+          const { legacy: nLegacy, cnative: nCnative } = res.namespaces;
+          this.appChecklistInfo.namespaceLegacy = nLegacy.length ? nLegacy.map(v => `*.${v.namespace}`).join() : '--';
+          this.appChecklistInfo.namespaceLegacyStr = nLegacy.length ? nLegacy.map(v => v.namespace).join() : '--';
+          this.appChecklistInfo.namespaceCnative = nCnative.length ? nCnative.map(v => `*.${v.namespace}`).join() : '--';
+        }
+        // 变更出口 IP
+        if (!this.appChecklistInfo.rcs_bindings) {
+          delete this.migrationRisk.ip;
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
     // 开始迁移
     async startMigration(id) {
       try {
@@ -426,7 +465,18 @@ export default {
           message: this.$t('迁移成功'),
         });
         this.handleCancel();
-        // 迁移成功重新获取应用列表？？
+        if (this.$route.name === 'myApplications') {
+          // 列表页直接刷新
+          window.location.reload();
+        } else {
+          this.$router.push({
+            name: 'appSummary',
+            params: {
+              id: this.appCode,
+            },
+          });
+          window.location.reload();
+        }
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -446,7 +496,10 @@ export default {
       this.startMigration(id);
     },
     // 部署
-    handleToDeploy() {
+    async handleToDeploy() {
+      // 重新获取当前应用信息
+      const appCode = this.data.code;
+      await Promise.all([this.$store.dispatch('getAppInfo', { appCode }), this.$store.dispatch('getAppFeature', { appCode })]);
       this.handleCancel();
       this.$router.push({
         name: 'cloudAppDeployManageStag',
@@ -587,15 +640,22 @@ export default {
     .title-wrapper {
       display: flex;
       align-items: center;
+      .bk-form-checkbox {
+        flex-shrink: 0;
+      }
       .title {
         margin: 0 16px 0 12px;
         font-weight: 700;
         font-size: 14px;
         color: #313238;
+        flex-shrink: 0;
       }
       .tips {
         font-size: 12px;
         color: #979ba5;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
       }
     }
 

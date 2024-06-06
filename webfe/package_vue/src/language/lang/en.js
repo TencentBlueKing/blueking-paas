@@ -2620,4 +2620,9 @@ export default {
   失败原因: 'Failure Reason',
   确认回退应用: 'Confirm Application Rollback',
   '回退后会将当前应用回退到普通应用的状态，并撤销所有云原生应用部署而分配的资源': 'After rollback, the current application will be reverted to the state of a regular application, and all resources allocated for cloud-native application deployment will be revoked',
+  '如 {l} 变更为：{c}': 'If {l} is changed to: {c}',
+  迁移进度: 'Migration Progress',
+  点击可迁移为云原生应用: 'Click to Migrate to Cloud Native Application',
+  重新部署应用下每个模块: 'Redeploy Each Module Under the Application',
+  '点击“确认迁移”后，会停掉应用迁移前的进程，并将桌面的访问入口切换为新的访问地址。': 'After clicking "Confirm Migration", the pre-migration processes will be stopped, and the desktop access entry will switch to the new access address.',
 };

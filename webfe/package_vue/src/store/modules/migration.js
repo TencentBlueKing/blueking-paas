@@ -44,6 +44,14 @@ export default {
     },
 
     /**
+     * 迁移前的 check_list 信息接口
+     */
+    getChecklistInfo({}, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/mgrlegacy/applications/${appCode}/checklist_info/`;
+      return http.get(url, config);
+    },
+
+    /**
      * 触发迁移接口
      */
     triggerMigration({}, { appCode }, config = {}) {

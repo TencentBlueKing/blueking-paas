@@ -121,12 +121,10 @@ def generate_context(instance: PluginInstance) -> dict:
         "plugin_desc": instance.name,
         "init_admin": instance.creator.username,
         "init_apigw_maintainer": instance.creator.username,
+        "extra_fields": instance.extra_fields,
         "apigw_manager_url_tmpl": settings.BK_API_URL_TMPL,
         "apigw_cors_allow_origins": "''",
         "apigw_cors_allow_methods": "GET,POST,PUT,PATCH,HEAD,DELETE,OPTIONS",
         "apigw_cors_allow_headers": "Accept,Cache-Control,Content-Type,Keep-Alive,Origin,User-Agent,X-Requested-With",
     }
-    # 创建插件的时候提供了额外字段，渲染插件模板的时候也一并将参数传过去
-    if extra_fields := instance.extra_fields:
-        context.update(extra_fields)
     return context

@@ -383,7 +383,7 @@
               <!-- 是否显示迁移应用icon, 需要后台提供字段 -->
               <div
                 v-if="!noMigrationNeededStatus.includes(row.migration_status?.status)"
-                v-bk-tooltips="{ content: $t('点击可迁移为云原生应用') }"
+                v-bk-tooltips="{ content: row.application.type === 'cloud_native' ? $t('查看迁移进度') : $t('点击可迁移为云原生应用') }"
                 class="migration-wrapper"
                 @click.stop="showAppMigrationDialog(row.application)"
               >

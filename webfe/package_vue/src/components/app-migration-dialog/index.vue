@@ -57,10 +57,14 @@
           <div slot="title" class="alert-warning">
             <i class="paasng-icon paasng-remind"></i>
             <span>{{ $t('点击“开始迁移”后，应用服务将不会受到任何影响') }}</span>
-            <span class="link">
+            <a
+              target="_blank"
+              :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/cloud_native_migration'"
+              class="link"
+            >
               <i class="paasng-icon paasng-process-file"></i>
               {{ $t('查看迁移文档') }}
-            </span>
+            </a>
           </div>
         </bk-alert>
       </section>
@@ -97,17 +101,21 @@
             <!-- 重新部署 -->
             </div>
             <div class="content">
-              {{ $t('如果有 Celery 等后台任务，同时部署 2 分可能会导致任务抢占，请确认影响') }}
+              {{ $t('如果有 Celery 等后台任务，同时部署(普通和云原生进程都存在时)可能会导致任务抢占，请确认影响。') }}
             </div>
           </div>
           <bk-alert type="warning" class="alert-tip-cls" :show-icon="false">
             <div slot="title" class="alert-warning">
               <i class="paasng-icon paasng-remind"></i>
               <span>{{ $t('点击“确认迁移”后，会停掉应用迁移前的进程，并将桌面的访问入口切换为新的访问地址。') }}</span>
-              <span class="link">
+              <a
+                target="_blank"
+                :href="GLOBAL.LINK.BK_APP_DOC + 'topics/paas/cloud_native_migration'"
+                class="link"
+              >
                 <i class="paasng-icon paasng-process-file"></i>
                 {{ $t('查看迁移文档') }}
-              </span>
+              </a>
             </div>
           </bk-alert>
         </template>

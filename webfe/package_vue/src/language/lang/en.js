@@ -2625,4 +2625,6 @@ export default {
   点击可迁移为云原生应用: 'Click to Migrate to Cloud Native Application',
   重新部署应用下每个模块: 'Redeploy Each Module Under the Application',
   '点击“确认迁移”后，会停掉应用迁移前的进程，并将桌面的访问入口切换为新的访问地址。': 'After clicking "Confirm Migration", the pre-migration processes will be stopped, and the desktop access entry will switch to the new access address.',
+  '如果有 Celery 等后台任务，同时部署(普通和云原生进程都存在时)可能会导致任务抢占，请确认影响。': 'If there are background tasks like Celery, simultaneous deployment (when both regular and cloud-native processes exist) may cause task preemption. Please confirm the impact.',
+  查看迁移进度: 'View Migration Progress',
 };

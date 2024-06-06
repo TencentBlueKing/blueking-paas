@@ -146,6 +146,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
             if query_conditions.sort:
                 sort_params.update({k: {"order": v} for k, v in query_conditions.sort.items()})
 
+            # es 会按 sort 的顺序进行排序，因此将默认排序条件 {time_field:{"order": "desc"}} 放在最后
             sort_params.setdefault(time_field, {"order": "desc"})
 
             search = search.sort(sort_params)

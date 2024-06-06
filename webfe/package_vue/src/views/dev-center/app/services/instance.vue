@@ -106,6 +106,7 @@
                         v-for="(value, key) in row.service_instance.credentials"
                         :key="key"
                         class="config-width"
+                        v-bk-overflow-tips
                       >
                         <span class="gray">{{ key }}: </span><span class="break-all">{{ value }}</span><br>
                       </div>
@@ -122,6 +123,7 @@
                       <div
                         v-for="(value, key) in row.service_instance.hidden_fields"
                         :key="key"
+                        v-bk-overflow-tips
                       >
                         <span class="gray">{{ key }}: </span>
                         <span

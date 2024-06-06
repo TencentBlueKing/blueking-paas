@@ -82,8 +82,8 @@ class WlAppBackupManager:
             config_dict = model_to_dict(
                 self.original_wl_app.config_set.latest(), exclude=uuid_audited_fields + ["app"]
             )
-            config_dict["app"] = wl_app
-            Config.objects.create(**config_dict)
+            # WlApp 创建后(post_save), on_app_created handler 会创建 Config, 因此这里使用 update_or_create
+            Config.objects.update_or_create(**config_dict, defaults={"app": wl_app})
 
             # 创建对应的 Release 副本. 用于 get_mapper_proc_config_latest 中 Release.objects.get_latest(app) 逻辑.
             # 虽然云原生应用部署时未创建 Release 对象, 但 get_mapper_proc_config_latest 中返回的 MapperProcConfig 含有 wl_app 属性,

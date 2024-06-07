@@ -90,5 +90,13 @@ export default {
       const url = `${BACKEND_URL}/api/mgrlegacy/cloud-native/applications/${appCode}/rollback/`;
       return http.post(url, {}, config);
     },
+
+    /**
+     * 查询访问入口
+     */
+    getEntrances({}, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/mgrlegacy/applications/${appCode}/entrances/`;
+      return http.get(url, {}, config);
+    },
   },
 };

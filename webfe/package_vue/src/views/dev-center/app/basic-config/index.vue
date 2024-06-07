@@ -44,8 +44,8 @@ export default {
       if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
         panels = panels.filter(tab => tab.name !== 'appMobileMarket');
       }
-      // 普通应用不支持
-      if (!this.isCloudNativeApp) {
+      // 普通应用不支持 | feature判断
+      if (!this.isCloudNativeApp || !this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE) {
         panels = panels.filter(tab => tab.name !== 'storage');
       }
       return panels;

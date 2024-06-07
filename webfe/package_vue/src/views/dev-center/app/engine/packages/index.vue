@@ -227,6 +227,7 @@
           :key="renderUploaderIndex"
           :validate-name="fileReg"
           :action="uploadUrl"
+          :max-size="maxPackageSize"
           :with-credentials="true"
           :name="'package'"
           :accept-tips="$t('仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件')"
@@ -301,6 +302,9 @@ export default {
     },
     isSmartApp() {
       return this.curAppInfo.application?.is_smart_app;
+    },
+    maxPackageSize() {
+      return window.BK_MAX_PACKAGE_SIZE || 500;
     },
   },
   watch: {

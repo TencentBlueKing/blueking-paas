@@ -23,7 +23,7 @@
       <migration-process-management v-if="active === 'migrationProcessManagement'" />
       <!-- 访问地址 -->
       <section v-else class="addressp-config-wrapper">
-        <visit-config :is-operation-shown="false" />
+        <visit-config :is-migration-status="true" />
       </section>
     </section>
 

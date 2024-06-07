@@ -752,7 +752,8 @@ export const PAAS_STATIC_CONFIG = {
                 "matchRouters": [
                     "pluginVersionManager",
                     "pluginVersionEditor",
-                    "pluginVersionRelease"
+                    "pluginVersionRelease",
+                    "pluginTestReport"
                 ],
                 "iconfontName": "publish-fill",
                 "supportModule": true,

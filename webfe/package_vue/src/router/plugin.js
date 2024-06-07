@@ -53,6 +53,10 @@ const pluginDeployEnv = () => import(/* webpackChunkName: 'plugin-version' */'@/
   window.showDeployTip(error);
 });
 
+const pluginTestReport = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/test-report').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const marketInfoEdit = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/market-info-edit.vue').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -134,6 +138,16 @@ export const pluginRouter = [
         meta: {
           pathName: i18n.t('版本管理'),
           capture403Error: false,
+        },
+      },
+      {
+        path: ':pluginTypeId/:id/test-report',
+        component: pluginTestReport,
+        name: 'pluginTestReport',
+        meta: {
+          pathName: i18n.t('测试报告'),
+          capture403Error: false,
+          supportBack: true,
         },
       },
       {

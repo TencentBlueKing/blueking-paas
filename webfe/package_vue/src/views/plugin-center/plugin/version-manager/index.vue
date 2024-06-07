@@ -687,8 +687,19 @@ export default {
       this.getVersionList();
     },
 
+    // 测试报告
     toTestReportPage(url) {
-      window.open(url, '_blank');
+      this.$router.push({
+        name: 'pluginTestReport',
+        params: {
+          pluginTypeId: this.pdId,
+          id: this.pluginId,
+        },
+        query: {
+          type: 'test',
+          url,
+        },
+      });
     },
   },
 };

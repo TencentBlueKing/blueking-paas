@@ -3,7 +3,7 @@
     :is-loading="isDataLoading"
     placeholder="market-visit-loading"
   >
-    <section v-show="!isDataLoading" class="market-manager">
+    <section class="market-manager">
       <div class="market-info mb25 shadow-card-style">
         <div class="flex-row justify-content-between align-items-center">
           <div class="market-info-title-wrapper">
@@ -134,7 +134,7 @@
             </bk-form-item>
 
             <bk-form-item
-              v-if="curAppInfo.feature.MARKET_VISIBILITY"
+              v-if="marketVisibility && isNewlyCreated"
               :label="$t('可见范围：')"
               :property="'name'"
             >
@@ -357,15 +357,8 @@
         </div>
       </div>
 
-      <!-- 可见范围 -->
-      <visible-range
-        v-if="curAppInfo.feature.MARKET_VISIBILITY"
-        :data="baseInfo"
-        @get-app-info="handleGetAppInfo"
-      />
-
       <user-selector-dialog
-        v-if="curAppInfo.feature.MARKET_VISIBILITY"
+        v-if="marketVisibility && isNewlyCreated"
         :show.sync="isShow"
         :users="users"
         :departments="departments"
@@ -373,6 +366,13 @@
         @sumbit="handleSubmit"
       />
     </section>
+
+    <!-- 可见范围 -->
+    <visible-range
+      v-if="marketVisibility && !isNewlyCreated"
+      :data="baseInfo"
+      @get-app-info="handleGetAppInfo"
+    />
   </paas-content-loader>
 </template>
 
@@ -506,6 +506,12 @@ export default {
     },
     isSmartApp() {
       return this.curAppInfo.application?.is_smart_app;
+    },
+    marketVisibility() {
+      return this.curAppInfo.feature.MARKET_VISIBILITY;
+    },
+    isNewlyCreated() {
+      return this.curAppInfo.product === null;
     },
   },
   watch: {

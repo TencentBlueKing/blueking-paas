@@ -101,7 +101,7 @@ export default {
       handler(newVal) {
         this.baseInfo = cloneDeep(newVal);
       },
-      deep: true,
+      immediate: true,
     },
   },
   methods: {
@@ -115,7 +115,7 @@ export default {
     // 保存可见范围
     async saveVisibleRange() {
       try {
-        const res = await this.$store.dispatch('market/updateMarketInfo', {
+        await this.$store.dispatch('market/updateMarketInfo', {
           appCode: this.appCode,
           data: {
             visiable_labels: this.baseInfo.visiable_labels,

@@ -195,7 +195,7 @@ ensure-golang-buildpack() {
     "GOPROXY=${PAAS_BUILDPACK_GOLANG_GOPROXY}"
 }
 
-ensure-buleking-image() {
+ensure-blueking-image() {
     region="$1"
     apt_buildpack_name="$2"
     python_buildpack_name="$3"
@@ -205,6 +205,7 @@ ensure-buleking-image() {
     image_name="blueking"
     python manage.py manage_image \
     --region "${region}" \
+    --type "legacy" \
     --image "${PAAS_APP_IMAGE}" \
     --name "${image_name}" \
     --display_name_zh_cn "蓝鲸基础镜像" \
@@ -220,7 +221,9 @@ ensure-buleking-image() {
     cnb_image_name="blueking-cloudnative"
     python manage.py manage_image \
     --region "${region}" \
-    --image "${PAAS_HEROKU_BUILDER_IMAGE}" \
+    --type "cnb" \
+    --slugbuilder "${PAAS_HEROKU_BUILDER_IMAGE}" \
+    --slugrunner "${PAAS_HEROKU_RUNNER_IMAGE}" \
     --name "${cnb_image_name}" \
     --display_name_zh_cn "蓝鲸基础镜像" \
     --display_name_en "Blueking Basic Image" \
@@ -244,6 +247,7 @@ ensure-legacy-image() {
     legacy_image_name="legacy-blueking"
     python manage.py manage_image \
     --region "${region}" \
+    --type "legacy" \
     --image "${PAAS_APP_IMAGE}" \
     --name "${legacy_image_name}" \
     --display_name_zh_cn "蓝鲸基础镜像（旧）" \
@@ -258,7 +262,8 @@ ensure-legacy-image() {
 }
 
 ensure-smart-image() {
-    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+    python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
 }
 
 ensure-runtimes() {
@@ -288,7 +293,7 @@ ensure-runtimes() {
     ensure-golang-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${region}" "${buildpack_url}" "${vendor_url}" "${golang_buildpack_name}"
     
     # blueking image
-    ensure-buleking-image "${region}" "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
+    ensure-blueking-image "${region}" "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
     
     # legacy blueking image
     ensure-legacy-image "${region}" "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"

@@ -245,7 +245,7 @@ class CNativeMigrationProcess(OwnerTimestampedModel):
 
     class Meta:
         get_latest_by = "created_at"
-        ordering = ["-created_at"]
+        ordering = ["created_at"]
 
     @classmethod
     def create_migration_process(cls, app, owner) -> "CNativeMigrationProcess":

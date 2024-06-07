@@ -70,6 +70,7 @@
             :right-icon="'bk-icon icon-search'"
             :style="{ width: `${isOfficialVersion ? 480 : 300}px` }"
             @enter="handleSearch"
+            @right-icon-click="handleSearch"
           />
         </section>
       </div>

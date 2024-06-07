@@ -620,6 +620,9 @@
 ## 是否使用 DockerRegistryToken 来验证，为 false 时使用 HTTPBasicAuthentication
 # SMART_DOCKER_AUTH_BY_TOKEN: true
 
+## 如果用到 python manage.py push_smart_image, SMART_IMAGE_TAG 和 SMART_CNB_IMAGE_TAG 必须设置有效值
+# SMART_IMAGE_TAG: v0.0.1-smart
+# SMART_CNB_IMAGE_TAG: v0.0.1-smart
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 

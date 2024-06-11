@@ -494,6 +494,7 @@ export default {
         name: 'pluginVersionRelease',
         query: {
           release_id: data.id,
+          type: this.versionType,
         },
       });
     },

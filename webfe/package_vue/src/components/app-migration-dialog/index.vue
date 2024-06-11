@@ -31,7 +31,7 @@
             <p>3. {{ $t('应用若在 API 网关上注册了资源，可直接在 API 网关上修改，调用方不需要调整') }}</p>
           </div>
         </div>
-        <div class="info-item">
+        <div class="info-item" v-if="appChecklistInfo.namespaces">
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
@@ -419,6 +419,10 @@ export default {
         // 变更出口 IP
         if (!this.appChecklistInfo.rcs_bindings) {
           delete this.migrationRisk.ip;
+        }
+        // 变更进程间通信地址
+        if (!this.appChecklistInfo.namespaces) {
+          delete this.migrationRisk.process;
         }
       } catch (e) {
         this.$paasMessage({

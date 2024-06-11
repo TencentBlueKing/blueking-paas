@@ -19,11 +19,13 @@
       class="mb16"
       type="error">
       <div slot="title" class="deploy-pre-commands">
-        <div>{{ $t('请将部署前置命令放在部署目录下的 `bin/post-compile` 文件中，并在页面上停用部署前置命令。') }}</div>
+        <div>{{ $t('为防止数据冲突，请禁用页面上的部署前置命令，并在代码仓库的 `app_desc.yaml` 文件中进行设置。') }}</div>
         <a
           class="right-link"
           target="_blank"
-          href="https://github.com/TencentBlueKing/bk-chatbot/blob/master/bin/post-compile">{{ $t('查看使用示例') }}</a>
+          :href="GLOBAL.DOC.DEPLOY_ORDER">
+          {{ $t('文档') }}：{{ $t('部署前置命令') }}
+        </a>
       </div>
     </bk-alert>
     <bk-form

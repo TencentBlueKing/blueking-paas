@@ -31,7 +31,7 @@
             <div>
               <span>{{ row.name || '--' }}</span>
               <span class="ml5" v-if="!row.autoscaling">
-                {{ row.instances.length }} / {{ row.available_instance_count }}
+                {{ (row.instances || []).filter(item => item.ready).length }} / {{ row.available_instance_count }}
               </span>
               <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
               <div class="icon-expand" v-if="row.instances.length > 1">
@@ -668,8 +668,8 @@ export default {
     },
     runningInstanceLength() {
       return this.allProcesses.reduce((p, v) => {
-        p += (v.instances.length || 0);
-        return p;
+        const readyInstancesCount = v.instances.filter(instance => instance.ready).length;
+        return p + readyInstancesCount;
       }, 0);
     },
   },

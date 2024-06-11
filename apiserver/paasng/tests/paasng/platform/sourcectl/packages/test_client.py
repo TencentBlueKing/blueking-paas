@@ -16,8 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import tarfile
 from contextlib import ExitStack
+from pathlib import Path
 
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
@@ -28,6 +30,7 @@ from paasng.platform.sourcectl.package.client import (
     BinaryTarClient,
     GenericLocalClient,
     GenericRemoteClient,
+    InvalidPackageFileFormatError,
     TarClient,
     ZipClient,
 )
@@ -70,6 +73,18 @@ class TestBinaryTarClient:
                 "./j/",
                 "./j/k/",
             }
+
+    def test_read_invalid_file(self, tmp_path):
+        p = Path(tmp_path / "foo.tgz")
+        p.write_text("Definitely not a tarball")
+        with pytest.raises(InvalidPackageFileFormatError):
+            BinaryTarClient(p).read_file("foo.txt")
+
+    def test_list_invalid_file(self, tmp_path):
+        p = Path(tmp_path / "foo.tgz")
+        p.write_text("Definitely not a tarball")
+        with pytest.raises(InvalidPackageFileFormatError):
+            BinaryTarClient(p).list()
 
 
 @pytest.mark.parametrize(

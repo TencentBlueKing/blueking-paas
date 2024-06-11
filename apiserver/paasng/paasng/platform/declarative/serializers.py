@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import shlex
 from typing import Any, Dict, Optional, Tuple, Type
 
@@ -28,7 +29,7 @@ from rest_framework.exceptions import ValidationError
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
+from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
 from paasng.platform.declarative import constants
 from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
@@ -40,7 +41,6 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.utils import get_quota_plan
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField
-from paasng.utils.validators import ReservedWordValidator
 
 
 def validate_desc(
@@ -150,12 +150,9 @@ class LegacyEnvVariableSLZ(serializers.Serializer):
 class SMartV1DescriptionSLZ(serializers.Serializer):
     """Serializer for parsing the origin version of S-Mart application description"""
 
-    app_code = AppIDField(
-        # DNS safe(prefix)
-        regex="^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-_]{,63}(?<!-)$",
-        validators=[ReservedWordValidator("应用 ID"), AppIDUniqueValidator()],
-        error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)")},
-    )
+    # For some reason, the max length for the `app_code` field uses the legacy value of 16
+    # in the v1 schema, the value is changed to 20 in later versions.
+    app_code = AppIDSMartField(max_length=16)
     app_name = I18NExtend(AppNameField())
     version = serializers.RegexField(r"^([0-9]+)\.([0-9]+)\.([0-9]+)$", required=True, help_text="版本")
     # Celery 相关

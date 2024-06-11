@@ -140,13 +140,35 @@
         <h4 class="mt20">模块进程</h4>
         <bk-collapse accordion>
             <bk-collapse-item v-for="(module, module_name) in dialog.form.res_summary.modules" :name="module_name">
-                $[ module_name ]
+                <!-- 如果该模块的某个环境有问题，则提示感叹号 -->
+                $[ module_name ] <span v-if="hasEvaluateIssues(module_name)">❗</span>
                 <div slot="content">
                     <bk-tab type="unborder-card">
                         <bk-tab-panel
                             v-for="(panel, index) in dialog.env_panels"
                             v-bind="panel"
                             :key="index">
+                            <!-- 如果该环境有问题，则提示感叹号 -->
+                            <template slot="label">
+                                <span> $[panel.label] </span>
+                                <i v-if="hasEvaluateIssues(module_name, panel.name)">❗</i>
+                            </template>
+                            <div v-if="hasEvaluateIssues(module_name, panel.name)">
+                                <bk-alert type="error" :title="getEnvEvaluateIssues(module_name, panel.name)"></bk-alert>
+                            </div>
+                            <bk-container :col="3">
+                                <bk-row>
+                                    <bk-col><label class="m10">CPU 平均使用率（7d）:</label> $[ getEnvResSummary(module_name, panel.name).cpu_usage_avg * 100 ] %</bk-col>
+                                    <bk-col><label class="m10">内存平均使用率（7d）:</label> $[ getEnvResSummary(module_name, panel.name).mem_usage_avg * 100 ] %</bk-col>
+                                </bk-row>
+                                <bk-row>
+                                    <bk-col><label class="m10">PV（30d）:</label> $[ getEnvVisitSummary(module_name, panel.name).pv ]</bk-col>
+                                    <bk-col><label class="m10">UV（30d）:</label> $[ getEnvVisitSummary(module_name, panel.name).uv ]</bk-col>
+                                    <bk-col><label class="m10">最近部署时间:</label> $[ getEnvDeploySummary(module_name, panel.name).latest_deployed_at ]</bk-col>
+                                </bk-row>
+                            </bk-container>
+                            <hr />
+                            <h5>进程详情：</h5>
                             <bk-container :col="5" v-for="proc in getEnvProcs(module, panel.name)" v-if="proc.quota">
                                 <bk-row>
                                     <bk-col><label class="m10">进程名称:</label><b> $[proc.name] </b></bk-col>
@@ -226,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     form: {
                         res_summary: {
                             modules: []
-                        }
+                        },
                     },
                     env_panels: [
                         {"name": "prod", "label": "生产环境"},
@@ -242,6 +264,45 @@ document.addEventListener('DOMContentLoaded', () => {
             handleView(row) {
                 this.dialog.form = row
                 this.dialog.visible = true
+            },
+            getEnvResSummary(module_name, env_name) {
+                return this.dialog.form.res_summary.modules[module_name].envs[env_name]
+            },
+            getEnvVisitSummary(module_name, env_name) {
+                return this.dialog.form.visit_summary.modules[module_name].envs[env_name]
+            },
+            getEnvDeploySummary(module_name, env_name) {
+                return this.dialog.form.deploy_summary.modules[module_name].envs[env_name]
+            },
+            getEnvEvaluateResult(module_name, env_name) {
+                return this.dialog.form.evaluate_result.modules[module_name].envs[env_name]
+            },
+            hasEvaluateIssues(module_name, env_name) {
+                let stag_env_has_issues = this.getEnvEvaluateResult(module_name, "stag").issue_type !== "none"
+                let prod_env_has_issues = this.getEnvEvaluateResult(module_name, "prod").issue_type !== "none"
+
+                if (env_name === "stag") {
+                    return stag_env_has_issues
+                } else if (env_name === "prod") {
+                    return prod_env_has_issues
+                }
+                return stag_env_has_issues || prod_env_has_issues
+            },
+            getEnvEvaluateIssues(module_name, env_name) {
+                let result = this.getEnvEvaluateResult(module_name, env_name)
+                if (result.issue_type === "none") {
+                    return ""
+                }
+                issue_type_display = {
+                    "ownerless": "无主",
+                    "idle": "闲置",
+                    "unvisited": "无用户访问",
+                    "maintainless": "缺少维护",
+                    "undeploy": "未部署/已下线",
+                    "misconfigured": "配置不当"
+                }[result.issue_type]
+
+                return `${issue_type_display}：${result.issues.join(", ")}`
             },
             getEnvProcs(module, tab_name) {
                 return module.envs[tab_name].procs

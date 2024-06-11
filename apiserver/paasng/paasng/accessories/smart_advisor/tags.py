@@ -64,6 +64,7 @@ AppSDKTag = type("AppSDKTag", (BaseFixedTypeTag,), {"tag_type": "app-sdk"})
 AppFeatureTag = type("AppFeatureTag", (BaseFixedTypeTag,), {"tag_type": "app-feature"})
 DeploymentFailureTag = type("DeploymentFailureTag", (BaseFixedTypeTag,), {"tag_type": "deploy-failure"})
 DeployPhaseTag = type("DeployPhaseTag", (BaseFixedTypeTag,), {"tag_type": "deploy_phase"})
+SaasMonitorTag = type("SaasMonitorTag", (BaseFixedTypeTag,), {"tag_type": "saas_monitor"})
 
 
 TAG_TYPES: List[Type[BaseFixedTypeTag]] = [
@@ -73,6 +74,7 @@ TAG_TYPES: List[Type[BaseFixedTypeTag]] = [
     AppFeatureTag,
     DeploymentFailureTag,
     DeployPhaseTag,
+    SaasMonitorTag,
 ]
 TAG_TYPES_MAP = {t.tag_type: t for t in TAG_TYPES}
 

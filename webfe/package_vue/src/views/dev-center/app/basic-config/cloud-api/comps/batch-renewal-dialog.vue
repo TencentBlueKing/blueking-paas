@@ -69,7 +69,7 @@
         style="margin-top: 25px;"
       >
         <bk-form-item
-          :label="$t('有效时间')"
+          :label="$t('授权期限')"
           required
           property="expired"
         >

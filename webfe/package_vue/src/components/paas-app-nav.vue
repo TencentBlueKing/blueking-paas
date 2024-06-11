@@ -1,5 +1,8 @@
 <template lang="html">
   <ul class="app-nav">
+    <div v-if="isMigrationEntryShown" class="migration-app-btn" @click="handleShowAppMigrationDialog">
+      {{ $t('迁移为云原生应用') }}
+    </div>
     <template v-for="(category, categoryIndex) in navTree">
       <li
         v-if="category.children && category.children.length"
@@ -62,6 +65,12 @@
 import { cloneDeep } from 'lodash';
 
 export default {
+  props: {
+    isMigrationEntryShown: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       navTree: [],
@@ -536,6 +545,14 @@ export default {
         done();
       });
     },
+
+    // 迁移应用弹窗
+    handleShowAppMigrationDialog() {
+      this.$emit('show-migration-dialog', {
+        visible: true,
+        data: this.curAppInfo.application,
+      });
+    },
   },
 };
 </script>
@@ -545,6 +562,22 @@ export default {
   padding-top: 9px;
   width: 240px;
   margin-top: 1px;
+
+  .migration-app-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 16px;
+    height: 32px;
+    background: #F0F5FF;
+    border-radius: 2px;
+    font-size: 12px;
+    color: #3A84FF;
+    cursor: pointer;
+    &:hover {
+      background: #E1ECFF;
+    }
+  }
 
   > li {
     width: 239px;

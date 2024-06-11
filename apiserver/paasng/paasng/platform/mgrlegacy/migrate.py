@@ -226,7 +226,7 @@ def rollback_cnative_to_default(
 
     try:
         _rollback_cnative(rollback_process, last_migration_process)
-    except MigrationFailed:
+    except (MigrationFailed, RollbackFailed):
         rollback_process.finish_rollback(False)
     else:
         rollback_process.finish_rollback(True)

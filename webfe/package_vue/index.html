@@ -32,6 +32,7 @@
         USERS_URL: `<%= process.env.BK_COMPONENT_API_URL %>/api/c/compapi/v2/usermanage/fs_list_users/` || '',
       }
       var BKPAAS_BUILD_VERSION = decodeURIComponent('<%= process.env.BK_PAAS_BUILD_VERSION %>' || '')
+      var BK_MAX_PACKAGE_SIZE = '<%= process.env.BK_MAX_PACKAGE_SIZE %>' || ''
 
       // 控制台输出版本信息
       if (BKPAAS_BUILD_VERSION !== '') {

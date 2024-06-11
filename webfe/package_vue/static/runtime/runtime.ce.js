@@ -27,6 +27,7 @@ var BK_LESSCODE_URL = process.env.BK_LESSCODE_URL || '' // 用于拼接 lesscode
 var BK_COMPONENT_API_URL = process.env.BK_COMPONENT_API_URL || '' // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
 var BK_ANALYSIS_JS = process.env.BK_ANALYSIS_JS || '' //上报js 内部版需要 外部版不需要
 var BK_PAAS_VERSION = process.env.BK_PAAS_VERSION || ''
+var BK_MAX_PACKAGE_SIZE = process.env.BK_MAX_PACKAGE_SIZE || ''
 
 var BACKEND_URL = `${SITE_URL}/backend` // 后端接口前缀
 var DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide`

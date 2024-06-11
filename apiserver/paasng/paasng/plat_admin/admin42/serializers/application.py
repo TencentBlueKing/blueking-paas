@@ -160,13 +160,16 @@ class AppOperationReportOutputSLZ(serializers.Serializer):
     res_summary = serializers.JSONField(help_text="资源使用汇总")
     pv = serializers.IntegerField(help_text="PV")
     uv = serializers.IntegerField(help_text="UV")
+    visit_summary = serializers.JSONField(help_text="访问汇总")
     latest_deployed_at = serializers.DateTimeField(help_text="最新部署时间")
     latest_deployer = serializers.CharField(help_text="最新部署人")
     latest_operated_at = serializers.DateTimeField(help_text="最新操作时间")
     latest_operator = serializers.CharField(help_text="最新操作人")
     latest_operation = serializers.CharField(help_text="最新操作内容")
+    deploy_summary = serializers.JSONField(help_text="部署汇总")
     issue_type = serializers.CharField(help_text="问题类型")
     issues = serializers.SerializerMethodField(help_text="问题详情")
+    evaluate_result = serializers.JSONField(help_text="评估结果")
     collected_at = serializers.DateTimeField(help_text="报告采集时间")
 
     def get_mem_requests(self, report: AppOperationReport) -> str:

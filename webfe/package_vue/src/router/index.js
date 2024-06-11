@@ -345,6 +345,10 @@ const cloudAppBuildHistory = () => import(/* webpackChunkName: 'cloud-image-mana
   window.showDeployTip(error);
 });
 
+const appMigrationInfo = () => import(/* webpackChunkName: 'app-migration-info' */'@/views/dev-center/app/engine/app-migration-info').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -441,6 +445,14 @@ const router = new Router({
           path: ':id/:moduleId/summary',
           component: appSummary,
           name: 'appSummary',
+          meta: {
+            capture403Error: false,
+          },
+        },
+        {
+          path: ':id/app-migration-info',
+          component: appMigrationInfo,
+          name: 'appMigrationInfo',
           meta: {
             capture403Error: false,
           },

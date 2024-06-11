@@ -32,6 +32,8 @@ from paasng.platform.engine.workflow import DeployStep
 logger = logging.getLogger(__name__)
 
 # Max timeout seconds for waiting the pre-release-hook pod to become ready
+# This timeout should be consistent with the default application
+# defined at `paas_wl.bk_app.deploy.actions.exec._WAIT_FOR_READINESS_TIMEOUT`
 _WAIT_FOR_READINESS_TIMEOUT = 300
 
 

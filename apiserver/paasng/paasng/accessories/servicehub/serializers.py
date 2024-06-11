@@ -21,6 +21,8 @@ import json
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.accessories.servicehub.remote.exceptions import ServiceConfigNotFound
+from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.services.models import ServiceCategory
 from paasng.platform.modules.serializers import MinimalModuleSLZ
 
@@ -65,6 +67,17 @@ class ServiceSLZ(serializers.Serializer):
     category = CategorySLZ()
     specifications = serializers.ListField(child=SpecDefinitionSLZ(), source="public_specifications")
     instance_tutorial = serializers.CharField()
+    is_ready = serializers.SerializerMethodField()
+
+    def get_is_ready(self, data) -> bool:
+        """部分依赖其他服务的增强服务（如蓝鲸 APM），在依赖服务尚未部署前，可以通过设置 is_ready=False 来跳过创建增强服务实例的步骤。"""
+        is_ready = True
+        svc_store = get_remote_store()
+        try:
+            svc_config = svc_store.get_source_config(data["uuid"])
+        except ServiceConfigNotFound:
+            is_ready = svc_config.is_ready
+        return is_ready
 
 
 class ServiceWithSpecsSLZ(serializers.Serializer):

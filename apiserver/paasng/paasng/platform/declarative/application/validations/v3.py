@@ -27,7 +27,7 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.utils.basic import to_error_string
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
-from paasng.platform.applications.serializers import AppIDField, AppIDUniqueValidator, AppNameField
+from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
 from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
     DisplayOptions,
@@ -39,7 +39,6 @@ from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.modules.serializers import ModuleNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField
-from paasng.utils.validators import ReservedWordValidator
 
 module_name_field = ModuleNameField()
 
@@ -133,15 +132,7 @@ class ModuleDescriptionSLZ(serializers.Serializer):
 class AppDescriptionSLZ(serializers.Serializer):
     # S-mart 专用字段(region, bkAppCode, bkAppName)
     region = serializers.ChoiceField(required=False, allow_null=True, choices=get_region().get_choices())
-    bkAppCode = AppIDField(
-        # DNS safe(prefix)
-        # S-mart 应用ID 长度限制为 20 个字符
-        max_length=20,
-        regex="^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-_]{,63}(?<!-)$",
-        validators=[ReservedWordValidator("应用 ID"), AppIDUniqueValidator()],
-        error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)")},
-        source="code",
-    )
+    bkAppCode = AppIDSMartField(source="code")
     bkAppName = AppNameField(source="name_zh_cn")
     bkAppNameEn = AppNameField(source="name_en", required=False)
     market = MarketSLZ(required=False, default=None)

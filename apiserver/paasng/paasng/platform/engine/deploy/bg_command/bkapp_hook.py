@@ -31,6 +31,9 @@ from paasng.platform.engine.workflow import DeployStep
 
 logger = logging.getLogger(__name__)
 
+# Max timeout seconds for waiting the pre-release-hook pod to become ready
+_WAIT_FOR_READINESS_TIMEOUT = 300
+
 
 def generate_pre_release_hook_name(bkapp_name: str, deploy_id: int) -> str:
     """获取钩子 pod 名称. 需要和 operator 中的保持一致"""
@@ -66,7 +69,7 @@ class PreReleaseDummyExecutor(DeployStep):
         handler = BkAppHookHandler(wl_app, hook_name)
 
         try:
-            handler.wait_for_logs_readiness()
+            handler.wait_for_logs_readiness(timeout=_WAIT_FOR_READINESS_TIMEOUT)
         except ReadTargetStatusTimeout as e:
             pod = e.extra_value
             if pod is None:

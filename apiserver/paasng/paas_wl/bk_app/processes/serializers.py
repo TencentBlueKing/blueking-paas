@@ -127,6 +127,15 @@ class InstanceListSLZ(serializers.Serializer):
     metadata = ListRespMetaDataSLZ()
 
 
+class EventSerializer(serializers.Serializer):
+    reason = serializers.CharField(help_text="事件发生的原因")
+    count = serializers.IntegerField(help_text="事件发生的次数")
+    type = serializers.CharField(help_text="事件的类型")
+    message = serializers.CharField(help_text="事件内容")
+    first_timestamp = serializers.CharField()
+    last_timestamp = serializers.CharField()
+
+
 class ListWatcherRespSLZ(serializers.Serializer):
     """SLZ for ProcessInstanceListWatcher.list"""
 

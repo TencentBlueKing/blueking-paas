@@ -117,7 +117,7 @@ class HttpClient:
 def get_ingress_nginx_pod(namespace: str, client: EnhancedApiClient, try_time: int = 60) -> kmodels.V1Pod:
     """utils to find the ingress controller running pod"""
     for _ in range(try_time):
-        results = KPod(client).ops_label.list(
+        results = KPod(client).ops_batch.list(
             {"app.kubernetes.io/name": "ingress-nginx", "app.kubernetes.io/component": "controller"},
             namespace=namespace,
         )

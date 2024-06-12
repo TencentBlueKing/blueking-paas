@@ -81,7 +81,7 @@ def build_process_stats(clusters: Iterable[Cluster]) -> BatchProcessStats:
             logger.warning(f"Unable to make client for {cluster.name}")
             continue
 
-        pods = KPod(client).ops_label.list(labels={})
+        pods = KPod(client).ops_batch.list(labels={})
         for pod in pods.items:
             try:
                 proc = AppProcess.from_pod(pod)
@@ -190,7 +190,7 @@ class NodeStateMismatch:
         for cluster in self.clusters:
             c_data = results[cluster.name]
             client = get_client_by_cluster_name(cluster_name=cluster.name)
-            nodes = KNode(client).ops_label.list(labels={})
+            nodes = KNode(client).ops_batch.list(labels={})
             for node in nodes.items:
                 # Find all region state related labels
                 node_name = node.metadata.name

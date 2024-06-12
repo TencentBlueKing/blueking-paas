@@ -52,4 +52,9 @@ urlpatterns = [
         views.ListAndWatchProcsViewSet.as_view({"get": "watch"}),
         name="api.watch_processes",
     ),
+    re_path(
+        make_app_pattern(r"/instance_events/(?P<instance_name>.+)/$"),
+        views.InstanceEventsViewSet.as_view({"get": "list"}),
+        name="api.list_instance_events",
+    ),
 ]

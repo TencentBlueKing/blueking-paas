@@ -38,7 +38,7 @@ class TestCommandGenState:
     @pytest.fixture()
     def existing_node_names(self, k8s_client):
         """The name of nodes already exists in the cluster."""
-        nodes = KNode(k8s_client).ops_label.list(labels={}).items
+        nodes = KNode(k8s_client).ops_batch.list(labels={}).items
         return [obj.metadata.name for obj in nodes]
 
     @pytest.fixture()

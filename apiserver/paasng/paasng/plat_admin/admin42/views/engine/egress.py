@@ -147,7 +147,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
 
         manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
-            pods = KPod(client).ops_label.list(
+            pods = KPod(client).ops_batch.list(
                 namespace=manifest["metadata"]["namespace"],
                 labels={
                     "app": "gate",

@@ -108,7 +108,7 @@ def format_nodes_data(nodes: List[dict]) -> List[dict]:
 
 def get_nodes(client: EnhancedApiClient) -> List[ResourceInstance]:
     """Return a list a all kubernetes nodes in current cluster"""
-    return KNode(client).ops_label.list({}).items
+    return KNode(client).ops_batch.list({}).items
 
 
 def sync_state_to_nodes(client: EnhancedApiClient, state):

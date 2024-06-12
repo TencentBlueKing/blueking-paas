@@ -74,7 +74,7 @@ dummy_reader = AppEntityReader(DummyObj)
 class TestDummyReader:
     def test_watch_with_error_event(self, wl_app):
         with mock.patch.object(dummy_reader, "kres") as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.return_value = [
+            mocked_kres().__enter__().ops_batch.create_watch_stream.return_value = [
                 {"type": "ERROR", "raw_object": {}}
             ]
             event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
@@ -82,7 +82,7 @@ class TestDummyReader:
             assert event.error_message == "Unknown"
 
         with mock.patch.object(dummy_reader, "kres") as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(
+            mocked_kres().__enter__().ops_batch.create_watch_stream.side_effect = ApiException(
                 410, 'Expired: too old resource version: 1 (1)"'
             )
             event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
@@ -91,7 +91,7 @@ class TestDummyReader:
 
     def test_watch_with_expired_exception(self, wl_app):
         with mock.patch.object(dummy_reader, "kres") as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(500, "Internal error")
+            mocked_kres().__enter__().ops_batch.create_watch_stream.side_effect = ApiException(500, "Internal error")
             with pytest.raises(ApiException):
                 next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
 

@@ -142,8 +142,8 @@ class ProcessesHandler(ResourceHandlerBase):
         res = self.res_identifiers(config)
         KDeployment(self.client).delete(res.deployment_name, namespace=app.namespace, non_grace_period=True)
         # Delete ReplicaSet and Pods manually
-        KReplicaSet(self.client).ops_label.delete_collection(labels=res.match_labels, namespace=app.namespace)
-        KPod(self.client).ops_label.delete_individual(labels=res.match_labels, namespace=app.namespace)
+        KReplicaSet(self.client).ops_batch.delete_collection(labels=res.match_labels, namespace=app.namespace)
+        KPod(self.client).ops_batch.delete_individual(labels=res.match_labels, namespace=app.namespace)
 
     def delete_gracefully(self, config: MapperProcConfig):
         """Delete a process gracefully by the config object.

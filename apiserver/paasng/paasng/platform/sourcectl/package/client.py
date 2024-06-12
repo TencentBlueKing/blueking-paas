@@ -16,9 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import abc
 import logging
 import os
+import re
 import subprocess
 import tarfile
 import tempfile
@@ -32,6 +34,14 @@ from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_direct
 from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
+
+
+class BasePackageClientError(Exception):
+    """The base error class for package clients."""
+
+
+class InvalidPackageFileFormatError(Exception):
+    """The package file is not in a valid format, it might be corrupt."""
 
 
 class BasePackageClient(metaclass=abc.ABCMeta):
@@ -120,6 +130,8 @@ class BinaryTarClient(BasePackageClient):
 
         :param filename: the filename need to be extracted.
         :return: bytes contents of the file.
+        :raises InvalidPackageFileFormatError: The file is not a valid tar file, it's content
+            might be corrupt.
         """
         with generate_temp_dir() as temp_dir:
             p = subprocess.Popen(
@@ -127,9 +139,12 @@ class BinaryTarClient(BasePackageClient):
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                encoding="utf-8",
             )
-            stdout, stderr = p.communicate()
+            _, stderr = p.communicate()
             if p.returncode != 0:
+                if self._is_invalid_file_format_error(stderr):
+                    raise InvalidPackageFileFormatError()
                 raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
             return (temp_dir / filename).read_bytes()
 
@@ -145,16 +160,32 @@ class BinaryTarClient(BasePackageClient):
     def list(self, tarfile_like: bool = True) -> List[str]:
         """List the file of the tarball
 
-        :param tarfile_like: tar 命令与 tarfile 的差异点在于, tar 命令返回目录时会在末尾带上 "/", 如果设置 tarfile_like = True, 则自动去除末尾的 "/"
+        :param tarfile_like: tar 命令与 tarfile 的差异点在于, tar 命令返回目录时会在末尾带上 "/",
+            如果设置 tarfile_like = True, 则自动去除末尾的 "/"
+        :raises InvalidPackageFileFormatError: The file is not a valid tar file, it's content
+            might be corrupt.
         """
         p = subprocess.Popen(
-            f'tar -tf "{self.filepath.absolute()}"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            f'tar -tf "{self.filepath.absolute()}"',
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
         )
         stdout, stderr = p.communicate()
         if p.returncode != 0:
+            if self._is_invalid_file_format_error(stderr):
+                raise InvalidPackageFileFormatError()
             raise RuntimeError(f"Failed to read from the tarball, error: {stderr!r}")
-        items = stdout.strip().decode().split("\n")
+        items = stdout.strip().split("\n")
         return items if not tarfile_like else [item.rstrip(os.path.sep) for item in items]
+
+    @staticmethod
+    def _is_invalid_file_format_error(message: str) -> bool:
+        """Check if the stderr message indicates an invalid file format."""
+        if re.search(r"tar:.* not look like a tar archive", message):
+            return True
+        return False
 
 
 class ZipClient(BasePackageClient):

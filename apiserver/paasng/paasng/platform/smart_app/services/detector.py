@@ -40,7 +40,7 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.services.path import PathProtocol
 from paasng.platform.sourcectl.models import SPStat
-from paasng.platform.sourcectl.package.client import BinaryTarClient, ZipClient
+from paasng.platform.sourcectl.package.client import BinaryTarClient, InvalidPackageFileFormatError, ZipClient
 
 logger = logging.getLogger(__name__)
 
@@ -94,16 +94,18 @@ class SourcePackageStatReader:
         :returns: Tuple[str, Dict]
         - the relative path of app.yaml (to the root dir in the tar file), "./" is returned by default
         - the raw meta info of source package, `{}` is returned by default
-        :raises: ValidationError when meta info is not valid YAML
+        :raises InvalidPackageFileFormatError: The file is not valid, it's content might be corrupt.
+        :raises ValidationError: The file content is not valid YAML.
         """
         relative_path = "./"
 
         with self.accessor(self.path) as archive:
             try:
-                # 根据约定, application description file 应当在应用的外层目录, 排序后可以更快地找到 application description file
+                # 根据约定, application description file 应当在应用的外层目录, 排序后可以
+                # 更快地找到它。
                 existed_filenames = sorted(archive.list())
             except RuntimeError:
-                logger.warning("file: %s is not a valid tar file.", self.path)
+                logger.warning("Unable to list contents in the package file, path: %s.", self.path)
                 return relative_path, {}
 
             for spec_version, filename in product([AppSpecVersion.VER_2, AppSpecVersion.VER_1], existed_filenames):
@@ -156,9 +158,16 @@ class SourcePackageStatReader:
         return sha256_hash.hexdigest()
 
     def read(self) -> SPStat:
-        """Return source package's stats object"""
+        """Return source package's stats object.
+
+        :raises ValidationError: Known errors when reading stats failed, it's message can
+            be displayed to user.
+        """
         logger.debug("parsing source package's stats object.")
-        relative_path, meta_info = self.get_meta_info()
+        try:
+            relative_path, meta_info = self.get_meta_info()
+        except InvalidPackageFileFormatError:
+            raise ValidationError(_("源码包文件格式错误，文件可能已经损坏"))
         # 当从源码包解析 app version 失败时, 需要由其他途径保证能获取到 version. 例如上传源码包的接口中的 version 参数
         version = self._try_extract_version(meta_info) or ""
         return SPStat(

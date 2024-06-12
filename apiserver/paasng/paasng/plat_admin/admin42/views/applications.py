@@ -16,7 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List
+
+from typing import Dict, List
 
 import rest_framework.request
 import xlwt
@@ -27,6 +28,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
@@ -264,7 +266,7 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
 
 
 class ApplicationOverviewView(ApplicationDetailBaseView):
-    """Application详情概览页"""
+    """应用详情概览页"""
 
     queryset = Application.objects.all()
     serializer_class = ApplicationSLZ
@@ -281,6 +283,14 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
             {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
             for cluster in RegionClusterService(application.region).list_clusters()
         ]
+
+        # Get the exposed URL for all environments
+        env_urls: Dict[int, str] = {}
+        for env in application.envs.all():
+            if url_obj := get_exposed_url(env):
+                env_urls[env.id] = url_obj.address
+        kwargs["env_urls"] = env_urls
+
         return kwargs
 
 

@@ -331,15 +331,25 @@
                   style="flex: 1 1 25%; width: 0;"
                 >
                   <template v-if="isReadOnlyRow(index)">
-                    <div
-                      v-bk-tooltips="{
-                        content: varItem.key === '*' ? '*\&nbsp' : varItem.key,
-                        trigger: 'mouseenter',
-                        maxWidth: 400,
-                        extCls: 'env-var-popover'
-                      }"
-                      class="desc-form-content"
-                    >{{ varItem.key }}</div>
+                    <div class="variable-key-wrapper">
+                      <div
+                        v-bk-tooltips="{
+                          content: varItem.key === '*' ? '*\&nbsp' : varItem.key,
+                          trigger: 'mouseenter',
+                          maxWidth: 400,
+                          extCls: 'env-var-popover'
+                        }"
+                        class="desc-form-content"
+                      >{{ varItem.key }}</div>
+                      <i
+                        v-if="varItem.conflictingService"
+                        class="paasng-icon paasng-remind"
+                        v-bk-tooltips="{
+                          content: $t('环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突', { s: varItem.conflictingService }),
+                          width: 200
+                        }">
+                      </i>
+                    </div>
                   </template>
                   <template v-else>
                     <bk-input
@@ -813,7 +823,7 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>import { cloneDeep, includes } from 'lodash';
 import dropdown from '@/components/ui/Dropdown';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
 import appBaseMixin from '@/mixins/app-base-mixin';
@@ -943,6 +953,7 @@ export default {
         bkPlatformLoading: false,
       },
       targetListData: [],
+      builtInEnvVars: {},
     };
   },
   computed: {
@@ -988,7 +999,7 @@ export default {
       return builds;
     },
     globalEnvName() {
-      if (_.includes(this.availableEnv, 'stag') && _.includes(this.availableEnv, 'prod')) {
+      if (includes(this.availableEnv, 'stag') && includes(this.availableEnv, 'prod')) {
         return '_global_';
       }
       return this.availableEnv[0];
@@ -1257,10 +1268,11 @@ export default {
       this.curFile = {};
       this.isFileTypeError = false;
     },
-    init() {
+    async init() {
       this.isLoading = true;
       this.isEdited = false;
       this.curSortKey = '-created';
+      await this.getConfigVarKeys();
       this.loadConfigVar();
       this.fetchReleaseInfo();
       this.getAllImages();
@@ -1317,8 +1329,8 @@ export default {
         this.runtimeImage = res.image ? res.image : '';
         if (res.buildpacks) {
           this.runtimeBuild = res.buildpacks.map(item => item.id);
-          this.targetListData = _.cloneDeep(this.runtimeBuild);
-          this.curBuildpacks = _.cloneDeep(this.runtimeBuild);
+          this.targetListData = cloneDeep(this.runtimeBuild);
+          this.curBuildpacks = cloneDeep(this.runtimeBuild);
         }
       } catch (e) {
         this.$paasMessage({
@@ -1373,6 +1385,18 @@ export default {
         });
       }
     },
+    // 是否已存在该环境变量
+    isEnvVarAlreadyExists(varKey) {
+      let existingKey = '';
+      // 检查是否已存在该环境变量
+      for (const key in this.builtInEnvVars) {
+        if (this.builtInEnvVars[key].includes(varKey)) {
+          existingKey = key;
+          break;
+        }
+      }
+      return existingKey;
+    },
     // Load all env vars for current selected tab
     loadConfigVar() {
       this.isVarLoading = true;
@@ -1382,7 +1406,10 @@ export default {
         } else {
           this.envVarList = response.filter(envVar => envVar.environment_name === this.activeEnvTab);
         }
-        this.envVarListBackup = JSON.parse(JSON.stringify(this.envVarList));
+        this.envVarList.forEach((item) => {
+          item.conflictingService = this.isEnvVarAlreadyExists(item.key);
+        });
+        this.envVarListBackup = cloneDeep(this.envVarList);
       }, (errRes) => {
         const errorMsg = errRes.message;
         this.$paasMessage({
@@ -1396,10 +1423,10 @@ export default {
         });
     },
     isReadOnlyRow(rowIndex) {
-      return !_.includes(this.editRowList, rowIndex);
+      return !includes(this.editRowList, rowIndex);
     },
     isEnvAvailable(envName) {
-      return _.includes(this.availableEnv, envName);
+      return includes(this.availableEnv, envName);
     },
     editingRowToggle(rowItem = {}, rowIndex, type = '') {
       if (type === 'cancel') {
@@ -1415,7 +1442,7 @@ export default {
           });
         }
       }
-      if (_.includes(this.editRowList, rowIndex)) {
+      if (includes(this.editRowList, rowIndex)) {
         this.editRowList.pop(rowIndex);
       } else {
         this.editRowList.push(rowIndex);
@@ -1566,7 +1593,7 @@ export default {
     // 数据还原
     handleHideRuntimeDialog() {
       setTimeout(() => {
-        this.targetListData = _.cloneDeep(this.curBuildpacks);
+        this.targetListData = cloneDeep(this.curBuildpacks);
       }, 200);
     },
 
@@ -1667,6 +1694,22 @@ export default {
           this.$set(data[index], 'isTips', false);
         }
       });
+    },
+
+    // 获取应用增强服务内置环境变量
+    async getConfigVarKeys() {
+      try {
+        const varKeys = await this.$store.dispatch('envVar/getConfigVarKeys', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        this.builtInEnvVars = varKeys;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };
@@ -1774,6 +1817,7 @@ export default {
         .desc-form-content {
             display: inline-block;
             padding: 0 10px;
+            padding-right: 25px;
             width: 100%;
             height: 32px;
             border: 1px solid #dcdee5;
@@ -2101,6 +2145,17 @@ export default {
           padding-bottom: 2px;
           border-bottom: 1px dashed #666;
         }
+      }
+    }
+    .variable-key-wrapper {
+      position: relative;
+      .paasng-remind {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        color: #EA3636;
       }
     }
 </style>

@@ -7,10 +7,20 @@
             class="overview-main"
             :style="{ 'min-height': $route.meta.notMinHeight ? 'auto' : `${minHeight}px` }"
           >
+            <!-- 在这里获取当前应用的迁移状态 -->
             <div class="overview-fleft">
-              <app-quick-nav />
-              <paas-cloud-app-nav v-if="type === 'cloud_native'" />
-              <paas-app-nav v-else />
+              <app-quick-nav :is-migrating="isMigrating" />
+              <paas-cloud-app-nav
+                v-if="type === 'cloud_native'"
+                :is-migration-entry-shown="isMigrationEntryShown"
+                @show-migration-dialog="showMigrationDialog"
+              />
+              <!-- 普通应用 -->
+              <paas-app-nav
+                v-else
+                :is-migration-entry-shown="isMigrationEntryShown"
+                @show-migration-dialog="showMigrationDialog"
+              />
             </div>
             <!-- 特殊页面样式无需指定padding-bottom -->
             <div
@@ -77,6 +87,12 @@
         <p> {{ $t('应用找不到了！') }} </p>
       </div>
     </template>
+
+    <!-- 普通应用迁移至云原生应用弹窗 -->
+    <app-migration-dialog
+      v-model="appMigrationDialogConfig.visible"
+      :data="appMigrationDialogConfig.data"
+    />
   </div>
 </template>
 
@@ -87,12 +103,14 @@ import appQuickNav from '@/components/app-quick-nav';
 import { bus } from '@/common/bus';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import store from '@/store';
+import appMigrationDialog from '@/components/app-migration-dialog';
 
 export default {
   components: {
     paasCloudAppNav,
     paasAppNav,
     appQuickNav,
+    appMigrationDialog,
   },
   mixins: [appBaseMixin],
   data() {
@@ -122,6 +140,10 @@ export default {
       subNavIds: [10, 12, 13, 14],
       engineEnabled: false,
       type: 'default',
+      appMigrationDialogConfig: {
+        visible: false,
+        data: {},
+      },
     };
   },
   computed: {
@@ -135,6 +157,16 @@ export default {
     isShowNotice() {
       return this.$store.state.isShowNotice;
     },
+    // 是否正在迁移中
+    isMigrating() {
+      const showMigration = ['default', 'no_need_migration', 'rollback_succeeded', 'confirmed'];
+      return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
+    },
+    // 是否迁移云原生弹窗按钮
+    isMigrationEntryShown() {
+      const showMigration = ['no_need_migration', 'migration_succeeded', 'confirmed'];
+      return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
+    },
   },
   watch: {
     $route: {
@@ -145,7 +177,7 @@ export default {
         this.checkPermission();
       },
     },
-    'curAppInfo.feature'(conf) {
+    'curAppInfo.feature'() {
       this.checkPermission();
     },
     appCode() {
@@ -319,6 +351,11 @@ export default {
           this.appPermissionMessage = this.$t('应用未开启“配置豁免路径”的功能');
         }
       }
+    },
+    // 显示迁移弹窗
+    showMigrationDialog(config) {
+      this.appMigrationDialogConfig.visible = config.visible;
+      this.appMigrationDialogConfig.data = config.data;
     },
   },
 };

@@ -104,7 +104,9 @@ class SchemaViewSet(ViewSet):
                         "init_templates": cattr.unstructure(basic_info_definition.init_templates),
                         "release_method": basic_info_definition.release_method,
                         "repository_group": basic_info_definition.repository_group,
-                        "repository_template": shim.build_repository_template(basic_info_definition.repository_group),
+                        "repository_template": shim.build_repository_template(
+                            pd, basic_info_definition.repository_group
+                        ),
                         "extra_fields": cattr.unstructure(extra_fields),
                         "extra_fields_order": cattr.unstructure(basic_info_definition.extra_fields_order),
                     },

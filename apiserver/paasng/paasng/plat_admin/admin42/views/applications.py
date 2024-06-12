@@ -16,7 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List
+
+from typing import Dict, List
 
 import rest_framework.request
 import xlwt
@@ -27,6 +28,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
@@ -40,6 +42,7 @@ from paasng.infras.iam.helpers import (
 from paasng.plat_admin.admin42.serializers.application import (
     ApplicationDetailSLZ,
     ApplicationSLZ,
+    AppOperationReportCollectionTaskOutputSLZ,
     AppOperationReportListInputSLZ,
     AppOperationReportOutputSLZ,
     BindEnvClusterSLZ,
@@ -54,7 +57,7 @@ from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
 from paasng.platform.engine.constants import ClusterType
 from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.models import AppOperationReport
+from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.utils.error_codes import error_codes
 
 
@@ -154,6 +157,12 @@ class ApplicationOperationEvaluationView(ApplicationOperationReportMixin, Generi
         self.paginator.default_limit = 10
 
         kwargs = super().get_context_data(**kwargs)
+
+        kwargs["latest_collect_task"] = None
+        # 获取最近一次同步任务
+        if latest_collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            kwargs["latest_collect_task"] = AppOperationReportCollectionTaskOutputSLZ(latest_collect_task).data
+
         kwargs["usage_report_list"] = AppOperationReportOutputSLZ(
             self.paginate_queryset(self.get_queryset()), many=True
         ).data
@@ -202,7 +211,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
             "最新操作人",
             "最新操作时间",
             "问题类型",
-            "问题详情",
+            "问题描述",
             "应用管理员",
         ]
 
@@ -229,7 +238,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
                     rp.latest_operator if rp.latest_operator else "--",
                     rp.latest_operated_at.strftime("%Y-%m-%d %H:%M:%S") if rp.latest_operated_at else "--",
                     str(OperationIssueType.get_choice_label(rp.issue_type)),
-                    ", ".join(rp.issues),
+                    ", ".join(rp.evaluation_result["issues"]) if rp.evaluation_result else "--",
                     administrators,
                 ]
             )
@@ -257,7 +266,7 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
 
 
 class ApplicationOverviewView(ApplicationDetailBaseView):
-    """Application详情概览页"""
+    """应用详情概览页"""
 
     queryset = Application.objects.all()
     serializer_class = ApplicationSLZ
@@ -274,6 +283,14 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
             {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
             for cluster in RegionClusterService(application.region).list_clusters()
         ]
+
+        # Get the exposed URL for all environments
+        env_urls: Dict[int, str] = {}
+        for env in application.envs.all():
+            if url_obj := get_exposed_url(env):
+                env_urls[env.id] = url_obj.address
+        kwargs["env_urls"] = env_urls
+
         return kwargs
 
 

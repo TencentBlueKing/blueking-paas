@@ -5,11 +5,14 @@ TencentBlueKing is pleased to support the open source community by making
 Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
+
     http://opensource.org/licenses/MIT
+
 Unless required by applicable law or agreed to in writing, software distributed under
 the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 either express or implied. See the License for the specific language governing permissions and
 limitations under the License.
+
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
@@ -88,12 +91,26 @@ class ProcSummary:
 
 
 @dataclass
+class EnvSummary:
+    """环境资源使用数据"""
+
+    procs: List[ProcSummary]
+    # CPU 单位为 m
+    cpu_requests: int
+    cpu_limits: int
+    # 内存单位为 Mi
+    mem_requests: int
+    mem_limits: int
+    # CPU，内存平均使用率
+    cpu_usage_avg: float
+    mem_usage_avg: float
+
+
+@dataclass
 class ModuleSummary:
     """模块资源使用数据"""
 
-    module_name: str
-    stag_procs: List[ProcSummary]
-    prod_procs: List[ProcSummary]
+    envs: Dict[str, EnvSummary]
 
 
 @dataclass
@@ -102,7 +119,9 @@ class AppSummary:
 
     app_code: str
     app_type: str
-    modules: List[ModuleSummary]
+    time_step: str
+    time_range: str
+    modules: Dict[str, ModuleSummary]
 
 
 class AppResQuotaCollector:
@@ -111,6 +130,8 @@ class AppResQuotaCollector:
     def __init__(self, app: Application, step: str = "15m", time_range_str: str = "7d"):
         self.app = app
         self.query_metrics = [MetricsType.CPU.value, MetricsType.MEM.value]
+        self.time_step = step
+        self.time_range_str = time_range_str
         # 查询历史 7 天的数据，数据采样间隔为 15m，需要注意的是：如果中间发布过，则数据长度可能不足
         self.time_range = MetricSmartTimeRange(step=step, time_range_str=time_range_str)
         # 初始化云原生应用 资源配额方案 -> request 映射表
@@ -120,20 +141,24 @@ class AppResQuotaCollector:
         }
 
     def collect(self) -> AppSummary:
-        module_summaries = [self._calc_module_summary(module) for module in self.app.modules.all()]
-        return AppSummary(app_code=self.app.code, app_type=self.app.type, modules=module_summaries)
+        module_summaries = {module.name: self._calc_module_summary(module) for module in self.app.modules.all()}
+        return AppSummary(
+            app_code=self.app.code,
+            app_type=self.app.type,
+            time_step=self.time_step,
+            time_range=self.time_range_str,
+            modules=module_summaries,
+        )
 
     def _calc_module_summary(self, module: Module) -> ModuleSummary:
         stag_env = module.get_envs(AppEnvName.STAG)
         prod_env = module.get_envs(AppEnvName.PROD)
-        return ModuleSummary(
-            module_name=module.name,
-            stag_procs=self._calc_proc_summaries(stag_env),
-            prod_procs=self._calc_proc_summaries(prod_env),
-        )
+        return ModuleSummary(envs={env.environment: self._calc_env_summary(env) for env in [stag_env, prod_env]})
 
-    def _calc_proc_summaries(self, env: ModuleEnvironment) -> List[ProcSummary]:
+    def _calc_env_summary(self, env: ModuleEnvironment) -> EnvSummary:
         proc_summaries = []
+        cpu_requests, mem_requests, cpu_limits, mem_limits = 0, 0, 0, 0
+        cpu_usage_avg_val, mem_usage_avg_val = 0.0, 0.0
         try:
             for proc in ProcessManager(env).list_processes_specs():
                 mgr = get_resource_metric_manager(env.engine_app.to_wl_obj(), proc["name"])
@@ -142,11 +167,31 @@ class AppResQuotaCollector:
                     time_range=self.time_range,
                     series_type=MetricsSeriesType.CURRENT,
                 )
-                proc_summaries.append(self._calc_proc_summary(proc, result))
+                ps = self._calc_proc_summary(proc, result)
+                proc_summaries.append(ps)
+
+                if ps.quota:
+                    cpu_requests += ps.replicas * ps.quota.requests.cpu
+                    mem_requests += ps.replicas * ps.quota.requests.memory
+                    cpu_limits += ps.replicas * ps.quota.limits.cpu
+                    mem_limits += ps.replicas * ps.quota.limits.memory
+                if ps.cpu:
+                    cpu_usage_avg_val += ps.replicas * ps.cpu.avg
+                if ps.memory:
+                    mem_usage_avg_val += ps.replicas * ps.memory.avg
+
         except Exception as e:
             logger.warning(f"failed to get env {env} process metrics: {e}")
 
-        return proc_summaries
+        return EnvSummary(
+            procs=proc_summaries,
+            cpu_requests=cpu_requests,
+            cpu_limits=cpu_limits,
+            mem_requests=mem_requests,
+            mem_limits=mem_limits,
+            cpu_usage_avg=round(cpu_usage_avg_val / cpu_limits, 4) if cpu_limits else 0,
+            mem_usage_avg=round(mem_usage_avg_val / mem_limits, 4) if mem_limits else 0,
+        )
 
     def _calc_proc_summary(self, proc_spec: Dict, results: List[MetricsInstanceResult]) -> ProcSummary:
         cpu_metrics, mem_metrics = [], []

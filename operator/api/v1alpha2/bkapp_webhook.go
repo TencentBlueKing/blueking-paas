@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -368,10 +369,14 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 
 	// 4. 如果启用扩缩容，需要符合规范
 	if proc.Autoscaling != nil {
-		if err := r.validateAutoscaling(
-			pField.Child("autoscaling"),
-			*proc.Autoscaling,
-		); err != nil {
+		if err := r.validateAutoscaling(pField.Child("autoscaling"), *proc.Autoscaling); err != nil {
+			return err
+		}
+	}
+
+	// 5. 如果启用探针，需要符合规范
+	if proc.Probes != nil {
+		if err := r.validateProbes(pField.Child("probe"), *proc.Probes); err != nil {
 			return err
 		}
 	}
@@ -404,6 +409,109 @@ func (r *BkApp) validateAutoscaling(pPath *field.Path, spec AutoscalingSpec) *fi
 	// 配置的扩缩容策略必须是受支持的
 	if !lo.Contains(AllowedScalingPolicies, spec.Policy) {
 		return field.NotSupported(pPath.Child("policy"), spec.Policy, stringx.ToStrArray(AllowedScalingPolicies))
+	}
+	return nil
+}
+
+func (r *BkApp) validateProbes(pPath *field.Path, probeSet ProbeSet) *field.Error {
+	if err := validateProbe(pPath.Child("liveness"), probeSet.Liveness); err != nil {
+		return err
+	}
+	if err := validateProbe(pPath.Child("readiness"), probeSet.Readiness); err != nil {
+		return err
+	}
+	if err := validateProbe(pPath.Child("startup"), probeSet.Startup); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateProbe(pField *field.Path, probe *corev1.Probe) *field.Error {
+	if probe == nil {
+		return nil
+	}
+	// 必须存在且只存在一种类型的探针
+	if probe.Exec == nil && probe.HTTPGet == nil && probe.TCPSocket == nil {
+		return field.Invalid(pField, probe, "at least one probe type must be specified")
+	}
+	// 检查命令探针
+	if probe.Exec != nil {
+		if probe.HTTPGet != nil || probe.TCPSocket != nil {
+			return field.Invalid(pField, probe, "only one probe type can be specified")
+		}
+		if len(probe.Exec.Command) == 0 {
+			return field.Invalid(pField.Child("command"), probe.Exec.Command, "command must not be empty")
+		}
+	}
+	// 检查 HTTP 探针
+	if probe.HTTPGet != nil {
+		if probe.Exec != nil || probe.TCPSocket != nil {
+			return field.Invalid(pField, probe, "only one probe type can be specified")
+		}
+		if probe.HTTPGet.Path == "" {
+			return field.Invalid(pField.Child("path"), probe.HTTPGet.Path, "path must not be empty")
+		}
+		if probe.HTTPGet.Port.Type != intstr.Int {
+			return field.Invalid(pField.Child("port"), probe.HTTPGet.Port, "port must be an integer currently")
+		}
+		port := probe.HTTPGet.Port.IntValue()
+		if port < 1 || port > 65535 {
+			return field.Invalid(pField.Child("port"), probe.HTTPGet.Port, "port must be between 1 and 65535")
+		}
+	}
+	// 检查 TCP 探针
+	if probe.TCPSocket != nil {
+		if probe.Exec != nil || probe.HTTPGet != nil {
+			return field.Invalid(pField, probe, "only one probe type can be specified")
+		}
+		if probe.TCPSocket.Port.Type != intstr.Int {
+			return field.Invalid(pField.Child("port"), probe.TCPSocket.Port, "port must be an integer currently")
+		}
+		port := probe.TCPSocket.Port.IntValue()
+		if port < 1 || port > 65535 {
+			return field.Invalid(pField.Child("port"), probe.TCPSocket.Port, "port must be between 1 and 65535")
+		}
+	}
+
+	// 初始探测延迟范围：0-300 s
+	if probe.InitialDelaySeconds < 0 || probe.InitialDelaySeconds > 300 {
+		return field.Invalid(
+			pField.Child("initialDelaySeconds"),
+			probe.InitialDelaySeconds,
+			"initialDelaySeconds must be between 0 and 300",
+		)
+	}
+	// 探测超时范围：1-60 s
+	if probe.TimeoutSeconds < 1 || probe.TimeoutSeconds > 60 {
+		return field.Invalid(
+			pField.Child("timeoutSeconds"),
+			probe.TimeoutSeconds,
+			"timeoutSeconds must be between 1 and 60",
+		)
+	}
+	// 探测间隔范围：2-300 s
+	if probe.PeriodSeconds < 2 || probe.PeriodSeconds > 300 {
+		return field.Invalid(
+			pField.Child("periodSeconds"),
+			probe.PeriodSeconds,
+			"periodSeconds must be between 2 and 300",
+		)
+	}
+	// 成功阈值范围：1-3
+	if probe.SuccessThreshold < 1 || probe.SuccessThreshold > 3 {
+		return field.Invalid(
+			pField.Child("successThreshold"),
+			probe.SuccessThreshold,
+			"successThreshold must be between 1 and 3",
+		)
+	}
+	// 失败阈值范围：1-50
+	if probe.FailureThreshold < 1 || probe.FailureThreshold > 50 {
+		return field.Invalid(
+			pField.Child("failureThreshold"),
+			probe.FailureThreshold,
+			"failureThreshold must be between 1 and 50",
+		)
 	}
 	return nil
 }

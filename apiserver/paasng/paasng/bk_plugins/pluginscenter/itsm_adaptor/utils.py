@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import typing
 from typing import List, Optional
 
 from django.conf import settings
@@ -30,6 +31,10 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
 )
+
+if typing.TYPE_CHECKING:
+    from paasng.bk_plugins.pluginscenter.models import PluginVisibleRange
+    from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
 
 
 def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, operator: str):
@@ -91,6 +96,40 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     current_stage.status = PluginReleaseStatus.PENDING
     current_stage.itsm_detail = itsm_detail
     current_stage.save(update_fields=["status", "itsm_detail"])
+
+
+def submit_visible_range_ticket(
+    pd: PluginDefinition,
+    plugin: PluginInstance,
+    operator: str,
+    visible_range_obj: "PluginVisibleRange",
+    bkci_project: Optional[list],
+    organization: Optional[list],
+) -> "ItsmDetail":
+    # 查询上线审批服务ID
+    service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.VISIBLE_RANGE_APPROVAL).service_id
+
+    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
+    paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
+    callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
+
+    visible_range_fields = [
+        {"key": "bkci_project", "value": bkci_project},
+        {"key": "organization", "value": _get_organization_display_name(organization)},
+        {"key": "current_bkci_project", "value": visible_range_obj.bkci_project},
+        {"key": "current_organization", "value": _get_organization_display_name(visible_range_obj.organization)},
+    ]
+
+    # 组装提单数据,包含插件的基本信息、可见范围修改前的值，修改后的值
+    basic_fields = _get_basic_fields(pd, plugin)
+    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]可见范围修改审批"}]
+    fields = basic_fields + title_fields + visible_range_fields
+
+    # 提交 itsm 申请单据
+    client = ItsmClient()
+    itsm_detail = client.create_ticket(service_id, operator, callback_url, fields)
+
+    return itsm_detail
 
 
 def get_ticket_status(sn: str):
@@ -176,3 +215,11 @@ def _get_advanced_fields(
         },
     ]
     return fields
+
+
+def _get_organization_display_name(organization) -> str:
+    if not organization:
+        return ""
+
+    organization_names = [r["name"] for r in organization]
+    return ";".join(organization_names)

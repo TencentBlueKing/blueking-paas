@@ -193,6 +193,12 @@ func buildContainers(
 	if proc.TargetPort != 0 {
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
 	}
+	// 容器探针
+	if proc.Probes != nil {
+		container.LivenessProbe = proc.Probes.Liveness
+		container.ReadinessProbe = proc.Probes.Readiness
+		container.StartupProbe = proc.Probes.Startup
+	}
 	return []corev1.Container{container}
 }
 

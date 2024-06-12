@@ -16,3 +16,27 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
+from functools import reduce
+from typing import Any, Dict, List, Union
+
+
+def get_items(obj: Dict[str, Any], paths: Union[List[str], str], default: Any = None) -> Any:
+    """
+    根据指定的路径从字典中获取对应的值
+
+    :param obj: 字典类型对象
+    :param paths: ['foo', 'bar'] 或 ".foo.bar" 或 "foo.bar"
+    :param default: 默认值
+    :return: 指定路径的值 或 默认值
+    """
+    if not isinstance(obj, Dict):
+        raise TypeError("only support get items from dict object!")
+
+    if isinstance(paths, str):
+        paths = paths.strip(".").split(".")
+
+    try:
+        return reduce(lambda d, k: d[k], paths, obj)
+    except (KeyError, IndexError, TypeError):
+        return default

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import datetime
 from json import dumps
 from typing import Dict
@@ -26,7 +27,7 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.constants import Category
-from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.exceptions import BindServiceNoPlansError, ServiceObjNotFound
 from paasng.accessories.servicehub.local import LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
@@ -34,7 +35,6 @@ from paasng.accessories.servicehub.remote import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
 from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
 from tests.paasng.accessories.servicehub import data_mocks
-from tests.utils.helpers import BaseTestCaseWithApp
 
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
@@ -120,70 +120,80 @@ class TestMixedMgr:
         assert envs == {"a": 1, "b": 2, "c": 3}
 
 
-class TestLocalMgr(BaseTestCaseWithApp):
-    app_region = "r1"
-
-    def setUp(self):
-        super().setUp()
-        self._create_service()
-
-    def _create_service(self):
-        # Add a service in database
+class TestLocalMgr:
+    @pytest.fixture(autouse=True)
+    def svc(self, bk_app):
+        """Create a local service object."""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        self.svc = G(Service, name="mysql", category=category, region="r1", logo_b64="dummy")
-        # Create default plans
-        self.plan_default = G(Plan, name="no-ha", service=self.svc, config="{}")
-        self.plan_ha = G(Plan, name="ha", service=self.svc, config="{}")
+        svc = G(Service, name="mysql", category=category, region=bk_app.region, logo_b64="dummy")
+        # Create 2 plans
+        G(Plan, name="no-ha", service=svc, config="{}")
+        G(Plan, name="ha", service=svc, config="{}")
+        return svc
 
-    def test_bind_service(self):
+    @pytest.fixture()
+    def plan_default(self, svc):
+        return Plan.objects.get(service=svc, name="no-ha")
+
+    @pytest.fixture()
+    def plan_ha(self, svc):
+        return Plan.objects.get(service=svc, name="ha")
+
+    @pytest.fixture()
+    def instance_factory(self, svc, plan_default):
+        """A factory method that creates an instance object."""
+
+        def _create():
+            return G(
+                ServiceInstance,
+                service=svc,
+                plan=plan_default,
+                config="{}",
+                credentials=dumps({"MYSQL_USERNAME": "foo", "MYSQL_PASSWORD": "bar"}),
+            )
+
+        return _create
+
+    def test_bind_service(self, svc, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        rel_pk = mgr.bind_service(service, self.module)
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        rel_pk = mgr.bind_service(service, bk_module)
         assert rel_pk is not None
 
-    def test_list_binded(self):
+    def test_list_binded(self, svc, bk_app, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        assert list(mgr.list_binded(self.module)) == []
-        for env in self.application.envs.all():
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        assert list(mgr.list_binded(bk_module)) == []
+        for env in bk_app.envs.all():
             assert list(mgr.list_unprovisioned_rels(env.engine_app)) == []
 
-        rel_pk = mgr.bind_service(service, self.module)
+        rel_pk = mgr.bind_service(service, bk_module)
         assert rel_pk is not None
-        assert list(mgr.list_binded(self.module)) == [service]
-        for env in self.application.envs.all():
+        assert list(mgr.list_binded(bk_module)) == [service]
+        for env in bk_app.envs.all():
             assert len(list(mgr.list_unprovisioned_rels(env.engine_app))) == 1
 
-    def _create_instance(self):
-        return G(
-            ServiceInstance,
-            service=self.svc,
-            plan=self.plan_default,
-            config="{}",
-            credentials=dumps({"MYSQL_USERNAME": "foo", "MYSQL_PASSWORD": "bar"}),
-        )
-
     @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
-    def test_provision(self, mocked_method):
+    def test_provision(self, mocked_method, instance_factory, svc, bk_app, bk_module):
         """Test service instance provision"""
-        mocked_method.side_effect = [self._create_instance(), self._create_instance()]
+        mocked_method.side_effect = [instance_factory(), instance_factory()]
 
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        mgr.bind_service(service, self.module)
-        for env in self.application.envs.all():
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        mgr.bind_service(service, bk_module)
+        for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
                 assert rel.is_provisioned() is False
                 rel.provision()
                 assert rel.is_provisioned() is True
 
     @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
-    def test_instance_has_create_time_attr(self, mocked_method):
-        mocked_method.side_effect = [self._create_instance()]
+    def test_instance_has_create_time_attr(self, mocked_method, instance_factory, svc, bk_app, bk_module):
+        mocked_method.side_effect = [instance_factory()]
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        mgr.bind_service(service, self.module)
-        env = self.application.envs.first()
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        mgr.bind_service(service, bk_module)
+        env = bk_app.envs.first()
         for rel in mgr.list_unprovisioned_rels(env.engine_app):
             rel.provision()
             instance = rel.get_instance()
@@ -191,12 +201,12 @@ class TestLocalMgr(BaseTestCaseWithApp):
 
     @mock.patch("paasng.accessories.servicehub.constants.SERVICE_SENSITIVE_FIELDS", {"mysql": ["MYSQL_PASSWORD"]})
     @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
-    def test_get_instance(self, mocked_method):
-        mocked_method.side_effect = [self._create_instance(), self._create_instance()]
+    def test_get_instance(self, mocked_method, instance_factory, svc, bk_app, bk_module):
+        mocked_method.side_effect = [instance_factory(), instance_factory()]
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        mgr.bind_service(service, self.module)
-        for env in self.application.envs.all():
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        mgr.bind_service(service, bk_module)
+        for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
                 rel.provision()
                 instance = rel.get_instance()
@@ -211,33 +221,33 @@ class TestLocalMgr(BaseTestCaseWithApp):
                 assert instance.should_remove_fields == ["MYSQL_PASSWORD"]
             break
 
-    def test_find_by_name_not_found(self):
+    def test_find_by_name_not_found(self, bk_module):
         mgr = LocalServiceMgr()
         with pytest.raises(ServiceObjNotFound):
-            mgr.find_by_name(name="foo_name", region=self.module.region)
+            mgr.find_by_name(name="foo_name", region=bk_module.region)
 
-    def test_find_by_name_normal(self):
+    def test_find_by_name_normal(self, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.find_by_name(name="mysql", region=self.module.region)
+        service = mgr.find_by_name(name="mysql", region=bk_module.region)
         assert service is not None
 
-    def test_module_is_bound_with(self):
+    def test_module_is_bound_with(self, svc, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        assert mgr.module_is_bound_with(service, self.module) is False
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        assert mgr.module_is_bound_with(service, bk_module) is False
 
-        mgr.bind_service(service, self.module)
-        assert mgr.module_is_bound_with(service, self.module) is True
+        mgr.bind_service(service, bk_module)
+        assert mgr.module_is_bound_with(service, bk_module) is True
 
-    def test_get_attachment_by_instance_id(self):
+    def test_get_attachment_by_instance_id(self, bk_module):
         expect_obj: Dict[UUID, ServiceEngineAppAttachment] = {}
 
         mgr = LocalServiceMgr()
-        svc = mgr.find_by_name(name="mysql", region=self.module.region)
+        svc = mgr.find_by_name(name="mysql", region=bk_module.region)
 
         # 绑定服务并创建服务实例
-        mgr.bind_service(svc, self.module)
-        for env in self.module.envs.all():
+        mgr.bind_service(svc, bk_module)
+        for env in bk_module.envs.all():
             for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app, svc):
                 plan = rel.get_plan()
                 if plan.is_eager:
@@ -248,29 +258,32 @@ class TestLocalMgr(BaseTestCaseWithApp):
             assert mgr.get_attachment_by_instance_id(svc, service_instance_id) == expect_obj[service_instance_id]
 
 
-class TestLocalRabbitMQMgr(BaseTestCaseWithApp):
-    app_region = "r1"
+class TestLocalRabbitMQMgr:
+    @pytest.fixture(autouse=True)
+    def svc(self, bk_app):
+        """Create a local service object."""
+        category = G(ServiceCategory, id=Category.DATA_STORAGE)
+        svc = G(Service, name="rabbitmq", category=category, region=bk_app.region, logo_b64="dummy")
+        # Create 2 inactive plans
+        G(Plan, name="no-ha", service=svc, config="{}", is_active=False)
+        G(Plan, name="ha", service=svc, config="{}", is_active=False)
+        return svc
 
-    def setUp(self):
-        super().setUp()
-        self.category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        self.svc = G(Service, name="rabbitmq", category=self.category, region=self.app_region, logo_b64="dummy")
-        # Create default plans
-        self.plan_default = G(Plan, name="no-ha", service=self.svc, config="{}", is_active=False)
-        self.plan_ha = G(Plan, name="ha", service=self.svc, config="{}", is_active=False)
-
-    def test_bind_service(self):
+    def test_bind_service(self, svc, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
+        service = mgr.get(svc.uuid, region=bk_module.region)
 
-        with self.assertRaisesMessage(RuntimeError, "can not bind a plan"):
-            mgr.bind_service(service, self.module)
+        with pytest.raises(BindServiceNoPlansError):
+            mgr.bind_service(service, bk_module)
 
-    def test_list_by_category(self):
+    def test_list_by_category(self, svc, bk_app):
         mgr = LocalServiceMgr()
         found = False
-        for service in mgr.list_by_category(category_id=self.category.id, region=self.app_region, include_hidden=True):
-            if service.uuid == str(self.svc.uuid):
+        for service in mgr.list_by_category(
+            category_id=Category.DATA_STORAGE, region=bk_app.region, include_hidden=True
+        ):
+            if service.uuid == str(svc.uuid):
                 found = True
+                break
 
         assert found

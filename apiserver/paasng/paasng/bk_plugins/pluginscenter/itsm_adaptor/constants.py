@@ -25,6 +25,7 @@ class ApprovalServiceName(str, StructuredEnum):
 
     CREATE_APPROVAL = EnumField("create_approval", label=_("插件上线审批"))
     ONLINE_APPROVAL = EnumField("online_approval", label=_("插件创建审批流程"))
+    VISIBLE_RANGE_APPROVAL = EnumField("visible_range_approval", label=_("插件可见范围修改审批流程"))
 
 
 class ItsmTicketStatus(str, StructuredEnum):
@@ -37,3 +38,7 @@ class ItsmTicketStatus(str, StructuredEnum):
     TERMINATED = EnumField("TERMINATED", label=_("被终止"))
     # 申请人撤销
     REVOKED = EnumField("REVOKED", label=_("被撤销"))
+
+    @classmethod
+    def completed_status(cls):
+        return [cls.FINISHED, cls.TERMINATED, cls.REVOKED]

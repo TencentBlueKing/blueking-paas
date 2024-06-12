@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import datetime
 import logging
 import re
@@ -344,7 +345,11 @@ class SourcePackage(OwnerTimestampedModel):
 
 @dataclass
 class SPStat:
-    """Stat info ob SourcePackage"""
+    """SourcePackage stats.
+
+    :param name: The package file name, e.g. 'foo-1.0.0.tar.gz'.
+    :param version: The version number parsed from the package, e.g. '1.0.0'.
+    """
 
     name: str
     version: str

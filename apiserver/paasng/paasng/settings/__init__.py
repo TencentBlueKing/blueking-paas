@@ -648,8 +648,8 @@ IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_SMART_APP_B
 # 是否默认允许创建云原生应用
 IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT", False)
 
-# 云原生应用的默认集群名称
-CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
+# 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
+MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = settings.get("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", "")
 
 # 新建的 lesscode 应用是否为云原生应用
 LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE_TYPE", True)
@@ -944,6 +944,8 @@ BK_PLUGIN_CONFIG = settings.get("BK_PLUGIN_CONFIG", {"allow_creation": IS_ALLOW_
 BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get("BK_PLUGIN_APIGW_SERVICE_STAGE", "prod")  # 环境（stage）
 BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE = settings.get("BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE", "default")  # 用户类型
 
+# 插件仓库的可见范围:私有项目 visibility_level = 0; 公共项目 visibility_level = 10
+PLUGIN_VISIBILTY_LEVEL = settings.get("PLUGIN_VISIBILTY_LEVEL", 10)
 
 # -------------
 # 引擎相关配置项
@@ -1228,10 +1230,11 @@ SMART_DOCKER_REGISTRY_USERNAME = settings.get("SMART_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking")
 # S-Mart 基础镜像信息
+_SMART_TAG_SUFFIX = "smart"
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = "heroku-18-v1.6.1"
+SMART_IMAGE_TAG = f'{settings.get("APP_IMAGE", "").partition(":")[-1]}-{_SMART_TAG_SUFFIX}'
 SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
-SMART_CNB_IMAGE_TAG = "heroku-18-v1.4.0"
+SMART_CNB_IMAGE_TAG = f'{settings.get("HEROKU_RUNNER_IMAGE", "").partition(":")[-1]}-{_SMART_TAG_SUFFIX}'
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))

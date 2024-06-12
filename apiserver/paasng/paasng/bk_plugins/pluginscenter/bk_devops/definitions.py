@@ -117,6 +117,19 @@ class PipelineBuildStatus(BaseModel):
         allow_population_by_field_name = True
 
 
+@register
+class AdditionalOptions(BaseModel):
+    """流水线构建状态额外配置
+
+    :param elementPostInfo: 后置状态信息，如果存在这个字段说明这个步骤是后置步骤，前端不展示出来
+    """
+
+    elementPostInfo: Optional[dict]
+
+    class Config:
+        allow_population_by_field_name = True
+
+
 @register(by_alias=False)
 class PipelineElementModel(BaseModel):
     """流水线元素模型
@@ -147,6 +160,8 @@ class PipelineElementModel(BaseModel):
     errorCode: Optional[int]
     errorMsg: Optional[str]
     timeCost: Optional[TimeCost]
+
+    additionalOptions: Optional[AdditionalOptions]
 
     class Config:
         allow_population_by_field_name = True

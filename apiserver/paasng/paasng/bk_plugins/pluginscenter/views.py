@@ -46,7 +46,10 @@ from paasng.bk_plugins.pluginscenter.filters import PluginInstancePermissionFilt
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import submit_create_approval_ticket
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    submit_create_approval_ticket,
+    submit_visible_range_ticket,
+)
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginBasicInfoDefinition,
@@ -55,6 +58,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStrategy,
+    PluginVisibleRange,
 )
 from paasng.bk_plugins.pluginscenter.permissions import IsPluginCreator, PluginCenterFeaturePermission
 from paasng.bk_plugins.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
@@ -84,6 +88,8 @@ class SchemaViewSet(ViewSet):
         for pd in PluginDefinition.objects.all():
             basic_info_definition = pd.basic_info_definition
             pd_data = serializers.PluginDefinitionSLZ(pd).data
+            basic_info = serializers.PluginBasicInfoDefinitionSLZ(basic_info_definition).data
+
             extra_fields = basic_info_definition.extra_fields
             # 当前语言为英文，且定义了英文字段则返回英文字段的定义
             if get_language() == "en" and basic_info_definition.extra_fields:
@@ -91,13 +97,16 @@ class SchemaViewSet(ViewSet):
             schemas.append(
                 {
                     "plugin_type": pd_data,
+                    "basic_info": basic_info,
                     "schema": {
                         "id": basic_info_definition.id_schema.dict(exclude_unset=True),
                         "name": basic_info_definition.name_schema.dict(exclude_unset=True),
                         "init_templates": cattr.unstructure(basic_info_definition.init_templates),
                         "release_method": basic_info_definition.release_method,
                         "repository_group": basic_info_definition.repository_group,
-                        "repository_template": shim.build_repository_template(basic_info_definition.repository_group),
+                        "repository_template": shim.build_repository_template(
+                            pd, basic_info_definition.repository_group
+                        ),
                         "extra_fields": cattr.unstructure(extra_fields),
                         "extra_fields_order": cattr.unstructure(basic_info_definition.extra_fields_order),
                     },
@@ -219,6 +228,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             language=validated_data["template"].language,
             **validated_data,
             creator=request.user.pk,
+            # 插件发布者默认是工具创建者
+            publisher=request.user.username,
             # 如果插件不需要审批，则状态设置为开发中
             status=plugin_status,
         )
@@ -245,7 +256,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
     def retrieve(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance(allow_archive=True)
-        return Response(data=self.get_serializer(plugin).data)
+        return Response(data=serializers.PluginInstanceDetailSLZ(plugin).data)
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubUpdatePluginSLZ)
@@ -315,6 +326,35 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.BASIC_INFO,
+        )
+        return Response(data=self.get_serializer(plugin).data)
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.PluginPublisher)
+    @_permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.EDIT_PLUGIN])]
+    )
+    def update_publisher(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        slz = serializers.PluginPublisher(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        plugin.publisher = validated_data["publisher"]
+        plugin.save()
+
+        if pd.basic_info_definition.api.update:
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 修改发布者
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.PUBLISHER,
         )
         return Response(data=self.get_serializer(plugin).data)
 
@@ -1141,3 +1181,50 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
             subject=constants.SubjectTypes.CONFIG_INFO,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, GenericViewSet):
+    serializer_class = serializers.PluginVisibleRangeSLZ
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.EDIT_PLUGIN]),
+    ]
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.PluginVisibleRangeUpdateSLZ)
+    def update(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+
+        visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+        if visible_range_obj.is_in_approval:
+            raise error_codes.VISIBLE_RANGE_UPDATE_FAIELD.f(_("可见范围修改失败：正在审批中"))
+
+        slz = serializers.PluginVisibleRangeUpdateSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        # 仅创建 ITSM 审批单据并将状态设置为审批中，单据审批成功后才将可见范围的数据同步到 DB
+        itsm_detail = submit_visible_range_ticket(
+            pd,
+            plugin,
+            request.user.username,
+            visible_range_obj,
+            validated_data["bkci_project"],
+            validated_data["organization"],
+        )
+
+        # 更新可见范围状态
+        visible_range_obj.is_in_approval = True
+        visible_range_obj.itsm_detail = itsm_detail
+        visible_range_obj.save()
+
+        # 操作记录: 修改发布者
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.VISIBLE_RANGE,
+        )
+        return Response(data=self.get_serializer(visible_range_obj).data)

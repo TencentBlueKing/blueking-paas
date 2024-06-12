@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from unittest import mock
 
 import pytest
@@ -65,7 +66,7 @@ def v2_mapper(process):
 
 
 class TestProcInstManager:
-    """TestCases for ProcInst"""
+    """Test cases for ProcInst"""
 
     @pytest.fixture()
     def pod(self, wl_app, release, client, process_manager, process, v2_mapper):
@@ -176,7 +177,7 @@ class TestProcInstManager:
 
 
 class TestProcSpecsManager:
-    """TestCases for ProcSpecs"""
+    """Test cases for ProcSpecs"""
 
     @pytest.fixture()
     def process(self, wl_app, release, process_manager, process, v2_mapper):

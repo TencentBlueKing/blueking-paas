@@ -32,6 +32,7 @@ from .instances import (
     PluginRelease,
     PluginReleaseStage,
     PluginReleaseStrategy,
+    PluginVisibleRange,
 )
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "ApprovalService",
     "OperationRecord",
     "PluginReleaseStrategy",
+    "PluginVisibleRange",
 ]

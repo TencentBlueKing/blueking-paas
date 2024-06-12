@@ -234,6 +234,14 @@ def online_approval_service():
 
 
 @pytest.fixture()
+def visible_range_approval_service():
+    svc: ApprovalService = G(
+        ApprovalService, service_name=ApprovalServiceName.VISIBLE_RANGE_APPROVAL.value, service_id=3
+    )
+    return svc
+
+
+@pytest.fixture()
 def thirdparty_client():
     with mock.patch("paasng.bk_plugins.pluginscenter.thirdparty.utils.DynamicClient") as cls:
         yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group

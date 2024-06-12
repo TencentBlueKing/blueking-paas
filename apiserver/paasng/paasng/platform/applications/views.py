@@ -107,7 +107,10 @@ from paasng.platform.applications.utils import (
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
+from paasng.platform.evaluation.constants import OperationIssueType
+from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.platform.mgrlegacy.constants import LegacyAppState
+from paasng.platform.mgrlegacy.migrate import get_migration_process_status
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.protections import ModuleDeletionPreparer
@@ -184,6 +187,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                 "marked": application.id in marked_application_ids,
                 # 应用市场访问地址信息
                 "market_config": MarketConfig.objects.get_or_create_by_app(application)[0],
+                "migration_status": get_migration_process_status(application),
             }
             for application in page_applications
         ]
@@ -249,6 +253,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                     application=application, owner=request.user.pk
                 ).exists(),
                 "web_config": web_config,
+                "migration_status": get_migration_process_status(application),
             }
         )
 
@@ -280,6 +285,27 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         serializer = slzs.ApplicationMinimalSLZ(applications, many=True)
         return Response({"count": len(applications), "results": serializer.data})
+
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取闲置的应用列表",
+        responses={200: slzs.IdleApplicationListOutputSLZ()},
+    )
+    def list_idle(self, request):
+        """获取闲置的应用列表"""
+        app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
+
+        latest_collected_at = None
+        if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            latest_collected_at = collect_task.start_at
+
+        resp_data = {
+            "collected_at": latest_collected_at,
+            "applications": AppOperationReport.objects.filter(
+                app__code__in=app_codes, issue_type=OperationIssueType.IDLE
+            ),
+        }
+        return Response(data=slzs.IdleApplicationListOutputSLZ(resp_data).data)
 
     def destroy(self, request, code):
         """

@@ -2,6 +2,13 @@
   <div class="nav-wrapper">
     <div :class="['title', 'pt15', { pb15: !navList.length }, { 'fixed-height': !navList.length }]">
       {{ title }}
+      <div
+        v-if="isMigrationProgress"
+        class="migration-progress"
+        @click.stop="handleShowAppMigrationDialog">
+        <i class="paasng-icon paasng-qianyi-mianxing" />
+        <span>{{ $t('迁移进度') }}</span>
+      </div>
       <!-- 模块列表 -->
       <div class="module-select-wrapper">
         <bk-select
@@ -110,6 +117,11 @@ export default defineComponent({
         return [];
       },
     },
+    // 迁移进度
+    isMigrationProgress: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup(props, { emit }) {
     const curActive = ref(props.active || props.navList[0]?.name);
@@ -144,12 +156,17 @@ export default defineComponent({
       curActive.value = props.active || list[0]?.name;
     });
 
+    const handleShowAppMigrationDialog = () => {
+      emit('migration-dialog', true);
+    };
+
     return {
       curActive,
       curModelName,
       handleTabChange,
       handleRightConfigClick,
       handleChangeModule,
+      handleShowAppMigrationDialog,
     };
   },
 });
@@ -189,6 +206,17 @@ export default defineComponent({
 
     &:hover {
       background: #eaebf0;
+    }
+  }
+  .migration-progress {
+    color: #3a84ff;
+    font-size: 12px;
+    cursor: pointer;
+    i {
+      margin-right: 5px;
+      margin-left: 14px;
+      font-size: 14px;
+      transform: translateY(0);
     }
   }
 }

@@ -244,7 +244,7 @@ auth.requestCurrentUser().then((user) => {
       methods: {},
       template: '<App />',
     });
-
+    bus.$emit('on-user-data', user);
     window.GLOBAL_I18N = global.paasVue;
   }
 }, (err) => {

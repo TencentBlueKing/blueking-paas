@@ -170,8 +170,8 @@
 # IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT: true
 ## 是否默认允许创建云原生应用
 # IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT: false
-## 云原生应用的默认集群名称
-# CLOUD_NATIVE_APP_DEFAULT_CLUSTER: ""
+## 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
+# MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER: ""
 ## 是否允许创建蓝鲸插件应用
 # IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 ## 新建的 lesscode 应用是否为云原生应用
@@ -620,6 +620,9 @@
 ## 是否使用 DockerRegistryToken 来验证，为 false 时使用 HTTPBasicAuthentication
 # SMART_DOCKER_AUTH_BY_TOKEN: true
 
+## 如果用到 python manage.py push_smart_image, SMART_IMAGE_TAG 和 SMART_CNB_IMAGE_TAG 必须设置有效值
+# SMART_IMAGE_TAG: v0.0.1-smart
+# SMART_CNB_IMAGE_TAG: v0.0.1-smart
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 

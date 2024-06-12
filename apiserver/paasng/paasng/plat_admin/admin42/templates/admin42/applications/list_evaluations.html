@@ -3,7 +3,15 @@
 {% load admin_utils %}
 
 {% block main_content %}
-<div id="evaluation-list" class="p20">
+<div id="evaluation-list" class="p10">
+    <div class="mb15" v-if="collect_task">
+        <h5>最新采集任务:</h5>
+        <span>开始时间：$[collect_task.start_at]</span>
+        <span class="ml25">耗时：$[collect_task.duration]</span>
+        <span class="ml25">总 / 成 / 败：$[collect_task.total_count] / $[collect_task.succeed_count] / $[collect_task.failed_count]</span>
+        <span class="ml25">状态：$[collect_task.status]</span>
+        <hr/>
+    </div>
     <div class="mb15" style="display: flex; justify-content: space-between">
         <bk-input
             placeholder="输入应用 Code 或名称，按 Enter 进行模糊搜索"
@@ -18,7 +26,7 @@
         </bk-button>
     </div>
     <div class="mb15">
-        <p>按问题类型过滤：</p>
+        <h5>按问题类型过滤：</h5>
         <bk-radio-group v-model="issueType" @change="handleSearch">
             <bk-radio value="" class="m5">
                 <i class="bk-icon">不过滤</i>
@@ -29,8 +37,14 @@
             <bk-radio value="ownerless" class="m5">
                 <i class="bk-icon">无主</i>
             </bk-radio>
-            <bk-radio value="inactive" class="m5">
-                <i class="bk-icon">不活跃</i>
+            <bk-radio value="idle" class="m5">
+                <i class="bk-icon">闲置</i>
+            </bk-radio>
+            <bk-radio value="unvisited" class="m5">
+                <i class="bk-icon">无用户访问</i>
+            </bk-radio>
+            <bk-radio value="maintainless" class="m5">
+                <i class="bk-icon">缺少维护</i>
             </bk-radio>
             <bk-radio value="undeploy" class="m5">
                 <i class="bk-icon">未部署/已下线</i>
@@ -125,17 +139,39 @@
         </bk-container>
         <h4 class="mt20">模块进程</h4>
         <bk-collapse accordion>
-            <bk-collapse-item v-for="module in dialog.form.res_summary.modules" :name="module.module_name">
-                $[ module.module_name ]
+            <bk-collapse-item v-for="(module, module_name) in dialog.form.res_summary.modules" :name="module_name">
+                <!-- 如果该模块的某个环境有问题，则提示感叹号 -->
+                $[ module_name ] <span v-if="hasEvaluateIssues(module_name)">❗</span>
                 <div slot="content">
                     <bk-tab type="unborder-card">
                         <bk-tab-panel
                             v-for="(panel, index) in dialog.env_panels"
                             v-bind="panel"
                             :key="index">
+                            <!-- 如果该环境有问题，则提示感叹号 -->
+                            <template slot="label">
+                                <span> $[panel.label] </span>
+                                <i v-if="hasEvaluateIssues(module_name, panel.name)">❗</i>
+                            </template>
+                            <div v-if="hasEvaluateIssues(module_name, panel.name)">
+                                <bk-alert type="error" :title="getEnvEvaluateIssues(module_name, panel.name)"></bk-alert>
+                            </div>
+                            <bk-container :col="3">
+                                <bk-row>
+                                    <bk-col><label class="m10">CPU 平均使用率（7d）:</label> $[ getEnvResSummary(module_name, panel.name).cpu_usage_avg * 100 ] %</bk-col>
+                                    <bk-col><label class="m10">内存平均使用率（7d）:</label> $[ getEnvResSummary(module_name, panel.name).mem_usage_avg * 100 ] %</bk-col>
+                                </bk-row>
+                                <bk-row>
+                                    <bk-col><label class="m10">PV（30d）:</label> $[ getEnvVisitSummary(module_name, panel.name).pv ]</bk-col>
+                                    <bk-col><label class="m10">UV（30d）:</label> $[ getEnvVisitSummary(module_name, panel.name).uv ]</bk-col>
+                                    <bk-col><label class="m10">最近部署时间:</label> $[ getEnvDeploySummary(module_name, panel.name).latest_deployed_at ]</bk-col>
+                                </bk-row>
+                            </bk-container>
+                            <hr />
+                            <h5>进程详情：</h5>
                             <bk-container :col="5" v-for="proc in getEnvProcs(module, panel.name)" v-if="proc.quota">
                                 <bk-row>
-                                    <bk-col><label class="m10">进程名称:</label><b>$[proc.name]</b></bk-col>
+                                    <bk-col><label class="m10">进程名称:</label><b> $[proc.name] </b></bk-col>
                                     <bk-col><label class="m10">副本数量:</label> $[proc.replicas]</bk-col>
                                     <bk-col><label class="m10">资源套餐:</label> $[proc.current_plan]</bk-col>
                                 </bk-row>
@@ -177,6 +213,7 @@
 
 {% block main_script %}
 <script>
+const collect_task = {{ latest_collect_task | default:"null" | safe }}
 const pagination = {{ pagination | to_json }}
 const data = {{ usage_report_list | to_json }}
 const SEARCH_PARAM = "search_term"
@@ -199,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return {
                 data,
                 pagination,
+                collect_task,
                 appOverviewUrl: '{% url "admin.applications.detail.overview" "app_code" %}',
                 dataExportUrl: '{% url "admin.applications.operation_evaluation.export" %}',
                 SEARCH_PARAM,
@@ -210,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     form: {
                         res_summary: {
                             modules: []
-                        }
+                        },
                     },
                     env_panels: [
                         {"name": "prod", "label": "生产环境"},
@@ -227,11 +265,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.form = row
                 this.dialog.visible = true
             },
-            getEnvProcs(module, tab_name) {
-                if (tab_name === "prod") {
-                    return module.prod_procs
+            getEnvResSummary(module_name, env_name) {
+                return this.dialog.form.res_summary.modules[module_name].envs[env_name]
+            },
+            getEnvVisitSummary(module_name, env_name) {
+                return this.dialog.form.visit_summary.modules[module_name].envs[env_name]
+            },
+            getEnvDeploySummary(module_name, env_name) {
+                return this.dialog.form.deploy_summary.modules[module_name].envs[env_name]
+            },
+            getEnvEvaluateResult(module_name, env_name) {
+                return this.dialog.form.evaluate_result.modules[module_name].envs[env_name]
+            },
+            hasEvaluateIssues(module_name, env_name) {
+                let stag_env_has_issues = this.getEnvEvaluateResult(module_name, "stag").issue_type !== "none"
+                let prod_env_has_issues = this.getEnvEvaluateResult(module_name, "prod").issue_type !== "none"
+
+                if (env_name === "stag") {
+                    return stag_env_has_issues
+                } else if (env_name === "prod") {
+                    return prod_env_has_issues
                 }
-                return module.stag_procs
+                return stag_env_has_issues || prod_env_has_issues
+            },
+            getEnvEvaluateIssues(module_name, env_name) {
+                let result = this.getEnvEvaluateResult(module_name, env_name)
+                if (result.issue_type === "none") {
+                    return ""
+                }
+                issue_type_display = {
+                    "ownerless": "无主",
+                    "idle": "闲置",
+                    "unvisited": "无用户访问",
+                    "maintainless": "缺少维护",
+                    "undeploy": "未部署/已下线",
+                    "misconfigured": "配置不当"
+                }[result.issue_type]
+
+                return `${issue_type_display}：${result.issues.join(", ")}`
+            },
+            getEnvProcs(module, tab_name) {
+                return module.envs[tab_name].procs
             },
             handleSortChange({column, prop, order}) {
                 if (!prop) {

@@ -16,14 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import TYPE_CHECKING, List, Optional
 
-from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.utils.configs import get_region_aware
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
@@ -44,10 +43,6 @@ class RegionClusterService:
         if qs.exists():
             return qs[0]
         raise Cluster.DoesNotExist(f"Default cluster not found for {self.region}")
-
-    def get_cnative_app_default_cluster(self) -> Cluster:
-        default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", self.region)
-        return self.get_cluster_by_name(default_cluster_name)
 
     def get_cluster_by_name(self, cluster_name: str) -> Cluster:
         return Cluster.objects.get(region=self.region, name=cluster_name)
@@ -75,11 +70,6 @@ class EnvClusterService:
 
         if wl_app.latest_config.cluster:
             return wl_app.latest_config.cluster
-
-        # 云原生应用需要用自己的默认集群
-        if wl_app.type == WlAppType.CLOUD_NATIVE:
-            return self._get_cnative_app_default_cluster(region).name
-
         return RegionClusterService(region).get_default_cluster().name
 
     def bind_cluster(self, cluster_name: Optional[str]):
@@ -92,16 +82,10 @@ class EnvClusterService:
 
         if cluster_name:
             cluster = Cluster.objects.get(name=cluster_name)
-        elif wl_app.type == WlAppType.CLOUD_NATIVE:
-            # 云原生应用需要用自己的默认集群
-            cluster = self._get_cnative_app_default_cluster(region)
         else:
             cluster = RegionClusterService(region).get_default_cluster()
 
         _bind_cluster_to_wl_app(wl_app, cluster)
-
-    def _get_cnative_app_default_cluster(self, region):
-        return RegionClusterService(region).get_cnative_app_default_cluster()
 
 
 def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):

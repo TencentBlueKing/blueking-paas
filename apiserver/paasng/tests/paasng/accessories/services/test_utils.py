@@ -16,17 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from dataclasses import dataclass
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
-from django.test import TestCase
 
 from paasng.accessories.services.utils import Base36Handler, WRItemList, gen_unique_id, get_vendor_config
 
 logger = logging.getLogger(__name__)
+
+pytestmark = pytest.mark.django_db
 
 
 def test_get_vendor_config(settings):
@@ -45,7 +47,7 @@ def test_get_vendor_config_not_configured(settings):
         assert get_vendor_config("foo", result_cls=type)
 
 
-class TestWRR(TestCase):
+class TestWRR:
     def test_normal(self):
         wr_list = WRItemList.from_json([{"values": "foo", "weight": 1}])
         assert wr_list.get().values == "foo"
@@ -80,44 +82,44 @@ class TestWRR(TestCase):
         assert sum([r == "bar" for r in results]) > 450
 
 
-class TestGetUniqueID(TestCase):
-    @classmethod
-    def setUpTestData(cls):
+class TestGetUniqueID:
+    @pytest.fixture(autouse=True)
+    def _setup_data(self):
         with connections["default"].cursor() as cursor:
             # make a big id
             cursor.execute("ALTER table services_resourceid AUTO_INCREMENT=1000")
 
-    def setUp(self) -> None:
+    @pytest.fixture()
+    def latest_id(self) -> None:
         with connections["default"].cursor() as cursor:
             cursor.execute("INSERT INTO services_resourceid (namespace, uid) VALUES ('default', 'foo')")
             cursor.execute("SELECT LAST_INSERT_ID()")
-            self.latest_id = cursor.fetchone()[0] + 1
+            return cursor.fetchone()[0] + 1
 
-    def test_normal(self):
+    def test_normal(self, latest_id):
         uid = "some-app"
+        assert gen_unique_id(uid) == f"some-app-{Base36Handler.encode(latest_id)}"
 
-        assert gen_unique_id(uid) == f"some-app-{Base36Handler.encode(self.latest_id)}"
-
-    def test_max_length(self):
+    def test_max_length(self, latest_id):
         # len(uid) is 14
         uid = "some-some-some"
         # Base62Handler.encode(1000) is 'rs', so reserve length of uid is 16 - 3 = 13
-        assert gen_unique_id(uid) == f"some-some-som-{Base36Handler.encode(self.latest_id)}"
+        assert gen_unique_id(uid) == f"some-some-som-{Base36Handler.encode(latest_id)}"
         # 14 + len("-rs") is 17
-        assert gen_unique_id(uid, max_length=20) == f"some-some-some-{Base36Handler.encode(self.latest_id+1)}"
+        assert gen_unique_id(uid, max_length=20) == f"some-some-some-{Base36Handler.encode(latest_id+1)}"
 
         # the length of six "some" is 24
         uid = "somesomesomesomesomesome"
         assert len(gen_unique_id(uid)) == 16
         assert len(gen_unique_id(uid, max_length=20)) == 20
 
-    def test_divide_char(self):
+    def test_divide_char(self, latest_id):
         uid = "some-some-some"
-        assert gen_unique_id(uid, divide_char="/") == f"some-some-som/{Base36Handler.encode(self.latest_id)}"
+        assert gen_unique_id(uid, divide_char="/") == f"some-some-som/{Base36Handler.encode(latest_id)}"
 
-    def test_divide_char_max_length(self):
+    def test_divide_char_max_length(self, latest_id):
         # length: 19
         uid = "some-some-some-some"
 
         # len("////") + len('rs') is 6, so reserve length of original uid is 10
-        assert gen_unique_id(uid, divide_char="////") == f"some-some-////{Base36Handler.encode(self.latest_id)}"
+        assert gen_unique_id(uid, divide_char="////") == f"some-some-////{Base36Handler.encode(latest_id)}"

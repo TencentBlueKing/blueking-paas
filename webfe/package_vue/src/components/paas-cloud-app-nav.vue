@@ -1,5 +1,9 @@
 <template lang="html">
   <ul class="app-nav">
+    <!-- 云原生导航栏 -->
+    <div v-if="isMigrationEntryShown" class="migration-app-btn" @click="handleShowAppMigrationDialog">
+      {{ $t('迁移为云原生应用') }}
+    </div>
     <template v-for="(category, categoryIndex) in navTree">
       <li
         v-if="category.children && category.children.length"
@@ -58,9 +62,15 @@
 </template>
 
 <script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
-import _ from 'lodash';
+import { cloneDeep } from 'lodash';
 
 export default {
+  props: {
+    isMigrationEntryShown: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       navTree: [],
@@ -88,11 +98,15 @@ export default {
         'cloudAppImageList',
         'cloudAppBuildHistory',
         'networkConfig',
+        // 迁移信息
+        'appMigrationInfo',
       ],
       allNavItems: [],
       region: 'ieod',
       roleAllowRouters: {
         administrator: [
+          // 迁移信息
+          'appMigrationInfo',
           // 概览
           'cloudAppSummary',
           // 应用编排
@@ -153,6 +167,8 @@ export default {
           'networkConfig',
         ],
         developer: [
+          // 迁移信息
+          'appMigrationInfo',
           // 概览
           'cloudAppSummary',
           // 应用编排
@@ -235,6 +251,10 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
+    // 是否展示迁移信息
+    isMigrationInfoShown() {
+      return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status === 'migration_succeeded';
+    },
   },
   watch: {
     curAppInfo() {
@@ -243,7 +263,7 @@ export default {
     'curAppInfo.feature': {
       handler(newValue, oldValue) {
         if (!Object.keys(newValue).length) {
-          this.curAppInfo.feature = _.cloneDeep(oldValue);
+          this.curAppInfo.feature = cloneDeep(oldValue);
         }
         this.init();
       },
@@ -268,6 +288,7 @@ export default {
       if (isReload) {
         this.navTree = await this.initNavByRegion(appNav.cloudList);
         await this.initRouterPermission();
+        this.redirectRoute(this.curRouteName);
       }
 
       await this.selectRouterByName(this.curRouteName);
@@ -313,6 +334,11 @@ export default {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
             }
           });
+        }
+
+        // 迁移中的应用展示迁移信息
+        if (!this.isMigrationInfoShown) {
+          navTree = navTree.filter(nav => nav.name !== 'appMigrationInfo');
         }
 
         // 当角色为开发者时，过滤部分功能入口
@@ -430,6 +456,8 @@ export default {
         'cloudAppImageList',
         'cloudAppBuildHistory',
         'networkConfig',
+        // 迁移信息
+        'appMigrationInfo',
       ];
 
       this.navTree.forEach((nav) => {
@@ -703,6 +731,27 @@ export default {
         done();
       });
     },
+
+    // 迁移应用弹窗
+    handleShowAppMigrationDialog() {
+      this.$emit('show-migration-dialog', {
+        visible: true,
+        data: this.curAppInfo.application,
+      });
+    },
+
+    // 当前应用切换为无迁移信息应用，跳转至概览
+    redirectRoute(routeName) {
+      const isCloudApp = this.curAppInfo.application?.type === 'cloud_native';
+      if (routeName === 'appMigrationInfo' && isCloudApp && !this.isMigrationInfoShown) {
+        this.$router.push({
+          name: 'cloudAppSummary',
+          params: {
+            id: this.curAppInfo.application.code,
+          },
+        });
+      }
+    },
   },
 };
 </script>
@@ -712,6 +761,22 @@ export default {
   padding-top: 9px;
   width: 240px;
   margin-top: 1px;
+
+  .migration-app-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 16px;
+    height: 32px;
+    background: #F0F5FF;
+    border-radius: 2px;
+    font-size: 12px;
+    color: #3A84FF;
+    cursor: pointer;
+    &:hover {
+      background: #E1ECFF;
+    }
+  }
 
   > li {
     width: 100%;

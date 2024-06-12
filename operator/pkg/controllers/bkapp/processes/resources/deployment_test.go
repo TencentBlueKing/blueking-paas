@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -142,6 +143,64 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			By("Check the env variables in the args have been replaced")
 			Expect(c.Args).To(Equal([]string{"start", "-l", "example.com:$(PORT)"}))
 			Expect(c.Ports).To(Equal([]corev1.ContainerPort{{ContainerPort: 8081}}))
+		})
+	})
+
+	Context("container probes field", func() {
+		It("no probes", func() {
+			d, _ := BuildProcDeployment(bkapp, "web")
+			c := d.Spec.Template.Spec.Containers[0]
+			Expect(c.LivenessProbe).To(BeNil())
+			Expect(c.ReadinessProbe).To(BeNil())
+			Expect(c.StartupProbe).To(BeNil())
+		})
+
+		It("standard probes", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Liveness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(8080),
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+				Readiness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/healthz",
+							Port: intstr.FromInt(80),
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+			}
+			d, _ := BuildProcDeployment(bkapp, "web")
+			c := d.Spec.Template.Spec.Containers[0]
+			Expect(c.LivenessProbe.TCPSocket.Port.IntValue()).To(Equal(8080))
+			Expect(c.ReadinessProbe.HTTPGet.Path).To(Equal("/healthz"))
+			Expect(c.ReadinessProbe.HTTPGet.Port.IntValue()).To(Equal(80))
+			Expect(c.StartupProbe.Exec.Command).To(Equal([]string{"echo", "I'm ready!"}))
 		})
 	})
 

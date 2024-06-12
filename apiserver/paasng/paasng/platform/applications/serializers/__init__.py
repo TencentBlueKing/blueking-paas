@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from .app import (
     ApplicationFeatureFlagSLZ,
     ApplicationGroupFieldSLZ,
@@ -35,6 +36,7 @@ from .app import (
     CreateCloudNativeApplicationSLZ,
     CreateThirdPartyApplicationSLZ,
     EnvironmentDeployInfoSLZ,
+    IdleApplicationListOutputSLZ,
     MarketAppMinimalSLZ,
     MarketConfigSLZ,
     ModuleEnvSLZ,
@@ -45,7 +47,7 @@ from .app import (
     UpdateApplicationSLZ,
 )
 from .cnative import CreateCloudNativeAppSLZ
-from .fields import AppIDField, ApplicationField, AppNameField
+from .fields import AppIDField, AppIDSMartField, ApplicationField, AppNameField
 from .light_app import LightAppCreateSLZ, LightAppDeleteSLZ, LightAppEditSLZ, LightAppQuerySLZ
 from .member_role import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ, RoleField
 from .validators import AppIDUniqueValidator
@@ -74,10 +76,12 @@ __all__ = [
     "ProductSLZ",
     "ProtectionStatusSLZ",
     "SearchApplicationSLZ",
+    "IdleApplicationListOutputSLZ",
     "SysThirdPartyApplicationSLZ",
     "UpdateApplicationSLZ",
     "CreateCloudNativeAppSLZ",
     "AppIDField",
+    "AppIDSMartField",
     "ApplicationField",
     "AppNameField",
     "LightAppCreateSLZ",

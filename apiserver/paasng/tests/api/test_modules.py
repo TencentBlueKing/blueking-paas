@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from unittest import mock
 
@@ -31,7 +32,6 @@ from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import generate_random_string, initialize_module
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -115,7 +115,6 @@ class TestModuleCreation:
 class TestCreateCloudNativeModule:
     @pytest.fixture(autouse=True)
     def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
-        settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
     def test_create_with_image(self, bk_cnative_app, api_client):

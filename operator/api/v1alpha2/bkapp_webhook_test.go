@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
@@ -258,6 +259,247 @@ var _ = Describe("test webhook.Validator", func() {
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
+		})
+	})
+
+	Context("Test process probes", func() {
+		It("standard", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Liveness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(80),
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+				Readiness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/healthz",
+							Port: intstr.FromInt(80),
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("invalid probe", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Liveness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("at least one probe type must be specified"))
+		})
+
+		It("exec empty command", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Liveness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{},
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("command must not be empty"))
+		})
+
+		It("httpGet empty path", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Readiness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "",
+							Port: intstr.FromInt(80),
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("path must not be empty"))
+		})
+
+		It("invalid httpGet port", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Readiness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ping",
+							Port: intstr.FromInt(98765),
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("port must be between 1 and 65535"))
+		})
+
+		It("invalid tcpSocket port", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(98765),
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("port must be between 1 and 65535"))
+		})
+
+		It("multiple probe kinds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(56789),
+						},
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("only one probe type can be specified"))
+		})
+
+		It("invalid initialDelaySeconds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 301,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "initialDelaySeconds must be between 0 and 300"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.InitialDelaySeconds = -1
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid timeoutSeconds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      0,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "timeoutSeconds must be between 1 and 60"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.TimeoutSeconds = 61
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid periodSeconds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       1,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "periodSeconds must be between 2 and 300"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.PeriodSeconds = 301
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid successThreshold", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       3,
+					SuccessThreshold:    0,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "successThreshold must be between 1 and 3"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.SuccessThreshold = 4
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid failureThreshold", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       3,
+					SuccessThreshold:    1,
+					FailureThreshold:    0,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "failureThreshold must be between 1 and 50"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.FailureThreshold = 51
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
 		})
 	})
 

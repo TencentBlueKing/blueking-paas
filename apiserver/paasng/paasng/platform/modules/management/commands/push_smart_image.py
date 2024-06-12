@@ -21,15 +21,29 @@ import os
 import pathlib
 import shutil
 import tempfile
+from typing import Dict
 
 from django.core.management.base import BaseCommand
 from moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef
 from moby_distribution.registry.utils import parse_image
 
+from paasng.platform.modules.constants import AppImageType
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
+
+
+DEST_IMAGE_CONFIGS: Dict[str, Dict] = {
+    AppImageType.CNB.value: {
+        "repo": bksmart_settings.cnb_base_image.name,
+        "reference": bksmart_settings.cnb_base_image.tag,
+    },
+    AppImageType.LEGACY.value: {
+        "repo": bksmart_settings.base_image.name,
+        "reference": bksmart_settings.base_image.tag,
+    },
+}
 
 
 class Command(BaseCommand):
@@ -37,9 +51,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--image", required=True, help="universal image")
+        parser.add_argument(
+            "--type",
+            required=True,
+            dest="type_",
+            help="image type can be either cnb or legacy",
+        )
         parser.add_argument("--dry-run", dest="dry_run", type=str2bool, help="dry run", default=False)
 
-    def handle(self, image: str, dry_run: bool, *args, **options):
+    def handle(self, image: str, type_: str, dry_run: bool, *args, **options):
         if dry_run:
             logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
             return
@@ -59,12 +79,14 @@ class Command(BaseCommand):
             raise
 
         workplace = tempfile.mkdtemp()
+        to_config = DEST_IMAGE_CONFIGS[type_]
+
         try:
             ref = ImageRef.from_tarball(
                 workplace=pathlib.Path(workplace),
                 src=image_tarball_path,
-                to_repo=bksmart_settings.base_image.name,
-                to_reference=bksmart_settings.base_image.tag,
+                to_repo=to_config["repo"],
+                to_reference=to_config["reference"],
                 client=bksmart_settings.registry.get_client(),
             )
             ref.push()

@@ -20,6 +20,13 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 
+class CollectionTaskStatus(str, StructuredEnum):
+    """采集任务状态"""
+
+    RUNNING = EnumField("running", label=_("运行中"))
+    FINISHED = EnumField("finished", label=_("已完成"))
+
+
 class EmailReceiverType(str, StructuredEnum):
     """邮件接收者类型"""
 
@@ -32,6 +39,8 @@ class OperationIssueType(str, StructuredEnum):
 
     NONE = EnumField("none", label=_("无"))
     OWNERLESS = EnumField("ownerless", label=_("无主"))
-    INACTIVE = EnumField("inactive", label=_("不活跃"))
+    IDLE = EnumField("idle", label=_("闲置"))
+    UNVISITED = EnumField("unvisited", label=_("无用户访问"))
+    MAINTAINLESS = EnumField("maintainless", label=_("缺少维护"))
     UNDEPLOY = EnumField("undeploy", label=_("未部署/已下线"))
-    MISCONFIGURED = EnumField("misconfigured", label=_("配置错误"))
+    MISCONFIGURED = EnumField("misconfigured", label=_("配置不当"))

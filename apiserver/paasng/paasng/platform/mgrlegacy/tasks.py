@@ -23,6 +23,7 @@ from celery import shared_task
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.workloads.networking.entrance.entrance import get_entrances
 from paas_wl.workloads.networking.entrance.serializers import ModuleEntrancesSLZ
+from paasng.accessories.publish.sync_market.handlers import sync_external_url_to_market
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy import migrate
 from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
@@ -145,3 +146,6 @@ def confirm_migration(migration_process_id):
             manager.delete()
 
     migration_process.confirm()
+
+    # 同步应用访问地址到桌面
+    sync_external_url_to_market(migration_process.app)

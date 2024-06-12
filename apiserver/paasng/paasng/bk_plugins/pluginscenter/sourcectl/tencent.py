@@ -33,6 +33,7 @@ from requests.models import Response
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
+from paasng.bk_plugins.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.bk_plugins.pluginscenter.sourcectl.base import AlternativeVersion, TemplateRender, generate_context
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import (
@@ -253,16 +254,18 @@ class PluginRepoInitializer:
 
     def create_project(self, plugin: PluginInstance):
         """为插件在 VCS 服务创建源码项目"""
+        repo_name = plugin.id
+        if PluginFeatureFlagsManager(plugin).has_feature(PluginFeatureFlag.LOWER_REPO_NAME):
+            repo_name = repo_name.lower()
+
         _url = "api/v3/projects"
         resp = self._session.post(
             urljoin(self._api_url, _url),
             data={
-                "name": plugin.id,
+                "name": repo_name,
                 "namespace_id": self._get_namespace_id(),
                 "description": plugin.name,
-                # 私有项目 visibility_level = 0
-                # 公共项目 visibility_level = 10
-                "visibility_level": 10,
+                "visibility_level": settings.PLUGIN_VISIBILTY_LEVEL,
             },
         )
         validate_response(resp)

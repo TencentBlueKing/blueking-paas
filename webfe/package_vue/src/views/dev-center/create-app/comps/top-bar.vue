@@ -17,7 +17,7 @@ export default {
 <style lang="scss" scoped>
 .success-top-bar {
     position: relative;
-    top: 50px;
+    top: calc(var(--app-notice-height) + 50px);
     width: 100%;
     height: 52px;
     font-size: 16px;

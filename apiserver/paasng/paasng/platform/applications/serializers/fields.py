@@ -16,6 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
+import re
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -44,6 +47,29 @@ class AppIDField(serializers.RegexField):
         )
         preset_kwargs.update(kwargs)
         super().__init__(regex, *args, **preset_kwargs)
+
+
+class AppIDSMartField(serializers.RegexField):
+    """Field for validating S-mart applications's ID, the differences to `AppIDField`:
+
+    - max length increased from 16 to 20
+    - allow using underscore("_")
+    """
+
+    # A variation of the DNS pattern with "_" allowed
+    pattern = re.compile(r"^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-_]{,63}(?<!-)$")
+
+    def __init__(self, *args, **kwargs):
+        preset_kwargs = dict(
+            max_length=20,
+            min_length=3,
+            required=True,
+            help_text="应用 ID",
+            validators=[ReservedWordValidator(_("应用 ID")), AppIDUniqueValidator()],
+            error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)")},
+        )
+        preset_kwargs.update(kwargs)
+        super().__init__(self.pattern, *args, **preset_kwargs)
 
 
 class ApplicationField(serializers.SlugRelatedField):

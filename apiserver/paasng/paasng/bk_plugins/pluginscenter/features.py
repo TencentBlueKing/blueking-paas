@@ -20,7 +20,7 @@ from typing import Dict, Union
 
 from blue_krill.data_types.enum import FeatureFlag, FeatureFlagField
 
-from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
 
 
 class PluginFeatureFlag(FeatureFlag):  # type: ignore
@@ -35,18 +35,32 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     CONFIGURATION_MANAGE = FeatureFlagField(label="配置管理", default=True)
     STDOUT_LOG = FeatureFlagField(label="标准输出日志", default=True)
     ACCESS_LOG = FeatureFlagField(label="访问日志日志", default=True)
+    MARKET_INFO = FeatureFlagField(label="市场信息", default=True)
+    PUBLISHER_INFO = FeatureFlagField(label="发布者", default=False)
+    LOWER_REPO_NAME = FeatureFlagField(label="代码仓库名称转为小写字母", default=False)
 
 
-class PluginFeatureFlagsManager:
-    def __init__(self, plugin: PluginInstance):
-        self.plugin = plugin
-        self.pd = plugin.pd
+class FeatureFlagsManagerBase:
+    def __init__(self, features):
+        self.features = features
 
     def list_all_features(self) -> Dict[str, bool]:
         feature_flag = PluginFeatureFlag.get_default_flags()
-        for feature in self.pd.features:
+        for feature in self.features:
             feature_flag[feature.name] = feature.value
         return feature_flag
 
     def has_feature(self, feature_name: Union[str, PluginFeatureFlag]) -> bool:
         return self.list_all_features().get(feature_name, False)
+
+
+class PluginFeatureFlagsManager(FeatureFlagsManagerBase):
+    def __init__(self, plugin: PluginInstance):
+        super().__init__(plugin.pd.features)
+        self.plugin = plugin
+
+
+class PluginDefinitionFlagsManager(FeatureFlagsManagerBase):
+    def __init__(self, pd: PluginDefinition) -> None:
+        super().__init__(pd.features)
+        self.pd = pd

@@ -464,7 +464,14 @@ export default {
       this.isShowInput = false;
     });
 
-    this.getCurrentUser();
+    // 入口请求成功，说明用户已认证
+    bus.$on('on-user-data', (user) => {
+      this.userInitialized = true;
+      this.user = user;
+      if (user.avatarUrl) {
+        this.avatars = user.avatarUrl;
+      }
+    });
   },
   methods: {
     goRouter(sitem) {
@@ -561,15 +568,6 @@ export default {
       // 清空搜索条件，不再显示APP下拉框
       this.filterKey = '';
       this.$refs.dropdown.close();
-    },
-    getCurrentUser() {
-      auth.requestCurrentUser().then((user) => {
-        this.userInitialized = true;
-        this.user = user;
-        if (user.avatarUrl) {
-          this.avatars = user.avatarUrl;
-        }
-      });
     },
     // 监听滚动事件（滚动是头部样式切换）
     handleScroll() {

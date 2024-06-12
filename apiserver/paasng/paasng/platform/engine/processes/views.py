@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import TYPE_CHECKING
 
@@ -39,7 +40,6 @@ from paasng.misc.feature_flags.constants import PlatformFeatureFlag as PFF
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.processes import serializers as slzs
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.error_codes import error_codes
@@ -61,9 +61,6 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     def _is_whitelisted_user(self, request):
         return user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self)
 
-    def _is_smart_app(self, module):
-        return module.get_source_origin() == SourceOrigin.S_MART
-
     def _get_webconsole_docs_from_advisor(self):
         """从智能顾问中获取 web-console 相关的文档"""
         tag = get_dynamic_tag("app-feature:web-console")
@@ -78,8 +75,8 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
         """获取进入 webconsole 的默认命令"""
         if runtime_type == RuntimeType.BUILDPACK:
             # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack
-            # 但是在流水线中单独构建的镜像，还是使用的原来的 heruku buildpack，而不是 CNB buildpack，没有 launcher 命令
-            if self._is_smart_app(module) or not is_cnb_runtime:
+            # 但是在流水线中单独构建的镜像，还是使用的原来的 heroku buildpack，而不是 CNB buildpack，没有 launcher 命令
+            if module.application.is_smart_app or not is_cnb_runtime:
                 return "bash"
 
             # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文

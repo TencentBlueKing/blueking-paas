@@ -123,6 +123,7 @@ class ErrorCodes:
     MISSING_DESCRIPTION_INFO = ErrorCode(_("缺失应用描述文件"), code_num=4314002)
     FAILED_TO_HANDLE_APP_DESC = ErrorCode(_("分析应用描述文件异常"), code_num=4314003)
     FAILED_TO_PUSH_IMAGE = ErrorCode(_("访问容器镜像仓库异常"), code_num=4314004)
+    FILE_CORRUPTED_ERROR = ErrorCode(_("S-Mart 应用源码文件损坏"))
     # 对外接口异常
     CANNOT_GET_BK_USER_CREDENTIAL = ErrorCode(_("无法获取用户凭证"))
     # Oauth 相关错误

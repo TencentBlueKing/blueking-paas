@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -135,7 +136,6 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     logger.debug("Start pushing Image.")
     manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
-    stat.name = stat.version
     stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
     policy = SPStoragePolicy(
         path=new_image_info.name,
@@ -188,7 +188,6 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
 
         manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
-    stat.name = stat.version
     stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
     policy = SPStoragePolicy(
         path=new_image_info.name,

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import datetime
 import uuid
 from dataclasses import asdict
@@ -27,7 +28,7 @@ from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.models import Cluster
-from paasng.accessories.servicehub.exceptions import CanNotModifyPlan, ServiceObjNotFound
+from paasng.accessories.servicehub.exceptions import BindServiceNoPlansError, CanNotModifyPlan, ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment
 from paasng.accessories.servicehub.remote import RemoteServiceMgr, collector
@@ -233,7 +234,7 @@ class TestRemoteMgrWithRealStore:
         if ok:
             mgr.bind_service(bk_service_ver, bk_module, specs=specs.copy())
         else:
-            with pytest.raises(RuntimeError):
+            with pytest.raises(BindServiceNoPlansError):
                 mgr.bind_service(bk_service_ver, bk_module, specs=specs.copy())
         assert mgr.module_is_bound_with(bk_service_ver, bk_module) is ok
 
@@ -296,7 +297,7 @@ class TestRemoteMgrWithMockedStore:
     def test_bind_service_errors(self, store, bk_module, bk_service_ver, plans):
         mgr = RemoteServiceMgr(store=store)
         bk_service_ver.plans = plans
-        with pytest.raises(RuntimeError):
+        with pytest.raises(BindServiceNoPlansError):
             mgr.bind_service(bk_service_ver, bk_module)
 
     @pytest.mark.parametrize(
@@ -378,7 +379,7 @@ class TestRemoteMgrWithMockedStore:
             if ok:
                 mgr.bind_service(bk_service_ver_zone, bk_module, {})
             else:
-                with pytest.raises(RuntimeError):
+                with pytest.raises(BindServiceNoPlansError):
                     mgr.bind_service(bk_service_ver_zone, bk_module, {})
 
         assert mgr.module_is_bound_with(bk_service_ver_zone, bk_module) is ok
@@ -581,7 +582,7 @@ class TestLegacyRemoteMgr:
         # Re-query another module object to avoid conflict
         module = Module.objects.get(pk=bk_module.pk)
         module.region = "r-invalid"
-        with pytest.raises(RuntimeError):
+        with pytest.raises(BindServiceNoPlansError):
             mgr.bind_service(svc, module)
 
     def test_list_binded(self, store, bk_app, bk_module):

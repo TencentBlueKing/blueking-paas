@@ -207,6 +207,7 @@
           :rules="informationRules"
         >
           <BkSchemaForm
+            :key="form.pd_id"
             class="mt20 bk-form-warp"
             v-model="schemaFormData"
             ref="bkForm"

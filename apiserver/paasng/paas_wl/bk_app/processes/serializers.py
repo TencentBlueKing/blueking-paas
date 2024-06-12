@@ -127,18 +127,6 @@ class InstanceListSLZ(serializers.Serializer):
     metadata = ListRespMetaDataSLZ()
 
 
-class SourceSerializer(serializers.Serializer):
-    component = serializers.CharField(help_text="生成事件系统组件")
-    host = serializers.CharField(required=False, allow_null=True, help_text="发生事件的主机名")
-
-
-class InvolvedObjectSerializer(serializers.Serializer):
-    api_version = serializers.CharField(help_text="事件相关对象的 API 版本")
-    kind = serializers.CharField(help_text="事件相关对象的类型")
-    name = serializers.CharField(help_text="事件相关对象的名称")
-    namespace = serializers.CharField(required=False, allow_null=True, help_text="事件相关对象的命名空间")
-
-
 class EventSerializer(serializers.Serializer):
     reason = serializers.CharField(help_text="事件发生的原因")
     count = serializers.IntegerField(help_text="事件发生的次数")
@@ -146,8 +134,6 @@ class EventSerializer(serializers.Serializer):
     message = serializers.CharField(help_text="事件内容")
     first_timestamp = serializers.CharField()
     last_timestamp = serializers.CharField()
-    source = SourceSerializer(help_text="事件来源")
-    involved_object = InvolvedObjectSerializer(help_text="事件相关的对象")
 
 
 class ListWatcherRespSLZ(serializers.Serializer):

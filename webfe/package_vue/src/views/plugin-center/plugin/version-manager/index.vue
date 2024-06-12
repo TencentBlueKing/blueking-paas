@@ -206,7 +206,7 @@
               v-if="row.report_url"
               theme="primary"
               text
-              @click="toTestReportPage(row.report_url)"
+              @click="toTestReportPage(row)"
             >
               {{ $t('测试报告') }}
             </bk-button>
@@ -689,7 +689,8 @@ export default {
     },
 
     // 测试报告
-    toTestReportPage(url) {
+    toTestReportPage(row) {
+      const url = `${row.report_url}?currentVersion=${row.version}`;
       this.$router.push({
         name: 'pluginTestReport',
         params: {

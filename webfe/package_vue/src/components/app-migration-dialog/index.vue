@@ -149,6 +149,7 @@
         v-else
         class="ml10"
         :theme="'primary'"
+        :loading="isConfirmMigrationLoading"
         :disabled="isMigrationDisabled"
         @click="handleAppMigration">
         {{ isStartMigration ? $t('开始迁移') : $t('确定迁移') }}
@@ -194,6 +195,7 @@ const defaultStateData = {
     errorMsg: '',
   },
 };
+const MAX_ATTEMPTS = 120;
 export default {
   name: 'AppMigrationDialog',
   model: {
@@ -240,6 +242,9 @@ export default {
       },
       appChecklistInfo: {},
       initStatus: '',
+      attempts: 0,
+      confirmMigrationIntervalId: null,
+      isConfirmMigrationLoading: false,
     };
   },
   computed: {
@@ -342,6 +347,12 @@ export default {
     // 弹窗关闭处理
     async handleCancel(isReload = true) {
       this.$emit('change', false);
+      // 确定迁移阶段
+      if (this.confirmMigrationIntervalId) {
+        clearInterval(this.confirmMigrationIntervalId);
+        this.reset();
+        return;
+      }
       // 停止轮询
       clearInterval(this.timerId);
       if (isReload) {
@@ -353,6 +364,7 @@ export default {
       this.currentStep = 1;
       this.processId = null;
       this.isPollingLatest = false;
+      this.isConfirmMigrationLoading = false;
       this.migrateStateData = cloneDeep(defaultStateData);
       this.migrationData = { details: {} };
       Object.keys(this.migrationRisk).forEach((key) => {
@@ -491,21 +503,34 @@ export default {
     },
     // 确定迁移
     async migrationProcessesConfirm() {
+      this.isConfirmMigrationLoading = true;
       try {
         await this.$store.dispatch('migration/migrationProcessesConfirm', {
           id: this.processId,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('迁移成功'),
-        });
-        this.handleCancel();
+        // 确定迁移轮询状态
+        this.confirmMigrationPolling();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+        this.isConfirmMigrationLoading = false;
       }
+    },
+    // 确定迁移轮询
+    confirmMigrationPolling() {
+      this.confirmMigrationIntervalId = setInterval(async () => {
+        this.attempts++;
+        this.queryMigrationStatus();
+
+        // 检查是否达到最大尝试次数，或已经确定迁移成功
+        if (this.attempts >= MAX_ATTEMPTS || this.isMigrationConfirmed) {
+          clearInterval(this.confirmMigrationIntervalId);
+          this.confirmMigrationIntervalId = null;
+          this.handleCancel();
+        }
+      }, 1000); // 每隔1秒轮询一次
     },
     // 重新迁移
     handleReMigrate(id) {

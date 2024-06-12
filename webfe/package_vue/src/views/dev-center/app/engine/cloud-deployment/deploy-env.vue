@@ -148,7 +148,10 @@
                   <i
                     v-if="row.isPresent"
                     class="paasng-icon paasng-remind"
-                    v-bk-tooltips="{ content: $t('环境变量不生效，KEY 与增强服务（Sentry）内置环境变量冲突'), width: 200 }">
+                    v-bk-tooltips="{
+                      content: $t('环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突', { s: row.conflictingService }),
+                      width: 200
+                    }">
                   </i>
                 </template>
               </div>
@@ -689,14 +692,19 @@ export default {
     // 是否已存在该环境变量
     isEnvVarAlreadyExists(varKey) {
       let flag = false;
+      let services = '';
       // 检查是否已存在该环境变量
       for (const key in this.builtInEnvVars) {
         if (this.builtInEnvVars[key].includes(varKey)) {
           flag = true;
+          services = key;
           break;
         }
       }
-      return flag;
+      return {
+        flag,
+        services,
+      };
     },
     getEnvVarList(isUpdate = true) {
       this.isTableLoading = true;
@@ -705,7 +713,9 @@ export default {
         // 添加自定义属性
         this.envVarList.forEach((v) => {
           this.$set(v, 'isEdit', false);
-          this.$set(v, 'isPresent', this.isEnvVarAlreadyExists(v.key));
+          const { flag, services } = this.isEnvVarAlreadyExists(v.key);
+          this.$set(v, 'isPresent', flag);
+          this.$set(v, 'conflictingService', services);
           if (!v.id) {
             const id = response.find(item => item.key === v.key)?.id;
             this.$set(v, 'id', id);
@@ -805,6 +815,7 @@ export default {
       delete data.isEdit;
       delete data.isAdd;
       delete data.isPresent;
+      delete data.conflictingService;
       try {
         await this.$store.dispatch('envVar/createdEnvVariable', {
           appCode: this.appCode,
@@ -864,6 +875,7 @@ export default {
           delete v.is_global;
           delete v.isEdit;
           delete v.isPresent;
+          delete v.conflictingService;
         });
 
         await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });

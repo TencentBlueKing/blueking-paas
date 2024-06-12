@@ -11,6 +11,8 @@ webhook:
 leaderElection:
   leaderElect: true
   resourceName: e56dbef1.bk.tencent.com
+zapOpts:
+  zapDevel: false
 platform:
   bkAppCode: "bk_paas3"
   bkAppSecret: ""
@@ -22,8 +24,16 @@ ingressPlugin:
     redisConfigKey: ""
   paasAnalysis:
     enabled: false
+resLimits:
+  procDefaultCPULimit: 4000m
+  procDefaultMemLimit: 1024Mi
+  maxReplicas: 5
+resRequests:
+  procDefaultCPURequest: 100m
+  procDefaultMemRequest: 64Mi
 autoscaling:
   enabled: false
+maxProcesses: 16
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume
 ## when the Manager ends. This requires the binary to immediately end when the

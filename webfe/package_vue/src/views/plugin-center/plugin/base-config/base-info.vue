@@ -31,6 +31,7 @@
 
         <!-- 市场信息 -->
         <plugin-market-info
+          v-if="pluginFeatureFlags.MARKET_INFO"
           class="mt16"
           :market-info="marketInfo"
         />
@@ -114,6 +115,9 @@
 
         <!-- 鉴权信息 -->
         <authentication-info v-if="pluginFeatureFlags.APP_SECRETS" />
+
+        <!-- 发布者 -->
+        <publisher-info v-if="pluginFeatureFlags.PUBLISHER_INFO" class="mt16" />
 
         <!-- archivedStatus为 true && can_reactivate 为 true 展示上架 -->
         <div class="plugin-operation-wrapper" v-if="isArchivedStatus && offlineStatus">
@@ -206,6 +210,7 @@ import authenticationInfo from '@/components/authentication-info.vue';
 import MoreInfo from './comps/more-info.vue';
 import pluginBaseInfo from './comps/base-info-item.vue';
 import pluginMarketInfo from './comps/market-info-item.vue';
+import publisherInfo from './comps/publisher-info.vue';
 // import 'BKSelectMinCss';
 export default {
   components: {
@@ -214,6 +219,7 @@ export default {
     MoreInfo,
     pluginBaseInfo,
     pluginMarketInfo,
+    publisherInfo,
   },
   mixins: [pluginBaseMixin],
   data() {
@@ -398,7 +404,7 @@ export default {
     async confirmRemoval() {
       this.delPluginDialog.isLoading = true;
       try {
-        await this.$store.dispatch('plugin/lowerShelfPlugin', {
+        await this.$store.dispatch('plugin/offShelfPlugin', {
           pdId: this.pdId,
           pluginId: this.pluginId,
           data: {},

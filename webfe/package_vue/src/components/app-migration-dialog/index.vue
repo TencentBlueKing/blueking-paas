@@ -21,9 +21,8 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.address"></bk-checkbox>
             <span class="title">{{ $t('变更应用访问地址') }}</span>
-            <span class="tips" v-bk-overflow-tips>
-              {{ $t(`如 {l} 变更为：{c}`, { l: appChecklistInfo.rootDomainsLegacy || '--', c: appChecklistInfo.rootDomainsCnative || '--' }) }}
-            </span>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <span class="tips" v-bk-overflow-tips v-html="domainsTips"></span>
           </div>
           <div class="content">
             <p>1. {{ $t('应用间不同模块间若通过 API 访问，需要修改调用地址') }}</p>
@@ -31,17 +30,16 @@
             <p>3. {{ $t('应用若在 API 网关上注册了资源，可直接在 API 网关上修改，调用方不需要调整') }}</p>
           </div>
         </div>
-        <div class="info-item" v-if="appChecklistInfo.namespaces">
+        <div class="info-item">
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
-            <span class="tips" v-bk-overflow-tips>
-              {{ $t(`如 {l} 变更为：{c}`, { l: appChecklistInfo.namespaceLegacy || '--', c: appChecklistInfo.namespaceCnative || '--' }) }}
-            </span>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <span class="tips" v-bk-overflow-tips v-html="namespaceTips"></span>
           </div>
           <div class="content">
             {{ $t('可搜索应用代码、环境变量中是否有以下内容来确认') }}：
-            <p>{{ appChecklistInfo.namespaceLegacyStr }}</p>
+            <p>{{ `http://${data.region}-bkapp-${data.code}-` }}</p>
           </div>
         </div>
         <div class="info-item" v-if="appChecklistInfo.rcs_bindings">
@@ -90,7 +88,7 @@
             <div class="title-wrapper">
               <!-- 监测模块没有部署，则不能进行勾选 -->
               <bk-checkbox v-model="verifyFunctionality.module"></bk-checkbox>
-              <span class="title">{{ $t('重新部署应用下每个模块') }}</span>
+              <span class="title">{{ $t('已成功部署应用下每个模块') }}</span>
               <bk-button
                 :text="true"
                 title="primary"
@@ -288,6 +286,15 @@ export default {
       }
       return '--';
     },
+    domainsTips() {
+      return this.$t('如 {l} 变更为：<em>{c}</em>', { l: this.appChecklistInfo.rootDomainsLegacy || '--', c: this.appChecklistInfo.rootDomainsCnative || '--' });
+    },
+    namespaceTips() {
+      return this.$t('如 {l} 变更为：<em>{c}</em>', {
+        l: '{region}-bkapp-{appId}-m-{moduleName}-{env}-{processName}',
+        c: '{appId}-m-{moduleName}-{processName}',
+      });
+    },
   },
   watch: {
     value: {
@@ -421,20 +428,9 @@ export default {
           this.appChecklistInfo.rootDomainsLegacy = legacy.length ? legacy.map(v => `*.${v}`).join() : '--';
           this.appChecklistInfo.rootDomainsCnative = cnative.length ? cnative.map(v => `*.${v}`).join() : '--';
         }
-        // namespaces 变更进程间通信地址
-        if (res.namespaces) {
-          const { legacy: nLegacy, cnative: nCnative } = res.namespaces;
-          this.appChecklistInfo.namespaceLegacy = nLegacy.length ? nLegacy.map(v => `*.${v.namespace}`).join() : '--';
-          this.appChecklistInfo.namespaceLegacyStr = nLegacy.length ? nLegacy.map(v => v.namespace).join() : '--';
-          this.appChecklistInfo.namespaceCnative = nCnative.length ? nCnative.map(v => `*.${v.namespace}`).join() : '--';
-        }
         // 变更出口 IP
         if (!this.appChecklistInfo.rcs_bindings) {
           delete this.migrationRisk.ip;
-        }
-        // 变更进程间通信地址
-        if (!this.appChecklistInfo.namespaces) {
-          delete this.migrationRisk.process;
         }
       } catch (e) {
         this.$paasMessage({
@@ -684,6 +680,11 @@ export default {
 
   .info-item {
     margin-top: 32px;
+    :deep(.tips) {
+      em {
+        font-weight: 700;
+      }
+    }
 
     .title-wrapper {
       display: flex;

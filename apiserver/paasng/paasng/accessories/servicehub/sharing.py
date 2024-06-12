@@ -153,8 +153,9 @@ class ServiceSharingManager:
             ref_env = referenced_info.ref_module.get_envs(env.environment)
             ref_service = referenced_info.service
             env_keys = mixed_service_mgr.get_env_vars(ref_env.engine_app, ref_service, True)
-
-            result[ref_service.display_name] = list(env_keys.keys())
+            # display_name 会被国际化处理为殊字符串类型（__proxy__类型），必须首先将它们转化为标准的字符串
+            service_name = str(ref_service.display_name)
+            result[service_name] = list(env_keys.keys())
 
         return result
 

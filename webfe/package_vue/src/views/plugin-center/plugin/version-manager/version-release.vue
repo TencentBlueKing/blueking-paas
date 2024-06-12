@@ -260,7 +260,10 @@ export default {
       }
     },
     messageStatus(status) {
-      this.updateStepStatus(status);
+      // 手动切换预览步骤，不通过postMessage的状态获取详情
+      if (this.isShowButtonGroup) {
+        this.updateStepStatus(status);
+      }
     },
   },
   async created() {

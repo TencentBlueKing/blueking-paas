@@ -192,9 +192,9 @@ class HttpGetActionInputSLZ(serializers.Serializer):
 class ProbeInputSLZ(serializers.Serializer):
     """探针配置"""
 
-    exec = ExecActionInputSLZ(required=False, help_text="exec 探活配置")
-    httpGet = TcpSocketActionInputSLZ(required=False, help_text="http get 探活配置")
-    tcpSocket = HttpGetActionInputSLZ(required=False, help_text="tcp socket 探活配置")
+    exec = ExecActionInputSLZ(help_text="exec 探活配置", required=False, allow_null=True)
+    httpGet = HttpGetActionInputSLZ(help_text="http get 探活配置", required=False, allow_null=True)
+    tcpSocket = TcpSocketActionInputSLZ(help_text="tcp socket 探活配置", required=False, allow_null=True)
     initialDelaySeconds = serializers.IntegerField(help_text="初次探测延迟时间")
     timeoutSeconds = serializers.IntegerField(help_text="探测超时时间")
     periodSeconds = serializers.IntegerField(help_text="探测周期")
@@ -205,9 +205,9 @@ class ProbeInputSLZ(serializers.Serializer):
 class ProbeSetInputSLZ(serializers.Serializer):
     """探针集合"""
 
-    liveness = ProbeInputSLZ(required=False, help_text="存活探针")
-    readiness = ProbeInputSLZ(required=False, help_text="就绪探针")
-    startup = ProbeInputSLZ(required=False, help_text="启动探针")
+    liveness = ProbeInputSLZ(help_text="存活探针", required=False, allow_null=True)
+    readiness = ProbeInputSLZ(help_text="就绪探针", required=False, allow_null=True)
+    startup = ProbeInputSLZ(help_text="启动探针", required=False, allow_null=True)
 
 
 class ProcessInputSLZ(serializers.Serializer):

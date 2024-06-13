@@ -138,7 +138,7 @@ class ModuleProcessSpecManager:
         )
         # update spec objects end
 
-    def sync_from_desc(self, processes: List["ProcessTmpl"]):
+    def sync_from_desc(self, processes: List[ProcessTmpl]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess ProcessTmpl
@@ -146,7 +146,7 @@ class ModuleProcessSpecManager:
                           where 'replicas' and 'plan' is optional
         """
 
-        processes_map: Dict[str, "ProcessTmpl"] = {process.name: process for process in processes}
+        processes_map: Dict[str, ProcessTmpl] = {process.name: process for process in processes}
 
         # remove proc spec objects which is already deleted via procfile
         self.delete_outdated_procs(cur_procs_name=processes_map.keys())

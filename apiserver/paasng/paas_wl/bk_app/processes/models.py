@@ -136,7 +136,7 @@ class ProcessSpecManager:
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
         """
-        processes_map: Dict[str, "ProcessTmpl"] = {process.name: process for process in processes}
+        processes_map: Dict[str, ProcessTmpl] = {process.name: process for process in processes}
         environment = get_metadata(self.wl_app).environment
 
         # Hardcode proc_type to "process" because no other values is supported at this moment.
@@ -157,7 +157,7 @@ class ProcessSpecManager:
             )
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
-        def process_spec_builder(process: "ProcessTmpl") -> ProcessSpec:
+        def process_spec_builder(process: ProcessTmpl) -> ProcessSpec:
             target_replicas = process.replicas or self.get_default_replicas(process.name, environment)
             plan = default_process_spec_plan
             if plan_name := process.plan:
@@ -172,7 +172,7 @@ class ProcessSpecManager:
                 plan=plan,
                 proc_command=process.command,
                 autoscaling=process.autoscaling,
-                scaling_config=asdict(process.scaling_config),
+                scaling_config=asdict(process.scaling_config) if process.scaling_config else None,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -181,7 +181,7 @@ class ProcessSpecManager:
         # update spec objects
         updating_proc_specs = [process for name, process in processes_map.items() if name in existed_procs_name]
 
-        def process_spec_updator(process: "ProcessTmpl") -> Tuple[bool, ProcessSpec]:
+        def process_spec_updator(process: ProcessTmpl) -> Tuple[bool, ProcessSpec]:
             process_spec = proc_specs.get(name=process.name)
             recorder = AttrSetter(process_spec)
 
@@ -217,8 +217,8 @@ class ProcessSpecManager:
 
     def bulk_create_procs(
         self,
-        proc_creator: Callable[["ProcessTmpl"], ProcessSpec],
-        adding_procs: List["ProcessTmpl"],
+        proc_creator: Callable[[ProcessTmpl], ProcessSpec],
+        adding_procs: List[ProcessTmpl],
     ):
         """bulk create ProcessSpec
 
@@ -233,8 +233,8 @@ class ProcessSpecManager:
 
     def bulk_update_procs(
         self,
-        proc_updator: Callable[["ProcessTmpl"], Tuple[bool, ProcessSpec]],
-        updating_procs: List["ProcessTmpl"],
+        proc_updator: Callable[[ProcessTmpl], Tuple[bool, ProcessSpec]],
+        updating_procs: List[ProcessTmpl],
         updated_fields: List[str],
     ):
         """bulk update ProcessSpec

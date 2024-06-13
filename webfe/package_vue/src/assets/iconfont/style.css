@@ -1040,3 +1040,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-shengxu:before {
 	content: "\e26c";
 }
+.paasng-qianyi-mianxing:before {
+	content: "\e26e";
+}
+.paasng-qianyi-xianxing:before {
+	content: "\e26f";
+}

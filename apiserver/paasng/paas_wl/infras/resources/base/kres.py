@@ -158,7 +158,7 @@ class BaseKresource:
         self.request_timeout = request_timeout or get_default_options().get("request_timeout")
         self.api_version = api_version
         self.ops_name = NameBasedOperations(self, self.request_timeout)
-        self.ops_label = LabelBasedOperations(self, self.request_timeout)
+        self.ops_batch = BatchOperations(self, self.request_timeout)
 
     # Make shortcuts: proxy a collection of methods to self.ops_name(name
     # based operations) for convenience.
@@ -454,18 +454,26 @@ class NameBasedOperations(BaseOperations):
         body_dict["metadata"].setdefault("resourceVersion", obj.metadata.resourceVersion)
 
 
-class LabelBasedOperations(BaseOperations):
-    """All operations in this class are based on labels"""
+class BatchOperations(BaseOperations):
+    """All operations in this class are performed in batch"""
 
-    def list(self, labels: Dict, namespace: Namespace = None) -> KubeObjectList:
+    def list(
+        self, labels: Optional[Dict] = None, fields: Optional[Dict] = None, namespace: Namespace = None
+    ) -> KubeObjectList:
         """list resources by labels
 
         :param labels: labels dict
+        :param fields: fields dict
         :param namespace: Resource namespace, only required for is_namespaced resource
         :returns: Various kinds of kubernetes lists
         """
+        labels = labels or {}
+        fields = fields or {}
         list_resp = self.resource.get(
-            label_selector=self.make_labels_string(labels), namespace=namespace, **self.default_kwargs
+            label_selector=self.make_labels_string(labels),
+            field_selector=self.make_fields_string(fields),
+            namespace=namespace,
+            **self.default_kwargs,
         )
         return KubeObjectList(list_resp)
 
@@ -506,6 +514,35 @@ class LabelBasedOperations(BaseOperations):
         :param labels: dict of labels
         """
         return ",".join("{}={}".format(key, value) for key, value in labels.items())
+
+    @staticmethod
+    def make_fields_string(fields: Dict) -> str:
+        """Turn a fields dict into string format
+
+        :param fields: dict of fields
+        Example:
+        Input:
+            input_dict = {
+                "involvedObject": {"name": "xxx", "kind": "Pod"},
+                "reason": "BackOff"
+            }
+        Output:
+            'involvedObject.name=xxx,involvedObject.kind=Pod,reason=BackOff'
+        """
+        field_selectors = []
+
+        # 递归函数用于处理字典嵌套的情况
+        def process_dict(d, prefix=""):
+            for key, value in d.items():
+                # 如果值是字典，递归处理
+                if isinstance(value, dict):
+                    process_dict(value, prefix=f"{prefix}{key}.")
+                else:
+                    field_selectors.append(f"{prefix}{key}={value}")
+
+        process_dict(fields)
+
+        return ",".join(field_selectors)
 
 
 # Individual resource types start

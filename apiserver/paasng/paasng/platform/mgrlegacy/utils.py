@@ -235,4 +235,8 @@ def get_cnative_target_cluster(region: str) -> Cluster:
         logger.warning("Get mgrlegacy target cluster failed, return default instead, region: %s.", region)
         return RegionClusterService(region).get_default_cluster()
 
-    return RegionClusterService(region).get_cluster_by_name(target_cluster_name)
+    if target_cluster_name:
+        return RegionClusterService(region).get_cluster_by_name(target_cluster_name)
+
+    # MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is "", return default cluster
+    return RegionClusterService(region).get_default_cluster()

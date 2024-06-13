@@ -255,6 +255,7 @@
           </template>
         </bk-table-column>
         <bk-table-column
+          v-if="!isMigrationStatus"
           :label="$t('操作')"
           :width="120"
           fixed="right"
@@ -387,6 +388,13 @@ import { ENV_ENUM } from '@/common/constants';
 import { copy } from '@/common/tools';
 export default {
   mixins: [appBaseMixin],
+  props: {
+    // 是否为迁移状态
+    isMigrationStatus: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       type: '',
@@ -566,8 +574,10 @@ export default {
     // 访问地址列表数据
     async getEntryList() {
       try {
+        // 迁移应用请求旧数据快照
+        const dispatchName = this.isMigrationStatus ? 'migration/getEntrances' : 'entryConfig/getEntryDataList';
         this.isTableLoading = true;
-        const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+        const res = await this.$store.dispatch(dispatchName, {
           appCode: this.appCode,
         });
         this.entryList = (res || []).map((e) => {

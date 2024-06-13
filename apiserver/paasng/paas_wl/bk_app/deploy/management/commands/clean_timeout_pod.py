@@ -36,7 +36,7 @@ class Command(BaseCommand):
 
         for cluster_name in get_all_cluster_names():
             client = get_client_by_cluster_name(cluster_name)
-            pods = KPod(client).ops_label.list(labels={"category": "slug-builder"})
+            pods = KPod(client).ops_batch.list(labels={"category": "slug-builder"})
             timeout_count = 0
             # normally, there is only one slug instance
             for pod in pods.items:

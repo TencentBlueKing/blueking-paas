@@ -139,6 +139,7 @@
         :validate-name="/^[a-zA-Z0-9-_. ]+$/"
         :with-credentials="true"
         :name="'package'"
+        :max-size="maxPackageSize"
         :accept-tips="$t('仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件')"
         :headers="uploadHeader"
         :on-upload-success="handleSuccess"
@@ -206,6 +207,9 @@ export default {
     },
     uploadUrl() {
       return `${BACKEND_URL}/api/bkapps/s-mart/`;
+    },
+    maxPackageSize() {
+      return window.BK_MAX_PACKAGE_SIZE || 500;
     },
   },
   methods: {

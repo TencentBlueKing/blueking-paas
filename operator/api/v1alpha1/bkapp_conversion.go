@@ -55,6 +55,14 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 				Policy:      paasv1alpha2.ScalingPolicy(proc.Autoscaling.Policy),
 			}
 		}
+		// Copy Probes field, extra logics needs because of the pointer type
+		if proc.Probes != nil {
+			dstProc.Probes = &paasv1alpha2.ProbeSet{
+				Liveness:  proc.Probes.Liveness,
+				Readiness: proc.Probes.Readiness,
+				Startup:   proc.Probes.Startup,
+			}
+		}
 
 		// Append to the destination process list
 		dst.Spec.Processes = append(dst.Spec.Processes, dstProc)
@@ -169,6 +177,14 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 				MinReplicas: proc.Autoscaling.MinReplicas,
 				MaxReplicas: proc.Autoscaling.MaxReplicas,
 				Policy:      ScalingPolicy(proc.Autoscaling.Policy),
+			}
+		}
+		// Copy Probes field, extra logics needs because of the pointer type
+		if proc.Probes != nil {
+			dstProc.Probes = &ProbeSet{
+				Liveness:  proc.Probes.Liveness,
+				Readiness: proc.Probes.Readiness,
+				Startup:   proc.Probes.Startup,
 			}
 		}
 

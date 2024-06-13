@@ -143,7 +143,7 @@ class ClusterComponentViewSet(ViewSet):
             # 可能存在废弃集群，占位没有删除的情况，这里做兼容处理
             return Response(resp_data)
 
-        secrets = KSecret(client).ops_label.list({"owner": "helm"}).items
+        secrets = KSecret(client).ops_batch.list({"owner": "helm"}).items
         releases = filter_latest_releases(convert_secrets_to_releases(secrets))
 
         for rel in releases:

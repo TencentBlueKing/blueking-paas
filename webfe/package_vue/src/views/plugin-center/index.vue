@@ -22,6 +22,7 @@
           :clearable="true"
           :right-icon="'paasng-icon paasng-search'"
           @enter="handleSearch"
+          @right-icon-click="handleSearch"
         />
       </div>
       <bk-table

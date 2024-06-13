@@ -16,12 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Optional, Type
 
 from paasng.platform.mgrlegacy.entities import DefaultAppLegacyData
 from paasng.platform.mgrlegacy.exceptions import BackupLegacyDataFailed, MigrationFailed, RollbackFailed
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
+
+logger = logging.getLogger(__name__)
 
 
 class CNativeBaseMigrator(ABC):
@@ -67,6 +70,7 @@ class CNativeBaseMigrator(ABC):
         try:
             self._rollback()
         except Exception as e:
+            logger.exception(f"migration_process(id={self.migration_process.id}) rollback failed")
             raise RollbackFailed(f"rollback failed: {e}")
 
     def _backup_legacy_data(self, legacy_data: DefaultAppLegacyData):

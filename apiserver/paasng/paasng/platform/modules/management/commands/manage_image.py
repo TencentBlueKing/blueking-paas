@@ -30,6 +30,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("-n", "--name", required=True, dest="name", help="name")
         parser.add_argument("-r", "--region", required=True, dest="regions", help="available region name", nargs="+")
+        parser.add_argument("--type", required=True, dest="type_", help="image type can be either cnb or legacy")
         parser.add_argument("--hidden", dest="is_hidden", help="is_hidden", action="store_true")
         parser.add_argument("--slugbuilder", required=False, help="slugbuilder image")
         parser.add_argument("--slugrunner", required=False, help="slugrunner image")
@@ -60,6 +61,7 @@ class Command(BaseCommand):
         self,
         name,
         image,
+        type_,
         slugbuilder,
         slugrunner,
         regions,
@@ -82,6 +84,7 @@ class Command(BaseCommand):
                 image_name,
                 region,
                 slugbuilder,
+                type_,
                 display_name_zh_cn,
                 display_name_en,
                 description_zh_cn,
@@ -95,6 +98,7 @@ class Command(BaseCommand):
                 image_name,
                 region,
                 slugrunner,
+                type_,
                 display_name_zh_cn,
                 display_name_en,
                 description_zh_cn,
@@ -110,6 +114,7 @@ class Command(BaseCommand):
         name,
         region,
         image,
+        type_,
         display_name_zh_cn,
         display_name_en,
         description_zh_cn,
@@ -132,6 +137,7 @@ class Command(BaseCommand):
                 "display_name_zh_cn": display_name_zh_cn,
                 "display_name_en": display_name_en,
                 "image": image,
+                "type": type_,
                 "tag": tag,
                 "description_zh_cn": description_zh_cn,
                 "description_en": description_en,

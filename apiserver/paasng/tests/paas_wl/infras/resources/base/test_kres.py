@@ -35,7 +35,7 @@ from paas_wl.infras.resources.base.exceptions import (
     ReadTargetStatusTimeout,
     ResourceMissing,
 )
-from paas_wl.infras.resources.base.kres import KDeployment, KNamespace, KPod, KServiceAccount
+from paas_wl.infras.resources.base.kres import BatchOperations, KDeployment, KNamespace, KPod, KServiceAccount
 from tests.paas_wl.utils.basic import random_resource_name
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -114,7 +114,7 @@ class TestNameBasedOps:
 
 
 @pytest.mark.auto_create_ns()
-class TestLabelBasedOps:
+class TestBatchOps:
     def test_create_watch_stream(self, k8s_client, wl_app):
         # Create a pod to generate event
         KPod(k8s_client).create_or_update(
@@ -122,14 +122,14 @@ class TestLabelBasedOps:
             namespace=wl_app.namespace,
             body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
-        stream = KPod(k8s_client).ops_label.create_watch_stream(
+        stream = KPod(k8s_client).ops_batch.create_watch_stream(
             {"app": wl_app.name}, namespace=wl_app.namespace, timeout_seconds=1, resource_version=0
         )
         # 在集成测试中, K8s 集群有可能会更新 Pod 的 metadata 和 status, 导致版本变化多次
         assert len(list(stream)) >= 1
 
     def test_filter_by_labels(self, k8s_client, wl_app):
-        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
+        results = KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 0
 
         KPod(k8s_client).create_or_update(
@@ -137,13 +137,13 @@ class TestLabelBasedOps:
             namespace=wl_app.namespace,
             body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
-        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
+        results = KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 1
         assert isinstance(results.items[0], ResourceInstance)
 
     def test_list_with_different_namespaces(self, k8s_client, namespace_maker, wl_app):
         another_namespace = random_resource_name()
-        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
+        results = KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 0
 
         obj, created = namespace_maker.make(another_namespace)
@@ -155,13 +155,13 @@ class TestLabelBasedOps:
             KPod(k8s_client).create_or_update(
                 pod_name, namespace=another_namespace, body=construct_foo_pod(pod_name, labels={"app": wl_app.name})
             )
-        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
+        results = KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 0
 
-        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=another_namespace)
+        results = KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=another_namespace)
         assert len(results.items) == 2
 
-        results = KPod(k8s_client).ops_label.list({"app": "invalid-label-value"}, namespace=another_namespace)
+        results = KPod(k8s_client).ops_batch.list({"app": "invalid-label-value"}, namespace=another_namespace)
         assert len(results.items) == 0
 
     def test_delete_collection(self, k8s_client, wl_app):
@@ -170,11 +170,11 @@ class TestLabelBasedOps:
             namespace=wl_app.namespace,
             body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
-        assert len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items) == 1
-        KPod(k8s_client).ops_label.delete_collection({"app": wl_app.name}, namespace=wl_app.namespace)
+        assert len(KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace).items) == 1
+        KPod(k8s_client).ops_batch.delete_collection({"app": wl_app.name}, namespace=wl_app.namespace)
         for _ in range(20):
             time.sleep(1)
-            cnt = len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items)
+            cnt = len(KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace).items)
             if cnt == 0:
                 break
         else:
@@ -186,17 +186,32 @@ class TestLabelBasedOps:
             namespace=wl_app.namespace,
             body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
-        assert len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items) == 1
-        KPod(k8s_client).ops_label.delete_individual(
+        assert len(KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace).items) == 1
+        KPod(k8s_client).ops_batch.delete_individual(
             {"app": wl_app.name}, namespace=wl_app.namespace, non_grace_period=False
         )
         for _ in range(20):
             time.sleep(1)
-            cnt = len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items)
+            cnt = len(KPod(k8s_client).ops_batch.list({"app": wl_app.name}, namespace=wl_app.namespace).items)
             if cnt == 0:
                 break
         else:
             pytest.fail("delete individual failed")
+
+    @pytest.mark.parametrize(
+        ("input_dict", "expected_output"),
+        [
+            ({}, ""),
+            ({"level1": {"level2": {"field": "value"}}}, "level1.level2.field=value"),
+            ({"level1": {"level2": {"level3": {"field": "value"}}}}, "level1.level2.level3.field=value"),
+            (
+                {"level1": "simple_value", "level2": {"subfield": "sub_value"}},
+                "level1=simple_value,level2.subfield=sub_value",
+            ),
+        ],
+    )
+    def test_make_fields_string(self, input_dict, expected_output):
+        assert BatchOperations.make_fields_string(input_dict) == expected_output
 
 
 class TestKNamespace:

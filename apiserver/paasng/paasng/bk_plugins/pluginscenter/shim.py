@@ -24,12 +24,13 @@ from django.utils.translation import gettext_lazy as _
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
+from paasng.bk_plugins.pluginscenter.features import PluginDefinitionFlagsManager, PluginFeatureFlag
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import (
     add_role_members,
     setup_builtin_grade_manager,
     setup_builtin_user_groups,
 )
-from paasng.bk_plugins.pluginscenter.models import PluginInstance, PluginMarketInfo
+from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance, PluginMarketInfo
 from paasng.bk_plugins.pluginscenter.sourcectl import add_repo_member, get_plugin_repo_initializer
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import APIError as SourceAPIError
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import PluginRepoNameConflict
@@ -122,8 +123,11 @@ def init_plugin_repository(plugin: PluginInstance, operator: str):
     add_repo_member(plugin, operator, role=constants.PluginRole.ADMINISTRATOR)
 
 
-def build_repository_template(repository_group: str) -> str:
+def build_repository_template(pd: PluginDefinition, repository_group: str) -> str:
     """transfer a repository group to repository template"""
     if not repository_group.endswith("/"):
         repository_group += "/"
+
+    if PluginDefinitionFlagsManager(pd).has_feature(PluginFeatureFlag.LOWER_REPO_NAME):
+        return repository_group + "{{ plugin_id|lower }}.git"
     return repository_group + "{{ plugin_id }}.git"

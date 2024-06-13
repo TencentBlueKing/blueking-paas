@@ -66,10 +66,11 @@
             v-model="keyword"
             class="fr"
             :clearable="true"
-            :placeholder="inputPlaceholder"
+            :placeholder="$t('版本/代码分支')"
             :right-icon="'bk-icon icon-search'"
             :style="{ width: `${isOfficialVersion ? 480 : 300}px` }"
             @enter="handleSearch"
+            @right-icon-click="handleSearch"
           />
         </section>
       </div>
@@ -205,7 +206,7 @@
               v-if="row.report_url"
               theme="primary"
               text
-              @click="toTestReportPage(row.report_url)"
+              @click="toTestReportPage(row)"
             >
               {{ $t('测试报告') }}
             </bk-button>
@@ -381,9 +382,6 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
-    },
-    inputPlaceholder() {
-      return this.isOfficialVersion ? this.$t('版本号/代码分支/代码 Commit/创建人/发布进度') : this.$t('代码分支/代码 Commit/创建人/测试进度');
     },
     // 正式版
     isOfficialVersion() {
@@ -690,8 +688,20 @@ export default {
       this.getVersionList();
     },
 
-    toTestReportPage(url) {
-      window.open(url, '_blank');
+    // 测试报告
+    toTestReportPage(row) {
+      const url = `${row.report_url}?currentVersion=${row.version}`;
+      this.$router.push({
+        name: 'pluginTestReport',
+        params: {
+          pluginTypeId: this.pdId,
+          id: this.pluginId,
+        },
+        query: {
+          type: 'test',
+          url,
+        },
+      });
     },
   },
 };

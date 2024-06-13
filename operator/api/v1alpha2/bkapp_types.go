@@ -157,6 +157,9 @@ type Process struct {
 
 	// Autoscaling specifies the autoscaling configuration
 	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
+
+	// Probes specifies the probe configuration
+	Probes *ProbeSet `json:"probes,omitempty"`
 }
 
 // Addon is used to specify add-on service
@@ -228,6 +231,18 @@ const (
 	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
 	ScalingPolicyDefault ScalingPolicy = "default"
 )
+
+type ProbeSet struct {
+	// liveness is the configuration for liveness probes.
+	// +optional
+	Liveness *corev1.Probe `json:"liveness,omitempty"`
+	// ReadinessProbe is the configuration for readiness probes.
+	// +optional
+	Readiness *corev1.Probe `json:"readiness,omitempty"`
+	// StartupProbe is the configuration for startup probes.
+	// +optional
+	Startup *corev1.Probe `json:"startup,omitempty"`
+}
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {

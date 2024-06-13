@@ -21,6 +21,8 @@ package v1alpha1
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -47,6 +49,45 @@ var _ = Describe("test conversion back and forth", func() {
 						Replicas: ReplicasTwo,
 						CPU:      "500m",
 						Memory:   "256Mi",
+						Probes: &ProbeSet{
+							Liveness: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(80),
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      60,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+							Readiness: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/healthz",
+										Port: intstr.FromInt(80),
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      60,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+							Startup: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"echo", "I'm ready!"},
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      60,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+						},
 					},
 					{
 						Name:     "worker",
@@ -153,6 +194,45 @@ var _ = Describe("test conversion back and forth", func() {
 						Name:         "web",
 						Replicas:     ReplicasTwo,
 						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						Probes: &paasv1alpha2.ProbeSet{
+							Liveness: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(80),
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      60,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+							Readiness: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/healthz",
+										Port: intstr.FromInt(80),
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      60,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+							Startup: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"echo", "I'm ready!"},
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      60,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+						},
 					},
 					{
 						Name:         "worker",

@@ -36,7 +36,7 @@
         </div>
       </div>
       <div
-        v-if="userFeature.PHALANX"
+        v-if="userFeature.MONITORING"
         class="alarm"
       >
         <div class="icon-box mr8">

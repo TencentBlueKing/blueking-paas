@@ -384,12 +384,11 @@ export default {
         // 接入feature flag来控制应用导航
         const featureMaps = {
           docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
-          appCloudAPI: 'API_GATEWAY', // 云API权限管理
         };
         const subFeatureMaps = {
           cloudAppAnalysis: 'ANALYTICS', // 访问统计
           codeReview: 'CI', // 代码检查
-          monitorAlarm: 'PHALANX', // 告警记录
+          monitorAlarm: 'MONITORING', // 告警记录
         };
         // 一级
         navTree = navTree.filter((nav) => {

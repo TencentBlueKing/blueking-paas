@@ -153,7 +153,7 @@ export default {
 
     curTabPanels() {
       // 可观测性配置接入featureflag
-      if (!this.userFeature.PHALANX) {
+      if (!this.userFeature.MONITORING) {
         this.panels = this.panels.filter(v => v.ref !== 'observability');
       }
       return this.panels;

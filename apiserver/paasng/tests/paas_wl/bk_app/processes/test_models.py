@@ -72,7 +72,10 @@ class TestProcessSpecManager:
         web.refresh_from_db()
         assert web.target_replicas == 2
         assert web.autoscaling
-        assert web.scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=3, policy="default")
+        assert web.scaling_config is not None
+        assert web.scaling_config.min_replicas == 1
+        assert web.scaling_config.max_replicas == 3
+        assert web.scaling_config.policy == "default"
 
         # rollback
         mgr.sync(
@@ -84,8 +87,11 @@ class TestProcessSpecManager:
         web.refresh_from_db()
         assert web.target_replicas == 2
         assert not web.autoscaling
-        # sync 时未提供 scaling_config, 不会设置未 None
-        assert web.scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=3, policy="default")
+        # sync 时未提供 scaling_config, 不会设置为 None
+        assert web.scaling_config is not None
+        assert web.scaling_config.min_replicas == 1
+        assert web.scaling_config.max_replicas == 3
+        assert web.scaling_config.policy == "default"
 
 
 class TestProcessProbeManager:

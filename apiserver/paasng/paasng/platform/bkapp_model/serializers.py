@@ -72,7 +72,7 @@ class ExecProbeActionSLZ(serializers.Serializer):
 
 
 class TcpSocketProbeActionSLZ(serializers.Serializer):
-    port = serializers.IntegerField(help_text="探活端口", min_value=1, max_value=65535)
+    port = serializers.CharField(help_text="探活端口")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
 
@@ -82,7 +82,7 @@ class HTTPHeaderSLZ(serializers.Serializer):
 
 
 class HttpGetProbeActionSLZ(serializers.Serializer):
-    port = serializers.IntegerField(help_text="探活端口", min_value=1, max_value=65535)
+    port = serializers.CharField(help_text="探活端口")
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
     http_headers = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ())

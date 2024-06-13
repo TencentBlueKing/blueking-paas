@@ -112,6 +112,13 @@ class TCPSocketAction:
 
 
 @dataclass
+class ProbeHandler:
+    exec: Optional[ExecAction] = None
+    http_get: Optional[HTTPGetAction] = None
+    tcp_socket: Optional[TCPSocketAction] = None
+
+
+@dataclass
 class Probe:
     exec: Optional[ExecAction] = None
     http_get: Optional[HTTPGetAction] = None
@@ -122,6 +129,10 @@ class Probe:
     period_seconds: Optional[int] = 10
     success_threshold: Optional[int] = 1
     failure_threshold: Optional[int] = 3
+
+    def get_probe_handler(self) -> ProbeHandler:
+        """返回 ProbeHandler 对象"""
+        return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
 
 
 @dataclass

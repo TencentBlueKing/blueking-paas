@@ -65,21 +65,6 @@
 
       <!-- 手动预览与发布完成不展示底部操作按钮组 -->
       <div class="footer-btn-warp" v-if="isShowButtonGroup && !isPostedSuccessfully">
-        <bk-popover placement="top" :disabled="isAllowPrev && !isItsmStage">
-          <bk-button
-            v-if="!isFirstStage"
-            theme="default"
-            class="ml5"
-            style="width: 120px"
-            :disabled="!isAllowPrev"
-            @click="handlerPrev"
-          >
-            {{ $t('上一步') }}
-          </bk-button>
-          <div slot="content" style="white-space: normal;">
-            {{ $t('单据正在审批中，无法回到上一步，如有修改需求，请先撤销提单') }}
-          </div>
-        </bk-popover>
         <!-- 构建完成可以进入下一步 -->
         <bk-popover placement="top" :disabled="nextTips.disabled">
           <bk-button
@@ -203,21 +188,6 @@ export default {
     },
     isSingleStage() {
       return this.curAllStages.length === 1;
-    },
-    // 是否禁用上一步
-    isAllowPrev() {
-      switch (this.curStageComponmentType) {
-        case 'itsm':
-          const itemStatus = this.stageData.status || this.pluginDetailedData.current_stage?.status;
-          // 已撤销、审批不通过，才显示上一步，其余情况禁用
-          const isDisabledList = ['interrupted', 'failed'];
-          return !!isDisabledList.includes(itemStatus);
-          break;
-        default:
-          const isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
-          return !isRunningDeploy && this.status !== 'successful';
-          break;
-      }
     },
     isAllowNext() {
       // 测试阶段下一步按钮禁用由接口返回值决定
@@ -521,34 +491,6 @@ export default {
       } finally {
         setTimeout(() => {
           this.isLoading = false;
-        }, 200);
-      }
-    },
-
-    // 上一步
-    async handlerPrev() {
-      this.isLoading = true;
-      this.isPrevious = true;
-      try {
-        const params = {
-          pdId: this.pdId,
-          pluginId: this.pluginId,
-          releaseId: this.$route.query.release_id,
-        };
-        const releaseData = await this.$store.dispatch('plugin/backRelease', params);
-        this.$store.commit('plugin/updateCurRelease', releaseData);
-        await this.getReleaseDetail();
-        await this.getReleaseStageDetail();
-      } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        setTimeout(() => {
-          this.isLoading = false;
-          this.stepsStatus = '';
-          this.isPrevious = false;
         }, 200);
       }
     },

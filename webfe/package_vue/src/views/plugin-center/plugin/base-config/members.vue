@@ -23,10 +23,11 @@
           <bk-input
             v-model="keyword"
             class="search-input"
-            :placeholder="$t('成员姓名/名称')"
+            :placeholder="$t('请输入成员姓名搜索')"
             :clearable="true"
             :right-icon="'bk-icon icon-search'"
             @enter="handleSearch"
+            @right-icon-click="handleSearch"
           />
         </div>
         <div class="content-wrapper">

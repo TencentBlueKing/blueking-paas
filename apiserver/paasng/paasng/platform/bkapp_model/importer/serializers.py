@@ -21,7 +21,7 @@ from rest_framework import serializers
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
-from paasng.utils.serializers import field_env_var_key
+from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
@@ -172,7 +172,7 @@ class ExecActionInputSLZ(serializers.Serializer):
 
 
 class TcpSocketActionInputSLZ(serializers.Serializer):
-    port = serializers.CharField(help_text="探活端口")
+    port = IntegerOrCharField(help_text="探活端口")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
 
@@ -182,7 +182,7 @@ class HTTPHeaderInputSLZ(serializers.Serializer):
 
 
 class HttpGetActionInputSLZ(serializers.Serializer):
-    port = serializers.CharField(help_text="探活端口")
+    port = IntegerOrCharField(help_text="探活端口")
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
     httpHeaders = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderInputSLZ())

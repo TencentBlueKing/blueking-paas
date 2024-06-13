@@ -27,6 +27,7 @@ from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import DeployHookType
+from paasng.utils.serializers import IntegerOrCharField
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -72,7 +73,7 @@ class ExecProbeActionSLZ(serializers.Serializer):
 
 
 class TcpSocketProbeActionSLZ(serializers.Serializer):
-    port = serializers.CharField(help_text="探活端口")
+    port = IntegerOrCharField(help_text="探活端口")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
 
@@ -82,7 +83,7 @@ class HTTPHeaderSLZ(serializers.Serializer):
 
 
 class HttpGetProbeActionSLZ(serializers.Serializer):
-    port = serializers.CharField(help_text="探活端口")
+    port = IntegerOrCharField(help_text="探活端口")
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
     http_headers = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ())

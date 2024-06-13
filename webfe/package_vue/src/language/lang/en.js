@@ -2628,4 +2628,11 @@ export default {
   查看迁移进度: 'View Migration Progress',
   '已选择 <span>{d}</span> 个组织，<span class="s2">{s}</span> 个用户': 'Selected <span>{d}</span> organizations and <span class="s2">{s}</span> users',
   '仅影响 蓝鲸桌面 上应用的可见范围': 'Only affects the visibility of applications on the BK Desktop',
+  '进程 {n1} 实例 {n2} 事件详情': 'Process {n1} Instance {n2} Event Details',
+  首次发生时间: 'First Occurrence Time',
+  最新发生时间: 'Latest Occurrence Time',
+  事件类型: 'Event Type',
+  事件原因: 'Event Cause',
+  事件次数: 'Event Count',
+  查看事件: 'View Event',
 };

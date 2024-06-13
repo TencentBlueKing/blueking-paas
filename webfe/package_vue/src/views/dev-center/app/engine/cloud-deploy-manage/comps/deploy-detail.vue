@@ -140,7 +140,7 @@
         <bk-table-column
           label=""
           class-name="table-colum-instance-cls"
-          width="140">
+          :width="columWidth">
           <template slot-scope="{ row }">
             <div
               class="instance-item-cls cell-container operation-column"
@@ -148,6 +148,13 @@
               v-for="instance in row.instances"
               :key="instance.process_name"
             >
+              <bk-button
+                class="mr10"
+                :text="true"
+                title="primary"
+                @click="showInstanceEvents(instance, row.name)">
+                {{$t('查看事件')}}
+              </bk-button>
               <bk-button
                 class="mr10"
                 :text="true"
@@ -426,6 +433,20 @@
       </div>
     </bk-sideslider>
 
+    <!-- 查看事件 -->
+    <bk-sideslider
+      :is-show.sync="instanceEventConfig.isShow"
+      :title="$t('进程 {n1} 实例 {n2} 事件详情', { n1: instanceEventConfig.processName, n2: instanceEventConfig.name })"
+      :quick-close="true"
+      :width="800">
+      <div class="p20" slot="content">
+        <eventDetail
+          :env="environment"
+          :module-id="curModuleId"
+          :instance-name="instanceEventConfig.instanceName"
+        />
+      </div>
+    </bk-sideslider>
 
     <!-- 无法使用控制台 -->
     <bk-dialog
@@ -466,6 +487,7 @@ import ECharts from 'vue-echarts/components/ECharts.vue';
 import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
+import eventDetail from './event-detail.vue';
 
 moment.locale('zh-cn');
 // let maxReplicasNum = 0;
@@ -479,6 +501,7 @@ export default {
   components: {
     chart: ECharts,
     scaleDialog,
+    eventDetail,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -652,6 +675,11 @@ export default {
       // EventSource handler
       serverProcessEvent: undefined,
       scaleTargetReplicas: 0,
+      instanceEventConfig: {
+        isShow: false,
+        name: '',
+        instanceName: '',
+      },
     };
   },
   computed: {
@@ -670,6 +698,9 @@ export default {
         const readyInstancesCount = v.instances.filter(instance => instance.ready).length;
         return p + readyInstancesCount;
       }, 0);
+    },
+    columWidth() {
+      return this.localLanguage === 'en' ? (this.curAppInfo.feature.ENABLE_WEB_CONSOLE ? 220 : 150) : (this.curAppInfo.feature.ENABLE_WEB_CONSOLE ? 200 : 140);
     },
   },
 
@@ -1503,6 +1534,14 @@ export default {
       if (isChangeScaleType) {
         bus.$emit('get-release-info');
       }
+    },
+
+    // 显示查看事件
+    showInstanceEvents(data, processName) {
+      this.instanceEventConfig.isShow = true;
+      this.instanceEventConfig.name = data.display_name;
+      this.instanceEventConfig.processName = processName;
+      this.instanceEventConfig.instanceName = data.name;
     },
   },
 };

@@ -313,3 +313,36 @@ export function isJsonString(str) {
   }
   return false;
 }
+
+/**
+ * 分页工具函数
+ * @param {Array} data - 数据源
+ * @param {number} currentPage - 当前页码
+ * @param {number} pageSize - 每页条数
+ * @return {Object} 分页结果，包括分页数据、总条数、总页数等信息
+ */
+export function paginationFun(data = [], currentPage = 1, pageSize = 10) {
+  // 确保页码为整数且大于等于1
+  const currentPageNumber = Math.max(1, parseInt(currentPage, 10));
+  // 计算总条数
+  const totalItems = data.length;
+  // 计算总页数
+  const totalPages = Math.ceil(totalItems / pageSize);
+
+  // 确保页码不超过总页数
+  const safePage = Math.min(currentPageNumber, totalPages);
+  // 计算分页的起始索引和结束索引
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+  // 获取当前页的数据
+  const pageData = data.slice(startIndex, endIndex);
+
+  return {
+    currentPage: safePage,
+    pageSize,
+    totalItems,
+    totalPages,
+    pageData,
+  };
+}

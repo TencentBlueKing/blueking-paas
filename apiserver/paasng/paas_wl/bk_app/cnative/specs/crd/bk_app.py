@@ -22,7 +22,7 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
@@ -68,7 +68,7 @@ class HTTPHeader(BaseModel):
 class HTTPGetAction(BaseModel):
     """HTTPGetAction describes an action based on HTTP Get requests."""
 
-    port: int
+    port: Union[str, int]
     host: Optional[str] = None
     path: Optional[str] = None
     httpHeaders: List[HTTPHeader] = Field(default_factory=list)
@@ -78,7 +78,7 @@ class HTTPGetAction(BaseModel):
 class TCPSocketAction(BaseModel):
     """TCPSocketAction describes an action based on opening a socket"""
 
-    port: int
+    port: Union[str, int]
     host: Optional[str] = None
 
 

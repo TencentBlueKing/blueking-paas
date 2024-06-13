@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
 import cattr
@@ -171,7 +172,7 @@ class ProcessSpecManager:
                 plan=plan,
                 proc_command=process.command,
                 autoscaling=process.autoscaling,
-                scaling_config=process.scaling_config,
+                scaling_config=asdict(process.scaling_config),
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -194,8 +195,8 @@ class ProcessSpecManager:
                 recorder.setattr("plan", plan)
             if process.autoscaling != process_spec.autoscaling:
                 recorder.setattr("autoscaling", process.autoscaling)
-            if (scaling_config := process.scaling_config) and scaling_config != process_spec.scaling_config:
-                recorder.setattr("scaling_config", scaling_config)
+            if (scaling_config := process.scaling_config) and asdict(scaling_config) != process_spec.scaling_config:
+                recorder.setattr("scaling_config", asdict(scaling_config))
             if (replicas := process.replicas) and replicas != process_spec.target_replicas:
                 recorder.setattr("target_replicas", replicas)
             return recorder.changed, process_spec

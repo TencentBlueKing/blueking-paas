@@ -24,6 +24,7 @@ from unittest import mock
 import pytest
 from blue_krill.data_types.enum import FeatureFlagField
 from django.conf import settings
+from django.test.utils import override_settings
 from django.urls import reverse
 
 from paasng.misc.feature_flags.constants import PlatformFeatureFlag
@@ -76,7 +77,10 @@ class TestSvnAPI:
 
     def test_reset_account_error(self, mocked_call_api, api_client, bk_user, svn_account):
         data = {"verification_code": "000000", "region": settings.DEFAULT_REGION_NAME}
-        response = api_client.put(reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), data)
+        with override_settings(ENABLE_VERIFICATION_CODE=False):
+            response = api_client.put(
+                reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), data
+            )
 
         assert response.status_code == 400
         assert response.json() == {

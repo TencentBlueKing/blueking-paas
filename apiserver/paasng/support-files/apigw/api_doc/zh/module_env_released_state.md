@@ -61,8 +61,6 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' ht
         }
     },
     "feature_flag":{
-        "release_to_bk_market": True/False,
-        "release_to_wx_miniprogram": True/False,
         "release_to_wx_qiye": True/False
     },
     "module_mobile_config_enabled": True/False,

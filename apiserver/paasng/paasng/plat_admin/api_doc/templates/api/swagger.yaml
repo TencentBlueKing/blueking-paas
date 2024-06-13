@@ -2636,8 +2636,6 @@ paths:
                 }
             },
             "feature_flag":{
-                "release_to_bk_market": True/False,         # 是否发布到蓝鲸应用市场
-                "release_to_wx_miniprogram": True/False,    # 是否发布到微信小程序
                 "release_to_wx_qiye": True/False            # 是否发布到微信企业端
             },
             "module_mobile_config_enabled": True/False,     # 移動端功能是否开启(对应region的总开关)

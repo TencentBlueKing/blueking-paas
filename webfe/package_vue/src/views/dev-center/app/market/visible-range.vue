@@ -12,7 +12,9 @@
       </div>
       <div class="content">
         <div class="top-wrapper">
+          <p class="info" v-if="departments.length === 0 && users.length === 0">{{ $t('默认全员可见') }}</p>
           <p
+            v-else
             class="info"
             v-html="infoMsg"
           ></p>

@@ -3,7 +3,7 @@
     :is-loading="isDataLoading"
     placeholder="market-visit-loading"
   >
-    <section v-show="!isDataLoading" class="market-manager">
+    <section class="market-manager">
       <div class="market-info mb25 shadow-card-style">
         <div class="flex-row justify-content-between align-items-center">
           <div class="market-info-title-wrapper">
@@ -134,7 +134,7 @@
             </bk-form-item>
 
             <bk-form-item
-              v-if="curAppInfo.feature.MARKET_VISIBILITY"
+              v-if="marketVisibility && isNewlyCreated"
               :label="$t('可见范围：')"
               :property="'name'"
             >
@@ -358,7 +358,7 @@
       </div>
 
       <user-selector-dialog
-        v-if="curAppInfo.feature.MARKET_VISIBILITY"
+        v-if="marketVisibility && isNewlyCreated"
         :show.sync="isShow"
         :users="users"
         :departments="departments"
@@ -366,6 +366,13 @@
         @sumbit="handleSubmit"
       />
     </section>
+
+    <!-- 可见范围 -->
+    <visible-range
+      v-if="marketVisibility && !isNewlyCreated"
+      :data="baseInfo"
+      @get-app-info="handleGetAppInfo"
+    />
   </paas-content-loader>
 </template>
 
@@ -373,6 +380,7 @@
 import user from '@/components/user';
 import userSelectorDialog from '@/components/user-selector';
 import RenderMemberItem from './render-member-display';
+import visibleRange from './visible-range';
 import { PLATFORM_CONFIG } from '../../../../../static/json/paas_static';
 
 export default {
@@ -380,6 +388,7 @@ export default {
     user,
     userSelectorDialog,
     RenderMemberItem,
+    visibleRange,
   },
   mixins: [appBaseMixin],
   data() {
@@ -498,6 +507,12 @@ export default {
     isSmartApp() {
       return this.curAppInfo.application?.is_smart_app;
     },
+    marketVisibility() {
+      return this.curAppInfo.feature.MARKET_VISIBILITY;
+    },
+    isNewlyCreated() {
+      return this.curAppInfo.product === null;
+    },
   },
   watch: {
     '$route'() {
@@ -512,8 +527,8 @@ export default {
   },
   methods: {
     /**
-             * 初始化入口
-             */
+     * 初始化入口
+     */
     async init() {
       this.initAppMarketInfo();
       this.getBusinessList();
@@ -549,8 +564,8 @@ export default {
     },
 
     /**
-             * 获取业务列表
-             */
+     * 获取业务列表
+     */
     async getBusinessList() {
       try {
         const res = await this.$store.dispatch('market/getBusinessList');
@@ -638,15 +653,15 @@ export default {
     },
 
     /**
-             * 获取应用的市场基础信息
-             *
-             * appStatus:
-             * offlined: 已经下架
-             * deploy: 没有部署到生产环境
-             * reg: 还没注册
-             */
-    async initAppMarketInfo() {
-      this.isDataLoading = true;
+     * 获取应用的市场基础信息
+     *
+     * appStatus:
+     * offlined: 已经下架
+     * deploy: 没有部署到生产环境
+     * reg: 还没注册
+     */
+    async initAppMarketInfo(loading = true) {
+      this.isDataLoading = loading;
       try {
         const res = await this.$store.dispatch('market/getAppBaseInfo', this.appCode);
         const { product } = res;
@@ -721,8 +736,8 @@ export default {
     },
 
     /**
-             * 针对接口数据处理，以适应前端需要
-             */
+     * 针对接口数据处理，以适应前端需要
+     */
     formatMarketInfo() {
       this.baseInfo.contactArr = this.baseInfo.contact.split('; ');
       this.baseInfo.resizableKey = this.baseInfo.resizable ? 'able' : 'disable';
@@ -731,8 +746,8 @@ export default {
     },
 
     /**
-             * 提交基础信息数据
-             */
+     * 提交基础信息数据
+     */
     submitMarketInfo() {
       if (this.isSmartApp) {
         this.saveMarketInfo();
@@ -744,8 +759,8 @@ export default {
     },
 
     /**
-             * 保存应用市场信息
-             */
+     * 保存应用市场信息
+     */
     async saveMarketInfo() {
       if (this.isInfoSaving) return;
 
@@ -821,14 +836,18 @@ export default {
     },
 
     /**
-             * 切换保打开方式
-             */
+     * 切换保打开方式
+     */
     changeDesktop() {
       this.baseInfo.open_mode = 'desktop';
     },
 
     changeNewtab() {
       this.baseInfo.open_mode = 'new_tab';
+    },
+
+    handleGetAppInfo() {
+      this.initAppMarketInfo(false);
     },
   },
 };

@@ -29,7 +29,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.declarative.deployment.resources import BkSaaSItem
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models.deployment import AutoscalingConfig
+from paasng.platform.engine.models.deployment import AutoscalingConfig, ProbeSet
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
 from paasng.utils.models import make_json_field
@@ -51,6 +51,8 @@ def env_overlay_getter_factory(field_name: str):
 
 
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
+
+ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -75,6 +77,7 @@ class ModuleProcessSpec(TimestampedModel):
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
+    probes: Optional[ProbeSet] = ProbeSetField("容器探针配置", default=None, null=True)
 
     class Meta:
         unique_together = ("module", "name")

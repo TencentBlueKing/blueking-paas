@@ -17,9 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 import cattr
 from attrs import define
@@ -86,6 +86,52 @@ class AutoscalingConfig:
 
 
 @dataclass
+class ExecAction:
+    command: List[str]
+
+
+@dataclass
+class HTTPHeader:
+    name: str
+    value: str
+
+
+@dataclass
+class HTTPGetAction:
+    port: int
+    host: Optional[str] = None
+    path: Optional[str] = None
+    http_headers: List[HTTPHeader] = field(default_factory=list)
+    scheme: Optional[Literal["HTTP", "HTTPS"]] = None
+
+
+@dataclass
+class TCPSocketAction:
+    port: int
+    host: Optional[str] = None
+
+
+@dataclass
+class Probe:
+    exec: Optional[ExecAction] = None
+    http_get: Optional[HTTPGetAction] = None
+    tcp_socket: Optional[TCPSocketAction] = None
+
+    initial_delay_seconds: Optional[int] = 0
+    timeout_seconds: Optional[int] = 1
+    period_seconds: Optional[int] = 10
+    success_threshold: Optional[int] = 1
+    failure_threshold: Optional[int] = 3
+
+
+@dataclass
+class ProbeSet:
+    liveness: Optional[Probe] = None
+    readiness: Optional[Probe] = None
+    startup: Optional[Probe] = None
+
+
+@dataclass
 class ProcessTmpl:
     """This class is a duplication of paas_wl.bk_app.processes.models.ProcessTmpl, it
     avoids a circular import problem.
@@ -97,6 +143,7 @@ class ProcessTmpl:
     plan: Optional[str] = None
     autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
+    probes: Optional[ProbeSet] = None
 
     def __post_init__(self):
         self.name = self.name.lower()

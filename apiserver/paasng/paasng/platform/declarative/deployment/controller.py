@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-import cattr
 from attrs import define, fields
 from django.db.transaction import atomic
 
@@ -51,18 +50,16 @@ class PerformResult:
     loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
 
     def set_processes(self, processes: Dict[str, Process]):
-        self.loaded_processes = cattr.structure(
-            {
-                proc_name: {
-                    "name": proc_name,
-                    "command": process.command,
-                    "replicas": process.replicas,
-                    "plan": process.plan,
-                }
-                for proc_name, process in processes.items()
-            },
-            Dict[str, ProcessTmpl],
-        )
+        self.loaded_processes = {
+            proc_name: ProcessTmpl(
+                name=proc_name,
+                command=process.command,
+                replicas=process.replicas,
+                plan=process.plan,
+                probes=process.probes,  # type: ignore
+            )
+            for proc_name, process in processes.items()
+        }
 
     def is_use_cnb(self) -> bool:
         return self.spec_version == AppSpecVersion.VER_3

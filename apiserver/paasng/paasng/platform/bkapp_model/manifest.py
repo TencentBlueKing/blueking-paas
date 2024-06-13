@@ -55,11 +55,16 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     EnvOverlay,
     EnvVar,
     EnvVarOverlay,
+    ExecAction,
     Hook,
+    HTTPGetAction,
     MountOverlay,
     ObjectMetadata,
+    Probe,
+    ProbeSet,
     ReplicasOverlay,
     ResQuotaOverlay,
+    TCPSocketAction,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
@@ -89,6 +94,7 @@ from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.engine.models.deployment import Probe as ProbeConfig
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -200,6 +206,14 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     minReplicas=_c.min_replicas, maxReplicas=_c.max_replicas, policy=_c.policy
                 )
 
+            probes_spec = None
+            if probes := process_spec.probes:
+                probes_spec = ProbeSet(
+                    liveness=self._build_probe_from_config(probes.liveness) if probes.liveness else None,
+                    readiness=self._build_probe_from_config(probes.readiness) if probes.readiness else None,
+                    startup=self._build_probe_from_config(probes.startup) if probes.startup else None,
+                )
+
             processes.append(
                 BkAppProcess(
                     name=process_spec.name,
@@ -210,6 +224,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
                     autoscaling=autoscaling_spec,
+                    probes=probes_spec,
                 )
             )
 
@@ -320,6 +335,36 @@ class ProcessesManifestConstructor(ManifestConstructor):
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
         return [s.replace("${PORT:-5000}", "${PORT}") for s in input]
+
+    @staticmethod
+    def _build_probe_from_config(cfg: ProbeConfig) -> Probe:
+        return Probe(
+            initialDelaySeconds=cfg.initial_delay_seconds,
+            periodSeconds=cfg.period_seconds,
+            timeoutSeconds=cfg.timeout_seconds,
+            successThreshold=cfg.success_threshold,
+            failureThreshold=cfg.failure_threshold,
+            exec=ExecAction(command=cfg.exec.command) if cfg.exec else None,
+            httpGet=(
+                HTTPGetAction(
+                    port=cfg.http_get.port,
+                    host=cfg.http_get.host,
+                    path=cfg.http_get.path,
+                    httpHeaders=cfg.http_get.http_headers,
+                    scheme=cfg.http_get.scheme,
+                )
+                if cfg.http_get
+                else None
+            ),
+            tcpSocket=(
+                TCPSocketAction(
+                    port=cfg.tcp_socket.port,
+                    host=cfg.tcp_socket.host,
+                )
+                if cfg.tcp_socket
+                else None
+            ),
+        )
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):

@@ -167,6 +167,49 @@ class BuildInputSLZ(serializers.Serializer):
         return bk_app.BkAppBuildConfig(**d)
 
 
+class ExecActionInputSLZ(serializers.Serializer):
+    command = serializers.ListField(help_text="探活命令", child=serializers.CharField(max_length=48), max_length=12)
+
+
+class TcpSocketActionInputSLZ(serializers.Serializer):
+    port = serializers.IntegerField(help_text="探活端口", min_value=1, max_value=65535)
+    host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
+
+
+class HTTPHeaderInputSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="标头名称")
+    value = serializers.CharField(help_text="标头值")
+
+
+class HttpGetActionInputSLZ(serializers.Serializer):
+    port = serializers.IntegerField(help_text="探活端口", min_value=1, max_value=65535)
+    path = serializers.CharField(help_text="探活路径", max_length=128)
+    host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
+    httpHeaders = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderInputSLZ())
+    scheme = serializers.CharField(help_text="http/https", required=False)
+
+
+class ProbeInputSLZ(serializers.Serializer):
+    """探针配置"""
+
+    exec = ExecActionInputSLZ(required=False, help_text="exec 探活配置")
+    httpGet = TcpSocketActionInputSLZ(required=False, help_text="http get 探活配置")
+    tcpSocket = HttpGetActionInputSLZ(required=False, help_text="tcp socket 探活配置")
+    initialDelaySeconds = serializers.IntegerField(help_text="初次探测延迟时间")
+    timeoutSeconds = serializers.IntegerField(help_text="探测超时时间")
+    periodSeconds = serializers.IntegerField(help_text="探测周期")
+    successThreshold = serializers.IntegerField(help_text="成功阈值")
+    failureThreshold = serializers.IntegerField(help_text="失败阈值")
+
+
+class ProbeSetInputSLZ(serializers.Serializer):
+    """探针集合"""
+
+    liveness = ProbeInputSLZ(required=False, help_text="存活探针")
+    readiness = ProbeInputSLZ(required=False, help_text="就绪探针")
+    startup = ProbeInputSLZ(required=False, help_text="启动探针")
+
+
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
@@ -177,6 +220,7 @@ class ProcessInputSLZ(serializers.Serializer):
     command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
+    probes = ProbeSetInputSLZ(allow_null=True, default=None)
 
     def to_internal_value(self, data) -> bk_app.BkAppProcess:
         d = super().to_internal_value(data)

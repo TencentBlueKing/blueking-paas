@@ -1146,6 +1146,8 @@ ACCESS_CONTROL_STRATEGY_DEFAULT_EXPIRES_DAYS = 90
 # ---------------
 # 访问统计相关配置
 # ---------------
+# 用于控制前端页面是否展示访问统计功能
+ENABLE_ANALYSIS = settings.get("ENABLE_ANALYSIS", False)
 
 PAAS_ANALYSIS_BASE_URL = settings.get("PAAS_ANALYSIS_BASE_URL", "http://localhost:8085")
 PAAS_ANALYSIS_JWT_CONF = settings.get("PAAS_ANALYSIS_JWT_CONF", {})
@@ -1186,8 +1188,11 @@ MIGRATION_REMIND_DAYS = 7
 IS_PATCH_CODE_IN_MGRLEGACY = settings.get("IS_PATCH_CODE_IN_MGRLEGACY", True)
 
 # ------------------
-# 蓝盾代码检查相关配置
+# 蓝鲸代码检查相关配置
 # ------------------
+
+# 是否开启 CI 相关特性，如代码检查
+ENABLE_CI = settings.get("ENABLE_CI", False)
 
 # 蓝鲸 CI 相关配置项
 CI_CONFIGS = settings.get("CI_CONFIGS", {})
@@ -1405,3 +1410,19 @@ DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE
 
 # 持久存储默认存储大小
 DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")
+
+# ---------------------------------------------
+#  平台 FeatureFlag
+# ---------------------------------------------
+# 应用市场可见范围
+ENABLE_MARKET_VISIBILITY = settings.get("ENABLE_MARKET_VISIBILITY", True)
+# 聚合搜索
+ENABLE_AGGREGATE_SEARCH = settings.get("ENABLE_MARKET_VISIBILITY", False)
+# 发送验证码，没有配置通知渠道的版本可以关闭该功能
+ENABLE_VERIFICATION_CODE = settings.get("ENABLE_VERIFICATION_CODE", False)
+# 文档管理功能
+ENABLE_DOCUMENT_MANAGEMENT = settings.get("ENABLE_DOCUMENT_MANAGEMENT", False)
+# 记录本地开发时长，部分版本的普通应用还有该功能
+ENABLE_DEVELOPMENT_TIME_RECORD = settings.get("ENABLE_DOCUMENT_MANAGEMENT", False)
+# 显示应用版本
+ENABLE_REGION_DISPLAY = settings.get("ENABLE_REGION_DISPLAY", False)

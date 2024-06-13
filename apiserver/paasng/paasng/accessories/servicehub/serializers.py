@@ -71,11 +71,13 @@ class ServiceSLZ(serializers.Serializer):
 
     def get_is_ready(self, data) -> bool:
         """部分依赖其他服务的增强服务（如蓝鲸 APM），在依赖服务尚未部署前，可以通过设置 is_ready=False 来跳过创建增强服务实例的步骤。"""
-        is_ready = True
         svc_store = get_remote_store()
         try:
-            svc_config = svc_store.get_source_config(data["uuid"])
+            svc_config = svc_store.get_source_config(data.uuid)
         except ServiceConfigNotFound:
+            # 本地增强服务等未显式声明 is_ready 属性的都默认为开启
+            is_ready = True
+        else:
             is_ready = svc_config.is_ready
         return is_ready
 

@@ -77,7 +77,7 @@ class TestSvnAPI:
 
     def test_reset_account_error(self, mocked_call_api, api_client, bk_user, svn_account):
         data = {"verification_code": "000000", "region": settings.DEFAULT_REGION_NAME}
-        with override_settings(ENABLE_VERIFICATION_CODE=False):
+        with override_settings(ENABLE_VERIFICATION_CODE=True):
             response = api_client.put(
                 reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), data
             )

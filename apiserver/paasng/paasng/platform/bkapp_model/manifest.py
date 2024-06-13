@@ -58,6 +58,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     ExecAction,
     Hook,
     HTTPGetAction,
+    HTTPHeader,
     MountOverlay,
     ObjectMetadata,
     Probe,
@@ -350,7 +351,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     port=cfg.http_get.port,
                     host=cfg.http_get.host,
                     path=cfg.http_get.path,
-                    httpHeaders=cfg.http_get.http_headers,
+                    httpHeaders=[HTTPHeader(name=h.name, value=h.value) for h in cfg.http_get.http_headers],
                     scheme=cfg.http_get.scheme,
                 )
                 if cfg.http_get

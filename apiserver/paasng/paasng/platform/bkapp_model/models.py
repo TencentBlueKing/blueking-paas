@@ -17,8 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import shlex
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -53,6 +54,8 @@ def env_overlay_getter_factory(field_name: str):
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
 
 ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
+cattr.register_structure_hook(Union[str, int], lambda items, cl: items)  # type: ignore
+cattr.register_unstructure_hook(Union[str, int], lambda value: value)  # type: ignore
 
 
 class ModuleProcessSpec(TimestampedModel):

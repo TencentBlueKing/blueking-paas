@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Union
 
 import cattr
 from attrs import define
@@ -98,7 +98,7 @@ class HTTPHeader:
 
 @dataclass
 class HTTPGetAction:
-    port: int
+    port: Union[str, int]
     host: Optional[str] = None
     path: Optional[str] = None
     http_headers: List[HTTPHeader] = field(default_factory=list)
@@ -107,7 +107,7 @@ class HTTPGetAction:
 
 @dataclass
 class TCPSocketAction:
-    port: int
+    port: Union[str, int]
     host: Optional[str] = None
 
 

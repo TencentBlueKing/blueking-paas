@@ -200,7 +200,7 @@
               text
               @click="handleRelease(row, 'reset')"
             >
-              {{ $t('重新发布') }}
+              {{ isOfficialVersion ? $t('重新发布') : $t('重新测试') }}
             </bk-button>
             <bk-button
               v-if="row.report_url"

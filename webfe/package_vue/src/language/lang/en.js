@@ -2699,4 +2699,6 @@ export default {
   查看更多: 'View More',
   请输入关键词进行搜索: 'Please enter keywords to search',
   没有找到相关结果: 'No related results found',
+  指定测试未通过: 'Designated Test Failed',
+  重新测试: 'Retest',
 };

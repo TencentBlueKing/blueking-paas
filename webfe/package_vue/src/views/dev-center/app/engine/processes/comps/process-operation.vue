@@ -228,6 +228,11 @@
                           class="blue ml5"
                           @click="showInstanceConsole(instance, process)"
                         > {{ $t('访问控制台') }} </a>
+                        <a
+                          href="javascript:void(0);"
+                          class="blue ml5"
+                          @click="showInstanceEvents(instance, process)"
+                        > {{ $t('查看事件') }} </a>
                       </td>
                     </tr>
                   </template>
@@ -496,6 +501,15 @@
     </div>
     <!-- 进程实时日志 end -->
 
+    <!-- 查看事件 -->
+    <eventDetail
+      v-model="instanceEventConfig.isShow"
+      :config="instanceEventConfig"
+      :env="environment"
+      :module-id="curModuleId"
+      :instance-name="instanceEventConfig.instanceName"
+    />
+
     <!-- 进程设置 -->
     <bk-dialog
       v-model="processConfigDialog.visiable"
@@ -642,6 +656,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import $ from 'jquery';
 import i18n from '@/language/i18n.js';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
+import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
 
 let maxReplicasNum = 0;
 
@@ -662,6 +677,7 @@ export default {
   components: {
     tooltipConfirm,
     chart: ECharts,
+    eventDetail,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -906,6 +922,12 @@ export default {
       defaultUtilizationRate: '85%',
       serverEventErrorTimer: 0,
       serverEventEOFTimer: 0,
+      instanceEventConfig: {
+        isShow: false,
+        name: '',
+        processName: '',
+        instanceName: '',
+      },
     };
   },
   computed: {
@@ -2192,6 +2214,13 @@ export default {
       this.processPlan.targetReplicas = this.curTargetReplicas;
       this.scalingConfig.maxReplicas = this.curTargetMaxReplicas;
       this.scalingConfig.minReplicas = this.curTargetMinReplicas;
+    },
+
+    showInstanceEvents(instance, process) {
+      this.instanceEventConfig.isShow = true;
+      this.instanceEventConfig.name = instance.display_name;
+      this.instanceEventConfig.processName = process.name;
+      this.instanceEventConfig.instanceName = instance.name;
     },
   },
 };

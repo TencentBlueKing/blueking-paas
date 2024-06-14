@@ -1,30 +1,51 @@
 <template>
-  <bk-table
-    :data="instanceEvents"
-    size="small"
-    :pagination="pagination"
-    :border="false"
-    :outer-border="false"
-    v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
-    @page-change="handlePageChange"
-    @page-limit-change="handlePageLimitChange">
-    <bk-table-column
-      v-for="column in tableColumns"
-      :label="column.label"
-      :prop="column.prop"
-      show-overflow-tooltip
-      :key="column.prop"
-      :render-header="$renderHeader"
-    >
-    </bk-table-column>
-  </bk-table>
+  <bk-sideslider
+    :is-show.sync="isShow"
+    :title="$t('进程 {n1} 实例 {n2} 事件详情', { n1: config?.processName, n2: config?.name })"
+    :quick-close="true"
+    :width="800"
+    @hidden="handleHidden">
+    <div class="p20" slot="content">
+      <bk-table
+        :data="instanceEvents"
+        size="small"
+        :pagination="pagination"
+        :border="false"
+        :outer-border="false"
+        v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+        @page-change="handlePageChange"
+        @page-limit-change="handlePageLimitChange">
+        <bk-table-column
+          v-for="column in tableColumns"
+          :label="column.label"
+          :prop="column.prop"
+          show-overflow-tooltip
+          :key="column.prop"
+          :render-header="$renderHeader"
+        >
+        </bk-table-column>
+      </bk-table>
+    </div>
+  </bk-sideslider>
 </template>
 
 <script>
 import { paginationFun } from '@/common/utils';
 export default {
   name: 'EventDetail',
+  model: {
+    prop: 'value',
+    event: 'change',
+  },
   props: {
+    value: {
+      type: Boolean,
+      default: false,
+    },
+    config: {
+      type: Object,
+      default: () => {},
+    },
     env: {
       type: String,
       default: '',
@@ -33,13 +54,10 @@ export default {
       type: String,
       default: '',
     },
-    instanceName: {
-      type: String,
-      default: '',
-    },
   },
   data() {
     return {
+      isShow: false,
       pagination: {
         current: 1,
         count: 0,
@@ -81,8 +99,13 @@ export default {
       return this.$route.params.id;
     },
   },
-  created() {
-    this.getInstanceEvents();
+  watch: {
+    value(newVal) {
+      this.isShow = newVal;
+      if (newVal) {
+        this.getInstanceEvents();
+      }
+    },
   },
   methods: {
     // 前端分页
@@ -106,7 +129,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.moduleId,
           env: this.env,
-          name: this.instanceName,
+          name: this.config.instanceName,
         });
         this.allEvents = instanceEventList;
         this.pagination.count = this.allEvents.length;
@@ -119,6 +142,16 @@ export default {
       } finally {
         this.isTableLoading = false;
       }
+    },
+    handleHidden() {
+      this.pagination = {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      this.allEvents = [];
+      this.instanceEvents = [];
+      this.$emit('change', false);
     },
   },
 };

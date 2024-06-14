@@ -434,19 +434,12 @@
     </bk-sideslider>
 
     <!-- 查看事件 -->
-    <bk-sideslider
-      :is-show.sync="instanceEventConfig.isShow"
-      :title="$t('进程 {n1} 实例 {n2} 事件详情', { n1: instanceEventConfig.processName, n2: instanceEventConfig.name })"
-      :quick-close="true"
-      :width="800">
-      <div class="p20" slot="content">
-        <eventDetail
-          :env="environment"
-          :module-id="curModuleId"
-          :instance-name="instanceEventConfig.instanceName"
-        />
-      </div>
-    </bk-sideslider>
+    <eventDetail
+      v-model="instanceEventConfig.isShow"
+      :config="instanceEventConfig"
+      :env="environment"
+      :module-id="curModuleId"
+    />
 
     <!-- 无法使用控制台 -->
     <bk-dialog

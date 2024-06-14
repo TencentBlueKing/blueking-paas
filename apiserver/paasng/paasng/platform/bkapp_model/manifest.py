@@ -187,6 +187,8 @@ class BuildConfigManifestConstructor(ManifestConstructor):
 class ProcessesManifestConstructor(ManifestConstructor):
     """Construct the processes part."""
 
+    port_placeholder = "${PORT}"
+
     def apply_to(self, model_res: BkAppResource, module: Module):
         process_specs = list(ModuleProcessSpec.objects.filter(module=module).order_by("created"))
         if not process_specs:
@@ -328,17 +330,15 @@ class ProcessesManifestConstructor(ManifestConstructor):
 
         raise ValueError("Error getting command and args")
 
-    @staticmethod
-    def _sanitize_args(input: List[str]) -> List[str]:
+    def _sanitize_args(self, input: List[str]) -> List[str]:
         """Sanitize the command and arg list, replace some special expressions which can't
         be interpreted by the operator.
         """
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
-        return [s.replace("${PORT:-5000}", "${PORT}") for s in input]
+        return [s.replace("${PORT:-5000}", self.port_placeholder) for s in input]
 
-    @staticmethod
-    def _build_probe_from_config(cfg: ProbeConfig) -> Probe:
+    def _build_probe_from_config(self, cfg: ProbeConfig) -> Probe:
         return Probe(
             initialDelaySeconds=cfg.initial_delay_seconds,
             periodSeconds=cfg.period_seconds,
@@ -348,7 +348,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
             exec=ExecAction(command=cfg.exec.command) if cfg.exec else None,
             httpGet=(
                 HTTPGetAction(
-                    port=cfg.http_get.port,
+                    port=settings.CONTAINER_PORT if cfg.http_get.port == self.port_placeholder else cfg.http_get.port,
                     host=cfg.http_get.host,
                     path=cfg.http_get.path,
                     httpHeaders=[HTTPHeader(name=h.name, value=h.value) for h in cfg.http_get.http_headers],
@@ -359,7 +359,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
             ),
             tcpSocket=(
                 TCPSocketAction(
-                    port=cfg.tcp_socket.port,
+                    port=(
+                        settings.CONTAINER_PORT
+                        if cfg.tcp_socket.port == self.port_placeholder
+                        else cfg.tcp_socket.port
+                    ),
                     host=cfg.tcp_socket.host,
                 )
                 if cfg.tcp_socket

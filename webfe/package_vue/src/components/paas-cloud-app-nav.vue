@@ -387,7 +387,7 @@ export default {
         };
         const subFeatureMaps = {
           cloudAppAnalysis: 'ANALYTICS', // 访问统计
-          codeReview: 'CI', // 代码检查
+          codeReview: 'CODE_CHECK', // 代码检查
           monitorAlarm: 'MONITORING', // 告警记录
         };
         // 一级

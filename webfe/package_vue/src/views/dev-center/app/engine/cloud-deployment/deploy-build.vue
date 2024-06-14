@@ -21,7 +21,7 @@
         ></image-credential>
         <!-- 上云版添加源码信息 -->
         <code-source
-          v-if="curAppInfo.feature?.ENABLE_IMAGE_APP_BIND_REPO"
+          v-if="curAppInfo.feature?.IMAGE_APP_BIND_REPO"
           :build-method="buildMethod"
           @close-content-loader="closeContentLoader"
         />

@@ -261,7 +261,7 @@ const actions = {
      * 获取平台功能开关详情
      */
   getPlatformFeature({ commit }, config = {}) {
-    const url = `${BACKEND_URL}/api/platform/feature_flags/`;
+    const url = `${BACKEND_URL}/api/platform/frontend_features/`;
     return http.get(url, config).then((data) => {
       commit('updatePlatformFeature', data);
     });

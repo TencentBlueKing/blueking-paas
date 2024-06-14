@@ -248,7 +248,7 @@ export default {
           docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
         };
         const subFeatureMaps = {
-          codeReview: 'CI', // 代码检查
+          codeReview: 'CODE_CHECK', // 代码检查
           monitorAlarm: 'MONITORING', // 告警记录
         };
         // 一级

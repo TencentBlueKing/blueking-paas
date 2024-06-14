@@ -68,7 +68,7 @@ class HTTPHeader(BaseModel):
 class HTTPGetAction(BaseModel):
     """HTTPGetAction describes an action based on HTTP Get requests."""
 
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
     path: Optional[str] = None
     httpHeaders: List[HTTPHeader] = Field(default_factory=list)
@@ -78,7 +78,7 @@ class HTTPGetAction(BaseModel):
 class TCPSocketAction(BaseModel):
     """TCPSocketAction describes an action based on opening a socket"""
 
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
 
 

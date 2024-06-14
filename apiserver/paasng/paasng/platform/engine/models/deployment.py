@@ -98,7 +98,7 @@ class HTTPHeader:
 
 @dataclass
 class HTTPGetAction:
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
     path: Optional[str] = None
     http_headers: List[HTTPHeader] = field(default_factory=list)
@@ -107,7 +107,7 @@ class HTTPGetAction:
 
 @dataclass
 class TCPSocketAction:
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
 
 

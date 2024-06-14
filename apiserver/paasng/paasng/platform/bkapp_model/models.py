@@ -54,8 +54,8 @@ def env_overlay_getter_factory(field_name: str):
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
 
 ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
-cattr.register_structure_hook(Union[str, int], lambda items, cl: items)  # type: ignore
-cattr.register_unstructure_hook(Union[str, int], lambda value: value)  # type: ignore
+cattr.register_structure_hook(Union[int, str], lambda items, cl: items)  # type: ignore
+cattr.register_unstructure_hook(Union[int, str], lambda value: value)  # type: ignore
 
 
 class ModuleProcessSpec(TimestampedModel):

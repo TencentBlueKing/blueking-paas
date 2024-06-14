@@ -74,7 +74,7 @@ class HTTPHeader:
 
 @define
 class HTTPGetAction:
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
     path: Optional[str] = None
     http_headers: Optional[List[HTTPHeader]] = None
@@ -83,7 +83,7 @@ class HTTPGetAction:
 
 @define
 class TCPSocketAction:
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
 
 

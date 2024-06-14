@@ -785,6 +785,7 @@ export default {
 }
 
 .detail-wrapper {
+  border: 1px solid #dfe0e5;
   &.en {
     .item-info .describe {
       width: 150px;
@@ -795,8 +796,8 @@ export default {
     min-height: 40px;
     border-top: 1px solid #dfe0e5;
 
-    &:last-child {
-      border-bottom: 1px solid #dfe0e5;
+    &:first-child {
+      border-top: none;
     }
 
     .describe,

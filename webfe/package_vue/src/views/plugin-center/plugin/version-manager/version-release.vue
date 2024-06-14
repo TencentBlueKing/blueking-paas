@@ -84,7 +84,7 @@
             </template>
           </bk-button>
           <div slot="content" style="white-space: normal;">
-            {{ nextTips.content }}
+            {{ $t(nextTips.content) }}
           </div>
         </bk-popover>
       </div>

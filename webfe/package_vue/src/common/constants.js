@@ -270,3 +270,8 @@ export const PAAS_APP_TYPE = {
   cloud_native: '云原生应用',
   engineless_app: '外链应用',
 };
+
+export const CIRCLED_NUMBERS = [
+  '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
+  '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳',
+];

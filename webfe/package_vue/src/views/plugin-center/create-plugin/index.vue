@@ -190,6 +190,10 @@
               disabled
               :placeholder="$t('代码仓库')"
             />
+            <i
+              v-copy="form.repositoryTemplateUrl"
+              class="paasng-icon paasng-general-copy copy-icon"
+            />
             <div class="tips">
               {{ $t('将自动创建该开源仓库，将模板代码初始化到仓库中，并将创建者初始化为仓库管理员') }}
             </div>
@@ -210,7 +214,7 @@
         >
           <BkSchemaForm
             :key="form.pd_id"
-            class="mt20 bk-form-warp"
+            class="bk-form-warp"
             v-model="schemaFormData"
             ref="bkForm"
             :http-adapter="{ request }"
@@ -662,6 +666,14 @@ export default {
     font-weight: Bold;
     color: #313238;
     font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .copy-icon {
+    position: absolute;
+    top: 11px;
+    right: 10px;
+    color: #3A84FF;
+    cursor: pointer;
   }
   .mt16 {
     margin-top: 16px;
@@ -755,6 +767,11 @@ export default {
   }
   .bk-schema-form-item__error-tips{
     color: #f5222d;
+  }
+}
+.bk-form-warp :deep(.bk-form-item) {
+  .bk-form-content p.mt5 {
+    color: #979BA5 !important;
   }
 }
 .plugin-type {

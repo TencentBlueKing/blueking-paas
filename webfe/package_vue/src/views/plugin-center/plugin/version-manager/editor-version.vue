@@ -28,6 +28,7 @@
         <div class="form-box">
           <bk-form
             ref="versionForm"
+            class="create-version-form-cls"
             :label-width="120"
             :model="curVersion"
             :rules="rules"
@@ -60,48 +61,51 @@
               :required="true"
               :property="'source_versions'"
             >
-              <bk-select
-                v-model="curVersion.source_versions"
-                :disabled="false"
-                ext-cls="select-custom-cls"
-                :placeholder="codeBranchPlaceholder"
-                searchable
-                :loading="isBranchLoading"
-                @change="handleSourceVersionChange"
-              >
-                <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
-                <bk-option
-                  v-for="option in sourceVersions"
-                  :id="option.name"
-                  :key="option.name"
-                  :name="option.name"
-                  :disabled="isOptionDisabled(option)"
-                />
-                <div
-                  v-if="curVersionData.version_type === 'tag'"
-                  slot="extension"
-                  style="cursor: pointer;text-align: center"
-                  @click="handleAddTag"
+              <div class="source-versions-wrapper">
+                <bk-select
+                  v-model="curVersion.source_versions"
+                  :disabled="false"
+                  ext-cls="select-custom-cls"
+                  :placeholder="codeBranchPlaceholder"
+                  searchable
+                  :loading="isBranchLoading"
+                  @change="handleSourceVersionChange"
                 >
-                  <i class="bk-icon icon-plus-circle mr5" />
-                  {{ $t('新建 Tag') }}
-                </div>
-              </bk-select>
+                  <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
+                  <bk-option
+                    v-for="option in sourceVersions"
+                    :id="option.name"
+                    :key="option.name"
+                    :name="option.name"
+                    :disabled="isOptionDisabled(option)"
+                  />
+                  <div
+                    v-if="curVersionData.version_type === 'tag'"
+                    slot="extension"
+                    style="cursor: pointer;text-align: center"
+                    @click="handleAddTag"
+                  >
+                    <i class="bk-icon icon-plus-circle mr5" />
+                    {{ $t('新建 Tag') }}
+                  </div>
+                </bk-select>
+                <bk-button
+                  v-if="curVersion.current_release"
+                  class="code-differences"
+                  :theme="'default'"
+                  type="submit"
+                  @click="handleShowCommits">
+                  <i class="paasng-icon paasng-diff-4"></i>
+                  {{ $t('代码差异') }}
+                </bk-button>
+              </div>
               <div
                 class="ribbon"
                 :style="{ 'right': -offset + 'px' }"
               >
-                <bk-button :text="true" title="primary" class="mr15" @click="getNewVersionFormat('refresh')">
+                <bk-button :text="true" :title="$t('刷新')" class="mr15" @click="getNewVersionFormat('refresh')">
                   {{ $t('刷新') }}
                 </bk-button>
-                <div
-                  v-if="curVersion.current_release"
-                  class="mr10"
-                  @click="handleShowCommits"
-                >
-                  <i class="paasng-icon paasng-diff-line mr5" />
-                  <span>{{ $t('代码差异') }}</span>
-                </div>
               </div>
             </bk-form-item>
             <bk-form-item
@@ -136,13 +140,13 @@
               </bk-radio-group>
             </bk-form-item>
             <bk-form-item
-              :label="$t('版本号')"
+              :label="isOfficialVersion ? $t('版本号') : $t('测试号')"
               :required="true"
               :property="'version'"
             >
               <bk-input
                 v-model="curVersion.version"
-                :placeholder="$t('版本号')"
+                :placeholder="isOfficialVersion ? $t('版本号') : $t('测试号')"
                 :disabled="curVersion.version_no !== 'self-fill'"
               />
             </bk-form-item>
@@ -413,13 +417,7 @@ export default {
 
     submitVersionForm() {
       this.$refs.versionForm.validate().then(() => {
-        // 新建版本info弹窗
-        this.$bkInfo({
-          title: `${this.isOfficialVersion ? this.$t('确认新建版本') : this.$t('新建测试版本')}：${this.curVersion.version}`,
-          subHeader: this.bkInfoRander(),
-          confirmFn: this.handlerConfirm,
-          cancelFn: this.handlerCancel,
-        });
+        this.createVersion();
       }, (validator) => {
         console.error(validator.content);
       });
@@ -511,18 +509,13 @@ export default {
       const fromRevision = this.curVersion.current_release.source_hash;
       const curCodeItem = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
       const toRevision = `${curCodeItem[0].type}:${curCodeItem[0].name}`;
-      const win = window.open();
       const res = await this.$store.dispatch('plugin/getGitCompareUrl', {
         pdId: this.pdId,
         pluginId: this.pluginId,
         fromRevision,
         toRevision,
       });
-      win.location.href = res.result;
-    },
-
-    handlerConfirm() {
-      this.createVersion();
+      window.open(res.result, '_blank');
     },
 
     handlerCancel() {
@@ -634,6 +627,25 @@ export default {
   .h-auto {
     height: auto;
     line-height: 22px;
+  }
+}
+
+.source-versions-wrapper {
+  display: flex;
+  .bk-select {
+    flex: 1;
+  }
+  .code-differences {
+    margin-left: 8px;
+    .paasng-diff-4 {
+      color: #979BA5;
+    }
+  }
+}
+
+:deep(.create-version-form-cls) {
+  .bk-label {
+    font-size: 12px;
   }
 }
 

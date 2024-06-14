@@ -446,6 +446,7 @@ class TestCreateBkPlugin:
     )
     def test_normal(self, api_client, mock_wl_services_in_creation, settings, bk_user, source_init_template, language):
         settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = True
+        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, False)
         response = self._send_creation_request(api_client, source_init_template)
 
         assert response.status_code == 201, f'error: {response.json()["detail"]}'

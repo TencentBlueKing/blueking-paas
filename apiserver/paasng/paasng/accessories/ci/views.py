@@ -105,7 +105,7 @@ class CIInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         task_id = last_ci_atom.task_id
         # 详情访问 URL
-        detail_url = settings.CI_CONFIGS[CIBackend.CODECC]["base_detail_url"].format(
+        detail_url = settings.CODE_CHECK_CONFIGS[CIBackend.CODECC]["base_detail_url"].format(
             project_id=last_ci_atom.resource.credentials["project_id"], task_id=task_id
         )
 

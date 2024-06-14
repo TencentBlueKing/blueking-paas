@@ -23,7 +23,7 @@ import string
 from collections import Counter, defaultdict
 from io import BytesIO
 from operator import itemgetter
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Optional
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
@@ -47,7 +47,6 @@ from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.accessories.publish.market.constant import AppState, ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig, Product
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
-from paasng.bk_plugins.bk_plugins.config import get_bk_plugin_config
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_all_regions
@@ -71,7 +70,6 @@ from paasng.infras.iam.helpers import (
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
 from paasng.platform.applications.constants import (
@@ -465,7 +463,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         self._ensure_source_origin_available(request.user, source_origin)
 
         # Guide: check if a bk_plugin can be created
-        if params["is_plugin_app"] and not get_bk_plugin_config(params["region"]).allow_creation:
+        if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
             raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
         if source_origin == SourceOrigin.SCENE:
@@ -555,7 +553,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         self._ensure_source_origin_available(request.user, source_origin)
 
         # Guide: check if a bk_plugin can be created
-        if params["is_plugin_app"] and not get_bk_plugin_config(params["region"]).allow_creation:
+        if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
             raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
         module_src_cfg["source_origin"] = source_origin
@@ -623,8 +621,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 )
 
         options = {
-            # configs related with "bk_plugin"
-            "bk_plugin_configs": list(self._get_bk_plugin_configs()),
             # ADVANCED options:
             "allow_adv_options": allow_advanced,
             # configs related with clusters, contains content only when "allow_adv_options" is true
@@ -635,11 +631,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     def validate_region_perm(self, region: str):
         if not user_can_create_in_region(self.request.user, region):
             raise error_codes.CANNOT_CREATE_APP.f(_("你无法在所指定的 region 中创建应用"))
-
-    def _get_bk_plugin_configs(self) -> Iterable[Dict]:
-        """Get configs for bk_plugin module"""
-        for name in get_all_regions():
-            yield {"region": name, "allow_creation": get_bk_plugin_config(name).allow_creation}
 
     def _get_cluster_entrance_https_enabled(
         self, region: str, cluster_name: Optional[str], exposed_url_type: ExposedURLType
@@ -1001,7 +992,7 @@ class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取单个应用的secret"""
         application = self.get_application()
 
-        if PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
+        if settings.ENABLE_VERIFICATION_CODE:
             # 验证验证码
             serializer = VerificationCodeSLZ(data=request.data)
             serializer.is_valid(raise_exception=True)

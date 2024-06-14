@@ -16,4 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-default_app_config = "paasng.misc.feature_flags.apps.FeatureFlagsConfig"
+from django.urls import path
+
+from paasng.misc.platform_config.views import FrontendFeatureViewSet
+
+urlpatterns = [path("api/platform/frontend_features/", FrontendFeatureViewSet.as_view({"get": "get_features"}))]

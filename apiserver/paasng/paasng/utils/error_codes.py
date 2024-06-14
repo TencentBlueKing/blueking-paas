@@ -23,6 +23,7 @@ from django.utils.translation import gettext_lazy as _
 class ErrorCodes:
     # 用户与通知相关
     ERROR_SENDING_NOTIFICATION = ErrorCode(_("发送通知消息失败，请稍候重试"))
+    NOTIFICATION_DISABLED = ErrorCode(_("暂不支持发送通知"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_("应用应该至少拥有一个管理员"))
     MEMBERSHIP_OWNER_FAILED = ErrorCode(_("应用所有者不能执行该操作"))

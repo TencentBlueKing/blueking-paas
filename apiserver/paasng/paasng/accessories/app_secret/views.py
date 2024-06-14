@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -42,7 +43,6 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.api import BkOauthClient
 from paasng.infras.oauth2.models import BkAppSecretInEnvVar
 from paasng.infras.oauth2.utils import get_app_secret_in_env_var
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
@@ -133,8 +133,8 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """验证验证码查看密钥详情"""
         application = self.get_application()
 
-        # 部分版本没有发送通知的渠道可通过平台FeatureFlag设置：跳过验证码校验步骤
-        if PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
+        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
+        if settings.ENABLE_VERIFICATION_CODE:
             serializer = VerificationCodeSLZ(data=request.data)
             serializer.is_valid(raise_exception=True)
 

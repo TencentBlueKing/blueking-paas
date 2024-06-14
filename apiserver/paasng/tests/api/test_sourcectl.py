@@ -16,17 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import copy
 import logging
-from contextlib import contextmanager
 from unittest import mock
 
 import pytest
-from blue_krill.data_types.enum import FeatureFlagField
 from django.conf import settings
+from django.test.utils import override_settings
 from django.urls import reverse
 
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.sourcectl.models import SvnAccount
 from paasng.utils.notification_plugins import BaseComponentAPIPlugin
 from tests.utils.helpers import generate_random_string
@@ -48,20 +45,6 @@ def svn_account(bk_user):
     return account
 
 
-@contextmanager
-def patch_feature_flag(name, default):
-    try:
-        field = PlatformFeatureFlag._get_feature_fields_()[PlatformFeatureFlag(name)]
-    except ValueError:
-        field = FeatureFlagField(name=name, label=name, default=default)
-
-    mocked_field = copy.deepcopy(field)
-    mocked_field.default = default
-    PlatformFeatureFlag.register_feature_flag(mocked_field)
-    yield
-    PlatformFeatureFlag.register_feature_flag(field)
-
-
 class TestSvnAPI:
     @mock.patch("paasng.platform.sourcectl.svn.admin.IeodSvnAuthClient.add_user")
     def test_create_account(self, add_user, mocked_call_api, api_client, bk_user):
@@ -76,7 +59,7 @@ class TestSvnAPI:
 
     def test_reset_account_error(self, mocked_call_api, api_client, bk_user, svn_account):
         data = {"verification_code": "000000", "region": settings.DEFAULT_REGION_NAME}
-        with patch_feature_flag(name=PlatformFeatureFlag.VERIFICATION_CODE, default=True):
+        with override_settings(ENABLE_VERIFICATION_CODE=True):
             response = api_client.put(
                 reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), data
             )
@@ -90,7 +73,7 @@ class TestSvnAPI:
 
     def test_reset_account_skip_verification_code(self, mocked_call_api, api_client, bk_user, svn_account):
         data = {"region": settings.DEFAULT_REGION_NAME}
-        with patch_feature_flag(name=PlatformFeatureFlag.VERIFICATION_CODE, default=False):
+        with override_settings(ENABLE_VERIFICATION_CODE=False):
             response = api_client.put(
                 reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), data
             )

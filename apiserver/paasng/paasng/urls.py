@@ -41,7 +41,7 @@ patch_datetime_field()
 
 urlpatterns = [
     path("", include("paasng.misc.metrics.urls")),
-    path("", include("paasng.misc.feature_flags.urls")),
+    path("", include("paasng.misc.platform_config.urls")),
     url(r"^", include("paasng.infras.accounts.urls")),
     url(r"^", include("paasng.platform.applications.urls")),
     url(r"^", include("paasng.accessories.log.urls")),

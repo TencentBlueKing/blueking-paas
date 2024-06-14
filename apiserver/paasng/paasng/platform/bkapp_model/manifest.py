@@ -340,11 +340,6 @@ class ProcessesManifestConstructor(ManifestConstructor):
 
     def _build_probe_from_config(self, cfg: ProbeConfig) -> Probe:
         return Probe(
-            initialDelaySeconds=cfg.initial_delay_seconds,
-            periodSeconds=cfg.period_seconds,
-            timeoutSeconds=cfg.timeout_seconds,
-            successThreshold=cfg.success_threshold,
-            failureThreshold=cfg.failure_threshold,
             exec=ExecAction(command=cfg.exec.command) if cfg.exec else None,
             httpGet=(
                 HTTPGetAction(
@@ -369,6 +364,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 if cfg.tcp_socket
                 else None
             ),
+            initialDelaySeconds=cfg.initial_delay_seconds,
+            periodSeconds=cfg.period_seconds,
+            timeoutSeconds=cfg.timeout_seconds,
+            successThreshold=cfg.success_threshold,
+            failureThreshold=cfg.failure_threshold,
         )
 
 

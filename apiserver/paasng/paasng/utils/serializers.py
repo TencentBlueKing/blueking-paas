@@ -273,7 +273,7 @@ def field_env_var_key():
 
 
 class IntegerOrCharField(serializers.CharField):
-    """整形或字符串字段，优先整形"""
+    """整型或字符串字段，优先整型"""
 
     def to_internal_value(self, data):
         val = super().to_internal_value(data)

@@ -256,7 +256,7 @@
       </div>
 
       <bk-sideslider
-        :width="800"
+        :width="computedWidth"
         :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
@@ -504,6 +504,7 @@
     <!-- 查看事件 -->
     <eventDetail
       v-model="instanceEventConfig.isShow"
+      :width="computedWidth"
       :config="instanceEventConfig"
       :env="environment"
       :module-id="curModuleId"
@@ -949,9 +950,15 @@ export default {
     isCloudNative() {
       return this.curAppInfo.application?.type === 'cloud_native';
     },
+    // 滑框的宽度
+    computedWidth() {
+      const defaultWidth = 980;
+      const maxWidth = window.innerWidth * 0.8;
+      return Math.min(defaultWidth, maxWidth);
+    },
   },
   watch: {
-    curLogTimeRange(val) {
+    curLogTimeRange() {
       this.loadInstanceLog();
     },
     '$route'() {
@@ -1221,7 +1228,10 @@ export default {
         // 滚动到底部
         setTimeout(() => {
           const container = document.getElementById('log-container');
-          container.scrollTop = container.scrollHeight;
+          container.scrollTo({
+            top: container?.scrollHeight || 0,
+            behavior: 'smooth',
+          });
         }, 500);
       } catch (e) {
         this.$paasMessage({

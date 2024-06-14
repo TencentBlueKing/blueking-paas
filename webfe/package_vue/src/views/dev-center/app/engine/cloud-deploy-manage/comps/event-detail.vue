@@ -3,7 +3,7 @@
     :is-show.sync="isShow"
     :title="$t('进程 {n1} 实例 {n2} 事件详情', { n1: config?.processName, n2: config?.name })"
     :quick-close="true"
-    :width="800"
+    :width="width"
     @hidden="handleHidden">
     <div class="p20" slot="content">
       <bk-table
@@ -53,6 +53,10 @@ export default {
     moduleId: {
       type: String,
       default: '',
+    },
+    width: {
+      type: Number,
+      default: 980,
     },
   },
   data() {

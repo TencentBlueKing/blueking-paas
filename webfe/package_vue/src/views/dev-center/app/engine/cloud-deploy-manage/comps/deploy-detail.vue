@@ -351,7 +351,7 @@
     </bk-sideslider>
     <!-- 日志侧栏 -->
     <bk-sideslider
-      :width="800"
+      :width="computedWidth"
       :is-show.sync="processSlider.isShow"
       :title="processSlider.title"
       :quick-close="true"
@@ -436,6 +436,7 @@
     <!-- 查看事件 -->
     <eventDetail
       v-model="instanceEventConfig.isShow"
+      :width="computedWidth"
       :config="instanceEventConfig"
       :env="environment"
       :module-id="curModuleId"
@@ -694,6 +695,12 @@ export default {
     },
     columWidth() {
       return this.localLanguage === 'en' ? (this.curAppInfo.feature.ENABLE_WEB_CONSOLE ? 220 : 150) : (this.curAppInfo.feature.ENABLE_WEB_CONSOLE ? 200 : 140);
+    },
+    // 滑框的宽度
+    computedWidth() {
+      const defaultWidth = 980;
+      const maxWidth = window.innerWidth * 0.8;
+      return Math.min(defaultWidth, maxWidth);
     },
   },
 
@@ -1433,7 +1440,10 @@ export default {
         // 滚动到底部
         setTimeout(() => {
           const container = document.getElementById('log-container');
-          container.scrollTop = container.scrollHeight;
+          container.scrollTo({
+            top: container?.scrollHeight || 0,
+            behavior: 'smooth',
+          });
         }, 500);
       } catch (e) {
         this.$paasMessage({

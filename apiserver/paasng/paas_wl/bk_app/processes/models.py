@@ -299,7 +299,6 @@ class ProcessProbeManager:
 
     def sync(self, processes: List[ProcessTmpl]):
         """Sync ProcessProbes data with given processes."""
-        # 全部删除
         ProcessProbe.objects.filter(app=self.wl_app).delete()
 
         for proc in processes:

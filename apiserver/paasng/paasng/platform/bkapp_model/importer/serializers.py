@@ -16,6 +16,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+from django.conf import settings
 from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
@@ -23,6 +24,9 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
+
+# 占位符与普通应用的保持一致
+PORT_PLACEHOLDER = "${PORT}"
 
 
 class BaseEnvVarFields(serializers.Serializer):
@@ -170,15 +174,30 @@ class BuildInputSLZ(serializers.Serializer):
 class ExecActionInputSLZ(serializers.Serializer):
     command = serializers.ListField(help_text="探活命令", child=serializers.CharField(max_length=48), max_length=12)
 
+    def to_internal_value(self, data) -> bk_app.ExecAction:
+        d = super().to_internal_value(data)
+        return bk_app.ExecAction(**d)
+
 
 class TcpSocketActionInputSLZ(serializers.Serializer):
     port = IntegerOrCharField(help_text="探活端口")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
+    def to_internal_value(self, data) -> bk_app.TCPSocketAction:
+        d = super().to_internal_value(data)
+        if data["port"] == PORT_PLACEHOLDER:
+            data["port"] = settings.CONTAINER_PORT
+
+        return bk_app.TCPSocketAction(**d)
+
 
 class HTTPHeaderInputSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="标头名称")
     value = serializers.CharField(help_text="标头值")
+
+    def to_internal_value(self, data) -> bk_app.HTTPHeader:
+        d = super().to_internal_value(data)
+        return bk_app.HTTPHeader(**d)
 
 
 class HttpGetActionInputSLZ(serializers.Serializer):
@@ -187,6 +206,13 @@ class HttpGetActionInputSLZ(serializers.Serializer):
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
     httpHeaders = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderInputSLZ())
     scheme = serializers.CharField(help_text="http/https", required=False)
+
+    def to_internal_value(self, data) -> bk_app.HTTPGetAction:
+        d = super().to_internal_value(data)
+        if data["port"] == PORT_PLACEHOLDER:
+            data["port"] = settings.CONTAINER_PORT
+
+        return bk_app.HTTPGetAction(**d)
 
 
 class ProbeInputSLZ(serializers.Serializer):
@@ -201,6 +227,10 @@ class ProbeInputSLZ(serializers.Serializer):
     successThreshold = serializers.IntegerField(help_text="成功阈值")
     failureThreshold = serializers.IntegerField(help_text="失败阈值")
 
+    def to_internal_value(self, data) -> bk_app.Probe:
+        d = super().to_internal_value(data)
+        return bk_app.Probe(**d)
+
 
 class ProbeSetInputSLZ(serializers.Serializer):
     """探针集合"""
@@ -208,6 +238,10 @@ class ProbeSetInputSLZ(serializers.Serializer):
     liveness = ProbeInputSLZ(help_text="存活探针", required=False, allow_null=True)
     readiness = ProbeInputSLZ(help_text="就绪探针", required=False, allow_null=True)
     startup = ProbeInputSLZ(help_text="启动探针", required=False, allow_null=True)
+
+    def to_internal_value(self, data) -> bk_app.ProbeSet:
+        d = super().to_internal_value(data)
+        return bk_app.ProbeSet(**d)
 
 
 class ProcessInputSLZ(serializers.Serializer):

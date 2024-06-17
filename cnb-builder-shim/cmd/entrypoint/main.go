@@ -18,6 +18,8 @@
 package main
 
 import (
+	"time"
+	"fmt"
 	"context"
 	"os"
 	"os/exec"
@@ -25,6 +27,8 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
+	"github.com/go-logr/logr"
 )
 
 const (
@@ -37,11 +41,13 @@ const (
 var (
 	buildInit       = flag.String("build-init", DefaultBuildInitPath, "path to build-init")
 	lifecycleDriver = flag.String("lifecycle-driver", DefaultLifecycleDriverPath, "path to lifecycle-driver")
+	exitDelay       = flag.String("exit-delay", utils.EnvOrDefault("CNB_EXIT_DELAY", "0"), "delay time before exit")
 )
 
 func init() {
 	flag.Lookup("build-init").NoOptDefVal = DefaultBuildInitPath
 	flag.Lookup("lifecycle-driver").NoOptDefVal = DefaultLifecycleDriverPath
+	flag.Lookup("exit-delay").NoOptDefVal = utils.EnvOrDefault("CNB_EXIT_DELAY", "0")
 }
 
 func main() {
@@ -51,12 +57,16 @@ func main() {
 	ctx := context.Background()
 	if err := makeBuildInitCmd(ctx).Run(); err != nil {
 		logger.Error(err, "!! Setup Build Environ Failed")
+		preExit(logger)
 		os.Exit(1)
 	}
 	if err := makeLifecycleDriverCmd(ctx).Run(); err != nil {
 		logger.Error(err, "!! Build failed")
+		preExit(logger)
 		os.Exit(1)
 	}
+
+	preExit(logger)
 }
 
 func makeBuildInitCmd(ctx context.Context) *exec.Cmd {
@@ -75,4 +85,21 @@ func makeLifecycleDriverCmd(ctx context.Context) *exec.Cmd {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd
+}
+
+// preExit sleep delay duration before exit if exit-delay is set
+func preExit(logger logr.Logger) {
+	duration, err := time.ParseDuration(*exitDelay)
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Sleeping before exit error"))
+		os.Exit(1)
+	}
+
+	if duration == time.Duration(0) {
+		return
+	}
+
+	logger.Info(fmt.Sprintf("Sleeping %v before exit", duration))
+
+	time.Sleep(duration)
 }

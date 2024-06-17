@@ -2,7 +2,7 @@
   <div class="alarm-strategy mt25">
     <div class="top-title mb20">
       <h4>{{ $t('告警策略') }}</h4>
-      <p class="tips" v-if="curAppInfo.feature?.MONITORING">
+      <p class="tips" v-if="curAppInfo.feature?.PHALANX">
         {{ $t('告警策略对应用下所有模块都生效，如需新增或编辑告警策略请直接到蓝鲸监控平台操作。') }}
         <!-- 未部署不展示 -->
         <a v-if="strategyLink" :href="strategyLink" target="_blank">
@@ -14,7 +14,7 @@
 
     <div
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
-      v-if="curAppInfo.feature?.MONITORING"
+      v-if="curAppInfo.feature?.PHALANX"
     >
       <!-- 策略列表 -->
       <bk-table

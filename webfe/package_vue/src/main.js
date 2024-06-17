@@ -75,8 +75,12 @@ import { renderHeader } from '@/common/utils';
 
 // markdown样式
 import 'github-markdown-css';
+
 // 代码高亮
 import 'highlight.js/styles/github.css';
+
+// 功能依赖css
+import '@blueking/functional-dependency/vue2/vue2.css';
 
 window.$ = $;
 

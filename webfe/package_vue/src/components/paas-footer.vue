@@ -1,75 +1,35 @@
 <template lang="html">
   <footer class="ps-sample-footer">
-    <div class="info">
-      <template v-if="GLOBAL.LINK.BK_HELP">
-        <bk-link
-          theme="primary"
-          :href="GLOBAL.LINK.BK_HELP"
-          target="_blank"
-        >
-          {{ $t('联系BK助手') }}
-        </bk-link>
-        |
-        <bk-link
-          theme="primary"
-          :href="GLOBAL.LINK.BK_DESKTOP"
-          target="_blank"
-        >
-          {{ $t('蓝鲸桌面') }}
-        </bk-link>
-      </template>
-      <div v-else>
-        <bk-link
-          theme="primary"
-          :href="GLOBAL.LINK.BK_TECHNICAL_SUPPORT"
-          target="_blank"
-        >
-          {{ $t('技术支持') }}
-        </bk-link>
-        |
-        <bk-link
-          theme="primary"
-          :href="GLOBAL.LINK.BK_COMMUNITY"
-          target="_blank"
-        >
-          {{ $t('社区论坛') }}
-        </bk-link>
-        |
-        <bk-link
-          theme="primary"
-          :href="GLOBAL.LINK.BK_OFFICIAL_WEBSITE"
-          target="_blank"
-        >
-          {{ $t('产品官网') }}
-        </bk-link>
-      </div>
-    </div>
-    <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. {{ paasVersion || '' }}</div>
+    <!-- eslint-disable-next-line vue/no-v-html -->
+    <div class="info" v-html="footerInfoHTML"></div>
+    <div>{{ platformConfig.footerCopyrightContent }} {{ platformConfig.version }}</div>
   </footer>
 </template>
 
 <script>
-    export default {
-        data () {
-            return {
-                bkPaas2Url: window.BK_PAAS2_URL
-            };
-        },
-        computed: {
-            curYear () {
-                return (new Date()).getFullYear();
-            },
-            routeName () {
-                return this.$route.name;
-            },
-            useCenterStyle () {
-                return ['index', 'myApplications'].includes(this.routeName);
-            },
-            paasVersion () {
-                return window.BK_PAAS_VERSION;
-            }
-        }
+export default {
+  data() {
+    return {
     };
+  },
+  computed: {
+    routeName() {
+      return this.$route.name;
+    },
+    useCenterStyle() {
+      return ['index', 'myApplications'].includes(this.routeName);
+    },
+    platformConfig() {
+      return this.$store.state.platformConfig;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    footerInfoHTML() {
+      return this.localLanguage === 'en' ? this.platformConfig.footerInfoHTMLEn : this.platformConfig.footerInfoHTML;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

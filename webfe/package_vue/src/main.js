@@ -213,16 +213,8 @@ auth.requestCurrentUser().then((user) => {
   if (!user.isAuthenticated) {
     auth.redirectToLogin();
   } else {
-    switch (window.GLOBAL_CONFIG.APP_VERSION) {
-      case 'ee':
-        document.title = i18n.t('开发者中心 | 腾讯蓝鲸智云');
-        break;
-      case 'ce':
-        document.title = i18n.t('开发者中心 | 腾讯蓝鲸智云');
-        break;
-      default:
-        document.title = i18n.t('开发者中心 | 蓝鲸');
-        Vue.prototype.$isInternalVersion = true;
+    if (window.GLOBAL_CONFIG.APP_VERSION === 'te') {
+      Vue.prototype.$isInternalVersion = true;
     }
 
     Vue.config.productionTip = false;

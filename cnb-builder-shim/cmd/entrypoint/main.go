@@ -87,7 +87,8 @@ func makeLifecycleDriverCmd(ctx context.Context) *exec.Cmd {
 	return cmd
 }
 
-// preExit sleep delay duration before exit if exit-delay is set
+// preExit do something before exit:
+// - sleep delay duration if exit-delay is set
 func preExit(logger logr.Logger) {
 	duration, err := time.ParseDuration(*exitDelay)
 	if err != nil {

@@ -14,8 +14,7 @@
  *
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
- */
-package main
+ */package main
 
 import (
 	"context"
@@ -41,7 +40,11 @@ const (
 var (
 	buildInit       = flag.String("build-init", DefaultBuildInitPath, "path to build-init")
 	lifecycleDriver = flag.String("lifecycle-driver", DefaultLifecycleDriverPath, "path to lifecycle-driver")
-	exitDelay       = flag.String("exit-delay", utils.EnvOrDefault("CNB_EXIT_DELAY", "0"), "delay time before exit")
+	exitDelay       = flag.String(
+		"exit-delay",
+		utils.EnvOrDefault("CNB_EXIT_DELAY", "0"),
+		"sleep delay duration(string like 1m30s) before exit",
+	)
 )
 
 func init() {

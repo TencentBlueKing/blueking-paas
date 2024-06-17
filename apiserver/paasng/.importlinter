@@ -58,7 +58,7 @@ modules =
     paasng.misc.metrics
     paasng.misc.tracing
     paasng.misc.changelog
-    paasng.misc.platform_config
+    paasng.misc.plat_config
 
 
 [importlinter:contract:layers-paas-wl]

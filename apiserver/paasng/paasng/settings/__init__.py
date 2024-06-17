@@ -115,7 +115,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "webpack_loader",
     "django_prometheus",
-    "paasng.misc.platform_config",
+    "paasng.misc.plat_config",
     "paasng.infras.accounts",
     "paasng.platform.applications",
     "paasng.accessories.log",

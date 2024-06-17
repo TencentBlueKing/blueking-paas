@@ -18,6 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.urls import path
 
-from paasng.misc.platform_config.views import FrontendFeatureViewSet
+from paasng.misc.plat_config.views import FrontendFeatureViewSet
 
 urlpatterns = [path("api/platform/frontend_features/", FrontendFeatureViewSet.as_view({"get": "get_features"}))]

@@ -2,17 +2,14 @@
   <div class="observability-config">
     <div class="top-title mb20">
       <h4>{{ $t('日志采集') }}</h4>
-      <p class="tips" v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR">
+      <p class="tips" v-if="enableBkLogCollector">
         {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志，也可以添加自定义日志采集规则。') }}
-      </p>
-      <p class="tips" v-else>
-        {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志。') }}
       </p>
     </div>
     <!-- 采集规则 -->
     <section class="collection-rules">
       <bk-button
-        v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR"
+        v-if="enableBkLogCollector"
         theme="primary"
         class="mb16"
         @click="handleAddCollectionRule"
@@ -21,7 +18,7 @@
         {{ $t('新增采集规则') }}
       </bk-button>
       <div
-        v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR"
+        v-if="enableBkLogCollector"
         v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
       >
         <bk-table
@@ -118,15 +115,15 @@
           </div>
         </div>
       </div>
-      <section
+      <FunctionalDependency
         v-else
-        class="empty"
-      >
-        <div class="empty-content">
-          <div class="title">{{ $t('暂不支持自定义日志采集规则') }}</div>
-          <div class="sub-title">{{ $t('自定义日志采集/清洗规则、日志导出等功能需要部署“蓝鲸日志平台”，由蓝鲸日志平台提供。') }}</div>
-        </div>
-      </section>
+        mode="partial"
+        :title="$t('暂无自定义日志采集等高级功能')"
+        :functional-desc="$t('平台默认采集了标准输出日志、访问日志、开发框架定义的文件日志。部署蓝鲸监控平台后，可以通过自定义日志采集、清洗规则采集任意文件日志，还能提供日志导出、日志关键字告警等功能。')"
+        :guide-title="$t('如需要该功能，需要部署：')"
+        :guide-desc-list="[$t('1. 蓝鲸监控：监控日志套餐')]"
+        @gotoMore="gotoMore"
+      />
     </section>
 
     <!-- 告警策略 -->
@@ -238,10 +235,12 @@
   </div>
 </template>
 
-<script>import i18n from '@/language/i18n.js';
+<script>
+import i18n from '@/language/i18n.js';
 import alarmStrategy from './alarm-strategy.vue';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 export default {
-  components: { alarmStrategy },
+  components: { alarmStrategy, FunctionalDependency },
   data() {
     return {
       isTableLoading: false,
@@ -315,9 +314,12 @@ export default {
     curAppInfo() {
       return this.$store.state.curAppInfo || {};
     },
+    enableBkLogCollector() {
+      return this.curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR || false;
+    },
   },
   created() {
-    if (this.curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR) {
+    if (this.enableBkLogCollector) {
       this.getLogCollectionRuleList();
     }
     this.getCustomLogCollectionRule();
@@ -515,7 +517,6 @@ export default {
 
     // 页容量变化回调
     handleLimitChange(currentLimit) {
-      console.log('currentLimit', currentLimit);
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
     },
@@ -532,6 +533,11 @@ export default {
           id: this.appCode,
         },
       });
+    },
+
+    // 了解更多
+    gotoMore() {
+      window.open(this.GLOBAL.DOC.DEPLOYMENT_MAINTENANCE, '_blank');
     },
   },
 };

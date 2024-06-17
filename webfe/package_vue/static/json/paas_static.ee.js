@@ -286,6 +286,9 @@ export const PLATFORM_CONFIG = {
 
         // 蓝盾流水线构建
         BK_CI_PIPELINE_BUILD: DOCS_URL_PREFIX + '/topics/paas/bk_ci_pipeline_build',
+
+        // 部署维护
+        DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
     },
 
     CONFIG: {

@@ -18,17 +18,17 @@
 package main
 
 import (
-	"time"
-	"fmt"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
+	"github.com/go-logr/logr"
 	flag "github.com/spf13/pflag"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
-	"github.com/go-logr/logr"
 )
 
 const (

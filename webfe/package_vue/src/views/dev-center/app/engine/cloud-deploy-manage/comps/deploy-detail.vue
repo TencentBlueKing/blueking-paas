@@ -694,7 +694,7 @@ export default {
       }, 0);
     },
     columWidth() {
-      return this.localLanguage === 'en' ? (this.curAppInfo.feature.ENABLE_WEB_CONSOLE ? 220 : 150) : (this.curAppInfo.feature.ENABLE_WEB_CONSOLE ? 200 : 140);
+      return this.localLanguage === 'en' ? 220 : 200;
     },
     // 滑框的宽度
     computedWidth() {

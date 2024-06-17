@@ -31,6 +31,7 @@
 
 <script>
 import { paginationFun } from '@/common/utils';
+import dayjs from 'dayjs';
 export default {
   name: 'EventDetail',
   model: {
@@ -134,6 +135,10 @@ export default {
           moduleId: this.moduleId,
           env: this.env,
           name: this.config.instanceName,
+        });
+        instanceEventList.forEach((item) => {
+          item.first_timestamp = dayjs(item.first_timestamp).format('YYYY-MM-DD HH:mm:ss');
+          item.last_timestamp = dayjs(item.last_timestamp).format('YYYY-MM-DD HH:mm:ss');
         });
         this.allEvents = instanceEventList;
         this.pagination.count = this.allEvents.length;

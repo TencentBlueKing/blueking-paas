@@ -147,7 +147,8 @@ class PluginDefaultAPIGateway:
         profile = self.plugin_app.bk_plugin_profile
         # When name is absent in plugin profile, generate a new name
         # WARN: The default value for gateway name should not exceeds 20 characters long.
-        self.gw_name = profile.api_gw_name or f"bk-{self.plugin_app.code}"
+        # WARN: BlueKing official product gateways use the prefix bk- and need to be distinguished from them.
+        self.gw_name = profile.api_gw_name or f"bp-{self.plugin_app.code}"
 
     def sync(self) -> int:
         """Sync API gateway resource, if the gateway resource doesn't exist yet, create it.

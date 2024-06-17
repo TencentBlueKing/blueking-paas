@@ -45,7 +45,7 @@ class FrontendFeatureViewSet(ViewSet):
             "MGRLEGACY": settings.FE_FEATURE_SETTINGS_MGRLEGACY,
         }
         # 部分前端的特性复用了后端的配置
-        frontend_reuses_backend = {
+        features_reuses_backend_settings = {
             # 发送验证码
             "VERIFICATION_CODE": settings.ENABLE_VERIFICATION_CODE,
             # 监控告警
@@ -61,4 +61,4 @@ class FrontendFeatureViewSet(ViewSet):
             # 创建与使用“蓝鲸插件”类型应用
             "BK_PLUGIN_TYPED_APPLICATION": settings.IS_ALLOW_CREATE_BK_PLUGIN_APP,
         }
-        return Response(data={**frontend_reuses_backend, **fronted_features})
+        return Response(data={**features_reuses_backend_settings, **fronted_features})

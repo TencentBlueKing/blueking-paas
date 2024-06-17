@@ -805,6 +805,8 @@ BK_CI_URL = settings.get("BK_CI_URL", "")
 BK_CODECC_URL = settings.get("BK_CODECC_URL", "")
 BK_TURBO_URL = settings.get("BK_TURBO_URL", "")
 BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
+# 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
+BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 
 BK_PLATFORM_URLS = settings.get(
     "BK_PLATFORM_URLS",

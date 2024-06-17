@@ -82,7 +82,6 @@
                   <i class="paasng-icon paasng-process-file" />
                 </a>
                 <a
-                  v-if="platformFeature.ENABLE_WEB_CONSOLE"
                   slot="trigger"
                   v-bk-tooltips="$t('访问控制台')"
                   class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
@@ -225,7 +224,6 @@
                           @click="showInstanceLog(instance, process)"
                         > {{ $t('查看日志') }} </a>
                         <a
-                          v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
                           href="javascript:void(0);"
                           class="blue ml5"
                           @click="showInstanceConsole(instance, process)"

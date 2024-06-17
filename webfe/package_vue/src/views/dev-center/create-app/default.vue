@@ -623,8 +623,6 @@ export default {
       isShowAdvancedOptions: false,
       isOpenAdvancedOptions: true,
       advancedOptionsObj: {},
-      // 保存与“蓝鲸插件”有关的配置，格式 {region_name: {allow_creation: false, ...}}
-      bkPluginConfig: {},
       clusterName: '',
       isShowError: false,
 
@@ -950,11 +948,6 @@ export default {
         return;
       }
 
-      // 初始化蓝鲸插件相关配置
-      (res.bk_plugin_configs || []).forEach((c) => {
-        this.bkPluginConfig[c.region] = c;
-      });
-
       // 如果返回当前用户不支持“高级选项”，停止后续处理
       if (!res.allow_adv_options) {
         this.isShowAdvancedOptions = false;
@@ -969,11 +962,6 @@ export default {
           this.$set(this.advancedOptionsObj, item.region, item.cluster_names);
         }
       });
-    },
-    allowPluginCreation(region) {
-      // 检查当前选择的 region 是否允许创建蓝鲸插件
-      const config = this.bkPluginConfig[region];
-      return !!(config && config.allow_creation);
     },
     async fetchRegionsServices() {
       // console.warn('fetchRegionsServices')

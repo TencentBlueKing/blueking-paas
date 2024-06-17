@@ -19,10 +19,10 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, cast
 
 from aenum import extend_enum, skip
+from blue_krill.data_types.enum import FeatureFlagField
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
-from paasng.misc.feature_flags.constants import FeatureFlagField
 from paasng.utils.basic import ChoicesEnum
 
 

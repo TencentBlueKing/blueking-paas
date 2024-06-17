@@ -158,7 +158,6 @@
               <bk-button
                 :text="true"
                 title="primary"
-                v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
                 @click="showInstanceConsole(instance, row)">
                 {{$t('访问控制台')}}
               </bk-button>

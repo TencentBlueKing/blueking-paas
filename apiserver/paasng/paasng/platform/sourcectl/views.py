@@ -22,6 +22,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from blue_krill.storages.blobstore.exceptions import UploadFailedError
+from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -40,7 +41,6 @@ from paasng.infras.accounts.models import Oauth2TokenHolder, make_verifier
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -170,7 +170,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        if PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
+        if settings.ENABLE_VERIFICATION_CODE:
             verifier = make_verifier(request.session, FunctionType.SVN.value)
             code = data["verification_code"]
             if not verifier.validate_and_clean(code):

@@ -708,7 +708,6 @@ export default {
       formLoading: false,
       advancedOptionsObj: {},
       regionChoose: 'ieod',
-      bkPluginConfig: {},
       rules: {
         code: [
           {
@@ -1037,11 +1036,6 @@ export default {
         this.isShowAdvancedOptions = false;
         return;
       }
-
-      // 初始化蓝鲸插件相关配置
-      (res.bk_plugin_configs || []).forEach((c) => {
-        this.bkPluginConfig[c.region] = c;
-      });
 
       // 如果返回当前用户不支持“高级选项”，停止后续处理
       if (!res.allow_adv_options) {

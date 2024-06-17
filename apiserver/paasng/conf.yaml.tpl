@@ -172,8 +172,6 @@
 # IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT: false
 ## 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
 # MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER: ""
-## 是否允许创建蓝鲸插件应用
-# IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 ## 新建的 lesscode 应用是否为云原生应用
 # LESSCODE_APP_USE_CLOUD_NATIVE_TYPE: true
 ## 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
@@ -383,11 +381,8 @@
 
 
 ## ------------------------------------ 插件应用相关配置 ------------------------------------
-
-## 插件应用配置
-# BK_PLUGIN_CONFIG:
-  ## 是否允许用户创建插件应用
-  # allow_creation: false
+# 是否允许创建蓝鲸插件应用
+IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 
 ## 管理插件应用的 API 网关环境
 # BK_PLUGIN_APIGW_SERVICE_STAGE: prod
@@ -580,10 +575,17 @@
 # IS_PATCH_CODE_IN_MGRLEGACY: true
 
 
-## ------------------------------------ 蓝盾代码检查相关配置 ------------------------------------
+## ------------------------------------ CI 相关配置 ------------------------------------
 
-## 蓝鲸 CI 相关配置项
-# CI_CONFIGS: {}
+## 代码检查配置
+# CODE_CHECK_CONFIGS: {}
+
+# 开发者中心在蓝盾的项目 ID
+BK_CI_PAAS_PROJECT_ID = bk_paas3"
+# 云原生应用构建流水线 ID
+BK_CI_BUILD_PIPELINE_ID = ""
+# 云原生应用构建流水线调用用户（应使用虚拟账号）
+BK_CI_CLIENT_USERNAME = "blueking"
 
 
 ## ------------------------------------ 蓝鲸文档中心配置 ------------------------------------

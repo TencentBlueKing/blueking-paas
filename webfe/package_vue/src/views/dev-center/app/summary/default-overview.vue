@@ -522,7 +522,7 @@ export default {
             this.userFeature.ANALYTICS && this.showInstanceChart(this.activeModuleId);
             // 资源用量
             this.isResourceMetrics && this.showProcessResource();
-            this.userFeature.PHALANX && this.getAlarmData();
+            this.userFeature.MONITORING && this.getAlarmData();
             this.init();
           });
         }
@@ -581,7 +581,7 @@ export default {
         this.trunkUrl = this.curAppModule.repo.trunk_url || '';
         this.sourceType = this.curAppModule.repo.source_type || '';
       }
-      if (this.userFeature.PHALANX) {
+      if (this.userFeature.MONITORING) {
         this.getAlarmData();
       }
     },

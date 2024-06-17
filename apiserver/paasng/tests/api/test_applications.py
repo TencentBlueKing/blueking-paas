@@ -228,8 +228,6 @@ class TestApplicationCreateWithEngine:
         mock_initialize_vcs_with_template,
         settings,
     ):
-        # Turn on "allow_creation" in bk_plugin configs
-        settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
         with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
             # Mock return value of syncing template
             mocked_sync.return_value = SourceSyncResult(dest_type="mock")
@@ -447,7 +445,7 @@ class TestCreateBkPlugin:
         ],
     )
     def test_normal(self, api_client, mock_wl_services_in_creation, settings, bk_user, source_init_template, language):
-        settings.BK_PLUGIN_CONFIG = {"allow_creation": True}
+        settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = True
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
         response = self._send_creation_request(api_client, source_init_template)
 
@@ -458,7 +456,7 @@ class TestCreateBkPlugin:
         assert response.json()["application"]["modules"][0]["repo"] is not None
 
     def test_forbidden_via_config(self, api_client, settings):
-        settings.BK_PLUGIN_CONFIG = {"allow_creation": False}
+        settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = False
         response = self._send_creation_request(api_client)
 
         assert response.status_code == 400, "the creation of bk_plugin must fail"

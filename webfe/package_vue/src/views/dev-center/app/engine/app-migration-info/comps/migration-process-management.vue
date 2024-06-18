@@ -186,13 +186,8 @@
 </template>
 
 <script>
-import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import scalingDialog from './scaling-dialog';
-
-const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
-  .format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   name: 'MigrationProcessManagement',

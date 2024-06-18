@@ -232,12 +232,8 @@ export default {
       }, 2000);
     },
     handleRollbackSuccessful() {
-      this.$router.push({
-        name: 'appSummary',
-        params: {
-          id: this.appCode,
-        },
-      });
+      const newPath = `/developer-center/apps/${this.appCode}/default/summary`;
+      window.history.replaceState(null, null, newPath);
       window.location.reload();
     },
   },

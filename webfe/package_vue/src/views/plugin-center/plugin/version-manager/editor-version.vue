@@ -150,6 +150,9 @@
                 :disabled="curVersion.version_no !== 'self-fill'"
               />
             </bk-form-item>
+            <bk-form-item label="CommitID">
+              {{ commitId }}
+            </bk-form-item>
             <bk-form-item
               :label="$t('版本日志-label')"
               :required="true"
@@ -335,6 +338,9 @@ export default {
     codeBranchPlaceholder() {
       const revisionPolicy = this.curVersionData.revision_policy;
       return revisionPolicy === 'disallow_releasing_source_version' ? this.$t('请选择代码分支，正在发布的代码分支不可选择') : this.$t('请选择版本，已经发布过的版本不可选择');
+    },
+    commitId() {
+      return this.sourceVersions.find(item => item.name === this.curVersion.source_versions)?.revision || '--';
     },
   },
   watch: {

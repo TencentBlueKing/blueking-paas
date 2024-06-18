@@ -44,8 +44,8 @@ class TestCNativeAppDescriptionHandler:
     def test_app_normal(self, random_name, bk_user, one_px_png):
         yaml_content = dedent(
             f"""
-        spec_version: 3
-        app_version: 0.0.1
+        specVersion: 3
+        appVersion: 0.0.1
         app:
           bkAppCode: {random_name}
           bkAppName: {random_name}
@@ -72,8 +72,8 @@ class TestCNativeAppDescriptionHandler:
     def test_app_from_stat(self, random_name, bk_user, one_px_png):
         yaml_content = dedent(
             f"""
-        spec_version: 3
-        app_version: 0.0.1
+        specVersion: 3
+        appVersion: 0.0.1
         app:
           bkAppCode: {random_name}
           bkAppName: {random_name}

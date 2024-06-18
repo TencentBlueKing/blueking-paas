@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import shlex
 
 import cattr
@@ -218,11 +219,11 @@ class DeploymentDescSLZ(serializers.Serializer):
         for proc_type in processes:
             if not PROC_TYPE_PATTERN.match(proc_type):
                 raise ValidationError(
-                    f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"
+                    f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}"
                 )
             if len(proc_type) > PROC_TYPE_MAX_LENGTH:
                 raise ValidationError(
-                    f"Invalid proc type: {proc_type}, must not " f"longer than {PROC_TYPE_MAX_LENGTH} characters"
+                    f"Invalid proc type: {proc_type}, must be less than {PROC_TYPE_MAX_LENGTH} characters"
                 )
 
         # Formalize procfile data and return

@@ -109,8 +109,8 @@ class TestCNativeAppDescriptionHandler:
 def test_app_data_to_desc(random_name):
     app_data = dedent(
         f"""
-    spec_version: 3
-    app_version: 0.0.1
+    specVersion: 3
+    appVersion: 0.0.1
     app:
       bkAppCode: {random_name}
       bkAppName: {random_name}

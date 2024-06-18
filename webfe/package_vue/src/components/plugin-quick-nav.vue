@@ -172,6 +172,16 @@ export default {
       const parmas = this.getTarget(data.id, data.pd_id);
       this.hideSelectData();
       this.$router.push(parmas);
+      // 如果当前为插件版本、测试阶段，返回概览页
+      if (this.$route.name === 'pluginVersionRelease') {
+        this.$router.replace({
+          name: 'pluginSummary',
+          query: {
+            id: data.id,
+            pluginTypeId: data.pd_id,
+          },
+        });
+      }
     },
     searchPlugin: debounce(function () {
       if (this.searchValue === '') {

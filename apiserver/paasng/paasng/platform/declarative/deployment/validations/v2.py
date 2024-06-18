@@ -223,7 +223,7 @@ class DeploymentDescSLZ(serializers.Serializer):
                 )
             if len(proc_type) > PROC_TYPE_MAX_LENGTH:
                 raise ValidationError(
-                    f"Invalid proc type: {proc_type}, must be less than {PROC_TYPE_MAX_LENGTH} characters"
+                    f"Invalid proc type: {proc_type}, cannot be longer than {PROC_TYPE_MAX_LENGTH} characters"
                 )
 
         # Formalize procfile data and return

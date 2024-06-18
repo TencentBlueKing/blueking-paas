@@ -18,7 +18,7 @@
           <paas-plugin-title
             :name="isOfficialVersion ? $t('发布') : $t('测试')"
             :no-shadow="true"
-            :version="curVersion"
+            :version-data="curRelease"
           />
           <!-- 结束发布流程禁用终止发布 -->
           <bk-button
@@ -91,7 +91,8 @@
     </paas-content-loader>
   </div>
 </template>
-<script>import paasPluginTitle from '@/components/pass-plugin-title';
+<script>
+import paasPluginTitle from '@/components/pass-plugin-title';
 import { bus } from '@/common/bus';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import deployStage from './release-stages/deploy';
@@ -151,21 +152,23 @@ export default {
     };
   },
   computed: {
+    curRelease() {
+      return this.$store.state.plugin.curRelease;
+    },
     releaseId() {
       return this.$route.query.release_id;
     },
     stageId() {
-      return this.$store.state.plugin.curRelease?.current_stage?.stage_id;
+      return this.curRelease?.current_stage?.stage_id;
     },
     curVersion() {
       return this.$route.query.version || this.titleVersion;
     },
     titleVersion() {
-      const releaseData = this.$store.state.plugin.curRelease;
-      return `${releaseData.version} (${releaseData.source_version_name})`;
+      return `${this.curRelease.version} (${this.curRelease.source_version_name})`;
     },
     status() {
-      return this.$store.state.plugin.curRelease.status;
+      return this.curRelease.status;
     },
     releaseTopHeight() {
       const topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;

@@ -325,7 +325,7 @@ export default {
       return this.buildMethod === 'buildpack';
     },
     isCodeQuality() {
-      return this.curAppInfo.feature?.CI;
+      return this.curAppInfo.feature?.CODE_CHECK;
     },
     isPluginApp() {
       return this.curAppInfo.application?.is_plugin_app;

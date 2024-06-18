@@ -596,6 +596,15 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domain_resolution/`;
     return http.post(url, data, config);
   },
+
+  /**
+   * 获取实例事件详情
+   * @param {Object} params 请求参数：appCode
+   */
+  getInstanceEvents({}, { appCode, moduleId, env, name }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/instance_events/${name}/`;
+    return http.get(url, {}, config);
+  },
 };
 
 export default {

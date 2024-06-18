@@ -228,6 +228,11 @@
                           class="blue ml5"
                           @click="showInstanceConsole(instance, process)"
                         > {{ $t('访问控制台') }} </a>
+                        <a
+                          href="javascript:void(0);"
+                          class="blue ml5"
+                          @click="showInstanceEvents(instance, process)"
+                        > {{ $t('查看事件') }} </a>
                       </td>
                     </tr>
                   </template>
@@ -251,7 +256,7 @@
       </div>
 
       <bk-sideslider
-        :width="800"
+        :width="computedWidth"
         :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
@@ -496,6 +501,16 @@
     </div>
     <!-- 进程实时日志 end -->
 
+    <!-- 查看事件 -->
+    <eventDetail
+      v-model="instanceEventConfig.isShow"
+      :width="computedWidth"
+      :config="instanceEventConfig"
+      :env="environment"
+      :module-id="curModuleId"
+      :instance-name="instanceEventConfig.instanceName"
+    />
+
     <!-- 进程设置 -->
     <bk-dialog
       v-model="processConfigDialog.visiable"
@@ -646,6 +661,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import $ from 'jquery';
 import i18n from '@/language/i18n.js';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
+import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
 
 let maxReplicasNum = 0;
 
@@ -666,6 +682,7 @@ export default {
   components: {
     tooltipConfirm,
     chart: ECharts,
+    eventDetail,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -910,6 +927,12 @@ export default {
       defaultUtilizationRate: '85%',
       serverEventErrorTimer: 0,
       serverEventEOFTimer: 0,
+      instanceEventConfig: {
+        isShow: false,
+        name: '',
+        processName: '',
+        instanceName: '',
+      },
     };
   },
   computed: {
@@ -931,9 +954,15 @@ export default {
     isCloudNative() {
       return this.curAppInfo.application?.type === 'cloud_native';
     },
+    // 滑框的宽度
+    computedWidth() {
+      const defaultWidth = 980;
+      const maxWidth = window.innerWidth * 0.8;
+      return Math.min(defaultWidth, maxWidth);
+    },
   },
   watch: {
-    curLogTimeRange(val) {
+    curLogTimeRange() {
       this.loadInstanceLog();
     },
     '$route'() {
@@ -1203,7 +1232,10 @@ export default {
         // 滚动到底部
         setTimeout(() => {
           const container = document.getElementById('log-container');
-          container.scrollTop = container.scrollHeight;
+          container.scrollTo({
+            top: container?.scrollHeight || 0,
+            behavior: 'smooth',
+          });
         }, 500);
       } catch (e) {
         this.$paasMessage({
@@ -2196,6 +2228,13 @@ export default {
       this.processPlan.targetReplicas = this.curTargetReplicas;
       this.scalingConfig.maxReplicas = this.curTargetMaxReplicas;
       this.scalingConfig.minReplicas = this.curTargetMinReplicas;
+    },
+
+    showInstanceEvents(instance, process) {
+      this.instanceEventConfig.isShow = true;
+      this.instanceEventConfig.name = instance.display_name;
+      this.instanceEventConfig.processName = process.name;
+      this.instanceEventConfig.instanceName = instance.name;
     },
   },
 };

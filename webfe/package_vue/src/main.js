@@ -75,8 +75,12 @@ import { renderHeader } from '@/common/utils';
 
 // markdown样式
 import 'github-markdown-css';
+
 // 代码高亮
 import 'highlight.js/styles/github.css';
+
+// 功能依赖css
+import '@blueking/functional-dependency/vue2/vue2.css';
 
 window.$ = $;
 
@@ -213,16 +217,8 @@ auth.requestCurrentUser().then((user) => {
   if (!user.isAuthenticated) {
     auth.redirectToLogin();
   } else {
-    switch (window.GLOBAL_CONFIG.APP_VERSION) {
-      case 'ee':
-        document.title = i18n.t('开发者中心 | 腾讯蓝鲸智云');
-        break;
-      case 'ce':
-        document.title = i18n.t('开发者中心 | 腾讯蓝鲸智云');
-        break;
-      default:
-        document.title = i18n.t('开发者中心 | 蓝鲸');
-        Vue.prototype.$isInternalVersion = true;
+    if (window.GLOBAL_CONFIG.APP_VERSION === 'te') {
+      Vue.prototype.$isInternalVersion = true;
     }
 
     Vue.config.productionTip = false;

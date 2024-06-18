@@ -89,6 +89,7 @@ const state = {
   // 是否显示通知中心
   isShowNotice: false,
   curUserInfo: {},
+  platformConfig: {},
 };
 
 const getters = {};
@@ -242,6 +243,9 @@ const mutations = {
   },
   updataUserInfo(state, data) {
     state.curUserInfo = data;
+  },
+  updataPlatformConfig(state, data) {
+    state.platformConfig = data;
   },
 };
 

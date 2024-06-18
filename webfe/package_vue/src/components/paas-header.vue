@@ -11,10 +11,10 @@
         >
           <span class="logo-warp">
             <img
-              src="/static/images/logo.svg"
+              :src="platformConfig.favicon"
               alt=""
             >
-            <span class="logo-text">{{ $t('蓝鲸开发者中心') }}</span>
+            <span class="logo-text">{{ platformConfig.name }}</span>
           </span>
         </router-link>
         <ul class="ps-nav" ref="navListRef">
@@ -431,6 +431,9 @@ export default {
     displayNavList() {
       const nav = this.headerStaticInfo.list.nav || [];
       return this.transformNavData(nav);
+    },
+    platformConfig() {
+      return this.$store.state.platformConfig;
     },
   },
   watch: {

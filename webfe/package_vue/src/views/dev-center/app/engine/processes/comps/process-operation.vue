@@ -600,6 +600,8 @@
                 :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
                 class="dia-input"
                 v-model="scalingConfig.minReplicas"
+                :max="maxReplicasNum"
+                :min="0"
               >
                 <template slot="prepend">
                   <div class="group-text">{{$t('最小副本数')}}</div>
@@ -612,6 +614,8 @@
                 :placeholder="'1 - ' + maxReplicasNum"
                 class="dia-input"
                 v-model="scalingConfig.maxReplicas"
+                :max="maxReplicasNum"
+                :min="0"
               >
                 <template slot="prepend">
                   <div class="group-text">{{$t('最大副本数')}}</div>

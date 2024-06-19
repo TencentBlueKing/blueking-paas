@@ -1024,16 +1024,19 @@ export default {
     },
 
     // 选中环境
-    handleEnvChange(curItem) {
-      this.curItem = curItem;
-      const flag = this.envVarList.filter(item => item.name === this.curItem.name
-      && item.envName === this.curItem.envName);
-      if (flag.length <= 1) {
+    handleEnvChange(row) {
+      this.curItem = row;
+      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name && v.isEdit);
+      if (index !== -1) {
         // 如果符合要求需要清除错误
-        this.envVarList.forEach((e, i) => {
-          this.$refs[`envRefKey${i}`].clearError();
-        });
+        this.$refs[`envRefKey${index}`].clearError();
       }
+      this.$nextTick(() => {
+        // 如果切换环境已存在，手动触发校验，显示error tips
+        this.$refs[`envRefKey${index}`].validate().catch((e) => {
+          console.error(e);
+        });
+      });
     },
 
     handleCloneFromModule() {

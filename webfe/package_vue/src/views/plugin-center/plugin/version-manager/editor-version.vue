@@ -252,6 +252,7 @@
 <script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import paasPluginTitle from '@/components/pass-plugin-title';
 import { formatTime } from '@/common/tools';
+import dayjs from 'dayjs';
 
 export default {
   components: {
@@ -559,8 +560,8 @@ export default {
 
     handleSourceVersionChange(v) {
       if (this.curVersionData.version_no === 'branch-timestamp') {
-        const timestamp = Date.now();
-        this.curVersion.version = `${v}-${timestamp}`;
+        const time = dayjs().format('YYMMDDHHmm');
+        this.curVersion.version = `${v}-${time}`;
         const curVersionData = this.sourceVersions.find(item => item.name === v) || {};
         this.curVersion.comment = curVersionData.message;
       }

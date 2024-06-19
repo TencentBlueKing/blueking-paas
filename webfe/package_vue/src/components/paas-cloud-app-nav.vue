@@ -255,6 +255,9 @@ export default {
     isMigrationInfoShown() {
       return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status === 'migration_succeeded';
     },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
   },
   watch: {
     curAppInfo() {
@@ -337,7 +340,7 @@ export default {
         }
 
         // 迁移中的应用展示迁移信息
-        if (!this.isMigrationInfoShown) {
+        if (!this.userFeature.CNATIVE_MGRLEGACY || !this.isMigrationInfoShown) {
           navTree = navTree.filter(nav => nav.name !== 'appMigrationInfo');
         }
 

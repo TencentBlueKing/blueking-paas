@@ -162,8 +162,12 @@ export default {
       const showMigration = ['default', 'no_need_migration', 'rollback_succeeded', 'confirmed'];
       return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
     },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
     // 是否迁移云原生弹窗按钮
     isMigrationEntryShown() {
+      if (!this.userFeature.CNATIVE_MGRLEGACY) return false;
       const showMigration = ['no_need_migration', 'migration_succeeded', 'confirmed'];
       return this.curAppInfo.migration_status && !showMigration.includes(this.curAppInfo.migration_status.status);
     },

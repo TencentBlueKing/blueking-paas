@@ -16,12 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
 
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.managers.subpath import SubPathAppIngressMgr, assign_subpaths
 from paas_wl.workloads.networking.ingress.models import AppSubpath
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -32,7 +33,7 @@ class TestSubPathAppIngressMgr:
         AppSubpath.objects.create_obj(bk_stag_wl_app, "/bar/")
 
         ingress_mgr = SubPathAppIngressMgr(bk_stag_wl_app)
-        with replace_cluster_service({"sub_path_domains": [{"name": "main.example.com"}]}):
+        with cluster_ingress_config({"sub_path_domains": [{"name": "main.example.com"}]}):
             domains = ingress_mgr.list_desired_domains()
             assert len(domains) == 1
             assert domains[0].host == "main.example.com"
@@ -40,7 +41,7 @@ class TestSubPathAppIngressMgr:
 
     def test_list_desired_domains_not_configured(self, bk_stag_wl_app):
         ingress_mgr = SubPathAppIngressMgr(bk_stag_wl_app)
-        with replace_cluster_service({"sub_path_domains": []}):
+        with cluster_ingress_config({"sub_path_domains": []}):
             domains = ingress_mgr.list_desired_domains()
             assert len(domains) == 0
 
@@ -49,7 +50,7 @@ class TestSubPathAppIngressMgr:
 class TestAssignSubpaths:
     @pytest.fixture(autouse=True)
     def _configure(self):
-        with replace_cluster_service({"sub_path_domains": [{"name": "main.example.com"}]}):
+        with cluster_ingress_config({"sub_path_domains": [{"name": "main.example.com"}]}):
             yield
 
     def test_brand_new_paths(self, bk_stag_wl_app):

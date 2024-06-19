@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from unittest import mock
 
 import pytest
@@ -25,7 +26,6 @@ from paasng.accessories.servicehub.remote.store import get_remote_store
 from tests.paasng.accessories.servicehub.utils import gen_plan, gen_service
 from tests.utils.api import mock_json_response
 from tests.utils.helpers import configure_regions
-from tests.utils.mocks.engine import mock_cluster_service
 
 from . import data_mocks
 
@@ -56,7 +56,7 @@ def _setup_mocks():
     - Setup regions which were used in mocked data
     - Mock ClusterService which will be used in bind_service
     """
-    with configure_regions(["r1", "r2", "r3", "rr1", "rr2"]), mock_cluster_service():
+    with configure_regions(["r1", "r2", "r3", "rr1", "rr2"]):
         yield
 
 

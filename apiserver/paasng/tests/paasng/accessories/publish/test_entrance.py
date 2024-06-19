@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Testcases for application entrance management
 """
 from contextlib import contextmanager
@@ -40,16 +41,16 @@ from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.modules.constants import ExposedURLType
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture(autouse=True)
 def _setup_cluster():
     """Replace cluster info in module level"""
-    with mock_cluster_service(
-        ingress_config={
+    with cluster_ingress_config(
+        {
             "sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}],
             "app_root_domains": [{"name": "bkapps.example.com"}],
         }

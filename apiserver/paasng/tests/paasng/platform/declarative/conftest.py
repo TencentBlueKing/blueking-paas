@@ -16,11 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from unittest import mock
 
 import pytest
 
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
 
 @pytest.fixture(autouse=True)
@@ -30,8 +31,8 @@ def _setup_mocks(mock_wl_services_in_creation):
     - Mock wl_app creation which depends on `workloads` module
     - Mock ProcessManager which depends on `workloads` module
     """
-    with mock_cluster_service(
-        ingress_config={
+    with cluster_ingress_config(
+        {
             "sub_path_domains": [],
             "app_root_domains": [{"name": "bkapps.example.com"}],
         }

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 from unittest import mock
 
@@ -28,7 +29,7 @@ from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModuleStructuredLogAPIView:

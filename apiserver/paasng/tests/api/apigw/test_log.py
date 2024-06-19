@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 from unittest import mock
 
@@ -23,7 +24,7 @@ import pytest
 from elasticsearch_dsl.response import Hit, Response
 from elasticsearch_dsl.search import Search
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestLegacyStdoutLogAPIView:

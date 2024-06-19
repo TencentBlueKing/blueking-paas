@@ -193,7 +193,7 @@ const defaultStateData = {
     errorMsg: '',
   },
 };
-const MAX_ATTEMPTS = 120;
+const MAX_ATTEMPTS = 60;
 export default {
   name: 'AppMigrationDialog',
   model: {
@@ -526,7 +526,7 @@ export default {
           this.confirmMigrationIntervalId = null;
           this.handleCancel();
         }
-      }, 1000); // 每隔1秒轮询一次
+      }, 2000); // 每隔2秒轮询一次
     },
     // 重新迁移
     handleReMigrate(id) {
@@ -542,7 +542,7 @@ export default {
     // 部署
     async handleToDeploy() {
       // 重新获取当前应用信息
-      const appCode = this.data.code;
+      const appCode = this.data.code || this.$route.params.id;
       await Promise.all([this.$store.dispatch('getAppInfo', { appCode }), this.$store.dispatch('getAppFeature', { appCode })]);
       this.handleCancel(false);
       this.$router.push({

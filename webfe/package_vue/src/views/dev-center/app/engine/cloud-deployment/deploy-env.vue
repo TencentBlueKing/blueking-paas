@@ -117,7 +117,7 @@
             prop="key"
           >
             <template slot-scope="{ row, $index }">
-              <div class="var-key-wrapper">
+              <div :class="{ 'var-key-wrapper': !(isPageEdit || row.isEdit) }">
                 <div
                   v-if="isPageEdit || row.isEdit"
                   class="table-colum-cls"
@@ -144,7 +144,7 @@
                   </bk-form>
                 </div>
                 <template v-else>
-                  <div>{{ row.key }}</div>
+                  <div class="var-key">{{ row.key }}</div>
                   <i
                     v-if="row.isPresent"
                     class="paasng-icon paasng-remind"
@@ -1009,7 +1009,7 @@ export default {
 
     // 新增一条数据
     handleEnvTableListData(v, row) {
-      const index = this.envVarList.findIndex(v => v.key === row.key);
+      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name);
       if (v === 'add') {
         this.envVarList.push({
           key: '',
@@ -1321,7 +1321,7 @@ export default {
 
     // 单个环境编辑
     handleSingleEdit(row) {
-      const index = this.envVarList.findIndex(v => v.key === row.key);
+      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name);
       this.envVarList[index].isEdit = true;
     },
 
@@ -1350,7 +1350,7 @@ export default {
 
     // 单个环境编辑保存
     handleSingleSave(row) {
-      const index = this.envVarList.findIndex(v => v.key === row.key);
+      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name);
       if (this.envVarList[index].isAdd) { // 新建
         this.singleValidate(index, 'add');
       } else { // 编辑
@@ -1375,7 +1375,10 @@ export default {
 
     // 单个环境编辑取消
     handleSingleCancel(row) {
-      const index = this.envVarList.findIndex(v => v.key === row.key);
+      // 区分编辑、新建
+      const index = this.envVarList.findIndex(v => (
+        v.key === row.key && v.environment_name === row.environment_name && (row.isAdd ? !v.id : true)
+      ));
       this.envVarList[index].isEdit = false;
       // 添加数据未保存，点击取消直接删除
       if (!this.envLocalVarList[index]) {
@@ -1880,7 +1883,7 @@ a.is-disabled {
     .bk-form-content {
       width: 100%;
       .tooltips-icon {
-        right: 1% !important;
+        right: 2px !important;
       }
     }
   }
@@ -1931,6 +1934,11 @@ a.is-disabled {
       font-size: 14px;
       color: #EA3636;
       transform: translateY(0);
+    }
+    .var-key {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
     }
   }
 }

@@ -82,7 +82,7 @@
           <div class="plugin-guide">
             <a
               target="_blank"
-              :href="extraInfo.docs"
+              :href="GLOBAL.DOC.PLUGIN_TOOL_FRAMEWORK"
             >
               {{ $t('查看更多开发和发布指引') }}
               <i class="paasng-icon paasng-double-arrow-right" />

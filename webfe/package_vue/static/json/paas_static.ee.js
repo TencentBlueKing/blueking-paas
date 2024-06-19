@@ -289,6 +289,9 @@ export const PLATFORM_CONFIG = {
 
         // 部署维护
         DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
+
+        // 插件-工具框架
+        PLUGIN_TOOL_FRAMEWORK: DOCS_URL_PREFIX + '/p/80458883'
     },
 
     CONFIG: {

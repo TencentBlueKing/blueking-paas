@@ -43,6 +43,8 @@ class FrontendFeatureViewSet(ViewSet):
             "MARKET_VISIBILITY": settings.FE_FEATURE_SETTINGS_MARKET_VISIBILITY,
             # PaaS2.0 应用迁移，全新部署的版本可不展示该功能
             "MGRLEGACY": settings.FE_FEATURE_SETTINGS_MGRLEGACY,
+            # 云原生应用迁移
+            "CNATIVE_MGRLEGACY": settings.FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {

@@ -34,8 +34,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 def yaml_content():
     return dedent(
         """
-        spec_version: 3
-        app_version: "1.0"
+        specVersion: 3
+        appVersion: "1.0"
         modules:
         - name: default
           language: NodeJS
@@ -68,8 +68,8 @@ def yaml_content():
 def yaml_content_after_change():
     return dedent(
         """
-        spec_version: 3
-        app_version: "1.0"
+        specVersion: 3
+        appVersion: "1.0"
         modules:
         - name: default
           language: NodeJS

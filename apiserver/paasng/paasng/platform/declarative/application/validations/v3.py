@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
-from typing import Dict, List
+from typing import Dict
 
 from django.utils.translation import gettext_lazy as _
 from pydantic import ValidationError as PDValidationError
@@ -28,19 +28,11 @@ from paas_wl.utils.basic import to_error_string
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
 from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
-from paasng.platform.declarative.application.resources import (
-    ApplicationDesc,
-    DisplayOptions,
-    MarketDesc,
-    ModuleDesc,
-)
+from paasng.platform.declarative.application.resources import ApplicationDesc, DisplayOptions, MarketDesc, ModuleDesc
 from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.modules.serializers import ModuleNameField
-from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField
-
-module_name_field = ModuleNameField()
 
 
 class DisplayOptionsSLZ(serializers.Serializer):
@@ -51,7 +43,7 @@ class DisplayOptionsSLZ(serializers.Serializer):
     isMaximized = serializers.BooleanField(
         required=False, default=False, source="is_win_maximize", help_text="窗口是否最大化"
     )
-    isVisible = serializers.BooleanField(required=False, default=True, source="visible", help_text="是否展示")
+    visible = serializers.BooleanField(required=False, default=True, help_text="是否展示")
     openMode = serializers.CharField(required=False, help_text="打开方式", source="open_mode")
 
     @classmethod
@@ -65,13 +57,14 @@ class DisplayOptionsSLZ(serializers.Serializer):
         return DisplayOptions(**attrs)
 
 
-@i18n
 class MarketSLZ(serializers.Serializer):
     """Serializer for describing application's market properties"""
 
     category = ProductTagByNameField(required=False, source="tag")
-    introduction = I18NExtend(serializers.CharField(required=True, help_text="简介"))
-    description = I18NExtend(serializers.CharField(required=False, default="", help_text="描述"))
+    introduction = serializers.CharField(required=True, help_text="简介", source="introduction_zh_cn")
+    introductionEn = serializers.CharField(required=False, default="", help_text="英文简介", source="introduction_en")
+    description = serializers.CharField(required=False, default="", help_text="描述", source="description_zh_cn")
+    descriptionEn = serializers.CharField(required=False, default="", help_text="英文描述", source="description_en")
     displayOptions = DisplayOptionsSLZ(
         required=False, default=DisplayOptionsSLZ.gen_default_value, source="display_options"
     )
@@ -101,7 +94,7 @@ class ModuleSpecField(serializers.DictField):
 
 
 class ModuleDescriptionSLZ(serializers.Serializer):
-    name = serializers.CharField(help_text="模块名称", required=True)
+    name = ModuleNameField()
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
     sourceDir = serializers.CharField(help_text="源码目录", default="", source="source_dir")
     isDefault = serializers.BooleanField(default=False, help_text="是否为主模块", source="is_default")
@@ -137,11 +130,6 @@ class AppDescriptionSLZ(serializers.Serializer):
     bkAppNameEn = AppNameField(source="name_en", required=False)
     market = MarketSLZ(required=False, default=None)
     modules = serializers.ListField(child=ModuleDescriptionSLZ())
-
-    def validate_modules(self, modules: List[ModuleDesc]):
-        for module_desc in modules:
-            module_name_field.run_validation(module_desc.name)
-        return modules
 
     def to_internal_value(self, data: Dict) -> ApplicationDesc:
         attrs = super().to_internal_value(data)

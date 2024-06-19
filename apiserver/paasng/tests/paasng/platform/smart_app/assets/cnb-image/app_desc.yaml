@@ -1,5 +1,5 @@
-spec_version: 3
-app_version: "1.0"
+specVersion: 3
+appVersion: "1.0"
 app:
   region: "default"
   bkAppCode: "TO_BE_CHANGED"

@@ -173,12 +173,12 @@ class AppDescV3Decorator:
         def apply(app_desc: Dict):
             market: Dict[str, Any] = {
                 "introduction": introduction or "introduction",
-                "introduction_en": introduction_en or "introduction_en",
+                "introductionEn": introduction_en or "introduction_en",
             }
             if description:
                 market["description"] = description
             if description_en:
-                market["description_en"] = description_en
+                market["descriptionEn"] = description_en
             if display_options:
                 market["displayOptions"] = display_options
             if tag is not None:

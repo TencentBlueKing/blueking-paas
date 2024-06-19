@@ -360,7 +360,7 @@ export default {
       return this.form.pd_id ? curPluginData[0] : this.pluginTypeList[0];
     },
     defaultPluginType() {
-      return this.$route.query.type;
+      return this.$route.query.plugin_type;
     },
     localLanguage() {
       return this.$store.state.localLanguage;

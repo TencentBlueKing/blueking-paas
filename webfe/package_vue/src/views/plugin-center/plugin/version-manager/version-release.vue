@@ -27,7 +27,7 @@
             :disabled="isPostedSuccessfully"
             @click="showInfoCancelRelease"
           >
-            <i class="paasng-icon paasng-stop-2" />
+            <i class="paasng-icon paasng-minus-circle" />
             {{ isOfficialVersion ? $t('终止发布') : $t('终止测试') }}
           </bk-button>
         </div>
@@ -702,10 +702,9 @@ export default {
     color: #C4C6CC;
 }
 .discontinued {
-    color: #979BA5;
     font-size: 14px;
     i {
-        font-size: 16px;
+      margin-right: 3px;
     }
 }
 .success-check-wrapper,

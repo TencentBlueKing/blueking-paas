@@ -38,7 +38,7 @@ class EventDeserializer(AppEntityDeserializer["Event"]):
             type=kube_data.type,
             message=kube_data.message,
             reason=kube_data.reason,
-            count=kube_data.count,
+            count=kube_data.get("count", 1),
             first_timestamp=kube_data.firstTimestamp,
             last_timestamp=kube_data.lastTimestamp,
             involved_object=InvolvedObject(

@@ -38,13 +38,13 @@ class Event(AppEntity):
     """
 
     reason: str
-    count: int
     type: str
     message: str
     first_timestamp: str
     last_timestamp: str
     source: Source
     involved_object: InvolvedObject
+    count: int = 1
 
     class Meta:
         kres_class = KEvent

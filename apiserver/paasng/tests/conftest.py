@@ -907,7 +907,6 @@ def _with_wl_apps(request):
     else:
         bk_app = request.getfixturevalue("bk_app")
 
-    print("CLUSTER_NAME_FOR_TESTING -with-wl-apps", CLUSTER_NAME_FOR_TESTING)
     create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
 
 

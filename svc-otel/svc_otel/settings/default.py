@@ -206,9 +206,11 @@ def get_logging_config(log_level="DEBUG"):
     }
 
 
-BKKRILL_ENCRYPT_SECRET_KEY = env.str(
-    "BKKRILL_ENCRYPT_SECRET_KEY", default="b1ZPY1FDTXV1WGpGb0x2cmJKdlVLQW5OdnJBb2FscVY="
-).encode()
+# 环境变量设置了 BKKRILL_ENCRYPT_SECRET_KEY 且不为空时才使用环境变量中的值，否则使用默认值
+BKKRILL_ENCRYPT_SECRET_KEY = (
+    env.str("BKKRILL_ENCRYPT_SECRET_KEY", default="").encode()
+    or "b1ZPY1FDTXV1WGpGb0x2cmJKdlVLQW5OdnJBb2FscVY=".encode()
+)
 
 
 METRIC_CLIENT_TOKEN_DICT = {

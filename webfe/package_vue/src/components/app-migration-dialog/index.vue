@@ -21,9 +21,8 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.address"></bk-checkbox>
             <span class="title">{{ $t('变更应用访问地址') }}</span>
-            <span class="tips" v-bk-overflow-tips>
-              {{ $t(`如 {l} 变更为：{c}`, { l: appChecklistInfo.rootDomainsLegacy || '--', c: appChecklistInfo.rootDomainsCnative || '--' }) }}
-            </span>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <span class="tips" v-bk-overflow-tips v-html="domainsTips"></span>
           </div>
           <div class="content">
             <p>1. {{ $t('应用间不同模块间若通过 API 访问，需要修改调用地址') }}</p>
@@ -35,13 +34,12 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
-            <span class="tips" v-bk-overflow-tips>
-              {{ $t(`如 {l} 变更为：{c}`, { l: appChecklistInfo.namespaceLegacy || '--', c: appChecklistInfo.namespaceCnative || '--' }) }}
-            </span>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <span class="tips" v-bk-overflow-tips v-html="namespaceTips"></span>
           </div>
           <div class="content">
             {{ $t('可搜索应用代码、环境变量中是否有以下内容来确认') }}：
-            <p>{{ appChecklistInfo.namespaceLegacyStr }}</p>
+            <p>{{ `http://${data.region}-bkapp-${data.code}-` }}</p>
           </div>
         </div>
         <div class="info-item" v-if="appChecklistInfo.rcs_bindings">
@@ -90,7 +88,7 @@
             <div class="title-wrapper">
               <!-- 监测模块没有部署，则不能进行勾选 -->
               <bk-checkbox v-model="verifyFunctionality.module"></bk-checkbox>
-              <span class="title">{{ $t('重新部署应用下每个模块') }}</span>
+              <span class="title">{{ $t('已成功部署应用下每个模块') }}</span>
               <bk-button
                 :text="true"
                 title="primary"
@@ -149,6 +147,7 @@
         v-else
         class="ml10"
         :theme="'primary'"
+        :loading="isConfirmMigrationLoading"
         :disabled="isMigrationDisabled"
         @click="handleAppMigration">
         {{ isStartMigration ? $t('开始迁移') : $t('确定迁移') }}
@@ -194,6 +193,7 @@ const defaultStateData = {
     errorMsg: '',
   },
 };
+const MAX_ATTEMPTS = 60;
 export default {
   name: 'AppMigrationDialog',
   model: {
@@ -240,6 +240,9 @@ export default {
       },
       appChecklistInfo: {},
       initStatus: '',
+      attempts: 0,
+      confirmMigrationIntervalId: null,
+      isConfirmMigrationLoading: false,
     };
   },
   computed: {
@@ -282,6 +285,15 @@ export default {
         }
       }
       return '--';
+    },
+    domainsTips() {
+      return this.$t('如 {l} 变更为：<em>{c}</em>', { l: this.appChecklistInfo.rootDomainsLegacy || '--', c: this.appChecklistInfo.rootDomainsCnative || '--' });
+    },
+    namespaceTips() {
+      return this.$t('如 {l} 变更为：<em>{c}</em>', {
+        l: '{region}-bkapp-{appId}-m-{moduleName}-{env}-{processName}',
+        c: '{appId}-m-{moduleName}-{processName}',
+      });
     },
   },
   watch: {
@@ -342,6 +354,12 @@ export default {
     // 弹窗关闭处理
     async handleCancel(isReload = true) {
       this.$emit('change', false);
+      // 确定迁移阶段
+      if (this.confirmMigrationIntervalId) {
+        clearInterval(this.confirmMigrationIntervalId);
+        this.reset();
+        return;
+      }
       // 停止轮询
       clearInterval(this.timerId);
       if (isReload) {
@@ -353,6 +371,7 @@ export default {
       this.currentStep = 1;
       this.processId = null;
       this.isPollingLatest = false;
+      this.isConfirmMigrationLoading = false;
       this.migrateStateData = cloneDeep(defaultStateData);
       this.migrationData = { details: {} };
       Object.keys(this.migrationRisk).forEach((key) => {
@@ -408,13 +427,6 @@ export default {
           const { legacy, cnative } = res.root_domains;
           this.appChecklistInfo.rootDomainsLegacy = legacy.length ? legacy.map(v => `*.${v}`).join() : '--';
           this.appChecklistInfo.rootDomainsCnative = cnative.length ? cnative.map(v => `*.${v}`).join() : '--';
-        }
-        // namespaces 变更进程间通信地址
-        if (res.namespaces) {
-          const { legacy: nLegacy, cnative: nCnative } = res.namespaces;
-          this.appChecklistInfo.namespaceLegacy = nLegacy.length ? nLegacy.map(v => `*.${v.namespace}`).join() : '--';
-          this.appChecklistInfo.namespaceLegacyStr = nLegacy.length ? nLegacy.map(v => v.namespace).join() : '--';
-          this.appChecklistInfo.namespaceCnative = nCnative.length ? nCnative.map(v => `*.${v.namespace}`).join() : '--';
         }
         // 变更出口 IP
         if (!this.appChecklistInfo.rcs_bindings) {
@@ -487,21 +499,34 @@ export default {
     },
     // 确定迁移
     async migrationProcessesConfirm() {
+      this.isConfirmMigrationLoading = true;
       try {
         await this.$store.dispatch('migration/migrationProcessesConfirm', {
           id: this.processId,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('迁移成功'),
-        });
-        this.handleCancel();
+        // 确定迁移轮询状态
+        this.confirmMigrationPolling();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
+        this.isConfirmMigrationLoading = false;
       }
+    },
+    // 确定迁移轮询
+    confirmMigrationPolling() {
+      this.confirmMigrationIntervalId = setInterval(async () => {
+        this.attempts++;
+        this.queryMigrationStatus();
+
+        // 检查是否达到最大尝试次数，或已经确定迁移成功
+        if (this.attempts >= MAX_ATTEMPTS || this.isMigrationConfirmed) {
+          clearInterval(this.confirmMigrationIntervalId);
+          this.confirmMigrationIntervalId = null;
+          this.handleCancel();
+        }
+      }, 2000); // 每隔2秒轮询一次
     },
     // 重新迁移
     handleReMigrate(id) {
@@ -517,7 +542,7 @@ export default {
     // 部署
     async handleToDeploy() {
       // 重新获取当前应用信息
-      const appCode = this.data.code;
+      const appCode = this.data.code || this.$route.params.id;
       await Promise.all([this.$store.dispatch('getAppInfo', { appCode }), this.$store.dispatch('getAppFeature', { appCode })]);
       this.handleCancel(false);
       this.$router.push({
@@ -655,6 +680,11 @@ export default {
 
   .info-item {
     margin-top: 32px;
+    :deep(.tips) {
+      em {
+        font-weight: 700;
+      }
+    }
 
     .title-wrapper {
       display: flex;

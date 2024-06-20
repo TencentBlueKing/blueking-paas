@@ -61,8 +61,6 @@ Before calling the interface, please get your access_token first. For specific g
         }
     },
     "feature_flag":{
-        "release_to_bk_market": True/False,
-        "release_to_wx_miniprogram": True/False,
         "release_to_wx_qiye": True/False
     },
     "module_mobile_config_enabled": True/False,

@@ -13,12 +13,6 @@ export default {
     };
   },
   computed: {
-    routeName() {
-      return this.$route.name;
-    },
-    useCenterStyle() {
-      return ['index', 'myApplications'].includes(this.routeName);
-    },
     platformConfig() {
       return this.$store.state.platformConfig;
     },

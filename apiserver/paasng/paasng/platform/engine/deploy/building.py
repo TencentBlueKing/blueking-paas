@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from pathlib import Path
 from typing import Optional
@@ -153,19 +154,22 @@ class BaseBuilder(DeployStep):
                 )
 
     def handle_app_description(self, raise_exception: bool = False) -> Optional[PerformResult]:
-        """Handle application description for deployment
+        """Handle application description for deployment. It try to parse the app description
+        file and store the related configurations, e.g. processes.
 
-        :param raise_exception: bool, will ignore all exception raise from _handle_app_description
-                                      if raise_exception is False
+        :param raise_exception: If true, raise the exception instead of failing silently,
+            default to False. The *validation error* will always be raised no matter what.
+        :raises HandleAppDescriptionError: When failed to handle the app description.
         """
         try:
             return self._handle_app_description()
         except AppDescriptionNotFoundError:
-            logger.debug("App description file(app_desc.yaml) is not defined, skip.")
+            logger.debug("App description file(app_desc.yaml) does not exist, skip.")
+            return None
         except (DescriptionValidationError, ManifestImportError) as e:
-            if raise_exception:
-                raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
-            logger.warning("Error while parsing app description file, skip, error: %s", e)
+            # Always raise the exception if the content is not valid, it's better to inform
+            # the developer early than to let the invalid content fail silently.
+            raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
         except ControllerError as e:
             if raise_exception:
                 raise HandleAppDescriptionError(reason=e.message) from e

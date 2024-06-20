@@ -371,11 +371,17 @@ const router = new Router({
       path: '/',
       name: 'home',
       component: frontPage,
+      meta: {
+        isFooterShown: true,
+      },
     },
     {
       path: '/developer-center/',
       name: 'index',
       component: frontPage,
+      meta: {
+        isFooterShown: true,
+      },
     },
     {
       path: '/developer-center/apps/',

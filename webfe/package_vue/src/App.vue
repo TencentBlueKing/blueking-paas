@@ -76,7 +76,7 @@ export default {
       return window.BK_PAAS_VERSION;
     },
     showPaasFooter() {
-      return ['/', '/developer-center'].indexOf(this.$route.path) !== -1;
+      return this.$route.meta?.isFooterShown;
     },
   },
   watch: {

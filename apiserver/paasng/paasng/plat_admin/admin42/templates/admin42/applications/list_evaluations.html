@@ -158,8 +158,8 @@
                             </div>
                             <bk-container :col="3">
                                 <bk-row>
-                                    <bk-col><label class="m10">CPU 平均使用率（7d）:</label> $[ getEnvResSummary(module_name, panel.name).cpu_usage_avg * 100 ] %</bk-col>
-                                    <bk-col><label class="m10">内存平均使用率（7d）:</label> $[ getEnvResSummary(module_name, panel.name).mem_usage_avg * 100 ] %</bk-col>
+                                    <bk-col><label class="m10">CPU 平均使用率（7d）:</label> $[ (getEnvResSummary(module_name, panel.name).cpu_usage_avg * 100).toFixed(2) ] %</bk-col>
+                                    <bk-col><label class="m10">内存平均使用率（7d）:</label> $[ (getEnvResSummary(module_name, panel.name).mem_usage_avg * 100).toFixed(2) ] %</bk-col>
                                 </bk-row>
                                 <bk-row>
                                     <bk-col><label class="m10">PV（30d）:</label> $[ getEnvVisitSummary(module_name, panel.name).pv ]</bk-col>

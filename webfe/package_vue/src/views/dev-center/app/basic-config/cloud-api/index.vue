@@ -4,7 +4,7 @@
     <div :class="['ps-top-bar','cloud-api-permission', { 'plugin-top-bar': isPlugin }]">
       <div class="header-title">
         {{ $t('云 API 权限') }}
-        <div class="guide-wrapper" v-if="userFeature.APP_ACCESS_TOKEN">
+        <div class="guide-wrapper" v-if="frontendFeature.APP_ACCESS_TOKEN">
           <bk-button
             class="f12"
             theme="primary"
@@ -235,7 +235,7 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    userFeature() {
+    frontendFeature() {
       return this.$store.state.userFeature;
     },
   },

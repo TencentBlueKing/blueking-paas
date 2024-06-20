@@ -1525,6 +1525,8 @@ export default {
             message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
           });
         });
+      }, (e) => {
+        console.error(e);
       });
     },
     deleteConfigVar(configVarID) {

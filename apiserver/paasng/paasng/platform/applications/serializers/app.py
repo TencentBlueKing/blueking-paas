@@ -162,6 +162,7 @@ class IdleModuleEnvSLZ(serializers.Serializer):
 class IdleApplicationSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用 Code", source="app.code")
     name = serializers.CharField(help_text="应用名称", source="app.name")
+    logo_url = serializers.CharField(help_text="应用 Logo 访问地址", source="app.get_logo_url")
 
     administrators = serializers.JSONField(help_text="应用管理员列表")
     developers = serializers.JSONField(help_text="应用开发者列表")

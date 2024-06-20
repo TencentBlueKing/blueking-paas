@@ -31,7 +31,7 @@ export default {
      * 查询迁移状态
      */
     queryMigrationStatus({}, { id }, config = {}) {
-      const url = `${BACKEND_URL}/api/mgrlegacy/cloud-native/migration_processes/${id}/`;
+      const url = `${BACKEND_URL}/api/mgrlegacy/cloud-native/migration_processes/${id}/?t=${new Date().getTime()}`;
       return http.get(url, config);
     },
 

@@ -34,7 +34,6 @@ from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 from typing_extensions import Protocol
 
-from paasng.infras.accounts.oauth.utils import get_available_backends
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
@@ -549,29 +548,6 @@ class GitProject:
         """
         namespace, name = path_with_namespace.rsplit("/", 1)
         return cls(name=name, namespace=namespace, type=sourcectl_type)
-
-    @staticmethod
-    def _find_source_type_by_hostname(hostname: str) -> Optional[str]:
-        """Try find source type by comparing hostname with configured backends
-
-        :param hostname: hostname of Git repo url, such as "x.git.com"
-        """
-        for sourcectl_name, backend in get_available_backends():
-            # 根据 backend 类型的域名判断 Git项目对应的源码仓库类型
-            if urlparse(backend.authorization_base_url).hostname == hostname:
-                return sourcectl_name
-        return None
-
-    @staticmethod
-    def _find_source_type_by_exitsted_data(repo_url: str) -> Optional[str]:
-        """Find source type by querying existed data in database
-
-        :param repo_url: git repo URL address
-        """
-        types = GitRepository.objects.filter(repo_url=repo_url).values_list("server_name", flat=True)
-        if len(set(types)) > 1:
-            raise RuntimeError(f'More than one sourcectl name can be found with "{repo_url}"')
-        return types[0] if types else None
 
     @property
     def path_with_namespace(self):

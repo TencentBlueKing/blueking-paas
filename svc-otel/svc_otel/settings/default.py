@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
-import base64
 import os
 from pathlib import Path
 
@@ -207,7 +206,10 @@ def get_logging_config(log_level="DEBUG"):
     }
 
 
-BKKRILL_ENCRYPT_SECRET_KEY = base64.b64encode(b"oVOcQCMuuXjFoLvrbJvUKAnNvrAoalqV")
+BKKRILL_ENCRYPT_SECRET_KEY = env.str(
+    "BKKRILL_ENCRYPT_SECRET_KEY", default="b1ZPY1FDTXV1WGpGb0x2cmJKdlVLQW5OdnJBb2FscVY="
+).encode()
+
 
 METRIC_CLIENT_TOKEN_DICT = {
     "monitoring": env.str("METRIC_CLIENT_TOKEN", "f7b58586-5e20-f189-7cf5-a020524cda3e"),

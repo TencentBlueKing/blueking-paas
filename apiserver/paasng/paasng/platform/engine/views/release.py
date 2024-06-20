@@ -72,8 +72,6 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - path param: environment, 部署环境(stag或者prod), 必须
         - get param: with_processes, 是否返回进程信息，传递 true 时返回，默认不返回
         """
-        # 必须显示调用 get_application，否则应用级别的权限控制不会生效
-        app = self.get_application()  # noqa: F841
         module_env = self.get_env_via_path()
         serializer = self.serializer_class(request.query_params)
 

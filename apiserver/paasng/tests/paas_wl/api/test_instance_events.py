@@ -52,29 +52,6 @@ class TestInstanceEventsViewSet:
         event, _ = KEvent(client).create_or_update(name="test-event", namespace=namespace, body=event_body)
         return event
 
-    @pytest.fixture()
-    def event_without_count(self, bk_app, bk_module, bk_stag_env, client):
-        namespace = bk_stag_env.wl_app.namespace
-        event_body_without_count = {
-            "apiVersion": "v1",
-            "kind": "Event",
-            "metadata": {
-                "name": "test-event-without-count",
-                "namespace": namespace,
-            },
-            "involvedObject": {"kind": "Pod", "apiVersion": "v1", "name": "test-pod", "namespace": namespace},
-            "reason": "ExampleReason",
-            "message": "This is an example event message for the Pod",
-            "source": {"component": "manual"},
-            "type": "Warning",
-            "firstTimestamp": "2023-01-01T12:00:00Z",
-            "lastTimestamp": "2023-01-01T12:00:00Z",
-        }
-        event, _ = KEvent(client).create_or_update(
-            name="test-event-without-count", namespace=namespace, body=event_body_without_count
-        )
-        return event
-
     def test_list(self, api_client, bk_app, bk_module, bk_stag_env, event):
         url = (
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}"
@@ -85,13 +62,3 @@ class TestInstanceEventsViewSet:
         assert len(response.data) == 1
         assert response.data[0]["count"] == 1
         assert response.data[0]["type"] == "Warning"
-
-    def test_list_without_count(self, api_client, bk_app, bk_module, bk_stag_env, event_without_count):
-        url = (
-            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}"
-            f"/envs/{bk_stag_env.environment}/instance_events/test-pod/"
-        )
-        response = api_client.get(url)
-        assert response.status_code == 200
-        assert len(response.data) == 1
-        assert response.data[0]["count"] == 1

@@ -45,7 +45,7 @@ class FrontendFeatureViewSet(ViewSet):
             "MGRLEGACY": settings.FE_FEATURE_SETTINGS_MGRLEGACY,
             # 云原生应用迁移
             "CNATIVE_MGRLEGACY": settings.FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY,
-            # 应用令牌，用于 APP 调用用户态的 云 API
+            # 应用令牌，用于 APP 调用用户态的云 API
             "APP_ACCESS_TOKEN": settings.FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN,
         }
         # 部分前端的特性复用了后端的配置

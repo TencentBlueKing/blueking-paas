@@ -83,18 +83,17 @@ class AppEnvironment(str, StructuredEnum):
 class AppFeatureFlag(FeatureFlag):  # type: ignore
     """App feature 常量表"""
 
-    RELEASE_TO_BLUEKING_MARKET = FeatureFlagField(label="发布 至蓝鲸应用市场")
     RELEASE_TO_WEIXIN_QIYE = FeatureFlagField(label="发布 移动端微信企业号(企业微信)")
-    RELEASE_TO_WEIXIN_MINIPROGRAM = FeatureFlagField(label="发布 移动端微信小程序")
     ACCESS_CONTROL_EXEMPT_MODE = FeatureFlagField(label="访问控制豁免模式")
     # 数据统计相关的 feature flag
     PA_WEBSITE_ANALYTICS = FeatureFlagField(label="网站访问统计功能")
     PA_CUSTOM_EVENT_ANALYTICS = FeatureFlagField(label="自定义事件统计功能")
     PA_INGRESS_ANALYTICS = FeatureFlagField(label="访问日志统计功能")
-    PA_USER_DIMENSION_SHOW_DEPT = FeatureFlagField(label="按用户维度拆分展示部门字段")
 
     APPLICATION_DESCRIPTION = FeatureFlagField(label="部署时使用应用描述文件", default=True)
-    MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=True)
+    MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(
+        label="修改环境变量，已迁移到插件开发者中心的应用不允许修改环境变量", default=True
+    )
     ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
     ENABLE_BK_LOG_CLIENT = FeatureFlagField(label=_("使用蓝鲸日志平台接口查询日志"), default=True)
 

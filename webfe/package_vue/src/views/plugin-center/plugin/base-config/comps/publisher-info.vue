@@ -17,7 +17,7 @@
           v-model="publisher"
           :placeholder="$t('请输入并按Enter结束')"
           :multiple="false"
-          @change="handleChange"
+          @blur="handleBlur"
         />
       </div>
       <template v-else>
@@ -82,10 +82,13 @@ export default {
   },
   methods: {
     handleEdit() {
+      if (this.curPluginInfo.publisher) {
+        this.publisher = [this.curPluginInfo.publisher];
+      }
       this.isEdit = true;
     },
     // 变更发布人
-    async handleChange() {
+    async handleBlur() {
       const publisher = this.publisher[0];
       try {
         await this.$store.dispatch('plugin/updatePublisher', {

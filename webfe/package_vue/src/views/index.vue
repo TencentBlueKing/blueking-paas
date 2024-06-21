@@ -245,10 +245,13 @@
 
     <!-- 中间部分 start -->
     <div
-      class="paas-content"
+      class="paas-content home-content"
       data-test-id="developer_content_wrap"
     >
-      <div class="wrap">
+      <div class="wrap middle-part">
+        <!--应用闲置看板功能 -->
+        <idle-app-dashboard />
+
         <div
           v-if="userHasApp"
           class="appuser"
@@ -463,11 +466,13 @@ import ECharts from 'vue-echarts/components/ECharts.vue';
 import echarts from 'echarts';
 import 'echarts/lib/chart/bar';
 import 'echarts/lib/component/tooltip';
+import IdleAppDashboard from '@/views/dev-center/home/idle-app-dashboard.vue';
 import { psIndexInfo, psHeaderInfo } from '@/mixins/ps-static-mixin';
 
 export default {
   components: {
     chart: ECharts,
+    IdleAppDashboard,
   },
   mixins: [psIndexInfo, psHeaderInfo],
   data() {
@@ -821,6 +826,11 @@ export default {
 </script>
 <style lang="scss" scoped>
     @import '~@/assets/css/mixins/ellipsis.scss';
+
+    .paas-content.home-content {
+        background-color: #F5F7FA;
+    }
+
     .paas-highcharts {
         width: 50%;
         position: relative;
@@ -1495,6 +1505,10 @@ export default {
     .wrap {
         width: 1180px;
         margin: 50px auto auto auto;
+
+        &.middle-part {
+            margin-top: 0px;
+        }
     }
     .section-wrapper {
         display: flex;

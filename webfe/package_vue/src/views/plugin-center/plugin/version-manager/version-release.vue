@@ -21,15 +21,23 @@
             :version-data="curRelease"
           />
           <!-- 结束发布流程禁用终止发布 -->
-          <bk-button
-            v-if="pluginFeatureFlags.CANCEL_RELEASE"
-            class="discontinued"
-            :disabled="isPostedSuccessfully"
-            @click="showInfoCancelRelease"
+          <span
+            v-bk-tooltips="{
+              content: $t('当前版本{s}，无需终止操作', { s: releaseDisablePrompt }),
+              disabled: !disableTerminationRelease,
+              placements: ['bottom']
+            }"
           >
-            <i class="paasng-icon paasng-minus-circle" />
-            {{ isOfficialVersion ? $t('终止发布') : $t('终止测试') }}
-          </bk-button>
+            <bk-button
+              v-if="pluginFeatureFlags.CANCEL_RELEASE"
+              class="discontinued"
+              :disabled="disableTerminationRelease"
+              @click="showInfoCancelRelease"
+            >
+              <i class="paasng-icon paasng-minus-circle" />
+              {{ isOfficialVersion ? $t('终止发布') : $t('终止测试') }}
+            </bk-button>
+          </span>
         </div>
       </div>
       <section class="content-container">
@@ -104,7 +112,7 @@ import itsmStage from './release-stages/itsm';
 import approvalStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
 import testStage from './release-stages/test';
-import { PLUGIN_VERSION_MAP } from '@/common/constants';
+import { PLUGIN_VERSION_MAP, PLUGIN_VERSION_STATUS } from '@/common/constants';
 import versionSteps from './version-steps/index.vue';
 
 export default {
@@ -237,6 +245,15 @@ export default {
     // 正式版
     isOfficialVersion() {
       return this.versionType === 'prod';
+    },
+    disableTerminationRelease() {
+      return !['initial', 'pending'].includes(this.pluginDetailedData.status);
+    },
+    releaseDisablePrompt() {
+      if (this.pluginDetailedData.status === 'interrupted') {
+        return this.$t(PLUGIN_VERSION_STATUS[this.pluginDetailedData.status]);
+      }
+      return this.$t(`已${PLUGIN_VERSION_STATUS[this.pluginDetailedData.status]}`);
     },
   },
   watch: {

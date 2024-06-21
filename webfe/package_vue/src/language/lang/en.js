@@ -2701,4 +2701,7 @@ export default {
   没有找到相关结果: 'No related results found',
   指定测试未通过: 'Designated Test Failed',
   重新测试: 'Retest',
+  '当前版本{s}，无需终止操作': 'Current version {s}, no need to terminate the operation',
+  已失败: 'Failed',
+  已成功: 'Successful',
 };

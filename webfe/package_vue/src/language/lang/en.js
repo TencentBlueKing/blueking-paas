@@ -2664,4 +2664,7 @@ export default {
   '近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。': 'Modules with no access records in the past 30 days, CPU usage below 1%, and no usage fluctuations in the past 7 days should be taken offline as soon as possible.',
   指定测试未通过: 'Designated Test Failed',
   重新测试: 'Retest',
+  '当前版本{s}，无需终止操作': 'Current version {s}, no need to terminate the operation',
+  已失败: 'Failed',
+  已成功: 'Successful',
 };

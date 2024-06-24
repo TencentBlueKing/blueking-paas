@@ -65,7 +65,7 @@ class Hook:
         """
         if isinstance(self.command, str):
             return self.command
-        # Warning: shlex.join 并不能简单的通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
+        # Warning: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
         return (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
 
 

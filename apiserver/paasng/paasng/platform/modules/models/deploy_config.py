@@ -39,8 +39,8 @@ class Hook:
     def get_command(self) -> List[str]:
         """get_args: 获取 hook 的命令部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
+        TODO 确认已在 HooksManifestConstructor 中使用?
         """
-        # TODO 确认已在 HooksManifestConstructor 中使用? 看代码是 ModuleDeployHook 的 get_command
         if isinstance(self.command, str):
             # TODO: runner 的 Dockerfile 默认的入口程序为 ["/runner/init"], 理论上返回空列表即可
             return DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -49,8 +49,8 @@ class Hook:
     def get_args(self) -> List[str]:
         """get_args: 获取 hook 的参数部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
+        TODO 确认已在 HooksManifestConstructor 中使用?
         """
-        # TODO 确认已在 HooksManifestConstructor 中使用? 看代码是 ModuleDeployHook 的 get_args
         if isinstance(self.command, str):
             command = shlex.split(self.command)
             # 有脏数据, 移除前 len(DEFAULT_SLUG_RUNNER_ENTRYPOINT) 个元素

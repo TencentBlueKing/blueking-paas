@@ -40,6 +40,7 @@ class Hook:
         """get_args: 获取 hook 的命令部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
         """
+        # TODO 确认已在 HooksManifestConstructor 中使用? 看代码是 ModuleDeployHook 的 get_command
         if isinstance(self.command, str):
             # TODO: runner 的 Dockerfile 默认的入口程序为 ["/runner/init"], 理论上返回空列表即可
             return DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -49,6 +50,7 @@ class Hook:
         """get_args: 获取 hook 的参数部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
         """
+        # TODO 确认已在 HooksManifestConstructor 中使用? 看代码是 ModuleDeployHook 的 get_args
         if isinstance(self.command, str):
             command = shlex.split(self.command)
             # 有脏数据, 移除前 len(DEFAULT_SLUG_RUNNER_ENTRYPOINT) 个元素
@@ -63,6 +65,7 @@ class Hook:
         """
         if isinstance(self.command, str):
             return self.command
+        # Warning: shlex.join 并不能简单的通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
         return (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
 
 

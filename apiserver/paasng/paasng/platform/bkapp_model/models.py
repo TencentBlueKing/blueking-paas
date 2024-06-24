@@ -88,8 +88,10 @@ class ModuleProcessSpec(TimestampedModel):
         """
         if self.proc_command:
             return self.proc_command
-        # Warning: 已知 shlex.join 不支持环境变量, 如果普通应用使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
+        # Warning: proc_command 并不能简单的通过 shlex.join 合并 command 和 args 生成
+        # 已知 shlex.join 不支持环境变量, 如果普通应用使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
         # 例如会报错: Error: '${PORT:-5000}' is not a valid port number.
+        # 如果实际用于命令执行, 可参考 generate_bash_command_with_tokens 函数实现
         return self._sanitize_proc_command(
             (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
         )
@@ -217,15 +219,15 @@ class ModuleDeployHook(TimestampedModel):
     def get_proc_command(self) -> str:
         if self.proc_command is not None:
             return self.proc_command
-        return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
+        return ""
 
     def get_command(self) -> List[str]:
-        if self.proc_command is not None:
+        if not self.proc_command:
             return [shlex.split(self.proc_command)[0]]
         return self.command or []
 
     def get_args(self) -> List[str]:
-        if self.proc_command is not None:
+        if not self.proc_command:
             return shlex.split(self.proc_command)[1:]
         return self.args or []
 

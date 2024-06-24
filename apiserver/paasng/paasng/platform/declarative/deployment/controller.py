@@ -115,7 +115,7 @@ class DeploymentDeclarativeController:
 
         application = self.deployment.app_environment.application
         module = self.deployment.app_environment.module
-        processes = desc.get_processes()
+        processes: Dict[str, Process] = desc.get_processes()
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={

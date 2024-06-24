@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import cattr
 import pytest
 
@@ -34,9 +35,9 @@ from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestProcessesField:
@@ -175,9 +176,7 @@ class TestSvcDiscoveryField:
         )
 
     def test_as_env_vars_domain(self, bk_deployment):
-        with mock_cluster_service(
-            replaced_ingress_config={"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}
-        ):
+        with cluster_ingress_config(replaced_config={"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}):
             self.apply_config(bk_deployment)
             env_vars = get_svc_disc_as_env_variables(bk_deployment.app_environment)
             value = env_vars["BKPAAS_SERVICE_ADDRESSES_BKSAAS"]
@@ -196,9 +195,7 @@ class TestSvcDiscoveryField:
             }
 
     def test_as_env_vars_subpath(self, bk_deployment):
-        with mock_cluster_service(
-            replaced_ingress_config={"sub_path_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}
-        ):
+        with cluster_ingress_config(replaced_config={"sub_path_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}):
             self.apply_config(bk_deployment)
             env_vars = get_svc_disc_as_env_variables(bk_deployment.app_environment)
             value = env_vars["BKPAAS_SERVICE_ADDRESSES_BKSAAS"]

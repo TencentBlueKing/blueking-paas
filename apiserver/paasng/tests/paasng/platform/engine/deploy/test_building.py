@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import uuid
 from unittest import mock
 
@@ -30,16 +31,9 @@ from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.sourcectl.exceptions import GetAppYamlError, GetProcfileError
-from tests.utils.mocks.engine import mock_cluster_service
 from tests.utils.mocks.poll_task import FakeTaskPoller
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture(autouse=True)
-def _setup_cluster():
-    with mock_cluster_service():
-        yield
 
 
 @pytest.mark.usefixtures("_init_tmpls")

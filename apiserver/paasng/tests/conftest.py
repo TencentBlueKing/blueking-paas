@@ -31,13 +31,14 @@ import sqlalchemy as sa
 from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
 from django.conf import settings
 from django.core.management import call_command
+from django.db import transaction
 from django.test.utils import override_settings
-from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
 from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paasng.accessories.publish.sync_market.handlers import (
     before_finishing_application_creation,
@@ -64,6 +65,7 @@ from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
 from tests.utils.auth import create_user
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING, build_default_cluster
 from tests.utils.helpers import (
     _mock_wl_services_in_creation,
     configure_regions,
@@ -74,25 +76,16 @@ from tests.utils.helpers import (
     initialize_module,
 )
 
-logger = logging.getLogger(__file__)
+# Install auto-used fixture
+from tests.utils.mocks.cluster import _cluster_service_allow_nonexisting_wl_apps  # noqa: F401
+
+logger = logging.getLogger(__name__)
 
 # The default region for testing
 DEFAULT_REGION = settings.DEFAULT_REGION_NAME
+
 svn_lock_fn = Path(__file__).parent / ".svn"
-# A random cluster name for running unit tests
-cluster_name_fn = Path(__file__).parent / ".random"
-with FileLock(str(cluster_name_fn.absolute()) + ".lock"):
-    if cluster_name_fn.is_file():
-        CLUSTER_NAME_FOR_TESTING = cluster_name_fn.read_text().strip()
-    else:
-        CLUSTER_NAME_FOR_TESTING = get_random_string(6)
-        cluster_name_fn.write_text(CLUSTER_NAME_FOR_TESTING)
-
-
-@atexit.register
-def clear_filelock():
-    cluster_name_fn.unlink(missing_ok=True)
-    svn_lock_fn.unlink(missing_ok=True)
+atexit.register(lambda: svn_lock_fn.unlink(missing_ok=True))
 
 
 def pytest_addoption(parser):
@@ -123,7 +116,7 @@ def _configure_default_region():
 
 @pytest.fixture(autouse=True, scope="session")
 def _drop_legacy_db(request, django_db_keepdb: bool):
-    """在单元测试结束后, 自动摧毁测试数据库, 除非用户显示要求保留"""
+    """在单元测试结束后, 自动摧毁测试数据库, 除非用户显式要求保留"""
     if django_db_keepdb:
         return
 
@@ -149,6 +142,17 @@ def _configure_remote_service():
     # unittest should not configure any remote service endpoints
     with override_settings(SERVICE_REMOTE_ENDPOINTS=None):
         yield
+
+
+@pytest.fixture(scope="session")
+def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
+    """Create the default cluster for testing."""
+
+    with django_db_blocker.unblock(), transaction.atomic():
+        Cluster.objects.all().delete()
+        cluster, apiserver = build_default_cluster()
+        cluster.save()
+        apiserver.save()
 
 
 def pytest_sessionstart(session):
@@ -902,6 +906,7 @@ def _with_wl_apps(request):
         bk_app = request.getfixturevalue("bk_cnative_app")
     else:
         bk_app = request.getfixturevalue("bk_app")
+
     create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
 
 

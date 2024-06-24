@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import uuid
 from unittest import mock
 
@@ -29,9 +30,12 @@ from paasng.accessories.services.models import Service, ServiceCategory
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration, BaseServiceMigration
 from tests.conftest import skip_if_legacy_not_configured
-from tests.utils.mocks.engine import mock_cluster_service
 
-pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
+pytestmark = [
+    skip_if_legacy_not_configured(),
+    pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.xdist_group(name="remote-services"),
+]
 
 
 dummy_service = RemoteServiceObj(
@@ -59,12 +63,6 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        yield
-
-
-@pytest.fixture(autouse=True)
-def _setup_cluster():
-    with mock_cluster_service():
         yield
 
 

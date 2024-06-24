@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Testcases for application entrance management
 """
 import cattr
@@ -34,9 +35,9 @@ from paasng.accessories.publish.entrance.subpaths import (
     get_preallocated_path,
     get_preallocated_paths_by_env,
 )
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModuleEnvSubpaths:
@@ -49,8 +50,8 @@ class TestModuleEnvSubpaths:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         # Enable USE_LEGACY_SUB_PATH_PATTERN by default
-        with mock_cluster_service(
-            ingress_config={"sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}]}
+        with cluster_ingress_config(
+            {"sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}]}
         ), override_settings(USE_LEGACY_SUB_PATH_PATTERN=True):
             yield
 
@@ -113,7 +114,7 @@ class TestModuleEnvSubpaths:
 class TestModuleEnvSubpathsNotConfigured:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
-        with mock_cluster_service(ingress_config={"sub_path_domains": []}):
+        with cluster_ingress_config({"sub_path_domains": []}):
             yield
 
     def test_prod_default(self, bk_module):
@@ -211,8 +212,8 @@ class TestGetPreallocatedPathsByEnv:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         """Replace cluster info in module level"""
-        with mock_cluster_service(
-            ingress_config={
+        with cluster_ingress_config(
+            {
                 "sub_path_domains": [
                     {"name": "sub.example.com"},
                     {"name": "sub.example.org"},

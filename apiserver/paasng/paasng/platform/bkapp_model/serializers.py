@@ -72,7 +72,7 @@ class ExecProbeActionSLZ(serializers.Serializer):
     command = serializers.ListField(help_text="探活命令", child=serializers.CharField(max_length=48), max_length=12)
 
 
-class TcpSocketProbeActionSLZ(serializers.Serializer):
+class TCPSocketProbeActionSLZ(serializers.Serializer):
     port = IntegerOrCharField(help_text="探活端口")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
@@ -82,7 +82,7 @@ class HTTPHeaderSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="标头值")
 
 
-class HttpGetProbeActionSLZ(serializers.Serializer):
+class HTTPGetProbeActionSLZ(serializers.Serializer):
     port = IntegerOrCharField(help_text="探活端口")
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
@@ -94,8 +94,8 @@ class ProbeSLZ(serializers.Serializer):
     """探针配置"""
 
     exec = ExecProbeActionSLZ(help_text="exec 探活配置", required=False, allow_null=True)
-    http_get = HttpGetProbeActionSLZ(help_text="http get 探活配置", required=False, allow_null=True)
-    tcp_socket = TcpSocketProbeActionSLZ(help_text="tcp socket 探活配置", required=False, allow_null=True)
+    http_get = HTTPGetProbeActionSLZ(help_text="http get 探活配置", required=False, allow_null=True)
+    tcp_socket = TCPSocketProbeActionSLZ(help_text="tcp socket 探活配置", required=False, allow_null=True)
     initial_delay_seconds = serializers.IntegerField(help_text="初次探测延迟时间")
     timeout_seconds = serializers.IntegerField(help_text="探测超时时间")
     period_seconds = serializers.IntegerField(help_text="探测周期")

@@ -187,7 +187,7 @@ class BuildConfigManifestConstructor(ManifestConstructor):
 class ProcessesManifestConstructor(ManifestConstructor):
     """Construct the processes part."""
 
-    port_placeholder = "${PORT}"
+    PORT_PLACEHOLDER = "${PORT}"
 
     def apply_to(self, model_res: BkAppResource, module: Module):
         process_specs = list(ModuleProcessSpec.objects.filter(module=module).order_by("created"))
@@ -336,14 +336,14 @@ class ProcessesManifestConstructor(ManifestConstructor):
         """
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
-        return [s.replace("${PORT:-5000}", self.port_placeholder) for s in input]
+        return [s.replace("${PORT:-5000}", self.PORT_PLACEHOLDER) for s in input]
 
     def _build_probe_from_config(self, cfg: ProbeConfig) -> Probe:
         return Probe(
             exec=ExecAction(command=cfg.exec.command) if cfg.exec else None,
             httpGet=(
                 HTTPGetAction(
-                    port=settings.CONTAINER_PORT if cfg.http_get.port == self.port_placeholder else cfg.http_get.port,
+                    port=settings.CONTAINER_PORT if cfg.http_get.port == self.PORT_PLACEHOLDER else cfg.http_get.port,
                     host=cfg.http_get.host,
                     path=cfg.http_get.path,
                     httpHeaders=[HTTPHeader(name=h.name, value=h.value) for h in cfg.http_get.http_headers],
@@ -356,7 +356,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 TCPSocketAction(
                     port=(
                         settings.CONTAINER_PORT
-                        if cfg.tcp_socket.port == self.port_placeholder
+                        if cfg.tcp_socket.port == self.PORT_PLACEHOLDER
                         else cfg.tcp_socket.port
                     ),
                     host=cfg.tcp_socket.host,

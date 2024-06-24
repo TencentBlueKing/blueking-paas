@@ -217,7 +217,7 @@ class ModuleDeployHook(TimestampedModel):
         unique_together = ("module", "type")
 
     def get_proc_command(self) -> str:
-        if self.proc_command:
+        if self.proc_command is not None:
             return self.proc_command
         # Warning: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])

@@ -17,14 +17,13 @@
  */
 
 import store from '@/store';
-import i18n from '@/language/i18n.js';
-import { getPlatformConfig, setShortcutIcon } from '@blueking/platform-config';
+import { getPlatformConfig, setShortcutIcon, setDocumentTitle } from '@blueking/platform-config';
 
 // 应用平台配置
 function applyPlatformConfig(config) {
   store.commit('updataPlatformConfig', config);
   // 更新标题和图标
-  document.title = config.title;
+  setDocumentTitle(config.i18n);
   setShortcutIcon(config.favicon);
 }
 
@@ -33,21 +32,20 @@ export default async function (vm) {
 
   // 默认配置
   const defaults = {
-    title: window.GLOBAL_CONFIG.APP_VERSION === 'te' ? i18n.t('开发者中心 | 蓝鲸') : i18n.t('开发者中心 | 腾讯蓝鲸智云'),
-    name: i18n.t('蓝鲸开发者中心'),
+    name: '蓝鲸开发者中心',
+    nameEn: 'BK Developer Center',
+    brandName: window.GLOBAL_CONFIG.APP_VERSION === 'te' ? '蓝鲸' : '腾讯蓝鲸智云',
+    brandNameEn: 'Tencent BlueKing',
+    appLogo: '/static/images/logo.svg',
     favicon: '/static/images/logo.svg',
     version: window.BK_PAAS_VERSION,
+    footerInfo: vm.GLOBAL.LINK.BK_HELP
+      ? `[联系BK助手](${vm.GLOBAL.LINK.BK_HELP}) | [蓝鲸桌面](${vm.GLOBAL.LINK.BK_DESKTOP})`
+      : `[技术支持](${vm.GLOBAL.LINK.BK_TECHNICAL_SUPPORT}) | [社区论坛](${vm.GLOBAL.LINK.BK_COMMUNITY}) | [产品官网](${vm.GLOBAL.LINK.BK_OFFICIAL_WEBSITE})`,
+    footerInfoEn: vm.GLOBAL.LINK.BK_HELP
+      ? `[Contact BK Customer Service](${vm.GLOBAL.LINK.BK_HELP}) | [BlueKing Desktop](${vm.GLOBAL.LINK.BK_DESKTOP})`
+      : `[Support](${vm.GLOBAL.LINK.BK_TECHNICAL_SUPPORT}) | [Forum](${vm.GLOBAL.LINK.BK_COMMUNITY}) | [Official](${vm.GLOBAL.LINK.BK_OFFICIAL_WEBSITE})`,
   };
-
-  if (vm.GLOBAL.LINK.BK_HELP) {
-    defaults.footerInfoHTML = `<a target="_blank" class="link-item" href="${vm.GLOBAL.LINK.BK_HELP}">${i18n.t('联系BK助手')}</a>
-    | <a target="_blank" class="link-item" href="${vm.GLOBAL.LINK.BK_DESKTOP}">${i18n.t('蓝鲸桌面')}</a>`;
-  } else {
-    defaults.footerInfoHTML = `<a target="_blank" class="link-item" href="${vm.GLOBAL.LINK.BK_TECHNICAL_SUPPORT}">${i18n.t('技术支持')}</a>
-    | <a target="_blank" class="link-item" href="${vm.GLOBAL.LINK.BK_COMMUNITY}">${i18n.t('社区论坛')}</a>
-    | <a target="_blank" class="link-item" href="${vm.GLOBAL.LINK.BK_OFFICIAL_WEBSITE}">${i18n.t('产品官网')}</a>`;
-  }
-  defaults.footerInfoHTMLEn = defaults.footerInfoHTML;
 
   try {
     const config = await getPlatformConfig(url, defaults);

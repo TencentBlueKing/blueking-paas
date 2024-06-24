@@ -1,8 +1,8 @@
 <template lang="html">
   <footer class="ps-sample-footer">
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div class="info" v-html="footerInfoHTML"></div>
-    <div>{{ platformConfig.footerCopyrightContent }} {{ platformConfig.version }}</div>
+    <div class="info" v-html="footerInfo"></div>
+    <div>{{ platformConfig.footerCopyrightContent }}</div>
   </footer>
 </template>
 
@@ -19,8 +19,8 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    footerInfoHTML() {
-      return this.localLanguage === 'en' ? this.platformConfig.footerInfoHTMLEn : this.platformConfig.footerInfoHTML;
+    footerInfo() {
+      return this.platformConfig.i18n?.footerInfoHTML;
     },
   },
 };
@@ -32,9 +32,13 @@ export default {
   text-align: center;
   width: 100%;
   // margin: 25px auto;
-  margin: 15px auto;
+  margin: 0 auto;
   color: #63656e;
   font-size: 12px;
+  padding: 15px 0;
+  .info {
+    margin-bottom: 6px;
+  }
 }
 
 // ps-footer

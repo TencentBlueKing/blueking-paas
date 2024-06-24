@@ -459,8 +459,8 @@ export default {
       if (!this.isAllowNext) {
         return;
       }
-      this.isLoading = true;
       await this.$refs.curStageComponment.nextStage(async () => {
+        this.isLoading = true;
         try {
           const params = {
             pdId: this.pdId,

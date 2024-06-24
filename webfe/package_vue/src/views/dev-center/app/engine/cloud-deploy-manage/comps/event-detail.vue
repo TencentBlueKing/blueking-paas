@@ -19,10 +19,18 @@
           v-for="column in tableColumns"
           :label="column.label"
           :prop="column.prop"
-          show-overflow-tooltip
+          :show-overflow-tooltip="column.prop !== 'first_timestamp'"
           :key="column.prop"
           :render-header="$renderHeader"
         >
+          <template slot-scope="{ row }">
+            <span
+              v-bk-tooltips="{
+                html: getTooltipsHtml(row),
+                disabled: column.prop !== 'first_timestamp',
+              }"
+            >{{ row[column.prop] || '--' }}</span>
+          </template>
         </bk-table-column>
       </bk-table>
     </div>
@@ -77,10 +85,6 @@ export default {
           prop: 'first_timestamp',
         },
         {
-          label: this.$t('最新发生时间'),
-          prop: 'last_timestamp',
-        },
-        {
           label: this.$t('事件类型'),
           prop: 'type',
         },
@@ -113,6 +117,9 @@ export default {
     },
   },
   methods: {
+    getTooltipsHtml(row) {
+      return `<div><p>${this.$t('首次发生时间')}：${row.first_timestamp}</p><p>${this.$t('最新发生时间')}：${row.last_timestamp}</p></div>`;
+    },
     // 前端分页
     handlePagination(data, current, limit) {
       const { pageData } = paginationFun(data, current, limit);
@@ -137,8 +144,8 @@ export default {
           name: this.config.instanceName,
         });
         instanceEventList.forEach((item) => {
-          item.first_timestamp = dayjs(item.first_timestamp).format('YYYY-MM-DD HH:mm:ss');
-          item.last_timestamp = dayjs(item.last_timestamp).format('YYYY-MM-DD HH:mm:ss');
+          item.first_timestamp = item.first_timestamp === null ? item.first_timestamp : dayjs(item.first_timestamp).format('YYYY-MM-DD HH:mm:ss');
+          item.last_timestamp = item.last_timestamp === null ? item.last_timestamp : dayjs(item.last_timestamp).format('YYYY-MM-DD HH:mm:ss');
         });
         this.allEvents = instanceEventList;
         this.pagination.count = this.allEvents.length;

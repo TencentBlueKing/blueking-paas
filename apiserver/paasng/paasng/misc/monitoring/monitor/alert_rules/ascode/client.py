@@ -86,12 +86,22 @@ class AsCodeClient:
             if code_snippet in alert_code:
                 ctx[f"{code_snippet}_metric_name_prefix"] = config.get("metric_name_prefix", "")
 
-    def _update_docs_url(self, ctx: dict, alert_code: str):
-        """根据告警代码添加需要的文档信息"""
+    def _get_docs_url(self, alert_code: str):
+        """根据告警代码获取需要的文档信息"""
         tag = get_dynamic_tag(f"saas_monitor:{alert_code}")
         links = DocumentaryLinkAdvisor().search_by_tags([tag], limit=1)
         if links:
-            ctx["doc_url"] = f"处理建议: {links[0].location}"
+            return f"。处理建议: {links[0].location}"
+        return ""
+
+    def _update_notice_template(self, ctx: dict, alert_code: str):
+        """根据告警代码修改告警通知内容模版"""
+        tpl_dir = Path(os.path.dirname(__file__))
+        loader = jinja2.FileSystemLoader([tpl_dir / "rule_notice_tpl"])
+        j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
+
+        notice_template = j2_env.get_template("notice_template.yaml.j2").render(doc_url=self._get_docs_url(alert_code))
+        ctx["notice_template"] = notice_template
 
     def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:
@@ -111,7 +121,7 @@ class AsCodeClient:
             # 涉及到增强服务的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
             self._update_metric_name_prefixes(ctx, conf.alert_code)
             # 为通知添加操作文档链接，若未在'管理后台--智能顾问--文档管理'配置文档则不添加
-            self._update_docs_url(ctx, conf.alert_code)
+            self._update_notice_template(ctx, conf.alert_code)
             configs[f"rule/{conf.alert_rule_name}.yaml"] = j2_env.get_template(f"{conf.alert_code}.yaml.j2").render(
                 **ctx
             )

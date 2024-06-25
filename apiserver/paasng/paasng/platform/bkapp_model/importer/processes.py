@@ -20,40 +20,12 @@ import logging
 from typing import Any, Dict, List
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess, Probe
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paasng.platform.bkapp_model.importer.entities import CommonImportResult
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
-
-
-def to_snake_case_probe(probe: Probe) -> Dict[str, Any]:
-    """将探针字段转换成下划线格式"""
-    exec_handler, http_get_handler, tcp_socket_handler = None, None, None
-    if probe.exec:
-        exec_handler = {"command": probe.exec.command}
-    elif probe.httpGet:
-        http_get_handler = {
-            "path": probe.httpGet.path,
-            "port": probe.httpGet.port,
-            "http_headers": [{"name": h.name, "value": h.value} for h in probe.httpGet.httpHeaders],
-            "host": probe.httpGet.host,
-            "scheme": probe.httpGet.scheme,
-        }
-    elif probe.tcpSocket:
-        tcp_socket_handler = {"port": probe.tcpSocket.port, "host": probe.tcpSocket.host}
-
-    return {
-        "exec": exec_handler,
-        "http_get": http_get_handler,
-        "tcp_socket": tcp_socket_handler,
-        "initial_delay_seconds": probe.initialDelaySeconds,
-        "timeout_seconds": probe.timeoutSeconds,
-        "period_seconds": probe.periodSeconds,
-        "success_threshold": probe.successThreshold,
-        "failure_threshold": probe.failureThreshold,
-    }
 
 
 def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImportResult:
@@ -89,11 +61,7 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
                 "policy": autoscaling.policy,
             }
         if probes := process.probes:
-            defaults["probes"] = {
-                "liveness": to_snake_case_probe(probes.liveness) if probes.liveness else None,
-                "readiness": to_snake_case_probe(probes.readiness) if probes.readiness else None,
-                "startup": to_snake_case_probe(probes.startup) if probes.startup else None,
-            }
+            defaults["probes"] = probes.to_snake_case() if probes else None
 
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
         ret.incr_by_created_flag(created)

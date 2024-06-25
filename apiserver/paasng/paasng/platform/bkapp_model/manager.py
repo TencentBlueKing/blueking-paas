@@ -24,7 +24,6 @@ from django.conf import settings
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paasng.platform.bkapp_model.importer.processes import to_snake_case_probe
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.deployment import ProcessTmpl
@@ -69,15 +68,7 @@ class ModuleProcessSpecManager:
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
         def process_spec_builder(process: BkAppProcess) -> ModuleProcessSpec:
-            probes = (
-                {
-                    "liveness": to_snake_case_probe(process.probes.liveness) if process.probes.liveness else None,
-                    "readiness": to_snake_case_probe(process.probes.readiness) if process.probes.readiness else None,
-                    "startup": to_snake_case_probe(process.probes.startup) if process.probes.startup else None,
-                }
-                if process.probes
-                else None
-            )
+            probes = process.probes.to_snake_case() if process.probes else None
             return ModuleProcessSpec(
                 module=self.module,
                 name=process.name,
@@ -113,11 +104,7 @@ class ModuleProcessSpecManager:
             if not process.probes and process_spec.probes:
                 recorder.setattr("probes", None)
             elif process.probes:
-                probes = {
-                    "liveness": to_snake_case_probe(process.probes.liveness) if process.probes.liveness else None,
-                    "readiness": to_snake_case_probe(process.probes.readiness) if process.probes.readiness else None,
-                    "startup": to_snake_case_probe(process.probes.startup) if process.probes.startup else None,
-                }
+                probes = process.probes.to_snake_case()
                 if process_spec.probes != probes:
                     recorder.setattr("probes", probes)
 

@@ -280,13 +280,11 @@ class IntegerOrCharField(serializers.CharField):
         try:
             return int(val)
         except ValueError:
-            pass
-        return val
+            return val
 
     def to_representation(self, value):
         val = super().to_representation(value)
         try:
             return int(val)
         except ValueError:
-            pass
-        return val
+            return val

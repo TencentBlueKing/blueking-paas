@@ -111,17 +111,20 @@ class AsCodeClient:
           └── high_mem_usage.yaml
         """
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"])
+        loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "rule_notice_tpl"])
         j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
         configs = {}
+        # 告警通知内容模版
+        notice_template = j2_env.get_template("notice_template.yaml.j2")
         for conf in rule_configs:
             ctx = conf.to_dict()
             ctx["notice_group_name"] = self.default_notice_group_name
             # 涉及到增强服务的告警策略, 指标是通过 bkmonitor 配置的采集器采集, 需要添加指标前缀
             self._update_metric_name_prefixes(ctx, conf.alert_code)
-            # 为通知添加操作文档链接，若未在'管理后台--智能顾问--文档管理'配置文档则不添加
-            self._update_notice_template(ctx, conf.alert_code)
+            # 为告警通知添加内容，若在'管理后台--智能顾问--文档管理'配置文档则额外添加处理文档链接
+            notice_template_content = notice_template.render(doc_url=self._get_docs_url(conf.alert_code))
+            ctx["notice_template"] = notice_template_content
             configs[f"rule/{conf.alert_rule_name}.yaml"] = j2_env.get_template(f"{conf.alert_code}.yaml.j2").render(
                 **ctx
             )

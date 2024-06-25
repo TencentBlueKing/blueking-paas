@@ -102,6 +102,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
         }
 
     init_rule_configs = {}
+    notice_template = j2_env.get_template("notice_template.yaml.j2")
     for alert_code, c in default_rules.items():
         for env in ["stag", "prod"]:
             doc_url = ""
@@ -109,7 +110,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
             links = DocumentaryLinkAdvisor().search_by_tags([tag], limit=1)
             if links:
                 doc_url = f"。处理建议: {links[0].location}"
-            notice_template = j2_env.get_template("notice_template.yaml.j2").render(doc_url=doc_url)
+            notice_template_content = notice_template.render(doc_url=doc_url)
 
             alert_rule_name = c["alert_rule_name_format"].format(env=env)
             init_rule_configs[f"rule/{alert_rule_name}.yaml"] = j2_env.get_template(c["template_name"]).render(
@@ -125,7 +126,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
                 },
                 threshold_expr=rule_configs[alert_code]["threshold_expr"],
                 notice_group_name=notice_group_name,
-                notice_template=notice_template,
+                notice_template=notice_template_content,
             )
 
     notice_group_config = {

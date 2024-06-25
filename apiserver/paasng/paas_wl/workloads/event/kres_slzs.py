@@ -22,7 +22,7 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
-from paasng.utils import dictx
+from paasng.utils.dictx import get_items
 
 from .entities import InvolvedObject, Source
 
@@ -35,7 +35,7 @@ class EventDeserializer(AppEntityDeserializer["Event"]):
         kube_data_dict = kube_data.to_dict()
         return self.entity_type(
             app=app,
-            name=kube_data_dict.get("metadata", {}).get("name", None),
+            name=get_items(kube_data_dict, "metadata.name"),
             type=kube_data_dict.get("type", None),
             message=kube_data_dict.get("message", None),
             reason=kube_data_dict.get("reason", None),
@@ -44,14 +44,14 @@ class EventDeserializer(AppEntityDeserializer["Event"]):
             first_timestamp=kube_data_dict.get("firstTimestamp", None),
             last_timestamp=kube_data_dict.get("lastTimestamp", None),
             involved_object=InvolvedObject(
-                kind=dictx.get_items(kube_data_dict, "involvedObject.kind", None),
-                name=dictx.get_items(kube_data_dict, "involvedObject.name", None),
-                namespace=dictx.get_items(kube_data_dict, "involvedObject.namespace", None),
-                api_version=dictx.get_items(kube_data_dict, "involvedObject.apiVersion", None),
+                kind=get_items(kube_data_dict, "involvedObject.kind"),
+                name=get_items(kube_data_dict, "involvedObject.name"),
+                namespace=get_items(kube_data_dict, "involvedObject.namespace"),
+                api_version=get_items(kube_data_dict, "involvedObject.apiVersion"),
             ),
             source=Source(
-                component=dictx.get_items(kube_data_dict, "source.component", None),
-                host=dictx.get_items(kube_data_dict, "source.host", None),
+                component=get_items(kube_data_dict, "source.component"),
+                host=get_items(kube_data_dict, "source.host"),
             ),
         )
 

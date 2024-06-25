@@ -133,8 +133,11 @@ class BkAppProcess(BaseModel):
 
     def __init__(self, **data):
         # 处理 specVersion: 3 中驼峰传递 procCommand
+        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
         if proc_command := data.get("procCommand"):
             data["proc_command"] = proc_command
+            data["command"] = None
+            data["args"] = shlex.split(proc_command)
         super().__init__(**data)
 
     def get_proc_command(self) -> str:

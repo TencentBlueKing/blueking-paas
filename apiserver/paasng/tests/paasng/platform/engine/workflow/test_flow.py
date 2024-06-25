@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import time
 from unittest import mock
 
@@ -27,15 +28,8 @@ from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.engine.utils.output import ConsoleStream
 from paasng.platform.engine.workflow.flow import DeploymentCoordinator, DeployProcedure
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
-from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture(autouse=True)
-def _setup_cluster():
-    with mock_cluster_service():
-        yield
 
 
 class TestDeployProcedure:

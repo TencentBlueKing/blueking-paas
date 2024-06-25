@@ -250,9 +250,9 @@ class TestDefaultAppEntranceViewSet:
 class TestChecklistInfoViewSet:
     @pytest.fixture()
     def _set_default_cluster(self, settings, bk_app):
+        # Create the second cluster
         cluster_name = get_random_string(6)
         G(Cluster, name=cluster_name, region=bk_app.region)
-        G(Cluster, name=CLUSTER_NAME_FOR_TESTING, region=bk_app.region)
         settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = cluster_name
 
     @pytest.fixture(autouse=True)

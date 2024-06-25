@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Any, Callable, Dict, List, Type, cast
 
@@ -42,7 +43,7 @@ def _upsert_res_quota(proc_spec: ModuleProcessSpec, input_p: ResQuotaOverlay) ->
     return created
 
 
-def _upsert_autoacaling(proc_spec: ModuleProcessSpec, input_p: AutoscalingOverlay) -> bool:
+def _upsert_autoscaling(proc_spec: ModuleProcessSpec, input_p: AutoscalingOverlay) -> bool:
     """save AutoscalingOverlay item"""
     _, created = ProcessSpecEnvOverlay.objects.update_or_create(
         proc_spec=proc_spec,
@@ -62,7 +63,7 @@ def _upsert_autoacaling(proc_spec: ModuleProcessSpec, input_p: AutoscalingOverla
 _handlers: Dict[Type, Callable[..., bool]] = {
     ReplicasOverlay: _upsert_replicas,
     ResQuotaOverlay: _upsert_res_quota,
-    AutoscalingOverlay: _upsert_autoacaling,
+    AutoscalingOverlay: _upsert_autoscaling,
 }
 
 

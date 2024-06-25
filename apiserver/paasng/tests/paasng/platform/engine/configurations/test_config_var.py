@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import io
 from textwrap import dedent
 
@@ -29,17 +30,11 @@ from paasng.platform.engine.configurations.config_var import get_builtin_env_var
 from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
 from paasng.platform.engine.models.config_var import ConfigVar
 from tests.utils.helpers import override_region_configs
-from tests.utils.mocks.engine import mock_cluster_service
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGetEnvVariables:
-    @pytest.fixture(autouse=True)
-    def _setup_cluster(self):
-        with mock_cluster_service():
-            yield
-
     @pytest.mark.parametrize(
         ("include_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
     )

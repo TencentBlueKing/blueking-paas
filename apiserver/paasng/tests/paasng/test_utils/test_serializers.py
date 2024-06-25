@@ -23,7 +23,7 @@ from blue_krill.contextlib import nullcontext
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.utils.serializers import Base64FileField, ConfigVarReservedKeyValidator
+from paasng.utils.serializers import Base64FileField, ConfigVarReservedKeyValidator, IntegerOrCharField
 
 
 class Base64FileFieldSLZ(serializers.Serializer):
@@ -79,3 +79,36 @@ def test_config_var_reserved_key_validator(protected_key_list, protected_prefix_
     v = ConfigVarReservedKeyValidator(protected_key_list, protected_prefix_list)
     with expected:
         v(key)
+
+
+class IntegerOrCharFieldSLZ(serializers.Serializer):
+    port = IntegerOrCharField()
+
+
+class TestIntegerOrCharField:
+    @pytest.mark.parametrize(
+        ("data", "expected"),
+        [
+            ("http", "http"),
+            ("${PORT}", "${PORT}"),
+            ("8080", 8080),
+            (8080, 8080),
+        ],
+    )
+    def test_to_internal_value(self, data, expected):
+        slz = IntegerOrCharFieldSLZ(data={"port": data})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data["port"] == expected
+
+    @pytest.mark.parametrize(
+        ("data", "expected"),
+        [
+            ("http", "http"),
+            ("${PORT}", "${PORT}"),
+            ("8080", 8080),
+            (8080, 8080),
+        ],
+    )
+    def test_to_representation(self, data, expected):
+        slz = IntegerOrCharFieldSLZ({"port": data})
+        assert slz.data == {"port": expected}

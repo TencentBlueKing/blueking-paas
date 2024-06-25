@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
-from dataclasses import asdict
 from typing import Optional
 
 from django.db import IntegrityError
@@ -30,7 +29,6 @@ from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -57,8 +55,10 @@ class BkAppReleaseMgr(DeployStep):
         build = Build.objects.get(pk=self.deployment.build_id)
         with self.procedure("更新进程配置"):
             # Turn the processes into the corresponding type in paas_wl module
-            procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
-            ProcessManager(self.engine_app.env).sync_processes_specs(procs)
+            procs = self.deployment.get_processes()
+            proc_mgr = ProcessManager(self.engine_app.env)
+            proc_mgr.sync_processes_specs(procs)
+            proc_mgr.sync_processes_probes(procs)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)

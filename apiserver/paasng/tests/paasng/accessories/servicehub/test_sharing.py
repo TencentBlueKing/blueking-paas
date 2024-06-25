@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 from unittest import mock
 
@@ -34,7 +35,10 @@ from tests.utils.helpers import create_app, generate_random_string, initialize_m
 
 from . import data_mocks
 
-pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
+pytestmark = [
+    pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.xdist_group(name="remote-services"),
+]
 
 
 _region_name = "r1"

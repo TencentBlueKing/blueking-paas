@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Dict
 from unittest import mock
@@ -36,7 +37,6 @@ from paas_wl.bk_app.cnative.specs.resource import (
 )
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from tests.paas_wl.bk_app.cnative.specs.utils import create_condition, create_res, with_conds
-from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 logger = logging.getLogger(__name__)
@@ -102,16 +102,14 @@ class TestBkAppClusterOperator:
             },
         }
 
-        with replace_cluster_service():
-            ret = deploy(bk_stag_env, manifest)
+        ret = deploy(bk_stag_env, manifest)
 
         assert ret["spec"]["processes"][0]["name"] == "web"
         assert get_mres_from_cluster(bk_stag_env) is not None
 
         # 修改进程配置信息，再次部署到集群
         manifest["spec"]["processes"].append({"name": "worker", "replicas": 1})
-        with replace_cluster_service():
-            ret = deploy(bk_stag_env, manifest)
+        ret = deploy(bk_stag_env, manifest)
         assert ret["spec"]["processes"][1]["name"] == "worker"
 
     @pytest.mark.usefixtures("_with_stag_ns")
@@ -140,7 +138,7 @@ class TestBkAppClusterOperator:
         }.get
         with mock.patch(
             "paas_wl.infras.resources.base.crd.BkApp.create_or_update", side_effect=create_or_update_side_effect
-        ) as mocked_create_or_update, replace_cluster_service():
+        ) as mocked_create_or_update:
             client = get_client_by_app(bk_stag_wl_app)
             create_or_update_bkapp_with_retries(client, bk_stag_env, manifest)
 

@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import cattr
 from attrs import define, field, validators
@@ -74,7 +74,7 @@ class HTTPHeader:
 
 @define
 class HTTPGetAction:
-    port: str
+    port: Union[int, str]
     host: Optional[str] = None
     path: Optional[str] = None
     http_headers: Optional[List[HTTPHeader]] = None
@@ -83,7 +83,7 @@ class HTTPGetAction:
 
 @define
 class TCPSocketAction:
-    port: str
+    port: Union[int, str]
     host: Optional[str] = None
 
 

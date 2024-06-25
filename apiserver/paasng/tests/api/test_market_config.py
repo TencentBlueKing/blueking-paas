@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -32,7 +33,10 @@ from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from tests.conftest import mark_skip_if_console_not_configured
 from tests.utils.helpers import generate_random_string
 
-pytestmark = [mark_skip_if_console_not_configured(), pytest.mark.django_db]
+pytestmark = [
+    mark_skip_if_console_not_configured(),
+    pytest.mark.django_db(databases=["default", "workloads"]),
+]
 
 
 @pytest.mark.usefixtures("_init_tmpls")

@@ -16,27 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import uuid
 from unittest import mock
 
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paas_wl.bk_app.processes.models import ProcessTmpl
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
 from paasng.platform.engine.deploy.release.legacy import ApplicationReleaseMgr, ReleaseResultHandler
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
+from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
-from tests.utils.mocks.engine import mock_cluster_service
 from tests.utils.mocks.poll_task import FakeTaskPoller
 
-pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture(autouse=True)
-def _setup_cluster():
-    with mock_cluster_service():
-        yield
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from itertools import product
 from typing import List
 from unittest import mock
@@ -35,7 +36,7 @@ from paasng.platform.declarative.constants import DiffType
 APP_DESC_INFO = dict(name_zh_cn="foo", name_en="foo", code="bar", region="baz")
 
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def diff_result(param) -> ModuleDiffResult:

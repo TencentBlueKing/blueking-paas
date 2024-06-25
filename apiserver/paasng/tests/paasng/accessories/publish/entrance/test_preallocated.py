@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Testcases entrance.exposer module
 """
 import json
@@ -33,9 +34,9 @@ from paasng.accessories.publish.entrance.preallocated import (
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.helpers import override_region_configs
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGetExposedUrlType:
@@ -60,14 +61,14 @@ class TestGetExposedUrlType:
 
 
 def test_default_preallocated_urls_empty(bk_stag_env):
-    with mock_cluster_service(replaced_ingress_config={}):
+    with cluster_ingress_config(replaced_config={}):
         urls = _default_preallocated_urls(bk_stag_env)["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
         assert urls == ""
 
 
 def test_default_preallocated_urls_normal(bk_stag_env):
     ingress_config = {"app_root_domains": [{"name": "example.com"}]}
-    with mock_cluster_service(replaced_ingress_config=ingress_config):
+    with cluster_ingress_config(replaced_config=ingress_config):
         urls = _default_preallocated_urls(bk_stag_env)["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
         assert isinstance(urls, str)
         assert set(json.loads(urls).keys()) == {"stag", "prod"}
@@ -75,7 +76,7 @@ def test_default_preallocated_urls_normal(bk_stag_env):
 
 class TestGetPreallocatedAddress:
     def test_not_configured(self):
-        with mock_cluster_service(replaced_ingress_config={}), pytest.raises(ValueError, match=r"^failed to get.*"):
+        with cluster_ingress_config(replaced_config={}), pytest.raises(ValueError, match=r"^failed to get.*"):
             get_preallocated_address("test-code")
 
     @pytest.mark.parametrize(
@@ -90,7 +91,7 @@ class TestGetPreallocatedAddress:
         ],
     )
     def test_normal(self, ingress_config, expected_address):
-        with mock_cluster_service(replaced_ingress_config=ingress_config):
+        with cluster_ingress_config(replaced_config=ingress_config):
             assert get_preallocated_address("test-code").prod == expected_address
 
     @pytest.mark.parametrize(
@@ -102,7 +103,7 @@ class TestGetPreallocatedAddress:
     )
     def test_preferred_url_type(self, preferred_url_type, expected_address):
         ingress_config = {"sub_path_domains": [{"name": "foo.com"}], "app_root_domains": [{"name": "foo.com"}]}
-        with mock_cluster_service(replaced_ingress_config=ingress_config):
+        with cluster_ingress_config(replaced_config=ingress_config):
             assert (
                 get_preallocated_address("test-code", preferred_url_type=preferred_url_type).prod == expected_address
             )
@@ -188,8 +189,7 @@ class TestGetPreallocatedAddress:
         ],
     )
     def test_with_clusters(self, clusters, stag_address, prod_address):
-        with mock_cluster_service():
-            addr = get_preallocated_address("test-code", clusters=clusters)
+        addr = get_preallocated_address("test-code", clusters=clusters)
         assert addr.prod == prod_address
         assert addr.stag == stag_address
 
@@ -197,8 +197,8 @@ class TestGetPreallocatedAddress:
 class TestDefaultEntrance:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        with mock_cluster_service(
-            ingress_config={
+        with cluster_ingress_config(
+            config={
                 "app_root_domains": [
                     {"name": "bar-1.example.com"},
                     {"name": "bar-2.example.org"},

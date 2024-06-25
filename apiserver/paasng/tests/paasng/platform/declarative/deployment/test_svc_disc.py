@@ -16,12 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import pytest
 
 from paasng.platform.declarative.deployment.resources import BkSaaSItem
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSAddrDiscoverer
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestBkSaaSEnvVariableFactoryExtendWithClusterApp:

@@ -39,6 +39,7 @@ class Hook:
     def get_command(self) -> List[str]:
         """get_args: 获取 hook 的命令部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
+        TODO 确认已在 HooksManifestConstructor 中使用?
         """
         if isinstance(self.command, str):
             # TODO: runner 的 Dockerfile 默认的入口程序为 ["/runner/init"], 理论上返回空列表即可
@@ -48,6 +49,7 @@ class Hook:
     def get_args(self) -> List[str]:
         """get_args: 获取 hook 的参数部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
+        TODO 确认已在 HooksManifestConstructor 中使用?
         """
         if isinstance(self.command, str):
             command = shlex.split(self.command)
@@ -63,6 +65,7 @@ class Hook:
         """
         if isinstance(self.command, str):
             return self.command
+        # FIXME: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
         return (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
 
 

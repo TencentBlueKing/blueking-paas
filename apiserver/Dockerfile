@@ -42,7 +42,8 @@ RUN mkdir ~/.pip &&  printf '[global]\nindex-url = https://mirrors.cloud.tencent
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade 'pip<24.1'
+
 RUN pip install poetry==1.3.2
 
 # Change security level of openssl to lower value in order to avoid "CA_MD_TOO_WEAK" error

@@ -53,7 +53,35 @@ class TestEventReader:
         event, _ = KEvent(client).create_or_update(name="test-event", namespace=wl_app.namespace, body=event_body)
         return event
 
+    @pytest.fixture()
+    def event_without_count(self, wl_app, client):
+        event_body_without_count = {
+            "apiVersion": "v1",
+            "kind": "Event",
+            "metadata": {
+                "name": "test-event-without-count",
+            },
+            "involvedObject": {"kind": "Pod", "apiVersion": "v1", "name": "test-pod", "namespace": wl_app.namespace},
+            "reason": "ExampleReason",
+            "message": "This is an example event message for the Pod",
+            "source": {"component": "manual"},
+            "type": "Warning",
+            "firstTimestamp": "2023-01-01T12:00:00Z",
+            "lastTimestamp": "2023-01-01T12:00:00Z",
+        }
+        event, _ = KEvent(client).create_or_update(
+            name="test-event-without-count", namespace=wl_app.namespace, body=event_body_without_count
+        )
+        return event
+
     def test_query_events(self, wl_app, event):
+        # Query events
+        events = event_kmodel.list_by_app_instance_name(wl_app, "test-pod")
+        assert len(events.items) == 1
+        assert events.items[0].involved_object.name == "test-pod"
+        assert events.items[0].message == "This is an example event message for the Pod"
+
+    def test_query_events_without_count(self, wl_app, event_without_count):
         # Query events
         events = event_kmodel.list_by_app_instance_name(wl_app, "test-pod")
         assert len(events.items) == 1

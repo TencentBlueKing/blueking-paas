@@ -11,10 +11,10 @@
         >
           <span class="logo-warp">
             <img
-              src="/static/images/logo.svg"
+              :src="appLogo"
               alt=""
             >
-            <span class="logo-text">{{ $t('蓝鲸开发者中心') }}</span>
+            <span class="logo-text">{{ appName }}</span>
           </span>
         </router-link>
         <ul class="ps-nav" ref="navListRef">
@@ -374,6 +374,7 @@ import { psHeaderInfo } from '@/mixins/ps-static-mixin';
 import defaultUserLogo from '../../static/images/default-user.png';
 import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';
+import logoSvg from '/static/images/logo.svg';
 
 export default {
   components: {
@@ -431,6 +432,15 @@ export default {
     displayNavList() {
       const nav = this.headerStaticInfo.list.nav || [];
       return this.transformNavData(nav);
+    },
+    platformConfig() {
+      return this.$store.state.platformConfig;
+    },
+    appName() {
+      return this.platformConfig.i18n?.name || this.$t('蓝鲸开发者中心');
+    },
+    appLogo() {
+      return this.platformConfig.appLogo ?? logoSvg;
     },
   },
   watch: {

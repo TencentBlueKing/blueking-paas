@@ -16,8 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.utils.addons import PlugableAppConfig
+from unittest import mock
+
+import pytest
+
+pytestmark = pytest.mark.django_db
 
 
-class FeatureFlagsConfig(PlugableAppConfig):
-    name = "paasng.misc.feature_flags"
+def test_retrieve_service(api_client, bk_service_ver):
+    url = f"/api/services/{bk_service_ver.uuid}/"
+    with mock.patch(
+        "paasng.accessories.servicehub.views.mixed_service_mgr.get_without_region",
+        return_value=bk_service_ver,
+    ):
+        resp = api_client.get(url)
+    data = resp.json()
+    assert resp.status_code == 200
+    assert data["result"]["is_ready"] is True

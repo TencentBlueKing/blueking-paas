@@ -25,7 +25,6 @@ ignore_imports =
     ** -> paasng.platform.engine.**
     ** -> paasng.platform.sourcectl.**
     ** -> paasng.platform.templates.**
-    paasng.platform.applications.views -> paasng.bk_plugins.bk_plugins.config
     # Other ignores
     paas_wl.bk_app.processes.models -> paasng.platform.declarative.deployment.resources
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
@@ -59,7 +58,7 @@ modules =
     paasng.misc.metrics
     paasng.misc.tracing
     paasng.misc.changelog
-    paasng.misc.feature_flags
+    paasng.misc.plat_config
 
 
 [importlinter:contract:layers-paas-wl]

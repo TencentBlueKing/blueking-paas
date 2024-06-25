@@ -31,25 +31,26 @@ if TYPE_CHECKING:
 
 class EventDeserializer(AppEntityDeserializer["Event"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Event":
-        involved_object = kube_data.involvedObject
+        involved_object = kube_data.get("involvedObject", {})
         return self.entity_type(
             app=app,
-            name=kube_data.metadata.name,
-            type=kube_data.type,
-            message=kube_data.message,
-            reason=kube_data.reason,
-            count=kube_data.count,
-            first_timestamp=kube_data.firstTimestamp,
-            last_timestamp=kube_data.lastTimestamp,
+            name=kube_data.get("metadata", {}).get("name", None),
+            type=kube_data.get("type", None),
+            message=kube_data.get("message", None),
+            reason=kube_data.get("reason", None),
+            # k8s 产生事件时，不写入 count 字段是否代表事件发生一次，待验证
+            count=kube_data.get("count", 1),
+            first_timestamp=kube_data.get("firstTimestamp", None),
+            last_timestamp=kube_data.get("lastTimestamp", None),
             involved_object=InvolvedObject(
-                kind=involved_object.kind,
-                name=involved_object.name,
-                namespace=getattr(involved_object, "namespace", None),
-                api_version=involved_object.apiVersion,
+                kind=involved_object.get("kind", None),
+                name=involved_object.get("name", None),
+                namespace=involved_object.get("namespace", None),
+                api_version=involved_object.get("apiVersion", None),
             ),
             source=Source(
-                component=kube_data.source.component,
-                host=getattr(kube_data.source, "host", None),
+                component=kube_data.get("source", {}).get("component", None),
+                host=kube_data.get("source", {}).get("host", None),
             ),
         )
 

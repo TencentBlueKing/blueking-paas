@@ -21,8 +21,6 @@ from unittest import mock
 
 import pytest
 
-from tests.utils.mocks.engine import mock_cluster_service
-
 
 def _mock_initialize_vcs_with_template():
     with mock.patch(
@@ -50,10 +48,4 @@ def _mock_bkpaas_auth_middlewares():
     ), mock.patch("apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware", new=FakeMiddleware), mock.patch(
         "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware", new=FakeMiddleware
     ):
-        yield
-
-
-@pytest.fixture(autouse=True)
-def _setup_cluster():
-    with mock_cluster_service():
         yield

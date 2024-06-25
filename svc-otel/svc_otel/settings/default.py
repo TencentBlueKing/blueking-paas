@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
-import base64
 import os
 from pathlib import Path
 
@@ -40,7 +39,7 @@ BASE_DIR = Path(__file__).parents[2].absolute()
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "c6h~oz+!%4b%br^8ekz&s7zt$(athjh_"
+SECRET_KEY = env.str("SECRET_KEY", default="c6h~oz+!%4b%br^8ekz&s7zt$(athjh_")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
@@ -207,7 +206,12 @@ def get_logging_config(log_level="DEBUG"):
     }
 
 
-BKKRILL_ENCRYPT_SECRET_KEY = base64.b64encode(b"oVOcQCMuuXjFoLvrbJvUKAnNvrAoalqV")
+# 环境变量设置了 BKKRILL_ENCRYPT_SECRET_KEY 且不为空时才使用环境变量中的值，否则使用默认值
+BKKRILL_ENCRYPT_SECRET_KEY = (
+    env.str("BKKRILL_ENCRYPT_SECRET_KEY", default="").encode()
+    or "b1ZPY1FDTXV1WGpGb0x2cmJKdlVLQW5OdnJBb2FscVY=".encode()
+)
+
 
 METRIC_CLIENT_TOKEN_DICT = {
     "monitoring": env.str("METRIC_CLIENT_TOKEN", "f7b58586-5e20-f189-7cf5-a020524cda3e"),

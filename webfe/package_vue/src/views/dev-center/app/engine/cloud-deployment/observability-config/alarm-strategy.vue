@@ -2,7 +2,7 @@
   <div class="alarm-strategy mt25">
     <div class="top-title mb20">
       <h4>{{ $t('告警策略') }}</h4>
-      <p class="tips">
+      <p class="tips" v-if="curAppInfo.feature?.MONITORING">
         {{ $t('告警策略对应用下所有模块都生效，如需新增或编辑告警策略请直接到蓝鲸监控平台操作。') }}
         <!-- 未部署不展示 -->
         <a v-if="strategyLink" :href="strategyLink" target="_blank">
@@ -11,7 +11,11 @@
         </a>
       </p>
     </div>
-    <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
+
+    <div
+      v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
+      v-if="curAppInfo.feature?.MONITORING"
+    >
       <!-- 策略列表 -->
       <bk-table
         v-if="alarmStrategyList?.length"
@@ -99,7 +103,9 @@
           prop="is_enabled"
         >
           <template slot-scope="{ row }">
-            <span :class="['tag', row.is_enabled ? 'enable' : 'deactivate' ]">{{ row.is_enabled ? '启用' : '停用' }}</span>
+            <span :class="['tag', row.is_enabled ? 'enable' : 'deactivate']">
+              {{ row.is_enabled ? $t('启用') : $t('停用') }}
+            </span>
           </template>
         </bk-table-column>
       </bk-table>
@@ -116,13 +122,25 @@
         </div>
       </div>
     </div>
+    <FunctionalDependency
+      v-else
+      mode="partial"
+      :title="$t('暂无监控告警功能')"
+      :functional-desc="$t('开发者中心与蓝鲸监控平台无缝集成，应用部署后便可自动开启资源使用率、进程异常等告警配置。')"
+      :guide-title="$t('如需要该功能，需要部署：')"
+      :guide-desc-list="[$t('1. 蓝鲸监控：监控日志套餐')]"
+      @gotoMore="gotoMore"
+    />
   </div>
 </template>
 
-<script>import { THRESHOLD_MAP, LEVEL_MAP } from '@/common/constants.js';
+<script>
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
+import { THRESHOLD_MAP, LEVEL_MAP } from '@/common/constants.js';
 
 export default {
   name: 'AlarmStrategy',
+  components: { FunctionalDependency },
   data() {
     return {
       alarmStrategyList: [],
@@ -139,6 +157,9 @@ export default {
   computed: {
     appCode() {
       return this.$route.params.id;
+    },
+    curAppInfo() {
+      return this.$store.state.curAppInfo || {};
     },
   },
   created() {
@@ -229,6 +250,10 @@ export default {
           id: this.appCode,
         },
       });
+    },
+    // 了解更多
+    gotoMore() {
+      window.open(this.GLOBAL.DOC.DEPLOYMENT_MAINTENANCE, '_blank');
     },
   },
 };

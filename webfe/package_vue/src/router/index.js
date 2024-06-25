@@ -371,14 +371,16 @@ const router = new Router({
       path: '/',
       name: 'home',
       component: frontPage,
+      meta: {
+        isFooterShown: true,
+      },
     },
     {
       path: '/developer-center/',
       name: 'index',
       component: frontPage,
       meta: {
-        // 只有首页需要footer版本信息
-        showPaasFooter: true,
+        isFooterShown: true,
       },
     },
     {

@@ -255,6 +255,9 @@ export default {
     isMigrationInfoShown() {
       return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status === 'migration_succeeded';
     },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
   },
   watch: {
     curAppInfo() {
@@ -337,7 +340,7 @@ export default {
         }
 
         // 迁移中的应用展示迁移信息
-        if (!this.isMigrationInfoShown) {
+        if (!this.userFeature.CNATIVE_MGRLEGACY || !this.isMigrationInfoShown) {
           navTree = navTree.filter(nav => nav.name !== 'appMigrationInfo');
         }
 
@@ -384,12 +387,11 @@ export default {
         // 接入feature flag来控制应用导航
         const featureMaps = {
           docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
-          appCloudAPI: 'API_GATEWAY', // 云API权限管理
         };
         const subFeatureMaps = {
           cloudAppAnalysis: 'ANALYTICS', // 访问统计
-          codeReview: 'CI', // 代码检查
-          monitorAlarm: 'PHALANX', // 告警记录
+          codeReview: 'CODE_CHECK', // 代码检查
+          monitorAlarm: 'MONITORING', // 告警记录
         };
         // 一级
         navTree = navTree.filter((nav) => {

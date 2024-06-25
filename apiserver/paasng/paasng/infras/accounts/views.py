@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -37,7 +38,6 @@ from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTo
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 from paasng.utils.notifier import get_notification_backend
@@ -81,8 +81,8 @@ class UserVerificationGenerationView(APIView):
         验证码-生成并发送验证码到用户的手机
         - 注意：接口调用有频率限制 6/min
         """
-        if not PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
-            raise error_codes.FEATURE_FLAG_DISABLED
+        if not settings.ENABLE_VERIFICATION_CODE:
+            raise error_codes.NOTIFICATION_DISABLED.f(_("暂不支持发送验证码"))
 
         verifier = make_verifier(request.session, request.data.get("func"))
         noti_backend = get_notification_backend()
@@ -107,8 +107,8 @@ class UserVerificationValidationView(APIView):
         验证码-测试验证码
         - 验证成功后，可以带上验证码发起最终操作
         """
-        if not PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
-            raise error_codes.FEATURE_FLAG_DISABLED
+        if not settings.ENABLE_VERIFICATION_CODE:
+            raise error_codes.NOTIFICATION_DISABLED.f(_("暂不支持发送验证码"))
 
         serializer = serializers.VerificationCodeSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -146,7 +146,7 @@ class AppProcessesController:
 
         proc_spec.autoscaling = True
         proc_spec.scaling_config = AutoscalingConfig(
-            min_replicas=scaling.spec.max_replicas, max_replicas=scaling.spec.max_replicas, policy="default"
+            min_replicas=scaling.spec.min_replicas, max_replicas=scaling.spec.max_replicas, policy="default"
         )
         proc_spec.save(update_fields=["autoscaling", "scaling_config", "updated"])
 

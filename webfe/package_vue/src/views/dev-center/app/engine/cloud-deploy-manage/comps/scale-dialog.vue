@@ -111,7 +111,7 @@
             <bk-input
               v-model="scalingConfig.minReplicas"
               type="number"
-              :max="5"
+              :max="processPlan.maxReplicas"
               :min="0"
               style="width: 204px"
             />
@@ -126,7 +126,7 @@
             <bk-input
               v-model="scalingConfig.maxReplicas"
               type="number"
-              :max="5"
+              :max="processPlan.maxReplicas"
               :min="0"
               style="width: 204px"
             />
@@ -466,7 +466,6 @@ export default {
       this.scalingConfig.targetReplicas = process.available_instance_count;
 
       this.initScalingConfig = { ...this.scalingConfig };
-      console.log('this.processPlan', this.processPlan);
       this.curTargetReplicas = this.processPlan.targetReplicas;
 
       this.scaleDialog.visible = true;

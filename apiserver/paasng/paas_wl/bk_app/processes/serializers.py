@@ -128,12 +128,12 @@ class InstanceListSLZ(serializers.Serializer):
 
 
 class EventSerializer(serializers.Serializer):
-    reason = serializers.CharField(help_text="事件发生的原因")
+    reason = serializers.CharField(help_text="事件发生的原因", required=False, allow_null=True)
     count = serializers.IntegerField(help_text="事件发生的次数")
-    type = serializers.CharField(help_text="事件的类型")
-    message = serializers.CharField(help_text="事件内容")
-    first_timestamp = serializers.CharField()
-    last_timestamp = serializers.CharField()
+    type = serializers.CharField(help_text="事件的类型", required=False, allow_null=True)
+    message = serializers.CharField(help_text="事件内容", required=False, allow_null=True)
+    first_timestamp = serializers.CharField(required=False, allow_null=True)
+    last_timestamp = serializers.CharField(required=False, allow_null=True)
 
 
 class ListWatcherRespSLZ(serializers.Serializer):

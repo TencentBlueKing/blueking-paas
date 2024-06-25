@@ -46,7 +46,7 @@ class TestAppDescriptionHandler:
             (
                 dedent(
                     """
-                spec_version: 3
+                specVersion: 3
                 module:
                   name: default
                   language: python

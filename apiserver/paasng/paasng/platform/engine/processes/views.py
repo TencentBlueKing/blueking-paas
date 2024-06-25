@@ -36,7 +36,6 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.user import user_has_feature
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag as PFF
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.processes import serializers as slzs
@@ -98,10 +97,6 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
         module = self.get_module_via_path()
         env = self.get_env_via_path()
         manager = ProcessManager(env)
-
-        if not PFF.get_default_flags()[PFF.ENABLE_WEB_CONSOLE]:
-            # 平台不支持 WebConsole 功能
-            raise error_codes.FEATURE_FLAG_DISABLED
 
         runtime_type = ModuleSpecs(module).runtime_type
         is_cnb_runtime = False

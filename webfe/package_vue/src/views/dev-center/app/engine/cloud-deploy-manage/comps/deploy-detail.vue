@@ -140,7 +140,7 @@
         <bk-table-column
           label=""
           class-name="table-colum-instance-cls"
-          width="140">
+          :width="columWidth">
           <template slot-scope="{ row }">
             <div
               class="instance-item-cls cell-container operation-column"
@@ -152,13 +152,19 @@
                 class="mr10"
                 :text="true"
                 title="primary"
+                @click="showInstanceEvents(instance, row.name)">
+                {{$t('查看事件')}}
+              </bk-button>
+              <bk-button
+                class="mr10"
+                :text="true"
+                title="primary"
                 @click="showInstanceLog(instance)">
                 {{$t('查看日志')}}
               </bk-button>
               <bk-button
                 :text="true"
                 title="primary"
-                v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
                 @click="showInstanceConsole(instance, row)">
                 {{$t('访问控制台')}}
               </bk-button>
@@ -345,7 +351,7 @@
     </bk-sideslider>
     <!-- 日志侧栏 -->
     <bk-sideslider
-      :width="800"
+      :width="computedWidth"
       :is-show.sync="processSlider.isShow"
       :title="processSlider.title"
       :quick-close="true"
@@ -427,6 +433,14 @@
       </div>
     </bk-sideslider>
 
+    <!-- 查看事件 -->
+    <eventDetail
+      v-model="instanceEventConfig.isShow"
+      :width="computedWidth"
+      :config="instanceEventConfig"
+      :env="environment"
+      :module-id="curModuleId"
+    />
 
     <!-- 无法使用控制台 -->
     <bk-dialog
@@ -467,6 +481,7 @@ import ECharts from 'vue-echarts/components/ECharts.vue';
 import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
+import eventDetail from './event-detail.vue';
 
 moment.locale('zh-cn');
 // let maxReplicasNum = 0;
@@ -480,6 +495,7 @@ export default {
   components: {
     chart: ECharts,
     scaleDialog,
+    eventDetail,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -653,6 +669,11 @@ export default {
       // EventSource handler
       serverProcessEvent: undefined,
       scaleTargetReplicas: 0,
+      instanceEventConfig: {
+        isShow: false,
+        name: '',
+        instanceName: '',
+      },
     };
   },
   computed: {
@@ -671,6 +692,15 @@ export default {
         const readyInstancesCount = v.instances.filter(instance => instance.ready).length;
         return p + readyInstancesCount;
       }, 0);
+    },
+    columWidth() {
+      return this.localLanguage === 'en' ? 220 : 200;
+    },
+    // 滑框的宽度
+    computedWidth() {
+      const defaultWidth = 980;
+      const maxWidth = window.innerWidth * 0.8;
+      return Math.min(defaultWidth, maxWidth);
     },
   },
 
@@ -1410,7 +1440,10 @@ export default {
         // 滚动到底部
         setTimeout(() => {
           const container = document.getElementById('log-container');
-          container.scrollTop = container.scrollHeight;
+          container.scrollTo({
+            top: container?.scrollHeight || 0,
+            behavior: 'smooth',
+          });
         }, 500);
       } catch (e) {
         this.$paasMessage({
@@ -1504,6 +1537,14 @@ export default {
       if (isChangeScaleType) {
         bus.$emit('get-release-info');
       }
+    },
+
+    // 显示查看事件
+    showInstanceEvents(data, processName) {
+      this.instanceEventConfig.isShow = true;
+      this.instanceEventConfig.name = data.display_name;
+      this.instanceEventConfig.processName = processName;
+      this.instanceEventConfig.instanceName = data.name;
     },
   },
 };

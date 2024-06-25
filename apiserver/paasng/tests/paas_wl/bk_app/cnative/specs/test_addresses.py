@@ -25,7 +25,7 @@ from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppS
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath, Domain
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.helpers import override_region_configs
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -38,8 +38,8 @@ def test_save_addresses(bk_prod_env, bk_prod_wl_app, settings):
     def set_exposed_url_type(region_config):
         region_config["entrance_config"]["exposed_url_type"] = ExposedURLType.SUBDOMAIN
 
-    with replace_cluster_service(
-        replaced_ingress_config={
+    with cluster_ingress_config(
+        replaced_config={
             "sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}],
             "app_root_domains": [{"name": "bkapps.example.com"}, {"name": "bkapps.example2.com"}],
         }

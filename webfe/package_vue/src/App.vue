@@ -25,7 +25,7 @@
     >
       <router-view />
     </div>
-    <paas-footer v-if="$route.meta.showPaasFooter" />
+    <paas-footer v-if="showPaasFooter" />
   </div>
 </template>
 
@@ -36,6 +36,7 @@ import paasFooter from '@/components/paas-footer';
 import NoticeComponent from '@blueking/notice-component-vue2';
 import { showLoginModal as showLoginPopup } from '@blueking/login-modal';
 import '@blueking/notice-component-vue2/dist/style.css';
+import getPlatformConfig from '@/common/platform-config';
 
 export default {
   components: {
@@ -71,6 +72,12 @@ export default {
     isDefaultBackgroundColor() {
       return this.$route.meta?.isDefaultBackgroundColor;
     },
+    paasVersion() {
+      return window.BK_PAAS_VERSION;
+    },
+    showPaasFooter() {
+      return this.$route.meta?.isFooterShown;
+    },
   },
   watch: {
     $route: {
@@ -95,6 +102,8 @@ export default {
     bus.$on('close-login-modal', () => {
       this.showLoginModal = false;
     });
+    // 获取平台通用配置
+    getPlatformConfig(this);
   },
   methods: {
     hideLoginModal() {

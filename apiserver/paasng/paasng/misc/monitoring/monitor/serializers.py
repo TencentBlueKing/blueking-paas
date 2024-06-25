@@ -113,11 +113,11 @@ class AlertSLZ(serializers.Serializer):
 
     def get_env(self, instance) -> Optional[str]:
         """从 labels 中获取运行环境信息"""
-        labels = set(instance.get("labels", []))
-        run_envs = set(RUN_ENVS)
-        env = labels & run_envs
+        labels = instance.get("labels") or []
+        env = set(labels) & set(RUN_ENVS)
         if len(env) == 1:
             return list(env)[0]
+
         return None
 
 

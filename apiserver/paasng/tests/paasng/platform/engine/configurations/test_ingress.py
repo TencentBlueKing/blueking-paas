@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from unittest import mock
 
 import cattr
@@ -26,7 +27,6 @@ from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
-from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -125,8 +125,7 @@ class TestAppDefaultSubpaths:
     ):
         bk_app = request.getfixturevalue(app)
         settings.FORCE_USING_LEGACY_SUB_PATH_VAR_VALUE = force_legacy_style
-        with mock_cluster_service():
-            envs = get_env_variables(bk_app.get_default_module().get_envs("stag"))
+        envs = get_env_variables(bk_app.get_default_module().get_envs("stag"))
         assert envs[sub_path_key] == request.getfixturevalue(expected)
 
     @pytest.mark.usefixtures("_with_wl_apps")

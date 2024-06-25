@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import atexit
 import copy
 import logging
@@ -42,7 +43,6 @@ from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
 from tests.paas_wl.utils.wl_app import create_wl_release
-from tests.utils.mocks.engine import build_default_cluster
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +53,12 @@ DEFAULT_PROD_ENV_ID = 2
 
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
-    """Create default cluster for testing"""
+    """Some initialization jobs before running tests."""
     with django_db_blocker.unblock():
         with transaction.atomic():
-            # Clear cached configuration pool before creating default cluster in case
-            # there are some stale configurations in the pool.
+            # Clear cached configuration pool in case there are some stale configurations
+            # in the pool.
             get_global_configuration_pool.cache_clear()
-
-            cluster = create_default_cluster()
-            setup_default_client(cluster)
 
         # The initialization in `processes.models` will not create default package plans in the TEST database,
         # it only creates the default plans in the non-test database(without the "test_" prefix).
@@ -212,15 +209,6 @@ def resource_name() -> str:
     return random_resource_name()
 
 
-def create_default_cluster():
-    """Destroy all existing clusters and create a default one"""
-    Cluster.objects.all().delete()
-    cluster, apiserver = build_default_cluster()
-    cluster.save()
-    apiserver.save()
-    return cluster
-
-
 @pytest.fixture()
 def patch_ingress_config():
     """Patch ingress_config of the default cluster, usage:
@@ -246,12 +234,6 @@ def patch_ingress_config():
     # Restore to original
     cluster.ingress_config = orig_cfg
     cluster.save(update_fields=["ingress_config"])
-
-
-def setup_default_client(cluster: Cluster):
-    """setup the default config for those client created by `kubernetes.client.ApiClient`"""
-    # TODO: 待重构, 让 BaseKresource 不再接受 ModuleType 类型的 client
-    get_client_by_cluster_name(cluster.name)
 
 
 def get_cluster_with_hook(hook_func: Callable) -> Callable:

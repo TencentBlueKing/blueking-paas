@@ -115,7 +115,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "webpack_loader",
     "django_prometheus",
-    "paasng.misc.feature_flags",
+    "paasng.misc.plat_config",
     "paasng.infras.accounts",
     "paasng.platform.applications",
     "paasng.accessories.log",
@@ -805,6 +805,8 @@ BK_CI_URL = settings.get("BK_CI_URL", "")
 BK_CODECC_URL = settings.get("BK_CODECC_URL", "")
 BK_TURBO_URL = settings.get("BK_TURBO_URL", "")
 BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
+# 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
+BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 
 BK_PLATFORM_URLS = settings.get(
     "BK_PLATFORM_URLS",
@@ -937,9 +939,6 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", Fa
 # 是否开启插件开发功能
 IS_ALLOW_PLUGIN_CENTER = settings.get("IS_ALLOW_PLUGIN_CENTER", False)
 
-# [region-aware] 是否允许用户创建插件应用
-BK_PLUGIN_CONFIG = settings.get("BK_PLUGIN_CONFIG", {"allow_creation": IS_ALLOW_CREATE_BK_PLUGIN_APP})
-
 # 管理插件应用的 API 网关时所使用的配置：
 BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get("BK_PLUGIN_APIGW_SERVICE_STAGE", "prod")  # 环境（stage）
 BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE = settings.get("BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE", "default")  # 用户类型
@@ -1010,6 +1009,13 @@ ENGINE_OFFLINE_RESUMABLE_SECS = 60
 #
 # 默认运行时镜像名称
 DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", {DEFAULT_REGION_NAME: "blueking"})
+
+# ------------------
+# CI 相关配置
+# ------------------
+
+# 代码检查配置
+CODE_CHECK_CONFIGS = settings.get("CODE_CHECK_CONFIGS", {})
 
 # 开发者中心在蓝盾的项目 ID
 BK_CI_PAAS_PROJECT_ID = settings.get("BK_CI_PAAS_PROJECT_ID", "bk_paas3")
@@ -1169,10 +1175,6 @@ MK_SEARCH_API_PRIVATE_TOKEN = settings.get("MK_SEARCH_API_PRIVATE_TOKEN", "")
 # ---------------
 # 应用一键迁移配置
 # ---------------
-
-# 是否开启应用迁移相关功能
-ENABLE_MANAGE_LEGACY_APP = settings.get("ENABLE_MANAGE_LEGACY_APP", False)
-
 # 一键迁移超时时间
 LEGACY_APP_MIGRATION_PROCESS_TIMEOUT = 600
 
@@ -1185,12 +1187,6 @@ MIGRATION_REMIND_DAYS = 7
 # 迁移时，是否 patch 用户代码
 IS_PATCH_CODE_IN_MGRLEGACY = settings.get("IS_PATCH_CODE_IN_MGRLEGACY", True)
 
-# ------------------
-# 蓝盾代码检查相关配置
-# ------------------
-
-# 蓝鲸 CI 相关配置项
-CI_CONFIGS = settings.get("CI_CONFIGS", {})
 
 # ------------------
 # 蓝鲸文档中心配置
@@ -1272,8 +1268,6 @@ BK_LESSCODE_TIPS = settings.get("BK_LESSCODE_TIPS", "")
 DOCKER_REGISTRY_CONFIG = settings.get(
     "DOCKER_REGISTRY_CONFIG", {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
-
-ENABLE_IMAGE_APP_BIND_REPO = settings.get("ENABLE_IMAGE_APP_BIND_REPO", False)
 
 # -----------------
 # 插件开发中心配置项
@@ -1376,12 +1370,19 @@ THIRD_APP_INIT_CODES = settings.get("THIRD_APP_INIT_CODES", "")
 ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
+# ---------------------------------------------
+# 平台通知配置相关
+# ---------------------------------------------
+
 # 开发者中心管理员，主要用于应用运营报告通知
 BKPAAS_PLATFORM_MANAGERS = settings.get("BKPAAS_PLATFORM_MANAGERS", [])
 # 是否向平台管理员发送应用运营报告邮件
 ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE = settings.get(
     "ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE", False
 )
+
+# 发送验证码，没有配置通知渠道的版本可以关闭该功能
+ENABLE_VERIFICATION_CODE = settings.get("ENABLE_VERIFICATION_CODE", False)
 
 # 引入 workloads 相关配置
 # fmt: off
@@ -1405,3 +1406,28 @@ DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE
 
 # 持久存储默认存储大小
 DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")
+
+
+# ---------------------------------------------
+#  前端特性配置
+# ---------------------------------------------
+# 应用市场可见范围
+FE_FEATURE_SETTINGS_MARKET_VISIBILITY = settings.get("FE_FEATURE_SETTINGS_MARKET_VISIBILITY", True)
+# 聚合搜索
+FE_FEATURE_SETTINGS_AGGREGATE_SEARCH = settings.get("FE_FEATURE_SETTINGS_AGGREGATE_SEARCH", False)
+# 文档管理功能
+FE_FEATURE_SETTINGS_DOCUMENT_MANAGEMENT = settings.get("FE_FEATURE_SETTINGS_DOCUMENT_MANAGEMENT", False)
+# 记录本地开发时长，部分版本的普通应用还有该功能
+FE_FEATURE_SETTINGS_DEVELOPMENT_TIME_RECORD = settings.get("FE_FEATURE_SETTINGS_DEVELOPMENT_TIME_RECORD", False)
+# 显示应用版本
+FE_FEATURE_SETTINGS_REGION_DISPLAY = settings.get("FE_FEATURE_SETTINGS_REGION_DISPLAY", False)
+# 用于控制前端页面是否展示访问统计功能
+FE_FEATURE_SETTINGS_ANALYTICS = settings.get("FE_FEATURE_SETTINGS_ANALYTICS", False)
+# 镜像应用绑定源码仓库，仅用于代码检查
+FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO = settings.get("FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO", False)
+# 是否开启应用迁移相关功能
+FE_FEATURE_SETTINGS_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_MGRLEGACY", False)
+# 是否开启迁移至云原生应用的相关功能
+FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY", False)
+# 应用令牌，用于 APP 调用用户态的云 API
+FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN", False)

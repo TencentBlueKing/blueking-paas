@@ -80,7 +80,6 @@ from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
 from tests.utils.helpers import generate_random_string
-from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -480,22 +479,22 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
             },
         },
     )
-    with mock_cluster_service():
-        apply_builtin_env_vars(blank_resource, bk_stag_env)
-        var_names = {item.name for item in blank_resource.spec.configuration.env}
-        for name in (
-            "BKPAAS_APP_ID",
-            "BKPAAS_APP_SECRET",
-            "BK_LOGIN_URL",
-            "BK_DOCS_URL_PREFIX",
-            "BKPAAS_DEFAULT_PREALLOCATED_URLS",
-        ):
-            assert name in var_names
-        # 验证描述文件中声明的环境变量不会通过 apply_builtin_env_vars 注入(而是在更上层的组装 manifest 时处理)
-        assert "FOO" not in var_names
-        assert "BAR" not in var_names
-        # 应用描述文件中申明了服务发现的话，不会写入相关的环境变量(云原生应用的服务发现通过 configmap 注入环境变量)
-        assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" not in var_names
+
+    apply_builtin_env_vars(blank_resource, bk_stag_env)
+    var_names = {item.name for item in blank_resource.spec.configuration.env}
+    for name in (
+        "BKPAAS_APP_ID",
+        "BKPAAS_APP_SECRET",
+        "BK_LOGIN_URL",
+        "BK_DOCS_URL_PREFIX",
+        "BKPAAS_DEFAULT_PREALLOCATED_URLS",
+    ):
+        assert name in var_names
+    # 验证描述文件中声明的环境变量不会通过 apply_builtin_env_vars 注入(而是在更上层的组装 manifest 时处理)
+    assert "FOO" not in var_names
+    assert "BAR" not in var_names
+    # 应用描述文件中申明了服务发现的话，不会写入相关的环境变量(云原生应用的服务发现通过 configmap 注入环境变量)
+    assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" not in var_names
 
 
 def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
@@ -506,10 +505,9 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
         EnvVarOverlay(name="BK_LOGIN_URL", value=custom_login_url, envName="stag")
     ]
 
-    with mock_cluster_service():
-        apply_builtin_env_vars(blank_resource, bk_stag_env)
-        vars = {item.name: item.value for item in blank_resource.spec.configuration.env}
-        vars_overlay = {(v.name, v.envName): v.value for v in blank_resource.spec.envOverlay.envVariables}
+    apply_builtin_env_vars(blank_resource, bk_stag_env)
+    vars = {item.name: item.value for item in blank_resource.spec.configuration.env}
+    vars_overlay = {(v.name, v.envName): v.value for v in blank_resource.spec.envOverlay.envVariables}
 
-        assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
-        assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
+    assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
+    assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]

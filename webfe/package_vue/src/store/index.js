@@ -89,6 +89,9 @@ const state = {
   // 是否显示通知中心
   isShowNotice: false,
   curUserInfo: {},
+  platformConfig: {
+    i18n: {},
+  },
 };
 
 const getters = {};
@@ -243,6 +246,9 @@ const mutations = {
   updataUserInfo(state, data) {
     state.curUserInfo = data;
   },
+  updataPlatformConfig(state, data) {
+    state.platformConfig = data;
+  },
 };
 
 // 公共 actions
@@ -261,7 +267,7 @@ const actions = {
      * 获取平台功能开关详情
      */
   getPlatformFeature({ commit }, config = {}) {
-    const url = `${BACKEND_URL}/api/platform/feature_flags/`;
+    const url = `${BACKEND_URL}/api/platform/frontend_features/`;
     return http.get(url, config).then((data) => {
       commit('updatePlatformFeature', data);
     });

@@ -36,7 +36,7 @@
               </bk-button>
             </template>
             <bk-tab-panel
-              v-for="(panel, index) in curTabPanels"
+              v-for="(panel, index) in panels"
               v-bind="panel"
               :key="index"
             ></bk-tab-panel>
@@ -134,7 +134,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.curTabPanels.find(e => e.name === this.active);
+      const curPenel = this.panels.find(e => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -148,15 +148,7 @@ export default {
     },
 
     firstTabActiveName() {
-      return this.curTabPanels[0].name;
-    },
-
-    curTabPanels() {
-      // 可观测性配置接入featureflag
-      if (!this.userFeature.PHALANX) {
-        this.panels = this.panels.filter(v => v.ref !== 'observability');
-      }
-      return this.panels;
+      return this.panels[0].name;
     },
 
     // 是否需要保存操作按钮

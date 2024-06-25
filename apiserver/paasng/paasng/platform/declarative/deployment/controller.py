@@ -112,7 +112,6 @@ class DeploymentDeclarativeController:
         """
         result = PerformResult(spec_version=desc.spec_version)
         logger.debug("Update related deployment description object.")
-
         application = self.deployment.app_environment.application
         module = self.deployment.app_environment.module
         processes: Dict[str, Process] = desc.get_processes()
@@ -126,7 +125,6 @@ class DeploymentDeclarativeController:
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
-
         # apply desc to bkapp_model
         result.set_processes(processes=processes)
         if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:

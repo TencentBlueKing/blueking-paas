@@ -88,6 +88,8 @@ class ImageReleaseMgr(DeployStep):
                     raise DeployShouldAbortError("failed to get processes")
                 processes = deployment.get_processes()
                 # 保存上一次部署的 Processes/Hooks 到 bkapp models
+                # Warning: sync_hooks 会重置 proc_command, 导致 proc_command 再次优先于 command/args 解析
+                # TODO 优化其中的 sync_hooks 部分
                 sync_to_bkapp_model(module=module, processes=processes, hooks=deployment.get_deploy_hooks())
             else:
                 # advanced_options.build_id 为空有 2 种可能情况

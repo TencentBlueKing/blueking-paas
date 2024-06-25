@@ -135,6 +135,8 @@ class BkAppProcess(BaseModel):
         # 处理 specVersion: 3 中驼峰传递 procCommand
         if proc_command := data.get("procCommand"):
             data["proc_command"] = proc_command
+            data["command"] = [shlex.split(proc_command)[0]]
+            data["args"] = shlex.split(proc_command)[1:]
         super().__init__(**data)
 
     def get_proc_command(self) -> str:

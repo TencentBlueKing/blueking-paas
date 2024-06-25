@@ -270,3 +270,21 @@ def field_env_var_key():
             )
         ],
     )
+
+
+class IntegerOrCharField(serializers.CharField):
+    """整型或字符串字段，优先整型"""
+
+    def to_internal_value(self, data):
+        val = super().to_internal_value(data)
+        try:
+            return int(val)
+        except ValueError:
+            return val
+
+    def to_representation(self, value):
+        val = super().to_representation(value)
+        try:
+            return int(val)
+        except ValueError:
+            return val

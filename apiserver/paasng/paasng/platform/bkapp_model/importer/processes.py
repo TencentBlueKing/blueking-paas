@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Any, Dict, List
 
@@ -59,6 +60,8 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
                 "max_replicas": autoscaling.maxReplicas,
                 "policy": autoscaling.policy,
             }
+        if probes := process.probes:
+            defaults["probes"] = probes.to_snake_case() if probes else None
 
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
         ret.incr_by_created_flag(created)

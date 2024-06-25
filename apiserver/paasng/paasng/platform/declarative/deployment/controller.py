@@ -20,7 +20,7 @@ import logging
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 import cattr
-from attrs import define, fields
+from attrs import asdict, define, fields
 from django.db.transaction import atomic
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
@@ -58,6 +58,7 @@ class PerformResult:
                     "command": process.command,
                     "replicas": process.replicas,
                     "plan": process.plan,
+                    "probes": asdict(process.probes) if process.probes else None,
                 }
                 for proc_name, process in processes.items()
             },

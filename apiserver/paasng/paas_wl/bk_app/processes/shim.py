@@ -22,13 +22,14 @@ from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import Process, list_processes
-from paas_wl.bk_app.processes.models import ProcessSpecManager, ProcessTmpl
+from paas_wl.bk_app.processes.models import ProcessProbeManager, ProcessSpecManager
 from paas_wl.bk_app.processes.processes import PlainProcess, condense_processes
 from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs_client import BCSClient
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.models.deployment import ProcessTmpl
 
 
 def _list_proc_specs(env: ModuleEnvironment) -> List[Dict]:
@@ -58,6 +59,10 @@ class ProcessManager:
                           where 'replicas' and 'plan' is optional
         """
         ProcessSpecManager(self.wl_app).sync(processes)
+
+    def sync_processes_probes(self, processes: List[ProcessTmpl]):
+        """Sync probes by plain ProcessProbe structure"""
+        ProcessProbeManager(self.wl_app).sync(processes)
 
     def list_processes_specs(self, target_status: Optional[str] = None) -> List[Dict]:
         """Get specs of current app's all processes

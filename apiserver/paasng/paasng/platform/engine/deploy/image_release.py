@@ -112,6 +112,7 @@ class ImageReleaseMgr(DeployStep):
                             plan=proc_spec.get_plan_name(self.module_environment.environment),
                             autoscaling=bool(proc_spec.get_autoscaling(self.module_environment.environment)),
                             scaling_config=proc_spec.get_scaling_config(self.module_environment.environment),
+                            probes=proc_spec.probes,
                         )
                         for proc_spec in ModuleProcessSpec.objects.filter(module=module)
                     ]

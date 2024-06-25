@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess, HTTPGetAction, Probe, ProbeSet, TCPSocketAction
 from paasng.platform.bkapp_model.importer.processes import import_processes
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
@@ -32,11 +32,34 @@ class Test__import_processes:
         ret = import_processes(
             bk_module,
             [
-                BkAppProcess(name="web", replicas=1, command=["./start.sh"]),
+                BkAppProcess(
+                    name="web",
+                    replicas=1,
+                    command=["./start.sh"],
+                    probes=ProbeSet(
+                        liveness=Probe(
+                            httpGet=HTTPGetAction(port="${PORT}", path="/healthz"),
+                            initialDelaySeconds=30,
+                            timeoutSeconds=5,
+                            periodSeconds=5,
+                            successThreshold=1,
+                            failureThreshold=3,
+                        ),
+                        readiness=Probe(tcpSocket=TCPSocketAction(port=5000)),
+                    ),
+                ),
                 BkAppProcess(name="sleep", replicas=1, command=["bash"], args=["-c", "100"]),
             ],
         )
         assert ret.updated_num == 1
         assert ret.created_num == 1
         assert ret.deleted_num == 1
-        assert ModuleProcessSpec.objects.filter(module=bk_module, name=proc_web.name).count() == 1
+
+        specs = ModuleProcessSpec.objects.filter(module=bk_module, name=proc_web.name)
+        assert specs.count() == 1
+
+        spec = specs.first()
+        assert spec.probes.liveness.http_get.port == "${PORT}"
+        assert spec.probes.liveness.initial_delay_seconds == 30
+        assert spec.probes.liveness.period_seconds == 5
+        assert spec.probes.readiness.tcp_socket.port == 5000

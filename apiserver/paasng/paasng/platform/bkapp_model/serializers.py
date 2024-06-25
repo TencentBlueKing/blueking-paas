@@ -15,7 +15,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List, Optional
+
+from typing import Any, Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -26,6 +27,7 @@ from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import DeployHookType
+from paasng.utils.serializers import IntegerOrCharField
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -66,6 +68,84 @@ class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
     allow_multiple_image = serializers.BooleanField(default=False, help_text="是否允许使用多个不同镜像")
 
 
+class ExecProbeActionSLZ(serializers.Serializer):
+    command = serializers.ListField(help_text="探活命令", child=serializers.CharField(max_length=48), max_length=12)
+
+
+class TCPSocketProbeActionSLZ(serializers.Serializer):
+    port = IntegerOrCharField(help_text="探活端口")
+    host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
+
+
+class HTTPHeaderSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="标头名称")
+    value = serializers.CharField(help_text="标头值")
+
+
+class HTTPGetProbeActionSLZ(serializers.Serializer):
+    port = IntegerOrCharField(help_text="探活端口")
+    path = serializers.CharField(help_text="探活路径", max_length=128)
+    host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
+    http_headers = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ())
+    scheme = serializers.CharField(help_text="http/https", required=False)
+
+
+class ProbeSLZ(serializers.Serializer):
+    """探针配置"""
+
+    exec = ExecProbeActionSLZ(help_text="exec 探活配置", required=False, allow_null=True)
+    http_get = HTTPGetProbeActionSLZ(help_text="http get 探活配置", required=False, allow_null=True)
+    tcp_socket = TCPSocketProbeActionSLZ(help_text="tcp socket 探活配置", required=False, allow_null=True)
+    initial_delay_seconds = serializers.IntegerField(help_text="初次探测延迟时间")
+    timeout_seconds = serializers.IntegerField(help_text="探测超时时间")
+    period_seconds = serializers.IntegerField(help_text="探测周期")
+    success_threshold = serializers.IntegerField(help_text="成功阈值")
+    failure_threshold = serializers.IntegerField(help_text="失败阈值")
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        probe_action_count = 0
+        if attrs.get("exec"):
+            probe_action_count += 1
+        if attrs.get("httpGet"):
+            probe_action_count += 1
+        if attrs.get("tcpSocket"):
+            probe_action_count += 1
+
+        if probe_action_count > 1:
+            raise serializers.ValidationError(_("至多设置一个探活配置"))
+        if probe_action_count == 0:
+            raise serializers.ValidationError(_("至少设置一个探活配置"))
+
+        return attrs
+
+    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        attrs = super().to_internal_value(data)
+
+        if attrs.get("http_get"):
+            http_get_action = attrs.pop("http_get")
+            if http_get_action.get("http_headers"):
+                http_get_action["httpHeaders"] = http_get_action.pop("http_headers")
+            attrs["httpGet"] = http_get_action
+
+        if attrs.get("tcp_socket"):
+            attrs["tcpSocket"] = attrs.pop("tcp_socket")
+
+        attrs["initialDelaySeconds"] = attrs.pop("initial_delay_seconds")
+        attrs["timeoutSeconds"] = attrs.pop("timeout_seconds")
+        attrs["periodSeconds"] = attrs.pop("period_seconds")
+        attrs["successThreshold"] = attrs.pop("success_threshold")
+        attrs["failureThreshold"] = attrs.pop("failure_threshold")
+        return attrs
+
+
+class ProbeSetSLZ(serializers.Serializer):
+    """探针集合"""
+
+    liveness = ProbeSLZ(help_text="存活探针", required=False, allow_null=True)
+    readiness = ProbeSLZ(help_text="就绪探针", required=False, allow_null=True)
+    startup = ProbeSLZ(help_text="启动探针", required=False, allow_null=True)
+
+
 class ModuleProcessSpecSLZ(serializers.Serializer):
     """进程配置"""
 
@@ -83,6 +163,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
         help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False
     )
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
+    probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
 
 
 class ModuleProcessSpecsOutputSLZ(serializers.Serializer):

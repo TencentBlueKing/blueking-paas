@@ -36,13 +36,13 @@ class EventDeserializer(AppEntityDeserializer["Event"]):
         return self.entity_type(
             app=app,
             name=get_items(kube_data_dict, "metadata.name"),
-            type=kube_data_dict.get("type", None),
-            message=kube_data_dict.get("message", None),
-            reason=kube_data_dict.get("reason", None),
+            type=kube_data_dict.get("type"),
+            message=kube_data_dict.get("message"),
+            reason=kube_data_dict.get("reason"),
             # k8s 产生事件时，不写入 count 字段是否代表事件发生一次，待验证
             count=kube_data_dict.get("count", 1),
-            first_timestamp=kube_data_dict.get("firstTimestamp", None),
-            last_timestamp=kube_data_dict.get("lastTimestamp", None),
+            first_timestamp=kube_data_dict.get("firstTimestamp"),
+            last_timestamp=kube_data_dict.get("lastTimestamp"),
             involved_object=InvolvedObject(
                 kind=get_items(kube_data_dict, "involvedObject.kind"),
                 name=get_items(kube_data_dict, "involvedObject.name"),

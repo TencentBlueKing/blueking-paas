@@ -37,7 +37,7 @@
             </bk-table-column>
             <bk-table-column label="">
               <template slot-scope="{ row: childRow }">
-                {{ childRow?.memory_quota / 1024 }} / {{ (childRow?.cpu_quota / 1000).toFixed(2) }} {{ $t('核') }}
+                {{ childRow?.memory_quota / 1024 }} G / {{ (childRow?.cpu_quota / 1000).toFixed(2) }} {{ $t('核') }}
               </template>
             </bk-table-column>
             <bk-table-column label="">
@@ -47,7 +47,9 @@
             </bk-table-column>
             <bk-table-column label="">
               <template slot-scope="{ row: childRow }">
-                {{ childRow.latest_deployed_at }}
+                <span v-bk-tooltips="childRow.latest_deployed_at">
+                  {{ dayjs(childRow.latest_deployed_at).fromNow() }}
+                </span>
               </template>
             </bk-table-column>
             <bk-table-column label="">
@@ -63,7 +65,7 @@
           </bk-table>
         </template>
       </bk-table-column>
-      <bk-table-column :label="$t('闲置模块')">
+      <bk-table-column :label="$t('闲置模块')" min-width="150">
         <template slot-scope="{ row }">
           <div class="app-name-wrapper" v-bk-overflow-tips="{ content: `${row.name}（${row.code}）` }">
             <img class="app-logo" :src="row.logo_url" alt="logo" />
@@ -160,6 +162,7 @@ export default {
       },
       curOperationAppData: {},
       scrollPosition: 0,
+      dayjs,
     };
   },
   computed: {

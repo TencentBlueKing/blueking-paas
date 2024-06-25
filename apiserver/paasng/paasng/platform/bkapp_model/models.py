@@ -88,7 +88,7 @@ class ModuleProcessSpec(TimestampedModel):
         """
         if self.proc_command:
             return self.proc_command
-        # Warning: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成
+        # FIXME: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成
         # 已知 shlex.join 不支持环境变量, 如果普通应用使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
         # 例如会报错: Error: '${PORT:-5000}' is not a valid port number.
         # 如果实际用于命令执行, 可参考 generate_bash_command_with_tokens 函数实现
@@ -219,7 +219,7 @@ class ModuleDeployHook(TimestampedModel):
     def get_proc_command(self) -> str:
         if self.proc_command is not None:
             return self.proc_command
-        # Warning: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
+        # FIXME: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
 
     def get_command(self) -> List[str]:

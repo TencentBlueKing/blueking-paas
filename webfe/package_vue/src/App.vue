@@ -57,7 +57,7 @@ export default {
       return ['myApplications', 'appLegacyMigration'].includes(this.$route.name);
     },
     isBkNotice() {
-      return this.$store.state.userFeature?.BK_NOTICE;
+      return this.$store.state.platformFeature.BK_NOTICE;
     },
     isShowNotice() {
       return this.$store.state.isShowNotice;

@@ -63,5 +63,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/mres/mount_sources/?source_type=${sourceType}&source_name=${sourceName}`;
       return http.delete(url);
     },
+
+    /**
+     * 集群是否支持持久存储
+     * @param {Object} params appCode
+     */
+    getClusterPersistentStorageFeature({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/mres/storage_class/`;
+      return http.get(url);
+    },
   },
 };

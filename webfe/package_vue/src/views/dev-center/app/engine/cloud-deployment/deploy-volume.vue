@@ -8,6 +8,18 @@
       :offset-left="0"
       class="middle"
     >
+      <FunctionalDependency
+        :show-dialog.sync="showFunctionalDependencyDialog"
+        mode="dialog"
+        :title="$t('暂无持久存储功能')"
+        :functional-desc="$t('开发者中心的持久存储功能为多个模块和进程提供了一个共享的数据源，实现了数据的共享与交互，并确保了数据在系统故障或重启后的持久化和完整性。')"
+        :guide-title="$t('如需使用该功能，需要：')"
+        :guide-desc-list="[
+          $t('1. 在应用集群创建 StorageClass 并注册到开发者中心'),
+          $t('2. 给应用开启持久存储特性'),
+        ]"
+        @gotoMore="gotoMore"
+      />
       <section v-show="!isLoading">
         <bk-alert type="info">
           <span slot="title">
@@ -185,21 +197,34 @@
             >
               <bk-radio-group v-model="volumeFormData.source_type">
                 <div
-                  v-for="item in sourceTypeList"
+                  :class="[
+                    'radio-style-wrapper',
+                    { active: volumeFormData.source_type === 'ConfigMap' },
+                    { disabled: isInEditMode }
+                  ]"
+                  @click="handleChangeSourceType('ConfigMap')"
+                >
+                  <bk-radio :value="'ConfigMap'" :disabled="isInEditMode">{{ $t('文件') }}</bk-radio>
+                  <span class="tip">{{ $t('可用于将自定义的配置文件注入到进程内文件系统中') }}</span>
+                </div>
+                <div
                   v-bk-tooltips.bottom="{
-                    content: $t('暂不支持持久存储, 如有需要请联系管理员开启'),
-                    disabled: !item.disabled,
+                    content: $t(`暂不支持持久存储，请联系管理员开启“持久存储挂载卷”应用特性`),
+                    disabled: enablePersistentStorage,
                   }"
                   :class="[
                     'radio-style-wrapper',
-                    { active: volumeFormData.source_type === item.value },
-                    { disabled: item.disabled || isInEditMode }
+                    { active: volumeFormData.source_type === 'PersistentStorage' },
+                    { disabled: isInEditMode || !enablePersistentStorage || !isClusterPersistentStorageSupported }
                   ]"
-                  @click="handleChangeSourceType(item.value, item)"
-                  :key="item.value"
+                  @click="handleChangeSourceType('PersistentStorage')"
                 >
-                  <bk-radio :value="item.value" :disabled="item.disabled || isInEditMode">{{ item.label }}</bk-radio>
-                  <span class="tip">{{ item.tip }}</span>
+                  <bk-radio
+                    :value="'PersistentStorage'"
+                    :disabled="isInEditMode || !enablePersistentStorage || !isClusterPersistentStorageSupported">
+                    {{ $t('持久存储') }}
+                  </bk-radio>
+                  <span class="tip">{{ $t('由平台分配的持久存储，可用于模块和进程间共享数据') }}</span>
                 </div>
               </bk-radio-group>
             </bk-form-item>
@@ -414,13 +439,15 @@
   </div>
 </template>
 
-<script>import { cloneDeep } from 'lodash';
+<script>
+import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import ResourceEditor from './comps/deploy-resource-editor';
 import { ENV_ENUM, PERSISTENT_STORAGE_SIZE_MAP } from '@/common/constants';
 import { isJsonString } from '@/common/utils';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import createPersistentStorageDailog from '@/components/create-persistent-storage-dailog';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
 const defaultSourceType = 'PersistentStorage';
 const containerWidth = 400;
@@ -430,6 +457,7 @@ export default {
   components: {
     ResourceEditor,
     createPersistentStorageDailog,
+    FunctionalDependency,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   data() {
@@ -532,7 +560,6 @@ export default {
       },
       maxTags: 0,
       isTableLoaing: false,
-      isShowPersistentStorage: false,
       isInEditMode: false,
       persistentStorageSizeMap: PERSISTENT_STORAGE_SIZE_MAP,
       deleteMountConfig: {
@@ -540,6 +567,9 @@ export default {
         loading: false,
         data: {},
       },
+      showFunctionalDependencyDialog: false,
+      // 集群是否支持持久存储
+      isClusterPersistentStorageSupported: false,
     };
   },
   computed: {
@@ -584,22 +614,6 @@ export default {
     isPersistentStorage() {
       return this.volumeFormData.source_type === defaultSourceType;
     },
-    sourceTypeList() {
-      return [
-        {
-          label: this.$t('文件'),
-          value: 'ConfigMap',
-          tip: this.$t('可用于将自定义的配置文件注入到进程内文件系统中'),
-          disabled: false,
-        },
-        {
-          label: this.$t('持久存储'),
-          value: defaultSourceType,
-          tip: this.$t('由平台分配的持久存储，可用于模块和进程间共享数据'),
-          disabled: !this.isShowPersistentStorage,
-        },
-      ];
-    },
     persistentStorageTips() {
       return this.$t('请选择{e}环境下的持久存储资源', { e: this.volumeFormData.environment_name === 'stag' ? this.$t('预发布') : this.$t('生产') });
     },
@@ -609,6 +623,9 @@ export default {
     },
     readonly() {
       return this.volumeFormData.sourceConfigArrData?.length <= 0;
+    },
+    enablePersistentStorage() {
+      return this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE;
     },
   },
   watch: {
@@ -646,9 +663,6 @@ export default {
   },
   mounted() {
     this.init();
-    setTimeout(() => {
-      console.log('sourceTypeList', this.sourceTypeList);
-    }, 2000);
   },
   methods: {
     // 重置数据
@@ -661,8 +675,8 @@ export default {
     },
     init() {
       this.isLoading = true;
+      this.getClusterPersistentStorageFeature();
       this.getVolumeList();
-      this.getpersistentStorageFeature();
     },
     // 新增挂载
     handleCreate() {
@@ -1065,8 +1079,18 @@ export default {
     },
 
     // 切换资源类型
-    handleChangeSourceType(value, item) {
-      if (this.isInEditMode || item.disabled) return;
+    handleChangeSourceType(value) {
+      // 编辑态不允许切换
+      if (this.isInEditMode) return;
+      if (value === defaultSourceType) {
+        // 应用特性未开启
+        if (!this.enablePersistentStorage) return;
+        // 集群特性未开启
+        if (!this.isClusterPersistentStorageSupported) {
+          this.showFunctionalDependencyDialog = true;
+          return;
+        }
+      }
       this.volumeFormData.source_type = value;
       if (value === defaultSourceType && !this.persistentStorageList.length) {
         this.getPersistentStorageList();
@@ -1078,12 +1102,20 @@ export default {
       this.persistentStorageList = [];
     },
 
-    async getpersistentStorageFeature() {
+    // 切换生效环境
+    handleEnvironmentChange() {
+      if (this.isPersistentStorage) {
+        this.volumeFormData.source_name = '';
+      };
+    },
+
+    // 获取集群特性
+    async getClusterPersistentStorageFeature() {
       try {
-        const res = await this.$store.dispatch('persistentStorage/getpersistentStorageFeature', {
+        const res = await this.$store.dispatch('persistentStorage/getClusterPersistentStorageFeature', {
           appCode: this.appCode,
         });
-        this.isShowPersistentStorage = res || false;
+        this.isClusterPersistentStorageSupported = res;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1092,11 +1124,9 @@ export default {
       }
     },
 
-    // 切换生效环境
-    handleEnvironmentChange() {
-      if (this.isPersistentStorage) {
-        this.volumeFormData.source_name = '';
-      };
+    gotoMore() {
+      const docUrl = `${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas_persistent_storage`;
+      window.open(docUrl, '_blank');
     },
   },
 };
@@ -1138,6 +1168,9 @@ export default {
 }
 .volume-store-module-table-cls.bk-table table {
   width: 432px !important;
+}
+.fuctional-deps-modal-ctx.is-show {
+  z-index: 99999 !important;
 }
 </style>
 

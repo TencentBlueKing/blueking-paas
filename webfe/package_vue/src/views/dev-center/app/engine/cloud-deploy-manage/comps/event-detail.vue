@@ -23,8 +23,11 @@
         >
           <template slot-scope="{ row }">
             <span
-              v-bk-tooltips="{ html: getTooltipsHtml(row) }"
-            >{{ row.first_timestamp || '--' }}</span>
+              v-bk-tooltips="{
+                content: `<p>${$t('首次发生时间')}：${row.first_timestamp}<\/p><p>${$t('最新发生时间')}：${row.last_timestamp}<\/p>`,
+                allowHTML: true,
+              }
+              ">{{ row.first_timestamp || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -123,9 +126,6 @@ export default {
     },
   },
   methods: {
-    getTooltipsHtml(row) {
-      return `<div><p>${this.$t('首次发生时间')}：${row.first_timestamp}</p><p>${this.$t('最新发生时间')}：${row.last_timestamp}</p></div>`;
-    },
     // 前端分页
     handlePagination(data, current, limit) {
       const { pageData } = paginationFun(data, current, limit);

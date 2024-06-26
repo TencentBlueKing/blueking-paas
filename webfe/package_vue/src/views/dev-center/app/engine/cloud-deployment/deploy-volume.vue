@@ -210,7 +210,7 @@
                 <div
                   v-bk-tooltips.bottom="{
                     content: $t(`暂不支持持久存储，请联系管理员开启“持久存储挂载卷”应用特性`),
-                    disabled: enablePersistentStorage,
+                    disabled: !isClusterPersistentStorageSupported || enablePersistentStorage,
                   }"
                   :class="[
                     'radio-style-wrapper',
@@ -1083,13 +1083,13 @@ export default {
       // 编辑态不允许切换
       if (this.isInEditMode) return;
       if (value === defaultSourceType) {
-        // 应用特性未开启
-        if (!this.enablePersistentStorage) return;
         // 集群特性未开启
         if (!this.isClusterPersistentStorageSupported) {
           this.showFunctionalDependencyDialog = true;
           return;
         }
+        // 应用特性未开启
+        if (!this.enablePersistentStorage) return;
       }
       this.volumeFormData.source_type = value;
       if (value === defaultSourceType && !this.persistentStorageList.length) {

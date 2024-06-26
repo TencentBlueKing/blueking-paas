@@ -110,7 +110,7 @@ class PipelineBuildStatus(BaseModel):
     status: str
     currentTimestamp: str
     stageStatus: List[BuildStageStatus] = Field(default_factory=list)
-    totalTime: int
+    totalTime: Optional[int]
     executeTime: int
 
     class Config:

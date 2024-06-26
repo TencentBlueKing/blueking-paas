@@ -14,6 +14,8 @@
       size="small"
       :outer-border="false"
       :span-method="arraySpanMethod"
+      :row-key="rowKey"
+      :expand-row-keys="expandRowKeys"
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
       row-class-name="idle-table-row-cls"
       ext-cls="idle-app-dashboard-table">
@@ -67,7 +69,11 @@
       </bk-table-column>
       <bk-table-column :label="$t('闲置模块')" width="240">
         <template slot-scope="{ row }">
-          <div class="app-name-wrapper" v-bk-overflow-tips="{ content: `${row.name}（${row.code}）` }">
+          <div
+            class="app-name-wrapper"
+            v-bk-overflow-tips="{ content: `${row.name}（${row.code}）` }"
+            @click="toAppDetail(row)"
+          >
             <img class="app-logo" :src="row.logo_url" alt="logo" />
             {{ row.name }}<span class="code">（{{ row.code }}）</span>
           </div>
@@ -147,6 +153,7 @@ export default {
   data() {
     return {
       idleAppList: [],
+      expandRowKeys: [],
       relativeTime: '',
       isTableLoading: false,
       visibleTags: [],
@@ -190,6 +197,9 @@ export default {
             ...item,
             staffList: [...item.administrators, ...item.developers],
           }));
+        if (this.idleAppList.length) {
+          this.expandRowKeys.push(this.idleAppList[0].code);
+        }
         this.relativeTime = dayjs(res.collected_at).fromNow(true);
       } catch (e) {
         this.$bkMessage({
@@ -199,6 +209,10 @@ export default {
       } finally {
         this.isTableLoading = false;
       }
+    },
+    // 行key
+    rowKey(row) {
+      return row.code;
     },
     // 合并表格行
     arraySpanMethod({ columnIndex }) {
@@ -280,6 +294,13 @@ export default {
         window.scrollTo(0, this.scrollPosition);
       });
     },
+    // 应用详情
+    toAppDetail(row) {
+      this.$router.push({
+        name: row.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
+        params: { id: row.code },
+      });
+    },
   },
 };
 </script>
@@ -289,6 +310,7 @@ export default {
   .title-wrapper {
     display: flex;
     align-items: center;
+    width: 100%;
     margin-bottom: 16px;
     .title {
       font-weight: 700;
@@ -306,6 +328,10 @@ export default {
   }
 
   .app-name-wrapper {
+    &:hover {
+      cursor: pointer;
+      color: #3A84FF;
+    }
     .app-logo {
       width: 16px;
       height: 16px;

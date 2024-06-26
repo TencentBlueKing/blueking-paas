@@ -25,7 +25,7 @@
             :header-cell-style="{background: 'red', borderRight: 'none'}"
             ext-cls="child-module-table-cls">
             <bk-table-column label="" width="30"></bk-table-column>
-            <bk-table-column label="">
+            <bk-table-column label="" width="240">
               <template slot-scope="{ row: childRow }">
                 {{ childRow.module_name }}
               </template>
@@ -65,7 +65,7 @@
           </bk-table>
         </template>
       </bk-table-column>
-      <bk-table-column :label="$t('闲置模块')" min-width="150">
+      <bk-table-column :label="$t('闲置模块')" width="240">
         <template slot-scope="{ row }">
           <div class="app-name-wrapper" v-bk-overflow-tips="{ content: `${row.name}（${row.code}）` }">
             <img class="app-logo" :src="row.logo_url" alt="logo" />

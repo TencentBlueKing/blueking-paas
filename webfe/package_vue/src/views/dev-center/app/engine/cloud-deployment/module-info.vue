@@ -286,6 +286,7 @@ export default {
         prod: false,
       },
       gatewayInfosStagLoading: false,
+      gatewayInfosProdLoading: false,
       isGatewayInfosBeClearing: false,
       pageLoading: true,
       isNetworkLoading: true,

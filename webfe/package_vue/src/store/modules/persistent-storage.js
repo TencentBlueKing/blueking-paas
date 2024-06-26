@@ -37,16 +37,6 @@ export default {
     },
 
     /**
-     * 获取持久存储功能性开关
-     * @param {Object} params appCode、sourceType
-     */
-    getpersistentStorageFeature({}, { appCode }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/mres/persistent_storage_feature/`;
-      return http.get(url);
-    },
-
-
-    /**
      * 新增持久存储
      * @param {Object} params appCode、data
      */

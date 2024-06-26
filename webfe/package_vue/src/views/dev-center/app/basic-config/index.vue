@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div :key="routeIndex">
     <cloud-app-top-bar
       :title="$t('应用配置')"
       :active="active"
@@ -9,7 +9,7 @@
       @right-config-click="toDeployHistory"
     />
     <div class="router-container">
-      <router-view :key="routeIndex" :environment="active"></router-view>
+      <router-view :environment="active"></router-view>
     </div>
   </div>
 </template>
@@ -26,6 +26,7 @@ export default {
     return {
       active: 'market',
       routeIndex: 0,
+      isClusterPersistentStorageSupported: false,
     };
   },
   computed: {
@@ -45,7 +46,7 @@ export default {
         panels = panels.filter(tab => tab.name !== 'appMobileMarket');
       }
       // 普通应用不支持 | feature判断
-      if (!this.isCloudNativeApp || !this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE) {
+      if (!this.isCloudNativeApp || !this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE || !this.isClusterPersistentStorageSupported) {
         panels = panels.filter(tab => tab.name !== 'storage');
       }
       return panels;
@@ -54,10 +55,27 @@ export default {
   watch: {
     $route: {
       handler(v) {
-        this.active = v.meta.module;
+        if (v.meta.module === 'storage') {
+          // 判断当前是否展示持久存储，无需展示默认选择第一项
+          if (!this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE && !this.isClusterPersistentStorageSupported) {
+            this.handleTabChange('market');
+          } else {
+            this.active = v.meta.module;
+          }
+        } else {
+          this.active = v.meta.module;
+        }
       },
       immediate: true,
     },
+    async '$route.params.id'() {
+      await this.getClusterPersistentStorageFeature();
+      this.routeIndex += 1;
+      this.handleTabChange(this.active);
+    },
+  },
+  created() {
+    this.getClusterPersistentStorageFeature();
   },
   methods: {
     handleTabChange(name) {
@@ -78,11 +96,24 @@ export default {
       });
     },
 
+    // 获取集群特性
+    async getClusterPersistentStorageFeature() {
+      try {
+        const res = await this.$store.dispatch('persistentStorage/getClusterPersistentStorageFeature', {
+          appCode: this.appCode,
+        });
+        this.isClusterPersistentStorageSupported = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
     goBack() {
       this.$router.go(-1);
     },
   },
 };
 </script>
-<style lang="scss" scoped>
-</style>

@@ -199,6 +199,7 @@ const (
 	ScalingPolicyDefault ScalingPolicy = "default"
 )
 
+// ProbeSet defines the probes configuration
 type ProbeSet struct {
 	// liveness is the configuration for liveness probes.
 	// +optional

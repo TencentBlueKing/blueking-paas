@@ -616,6 +616,7 @@ export default {
           query: {
             stage_id: res.current_stage && res.current_stage.stage_id,
             release_id: data.id,
+            type: this.curVersionType,
           },
         });
       } catch (e) {

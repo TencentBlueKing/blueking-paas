@@ -78,6 +78,10 @@
                     :key="option.name"
                     :name="option.name"
                     :disabled="isOptionDisabled(option)"
+                    v-bk-tooltips="{
+                      content: $t('当前分支正在测试中，请先终止测试才能新建版本'),
+                      disabled: isOfficialVersion || !isOptionDisabled(option)
+                    }"
                   />
                   <div
                     v-if="curVersionData.version_type === 'tag'"

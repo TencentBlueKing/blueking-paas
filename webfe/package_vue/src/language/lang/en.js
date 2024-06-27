@@ -1509,7 +1509,6 @@ export default {
   查看更多应用: 'View more APP',
   资源使用量: 'Resource usage',
   对象储存: 'Object Storag',
-  了解我们的服务: 'Discover our services',
   我的应用分布: 'My APP distribution',
   '单位（个）': 'Unit (pcs)',
   '访问量 Top 5 (最近 30 天)': 'Top 5 visits (last 30 days)',
@@ -2652,4 +2651,9 @@ export default {
   '点击“开始迁移”后，应用服务将不会受到任何影响': 'After clicking "Start Migration", the application services will not be affected',
   '可搜索应用代码、环境变量中是否有以下内容来确认': 'You can search the application code and environment variables for the following content to confirm',
   '将您的自定义域名解析到表格中的 IP': 'Map your custom domain to the IP in the table',
+  闲置应用: 'Idle Application',
+  闲置模块: 'Idle Module',
+  '更新于 {t}之前': 'Updated before {t}',
+  资源配额: 'Resource Quota',
+  '近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。': 'Modules with no access records in the past 30 days, CPU usage below 1%, and no usage fluctuations in the past 7 days should be taken offline as soon as possible.',
 };

@@ -341,9 +341,8 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         confirm_migration.delay(process.id)
 
-        app = self.get_application()
         # 根据集群特性开启应用的日志采集 FeatureFlag
-        enable_app_log_collector_by_cluster_feature(app)
+        enable_app_log_collector_by_cluster_feature(process.app)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod

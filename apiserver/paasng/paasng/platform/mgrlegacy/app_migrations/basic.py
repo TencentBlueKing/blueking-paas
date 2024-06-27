@@ -30,8 +30,9 @@ from paasng.infras.iam.helpers import add_role_members
 from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.cleaner import ApplicationCleaner
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.handlers import enable_app_log_collector_by_cluster_feature
 from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
@@ -80,6 +81,8 @@ class BaseObjectMigration(BaseMigration):
         # 为什么不在这里绑定 migration_process 和 Application ?
         # app.migrationprocess_set.add(self.context.migration_process)
         app.save(update_fields=["created"])
+        # 根据集群特性开启应用的日志采集 FeatureFlag
+        enable_app_log_collector_by_cluster_feature(app)
 
         self.context.app = app
 
@@ -89,6 +92,8 @@ class BaseObjectMigration(BaseMigration):
             MigrationProcess.objects.filter(app=self.context.app).update(app=None)
             self.context.app.operation_set.all().delete()
             Application.objects.filter(pk=self.context.app.pk).delete()
+            # 初始化应用特性配置
+            ApplicationFeatureFlag.filter(application=self.context.app).delete()
         self.context.app = None  # type: ignore
 
     @staticmethod

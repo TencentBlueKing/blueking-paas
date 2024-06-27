@@ -58,6 +58,7 @@ except ImportError:
 from paas_wl.utils.error_codes import error_codes as wl_error_codes
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
+from paasng.platform.applications.handlers import enable_app_log_collector_by_cluster_feature
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.platform.mgrlegacy.serializers import (
@@ -340,6 +341,9 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         confirm_migration.delay(process.id)
 
+        app = self.get_application()
+        # 根据集群特性开启应用的日志采集 FeatureFlag
+        enable_app_log_collector_by_cluster_feature(app)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod

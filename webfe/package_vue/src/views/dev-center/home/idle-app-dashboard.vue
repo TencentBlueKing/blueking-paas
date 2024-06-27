@@ -189,7 +189,7 @@ export default {
     async getIdleAppList() {
       this.isTableLoading = true;
       try {
-        const res = await this.$store.dispatch('baseInfo/gitIdleAppList');
+        const res = await this.$store.dispatch('baseInfo/getIdleAppList');
         // 该应用无模块，则无需展示
         this.idleAppList = res.applications
           .filter(app => app.module_envs.length)
@@ -232,7 +232,7 @@ export default {
     async confirmLeaveApp() {
       this.leaveAppDialog.isLoading = true;
       try {
-        await this.$store.dispatch('baseInfo/leaveApp', {
+        await this.$store.dispatch('member/quitApplication', {
           appCode: this.curOperationAppData.code,
         });
         // 退出成功
@@ -266,9 +266,9 @@ export default {
     async confirmOfflineApp() {
       this.offlineAppDialog.isLoading = true;
       try {
-        await this.$store.dispatch('baseInfo/offlinesModule', {
+        await this.$store.dispatch('deploy/offlineApp', {
           appCode: this.curOperationAppData.code,
-          moduleName: this.curOperationAppData.module_name,
+          moduleId: this.curOperationAppData.module_name,
           env: this.curOperationAppData.env_name,
         });
         // 下架成功

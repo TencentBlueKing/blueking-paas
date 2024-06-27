@@ -117,25 +117,9 @@ const actions = {
   /**
    * 获取闲置应用看板数据
    */
-  gitIdleAppList() {
+  getIdleAppList() {
     const url = `${BACKEND_URL}/api/bkapps/applications/lists/idle/`;
     return http.get(url, {});
-  },
-
-  /**
-   * 下架某个环境(模块)
-   */
-  offlinesModule({}, { appCode, moduleName, env }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/envs/${env}/offlines/`;
-    return http.post(url, {}, config);
-  },
-
-  /**
-   * 退出应用
-   */
-  leaveApp({}, { appCode }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/leave/`;
-    return http.post(url, {}, config);
   },
 };
 

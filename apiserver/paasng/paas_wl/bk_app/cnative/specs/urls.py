@@ -53,8 +53,8 @@ urlpatterns = [
         name="api.mres.mount_source",
     ),
     url(
-        r"api/bkapps/applications/(?P<code>[^/]+)/mres/persistent_storage_feature/$",
-        views.PersistentStorageFeatureViewSet.as_view({"get": "check"}),
-        name="api.mres.persistent_storage_feature",
+        r"api/bkapps/applications/(?P<code>[^/]+)/mres/storage_class/$",
+        views.StorageClassViewSet.as_view({"get": "check"}),
+        name="api.mres.storage_class",
     ),
 ]

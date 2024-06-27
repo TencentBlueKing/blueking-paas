@@ -492,9 +492,7 @@ export default {
           </div>
           <div class="mt10 mb10" style="color: #979BA5;">${this.$t('推荐操作流程: ')}</div>
           <div>1. ${this.$t('首先在页面上添加好自定义访问地址')} </div>
-          <div>2. ${this.$t('修改本机 Hosts 文件，将域名解析到表格中的 IP')} </div>
-          <div>3. ${this.$t('打开浏览器，测试访问是否正常')} </div>
-          <div>4. ${this.$t('修改域名解析记录，将其永久解析到目标 IP')} </div>
+          <div>2. ${this.$t('将您的自定义域名解析到表格中的 IP')} </div>
           </div>`,
         placements: ['bottom'],
         onHidden: () => {

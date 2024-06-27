@@ -39,6 +39,7 @@ from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
     check_persistent_storage_enabled,
+    check_storage_class_exists,
     init_volume_source_controller,
 )
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -372,11 +373,13 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PersistentStorageFeatureViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class StorageClassViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def check(self, request, code):
-        """检查应用是否支持持久化存储"""
+        """检查应用是否开启相应的 StorageClass"""
         app = self.get_application()
-        enabled = check_persistent_storage_enabled(application=app)
-        return Response(enabled)
+        exists = check_storage_class_exists(
+            application=app, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
+        )
+        return Response(exists)

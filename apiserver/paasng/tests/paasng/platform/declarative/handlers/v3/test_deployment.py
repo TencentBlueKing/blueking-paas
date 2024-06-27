@@ -55,6 +55,13 @@ class TestAppDescriptionHandler:
                       env:
                       - name: FOO
                         value: 1
+                    processes:
+                      - name: web
+                        replicas: 1
+                        procCommand: python manage.py runserver
+                    hooks:
+                      preRelease:
+                        procCommand: python manage.py migrate
                     svcDiscovery:
                       bkSaaS:
                       - bkAppCode: foo-app
@@ -65,6 +72,8 @@ class TestAppDescriptionHandler:
                 does_not_raise(
                     {
                         "env_variables": {"FOO": "1"},
+                        "procfile": {"web": "python manage.py runserver"},
+                        "hooks": {"args": ["python", "manage.py", "migrate"], "command": []},
                         "svc_discovery": {
                             "BKPAAS_SERVICE_ADDRESSES_BKSAAS": base64.b64encode(
                                 json.dumps(
@@ -109,7 +118,16 @@ class TestAppDescriptionHandler:
         with ctx as expected, mock.patch(
             "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
         ) as update_bkmonitor:
-            get_desc_handler(yaml_content).handle_deployment(bk_deployment)
+            handler = get_desc_handler(yaml_content)
+
+            handler.handle_deployment(bk_deployment)
+
+            deploy_desc = handler.get_deploy_desc(bk_deployment.app_environment.module.name)
+            assert deploy_desc.get_procfile() == expected["procfile"]
+
+            assert bk_deployment.hooks[0].command == expected["hooks"]["command"]
+            assert bk_deployment.hooks[0].args == expected["hooks"]["args"]
+
             assert get_preset_env_variables(bk_deployment.app_environment) == expected["env_variables"]
             assert get_svc_disc_as_env_variables(bk_deployment.app_environment) == expected["svc_discovery"]
             assert not update_bkmonitor.called

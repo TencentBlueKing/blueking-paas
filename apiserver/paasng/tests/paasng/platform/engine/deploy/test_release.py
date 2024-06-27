@@ -23,10 +23,10 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paas_wl.bk_app.processes.models import ProcessTmpl
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
 from paasng.platform.engine.deploy.release.legacy import ApplicationReleaseMgr, ReleaseResultHandler
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
+from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from tests.utils.mocks.poll_task import FakeTaskPoller
 

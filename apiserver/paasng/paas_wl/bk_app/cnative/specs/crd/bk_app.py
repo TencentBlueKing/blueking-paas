@@ -22,6 +22,7 @@ to the current version of the project delivered to anyone in the future.
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
+import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
@@ -68,7 +69,7 @@ class HTTPHeader(BaseModel):
 class HTTPGetAction(BaseModel):
     """HTTPGetAction describes an action based on HTTP Get requests."""
 
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
     path: Optional[str] = None
     httpHeaders: List[HTTPHeader] = Field(default_factory=list)
@@ -78,7 +79,7 @@ class HTTPGetAction(BaseModel):
 class TCPSocketAction(BaseModel):
     """TCPSocketAction describes an action based on opening a socket"""
 
-    port: Union[str, int]
+    port: Union[int, str]
     host: Optional[str] = None
 
 
@@ -106,11 +107,46 @@ class Probe(BaseModel):
     successThreshold: Optional[int] = 1
     failureThreshold: Optional[int] = 3
 
+    def to_snake_case(self) -> Dict[str, Any]:
+        """将探针字段转换成下划线格式"""
+        exec_handler, http_get_handler, tcp_socket_handler = None, None, None
+        if self.exec:
+            exec_handler = {"command": self.exec.command}
+        elif self.httpGet:
+            http_get_handler = {
+                "path": self.httpGet.path,
+                "port": self.httpGet.port,
+                "http_headers": [{"name": h.name, "value": h.value} for h in self.httpGet.httpHeaders],
+                "host": self.httpGet.host,
+                "scheme": self.httpGet.scheme,
+            }
+        elif self.tcpSocket:
+            tcp_socket_handler = {"port": self.tcpSocket.port, "host": self.tcpSocket.host}
+
+        return {
+            "exec": exec_handler,
+            "http_get": http_get_handler,
+            "tcp_socket": tcp_socket_handler,
+            "initial_delay_seconds": self.initialDelaySeconds,
+            "timeout_seconds": self.timeoutSeconds,
+            "period_seconds": self.periodSeconds,
+            "success_threshold": self.successThreshold,
+            "failure_threshold": self.failureThreshold,
+        }
+
 
 class ProbeSet(BaseModel):
     liveness: Optional[Probe] = None
     readiness: Optional[Probe] = None
     startup: Optional[Probe] = None
+
+    def to_snake_case(self) -> Dict[str, Any]:
+        """将探针字段转换成下划线格式"""
+        return {
+            "liveness": self.liveness.to_snake_case() if self.liveness else None,
+            "readiness": self.readiness.to_snake_case() if self.readiness else None,
+            "startup": self.startup.to_snake_case() if self.startup else None,
+        }
 
 
 class BkAppProcess(BaseModel):
@@ -123,12 +159,19 @@ class BkAppProcess(BaseModel):
     targetPort: Optional[int] = None
     resQuotaPlan: Optional[ResQuotaPlan] = None
     autoscaling: Optional[AutoscalingSpec] = None
-
-    # TODO: `probes` is NOT supported by operator now.
     probes: Optional[ProbeSet] = None
 
     # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
     proc_command: Optional[str] = Field(None)
+
+    def __init__(self, **data):
+        # 处理 specVersion: 3 中驼峰传递 procCommand
+        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
+        if proc_command := data.get("procCommand"):
+            data["proc_command"] = proc_command
+            data["command"] = None
+            data["args"] = shlex.split(proc_command)
+        super().__init__(**data)
 
     def get_proc_command(self) -> str:
         """get_proc_command: 生成 Procfile 文件中对应的命令行"""
@@ -142,6 +185,13 @@ class Hook(BaseModel):
 
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
+
+    def __init__(self, **data):
+        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
+        if proc_command := data.get("procCommand"):
+            data["command"] = None
+            data["args"] = shlex.split(proc_command)
+        super().__init__(**data)
 
 
 class BkAppHooks(BaseModel):

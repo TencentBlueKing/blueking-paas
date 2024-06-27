@@ -88,6 +88,44 @@ class TestModuleProcessSpecViewSet:
         )
         assert web.get_autoscaling("stag")
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        probes_cfg = {
+            "liveness": {
+                "exec": {"command": ["/bin/bash", "-c", "echo hello"]},
+                "http_get": None,
+                "tcp_socket": None,
+                "initial_delay_seconds": 5,
+                "timeout_seconds": 5,
+                "period_seconds": 5,
+                "success_threshold": 1,
+                "failure_threshold": 3,
+            },
+            "readiness": {
+                "exec": None,
+                "tcp_socket": None,
+                "http_get": {
+                    "port": 8080,
+                    "host": "bk.example.com",
+                    "path": "/healthz",
+                    "http_headers": [{"name": "XXX", "value": "YYY"}],
+                    "scheme": "HTTPS",
+                },
+                "initial_delay_seconds": 15,
+                "timeout_seconds": 60,
+                "period_seconds": 10,
+                "success_threshold": 1,
+                "failure_threshold": 5,
+            },
+            "startup": {
+                "exec": None,
+                "http_get": None,
+                "tcp_socket": {"port": 8080, "host": "bk.example.com"},
+                "initial_delay_seconds": 5,
+                "timeout_seconds": 15,
+                "period_seconds": 2,
+                "success_threshold": 1,
+                "failure_threshold": 5,
+            },
+        }
         request_data = [
             {
                 "name": "web",
@@ -104,6 +142,7 @@ class TestModuleProcessSpecViewSet:
                         "autoscaling": False,
                     }
                 },
+                "probes": probes_cfg,
             },
             {
                 "name": "beat",
@@ -128,6 +167,11 @@ class TestModuleProcessSpecViewSet:
                         },
                     },
                 },
+                "probes": {
+                    "liveness": None,
+                    "readiness": None,
+                    "startup": None,
+                },
             },
         ]
         resp = api_client.post(url, data=request_data)
@@ -144,6 +188,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["args"] == ["http.server"]
         assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
         assert not proc_specs[0]["env_overlay"]["stag"]["autoscaling"]
+        assert proc_specs[0]["probes"] == probes_cfg
 
         assert proc_specs[1]["name"] == "beat"
         assert proc_specs[1]["image"] == "example.com/foo"
@@ -155,6 +200,7 @@ class TestModuleProcessSpecViewSet:
             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
             "policy": "default",
         }
+        assert proc_specs[1]["probes"] == {"liveness": None, "readiness": None, "startup": None}
         assert ModuleProcessSpec.objects.get(module=bk_module, name="beat").get_scaling_config(
             "prod"
         ) == AutoscalingConfig(

@@ -16,11 +16,49 @@
         @page-change="handlePageChange"
         @page-limit-change="handlePageLimitChange">
         <bk-table-column
-          v-for="column in tableColumns"
-          :label="column.label"
-          :prop="column.prop"
+          :label="$t('首次发生时间')"
+          prop="first_timestamp"
+          :width="150"
+          :render-header="$renderHeader"
+        >
+          <template slot-scope="{ row }">
+            <span
+              v-bk-tooltips="{
+                content: `<p>${$t('首次发生时间')}：${row.first_timestamp}<\/p><p>${$t('最新发生时间')}：${row.last_timestamp}<\/p>`,
+                allowHTML: true,
+              }
+              ">{{ row.first_timestamp || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('事件类型')"
+          prop="type"
+          :width="100"
+          :render-header="$renderHeader"
+          :filters="sourceFilters"
+          :filter-method="sourceFilterMethod"
+          :filter-multiple="false"
+        >
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('事件原因')"
+          prop="reason"
+          :width="100"
           show-overflow-tooltip
-          :key="column.prop"
+          :render-header="$renderHeader"
+        >
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('事件次数')"
+          prop="count"
+          :width="100"
+          :render-header="$renderHeader"
+        >
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('事件内容')"
+          prop="message"
+          show-overflow-tooltip
           :render-header="$renderHeader"
         >
         </bk-table-column>
@@ -71,32 +109,7 @@ export default {
       allEvents: [],
       instanceEvents: [],
       isTableLoading: false,
-      tableColumns: [
-        {
-          label: this.$t('首次发生时间'),
-          prop: 'first_timestamp',
-        },
-        {
-          label: this.$t('最新发生时间'),
-          prop: 'last_timestamp',
-        },
-        {
-          label: this.$t('事件类型'),
-          prop: 'type',
-        },
-        {
-          label: this.$t('事件原因'),
-          prop: 'reason',
-        },
-        {
-          label: this.$t('事件次数'),
-          prop: 'count',
-        },
-        {
-          label: this.$t('事件内容'),
-          prop: 'message',
-        },
-      ],
+      sourceFilters: [],
     };
   },
   computed: {
@@ -137,9 +150,10 @@ export default {
           name: this.config.instanceName,
         });
         instanceEventList.forEach((item) => {
-          item.first_timestamp = dayjs(item.first_timestamp).format('YYYY-MM-DD HH:mm:ss');
-          item.last_timestamp = dayjs(item.last_timestamp).format('YYYY-MM-DD HH:mm:ss');
+          item.first_timestamp = item.first_timestamp === null ? item.first_timestamp : dayjs(item.first_timestamp).format('YYYY-MM-DD HH:mm:ss');
+          item.last_timestamp = item.last_timestamp === null ? item.last_timestamp : dayjs(item.last_timestamp).format('YYYY-MM-DD HH:mm:ss');
         });
+        this.sourceFilters = this.getSourceFilters(instanceEventList);
         this.allEvents = instanceEventList;
         this.pagination.count = this.allEvents.length;
         this.handlePagination(this.allEvents, this.pagination.current, this.pagination.limit);
@@ -152,6 +166,10 @@ export default {
         this.isTableLoading = false;
       }
     },
+    getSourceFilters(events) {
+      const types = [...new Set(events.map(event => event.type))];
+      return types.map(type => ({ text: type, value: type }));
+    },
     handleHidden() {
       this.pagination = {
         current: 1,
@@ -161,6 +179,10 @@ export default {
       this.allEvents = [];
       this.instanceEvents = [];
       this.$emit('change', false);
+    },
+    sourceFilterMethod(value, row, column) {
+      const { property } = column;
+      return row[property] === value;
     },
   },
 };

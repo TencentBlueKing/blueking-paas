@@ -89,7 +89,9 @@ const state = {
   // 是否显示通知中心
   isShowNotice: false,
   curUserInfo: {},
-  platformConfig: {},
+  platformConfig: {
+    i18n: {},
+  },
 };
 
 const getters = {};

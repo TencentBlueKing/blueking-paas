@@ -1207,6 +1207,7 @@ export default {
   background: #FFFFFF;
   border: 1px solid #C4C6CC;
   border-radius: 2px;
+  cursor: pointer;
 
   label {
     flex-shrink: 0;

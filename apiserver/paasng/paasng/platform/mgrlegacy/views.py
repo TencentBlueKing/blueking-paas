@@ -336,6 +336,9 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """确认迁移"""
         process = get_object_or_404(CNativeMigrationProcess, id=process_id)
 
+        # 校验用户是否有操作当前应用的权限
+        check_application_perm(self.request.user, process.app, AppAction.BASIC_DEVELOP)
+
         if process.status != CNativeMigrationStatus.MIGRATION_SUCCEEDED.value:
             raise error_codes.APP_MIGRATION_CONFIRMED_FAILED.f("该应用记录未表明应用已成功迁移, 无法确认")
 

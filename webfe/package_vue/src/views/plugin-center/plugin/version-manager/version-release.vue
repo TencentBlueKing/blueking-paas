@@ -18,18 +18,26 @@
           <paas-plugin-title
             :name="isOfficialVersion ? $t('发布') : $t('测试')"
             :no-shadow="true"
-            :version="curVersion"
+            :version-data="curRelease"
           />
           <!-- 结束发布流程禁用终止发布 -->
-          <bk-button
-            v-if="pluginFeatureFlags.CANCEL_RELEASE"
-            class="discontinued"
-            :disabled="isPostedSuccessfully"
-            @click="showInfoCancelRelease"
+          <span
+            v-bk-tooltips="{
+              content: $t('当前版本{s}，无需终止操作', { s: releaseDisablePrompt }),
+              disabled: !disableTerminationRelease,
+              placements: ['bottom']
+            }"
           >
-            <i class="paasng-icon paasng-stop-2" />
-            {{ isOfficialVersion ? $t('终止发布') : $t('终止测试') }}
-          </bk-button>
+            <bk-button
+              v-if="pluginFeatureFlags.CANCEL_RELEASE"
+              class="discontinued"
+              :disabled="disableTerminationRelease"
+              @click="showInfoCancelRelease"
+            >
+              <i class="paasng-icon paasng-minus-circle" />
+              {{ isOfficialVersion ? $t('终止发布') : $t('终止测试') }}
+            </bk-button>
+          </span>
         </div>
       </div>
       <section class="content-container">
@@ -84,14 +92,15 @@
             </template>
           </bk-button>
           <div slot="content" style="white-space: normal;">
-            {{ nextTips.content }}
+            {{ $t(nextTips.content) }}
           </div>
         </bk-popover>
       </div>
     </paas-content-loader>
   </div>
 </template>
-<script>import paasPluginTitle from '@/components/pass-plugin-title';
+<script>
+import paasPluginTitle from '@/components/pass-plugin-title';
 import { bus } from '@/common/bus';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import deployStage from './release-stages/deploy';
@@ -103,7 +112,7 @@ import itsmStage from './release-stages/itsm';
 import approvalStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
 import testStage from './release-stages/test';
-import { PLUGIN_VERSION_MAP } from '@/common/constants';
+import { PLUGIN_VERSION_MAP, PLUGIN_VERSION_STATUS } from '@/common/constants';
 import versionSteps from './version-steps/index.vue';
 
 export default {
@@ -151,21 +160,23 @@ export default {
     };
   },
   computed: {
+    curRelease() {
+      return this.$store.state.plugin.curRelease;
+    },
     releaseId() {
       return this.$route.query.release_id;
     },
     stageId() {
-      return this.$store.state.plugin.curRelease?.current_stage?.stage_id;
+      return this.curRelease?.current_stage?.stage_id;
     },
     curVersion() {
       return this.$route.query.version || this.titleVersion;
     },
     titleVersion() {
-      const releaseData = this.$store.state.plugin.curRelease;
-      return `${releaseData.version} (${releaseData.source_version_name})`;
+      return `${this.curRelease.version} (${this.curRelease.source_version_name})`;
     },
     status() {
-      return this.$store.state.plugin.curRelease.status;
+      return this.curRelease.status;
     },
     releaseTopHeight() {
       const topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
@@ -235,6 +246,15 @@ export default {
     isOfficialVersion() {
       return this.versionType === 'prod';
     },
+    disableTerminationRelease() {
+      return !['initial', 'pending'].includes(this.pluginDetailedData.status);
+    },
+    releaseDisablePrompt() {
+      if (this.pluginDetailedData.status === 'interrupted') {
+        return this.$t(PLUGIN_VERSION_STATUS[this.pluginDetailedData.status]);
+      }
+      return this.$t(`已${PLUGIN_VERSION_STATUS[this.pluginDetailedData.status]}`);
+    },
   },
   watch: {
     stageData: {
@@ -260,7 +280,10 @@ export default {
       }
     },
     messageStatus(status) {
-      this.updateStepStatus(status);
+      // 手动切换预览步骤，不通过postMessage的状态获取详情
+      if (this.isShowButtonGroup) {
+        this.updateStepStatus(status);
+      }
     },
   },
   async created() {
@@ -436,8 +459,8 @@ export default {
       if (!this.isAllowNext) {
         return;
       }
-      this.isLoading = true;
       await this.$refs.curStageComponment.nextStage(async () => {
+        this.isLoading = true;
         try {
           const params = {
             pdId: this.pdId,
@@ -696,10 +719,9 @@ export default {
     color: #C4C6CC;
 }
 .discontinued {
-    color: #979BA5;
     font-size: 14px;
     i {
-        font-size: 16px;
+      margin-right: 3px;
     }
 }
 .success-check-wrapper,

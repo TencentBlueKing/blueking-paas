@@ -200,7 +200,7 @@
               text
               @click="handleRelease(row, 'reset')"
             >
-              {{ $t('重新发布') }}
+              {{ isOfficialVersion ? $t('重新发布') : $t('重新测试') }}
             </bk-button>
             <bk-button
               v-if="row.report_url"
@@ -616,6 +616,7 @@ export default {
           query: {
             stage_id: res.current_stage && res.current_stage.stage_id,
             release_id: data.id,
+            type: this.curVersionType,
           },
         });
       } catch (e) {
@@ -785,6 +786,7 @@ export default {
 }
 
 .detail-wrapper {
+  border: 1px solid #dfe0e5;
   &.en {
     .item-info .describe {
       width: 150px;
@@ -795,8 +797,8 @@ export default {
     min-height: 40px;
     border-top: 1px solid #dfe0e5;
 
-    &:last-child {
-      border-bottom: 1px solid #dfe0e5;
+    &:first-child {
+      border-top: none;
     }
 
     .describe,

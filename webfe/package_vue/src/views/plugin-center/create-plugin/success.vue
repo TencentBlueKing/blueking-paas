@@ -53,7 +53,7 @@
                 <p>{{ gitClone }}</p>
               </code>
             </div>
-            <div class="title mt10">
+            <div class="title mt24">
               {{ $t('提交代码到代码库') }}
               <div
                 class="icon-wrapper"
@@ -75,14 +75,14 @@
                 <p>{{ pushTips }}</p>
               </code>
             </div>
-            <div class="title mt10">
+            <div class="title mt24">
               {{ $t('创建测试版本进行测试，创建正式版本进行发布') }}
             </div>
           </div>
           <div class="plugin-guide">
             <a
               target="_blank"
-              :href="extraInfo.docs"
+              :href="GLOBAL.DOC.PLUGIN_TOOL_FRAMEWORK"
             >
               {{ $t('查看更多开发和发布指引') }}
               <i class="paasng-icon paasng-double-arrow-right" />
@@ -179,6 +179,10 @@ export default {
   min-height: 100vh;
   background: #f5f7fa;
 
+  .mt24 {
+    margin-top: 24px;
+  }
+
   .biz-create-success {
     background: #f5f7fa;
     padding-bottom: 20px;
@@ -259,7 +263,7 @@ export default {
     position: relative;
     font-size: 14px;
     color: #63656e;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     .icon-wrapper {
       position: absolute;
       top: 1px;
@@ -293,7 +297,7 @@ export default {
     box-sizing: content-box;
     content: '';
     width: 1px;
-    height: calc(100% + 11px);
+    height: calc(100% + 25px);
     top: -13px;
     left: -11px;
     background: #d8d8d8;

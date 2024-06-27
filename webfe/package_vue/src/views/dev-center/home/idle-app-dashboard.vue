@@ -75,7 +75,7 @@
             @click="toAppDetail(row)"
           >
             <img class="app-logo" :src="row.logo_url" alt="logo" />
-            {{ row.name }}<span class="code">（{{ row.code }}）</span>
+            <span class="info">{{ row.name }}<span class="code">（{{ row.code }}）</span></span>
           </div>
         </template>
       </bk-table-column>
@@ -296,6 +296,13 @@ export default {
     },
     // 应用详情
     toAppDetail(row) {
+      if (row.is_plugin_app) {
+        this.$router.push({
+          name: 'pluginSummary',
+          params: { pluginTypeId: 'bk-saas', id: row.code },
+        });
+        return;
+      }
       this.$router.push({
         name: row.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
         params: { id: row.code },
@@ -328,10 +335,7 @@ export default {
   }
 
   .app-name-wrapper {
-    &:hover {
-      cursor: pointer;
-      color: #3A84FF;
-    }
+    cursor: pointer;
     .app-logo {
       width: 16px;
       height: 16px;
@@ -340,6 +344,9 @@ export default {
     }
     .code {
       color: #979BA5;
+    }
+    .info:hover {
+      color: #3A84FF;
     }
   }
 

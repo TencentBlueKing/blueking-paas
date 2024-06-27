@@ -21,6 +21,7 @@
  */
 
 import Vue from 'vue';
+import http from '@/api';
 
 // store
 const state = {
@@ -39,13 +40,13 @@ const mutations = {};
 // actions
 const actions = {
   /**
-     * 获取各环境网关获取情况
-     *
-     * @param {Function} commit store commit mutation handler
-     * @param {Object} state store state
-     * @param {String} appCode 应用code
-     * @return {String} env 环境
-     */
+   * 获取各环境网关获取情况
+   *
+   * @param {Function} commit store commit mutation handler
+   * @param {Object} state store state
+   * @param {String} appCode 应用code
+   * @return {String} env 环境
+   */
   getGatewayInfos({}, { appCode, env, moduleName }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
 
@@ -53,13 +54,13 @@ const actions = {
   },
 
   /**
-     * 获取相应环境出口网关信息
-     *
-     * @param {Function} commit store commit mutation handler
-     * @param {Object} state store state
-     * @param {String} appCode 应用code
-     * @return {String} env 环境
-     */
+   * 获取相应环境出口网关信息
+   *
+   * @param {Function} commit store commit mutation handler
+   * @param {Object} state store state
+   * @param {String} appCode 应用code
+   * @return {String} env 环境
+   */
   enableGatewayInfos({}, { appCode, env, moduleName }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/`;
 
@@ -67,13 +68,13 @@ const actions = {
   },
 
   /**
-     * 清除当前已获取的的出口网关信息
-     *
-     * @param {Function} commit store commit mutation handler
-     * @param {Object} state store state
-     * @param {String} appCode 应用code
-     * @return {String} env 环境
-     */
+   * 清除当前已获取的的出口网关信息
+   *
+   * @param {Function} commit store commit mutation handler
+   * @param {Object} state store state
+   * @param {String} appCode 应用code
+   * @return {String} env 环境
+   */
   clearGatewayInfos({}, { appCode, env, moduleName }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
 
@@ -81,13 +82,13 @@ const actions = {
   },
 
   /**
-     * 获取lessCode应用列表信息地址
-     *
-     * @param {Function} commit store commit mutation handler
-     * @param {Object} state store state
-     * @param {String} appCode 应用code
-     * @return {String} env 环境
-     */
+   * 获取lessCode应用列表信息地址
+   *
+   * @param {Function} commit store commit mutation handler
+   * @param {Object} state store state
+   * @param {String} appCode 应用code
+   * @return {String} env 环境
+   */
   gitLessCodeAddress({}, { appCode, moduleName }) {
     const url = `${BACKEND_URL}/api/bkapps/lesscode/${appCode}/modules/${moduleName}/`;
 
@@ -111,6 +112,14 @@ const actions = {
   deleteApp({}, { appCode }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/`;
     return Vue.http.delete(url, {}, config);
+  },
+
+  /**
+   * 获取闲置应用看板数据
+   */
+  getIdleAppList() {
+    const url = `${BACKEND_URL}/api/bkapps/applications/lists/idle/`;
+    return http.get(url, {});
   },
 };
 

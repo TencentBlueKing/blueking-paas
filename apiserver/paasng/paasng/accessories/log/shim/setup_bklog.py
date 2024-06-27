@@ -255,14 +255,14 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         )
     elif collector_config.etl_type == ETLType.JSON:
 
-        def make_string_field(index: int, field_name: str) -> ETLField:
+        def make_string_field(index: int, field_name: str, is_analyzed: bool) -> ETLField:
             return ETLField(
                 field_index=index,
                 field_name=field_name,
                 field_type=FieldType.STRING,
                 is_time=False,
                 is_dimension=False,
-                is_analyzed=True,
+                is_analyzed=is_analyzed,
                 option={},
             )
 
@@ -282,13 +282,16 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
 
         fields = [
             *([time_filed] if time_filed is not None else []),
-            make_string_field(2, "message"),
-            make_string_field(3, "levelname"),
-            make_string_field(4, "pathname"),
-            make_string_field(5, "funcName"),
-            make_string_field(6, "otelSpanID"),
-            make_string_field(7, "otelServiceName"),
-            make_string_field(8, "otelTraceID"),
+            # 只对 message 字段做分词处理，其他字段不分词
+            # 对字段分词后无法使用 term 查询做精确查询
+            # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-term-query.html
+            make_string_field(2, "message", is_analyzed=True),
+            make_string_field(3, "levelname", is_analyzed=False),
+            make_string_field(4, "pathname", is_analyzed=False),
+            make_string_field(5, "funcName", is_analyzed=False),
+            make_string_field(6, "otelSpanID", is_analyzed=False),
+            make_string_field(7, "otelServiceName", is_analyzed=False),
+            make_string_field(8, "otelTraceID", is_analyzed=False),
         ]
 
         etl_config = ETLConfig(

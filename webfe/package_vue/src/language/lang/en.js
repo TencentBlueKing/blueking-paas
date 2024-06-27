@@ -1509,7 +1509,6 @@ export default {
   查看更多应用: 'View more APP',
   资源使用量: 'Resource usage',
   对象储存: 'Object Storag',
-  了解我们的服务: 'Discover our services',
   我的应用分布: 'My APP distribution',
   '单位（个）': 'Unit (pcs)',
   '访问量 Top 5 (最近 30 天)': 'Top 5 visits (last 30 days)',
@@ -2658,4 +2657,9 @@ export default {
   '1. 在应用集群创建 StorageClass 并注册到开发者中心': '1. Create a StorageClass in the application cluster and register it in the developer center',
   '2. 给应用开启持久存储特性': '2. Enable the persistent storage feature for the application',
   '暂不支持持久存储，请联系管理员开启“持久存储挂载卷”应用特性': 'Persistent storage is not supported; please contact the administrator to enable the "Persistent Storage Mount Volume" application feature',
+  闲置应用: 'Idle Application',
+  闲置模块: 'Idle Module',
+  '更新于 {t}之前': 'Updated before {t}',
+  资源配额: 'Resource Quota',
+  '近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。': 'Modules with no access records in the past 30 days, CPU usage below 1%, and no usage fluctuations in the past 7 days should be taken offline as soon as possible.',
 };

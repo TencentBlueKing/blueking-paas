@@ -22,6 +22,7 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
+from paasng.utils.dictx import get_items
 
 from .entities import InvolvedObject, Source
 
@@ -31,26 +32,26 @@ if TYPE_CHECKING:
 
 class EventDeserializer(AppEntityDeserializer["Event"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Event":
-        involved_object = kube_data.get("involvedObject", {})
+        kube_data_dict = kube_data.to_dict()
         return self.entity_type(
             app=app,
-            name=kube_data.get("metadata", {}).get("name", None),
-            type=kube_data.get("type", None),
-            message=kube_data.get("message", None),
-            reason=kube_data.get("reason", None),
+            name=get_items(kube_data_dict, "metadata.name"),
+            type=kube_data_dict.get("type"),
+            message=kube_data_dict.get("message"),
+            reason=kube_data_dict.get("reason"),
             # k8s 产生事件时，不写入 count 字段是否代表事件发生一次，待验证
-            count=kube_data.get("count", 1),
-            first_timestamp=kube_data.get("firstTimestamp", None),
-            last_timestamp=kube_data.get("lastTimestamp", None),
+            count=kube_data_dict.get("count", 1),
+            first_timestamp=kube_data_dict.get("firstTimestamp"),
+            last_timestamp=kube_data_dict.get("lastTimestamp"),
             involved_object=InvolvedObject(
-                kind=involved_object.get("kind", None),
-                name=involved_object.get("name", None),
-                namespace=involved_object.get("namespace", None),
-                api_version=involved_object.get("apiVersion", None),
+                kind=get_items(kube_data_dict, "involvedObject.kind"),
+                name=get_items(kube_data_dict, "involvedObject.name"),
+                namespace=get_items(kube_data_dict, "involvedObject.namespace"),
+                api_version=get_items(kube_data_dict, "involvedObject.apiVersion"),
             ),
             source=Source(
-                component=kube_data.get("source", {}).get("component", None),
-                host=kube_data.get("source", {}).get("host", None),
+                component=get_items(kube_data_dict, "source.component"),
+                host=get_items(kube_data_dict, "source.host"),
             ),
         )
 

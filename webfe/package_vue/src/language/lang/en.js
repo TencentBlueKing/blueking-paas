@@ -2704,4 +2704,5 @@ export default {
   '当前版本{s}，无需终止操作': 'Current version {s}, no need to terminate the operation',
   已失败: 'Failed',
   已成功: 'Successful',
+  '当前分支正在测试中，请先终止测试才能新建版本': 'The current branch is under testing, please terminate the test before creating a new version',
 };

@@ -24,8 +24,9 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 
+from paasng.infras.iam.helpers import fetch_role_members
 from paasng.misc.operations.models import Operation
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import Deployment
@@ -101,8 +102,8 @@ def _update_or_create_operation_report(app: Application):
         "latest_operation": latest_operation.get_operate_display() if latest_operation else None,
         "deploy_summary": asdict(deploy_summary),
         # 应用开发者 / 管理员
-        "administrators": app.get_administrators(),
-        "developers": app.get_developers(),
+        "administrators": fetch_role_members(app.code, ApplicationRole.ADMINISTRATOR),
+        "developers": fetch_role_members(app.code, ApplicationRole.DEVELOPER),
         "collected_at": timezone.now(),
     }
     report, _ = AppOperationReport.objects.update_or_create(app=app, defaults=defaults)

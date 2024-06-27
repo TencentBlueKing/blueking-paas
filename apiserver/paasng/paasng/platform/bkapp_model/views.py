@@ -154,6 +154,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     }
                     for environment_name in AppEnvName
                 },
+                "probes": proc_spec.probes or {},
             }
             for proc_spec in proc_specs
         ]
@@ -178,6 +179,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 command=proc_spec["command"],
                 args=proc_spec["args"],
                 targetPort=proc_spec.get("port", None),
+                probes=proc_spec.get("probes", None),
             )
             for proc_spec in proc_specs
         ]

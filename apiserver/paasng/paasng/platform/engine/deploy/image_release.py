@@ -88,6 +88,7 @@ class ImageReleaseMgr(DeployStep):
                     raise DeployShouldAbortError("failed to get processes")
                 processes = deployment.get_processes()
                 # 保存上一次部署的 Processes/Hooks 到 bkapp models
+                # FIXME: sync_hooks 会重置 proc_command, 导致 proc_command 再次优先于 command/args 解析
                 sync_to_bkapp_model(module=module, processes=processes, hooks=deployment.get_deploy_hooks())
             else:
                 # advanced_options.build_id 为空有 2 种可能情况
@@ -112,6 +113,7 @@ class ImageReleaseMgr(DeployStep):
                             plan=proc_spec.get_plan_name(self.module_environment.environment),
                             autoscaling=bool(proc_spec.get_autoscaling(self.module_environment.environment)),
                             scaling_config=proc_spec.get_scaling_config(self.module_environment.environment),
+                            probes=proc_spec.probes,
                         )
                         for proc_spec in ModuleProcessSpec.objects.filter(module=module)
                     ]

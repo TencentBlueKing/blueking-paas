@@ -81,9 +81,6 @@ class BaseObjectMigration(BaseMigration):
         # 为什么不在这里绑定 migration_process 和 Application ?
         # app.migrationprocess_set.add(self.context.migration_process)
         app.save(update_fields=["created"])
-        # 根据集群特性开启应用的日志采集 FeatureFlag
-        enable_app_log_collector_by_cluster_feature(app)
-
         self.context.app = app
 
     def rollback(self):
@@ -93,7 +90,7 @@ class BaseObjectMigration(BaseMigration):
             self.context.app.operation_set.all().delete()
             Application.objects.filter(pk=self.context.app.pk).delete()
             # 初始化应用特性配置
-            ApplicationFeatureFlag.filter(application=self.context.app).delete()
+            ApplicationFeatureFlag.objects.filter(application=self.context.app).delete()
         self.context.app = None  # type: ignore
 
     @staticmethod
@@ -159,6 +156,8 @@ class MainInfoMigration(BaseMigration):
         # PaaS2.0 应用迁移为云原生应用，运行时默认不做特殊处理
         # 已验证 Django1.8 开发框架代码能在云原生应用运行时下正常部署
         initializer.bind_default_runtime()
+        # 根据集群特性开启应用的日志采集 FeatureFlag
+        enable_app_log_collector_by_cluster_feature(self.context.app)
 
     def migrate(self):
         # 第三方应用（非引擎应用）仅创建默认模块，不创建 engine 相关信息

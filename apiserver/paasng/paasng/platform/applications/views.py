@@ -151,10 +151,9 @@ class ApplicationViewSet(viewsets.ViewSet):
             search_term=params.get("search_term"),
             source_origin=params.get("source_origin"),
             type_=params.get("type"),
-            order_by=[params.get("order_by")],
+            # 已下架的应用默认展示在最末尾
+            order_by=["-is_active", params.get("order_by")],
         )
-        # 默认按应用状态排序，已下架的的应用排在最后
-        applications = applications.order_by("-is_active")
 
         # 查询我创建的应用时，也需要返回总的应用数量给前端
         all_app_count = applications.count()

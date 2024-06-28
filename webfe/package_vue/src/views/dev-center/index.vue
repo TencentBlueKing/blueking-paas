@@ -602,6 +602,8 @@ export default {
         offset: 0,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: false,
+        // 是否包含已下架应用，默认包含
+        include_inactive: true,
         // limit
         limit: 0,
         order_by: 'code',
@@ -702,6 +704,9 @@ export default {
   },
   created() {
     this.getAppCategory(false);
+    if (this.$route.query.include_inactive) {
+      this.appFilter.includeInactive = true;
+    }
     this.fetchAppList();
   },
   mounted() {

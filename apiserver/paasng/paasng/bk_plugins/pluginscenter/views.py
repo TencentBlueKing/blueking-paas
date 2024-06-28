@@ -581,7 +581,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             data=request.data,
             context={
                 "source_hash": source_hash,
-                "previous_version": getattr(plugin.all_versions.get_latest_succeeded(), "version", None),
+                "previous_version": getattr(plugin.all_versions.get_latest_succeeded(type=type), "version", None),
             },
         )
         slz.is_valid(raise_exception=True)
@@ -704,7 +704,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             )
 
         semver_choices = None
-        current_release = plugin.all_versions.get_latest_succeeded()
+        current_release = plugin.all_versions.get_latest_succeeded(type=type)
         if release_definition.versionNo == constants.PluginReleaseVersionRule.AUTOMATIC:
             current_version_no = semver.VersionInfo.parse(getattr(current_release, "version", "0.0.0"))
             semver_choices = {

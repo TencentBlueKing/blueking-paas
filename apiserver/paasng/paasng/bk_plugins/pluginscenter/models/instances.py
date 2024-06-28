@@ -157,9 +157,13 @@ class PluginMarketInfo(AuditedModel):
 
 
 class PluginReleaseVersionManager(models.Manager):
-    def get_latest_succeeded(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
-        """获取最后一个成功发布的正式版本，用于:
-        1.发布正式版本时自动生成版本号
+    def get_latest_succeeded(
+        self, plugin: Optional["PluginInstance"] = None, type: Optional[str] = constants.PluginReleaseType.PROD
+    ) -> Optional["PluginRelease"]:
+        """获取最后一个成功发布的版本，默认为正式版本用于:
+        1. 新建测试/版本页面：
+        - 代码差异对比
+        - 自动生成版本号
         """
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
@@ -169,9 +173,9 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(
-                plugin=plugin, status=constants.PluginReleaseStatus.SUCCESSFUL, type=constants.PluginReleaseType.PROD
-            ).latest("created")
+            return self.filter(plugin=plugin, status=constants.PluginReleaseStatus.SUCCESSFUL, type=type).latest(
+                "created"
+            )
         except self.model.DoesNotExist:
             return None
 

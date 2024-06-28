@@ -219,6 +219,13 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
     creator = serializers.CharField(help_text="部署人")
     created = serializers.DateTimeField(help_text="部署时间")
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data["creator"]:
+            user = get_user_by_user_id(data["creator"])
+            data["creator"] = user.username
+        return data
+
 
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()

@@ -155,12 +155,19 @@ class TestQueryProcessCNativeMigrationViewSet:
 
 
 class TestConfirmCNativeMigrationViewSet:
-    def test_confirm(self, api_client, bk_app, bk_user):
-        process = CNativeMigrationProcess.objects.create(
-            app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
-        )
-        response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
-        assert response.status_code == 204
+    @pytest.mark.parametrize(
+        ("has_app_permission", "status_code"),
+        [(False, 403), (True, 204)],
+    )
+    def test_confirm(self, api_client, bk_app, bk_user, has_app_permission, status_code):
+        with mock.patch(
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
+        ):
+            process = CNativeMigrationProcess.objects.create(
+                app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+            )
+            response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
+            assert response.status_code == status_code
 
     def test_confirm_failed(self, api_client, bk_app, bk_user):
         process = CNativeMigrationProcess.objects.create(

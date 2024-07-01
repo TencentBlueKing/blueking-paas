@@ -34,6 +34,7 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
@@ -376,6 +377,15 @@ class PluginReleaseStrategy(AuditedModel):
     # ]
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+
+    def get_itsm_service_name(self):
+        """根据发布策略的设置获取对应的 ITSM 审批流程"""
+        if self.strategy == constants.PluginReleaseStrategy.FULL:
+            return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
+
+        if self.organization:
+            return ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL
+        return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
 
 
 class ApprovalService(UuidAuditedModel):

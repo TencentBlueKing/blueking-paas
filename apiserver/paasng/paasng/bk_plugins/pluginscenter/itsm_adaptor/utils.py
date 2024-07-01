@@ -96,10 +96,10 @@ def submit_canary_release_ticket(
     pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, operator: str
 ) -> "ItsmDetail":
     """提交灰度发布申请单据"""
-    # # 可见范围
+    # 可见范围
     # visible_range_obj, _c = PluginVisibleRange.objects.get_or_create(plugin=plugin)
-    # # 发布策略
-    # release_strategy = version.release.latest_release_strategy
+    # 发布策略
+    release_strategy = version.release.latest_release_strategy
 
     # 组装提单数据,包含插件的基本信息和灰度发布信息
     basic_fields = _get_basic_fields(pd, plugin)
@@ -107,7 +107,7 @@ def submit_canary_release_ticket(
     fields = basic_fields + title_fields
 
     # 查询上线审批服务ID
-    service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.CANARY_APPROVAL.value).service_id
+    service_id = ApprovalService.objects.get(service_name=release_strategy.get_itsm_service_name()).service_id
 
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
     paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"

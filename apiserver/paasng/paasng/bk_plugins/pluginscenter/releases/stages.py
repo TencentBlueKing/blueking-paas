@@ -221,19 +221,7 @@ class CanaryWithItsm(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM
 
     def execute(self, operator: str):
-        current_stage = self.release.current_stage
-        if not current_stage or current_stage.invoke_method != constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM:
-            raise ValueError("this stage is not invoked by canary with itsm")
-        if current_stage.status != constants.PluginReleaseStatus.INITIAL:
-            raise ValueError("canary with its stage is not an initialization state and cannot be triggered")
-        if not self.release.latest_release_strategy:
-            raise ValueError("canary with its stage is not an initialization state and cannot be triggered")
-
-        itsm_detail = submit_canary_release_ticket(self.pd, self.plugin, self.release, operator)
-
-        current_stage.status = constants.PluginReleaseStatus.PENDING
-        current_stage.itsm_detail = itsm_detail
-        current_stage.save(update_fields=["status", "itsm_detail"])
+        submit_canary_release_ticket(self.pd, self.plugin, self.release, operator)
 
     # def render_to_view(self) -> Dict:
     #     basic_info = super().render_to_view()

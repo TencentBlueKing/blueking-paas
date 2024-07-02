@@ -26,32 +26,4 @@ notice: # 通知配置
   user_groups: # 通知组配置
   - '{{ notice_group_name }}'
   template:
-    abnormal:
-      content: '{% raw %}{{content.level}}
-
-        {{content.begin_time}}
-
-        {{content.time}}
-
-        {{content.duration}}
-
-        {{content.target_type}}
-
-        {{content.data_source}}
-
-        {{content.content}}{% endraw %} {{ doc_url }}
-
-        {% raw %}{{content.current_value}}
-
-        {{content.biz}}
-
-        {{content.target}}
-
-        {{content.dimension}}
-
-        {{content.detail}}
-
-        {{content.assign_detail}}
-
-        {{content.related_info}}'
-      title: '{{business.bk_biz_name}} - {{alarm.name}}{{alarm.display_type}}{% endraw %}'
+{{ notice_template }}

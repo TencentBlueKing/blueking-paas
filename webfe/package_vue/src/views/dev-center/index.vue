@@ -582,7 +582,7 @@ export default {
       // 搜索条件筛选
       appFilter: {
         // 显示已下架应用
-        includeInactive: false,
+        includeInactive: true,
         // 显示我创建的
         excludeCollaborated: false,
         // 版本选择
@@ -602,8 +602,8 @@ export default {
         offset: 0,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: false,
-        // 是否包含已下架应用，默认不包含
-        include_inactive: false,
+        // 是否包含已下架应用，默认包含
+        include_inactive: true,
         // limit
         limit: 0,
         order_by: 'code',
@@ -655,7 +655,7 @@ export default {
       isFilterConditionPresent: false,
       filterRegion: [],
       appExtraData: {},
-      tableHeaderFilterValue: 'normal',
+      tableHeaderFilterValue: 'all',
       appMigrationDialogConfig: {
         visible: false,
         data: {},
@@ -853,7 +853,7 @@ export default {
         limit: this.pagination.limit,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: this.appFilter.excludeCollaborated,
-        // 是否包含已下架应用，默认不包含
+        // 是否包含已下架应用，默认包含
         include_inactive: this.tableHeaderFilterValue === 'all',
         // 对应类型
         type: this.curAppType,
@@ -914,8 +914,8 @@ export default {
 
     reset() {
       this.appFilter = {
-        // 已下架
-        includeInactive: false,
+        // 默认包含已下架应用
+        includeInactive: true,
         // 我创建的
         excludeCollaborated: false,
         languageList: ['Python', 'PHP', 'Go', 'NodeJS'],

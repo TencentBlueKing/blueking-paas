@@ -79,16 +79,12 @@
           </div>
         </template>
       </bk-table-column>
-      <bk-table-column :label="$t('环境')" prop="source">
+      <bk-table-column
+        :label="$t('环境')"
+        prop="source"
+        class-name="env-column-cls">
         <template slot-scope="{ row }">
           <tag-box :tags="row.staffList" />
-        </template>
-      </bk-table-column>
-      <bk-table-column :label="$t('资源配额')"></bk-table-column>
-      <bk-table-column :label="$t('CPU 使用率')"></bk-table-column>
-      <bk-table-column :label="$t('最近部署时间')"></bk-table-column>
-      <bk-table-column :label="$t('操作')">
-        <template slot-scope="{ row }">
           <bk-button
             :theme="'default'"
             type="submit"
@@ -98,6 +94,10 @@
           </bk-button>
         </template>
       </bk-table-column>
+      <bk-table-column :label="$t('资源配额')"></bk-table-column>
+      <bk-table-column :label="$t('CPU 使用率')"></bk-table-column>
+      <bk-table-column :label="$t('最近部署时间')"></bk-table-column>
+      <bk-table-column :label="$t('操作')"></bk-table-column>
     </bk-table>
 
     <!-- 退出应用 -->
@@ -217,7 +217,7 @@ export default {
     // 合并表格行
     arraySpanMethod({ columnIndex }) {
       if (columnIndex === 2) {
-        return [1, 4];
+        return [1, 5];
       } if (columnIndex >= 3 && columnIndex <= 5) {
         return [0, 0];
       }
@@ -370,6 +370,10 @@ export default {
     }
     .child-module-table-cls .bk-table-header-wrapper {
       display: none;
+    }
+    .env-column-cls .cell {
+      display: flex;
+      align-items: center;
     }
   }
 }

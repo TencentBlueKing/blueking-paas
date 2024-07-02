@@ -2662,4 +2662,6 @@ export default {
   '更新于 {t}之前': 'Updated before {t}',
   资源配额: 'Resource Quota',
   '近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。': 'Modules with no access records in the past 30 days, CPU usage below 1%, and no usage fluctuations in the past 7 days should be taken offline as soon as possible.',
+  发布者: 'Publisher',
+  请选择发布者: 'Please select a publisher',
 };

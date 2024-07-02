@@ -23,6 +23,7 @@
       @change="change"
       @select="select"
       @remove="remove"
+      @blur="blur"
     />
     <img
       v-if="isLoading"
@@ -441,7 +442,10 @@
             },
             remove (data) {
                 this.$emit('remove', this.selectedList);
-            }
+            },
+            blur () {
+                this.$emit('blur', this.selectedList);
+            },
         }
     };
 </script>

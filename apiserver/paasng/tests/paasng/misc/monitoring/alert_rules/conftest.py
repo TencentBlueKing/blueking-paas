@@ -69,7 +69,7 @@ def create_module_for_alert(bk_module_2, _with_wl_apps):
 @pytest.fixture()
 def bk_app_init_rule_configs(bk_app, wl_namespaces):
     tpl_dir = Path(settings.BASE_DIR) / "paasng" / "misc" / "monitoring" / "monitor" / "alert_rules" / "ascode"
-    loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl", tpl_dir / "rule_notice_tpl"])
+    loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl", tpl_dir / "notice_tpl"])
     j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
     app_code = bk_app.code

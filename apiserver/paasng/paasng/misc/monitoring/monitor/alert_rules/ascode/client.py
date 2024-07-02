@@ -94,15 +94,6 @@ class AsCodeClient:
             return f"。处理建议: {links[0].location}"
         return ""
 
-    def _update_notice_template(self, ctx: dict, alert_code: str):
-        """根据告警代码修改告警通知内容模版"""
-        tpl_dir = Path(os.path.dirname(__file__))
-        loader = jinja2.FileSystemLoader([tpl_dir / "rule_notice_tpl"])
-        j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
-
-        notice_template = j2_env.get_template("notice_template.yaml.j2").render(doc_url=self._get_docs_url(alert_code))
-        ctx["notice_template"] = notice_template
-
     def _render_rule_configs(self, rule_configs: List[RuleConfig]) -> Dict:
         """按照 MonitorAsCode 规则, 渲染出如下示例目录结构:
 
@@ -111,7 +102,7 @@ class AsCodeClient:
           └── high_mem_usage.yaml
         """
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "rule_notice_tpl"])
+        loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"])
         j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
         configs = {}

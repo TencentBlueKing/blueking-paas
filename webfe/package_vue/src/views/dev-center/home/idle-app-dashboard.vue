@@ -56,12 +56,45 @@
             </bk-table-column>
             <bk-table-column label="">
               <template slot-scope="{ row: childRow }">
-                <bk-button
-                  :text="true"
-                  title="primary"
-                  @click="hanleOfflinesModule(childRow, props.row)">
-                  {{ $t('下架') }}
-                </bk-button>
+                <bk-popover
+                  :ref="`removed${childRow.env_name}-${childRow.module_name}`"
+                  placement="top"
+                  theme="light-border"
+                  trigger="click"
+                  width="260"
+                  :on-hide="handleHide"
+                  ext-cls="idle-popover-cls">
+                  <bk-button
+                    :text="true"
+                    title="primary"
+                    @click="hanleOfflinesModule(childRow, props.row)">
+                    {{ $t('下架') }}
+                  </bk-button>
+                  <div slot="content">
+                    <div class="popover-title">{{ $t('是否下架 {n} 模块', { n: curOperationAppData.module_name }) }}</div>
+                    <div class="popover-content tl">
+                      {{ $t('将模块从') }}
+                      <em>{{ curOperationAppData.env_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</em>
+                      {{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
+                    </div>
+                    <div class="popover-operate">
+                      <bk-button
+                        :theme="'primary'"
+                        size="small"
+                        class="mr4"
+                        :loading="isPopoverLoading"
+                        @click="confirmOfflineApp(`removed${childRow.env_name}-${childRow.module_name}`)">
+                        {{ $t('确定') }}
+                      </bk-button>
+                      <bk-button
+                        :theme="'default'"
+                        size="small"
+                        @click="handleCancel(`removed${childRow.env_name}-${childRow.module_name}`)">
+                        {{ $t('取消') }}
+                      </bk-button>
+                    </div>
+                  </div>
+                </bk-popover>
               </template>
             </bk-table-column>
           </bk-table>
@@ -85,13 +118,42 @@
         class-name="env-column-cls">
         <template slot-scope="{ row }">
           <tag-box :tags="row.staffList" />
-          <bk-button
-            :theme="'default'"
-            type="submit"
-            size="small"
-            @click="handleLeaveApp(row)">
-            {{ $t('退出应用') }}
-          </bk-button>
+          <bk-popover
+            :ref="`quit${row.code}`"
+            placement="top"
+            theme="light-border"
+            trigger="click"
+            width="260"
+            :on-hide="handleHide"
+            ext-cls="idle-popover-cls">
+            <bk-button
+              :theme="'default'"
+              type="submit"
+              size="small"
+              @click="handleLeaveApp(row)">
+              {{ $t('退出应用') }}
+            </bk-button>
+            <div slot="content">
+              <div class="popover-title">{{ $t('退出应用') }}</div>
+              <div class="popover-content">{{ $t('退出并放弃此应用的对应权限，是否确定？') }}</div>
+              <div class="popover-operate">
+                <bk-button
+                  :theme="'primary'"
+                  size="small"
+                  class="mr4"
+                  :loading="isPopoverLoading"
+                  @click="confirmLeaveApp(`quit${row.code}`)">
+                  {{ $t('确定') }}
+                </bk-button>
+                <bk-button
+                  :theme="'default'"
+                  size="small"
+                  @click="handleCancel(`quit${row.code}`)">
+                  {{ $t('取消') }}
+                </bk-button>
+              </div>
+            </div>
+          </bk-popover>
         </template>
       </bk-table-column>
       <bk-table-column :label="$t('资源配额')"></bk-table-column>
@@ -99,43 +161,6 @@
       <bk-table-column :label="$t('最近部署时间')"></bk-table-column>
       <bk-table-column :label="$t('操作')"></bk-table-column>
     </bk-table>
-
-    <!-- 退出应用 -->
-    <bk-dialog
-      v-model="leaveAppDialog.visiable"
-      width="540"
-      :title="$t('退出应用')"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="leaveAppDialog.isLoading"
-      @confirm="confirmLeaveApp"
-      @cancel="resetScrollPosition"
-    >
-      <div class="tc">
-        {{ $t('退出并放弃此应用的对应权限，是否确定？') }}
-      </div>
-    </bk-dialog>
-
-    <!-- 下架模块 -->
-    <bk-dialog
-      v-model="offlineAppDialog.visiable"
-      width="450"
-      :title="$t('是否下架 {n} 模块', { n: curOperationAppData.module_name })"
-      :theme="'primary'"
-      :header-position="'left'"
-      :mask-close="false"
-      :loading="offlineAppDialog.isLoading"
-      :ok-text="$t('下架')"
-      :cancel-text="$t('取消')"
-      @confirm="confirmOfflineApp"
-      @cancel="resetScrollPosition"
-    >
-      <div class="tl">
-        {{ $t('将模块从') }}
-        <em>{{ curOperationAppData.env_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</em>
-        {{ $t('下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留。') }}
-      </div>
-    </bk-dialog>
   </div>
 </template>
 
@@ -158,18 +183,9 @@ export default {
       isTableLoading: false,
       visibleTags: [],
       hiddenCount: 0,
-      leaveAppDialog: {
-        visiable: false,
-        isLoading: false,
-        data: {},
-      },
-      offlineAppDialog: {
-        visiable: false,
-        isLoading: false,
-      },
       curOperationAppData: {},
-      scrollPosition: 0,
       dayjs,
+      isPopoverLoading: false,
     };
   },
   computed: {
@@ -224,20 +240,16 @@ export default {
     },
     // 退出应用
     handleLeaveApp(data) {
-      this.scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-      this.leaveAppDialog.visiable = true;
       this.curOperationAppData = data;
     },
     // 确定退出
-    async confirmLeaveApp() {
-      this.leaveAppDialog.isLoading = true;
+    async confirmLeaveApp(refName) {
+      this.isPopoverLoading = true;
       try {
         await this.$store.dispatch('member/quitApplication', {
           appCode: this.curOperationAppData.code,
         });
-        // 退出成功
-        this.leaveAppDialog.visiable = false;
-        this.resetScrollPosition();
+        this.handleCancel(refName);
         this.$paasMessage({
           theme: 'success',
           message: this.$t('退出成功'),
@@ -250,30 +262,26 @@ export default {
           message: `${this.$t('退出应用失败：')} ${e.detail}`,
         });
       } finally {
-        this.leaveAppDialog.isLoading = false;
+        this.isPopoverLoading = false;
       }
     },
     // 下架模块
     hanleOfflinesModule(data, appData) {
-      this.scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-      this.offlineAppDialog.visiable = true;
       this.curOperationAppData = {
         ...data,
         ...appData,
       };
     },
     // 确定下架
-    async confirmOfflineApp() {
-      this.offlineAppDialog.isLoading = true;
+    async confirmOfflineApp(refName) {
+      this.isPopoverLoading = true;
       try {
         await this.$store.dispatch('deploy/offlineApp', {
           appCode: this.curOperationAppData.code,
           moduleId: this.curOperationAppData.module_name,
           env: this.curOperationAppData.env_name,
         });
-        // 下架成功
-        this.offlineAppDialog.visiable = false;
-        this.resetScrollPosition();
+        this.handleCancel(refName);
         this.$paasMessage({
           theme: 'success',
           message: this.$t('下架成功'),
@@ -285,7 +293,7 @@ export default {
           message: e.detail || e.message || this.$t('下架失败，请稍候再试'),
         });
       } finally {
-        this.offlineAppDialog.isLoading = false;
+        this.isPopoverLoading = false;
       }
     },
     // 滚动到记录位置
@@ -307,6 +315,13 @@ export default {
         name: row.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
         params: { id: row.code },
       });
+    },
+    handleHide() {
+      this.isPopoverLoading = false;
+    },
+    // 取消
+    handleCancel(refName) {
+      this.$refs[refName].hideHandler();
     },
   },
 };
@@ -350,10 +365,6 @@ export default {
     }
   }
 
-  .tl em {
-    font-weight: bold;
-  }
-
   :deep(.idle-app-dashboard-table) .bk-table-body td.bk-table-expanded-cell {
     padding: 0px !important;
   }
@@ -375,6 +386,27 @@ export default {
       display: flex;
       align-items: center;
     }
+  }
+}
+
+.mr4 {
+  margin-right: 4px;
+}
+
+.idle-popover-cls {
+  .popover-title {
+    font-size: 14px;
+    color: #313238;
+    margin-bottom: 10px;
+  }
+  .popover-content {
+    margin-bottom: 10px;
+  }
+  .popover-operate {
+    text-align: right;
+  }
+  .tl em {
+    font-weight: bold;
   }
 }
 </style>

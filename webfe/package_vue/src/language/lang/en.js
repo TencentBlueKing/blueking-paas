@@ -17,7 +17,6 @@
  */
 
 export default {
-  码客: '码客',
   '工蜂 Git': '工蜂 Git',
   '工蜂 Git 授权': '工蜂 Git authorization',
   'GitHub 授权': 'GitHub authorization',

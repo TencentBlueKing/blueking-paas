@@ -441,7 +441,7 @@ export default {
       return !this.selectedList.some(item => item.applyDisabled === false)
       || new Set(this.selectedList.map(item => item[idField])).size > 1;
     },
-    // 批量申请禁用
+    // 跨网关批量申请禁用，只支持单个网关下接口的批量申请
     isTooltipsDisabled() {
       const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
       return new Set(this.selectedList.map(item => item[idField])).size > 1;

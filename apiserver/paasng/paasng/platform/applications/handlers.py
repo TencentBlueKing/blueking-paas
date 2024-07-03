@@ -68,9 +68,9 @@ def initialize_application_members(sender, application: Application, **kwargs):
 
 
 @receiver(post_create_application)
-def turn_on_bk_log_feature(sender, application: Application, **kwargs):
+def turn_on_bk_log_feature_for_app(sender, application: Application, **kwargs):
     """将符合灰度条件的应用采集/查询日志的链路切换至日志平台"""
-    enable_app_log_collector_by_cluster_feature(application)
+    turn_on_bk_log_feature(application)
 
 
 @receiver(post_create_application)
@@ -197,7 +197,7 @@ def initialize_app_logo_metadata(storage: Storage, bucket_name: str, key: str):
         logger.exception("update key: %s's metadata failed", key)
 
 
-def enable_app_log_collector_by_cluster_feature(application: Application):
+def turn_on_bk_log_feature(application: Application):
     """根据集群特性开启应用的日志采集 FeatureFlag
 
     目前的调用场景：

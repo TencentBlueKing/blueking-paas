@@ -29,8 +29,8 @@ from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import add_role_members
 from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.cleaner import ApplicationCleaner
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.handlers import enable_app_log_collector_by_cluster_feature
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
+from paasng.platform.applications.handlers import turn_on_bk_log_feature
 from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.utils import create_default_module
@@ -89,8 +89,6 @@ class BaseObjectMigration(BaseMigration):
             MigrationProcess.objects.filter(app=self.context.app).update(app=None)
             self.context.app.operation_set.all().delete()
             Application.objects.filter(pk=self.context.app.pk).delete()
-            # 初始化应用特性配置
-            ApplicationFeatureFlag.objects.filter(application=self.context.app).delete()
         self.context.app = None  # type: ignore
 
     @staticmethod
@@ -157,7 +155,7 @@ class MainInfoMigration(BaseMigration):
         # 已验证 Django1.8 开发框架代码能在云原生应用运行时下正常部署
         initializer.bind_default_runtime()
         # 根据集群特性开启应用的日志采集 FeatureFlag
-        enable_app_log_collector_by_cluster_feature(self.context.app)
+        turn_on_bk_log_feature(self.context.app)
 
     def migrate(self):
         # 第三方应用（非引擎应用）仅创建默认模块，不创建 engine 相关信息
@@ -203,3 +201,7 @@ class MainInfoMigration(BaseMigration):
 
         # rollback app user permissions and delete user groups and grade manager info from the DB.
         ApplicationCleaner(self.context.app).delete_iam_resources()
+        # Initialize the application log collection feature configuration.
+        ApplicationFeatureFlag.objects.filter(
+            application=self.context.app, name=AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR
+        ).delete()

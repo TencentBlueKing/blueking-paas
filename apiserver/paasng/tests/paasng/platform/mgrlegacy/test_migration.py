@@ -38,7 +38,7 @@ except ImportError:
     from paasng.platform.mgrlegacy.app_migrations.sourcectl import SourceControlMigration
 
 
-pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db]
+pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db(databases=["default", "workloads"])]
 
 
 @pytest.mark.usefixtures("legacy_app_code")

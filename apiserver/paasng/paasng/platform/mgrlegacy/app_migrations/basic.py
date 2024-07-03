@@ -28,9 +28,10 @@ from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import add_role_members
 from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.cleaner import ApplicationCleaner
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
+from paasng.platform.applications.handlers import turn_on_bk_log_feature
 from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
@@ -79,7 +80,6 @@ class BaseObjectMigration(BaseMigration):
         # 为什么不在这里绑定 migration_process 和 Application ?
         # app.migrationprocess_set.add(self.context.migration_process)
         app.save(update_fields=["created"])
-
         self.context.app = app
 
     def rollback(self):
@@ -153,6 +153,8 @@ class MainInfoMigration(BaseMigration):
         # PaaS2.0 应用迁移为云原生应用，运行时默认不做特殊处理
         # 已验证 Django1.8 开发框架代码能在云原生应用运行时下正常部署
         initializer.bind_default_runtime()
+        # 根据集群特性开启应用的日志采集 FeatureFlag
+        turn_on_bk_log_feature(self.context.app)
 
     def migrate(self):
         # 第三方应用（非引擎应用）仅创建默认模块，不创建 engine 相关信息
@@ -198,3 +200,7 @@ class MainInfoMigration(BaseMigration):
 
         # rollback app user permissions and delete user groups and grade manager info from the DB.
         ApplicationCleaner(self.context.app).delete_iam_resources()
+        # Initialize the application log collection feature configuration.
+        ApplicationFeatureFlag.objects.filter(
+            application=self.context.app, name=AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR
+        ).delete()

@@ -18,7 +18,10 @@
 import logging
 from typing import List
 
+from django.db.models import QuerySet
+
 from paasng.platform.evaluation.constants import EmailReceiverType
+from paasng.platform.evaluation.models import AppOperationReport
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +29,7 @@ logger = logging.getLogger(__name__)
 class AppOperationReportNotifier:
     """将蓝鲸应用的运营报告发送到指定对象"""
 
-    def send(self, receiver_type: EmailReceiverType, receivers: List[str]):
+    def send(self, reports: QuerySet[AppOperationReport], receiver_type: EmailReceiverType, receivers: List[str]):
         # 该版本暂时不支持发送邮件，有需要可以在 notifiers_ext 中实现同名类
         logger.warning("send operation report is unsupported")
 

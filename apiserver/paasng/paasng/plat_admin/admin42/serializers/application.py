@@ -26,7 +26,7 @@ from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.platform.evaluation.constants import CollectionTaskStatus
+from paasng.platform.evaluation.constants import BatchTaskStatus
 from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.utils.datetime import humanize_timedelta
 from paasng.utils.models import OrderByField
@@ -142,7 +142,7 @@ class AppOperationReportCollectionTaskOutputSLZ(serializers.Serializer):
         return humanize_timedelta(obj.end_at - obj.start_at)
 
     def get_status(self, obj: AppOperationReportCollectionTask) -> str:
-        return CollectionTaskStatus.get_choice_label(obj.status)
+        return BatchTaskStatus.get_choice_label(obj.status)
 
 
 class AppOperationReportOutputSLZ(serializers.Serializer):

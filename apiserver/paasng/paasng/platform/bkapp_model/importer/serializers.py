@@ -196,7 +196,7 @@ class HTTPGetActionInputSLZ(serializers.Serializer):
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
     httpHeaders = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderInputSLZ())
-    scheme = serializers.CharField(help_text="http/https", required=False)
+    scheme = serializers.CharField(help_text="http/https", required=False, default="HTTP")
 
     def to_internal_value(self, data) -> bk_app.HTTPGetAction:
         d = super().to_internal_value(data)

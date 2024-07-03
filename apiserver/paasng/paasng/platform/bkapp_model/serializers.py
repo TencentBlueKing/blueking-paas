@@ -85,7 +85,7 @@ class HTTPGetProbeActionSLZ(serializers.Serializer):
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
     http_headers = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ())
-    scheme = serializers.CharField(help_text="http/https", required=False)
+    scheme = serializers.CharField(help_text="http/https", required=False, default="HTTP")
 
 
 class ProbeSLZ(serializers.Serializer):

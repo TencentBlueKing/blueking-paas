@@ -16,7 +16,8 @@
         </bk-table-column>
         <bk-table-column label="上传者" prop="owner"></bk-table-column>
         <bk-table-column label="上传时间" prop="updated"></bk-table-column>
-        <bk-table-column label="操作" width="150">
+        <!--以 docker 形式上传到 bkrepo 上的包不提供下载功能-->
+        <bk-table-column label="操作" width="150" v-if="props.row.storage_engine !== 'docker'">
             <template slot-scope="props">
                 <bk-button theme="primary" text @click="handleDownload(props.row)">下载</bk-button>
             </template>

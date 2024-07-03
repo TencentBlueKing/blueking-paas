@@ -63,11 +63,9 @@ def detect_spec_version(json_data: Dict) -> AppSpecVersion:
 
 class DescriptionHandler(Protocol):
     @property
-    def app_desc(self) -> ApplicationDesc:
-        ...
+    def app_desc(self) -> ApplicationDesc: ...
 
-    def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
-        ...
+    def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc: ...
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
@@ -118,8 +116,6 @@ class CNativeAppDescriptionHandler:
 
     def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
         desc_data = _find_module_desc_data(self.json_data, module_name, "list")
-        assert desc_data
-
         desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data)
         return desc
 
@@ -181,7 +177,6 @@ class AppDescriptionHandler:
         :raise DescriptionValidationError: If no info can be found using the given module.
         """
         desc_data = _find_module_desc_data(self.json_data, module_name, "dict")
-        assert desc_data
         desc = validate_desc(deploy_spec_v2.DeploymentDescSLZ, desc_data)
         return desc
 
@@ -261,6 +256,11 @@ def _find_module_desc_data(
 ) -> Dict:
     """Find a module's desc data in the json data. This function can be used in both v2 and v3
     because them have similar(but slightly different) structure.
+
+    In the `json_data` 2 fields are used to store the module data:
+
+    - "module": contains desc data of the default module.
+    - "modules": contains desc data of multiple modules, use a list(v3) or dict(v2) format.
 
     :param modules_data_type: The data type that holds the modules data, v2 using dict, v3 using list.
     """

@@ -32,6 +32,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -44,167 +45,188 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         response_serializer=serializers.APIGWAPISLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_apis(self, request, app_code: str, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_apis(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_resource_permissions(self, request, app_code: str, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_resource_permissions(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         request_body=serializers.APIGWPermissionApplySLZ,
         tags=["CloudAPI"],
     )
-    def apply(self, request, app_code: str, *args, **kwargs):
+    def apply(self, request, *args, **kwargs):
         slz = serializers.APIGWPermissionApplySLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
+        app = self.get_application()
         operation_type = OperationType.APPLY_PERM_FOR_CLOUD_API.value
-        return self._post(request, operation_type, app_code, *args, **kwargs)
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._post(request, apigw_url, operation_type, app)
 
     @swagger_auto_schema(
         request_body=serializers.APIGWPermissionRenewSLZ,
         tags=["CloudAPI"],
     )
-    def renew(self, request, app_code: str, *args, **kwargs):
+    def renew(self, request, *args, **kwargs):
         slz = serializers.APIGWPermissionRenewSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
+        app = self.get_application()
         operation_type = OperationType.RENEW_PERM_FOR_CLOUD_API.value
-        return self._post(request, operation_type, app_code, *args, **kwargs)
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._post(request, apigw_url, operation_type, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWAllowApplyByAPISLZ,
         tags=["CloudAPI"],
     )
-    def allow_apply_by_api(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def allow_apply_by_api(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_app_resource_permissions(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_app_resource_permissions(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         query_serializer=serializers.APIGWPermissionApplyRecordQuerySLZ,
         response_serializer=serializers.APIGWPermissionApplyRecordSLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_resource_permission_apply_records(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_resource_permission_apply_records(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionApplyRecordDetailSLZ,
         tags=["CloudAPI"],
     )
-    def retrieve_resource_permission_apply_record(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def retrieve_resource_permission_apply_record(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.ESBSystemSLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_esb_systems(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_esb_systems(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_component_permissions(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_component_permissions(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         request_body=serializers.ESBPermissionApplySLZ,
         tags=["CloudAPI"],
     )
-    def apply_component_permissions(self, request, app_code, *args, **kwargs):
+    def apply_component_permissions(self, request, *args, **kwargs):
         slz = serializers.ESBPermissionApplySLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
+        app = self.get_application()
         operation_type = OperationType.APPLY_PERM_FOR_CLOUD_API.value
-        return self._post(request, operation_type, app_code, *args, **kwargs)
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._post(request, apigw_url, operation_type, app)
 
     @swagger_auto_schema(
         request_body=serializers.ESBPermissionRenewSLZ,
         tags=["CloudAPI"],
     )
-    def renew_component_permissions(self, request, app_code, *args, **kwargs):
+    def renew_component_permissions(self, request, *args, **kwargs):
         slz = serializers.ESBPermissionRenewSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
+        app = self.get_application()
         operation_type = OperationType.RENEW_PERM_FOR_CLOUD_API.value
-        return self._post(request, operation_type, app_code, *args, **kwargs)
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._post(request, apigw_url, operation_type, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_app_component_permissions(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_app_component_permissions(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         query_serializer=serializers.APIGWPermissionApplyRecordQuerySLZ,
         response_serializer=serializers.APIGWPermissionApplyRecordSLZ(many=True),
         tags=["CloudAPI"],
     )
-    def list_component_permission_apply_records(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def list_component_permission_apply_records(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
     @swagger_auto_schema(
         response_serializer=serializers.ESBPermissionApplyRecordDetailSLZ,
         tags=["CloudAPI"],
     )
-    def retrieve_component_permission_apply_record(self, request, app_code, *args, **kwargs):
-        return self._get(request, app_code, *args, **kwargs)
+    def retrieve_component_permission_apply_record(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
 
-    def _get(self, request, app_code: str, *args, **kwargs):
-        logger.debug("[cloudapi] getting %s", self._get_bk_apigateway_inner_api_path(request.path, app_code))
+    def _get(self, request, apigw_url: str, app: Application):
+        logger.debug("[cloudapi] getting %s", apigw_url)
         params = copy.copy(request.query_params)
         params.update(
             {
-                "target_app_code": app_code,
-                "user_auth_type": get_user_auth_type(self._get_app_region()),
+                "target_app_code": app.code,
+                "user_auth_type": get_user_auth_type(app.region),
             }
         )
 
-        result = bk_apigateway_inner_component.get(
-            self._get_bk_apigateway_inner_api_path(request.path, app_code),
-            params=params,
-            bk_username=request.user.username,
-        )
+        result = bk_apigateway_inner_component.get(apigw_url, params=params, bk_username=request.user.username)
         return Response(result)
 
-    def _post(self, request, operation_type: int, app_code: str, *args, **kwargs):
-        logger.debug("[cloudapi] posting %s", self._get_bk_apigateway_inner_api_path(request.path, app_code))
+    def _post(self, request, apigw_url: str, operation_type: int, app: Application):
+        logger.debug("[cloudapi] posting %s", apigw_url)
         data = copy.copy(request.data)
         data.update(
             {
-                "target_app_code": app_code,
-                "user_auth_type": get_user_auth_type(self._get_app_region()),
+                "target_app_code": app.code,
+                "user_auth_type": get_user_auth_type(app.region),
             }
         )
 
-        result = bk_apigateway_inner_component.post(
-            self._get_bk_apigateway_inner_api_path(request.path, app_code),
-            json=data,
-            bk_username=request.user.username,
-        )
+        result = bk_apigateway_inner_component.post(apigw_url, json=data, bk_username=request.user.username)
 
         # 记录操作记录
         try:
             # 部分 API 没有带上网关名，则不记录到操作记录中
             gateway_name = data.get("gateway_name")
             if gateway_name:
-                application = self.get_application()
                 Operation.objects.create(
-                    region=application.region,
-                    application=application,
+                    region=app.region,
+                    application=app,
                     type=operation_type,
                     user=request.user,
                     extra_values={"gateway_name": gateway_name},
@@ -214,19 +236,14 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(result)
 
-    def _get_bk_apigateway_inner_api_path(self, path: str, app_code: str) -> str:
+    @staticmethod
+    def _trans_request_path_to_apigw_url(path: str, app_code: str) -> str:
+        """将请求路径转换为 bk-apigateway-inner 接口地址"""
         # 请求 bk-apigateway-inner 接口时，约定 `/api/cloudapi/apps/{app_code}/` 为 bk-paas-ng 的 url 前缀，
         # `/api/v1/` + `其他部分` 即为 bk-apigateway-inner 接口地址
-        prefix = self._get_request_path_prefix(path, app_code)
+        force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
+        prefix = f"{force_script_name}/api/cloudapi/apps/{app_code}/"
         if path.startswith(prefix):
             return f"/api/v1/{path[len(prefix):]}"
 
         raise error_codes.CLOUDAPI_PATH_ERROR
-
-    def _get_request_path_prefix(self, path: str, app_code: str) -> str:
-        force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
-        return f"{force_script_name}/api/cloudapi/apps/{app_code}/"
-
-    def _get_app_region(self) -> str:
-        app = self.get_application()
-        return app.region

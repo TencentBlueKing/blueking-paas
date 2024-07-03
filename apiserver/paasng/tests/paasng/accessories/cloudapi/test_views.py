@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from contextlib import contextmanager
 from unittest import mock
 
 import pytest
@@ -22,9 +23,19 @@ from blue_krill.web.std_error import APIError
 
 from paasng.accessories.cloudapi import views
 from paasng.misc.operations.constant import OperationType
+from paasng.platform.applications.models import Application
 from tests.utils.testing import get_response_json
 
 pytestmark = pytest.mark.django_db
+
+
+@contextmanager
+def mock_app(app_code):
+    app, created = Application.objects.get_or_create(code=app_code)
+    yield app
+
+    if created:
+        app.delete()
 
 
 class TestCloudAPIViewSet:
@@ -44,10 +55,6 @@ class TestCloudAPIViewSet:
             new_callback=mock.PropertyMock(return_value=None),
         )
         mocker.patch(
-            "paasng.accessories.cloudapi.views.CloudAPIViewSet._get_app_region",
-            return_value="",
-        )
-        mocker.patch(
             "paasng.accessories.cloudapi.views.get_user_auth_type",
             return_value="test",
         )
@@ -56,12 +63,17 @@ class TestCloudAPIViewSet:
             return_value=mocked_result,
         )
 
-        request = request_factory.get(path, params={"test": 1})
+        with mock_app(app_code) as app:
+            request = request_factory.get(path, params={"test": 1})
 
-        view = views.CloudAPIViewSet.as_view({"get": "_get"})
-        response = view(request, app_code=app_code)
-        result = get_response_json(response)
-        assert result == mocked_result
+            view = views.CloudAPIViewSet.as_view({"get": "_get"})
+            response = view(
+                request,
+                apigw_url=views.CloudAPIViewSet._trans_request_path_to_apigw_url(path, app.code),
+                app=app,
+            )
+            result = get_response_json(response)
+            assert result == mocked_result
 
     @pytest.mark.parametrize(
         ("app_code", "operation_type", "path", "mocked_result"),
@@ -80,10 +92,6 @@ class TestCloudAPIViewSet:
             new_callback=mock.PropertyMock(return_value=None),
         )
         mocker.patch(
-            "paasng.accessories.cloudapi.views.CloudAPIViewSet._get_app_region",
-            return_value="",
-        )
-        mocker.patch(
             "paasng.accessories.cloudapi.views.get_user_auth_type",
             return_value="test",
         )
@@ -92,12 +100,18 @@ class TestCloudAPIViewSet:
             return_value=mocked_result,
         )
 
-        request = request_factory.post(path, params={"test": 1})
+        with mock_app(app_code) as app:
+            request = request_factory.post(path, params={"test": 1})
 
-        view = views.CloudAPIViewSet.as_view({"post": "_post"})
-        response = view(request, app_code=app_code, operation_type=operation_type)
-        result = get_response_json(response)
-        assert result == mocked_result
+            view = views.CloudAPIViewSet.as_view({"post": "_post"})
+            response = view(
+                request,
+                apigw_url=views.CloudAPIViewSet._trans_request_path_to_apigw_url(path, app.code),
+                operation_type=operation_type,
+                app=app,
+            )
+            result = get_response_json(response)
+            assert result == mocked_result
 
     @pytest.mark.parametrize(
         ("path", "app_code", "expected", "will_error"),
@@ -120,9 +134,9 @@ class TestCloudAPIViewSet:
         viewset = views.CloudAPIViewSet()
         if will_error:
             with pytest.raises(APIError):
-                viewset._get_bk_apigateway_inner_api_path(path, app_code)
+                viewset._trans_request_path_to_apigw_url(path, app_code)
 
             return
 
-        result = viewset._get_bk_apigateway_inner_api_path(path, app_code)
+        result = viewset._trans_request_path_to_apigw_url(path, app_code)
         assert result == expected

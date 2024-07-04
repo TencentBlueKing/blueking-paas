@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from contextlib import contextmanager
 from unittest import mock
 
 import pytest
@@ -27,15 +26,6 @@ from paasng.platform.applications.models import Application
 from tests.utils.testing import get_response_json
 
 pytestmark = pytest.mark.django_db
-
-
-@contextmanager
-def mock_app(app_code):
-    app, created = Application.objects.get_or_create(code=app_code)
-    yield app
-
-    if created:
-        app.delete()
 
 
 class TestCloudAPIViewSet:
@@ -63,17 +53,17 @@ class TestCloudAPIViewSet:
             return_value=mocked_result,
         )
 
-        with mock_app(app_code) as app:
-            request = request_factory.get(path, params={"test": 1})
+        app, _ = Application.objects.get_or_create(code=app_code)
+        request = request_factory.get(path, params={"test": 1})
 
-            view = views.CloudAPIViewSet.as_view({"get": "_get"})
-            response = view(
-                request,
-                apigw_url=views.CloudAPIViewSet._trans_request_path_to_apigw_url(path, app.code),
-                app=app,
-            )
-            result = get_response_json(response)
-            assert result == mocked_result
+        view = views.CloudAPIViewSet.as_view({"get": "_get"})
+        response = view(
+            request,
+            apigw_url=views.CloudAPIViewSet._trans_request_path_to_apigw_url(path, app.code),
+            app=app,
+        )
+        result = get_response_json(response)
+        assert result == mocked_result
 
     @pytest.mark.parametrize(
         ("app_code", "operation_type", "path", "mocked_result"),
@@ -100,18 +90,18 @@ class TestCloudAPIViewSet:
             return_value=mocked_result,
         )
 
-        with mock_app(app_code) as app:
-            request = request_factory.post(path, params={"test": 1})
+        app, _ = Application.objects.get_or_create(code=app_code)
+        request = request_factory.post(path, params={"test": 1})
 
-            view = views.CloudAPIViewSet.as_view({"post": "_post"})
-            response = view(
-                request,
-                apigw_url=views.CloudAPIViewSet._trans_request_path_to_apigw_url(path, app.code),
-                operation_type=operation_type,
-                app=app,
-            )
-            result = get_response_json(response)
-            assert result == mocked_result
+        view = views.CloudAPIViewSet.as_view({"post": "_post"})
+        response = view(
+            request,
+            apigw_url=views.CloudAPIViewSet._trans_request_path_to_apigw_url(path, app.code),
+            operation_type=operation_type,
+            app=app,
+        )
+        result = get_response_json(response)
+        assert result == mocked_result
 
     @pytest.mark.parametrize(
         ("path", "app_code", "expected", "will_error"),

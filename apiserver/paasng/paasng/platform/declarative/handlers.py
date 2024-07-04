@@ -252,7 +252,7 @@ class SMartDescriptionHandler:
 def _find_module_desc_data(
     json_data: Dict,
     module_name: Optional[str],
-    modules_data_type: Literal["list", "dict"] = "dict",
+    modules_data_type: Literal["list", "dict"],
 ) -> Dict:
     """Find a module's desc data in the json data. This function can be used in both v2 and v3
     because them have similar(but slightly different) structure.

@@ -168,6 +168,8 @@ class Build(UuidAuditedModel):
         if self.artifact_detail:
             return self.artifact_detail
 
+        self.artifact_detail = {"invoke_message": self.build_process.invoke_message}
+
         if self.artifact_type == ArtifactType.IMAGE:
             image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
             registry_client = get_app_docker_registry_client()
@@ -175,22 +177,13 @@ class Build(UuidAuditedModel):
             metadata = ref.get_metadata()
             if metadata:
                 manifest: ManifestSchema2 = ref.get()
-                self.artifact_detail = {
-                    "size": sum(layer.size for layer in manifest.layers),
-                    "digest": metadata.digest,
-                    "invoke_message": self.build_process.invoke_message,
-                }
+                self.artifact_detail.update(
+                    {"size": sum(layer.size for layer in manifest.layers), "digest": metadata.digest}
+                )
             else:
-                # 未查找到镜像时
-                self.artifact_detail = {
-                    "size": 0,
-                    "digest": "unknown",
-                    "invoke_message": self.build_process.invoke_message,
-                }
-        else:
-            self.artifact_detail = {
-                "invoke_message": self.build_process.invoke_message,
-            }
+                # 如果 metadata 为 None, 表示未查找到镜像
+                self.artifact_detail.update({"size": 0, "digest": "unknown"})
+
         self.save(update_fields=["artifact_detail"])
         return self.artifact_detail
 

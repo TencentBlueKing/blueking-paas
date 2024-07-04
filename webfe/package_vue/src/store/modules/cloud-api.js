@@ -58,27 +58,27 @@ export default {
   },
   actions: {
     /**
-         * --
-         * @param {Object} params 请求参数：appCode
-         */
+     * --
+     * @param {Object} params 请求参数：appCode
+     */
     getApis({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/`;
       return http.get(url, config);
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode
-         */
+     * --
+     * @param {Object} params 请求参数：appCode
+     */
     getAppPermissions({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/permissions/app-permissions/`;
       return http.get(url, config);
     },
 
     /**
-         * --
-         * @param {Object} params
-         */
+     * --
+     * @param {Object} params
+     */
     getApplyRecords({}, params, config = {}) {
       const requsetParams = Object.assign({}, params);
       delete requsetParams.appCode;
@@ -87,72 +87,87 @@ export default {
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode, recordId
-         */
+     * --
+     * @param {Object} params 请求参数：appCode, recordId
+     */
     getApplyRecordDetail({}, { appCode, recordId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/permissions/apply-records/${recordId}/`;
       return http.get(url, config);
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode, apiId
-         */
+     * --
+     * @param {Object} params 请求参数：appCode, apiId
+     */
     getAllowApplyByApi({}, { appCode, apiId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/${apiId}/permissions/allow-apply-by-api/`;
       return http.get(url, config);
     },
 
-    /**
-         * --
-         * @param {Object} params 请求参数：appCode, apiId, data
-         */
+    /** 网关申请 - 不支持跨网关
+     * @param {Object} params 请求参数：appCode, apiId, data
+     */
     apply({}, { appCode, apiId, data }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/${apiId}/permissions/apply/`;
       return http.post(url, data, config);
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode, data
-         */
+     * 组件申请 - 不支持跨组件
+     * @param {Object} params 请求参数：appCode, systemId, data
+     */
+    sysApply({}, { appCode, systemId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/${systemId}/permissions/apply/`;
+      return http.post(url, data, config);
+    },
+
+    /** 网关续期 -支持跨网关
+     * @param {Object} params 请求参数：appCode, data
+     */
     renewal({}, { appCode, data }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/permissions/renew/`;
       return http.post(url, data, config);
     },
 
+    /** 组件续期 -支持跨组件
+     * @param {Object} params 请求参数：appCode, data
+     */
+    sysRenewal({}, { appCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/permissions/renew/`;
+      return http.post(url, data, config);
+    },
+
     /**
-         * --
-         * @param {Object} params 请求参数：appCode, apiId
-         */
+     * --
+     * @param {Object} params 请求参数：appCode, apiId
+     */
     getResources({}, { appCode, apiId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/apis/${apiId}/permissions/resources/`;
       return http.get(url, config);
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode
-         */
+     * --
+     * @param {Object} params 请求参数：appCode
+     */
     getSystems({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/`;
       return http.get(url, config);
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode
-         */
+     * --
+     * @param {Object} params 请求参数：appCode
+     */
     getSysAppPermissions({}, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/permissions/app-permissions/`;
       return http.get(url, config);
     },
 
     /**
-         * --
-         * @param {Object} params
-         */
+     * --
+     * @param {Object} params
+     */
     getSysApplyRecords({}, params, config = {}) {
       const requsetParams = Object.assign({}, params);
       delete requsetParams.appCode;
@@ -161,30 +176,12 @@ export default {
     },
 
     /**
-         * --
-         * @param {Object} params 请求参数：appCode, recordId
-         */
+     * --
+     * @param {Object} params 请求参数：appCode, recordId
+     */
     getSysApplyRecordDetail({}, { appCode, recordId }, config = {}) {
       const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/permissions/apply-records/${recordId}/`;
       return http.get(url, config);
-    },
-
-    /**
-         * --
-         * @param {Object} params 请求参数：appCode, systemId, data
-         */
-    sysApply({}, { appCode, systemId, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/${systemId}/permissions/apply/`;
-      return http.post(url, data, config);
-    },
-
-    /**
-         * --
-         * @param {Object} params 请求参数：appCode, data
-         */
-    sysRenewal({}, { appCode, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/cloudapi/apps/${appCode}/esb/systems/permissions/renew/`;
-      return http.post(url, data, config);
     },
 
     /**

@@ -166,7 +166,7 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
 
 
 @shared_task
-def send_idle_email_to_app_developers(app_codes: List[str]):
+def send_idle_email_to_app_developers(app_codes: List[str], usernames: List[str]):
     """发送应用闲置模块邮件给应用管理员/开发者"""
     reports = AppOperationReport.objects.filter(issue_type=OperationIssueType.IDLE)
     if app_codes:
@@ -180,6 +180,10 @@ def send_idle_email_to_app_developers(app_codes: List[str]):
     for r in reports:
         waiting_notify_usernames.update(r.administrators)
         waiting_notify_usernames.update(r.developers)
+
+    # 如果特殊指定用户，只发送给指定的用户
+    if usernames:
+        waiting_notify_usernames &= set(usernames)
 
     total_cnt, succeed_cnt = len(waiting_notify_usernames), 0
     failed_usernames = []

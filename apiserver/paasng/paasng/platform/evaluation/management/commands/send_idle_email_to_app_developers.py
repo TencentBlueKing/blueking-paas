@@ -38,14 +38,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--codes", dest="app_codes", default=[], nargs="*", help="应用 Code 列表")
+        parser.add_argument("--usernames", dest="usernames", default=[], nargs="*", help="只发送给指定的用户")
         parser.add_argument("--all", dest="notify_all", default=False, action="store_true", help="全量应用通知")
         parser.add_argument("--async", dest="async_run", default=False, action="store_true", help="异步执行")
 
-    def handle(self, app_codes, notify_all, async_run, *args, **options):
+    def handle(self, app_codes, usernames, notify_all, async_run, *args, **options):
         if not (notify_all or app_codes):
             raise ValueError("please specify --codes or --all")
 
         if async_run:
-            send_idle_email_to_app_developers.delay(app_codes)
+            send_idle_email_to_app_developers.delay(app_codes, usernames)
         else:
-            send_idle_email_to_app_developers(app_codes)
+            send_idle_email_to_app_developers(app_codes, usernames)

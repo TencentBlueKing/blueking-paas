@@ -2663,4 +2663,5 @@ export default {
   '近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。': 'Modules with no access records in the past 30 days, CPU usage below 1%, and no usage fluctuations in the past 7 days should be taken offline as soon as possible.',
   发布者: 'Publisher',
   请选择发布者: 'Please select a publisher',
+  '仅支持对同一{t}下的 API 进行批量申请': 'Batch application is only supported for APIs under the same {t}',
 };

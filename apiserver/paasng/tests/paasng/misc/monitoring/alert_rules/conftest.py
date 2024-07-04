@@ -24,6 +24,8 @@ import pytest
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
+from paasng.accessories.smart_advisor.tags import get_dynamic_tag
 from paasng.misc.monitoring.monitor.alert_rules.ascode.client import AsCodeClient
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.misc.monitoring.monitor.alert_rules.config.entities import AlertCode
@@ -65,7 +67,7 @@ def create_module_for_alert(bk_module_2, _with_wl_apps):
 @pytest.fixture()
 def bk_app_init_rule_configs(bk_app, wl_namespaces):
     tpl_dir = Path(settings.BASE_DIR) / "paasng" / "misc" / "monitoring" / "monitor" / "alert_rules" / "ascode"
-    loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"])
+    loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl", tpl_dir / "notice_tpl"])
     j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
     app_code = bk_app.code
@@ -98,8 +100,16 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
         }
 
     init_rule_configs = {}
+    notice_template = j2_env.get_template("notice_template.yaml.j2")
     for alert_code, c in default_rules.items():
         for env in ["stag", "prod"]:
+            doc_url = ""
+            tag = get_dynamic_tag(f"saas_monitor:{alert_code}")
+            links = DocumentaryLinkAdvisor().search_by_tags([tag], limit=1)
+            if links:
+                doc_url = f"。处理建议: {links[0].location}"
+            notice_template_content = notice_template.render(doc_url=doc_url)
+
             alert_rule_name = c["alert_rule_name_format"].format(env=env)
             init_rule_configs[f"rule/{alert_rule_name}.yaml"] = j2_env.get_template(c["template_name"]).render(
                 alert_rule_display_name=f"{rule_configs[alert_code]['display_name']} [default:{env}]",
@@ -114,6 +124,7 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
                 },
                 threshold_expr=rule_configs[alert_code]["threshold_expr"],
                 notice_group_name=notice_group_name,
+                notice_template=notice_template_content,
             )
 
     notice_group_config = {

@@ -149,7 +149,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 	for _, mounter := range mounterMap {
 		err = mounter.ApplyToDeployment(app, deployment)
 		if err != nil {
-			log.Error(err, "Failed to inject mounts info to process", proc.Name)
+			log.Error(err, "Failed to inject mounts info to process", "process", proc.Name)
 		}
 	}
 

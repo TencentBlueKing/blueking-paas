@@ -91,7 +91,7 @@ func (r *AutoscalingReconciler) getCurrentState(
 		client.MatchingFields{paasv1alpha2.KubeResOwnerKey: bkapp.Name},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list app's GPA")
+		return nil, errors.Wrapf(err, "failed to list app(%s/%s)'s GPA", bkapp.Namespace, bkapp.Name)
 	}
 
 	return lo.ToSlicePtr(gpaList.Items), nil

@@ -204,7 +204,7 @@ func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
 func GetBuiltinLogsVolumeMounts(bkapp *paasv1alpha2.BkApp) ([]BuiltinLogsVolumeMount, error) {
 	var legacyLogPath, moduleLogPath string
 	if appInfo, err := applications.GetBkAppInfo(bkapp); err != nil {
-		return nil, errors.Wrap(err, "InvalidAnnotations: missing bkapp info")
+		return nil, errors.Wrapf(err, "InvalidAnnotations: missing bkapp(%s/%s) info", bkapp.Namespace, bkapp.Name)
 	} else {
 		// {region}-{dns-safe-wl-app-name}
 		legacyLogPath = fmt.Sprintf("%s-%s", appInfo.Region, paasv1alpha2.DNSSafeName(appInfo.WlAppName))

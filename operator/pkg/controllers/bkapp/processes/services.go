@@ -89,7 +89,7 @@ func (r *ServiceReconciler) listCurrentServices(
 		client.InNamespace(bkapp.GetNamespace()),
 		client.MatchingLabels{paasv1alpha2.BkAppNameKey: bkapp.GetName()},
 	); err != nil {
-		return nil, errors.Wrap(err, "failed to list app's Service")
+		return nil, errors.Wrapf(err, "failed to list app(%s/%s)'s Service", bkapp.Namespace, bkapp.Name)
 	}
 	return lo.ToSlicePtr(current.Items), nil
 }

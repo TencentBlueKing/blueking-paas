@@ -55,13 +55,13 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	}
 
 	log := logf.FromContext(ctx)
-	log.Info("OnGarbageCollection")
+	log.Info("OnGarbageCollection", "bkapp", bkapp.Name)
 
 	// our finalizer is present, so lets handle any external dependency
 	canFinalizeHooks, err := r.allHooksFinishedOrTimeout(ctx, bkapp)
 	if err != nil {
 		metrics.IncHooksFinishedFailures(bkapp)
-		return r.Result.WithError(errors.Wrap(err, "failed to check hook status"))
+		return r.Result.WithError(errors.Wrapf(err, "failed to check hook status for BkApp %s/%s", bkapp.Namespace, bkapp.Name))
 	}
 	if !canFinalizeHooks {
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
@@ -77,13 +77,13 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		metrics.IncDeleteResourcesFailures(bkapp)
 		// if fail to delete the external dependency here, return with error
 		// so that it can be retried
-		return r.Result.WithError(errors.Wrap(err, "failed to delete external resources"))
+		return r.Result.WithError(errors.Wrapf(err, "failed to delete external resources for BkApp %s/%s", bkapp.Namespace, bkapp.Name))
 	}
 
 	// remove our finalizer from the finalizers list and update it.
 	controllerutil.RemoveFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)
 	if err = r.Client.Update(ctx, bkapp); err != nil {
-		return r.Result.WithError(errors.Wrap(err, "failed to remove finalizer for app"))
+		return r.Result.WithError(errors.Wrapf(err, "failed to remove finalizer for app for BkApp %s/%s", bkapp.Namespace, bkapp.Name))
 	}
 	return r.Result.End()
 }
@@ -131,10 +131,10 @@ func isPodExecTimeout(pod corev1.Pod, timeout time.Duration) bool {
 func (r *BkappFinalizer) deleteResources(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
 	var err error
 	if err = r.deleteHookPods(ctx, bkapp); err != nil {
-		return errors.Wrap(err, "failed to delete hook pods")
+		return errors.Wrapf(err, "failed to delete hook pods for BkApp %s/%s", bkapp.Namespace, bkapp.Name)
 	}
 	if err = r.deleteServices(ctx, bkapp); err != nil {
-		return errors.Wrap(err, "failed to delete services")
+		return errors.Wrapf(err, "failed to delete services for BkApp %s/%s", bkapp.Namespace, bkapp.Name)
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ func (r *BkappFinalizer) deleteServices(ctx context.Context, bkapp *paasv1alpha2
 		client.MatchingLabels{paasv1alpha2.BkAppNameKey: bkapp.GetName()},
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to query ServiceList")
+		return errors.Wrapf(err, "failed to query ServiceList for bkapp %s/%s", bkapp.Namespace, bkapp.Name)
 	}
 	for _, svc := range svcList.Items {
 		if err = r.Client.Delete(ctx, &svc); err != nil {

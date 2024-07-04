@@ -17,7 +17,7 @@
 
 import copy
 import logging
-from typing import Dict, Optional, TextIO
+from typing import Dict, Literal, Optional, TextIO
 
 import yaml
 from django.utils.translation import gettext as _
@@ -63,11 +63,9 @@ def detect_spec_version(json_data: Dict) -> AppSpecVersion:
 
 class DescriptionHandler(Protocol):
     @property
-    def app_desc(self) -> ApplicationDesc:
-        ...
+    def app_desc(self) -> ApplicationDesc: ...
 
-    def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
-        ...
+    def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc: ...
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
@@ -117,16 +115,8 @@ class CNativeAppDescriptionHandler:
         return app_desc
 
     def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
-        module_desc = self.json_data.get("module")
-        if "modules" in self.json_data:
-            found = next(filter(lambda x: x["name"] == module_name, self.json_data["modules"]), None)
-            if module_desc is not None:
-                logger.warning("Duplicate definition of module information !")
-            module_desc = found
-        if not module_desc:
-            logger.info("Skip running deployment controller because not content was provided")
-            raise DescriptionValidationError({"module": _("内容不能为空")})
-        desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, module_desc)
+        desc_data = _find_module_desc_data(self.json_data, module_name, "list")
+        desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data)
         return desc
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
@@ -181,15 +171,13 @@ class AppDescriptionHandler:
         return app_desc
 
     def get_deploy_desc(self, module_name: Optional[str] = None) -> DeploymentDesc:
-        module_desc = self.json_data.get("module")
-        if "modules" in self.json_data and module_name in self.json_data["modules"]:
-            if module_desc is not None:
-                logger.warning("Duplicate definition of module information !")
-            module_desc = self.json_data["modules"][module_name]
-        if not module_desc:
-            logger.info("Skip running deployment controller because not content was provided")
-            raise DescriptionValidationError({"module": _("内容不能为空")})
-        desc = validate_desc(deploy_spec_v2.DeploymentDescSLZ, module_desc)
+        """Get the deployment description object by module name.
+
+        :param module_name: The name of module.
+        :raise DescriptionValidationError: If no info can be found using the given module.
+        """
+        desc_data = _find_module_desc_data(self.json_data, module_name, "dict")
+        desc = validate_desc(deploy_spec_v2.DeploymentDescSLZ, desc_data)
         return desc
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
@@ -259,3 +247,54 @@ class SMartDescriptionHandler:
         """
         controller = DeploymentDeclarativeController(deployment)
         return controller.perform_action(self.get_deploy_desc(None))
+
+
+def _find_module_desc_data(
+    json_data: Dict,
+    module_name: Optional[str],
+    modules_data_type: Literal["list", "dict"],
+) -> Dict:
+    """Find a module's desc data in the json data. This function can be used in both v2 and v3
+    because them have similar(but slightly different) structure.
+
+    In the `json_data` 2 fields are used to store the module data:
+
+    - "module": contains desc data of the default module.
+    - "modules": contains desc data of multiple modules, use a list(v3) or dict(v2) format.
+
+    :param modules_data_type: The data type that holds the modules data, v2 using dict, v3 using list.
+    """
+    if not module_name:
+        desc_data = json_data.get("module")
+        if not desc_data:
+            raise DescriptionValidationError({"module": _("模块配置内容不能为空")})
+        return desc_data
+
+    # "module_name" is not None, find the desc data in the json data.
+    desc_data = None
+    # When "modules" is provided, find the desc in it's content by module name
+    if modules_data := json_data.get("modules"):
+        # Use different approach for different module data type
+        if modules_data_type == "dict":
+            desc_data = modules_data.get(module_name)
+            existed_modules = ", ".join(modules_data.keys())
+        elif modules_data_type == "list":
+            desc_data = next((m for m in modules_data if m["name"] == module_name), None)
+            existed_modules = ", ".join(m["name"] for m in modules_data)
+        else:
+            raise ValueError("Wrong modules data type")
+
+        # Use the value in the "module" field as a fallback
+        desc_data = desc_data or json_data.get("module")
+        if not desc_data:
+            raise DescriptionValidationError(
+                {"modules": _("未找到 {} 模块的配置，当前已配置模块为 {}").format(module_name, existed_modules)}
+            )
+
+    # The "modules" field is not provided, use the value in the "module" field
+    if not desc_data:
+        desc_data = json_data.get("module")
+
+    if not desc_data:
+        raise DescriptionValidationError({"module": _("模块配置内容不能为空")})
+    return desc_data

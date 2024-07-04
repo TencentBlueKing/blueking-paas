@@ -17,7 +17,7 @@
 
 ```bash
 ❯ cd builders/heroku-builder
-❯ make builder
+❯ make builder-bionic
 ```
 
 成功执行该命令后，将在本地生成一个名为 `mirrors.tencent.com/bkpaas/builder-heroku-bionic` 的 builder 镜像，其中打包了 `Python`、`Go` 和 `apt` 等多种 buildpack。流程细节如下：

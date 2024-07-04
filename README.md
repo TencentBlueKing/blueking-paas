@@ -33,6 +33,8 @@
 ❯ git submodule update --init
 ```
 
+> 如果执行 `git submodule` 时出现 "You need to run this command from the toplevel of the working tree" 错误，可以升级 git 版本到 2.39.3，或者修改 Makefile 文件
+
 安装必要的依赖工具：[pack](https://github.com/buildpacks/pack)。
 
 ### 云原生构建工具

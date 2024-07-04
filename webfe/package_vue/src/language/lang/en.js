@@ -1359,7 +1359,6 @@ export default {
   命令参数: 'Command parameters',
   '示例： /start _web_server': 'Example: /start _web_server',
   留空使用镜像的默认entrypoint: 'Leave blank to use the mirrors default entrypoint',
-  '示例镜像：mirrors.tencent.com/foo/bar': 'Example mirror: mirrors.tencent.com/foo/bar',
   '镜像应监听环境变量值$PORT端口，提供HTTP服务': 'The mirror should listen to the environment variable value $PORT port and provide HTTP services',
   应用: 'APP',
   外链应用: 'Ext-link APP',
@@ -1861,7 +1860,6 @@ export default {
   '副本数量有效值范围0-5': 'Valid range of the number of copies 0-5',
   粘贴内容不能为空: 'Paste content cannot be empty',
   VALUE不能超过2048个字符: 'Value cannot exceed 2048 characters',
-  '示例镜像：': 'Example image:',
   使用示例镜像: 'Use example image',
   '镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务': 'The image should listen to the port number specified in "container port" or the environment variable value $port to provide HTTP services',
   '帮助：如何构建镜像': 'Help: how to build an image',
@@ -2689,4 +2687,5 @@ export default {
   '目前支持 IDE': 'Currently Supported IDEs',
   'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP 等 100+ 语言/框架': 'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP, and over 100 other languages/frameworks',
   'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim': 'Visual Studio Code, Jetbrains IDEs (GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, Hongmeng IDE, etc.), Visual Studio, Vim / NeoVim',
+  '请输入镜像仓库，如': 'Please enter the image repository, such as',
 };

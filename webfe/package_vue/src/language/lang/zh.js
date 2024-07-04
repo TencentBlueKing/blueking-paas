@@ -1965,7 +1965,6 @@ export default {
   进程名称: '进程名称',
   容器镜像地址: '容器镜像地址',
   请输入正确的容器镜像地址: '请输入正确的容器镜像地址',
-  '示例镜像：mirrors.tencent.com/foo/bar': '示例镜像：mirrors.tencent.com/foo/bar',
   '镜像应监听环境变量值$PORT端口，提供HTTP服务': '镜像应监听环境变量值$PORT端口，提供HTTP服务',
   请输入启动命令: '请输入启动命令',
   请输入命令参数: '请输入命令参数',
@@ -1984,7 +1983,6 @@ export default {
   '副本数量有效值范围0-5': '副本数量有效值范围0-5',
   粘贴内容不能为空: '粘贴内容不能为空',
   VALUE不能超过2048个字符: 'VALUE不能超过2048个字符',
-  '示例镜像：': '示例镜像：',
   使用示例镜像: '使用示例镜像',
   '镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务':
     '镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务',
@@ -2828,4 +2826,5 @@ export default {
   '目前支持 IDE': '目前支持 IDE',
   'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP 等 100+ 语言/框架': 'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP 等 100+ 语言/框架',
   'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim': 'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim',
+  '请输入镜像仓库，如': '请输入镜像仓库，如',
 };

@@ -1,34 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, List, Optional
 
 from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import Process, list_processes
-from paas_wl.bk_app.processes.models import ProcessSpecManager, ProcessTmpl
+from paas_wl.bk_app.processes.models import ProcessProbeManager, ProcessSpecManager
 from paas_wl.bk_app.processes.processes import PlainProcess, condense_processes
 from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs_client import BCSClient
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.models.deployment import ProcessTmpl
 
 
 def _list_proc_specs(env: ModuleEnvironment) -> List[Dict]:
@@ -58,6 +58,10 @@ class ProcessManager:
                           where 'replicas' and 'plan' is optional
         """
         ProcessSpecManager(self.wl_app).sync(processes)
+
+    def sync_processes_probes(self, processes: List[ProcessTmpl]):
+        """Sync probes by plain ProcessProbe structure"""
+        ProcessProbeManager(self.wl_app).sync(processes)
 
     def list_processes_specs(self, target_status: Optional[str] = None) -> List[Dict]:
         """Get specs of current app's all processes

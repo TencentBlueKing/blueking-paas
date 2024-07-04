@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import base64
 import logging
 import random
@@ -151,8 +150,10 @@ class ApplicationViewSet(viewsets.ViewSet):
             search_term=params.get("search_term"),
             source_origin=params.get("source_origin"),
             type_=params.get("type"),
-            order_by=[params.get("order_by")],
+            # 已下架的应用默认展示在最末尾
+            order_by=["-is_active", params.get("order_by")],
         )
+
         # 查询我创建的应用时，也需要返回总的应用数量给前端
         all_app_count = applications.count()
         # 仅查询我创建的应用

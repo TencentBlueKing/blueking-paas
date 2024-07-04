@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 import cattr
-from attrs import define, fields
+from attrs import asdict, define, fields
 from django.db.transaction import atomic
 
 from paas_wl.bk_app.cnative.specs.crd import bk_app
@@ -58,6 +57,7 @@ class PerformResult:
                     "command": process.command,
                     "replicas": process.replicas,
                     "plan": process.plan,
+                    "probes": asdict(process.probes) if process.probes else None,
                 }
                 for proc_name, process in processes.items()
             },
@@ -112,10 +112,9 @@ class DeploymentDeclarativeController:
         """
         result = PerformResult(spec_version=desc.spec_version)
         logger.debug("Update related deployment description object.")
-
         application = self.deployment.app_environment.application
         module = self.deployment.app_environment.module
-        processes = desc.get_processes()
+        processes: Dict[str, Process] = desc.get_processes()
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
@@ -126,7 +125,6 @@ class DeploymentDeclarativeController:
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
-
         # apply desc to bkapp_model
         result.set_processes(processes=processes)
         if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:

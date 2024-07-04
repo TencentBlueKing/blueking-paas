@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 import boto3
@@ -68,24 +67,9 @@ def initialize_application_members(sender, application: Application, **kwargs):
 
 
 @receiver(post_create_application)
-def turn_on_bk_log_feature(sender, application: Application, **kwargs):
-    """将符合灰度条件的应用采集/查询日志的链路切换至应用平台"""
-    if not AppSpecs(application).engine_enabled:
-        # 如果应用未开启引擎功能, 则直接返回
-        return
-
-    if AppFeatureFlagConst.get_default_flags()[AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR]:
-        # 如果已默认开启, 则直接返回
-        return
-
-    cluster = get_application_cluster(application)
-    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-        # 集群未开启日志平台特性, 则直接返回
-        return
-
-    logger.debug("turn on ENABLE_BK_LOG_COLLECTOR flag for application %s", application)
-    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
-    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_CLIENT, True)
+def turn_on_bk_log_feature_for_app(sender, application: Application, **kwargs):
+    """将符合灰度条件的应用采集/查询日志的链路切换至日志平台"""
+    turn_on_bk_log_feature(application)
 
 
 @receiver(post_create_application)
@@ -210,3 +194,29 @@ def initialize_app_logo_metadata(storage: Storage, bucket_name: str, key: str):
         )
     except Exception:
         logger.exception("update key: %s's metadata failed", key)
+
+
+def turn_on_bk_log_feature(application: Application):
+    """根据集群特性开启应用的日志采集 FeatureFlag
+
+    目前的调用场景：
+    - 创建应用
+    - PaaS2.0 应用迁移时，立即设置
+    - 普通应用迁移为云原生应用，确认迁移时设置
+    """
+    if not AppSpecs(application).engine_enabled:
+        # 如果应用未开启引擎功能, 则直接返回
+        return
+
+    if AppFeatureFlagConst.get_default_flags()[AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR]:
+        # 如果已默认开启, 则直接返回
+        return
+
+    cluster = get_application_cluster(application)
+    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+        # 集群未开启日志平台特性, 则直接返回
+        return
+
+    logger.debug("turn on ENABLE_BK_LOG_COLLECTOR flag for application %s", application)
+    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
+    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_CLIENT, True)

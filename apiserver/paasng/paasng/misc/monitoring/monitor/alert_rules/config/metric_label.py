@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import functools
 import logging
 from typing import Callable, Dict, List, Optional
@@ -28,7 +27,6 @@ from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
-from paasng.platform.modules.constants import ModuleName
 
 from .constants import BKREPO_SERVICE_NAME, GCS_MYSQL_SERVICE_NAME, RABBITMQ_SERVICE_NAME
 
@@ -84,8 +82,9 @@ def get_gcs_mysql_user(app_code: str, run_env: str, module_name: Optional[str] =
 
 
 def get_namespace(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
-    # 如果不传递模块, 则使用 default 模块(云原生应用各个模块和 default 模块部署在相同的命名空间下)
-    module_name = module_name or ModuleName.DEFAULT.value
+    # 如果不传递模块, 则使用 default 模块(云原生应用相同环境下的各个模块都在一个命名空间下)
+    module_name = module_name or Application.objects.get(code=app_code).default_module.name
+
     return _get_namespace_cache(app_code, run_env, module_name)
 
 
@@ -98,8 +97,9 @@ def get_cluster_id(app_code: str, run_env: str, module_name: Optional[str] = Non
     :param module_name: 模块名
     :raises NotImplementedError: 集群版本低于 1.12
     """
-    # 如果不传递模块, 则使用 default 模块(云原生应用各个模块和 default 模块部署在相同的命名空间下)
-    module_name = module_name or ModuleName.DEFAULT.value
+    # 如果不传递模块, 则使用 default 模块(云原生应用相同环境下的各个模块都在一个命名空间下)
+    module_name = module_name or Application.objects.get(code=app_code).default_module.name
+
     cluster_info = _get_cluster_info_cache(app_code, run_env, module_name)
     version = cluster_info["version"]
     if (int(version.major), int(version.minor.rstrip("+"))) < (1, 12):

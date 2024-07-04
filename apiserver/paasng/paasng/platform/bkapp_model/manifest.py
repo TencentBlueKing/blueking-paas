@@ -1,20 +1,18 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 import logging
 import shlex
@@ -55,11 +53,17 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     EnvOverlay,
     EnvVar,
     EnvVarOverlay,
+    ExecAction,
     Hook,
+    HTTPGetAction,
+    HTTPHeader,
     MountOverlay,
     ObjectMetadata,
+    Probe,
+    ProbeSet,
     ReplicasOverlay,
     ResQuotaOverlay,
+    TCPSocketAction,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
@@ -89,6 +93,7 @@ from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.engine.models.deployment import Probe as ProbeConfig
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -180,6 +185,8 @@ class BuildConfigManifestConstructor(ManifestConstructor):
 class ProcessesManifestConstructor(ManifestConstructor):
     """Construct the processes part."""
 
+    PORT_PLACEHOLDER = "${PORT}"
+
     def apply_to(self, model_res: BkAppResource, module: Module):
         process_specs = list(ModuleProcessSpec.objects.filter(module=module).order_by("created"))
         if not process_specs:
@@ -200,6 +207,14 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     minReplicas=_c.min_replicas, maxReplicas=_c.max_replicas, policy=_c.policy
                 )
 
+            probes_spec = None
+            if probes := process_spec.probes:
+                probes_spec = ProbeSet(
+                    liveness=self._build_probe_from_config(probes.liveness) if probes.liveness else None,
+                    readiness=self._build_probe_from_config(probes.readiness) if probes.readiness else None,
+                    startup=self._build_probe_from_config(probes.startup) if probes.startup else None,
+                )
+
             processes.append(
                 BkAppProcess(
                     name=process_spec.name,
@@ -210,6 +225,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
                     autoscaling=autoscaling_spec,
+                    probes=probes_spec,
                 )
             )
 
@@ -312,14 +328,46 @@ class ProcessesManifestConstructor(ManifestConstructor):
 
         raise ValueError("Error getting command and args")
 
-    @staticmethod
-    def _sanitize_args(input: List[str]) -> List[str]:
+    def _sanitize_args(self, input: List[str]) -> List[str]:
         """Sanitize the command and arg list, replace some special expressions which can't
         be interpreted by the operator.
         """
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
-        return [s.replace("${PORT:-5000}", "${PORT}") for s in input]
+        return [s.replace("${PORT:-5000}", self.PORT_PLACEHOLDER) for s in input]
+
+    def _build_probe_from_config(self, cfg: ProbeConfig) -> Probe:
+        return Probe(
+            exec=ExecAction(command=cfg.exec.command) if cfg.exec else None,
+            httpGet=(
+                HTTPGetAction(
+                    port=settings.CONTAINER_PORT if cfg.http_get.port == self.PORT_PLACEHOLDER else cfg.http_get.port,
+                    host=cfg.http_get.host,
+                    path=cfg.http_get.path,
+                    httpHeaders=[HTTPHeader(name=h.name, value=h.value) for h in cfg.http_get.http_headers],
+                    scheme=cfg.http_get.scheme,
+                )
+                if cfg.http_get
+                else None
+            ),
+            tcpSocket=(
+                TCPSocketAction(
+                    port=(
+                        settings.CONTAINER_PORT
+                        if cfg.tcp_socket.port == self.PORT_PLACEHOLDER
+                        else cfg.tcp_socket.port
+                    ),
+                    host=cfg.tcp_socket.host,
+                )
+                if cfg.tcp_socket
+                else None
+            ),
+            initialDelaySeconds=cfg.initial_delay_seconds,
+            periodSeconds=cfg.period_seconds,
+            timeoutSeconds=cfg.timeout_seconds,
+            successThreshold=cfg.success_threshold,
+            failureThreshold=cfg.failure_threshold,
+        )
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):

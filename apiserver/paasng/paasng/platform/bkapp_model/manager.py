@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from dataclasses import asdict
 from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
@@ -68,6 +67,7 @@ class ModuleProcessSpecManager:
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
         def process_spec_builder(process: BkAppProcess) -> ModuleProcessSpec:
+            probes = process.probes.to_snake_case() if process.probes else None
             return ModuleProcessSpec(
                 module=self.module,
                 name=process.name,
@@ -76,6 +76,7 @@ class ModuleProcessSpecManager:
                 port=process.targetPort,
                 target_replicas=process.replicas,
                 plan_name=process.resQuotaPlan or ResQuotaPlan.P_DEFAULT,
+                probes=probes,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -97,6 +98,15 @@ class ModuleProcessSpecManager:
                 recorder.setattr("plan_name", process.resQuotaPlan)
             if process_spec.port != process.targetPort:
                 recorder.setattr("port", process.targetPort)
+
+            # 容器探针
+            if not process.probes and process_spec.probes:
+                recorder.setattr("probes", None)
+            elif process.probes:
+                probes = process.probes.to_snake_case()
+                if process_spec.probes != probes:
+                    recorder.setattr("probes", probes)
+
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
@@ -108,12 +118,13 @@ class ModuleProcessSpecManager:
                 "target_replicas",
                 "plan_name",
                 "port",
+                "probes",
                 "updated",
             ],
         )
         # update spec objects end
 
-    def sync_from_desc(self, processes: List["ProcessTmpl"]):
+    def sync_from_desc(self, processes: List[ProcessTmpl]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess ProcessTmpl
@@ -121,7 +132,7 @@ class ModuleProcessSpecManager:
                           where 'replicas' and 'plan' is optional
         """
 
-        processes_map: Dict[str, "ProcessTmpl"] = {process.name: process for process in processes}
+        processes_map: Dict[str, ProcessTmpl] = {process.name: process for process in processes}
 
         # remove proc spec objects which is already deleted via procfile
         self.delete_outdated_procs(cur_procs_name=processes_map.keys())
@@ -139,6 +150,7 @@ class ModuleProcessSpecManager:
                 proc_command=process.command,
                 target_replicas=process.replicas or PROC_DEFAULT_REPLICAS,
                 plan_name=process.plan or ResQuotaPlan.P_DEFAULT,
+                probes=asdict(process.probes) if process.probes else None,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -156,12 +168,14 @@ class ModuleProcessSpecManager:
                 recorder.setattr("plan_name", process.plan)
             if process.replicas and process_spec.target_replicas != process.replicas:
                 recorder.setattr("target_replicas", process.replicas)
+            if process.probes and process_spec.probes != asdict(process.probes):
+                recorder.setattr("probes", asdict(process.probes))
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
             proc_updator=process_spec_updator,
             updating_procs=updating_procs,
-            updated_fields=["proc_command", "target_replicas", "plan_name", "updated"],
+            updated_fields=["proc_command", "target_replicas", "plan_name", "probes", "updated"],
         )
         # update spec objects end
 

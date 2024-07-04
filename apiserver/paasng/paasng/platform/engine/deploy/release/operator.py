@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import time
-from dataclasses import asdict
 from typing import Optional
 
 from django.db import IntegrityError
@@ -30,7 +28,6 @@ from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.bk_app.processes.models import ProcessTmpl
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -57,8 +54,10 @@ class BkAppReleaseMgr(DeployStep):
         build = Build.objects.get(pk=self.deployment.build_id)
         with self.procedure("更新进程配置"):
             # Turn the processes into the corresponding type in paas_wl module
-            procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
-            ProcessManager(self.engine_app.env).sync_processes_specs(procs)
+            procs = self.deployment.get_processes()
+            proc_mgr = ProcessManager(self.engine_app.env)
+            proc_mgr.sync_processes_specs(procs)
+            proc_mgr.sync_processes_probes(procs)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 from typing import Union
@@ -255,14 +254,14 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         )
     elif collector_config.etl_type == ETLType.JSON:
 
-        def make_string_field(index: int, field_name: str) -> ETLField:
+        def make_string_field(index: int, field_name: str, is_analyzed: bool) -> ETLField:
             return ETLField(
                 field_index=index,
                 field_name=field_name,
                 field_type=FieldType.STRING,
                 is_time=False,
                 is_dimension=False,
-                is_analyzed=True,
+                is_analyzed=is_analyzed,
                 option={},
             )
 
@@ -282,13 +281,16 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
 
         fields = [
             *([time_filed] if time_filed is not None else []),
-            make_string_field(2, "message"),
-            make_string_field(3, "levelname"),
-            make_string_field(4, "pathname"),
-            make_string_field(5, "funcName"),
-            make_string_field(6, "otelSpanID"),
-            make_string_field(7, "otelServiceName"),
-            make_string_field(8, "otelTraceID"),
+            # 只对 message 字段做分词处理，其他字段不分词
+            # 对字段分词后无法使用 term 查询做精确查询
+            # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-term-query.html
+            make_string_field(2, "message", is_analyzed=True),
+            make_string_field(3, "levelname", is_analyzed=False),
+            make_string_field(4, "pathname", is_analyzed=False),
+            make_string_field(5, "funcName", is_analyzed=False),
+            make_string_field(6, "otelSpanID", is_analyzed=False),
+            make_string_field(7, "otelServiceName", is_analyzed=False),
+            make_string_field(8, "otelTraceID", is_analyzed=False),
         ]
 
         etl_config = ETLConfig(

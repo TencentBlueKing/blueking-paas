@@ -106,18 +106,6 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 		return nil
 	}
 
-	proc := bkapp.Spec.GetWebProcess()
-	if proc == nil {
-		return nil
-	}
-
-	// Use the web process's image and pull policy to run the hook.
-	// This behavior might be changed in the future when paasv1alpha1.BkApp is fully removed.
-	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get("web")
-	if err != nil {
-		return nil
-	}
-
 	if status == nil {
 		status = &paasv1alpha2.HookStatus{
 			Type:  paasv1alpha2.HookPreRelease,
@@ -155,12 +143,12 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Image:           image,
+						Image:           bkapp.Spec.Build.Image,
 						Command:         kubeutil.ReplaceCommandEnvVariables(command),
 						Args:            kubeutil.ReplaceCommandEnvVariables(args),
 						Env:             common.GetAppEnvs(bkapp),
 						Name:            "hook",
-						ImagePullPolicy: pullPolicy,
+						ImagePullPolicy: bkapp.Spec.Build.ImagePullPolicy,
 						// pre-hook 使用默认资源配置
 						Resources: envs.NewProcResourcesGetter(bkapp).Default(),
 						// TODO: 挂载点

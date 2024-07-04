@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from contextlib import suppress
 from urllib.parse import quote
@@ -39,6 +38,7 @@ from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
     check_persistent_storage_enabled,
+    check_storage_class_exists,
     init_volume_source_controller,
 )
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -372,11 +372,13 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PersistentStorageFeatureViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class StorageClassViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def check(self, request, code):
-        """检查应用是否支持持久化存储"""
+        """检查应用是否开启相应的 StorageClass"""
         app = self.get_application()
-        enabled = check_persistent_storage_enabled(application=app)
-        return Response(enabled)
+        exists = check_storage_class_exists(
+            application=app, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
+        )
+        return Response(exists)

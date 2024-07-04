@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 import shlex
 
@@ -30,7 +28,7 @@ from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.declarative.utils import get_quota_plan
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.utils.serializers import field_env_var_key
+from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
@@ -81,7 +79,7 @@ class ExecSLZ(serializers.Serializer):
 
 
 class HTTPGetSLZ(serializers.Serializer):
-    port = serializers.CharField(help_text="访问端口或者端口名称")
+    port = IntegerOrCharField(help_text="访问端口或者端口名称")
     host = serializers.CharField(help_text="主机名", required=False)
     path = serializers.CharField(help_text="访问路径", required=False)
     http_headers = serializers.ListField(
@@ -91,7 +89,7 @@ class HTTPGetSLZ(serializers.Serializer):
 
 
 class TCPSocketSLZ(serializers.Serializer):
-    port = serializers.CharField(help_text="访问端口或者端口名称")
+    port = IntegerOrCharField(help_text="访问端口或者端口名称")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
 

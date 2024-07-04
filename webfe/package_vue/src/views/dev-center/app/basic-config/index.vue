@@ -55,6 +55,12 @@ export default {
     $route: {
       handler(v) {
         this.active = v.meta.module;
+        if (v.meta.module === 'storage') {
+          // 判断当前是否展示持久存储，无需展示默认选择第一项
+          if (!this.isCloudNativeApp || !this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE) {
+            this.handleTabChange('market');
+          }
+        }
       },
       immediate: true,
     },
@@ -66,7 +72,7 @@ export default {
       this.$router.push({
         name: curEnv.routeName,
         params: {
-          id: this.curAppCode,
+          id: this.appCode,
         },
       });
     },

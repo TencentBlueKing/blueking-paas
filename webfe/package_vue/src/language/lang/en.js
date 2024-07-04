@@ -17,7 +17,6 @@
  */
 
 export default {
-  码客: '码客',
   '工蜂 Git': '工蜂 Git',
   '工蜂 Git 授权': '工蜂 Git authorization',
   'GitHub 授权': 'GitHub authorization',
@@ -1509,7 +1508,6 @@ export default {
   查看更多应用: 'View more APP',
   资源使用量: 'Resource usage',
   对象储存: 'Object Storag',
-  了解我们的服务: 'Discover our services',
   我的应用分布: 'My APP distribution',
   '单位（个）': 'Unit (pcs)',
   '访问量 Top 5 (最近 30 天)': 'Top 5 visits (last 30 days)',
@@ -2651,4 +2649,19 @@ export default {
   '应用若在 API 网关上注册了资源，可直接在 API 网关上修改，调用方不需要调整': 'If the application has registered resources on the API Gateway, modifications can be made directly on the API Gateway, and callers do not need to adjust',
   '点击“开始迁移”后，应用服务将不会受到任何影响': 'After clicking "Start Migration", the application services will not be affected',
   '可搜索应用代码、环境变量中是否有以下内容来确认': 'You can search the application code and environment variables for the following content to confirm',
+  '将您的自定义域名解析到表格中的 IP': 'Map your custom domain to the IP in the table',
+  暂无持久存储功能: 'No persistent storage feature available',
+  '开发者中心的持久存储功能为多个模块和进程提供了一个共享的数据源，实现了数据的共享与交互，并确保了数据在系统故障或重启后的持久化和完整性。': 'The persistent storage feature in the developer center provides a shared data source for multiple modules and processes, enabling data sharing and interaction, and ensuring data persistence and integrity in the event of system failures or restarts.',
+  '如需使用该功能，需要：': 'To use this feature, you need to:',
+  '1. 在应用集群创建 StorageClass 并注册到开发者中心': '1. Create a StorageClass in the application cluster and register it in the developer center',
+  '2. 给应用开启持久存储特性': '2. Enable the persistent storage feature for the application',
+  '暂不支持持久存储，请联系管理员开启“持久存储挂载卷”应用特性': 'Persistent storage is not supported; please contact the administrator to enable the "Persistent Storage Mount Volume" application feature',
+  闲置应用: 'Idle Application',
+  闲置模块: 'Idle Module',
+  '更新于 {t}之前': 'Updated before {t}',
+  资源配额: 'Resource Quota',
+  '近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。': 'Modules with no access records in the past 30 days, CPU usage below 1%, and no usage fluctuations in the past 7 days should be taken offline as soon as possible.',
+  发布者: 'Publisher',
+  请选择发布者: 'Please select a publisher',
+  '仅支持对同一{t}下的 API 进行批量申请': 'Batch application is only supported for APIs under the same {t}',
 };

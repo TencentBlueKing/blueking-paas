@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 import logging
 from unittest import mock
@@ -32,7 +30,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
-from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
+from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -59,10 +57,10 @@ def another_user(request):
 
 
 @pytest.fixture(autouse=True)
-def _turn_on_bk_log_feature():
-    post_create_application.connect(turn_on_bk_log_feature)
+def _turn_on_bk_log_feature_for_app():
+    post_create_application.connect(turn_on_bk_log_feature_for_app)
     yield
-    post_create_application.disconnect(turn_on_bk_log_feature)
+    post_create_application.disconnect(turn_on_bk_log_feature_for_app)
 
 
 class TestMembershipViewset:

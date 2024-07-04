@@ -7,14 +7,18 @@
     >
       <section class="storage-container">
         <!-- 不支持持久存储 -->
-        <section v-if="!isShowPersistentStorage">
-          <bk-exception
-            class="exception-wrap-item exception-part"
-            type="empty"
-            scene="part"
-          >
-            <p class="mt10 exception-text">{{ $t('暂不支持持久存储, 如有需要请联系管理员开启') }}</p>
-          </bk-exception>
+        <section v-if="!isClusterPersistentStorageSupported">
+          <FunctionalDependency
+            mode="partial"
+            :title="$t('暂无持久存储功能')"
+            :functional-desc="$t('开发者中心的持久存储功能为多个模块和进程提供了一个共享的数据源，实现了数据的共享与交互，并确保了数据在系统故障或重启后的持久化和完整性。')"
+            :guide-title="$t('如需使用该功能，需要：')"
+            :guide-desc-list="[
+              $t('1. 在应用集群创建 StorageClass 并注册到开发者中心'),
+              $t('2. 给应用开启持久存储特性'),
+            ]"
+            @gotoMore="gotoMore"
+          />
         </section>
         <template v-else>
           <!-- 无数据 -->
@@ -177,7 +181,9 @@
   </div>
 </template>
 
-<script>import createPersistentStorageDailog from '@/components/create-persistent-storage-dailog';
+<script>
+import createPersistentStorageDailog from '@/components/create-persistent-storage-dailog';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 import { PERSISTENT_STORAGE_SIZE_MAP } from '@/common/constants';
 
 const defaultSourceType = 'PersistentStorage';
@@ -186,6 +192,7 @@ export default {
   name: 'AppPersistentStorage',
   components: {
     createPersistentStorageDailog,
+    FunctionalDependency,
   },
   data() {
     return {
@@ -202,7 +209,7 @@ export default {
         bound_modules: [],
       },
       persistentStorageDailogVisible: false,
-      isShowPersistentStorage: false,
+      isClusterPersistentStorageSupported: false,
       persistentStorageSizeMap: PERSISTENT_STORAGE_SIZE_MAP,
     };
   },
@@ -230,7 +237,7 @@ export default {
   methods: {
     init() {
       this.isLoading = true;
-      Promise.all([this.getpersistentStorageFeature(), this.getPersistentStorageList()]).finally(() => {
+      Promise.all([this.getClusterPersistentStorageFeature(), this.getPersistentStorageList()]).finally(() => {
         this.isLoading = false;
       });
     },
@@ -298,12 +305,13 @@ export default {
         this.delteDialogConfig.isLoading = false;
       }
     },
-    async getpersistentStorageFeature() {
+    // 获取集群特性
+    async getClusterPersistentStorageFeature() {
       try {
-        const res = await this.$store.dispatch('persistentStorage/getpersistentStorageFeature', {
+        const res = await this.$store.dispatch('persistentStorage/getClusterPersistentStorageFeature', {
           appCode: this.appCode,
         });
-        this.isShowPersistentStorage = res || false;
+        this.isClusterPersistentStorageSupported = res;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -319,6 +327,10 @@ export default {
         this.delteDialogConfig.isDisabled = true;
         this.delteDialogConfig.isLoading = false;
       }, 500);
+    },
+    gotoMore() {
+      const docUrl = `${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas_persistent_storage`;
+      window.open(docUrl, '_blank');
     },
   },
 };

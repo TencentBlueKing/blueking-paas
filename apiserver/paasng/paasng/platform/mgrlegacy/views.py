@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 import datetime
 import logging
@@ -58,6 +56,7 @@ except ImportError:
 from paas_wl.utils.error_codes import error_codes as wl_error_codes
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
+from paasng.platform.applications.handlers import turn_on_bk_log_feature
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.platform.mgrlegacy.serializers import (
@@ -335,11 +334,16 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """确认迁移"""
         process = get_object_or_404(CNativeMigrationProcess, id=process_id)
 
+        # 校验用户是否有操作当前应用的权限
+        check_application_perm(self.request.user, process.app, AppAction.BASIC_DEVELOP)
+
         if process.status != CNativeMigrationStatus.MIGRATION_SUCCEEDED.value:
             raise error_codes.APP_MIGRATION_CONFIRMED_FAILED.f("该应用记录未表明应用已成功迁移, 无法确认")
 
         confirm_migration.delay(process.id)
 
+        # 根据集群特性开启应用的日志采集 FeatureFlag
+        turn_on_bk_log_feature(process.app)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod

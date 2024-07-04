@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import shlex
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -29,7 +29,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.declarative.deployment.resources import BkSaaSItem
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models.deployment import AutoscalingConfig
+from paasng.platform.engine.models.deployment import AutoscalingConfig, ProbeSet
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
 from paasng.utils.models import make_json_field
@@ -51,6 +51,10 @@ def env_overlay_getter_factory(field_name: str):
 
 
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
+
+ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
+cattr.register_structure_hook(Union[int, str], lambda items, cl: items)  # type: ignore
+cattr.register_unstructure_hook(Union[int, str], lambda value: value)  # type: ignore
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -75,6 +79,7 @@ class ModuleProcessSpec(TimestampedModel):
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
+    probes: Optional[ProbeSet] = ProbeSetField("容器探针配置", default=None, null=True)
 
     class Meta:
         unique_together = ("module", "name")
@@ -88,8 +93,10 @@ class ModuleProcessSpec(TimestampedModel):
         """
         if self.proc_command:
             return self.proc_command
-        # Warning: 已知 shlex.join 不支持环境变量, 如果普通应用使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
+        # FIXME: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成
+        # 已知 shlex.join 不支持环境变量, 如果普通应用使用 app_desc v3 描述文件, 有可能出现无法正常运行的问题
         # 例如会报错: Error: '${PORT:-5000}' is not a valid port number.
+        # 如果实际用于命令执行, 可参考 generate_bash_command_with_tokens 函数实现
         return self._sanitize_proc_command(
             (shlex.join(self.command or []) + " " + shlex.join(self.args or [])).strip()
         )
@@ -217,15 +224,16 @@ class ModuleDeployHook(TimestampedModel):
     def get_proc_command(self) -> str:
         if self.proc_command is not None:
             return self.proc_command
+        # FIXME: proc_command 并不能简单地通过 shlex.join 合并 command 和 args 生成, 可能出现无法正常运行的问题
         return shlex.join(self.command or []) + " " + shlex.join(self.args or [])
 
     def get_command(self) -> List[str]:
-        if self.proc_command is not None:
+        if self.proc_command:
             return [shlex.split(self.proc_command)[0]]
         return self.command or []
 
     def get_args(self) -> List[str]:
-        if self.proc_command is not None:
+        if self.proc_command:
             return shlex.split(self.proc_command)[1:]
         return self.args or []
 

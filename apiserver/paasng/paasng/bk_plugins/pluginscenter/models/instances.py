@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import time
 from pathlib import PurePath
@@ -158,9 +157,13 @@ class PluginMarketInfo(AuditedModel):
 
 
 class PluginReleaseVersionManager(models.Manager):
-    def get_latest_succeeded(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
-        """获取最后一个成功发布的正式版本，用于:
-        1.发布正式版本时自动生成版本号
+    def get_latest_succeeded(
+        self, plugin: Optional["PluginInstance"] = None, type: Optional[str] = constants.PluginReleaseType.PROD
+    ) -> Optional["PluginRelease"]:
+        """获取最后一个成功发布的版本，默认为正式版本用于:
+        1. 新建测试/版本页面：
+        - 代码差异对比
+        - 自动生成版本号
         """
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
@@ -170,9 +173,9 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(
-                plugin=plugin, status=constants.PluginReleaseStatus.SUCCESSFUL, type=constants.PluginReleaseType.PROD
-            ).latest("created")
+            return self.filter(plugin=plugin, status=constants.PluginReleaseStatus.SUCCESSFUL, type=type).latest(
+                "created"
+            )
         except self.model.DoesNotExist:
             return None
 

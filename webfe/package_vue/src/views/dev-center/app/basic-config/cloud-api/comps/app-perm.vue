@@ -1,13 +1,21 @@
 <template>
   <div class="paasng-api-panel">
     <div class="search-wrapper">
-      <bk-button
-        theme="primary"
-        :disabled="isApplyDisabled"
-        @click="handleBatchApply"
-      >
-        {{ $t('批量申请') }}
-      </bk-button>
+      <!-- 申请：不支持跨网关/组件申请 -->
+      <span
+        v-bk-tooltips="{
+          content: $t('仅支持对同一{t}下的 API 进行批量申请', { t: isComponentApi ? $t('组件') : $t('网关') }),
+          disabled: !isTooltipsDisabled
+        }">
+        <bk-button
+          theme="primary"
+          :disabled="isApplyDisabled"
+          @click="handleBatchApply"
+        >
+          {{ $t('批量申请') }}
+        </bk-button>
+      </span>
+      <!-- 续期：支持跨网关/组件续期 -->
       <bk-button
         style="margin-left: 6px;"
         theme="primary"
@@ -325,10 +333,10 @@
   </div>
 </template>
 
-<script>import RenewalDialog from './batch-renewal-dialog';
+<script>
+import RenewalDialog from './batch-renewal-dialog';
 import BatchDialog from './batch-apply-dialog';
 import PaasngAlert from './paasng-alert';
-import { clearFilter } from '@/common/utils';
 import { formatRenewFun, formatApplyFun } from '@/common/cloud-api';
 
 export default {
@@ -427,9 +435,16 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    // 是否允许批量申请
+    // 是否允许批量申请、不支持跨网关/组件申请
     isApplyDisabled() {
-      return !this.selectedList.some(item => item.applyDisabled === false);
+      const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
+      return !this.selectedList.some(item => item.applyDisabled === false)
+      || new Set(this.selectedList.map(item => item[idField])).size > 1;
+    },
+    // 跨网关批量申请禁用，只支持单个网关下接口的批量申请
+    isTooltipsDisabled() {
+      const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
+      return new Set(this.selectedList.map(item => item[idField])).size > 1;
     },
     // 是否允许批量续期
     isRenewalDisabled() {
@@ -490,11 +505,16 @@ export default {
       this.renewalDialog.rows = [...this.selectedList];
     },
 
-    // 批量申请权限
+    // 批量申请权限-不允许跨网关/组件申请
     handleBatchApply() {
       if (!this.selectedList.length) {
         return;
       }
+      const id = this.isComponentApi ? 'system_id' : 'gateway_id';
+      const name = this.isComponentApi ? 'system_name' : 'api_name';
+      // 跨网关/组件申请已禁用，取第一项即可
+      this.applyDialog.superiorId = this.selectedList[0][id];
+      this.applyDialog.superiorName = this.selectedList[0][name];
       this.applyDialog.visiable = true;
       this.applyDialog.title = this.$t('批量申请权限');
       this.applyDialog.rows = [...this.selectedList];
@@ -613,6 +633,7 @@ export default {
       this.renewalDialog.visiable = false;
       this.allChecked = false;
       this.indeterminate = false;
+      this.selectedList = [];
       this.fetchList(this.id);
     },
 
@@ -902,6 +923,7 @@ export default {
     handleSuccessApply() {
       this.applyDialog.visiable = false;
       this.allChecked = false;
+      this.selectedList = [];
       // 获取列表
       this.fetchList(this.id);
     },

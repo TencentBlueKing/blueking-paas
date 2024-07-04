@@ -29,7 +29,7 @@ try:
 except ImportError:
     from paasng.platform.mgrlegacy.app_migrations.sourcectl import SourceControlMigration
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestBaseEnvironmentVariableMigration(BaseMigrationTest):

@@ -56,7 +56,7 @@ class BaseComponentAPIPlugin(UserNotificationPlugin):
         common_params = self.get_common_params(bk_username)
         url = f"{settings.COMPONENT_SYSTEM_HOST}{self.url_prefix}{method}/"
         try:
-            resp = self.client.get(url, params={**common_params, **params})
+            resp = self.client.post(url, json={**common_params, **params})
             result = resp.json()
         except Exception:
             logger.exception("request to tof failed.")

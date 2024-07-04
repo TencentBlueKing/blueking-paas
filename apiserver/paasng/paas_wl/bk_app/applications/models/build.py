@@ -173,12 +173,20 @@ class Build(UuidAuditedModel):
             registry_client = get_app_docker_registry_client()
             ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
             metadata = ref.get_metadata()
-            manifest: ManifestSchema2 = ref.get()
-            self.artifact_detail = {
-                "size": sum(layer.size for layer in manifest.layers),
-                "digest": metadata.digest,
-                "invoke_message": self.build_process.invoke_message,
-            }
+            if metadata:
+                manifest: ManifestSchema2 = ref.get()
+                self.artifact_detail = {
+                    "size": sum(layer.size for layer in manifest.layers),
+                    "digest": metadata.digest,
+                    "invoke_message": self.build_process.invoke_message,
+                }
+            else:
+                # 未查找到镜像时
+                self.artifact_detail = {
+                    "size": 0,
+                    "digest": "unknown",
+                    "invoke_message": self.build_process.invoke_message,
+                }
         else:
             self.artifact_detail = {
                 "invoke_message": self.build_process.invoke_message,

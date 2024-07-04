@@ -138,7 +138,7 @@
                     :placeholder="$t('请输入带标签的镜像仓库')"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('示例镜像：') }}
+                    {{ $t('请输入镜像仓库，如') }}：
                     <span>
                       {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
                     </span>

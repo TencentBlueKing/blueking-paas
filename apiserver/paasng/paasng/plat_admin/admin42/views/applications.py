@@ -236,7 +236,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
                     rp.latest_operator if rp.latest_operator else "--",
                     rp.latest_operated_at.strftime("%Y-%m-%d %H:%M:%S") if rp.latest_operated_at else "--",
                     str(OperationIssueType.get_choice_label(rp.issue_type)),
-                    ", ".join(rp.evaluation_result["issues"]) if rp.evaluation_result else "--",
+                    ", ".join(rp.evaluate_result["issues"]) if rp.evaluate_result else "--",
                     administrators,
                 ]
             )

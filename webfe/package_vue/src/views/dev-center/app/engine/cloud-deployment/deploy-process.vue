@@ -129,6 +129,7 @@
                   :label-width="labelWidth"
                   :property="'image'"
                   :rules="rules.image"
+                  :error-display-type="'normal'"
                   v-else-if="isCustomImage && allowMultipleImage"
                 >
                   <bk-input
@@ -283,8 +284,9 @@
                 <bk-form-item
                   v-show="ifopen"
                   :label-width="70"
+                  ext-cls="env-form-item-cls"
                 >
-                  <div class="env-name w885">{{ $t('预发布环境') }}</div>
+                  <div class="env-name">{{ $t('预发布环境') }}</div>
                   <div class="env-container">
                     <bk-form
                       ref="formStagEnv"
@@ -406,6 +408,7 @@
                           :required="true"
                           :property="'scaling_config.min_replicas'"
                           :rules="rules.stagMinReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.stag.scaling_config.min_replicas"
@@ -421,6 +424,7 @@
                           :required="true"
                           :property="'scaling_config.max_replicas'"
                           :rules="rules.stagMaxReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.stag.scaling_config.max_replicas"
@@ -441,6 +445,7 @@
                           :required="true"
                           :property="'target_replicas'"
                           :rules="rules.formReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.stag.target_replicas"
@@ -457,8 +462,9 @@
                 <bk-form-item
                   v-show="ifopen"
                   :label-width="70"
+                  ext-cls="env-form-item-cls"
                 >
-                  <div class="env-name w885">{{ $t('生产环境') }}</div>
+                  <div class="env-name">{{ $t('生产环境') }}</div>
                   <div class="env-container">
                     <bk-form
                       ref="formProdEnv"
@@ -580,6 +586,7 @@
                           :required="true"
                           :property="'scaling_config.min_replicas'"
                           :rules="rules.prodMinReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.prod.scaling_config.min_replicas"
@@ -595,6 +602,7 @@
                           :required="true"
                           :property="'scaling_config.max_replicas'"
                           :rules="rules.prodMaxReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.prod.scaling_config.max_replicas"
@@ -615,6 +623,7 @@
                           :required="true"
                           :property="'target_replicas'"
                           :rules="rules.formReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.prod.target_replicas"
@@ -701,7 +710,7 @@
                 </bk-button>
               </bk-form-item>
               <section
-                class="mt20 extra-config-cls"
+                :class="['mt20', 'extra-config-cls', { 'view-status': !isPageEdit }]"
                 v-if="ifopen"
               >
                 <bk-form-item :label="`${$t('配置环境')}：`">
@@ -709,7 +718,8 @@
                     <div
                       v-for="item in envsData"
                       :key="item.value"
-                      :class="item.value === 'prod' ? 'ml20' : ''"
+                      class="env-panel"
+                      :class="item.value === 'prod' ? 'ml24' : ''"
                     >
                       <div class="env-name">{{ item.label }}</div>
                       <div class="env-item">
@@ -760,6 +770,16 @@
             </bk-form>
           </div>
 
+          <!-- 探针 -->
+          <section v-if="ifopen">
+            <probe
+              ref="formProbe"
+              :process-data="formData"
+              :is-edit="isPageEdit"
+              @change-form-data="changeProbeFormData"
+            />
+          </section>
+
           <!-- 创建应用于与模块需隐藏 -->
           <div
             class="process-btn-wrapper"
@@ -801,6 +821,7 @@
               :required="true"
               :property="'name'"
               :rules="rules.processName"
+              :error-display-type="'normal'"
             >
               <bk-input
                 class="path-input-cls"
@@ -821,18 +842,21 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>
+import { cloneDeep } from 'lodash';
 import { RESQUOTADATA, ENV_OVERLAY } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 import quotaPopver from './comps/quota-popver';
 import deployHook from './deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
+import probe from './comps/probe/index.vue';
 
 export default {
   components: {
     userGuide,
     quotaPopver,
     deployHook,
+    probe,
   },
   props: {
     moduleId: {
@@ -1122,8 +1146,8 @@ export default {
     if (this.isCreate) {
       if (!this.processData.length) {
         this.processData.push(this.formData);
-        this.processDataBackUp = _.cloneDeep(this.processData);
-        this.panels = _.cloneDeep(this.processData);
+        this.processDataBackUp = cloneDeep(this.processData);
+        this.panels = cloneDeep(this.processData);
       }
     } else {
       // 非创建应用初始化为查看态
@@ -1140,8 +1164,6 @@ export default {
     // 获取资源配额数据
     await this.getQuotaPlans();
   },
-  mounted() {
-  },
   methods: {
     async init() {
       try {
@@ -1155,7 +1177,7 @@ export default {
         if (this.allowMultipleImage) {
           this.getImageCredentialList();
         }
-        this.processDataBackUp = _.cloneDeep(this.processData);
+        this.processDataBackUp = cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
           // 传入的镜像仓库示例
@@ -1165,7 +1187,7 @@ export default {
           if (!Object.keys(this.formData.env_overlay).length) {
             this.formData.env_overlay = ENV_OVERLAY;
           }
-          this.panels = _.cloneDeep(this.processData);
+          this.panels = cloneDeep(this.processData);
         }
       } catch (e) {
         this.$paasMessage({
@@ -1257,7 +1279,6 @@ export default {
         const { appCode } = this;
         const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
         this.imageCredentialList = res;
-        console.log('res', res);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1335,7 +1356,7 @@ export default {
             this.formDataBackUp.image = this.formData.image;
             this.formDataBackUp.image_credential_name = this.formData.image_credential_name;
           }
-          this.formData = _.cloneDeep(this.formDataBackUp);
+          this.formData = cloneDeep(this.formDataBackUp);
           this.formData.name = this.processDialog.name;
           this.processData.push(this.formData);
         }
@@ -1355,9 +1376,9 @@ export default {
 
     // 页面取消
     handleCancel() {
-      this.processData = _.cloneDeep(this.processDataBackUp);
+      this.processData = cloneDeep(this.processDataBackUp);
       this.formData = this.processData[0];
-      this.panels = _.cloneDeep(this.processData);
+      this.panels = cloneDeep(this.processData);
       this.processNameActive = 'web';
       this.btnIndex = 0;
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
@@ -1376,7 +1397,7 @@ export default {
       this.processData.splice(i, 1);
       // eslint-disable-next-line prefer-destructuring
       this.formData = this.processData[0];
-      this.panels = _.cloneDeep(this.processData);
+      this.panels = cloneDeep(this.processData);
 
       this.processNameActive = 'web';
       this.btnIndex = 0;
@@ -1425,11 +1446,25 @@ export default {
       }
     },
 
+    // 处理校验
+    async handleValidate() {
+      try {
+        await this.$refs?.formStagEnv?.validate();
+        await this.$refs?.formProdEnv?.validate();
+        await this.$refs?.formDeploy?.validate();
+        await this.$refs?.formProbe?.probeValidate();
+        return true;
+      } catch (e) {
+        console.error(e);
+        return false;
+      }
+    },
+
     // 保存
     async handleSave() {
-      await this.$refs?.formStagEnv?.validate();
-      await this.$refs?.formProdEnv?.validate();
-      await this.$refs?.formDeploy?.validate();
+      const isValidationSuccessful = await this.handleValidate();
+      if (!isValidationSuccessful) return;
+      // 探针数据校验
       // 创建应用或创建模块返回值
       if (this.isCreate) {
         return [...this.processData];
@@ -1468,15 +1503,20 @@ export default {
         this.prodQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
       }
     },
+    // 设置对应探测数据
+    changeProbeFormData(config) {
+      this.formData.probes[config.key] = config.data;
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
 .process-container {
-  // margin-top: 20px;
-  // border: 1px solid #e6e9ea;
   border-top: none;
   padding-bottom: 20px;
+}
+.ml24 {
+  margin-left: 24px;
 }
 .tab-container {
   position: relative;
@@ -1575,10 +1615,6 @@ export default {
   .form-pre-command.bk-form.bk-inline-form .bk-form-input {
     height: 32px !important;
   }
-
-  .form-process {
-    width: 625px;
-  }
 }
 .btn-container {
   padding: 0 24px;
@@ -1605,11 +1641,7 @@ export default {
     padding-left: 10px;
   }
 }
-.w885 {
-  width: 885px !important;
-}
 .env-name {
-  width: 420px;
   color: #313238;
   font-size: 14px;
   height: 32px;
@@ -1630,10 +1662,17 @@ export default {
   padding-top: 10px;
 }
 .env-container {
-  width: 885px;
   background: #FAFBFD;
   border-radius: 2px;
   padding: 20px 24px;
+}
+.view-status {
+  .env-panel {
+    width: 420px;
+  }
+}
+.env-form-item-cls {
+  margin-right: 56px;
 }
 .process-name {
   width: 280px;

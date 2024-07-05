@@ -110,11 +110,11 @@ func (r *DGroupMappingSyncer) getWantedIngresses(
 	for _, group := range domains {
 		builder, err := dgmingress.NewIngressBuilder(group.SourceType, r.bkapp)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fail to create builder %s/%s", r.bkapp.Namespace, r.bkapp.Name)
+			return nil, errors.Wrapf(err, "fail to create builder for bkapp %s/%s", r.bkapp.Namespace, r.bkapp.Name)
 		}
 		ings, err := builder.Build(group.Domains)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fail to generate ingresses  %s/%s", r.bkapp.Namespace, r.bkapp.Name)
+			return nil, errors.Wrapf(err, "fail to generate ingresses for bkapp %s/%s", r.bkapp.Namespace, r.bkapp.Name)
 		}
 		results = append(results, ings...)
 	}

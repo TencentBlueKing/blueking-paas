@@ -54,7 +54,7 @@ type DeployActionReconciler struct {
 func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
 	log := logf.FromContext(ctx)
 	var err error
-	log.V(1).Info(fmt.Sprintf("handling deploy action reconciliation for BkApp %s/%s", bkapp.Namespace, bkapp.Name))
+	log.V(1).Info(fmt.Sprintf("handling deploy action reconciliation for bkapp %s/%s", bkapp.Namespace, bkapp.Name))
 
 	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 	if currentDeployID == "" {

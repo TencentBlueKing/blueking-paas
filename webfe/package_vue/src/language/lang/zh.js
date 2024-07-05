@@ -566,7 +566,6 @@ export default {
   选择日期时间范围: '选择日期时间范围',
   输出流: '输出流',
   进程: '进程',
-  '请输入过滤关键字，按 Enter 键搜索': '请输入过滤关键字，按 Enter 键搜索',
   隐藏示例: '隐藏示例',
   显示示例: '显示示例',
   '更多请参考 ': '更多请参考',
@@ -2830,4 +2829,5 @@ export default {
   'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim': 'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim',
   '请输入镜像仓库，如': '请输入镜像仓库，如',
   '部署前置命令在独立容器中执行，适用于数据库表变更等操作。': '部署前置命令在独立容器中执行，适用于数据库表变更等操作。',
+  '请输入过滤关键字，按 Enter 搜索关键词默认进行分词匹配，如需精确匹配，请加上英文双引号': '请输入过滤关键字，按 Enter 搜索关键词默认进行分词匹配，如需精确匹配，请加上英文双引号',
 };

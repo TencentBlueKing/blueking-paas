@@ -557,7 +557,6 @@ export default {
   选择日期时间范围: 'Select date time range',
   输出流: 'Type',
   进程: 'Process',
-  '请输入过滤关键字，按 Enter 键搜索': 'Please enter a filter keyword and press Enter to search',
   隐藏示例: 'Hide example',
   显示示例: 'Example',
   '更多请参考 ': 'For more, please refer to',
@@ -2691,4 +2690,5 @@ export default {
   'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim': 'Visual Studio Code, Jetbrains IDEs (GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, Hongmeng IDE, etc.), Visual Studio, Vim / NeoVim',
   '请输入镜像仓库，如': 'Please enter the image repository, such as',
   '部署前置命令在独立容器中执行，适用于数据库表变更等操作。': 'Pre-deployment commands are executed in a separate container and are suitable for operations such as database table changes.',
+  '请输入过滤关键字，按 Enter 搜索关键词默认进行分词匹配，如需精确匹配，请加上英文双引号': 'Please enter filter keywords and press Enter to search. By default, keyword segmentation matching is performed. For an exact match, please use double quotes.',
 };

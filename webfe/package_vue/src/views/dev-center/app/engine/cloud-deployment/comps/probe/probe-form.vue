@@ -12,7 +12,8 @@
         :required="true"
         :property="'method'"
         :desc="{
-          html: methodHtml
+          content: `<p>${$t('成功条件')}：</p><p>HTTP Get：${$t('请求状态码为')} 2xx / 3xx</p><p>TCP Socket：${$t('指定端口可访问')}</p>`,
+          allowHTML: true,
         }"
         :error-display-type="'normal'"
       >
@@ -184,7 +185,7 @@ export default {
   },
   data() {
     return {
-      curMethod: 'http_get',
+      curMethod: 'tcp_socket',
       formData: {
         http_get: {
           port: 80,
@@ -269,13 +270,6 @@ export default {
     };
   },
   computed: {
-    methodHtml() {
-      return `
-        <p>${this.$t('成功条件')}：</p>
-        <p>HTTP Get：${this.$t('请求状态码为')} 2xx / 3xx</p>
-        <p>TCP Socket：${this.$t('指定端口可访问')}</p>
-      `;
-    },
     localLanguage() {
       return this.$store.state.localLanguage;
     },
@@ -302,7 +296,7 @@ export default {
   },
   methods: {
     init() {
-      this.curMethod = this.formData.http_get ? 'http_get' : 'tcp_socket';
+      this.curMethod = this.formData.tcp_socket ? 'tcp_socket' : 'http_get';
     },
     // 处理表单数据，探测方法， http_get 和 tcp_socket 只能同时有一个
     formattParams() {

@@ -98,7 +98,7 @@
             class="pt20"
             style="position: relative;"
           >
-            <span :class="['hook-tag', { 'enabled': preFormData.enabled } ]">
+            <span :class="['hook-tag', { 'enabled': preFormData.enabled }]">
               {{ preFormData.enabled ? $t('已启用') : $t('未启用') }}
             </span>
           </bk-form-item>
@@ -107,7 +107,7 @@
             :label="`${$t('启动命令')}：`"
             style="position: relative;"
           >
-            <div v-if="preFormData.command.length">
+            <div class="hook-tag-cls" v-if="preFormData.command.length">
               <bk-tag
                 v-for="item in preFormData.command"
                 :key="item"
@@ -115,10 +115,7 @@
                 {{ item }}
               </bk-tag>
             </div>
-            <div
-              v-else
-              class="pl10"
-            >
+            <div v-else>
               --
             </div>
           </bk-form-item>
@@ -128,7 +125,7 @@
             class="pt20 hook-form-cls"
             style="position: relative;"
           >
-            <div v-if="preFormData.args.length">
+            <div class="hook-tag-cls" v-if="preFormData.args.length">
               <bk-tag
                 v-for="item in preFormData.args"
                 :key="item"
@@ -136,10 +133,7 @@
                 {{ item }}
               </bk-tag>
             </div>
-            <div
-              v-else
-              class="pl10"
-            >
+            <div v-else>
               --
             </div>
           </bk-form-item>
@@ -436,7 +430,6 @@ export default {
   }
 }
 .hook-tag {
-  margin-left: 6px;
   display: inline-block;
   height: 22px;
   padding: 0 8px;
@@ -452,5 +445,8 @@ export default {
 }
 .deploy-hook-container {
   min-height: 200px;
+}
+.hook-tag-cls .bk-tag:first-child {
+  margin-left: 0px;
 }
 </style>

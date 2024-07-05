@@ -137,7 +137,7 @@ func (r *DeploymentReconciler) getNewDeployments(
 		}
 
 		if err = kubeutil.UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {
-			return nil, errors.Wrapf(err, "get new deployment error, upsert failed for bkapp %s:%s.", bkapp.Name, proc.Name)
+			return nil, errors.Wrapf(err, "get new deployment error, upsert failed for %s:%s.", bkapp.Name, proc.Name)
 		}
 		results[proc.Name] = deployment
 	}

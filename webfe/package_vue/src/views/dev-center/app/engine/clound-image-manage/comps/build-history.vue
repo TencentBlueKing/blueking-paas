@@ -67,7 +67,11 @@
           prop="invoke_message"
           :render-header="$renderHeader"
           :show-overflow-tooltip="true"
-        />
+        >
+          <template slot-scope="{ row }">
+            {{ $t(row.invoke_message) }}
+          </template>
+        </bk-table-column>
         <bk-table-column
           :label="$t('开始时间')"
           prop="start_at"

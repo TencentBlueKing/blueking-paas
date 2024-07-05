@@ -188,11 +188,11 @@ export default {
       curMethod: 'tcp_socket',
       formData: {
         http_get: {
-          port: 80,
-          path: '/ping',
+          port: '',
+          path: '/',
         },
         tcp_socket: {
-          port: 80,
+          port: '',
         },
         initial_delay_seconds: 0,
         timeout_seconds: 1,
@@ -318,13 +318,13 @@ export default {
     setProbeMethodValue(type) {
       if (type === 'http_get') {
         this.formData[type] = {
-          port: 80,
-          path: '/ping',
+          port: '',
+          path: '/',
         };
         this.formData.tcp_socket = null;
       } else {
         this.formData[type] = {
-          port: 80,
+          port: '',
         };
         this.formData.http_get = null;
       }

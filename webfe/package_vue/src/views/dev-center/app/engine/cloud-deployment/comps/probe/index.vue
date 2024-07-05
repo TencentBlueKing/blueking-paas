@@ -138,7 +138,8 @@ export default {
     },
     // 探针校验
     async probeValidate() {
-      return await this.$refs.livenessRef?.validateFun() && this.$refs.readinessRef?.validateFun();
+      await this.$refs.livenessRef?.validateFun();
+      await this.$refs.readinessRef?.validateFun();
     },
     handlerProbeChange() {
       if (this.probeList.includes(LIVENESS)) {

@@ -334,17 +334,17 @@ export default {
       return Object.values(data).every(value => value === true);
     },
     // 刷新操作
-    handleWindowReload() {
+    async handleWindowReload() {
       // 当前状态与进入时的初始状态不同，且为迁移成功状态，需要刷新当前页
       if (this.initStatus !== this.migrationData.status && (this.isMigrationStepSuccessful || this.isMigrationConfirmed)) {
         if (this.$route.name === 'myApplications') {
           // 列表页直接刷新
           window.location.reload();
         } else {
-          this.$router.push({
-            name: 'appSummary',
+          await this.$router.push({
+            name: 'cloudAppSummary',
             params: {
-              id: this.appCode,
+              id: this.data.code,
             },
           });
           window.location.reload();

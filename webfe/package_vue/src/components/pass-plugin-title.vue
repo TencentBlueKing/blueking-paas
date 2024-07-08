@@ -31,6 +31,15 @@
             <span class="pl5">{{ PLUGIN_TEST_VERSION_STATUS[versionData.status] }}</span>
           </div>
         </template>
+        <a
+          v-if="isPluginDoc"
+          target="_blank"
+          :href="docUrl"
+          class="plugin-doc"
+        >
+          <i class="paasng-icon paasng-question-circle" />
+          {{ $t('插件文档') }}
+        </a>
       </div>
     </div>
   </div>
@@ -56,6 +65,14 @@ export default {
     noShadow: {
       type: Boolean,
       default: false,
+    },
+    isPluginDoc: {
+      type: Boolean,
+      default: false,
+    },
+    docUrl: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -101,6 +118,14 @@ export default {
 .plugin-top-title {
   i {
     transform: translateY(0px);
+  }
+  .plugin-doc {
+    position: absolute;
+    right: 24px;
+    font-size: 14px;
+    i {
+      transform: translateY(-1px);
+    }
   }
   &.no-shadow {
     height: 52px;

@@ -1998,6 +1998,7 @@ export default {
   '代码分支：': 'Code branch：',
   是否确定删除: 'Are you sure to delete',
   插件指引: 'Plugin Guide',
+  插件文档: 'Plugin Documentation',
   '质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考': 'Code quality star based on Tencent Open Source Governance indicator system',
   '运行总次数:': 'No. of total runs:',
   '拦截次数:': 'Intercepted:',

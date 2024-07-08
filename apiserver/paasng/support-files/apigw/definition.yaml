@@ -33,7 +33,7 @@ grant_permissions:
   - bk_app_code: bk_monitorv3
   - bk_app_code: bk_dataweb
   - bk_app_code: bk_bkdata
-  - bk_app_code: bk-notice
+  - bk_app_code: bk_notice
 
 strategies: []
 

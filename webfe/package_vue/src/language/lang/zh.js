@@ -2821,4 +2821,11 @@ export default {
   指定端口可访问: '指定端口可访问',
   '探测容器是否正常，不正常则会重启容器，在容器生命周期中，该探针会按照设定频率持续运行': '探测容器是否正常，不正常则会重启容器，在容器生命周期中，该探针会按照设定频率持续运行',
   '探测容器是否就绪，若未就绪则不会转发流量到该实例，在容器就绪之前该探针会按照设定频率持续运行': '探测容器是否就绪，若未就绪则不会转发流量到该实例，在容器就绪之前该探针会按照设定频率持续运行',
+  体验: '体验',
+  '工蜂 Copilot': '工蜂 Copilot',
+  代码补全与生成目前支持语言: '代码补全与生成目前支持语言',
+  '工蜂 Copilot 是由工蜂智能化团队推出的一款 AI 代码助手工具。采用腾讯混元代码领域大模型，同时结合开源模型、以及工蜂领域数据进行业务精调。': '工蜂 Copilot 是由工蜂智能化团队推出的一款 AI 代码助手工具。采用腾讯混元代码领域大模型，同时结合开源模型、以及工蜂领域数据进行业务精调。',
+  '目前支持 IDE': '目前支持 IDE',
+  'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP 等 100+ 语言/框架': 'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP 等 100+ 语言/框架',
+  'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim': 'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim',
 };

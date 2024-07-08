@@ -2682,4 +2682,11 @@ export default {
   指定端口可访问: 'Specified Port Accessible',
   '探测容器是否正常，不正常则会重启容器，在容器生命周期中，该探针会按照设定频率持续运行': 'Checks if the container is functioning properly; if not, the container will be restarted. This probe will continue to run at the set frequency throughout the containers lifecycle.',
   '探测容器是否就绪，若未就绪则不会转发流量到该实例，在容器就绪之前该探针会按照设定频率持续运行': 'Checks if the container is ready; if not, traffic will not be forwarded to the instance. This probe will continue to run at the set frequency until the container is ready.',
+  体验: 'Experience ',
+  '工蜂 Copilot': 'TcGit Copilot',
+  代码补全与生成目前支持语言: 'Languages Currently Supported for Code Completion and Generation',
+  '工蜂 Copilot 是由工蜂智能化团队推出的一款 AI 代码助手工具。采用腾讯混元代码领域大模型，同时结合开源模型、以及工蜂领域数据进行业务精调。': 'TcGit Copilot is an AI code assistant tool launched by the TcGit Intelligence team. It uses Tencent Hunyuans large model for the code domain, combined with open-source models and TcGits domain data for business fine-tuning.',
+  '目前支持 IDE': 'Currently Supported IDEs',
+  'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP 等 100+ 语言/框架': 'Python, JavaScript/TypeScript, Java, C/C++, Go, C#, Lua, Kotlin, TSX/JSX, Vue, Proto, PHP, and over 100 other languages/frameworks',
+  'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim': 'Visual Studio Code, Jetbrains IDEs (GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, Hongmeng IDE, etc.), Visual Studio, Vim / NeoVim',
 };

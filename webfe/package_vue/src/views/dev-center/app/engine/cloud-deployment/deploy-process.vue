@@ -661,7 +661,7 @@
                 <span class="form-text">{{ formData.image || '--' }}</span>
               </bk-form-item>
               <bk-form-item :label="`${$t('启动命令')}：`">
-                <span v-if="formData.command && formData.command.length">
+                <span class="process-tag-cls" v-if="formData.command && formData.command.length">
                   <bk-tag
                     v-for="item in formData.command"
                     :key="item"
@@ -677,7 +677,7 @@
                 </span>
               </bk-form-item>
               <bk-form-item :label="`${$t('命令参数')}：`">
-                <span v-if="formData.args && formData.args.length">
+                <span class="process-tag-cls" v-if="formData.args && formData.args.length">
                   <bk-tag
                     v-for="item in formData.args"
                     :key="item"
@@ -1638,7 +1638,9 @@ export default {
 .form-detail {
   .form-text {
     color: #313238;
-    padding-left: 10px;
+  }
+  .process-tag-cls .bk-tag:first-child {
+    margin-left: 0px;
   }
 }
 .env-name {

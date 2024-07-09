@@ -273,7 +273,7 @@
             </p>
             <p class="deploy-text-wrapper">
               <span>
-                由 {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }} {{ $t(' 手动停止部署') }}
+                {{ $t('由') }} {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }} {{ $t(' 手动停止部署') }}
               </span>
               <span>
                 <bk-button
@@ -355,7 +355,7 @@
           </div>
           <div class="span fl" />
           <div class="fl">
-            {{ $t('由') }} {{ deploymentInfo.operator && deploymentInfo.operator.username }} {{ $t(' 于 ') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
+            {{ $t('由') }} {{ deploymentInfo.operator && deploymentInfo.operator.username }} {{ $t('于') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
           </div>
 
           <bk-dropdown-menu

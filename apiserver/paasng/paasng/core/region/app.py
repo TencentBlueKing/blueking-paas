@@ -54,7 +54,7 @@ class BuiltInEnvsRegionHelper:
         for key in self.required_env_dict:
             value = self.region.get_built_in_config_var(key=key, env=self.app_env)
             if value:
-                result.update({key: {"value": value, "description": self.required_env_dict["key"]}})
+                result.update({key: {"value": value, "description": self.required_env_dict[key]}})
         return result
 
 

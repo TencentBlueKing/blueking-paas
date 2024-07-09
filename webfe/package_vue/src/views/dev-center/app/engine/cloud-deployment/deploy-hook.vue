@@ -16,7 +16,6 @@
               {{ $t('部署前置命令') }}
             </div>
           </div>
-
           <div
             class="edit-container"
             @click="handleEditClick"
@@ -25,6 +24,15 @@
             <i class="paasng-icon paasng-edit-2" />
             {{ $t('编辑') }}
           </div>
+        </div>
+        <div class="deploy-command-tip">
+          {{ $t('部署前置命令在独立容器中执行，适用于数据库表变更等操作。') }}
+          <a
+            :href="GLOBAL.DOC.DEPLOY_ORDER"
+            target="_blank"
+          >
+            {{ $t('使用指南') }}
+          </a>
         </div>
         <!-- 不启用时隐藏 -->
         <bk-form
@@ -403,6 +411,13 @@ export default {
   .hook-btn-wrapper {
     margin-left: 150px;
     margin-top: 24px;
+  }
+
+  .deploy-command-tip {
+    padding-left: 20px;
+    color: #979ba5;
+    font-size: 12px;
+    margin-top: 8px;
   }
 }
 

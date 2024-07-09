@@ -2827,8 +2827,9 @@ export default {
   'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim': 'Visual Studio Code, Jetbrains IDEs（GoLand, Pycharm, IDEA, WebStorm, Rider, Android Studio, 鸿蒙 IDE 等）, Visual Studio, Vim / NeoVim',
   '请输入镜像仓库，如': '请输入镜像仓库，如',
   '部署前置命令在独立容器中执行，适用于数据库表变更等操作。': '部署前置命令在独立容器中执行，适用于数据库表变更等操作。',
-  '请输入过滤关键字，按 Enter 搜索关键词默认进行分词匹配，如需精确匹配，请加上英文双引号': '请输入过滤关键字，按 Enter 搜索关键词默认进行分词匹配，如需精确匹配，请加上英文双引号',
+  '搜索关键词默认进行分词匹配，如需精确匹配，请加上英文双引号': '搜索关键词默认进行分词匹配，如需精确匹配，请加上英文双引号',
   发布时自动构建: '发布时自动构建',
   '请输入命令参数，并按 Enter 键结束': '请输入命令参数，并按 Enter 键结束',
   '请输入启动命令，并按 Enter 键结束': '请输入启动命令，并按 Enter 键结束',
+  默认全员可见: '默认全员可见',
 };

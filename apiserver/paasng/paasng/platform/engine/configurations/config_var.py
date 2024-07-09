@@ -240,12 +240,12 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
     runtime_envs = generate_runtime_env_vars_for_app(engine_app, config_vars_prefix)
 
     # 蓝鲸体系内平台的访问地址
-    bk_address_envs = _flatten_system_envs(generate_env_vars_for_bk_platform(config_vars_prefix))
+    bk_address_envs = _flatten_envs(generate_env_vars_for_bk_platform(config_vars_prefix))
 
     environment = engine_app.env.environment
     region = engine_app.region
     # 需要根据 region、env 写入不同值的系统环境变量
-    envs_by_region_and_env = _flatten_system_envs(
+    envs_by_region_and_env = _flatten_envs(
         generate_env_vars_by_region_and_env(region, environment, config_vars_prefix)
     )
 
@@ -264,7 +264,7 @@ def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     return {item.key: item.value for item in qs if item.is_within_scope(ConfigVarEnvName(env.environment))}
 
 
-def _flatten_system_envs(nested_envs: Dict[str, Dict[str, str]]) -> Dict[str, str]:
+def _flatten_envs(nested_envs: Dict[str, Dict[str, str]]) -> Dict[str, str]:
     """将嵌套的环境变量字典转换为扁平的键值对格式
 
     调用前：{"BK_CRYPTO_TYPE": {"value": settings.BK_CRYPTO_TYPE, "description": "这是一个变量描述")}}

@@ -308,8 +308,8 @@
 # BK_TURBO_URL: ''
 ## 蓝盾流水线服务地址
 # BK_PIPELINE_URL: ''
-## 其他蓝鲸服务地址，格式如：{"BK_SOPS_URL": "http://localhost:8080"}
-# BK_PLATFORM_URLS: {}
+## PaaS2.0 注入的系统环境变量，格式如：{"BK_SOPS_URL": "http://localhost:8080"}
+# BK_PAAS2_PLATFORM_ENVS: {}
 
 ## 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 # BKPAAS_WEIXIN_URL_MAP:

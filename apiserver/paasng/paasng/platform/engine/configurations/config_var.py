@@ -18,6 +18,7 @@
 from typing import TYPE_CHECKING, Dict, Iterator
 
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -134,66 +135,91 @@ def generate_runtime_env_vars_for_app(engine_app: "EngineApp", config_vars_prefi
     return add_prefix_to_key(runtime_envs, config_vars_prefix)
 
 
-def generate_env_vars_by_region_and_env(region: str, environment: str, config_vars_prefix: str) -> Dict[str, str]:
+def generate_env_vars_by_region_and_env(
+    region: str, environment: str, config_vars_prefix: str
+) -> Dict[str, Dict[str, str]]:
     """Generate the platform address in the bk system by region and env"""
     # 需要按 region、env 写入不同值的变量
-    region_related_envs = ["REMOTE_STATIC_URL", "LOGIN_URL", "LOGIN_DOMAIN", "APIGW_OAUTH_API_URL"]
+    region_related_envs = {
+        "REMOTE_STATIC_URL": {"description": _("平台提供的静态资源地址前缀，不推荐使用")},
+        "LOGIN_URL": {"description": _("蓝鲸统一登录访问地址")},
+        "LOGIN_DOMAIN": {"description": _("蓝鲸统一登录服务域名")},
+        "APIGW_OAUTH_API_URL": {"description": _("蓝鲸 APIGW 提供的 OAuth 服务，不推荐使用")},
+    }
     envs = BuiltInEnvsRegionHelper(
-        region_name=region, app_env=environment, env_key_list=region_related_envs
+        region_name=region, app_env=environment, required_env_dict=region_related_envs
     ).get_envs()
 
     # 微信内显示应用的静态资源地址前缀，从 PaaS2.0 上迁移过来的应用可能会用到
     weixin_url = settings.BKPAAS_WEIXIN_URL_MAP.get(environment)
-    envs["WEIXIN_URL"] = weixin_url
-    envs["WEIXIN_REMOTE_STATIC_URL"] = f"{weixin_url}/static_api/"
+    envs["WEIXIN_URL"] = {"value": weixin_url, "description": _("应用移动端访问地址，不推荐使用")}
+    envs["WEIXIN_REMOTE_STATIC_URL"] = {
+        "value": f"{weixin_url}/static_api/",
+        "description": _("应用移动端静态资源地址前缀，不推荐使用"),
+    }
 
     # 系统环境变量需要添加统一的前缀
-    envs_dict = add_prefix_to_key(envs, config_vars_prefix)
+    region_envs_with_prefix = add_prefix_to_key(envs, config_vars_prefix)
 
     # 不需要写入兼容性的环境变量，则直接返回
     region_container = get_region(region)
     if not region_container.provide_env_vars_platform:
-        return envs_dict
+        return region_envs_with_prefix
 
     bk_envs = {
         # 私有化版本目前 SaaS 用到了该环境变量，需要推动切换到 BKPAAS_LOGIN_URL 这个环境变量
-        "BK_LOGIN_URL": settings.LOGIN_FULL,
+        "BK_LOGIN_URL": {
+            "value": settings.LOGIN_FULL,
+            "description": _("蓝鲸统一登录访问地址，建议切换为 BKPAAS_LOGIN_URL"),
+        }
     }
-    bk_envs.update(settings.BK_PLATFORM_URLS)
-    return {**envs_dict, **bk_envs}
+    bk_envs.update(settings.BK_PAAS2_PLATFORM_ENVS)
+    return {**region_envs_with_prefix, **bk_envs}
 
 
-def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> Dict[str, str]:
+def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> Dict[str, Dict[str, str]]:
     """Generate the platform address in the bk system"""
-
     system_envs = {
-        "BK_CRYPTO_TYPE": settings.BK_CRYPTO_TYPE,
-        "BK_DOMAIN": settings.BK_DOMAIN,
-        "URL": settings.BKPAAS_URL,
-        # 蓝鲸桌面地址
-        "CONSOLE_URL": settings.BK_CONSOLE_URL,
+        "BK_DOMAIN": {
+            "value": settings.BK_DOMAIN,
+            "description": _("蓝鲸根域，用于获取登录票据、国际化语言等 cookie 信息"),
+        },
+        "URL": {"value": settings.BKPAAS_URL, "description": _("蓝鲸PaaS平台访问URL")},
         # 蓝鲸体系内产品地址
-        "CC_URL": settings.BK_CC_URL,
-        "JOB_URL": settings.BK_JOB_URL,
-        "IAM_URL": settings.BK_IAM_URL,
-        "USER_URL": settings.BK_USER_URL,
-        "MONITORV3_URL": settings.BK_MONITORV3_URL,
-        "LOG_URL": settings.BK_LOG_URL,
-        "REPO_URL": settings.BK_REPO_URL,
-        "CI_URL": settings.BK_CI_URL,
-        "CODECC_URL": settings.BK_CODECC_URL,
-        "TURBO_URL": settings.BK_TURBO_URL,
-        "PIPELINE_URL": settings.BK_PIPELINE_URL,
-        "SHARED_RES_URL": settings.BK_SHARED_RES_URL,
+        "CONSOLE_URL": {"value": settings.BK_CONSOLE_URL, "description": _("蓝鲸桌面访问地址")},
+        "CC_URL": {"value": settings.BK_CC_URL, "description": _("蓝鲸配置平台访问地址")},
+        "JOB_URL": {"value": settings.BK_JOB_URL, "description": _("蓝鲸作业平台访问地址")},
+        "IAM_URL": {"value": settings.BK_IAM_URL, "description": _("蓝鲸权限中心访问地址")},
+        "USER_URL": {"value": settings.BK_USER_URL, "description": _("蓝鲸用户管理访问地址")},
+        "MONITORV3_URL": {"value": settings.BK_MONITORV3_URL, "description": _("蓝鲸监控平台访问地址")},
+        "LOG_URL": {"value": settings.BK_LOG_URL, "description": _("蓝鲸日志平台访问地址")},
+        "REPO_URL": {"value": settings.BK_REPO_URL, "description": _("蓝鲸制品库访问地址")},
+        "CI_URL": {"value": settings.BK_CI_URL, "description": _("蓝鲸持续集成平台（蓝盾）访问地址")},
+        "CODECC_URL": {"value": settings.BK_CODECC_URL, "description": _("蓝鲸代码检查平台访问地址")},
+        "TURBO_URL": {"value": settings.BK_TURBO_URL, "description": _("蓝鲸编译加速平台访问地址")},
+        "PIPELINE_URL": {"value": settings.BK_PIPELINE_URL, "description": _("蓝鲸流水线访问地址")},
+        "SHARED_RES_URL": {
+            "value": settings.BK_SHARED_RES_URL,
+            "description": _("蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径"),
+        },
+        "BK_CRYPTO_TYPE": {
+            "value": settings.BK_CRYPTO_TYPE,
+            "description": _(
+                "加密数据库内容的推荐算法，可选值有：`SHANGMI` , `CLASSIC`，分别对应 `SM4CTR`和`Fernet` 算法"
+            ),
+        },
     }
     # 系统环境变量需要添加统一的前缀
-    system_envs_dict = add_prefix_to_key(system_envs, config_vars_prefix)
+    system_envs_with_prefix = add_prefix_to_key(system_envs, config_vars_prefix)
     # 兼容私有化版本保留的 BK_ 前缀的环境变量
-    system_envs_dict["BK_API_URL_TMPL"] = settings.BK_API_URL_TMPL
-    system_envs_dict["BK_COMPONENT_API_URL"] = settings.BK_COMPONENT_API_URL
-    system_envs_dict["BK_PAAS2_URL"] = settings.BK_PAAS2_URL
-
-    return system_envs_dict
+    system_envs_with_prefix.update(
+        {
+            "BK_API_URL_TMPL": {"value": settings.BK_API_URL_TMPL, "description": _("网关 API 访问地址模板")},
+            "BK_COMPONENT_API_URL": {"value": settings.BK_COMPONENT_API_URL, "description": _("组件 API 访问地址")},
+            "BK_PAAS2_URL": {"value": settings.BK_PAAS2_URL, "description": _("PaaS2.0 开发者中心地址")},
+        }
+    )
+    return system_envs_with_prefix
 
 
 def generate_blobstore_env_vars(engine_app: "EngineApp") -> Dict[str, str]:
@@ -214,12 +240,14 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
     runtime_envs = generate_runtime_env_vars_for_app(engine_app, config_vars_prefix)
 
     # 蓝鲸体系内平台的访问地址
-    bk_address_envs = generate_env_vars_for_bk_platform(config_vars_prefix)
+    bk_address_envs = _flatten_system_envs(generate_env_vars_for_bk_platform(config_vars_prefix))
 
     environment = engine_app.env.environment
     region = engine_app.region
     # 需要根据 region、env 写入不同值的系统环境变量
-    envs_by_region_and_env = generate_env_vars_by_region_and_env(region, environment, config_vars_prefix)
+    envs_by_region_and_env = _flatten_system_envs(
+        generate_env_vars_by_region_and_env(region, environment, config_vars_prefix)
+    )
 
     return {
         **app_info_envs,
@@ -234,3 +262,15 @@ def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     """Get PresetEnvVariable as env variables dict"""
     qs: Iterator[PresetEnvVariable] = PresetEnvVariable.objects.filter(module=env.module)
     return {item.key: item.value for item in qs if item.is_within_scope(ConfigVarEnvName(env.environment))}
+
+
+def _flatten_system_envs(nested_envs: Dict[str, Dict[str, str]]) -> Dict[str, str]:
+    """将嵌套的环境变量字典转换为扁平的键值对格式
+
+    调用前：{"BK_CRYPTO_TYPE": {"value": settings.BK_CRYPTO_TYPE, "description": "这是一个变量描述")}}
+    调用后：{"BK_CRYPTO_TYPE": settings.BK_CRYPTO_TYPE}
+    """
+    flat_envs = {}
+    for key, value in nested_envs.items():
+        flat_envs[key] = value["value"]
+    return flat_envs

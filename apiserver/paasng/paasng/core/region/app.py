@@ -44,17 +44,17 @@ class BuiltInEnvsRegionHelper:
     "FOO" whose value was set to "bar_stag". While in prod environment, the value is "bar_prod".
     """
 
-    def __init__(self, region_name, app_env, env_key_list):
+    def __init__(self, region_name, app_env, required_env_dict):
         self.region = get_region(region_name)
         self.app_env = app_env
-        self.key_list = env_key_list
+        self.required_env_dict = required_env_dict
 
     def get_envs(self):
         result = {}
-        for key in self.key_list:
+        for key in self.required_env_dict:
             value = self.region.get_built_in_config_var(key=key, env=self.app_env)
             if value:
-                result.update({key: value})
+                result.update({key: {"value": value, "description": self.required_env_dict["key"]}})
         return result
 
 

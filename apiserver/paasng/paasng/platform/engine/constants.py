@@ -167,6 +167,10 @@ class AppRunTimeBuiltinEnv(str, StructuredEnum):
     ENVIRONMENT = EnumField("ENVIRONMENT", label=_("应用当前环境，预发布环境为 stag、生产环境为 prod"))
     MAJOR_VERSION = EnumField("MAJOR_VERSION", label=_("应用当前运行的开发者中心版本，值为 3"))
     ENGINE_REGION = EnumField("ENGINE_REGION", label=_("应用版本，默认版本为 default"))
+    DEFAULT_PREALLOCATED_URLS = EnumField(
+        "DEFAULT_PREALLOCATED_URLS",
+        label=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
+    )
 
 
 class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):

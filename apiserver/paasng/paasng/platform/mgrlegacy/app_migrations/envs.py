@@ -30,8 +30,8 @@ class DefaultEnvironmentVariableMigration(BaseEnvironmentVariableMigration):
             BK_PAAS_HOST=settings.BK_PAAS2_URL,
             BK_PAAS_INNER_HOST=settings.BK_PAAS2_INNER_URL,
         )
-        # 蓝鲸体系其他平台访问地址的环境变量
-        variables.update(settings.BK_PLATFORM_URLS)
+        # PaaS2.0 注入的系统环境变量
+        variables.update(settings.BK_PAAS2_PLATFORM_ENVS)
         return variables
 
     def get_stag_envs(self) -> dict:

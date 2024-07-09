@@ -142,7 +142,7 @@ class TestBuiltInEnvVars:
             assert ("BK_LOGIN_URL" in config_vars) == provide_env_vars_platform
             # 应用是需要写入蓝鲸体系其他系统访问地址的环境变量
             if provide_env_vars_platform:
-                assert set(settings.BK_PLATFORM_URLS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
+                assert set(settings.BK_PAAS2_PLATFORM_ENVS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
 
     def test_builtin_env_keys(self, bk_app):
         bk_module = bk_app.get_default_module()

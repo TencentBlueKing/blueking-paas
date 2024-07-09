@@ -48,6 +48,7 @@ from typing import Any, Dict, List, Optional
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
 from django.utils.encoding import force_bytes, force_str
+from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
 from environ import Env
 
@@ -806,15 +807,24 @@ BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
 # 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
 BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 
-BK_PLATFORM_URLS = settings.get(
-    "BK_PLATFORM_URLS",
+# PaaS2.0 注入的系统环境变量
+BK_PAAS2_PLATFORM_ENVS = settings.get(
+    "BK_PAAS2_PLATFORM_ENVS",
     {
-        # 旧版 IAM 地址，目前已废弃
-        "BK_IAM_INNER_HOST": settings.get("BK_IAM_INNER_URL", "http://:"),
-        "BK_IAM_V3_APP_CODE": settings.get("BK_IAM_V3_APP_CODE", "bk_iam"),
-        "BK_IAM_V3_INNER_HOST": BK_IAM_V3_INNER_URL,
-        "BK_CC_HOST": BK_CC_URL,
-        "BK_JOB_HOST": BK_JOB_URL,
+        "BK_IAM_INNER_HOST": {
+            "value": settings.get("BK_IAM_INNER_URL", "http://:"),
+            "description": _("蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"),
+        },
+        "BK_IAM_V3_APP_CODE": {
+            "value": settings.get("BK_IAM_V3_APP_CODE", "bk_iam"),
+            "description": _("蓝鲸权限中心的应用ID"),
+        },
+        "BK_IAM_V3_INNER_HOST": {
+            "value": BK_IAM_V3_INNER_URL,
+            "description": _("蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"),
+        },
+        "BK_CC_HOST": {"value": BK_CC_URL, "description": _("蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL")},
+        "BK_JOB_HOST": {"value": BK_JOB_URL, "description": _("蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL")},
     },
 )
 

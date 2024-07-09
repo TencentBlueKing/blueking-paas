@@ -153,6 +153,10 @@ class TestBuiltInEnvVars:
             config_vars.keys()
         )
 
-        # 运行时相关的环境变量
-        runtime_env_keys = [f"{settings.CONFIGVAR_SYSTEM_PREFIX}{key}" for key in AppRunTimeBuiltinEnv.get_values()]
+        # 运行时相关的环境变量，其中 DEFAULT_PREALLOCATED_URLS 是在 _default_preallocated_urls() 中单独处理的环境变量
+        runtime_env_keys = [
+            f"{settings.CONFIGVAR_SYSTEM_PREFIX}{key}"
+            for key in AppRunTimeBuiltinEnv.get_values()
+            if key != AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value
+        ]
         assert set(runtime_env_keys).issubset(config_vars.keys())

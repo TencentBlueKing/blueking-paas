@@ -21,8 +21,6 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.bkapp_model.models import ModuleDeployHook, ModuleProcessSpec
@@ -80,19 +78,13 @@ class TestModuleCreation:
             assert response.status_code == 201
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(("with_feature_flag", "is_success"), [(True, True), (False, False)])
     def test_create_nondefault_origin(
         self,
         api_client,
         bk_app,
         bk_user,
         mock_wl_services_in_creation,
-        with_feature_flag,
-        is_success,
     ):
-        # Set user feature flag
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
-
         with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
             # Mock return value of syncing template
             mocked_sync.return_value = SourceSyncResult(dest_type="mock")
@@ -106,15 +98,10 @@ class TestModuleCreation:
                     "source_origin": SourceOrigin.BK_LESS_CODE.value,
                 },
             )
-            desired_status_code = 201 if is_success else 400
-            assert response.status_code == desired_status_code
+            assert response.status_code == 201
 
 
 class TestCreateCloudNativeModule:
-    @pytest.fixture(autouse=True)
-    def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
-
     def test_create_with_image(self, bk_cnative_app, api_client):
         """托管方式：仅镜像"""
         random_suffix = generate_random_string(length=6)

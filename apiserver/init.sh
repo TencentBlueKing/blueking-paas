@@ -104,8 +104,7 @@ ensure-apt-buildpack() {
     --tag "${apt_buildpack_version}" \
     --language Apt \
     --type tar \
-    --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar" \
-    --hidden
+    --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar"
 }
 
 ensure-python-buildpack() {

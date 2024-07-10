@@ -35,8 +35,8 @@ type PlatformConfig struct {
 	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations
 	IngressClassName string `json:"ingressClassName"`
 	// CustomDomainIngressClassName works the same as IngressClassName, but only for ingress with custom domains.
-	// In the deployment architecture of BK, there are two layers of nginx controllers, and the custom domain needs to
-	// take effect in the outermost nginx controller.
+	// Set customDomainIngressClassName if custom domain ingress needs to bound to a specific ingress controller,
+	// otherwise it will be bound to the ingress controller specified by ingressClassName config
 	CustomDomainIngressClassName string `json:"customDomainIngressClassName"`
 }
 

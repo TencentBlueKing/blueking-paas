@@ -104,7 +104,7 @@
                 class="ps-switcher-wrapper"
                 @click="toggleSwitch(row, $index)"
                 v-bk-tooltips="{
-                  content: $t('S-mart 应用请在配置文件中设置并开启增强服务'),
+                  content: $t('S-mart 应用不支持停用增强服务'),
                   disabled: !isSmartApp
                 }"
                 v-if="row.isStartUp">
@@ -398,7 +398,7 @@ export default {
       this.switcherTips.disabled = this.isSmartApp;
       if (this.isSmartApp) {
         return {
-          content: this.$t('S-mart 应用暂不支持删除增强服务'),
+          content: this.$t('S-mart 应用请在应用描述文件中启用增强服务'),
         };
       }
       return this.switcherTips;

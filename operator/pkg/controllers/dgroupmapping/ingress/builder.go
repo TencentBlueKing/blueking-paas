@@ -195,6 +195,7 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 	}
 	// 如果已配置 ingressClassName，则使用
 	if ingClassName := config.Global.GetIngressClassName(); ingClassName != "" {
+		// WARNING: kubernetes.io/ingress.class annotation will be deprecated in the future
 		ingress.Annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
 	}
 	results = append(results, &ingress)
@@ -243,6 +244,12 @@ func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ing
 				TLS:   makeTLS([]Domain{d}),
 			},
 		}
+
+		if ingClassName := config.Global.GetCustomDomainIngressClassName(); ingClassName != "" {
+			// WARNING: kubernetes.io/ingress.class annotation will be deprecated in the future
+			val.Annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
+		}
+
 		results = append(results, &val)
 
 	}

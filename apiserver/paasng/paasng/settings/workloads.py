@@ -156,6 +156,7 @@ DEFAULT_POD_LOGS_LINE = 512
 # 不指定则使用默认，可以指定为 bk-ingress-nginx
 APP_INGRESS_CLASS = settings.get("APP_INGRESS_CLASS")
 # 独立域名的 ingress 使用的 ingress class
+# 在蓝鲸私有化版本的部署架构中, 存在两层 nginx controller, 而独立域名需要在最外层的 nginx controller 中生效
 CUSTOM_DOMAIN_INGRESS_CLASS = settings.get("CUSTOM_DOMAIN_INGRESS_CLASS")
 
 # 控制 ingress 资源路径是否严格匹配末尾斜杆, 如某个 ingress 路径设置成 "/foo/", 开启严格匹配将无法通过 "/foo" 访问应用

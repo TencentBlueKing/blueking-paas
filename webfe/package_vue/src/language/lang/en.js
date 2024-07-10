@@ -2693,4 +2693,10 @@ export default {
   '请输入命令参数，并按 Enter 键结束': 'Please enter the command parameters and press Enter to finish',
   '请输入启动命令，并按 Enter 键结束': 'Please enter the startup command and press Enter to finish',
   默认全员可见: 'Visible to All by Default',
+  '已找到 “{k}” 相关的 <i>{n}</i> 条数据': 'Found <i>{n}</i> results related to “{k}”',
+  历史搜索: 'Search History',
+  清空历史: 'Clear History',
+  查看更多: 'View More',
+  请输入关键词进行搜索: 'Please enter keywords to search',
+  没有找到相关结果: 'No related results found',
 };

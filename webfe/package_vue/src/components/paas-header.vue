@@ -72,39 +72,35 @@
             <dropdown
               ref="dropdown"
               :options="{
-                position: 'bottom right',
-                classes: 'ps-header-dropdown exclude-drop',
-                tetherOptions: {
-                  targetOffset: '0px 30px'
+                position: 'bottom center',
+                classes: 'ps-header-dropdown',
+                beforeClose() {
+                  return !isFocus;
                 },
               }"
             >
               <div
                 slot="trigger"
-                class="ps-search clearfix"
+                :class="['ps-search', 'clearfix', { 'focus': isFocus }]"
+                v-bk-clickoutside="handleClickOutSide"
               >
                 <input
                   v-if="isShowInput"
                   v-model="filterKey"
                   type="text"
-                  :placeholder="`${$t('输入')} &quot;FAQ&quot; ${$t('看看')}`"
-                  @keydown.down.prevent="emitChildKeyDown"
-                  @keydown.up.prevent="emitChildKeyUp"
-                  @keypress.enter="enterCallBack($event)"
-                  @compositionstart="handleCompositionstart"
-                  @compositionend="handleCompositionend"
+                  :placeholder="$t('搜索')"
+                  @keypress.enter="handleEnter"
                   @focus="handleFocus"
-                  @blur="handleBlur"
                 >
                 <div class="ps-search-icon">
-                  <span
-                    v-if="filterKey === ''"
-                    class="paasng-icon paasng-search"
-                  />
-                  <span
-                    v-else
-                    class="paasng-icon paasng-close close-cursor"
+                  <i
+                    v-if="filterKey && isFocus"
+                    class="bk-icon icon-close-circle-shape clear-icon ml5 mr5"
                     @click="clearInputValue"
+                  />
+                  <i
+                    class="input-right-icon bk-icon bk-icon icon-search"
+                    @click="handleEnter"
                   />
                 </div>
               </div>
@@ -113,33 +109,14 @@
                 slot="content"
                 class="header-search-result"
               >
-                <div v-if="isShowInput && isFocus">
-                  <div
-                    v-if="filterKey !== ''"
-                    class="paas-search-trigger"
-                    @click.stop="handleToSearchPage"
-                  >
-                    <span> {{ $t('查看更多结果') }} </span>
-                  </div>
-                  <div
-                    v-for="(searchComponent, index) of searchComponentList"
-                    v-show="filterKey"
-                    :key="index"
-                  >
-                    <h3>{{ searchComponent.title }}</h3>
-                    <component
-                      :is="searchComponent.component"
-                      ref="searchPanelList"
-                      :theme="'ps-header-search'"
-                      :max="searchComponent.max"
-                      :filter-key="filterKey"
-                      :params="searchComponent.params"
-                      @selectAppCallback="selectAppCallback"
-                      @key-up-overflow="onKeyUp(), emitChildKeyUp()"
-                      @key-down-overflow="onKeyDown(), emitChildKeyDown()"
-                    />
-                  </div>
-                </div>
+                <search-main
+                  ref="searchRef"
+                  :search-history="searchHistory"
+                  :search-value="filterKey"
+                  @close-search-mode="handleSearchClose"
+                  @load-history="loadSearchHistory"
+                  @change="handleChange"
+                />
               </div>
             </dropdown>
           </li>
@@ -365,22 +342,24 @@
   </div>
 </template>
 
-<script>import auth from '@/auth';
+<script>
+import auth from '@/auth';
 import { bus } from '@/common/bus';
 import selectEventMixin from '@/components/searching/selectEventMixin';
-import searchAppList from '@/components/searching/searchAppList';
 import Dropdown from '@/components/ui/Dropdown';
 import { psHeaderInfo } from '@/mixins/ps-static-mixin';
 import defaultUserLogo from '../../static/images/default-user.png';
 import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';
+import { parentClsContains } from '@/common/tools';
 import logoSvg from '/static/images/logo.svg';
+import searchMain from './search-main.vue';
 
 export default {
   components: {
     dropdown: Dropdown,
-    searchAppList,
     logVersion,
+    searchMain,
   },
   mixins: [psHeaderInfo, selectEventMixin],
   props: [],
@@ -417,6 +396,7 @@ export default {
       // eslint-disable-next-line comma-dangle
       link: this.GLOBAL.LINK.APIGW_INDEX,
       navText: '',
+      searchHistory: [],
     };
   },
   computed: {
@@ -493,91 +473,53 @@ export default {
       }
       this.hideSubNav();
     },
-    handleToMonitor() {
-      this.$router.push({
-        name: 'myMonitor',
-      });
-    },
+    // 清空搜索框
     clearInputValue() {
       this.filterKey = '';
+      this.$refs.searchRef.clearData();
     },
     // enter键 选择事件回调
-    enterCallBack(event) {
-      if (this.isInputing) {
-        return;
+    handleEnter() {
+      if (!this.filterKey) {
+        this.$refs.searchRef.clearData();
       }
-      event.currentTarget.blur();
-      if (this.$refs.searchPanelList[this.curActiveIndex]) {
-        this.$refs.searchPanelList[this.curActiveIndex].enterSelect();
-      }
-      this.$refs.dropdown.close();
-
       if (this.filterKey !== '') {
-        this.isShowInput = false;
-        this.$router.push({
-          name: 'search',
-          query: {
-            keyword: this.filterKey,
-          },
-        });
+        this.saveSearchHistory(this.filterKey);
+        this.$refs.searchRef.handleSearch();
       }
     },
-
-    handleCompositionstart() {
-      this.isInputing = true;
+    // 加载搜索历史
+    loadSearchHistory() {
+      const history = localStorage.getItem('searchHistory');
+      if (history) {
+        this.searchHistory = JSON.parse(history);
+      }
     },
-
-    handleCompositionend() {
-      this.isInputing = false;
+    // 存储搜索历史
+    saveSearchHistory(query) {
+      this.searchHistory = [query, ...this.searchHistory.filter(item => item !== query)];
+      localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory));
     },
-
-    handleFocus() {
-      this.isFocus = true;
-    },
-
-    handleBlur() {
-      setTimeout(() => {
+    handleClickOutSide(e) {
+      const result = parentClsContains('header-search-result', e.target);
+      if (!result) {
         this.isFocus = false;
-      }, 500);
+      }
     },
-
-    handleToSearchPage() {
+    // 聚焦事件
+    handleFocus() {
+      this.loadSearchHistory();
+      this.isFocus = true;
+      setTimeout(() => {
+        this.$refs.dropdown.position();
+      }, 200);
+    },
+    handleSearchClose() {
+      this.isFocus = false;
       this.$refs.dropdown.close();
-      this.isShowInput = false;
-      this.$router.push({
-        name: 'search',
-        query: {
-          keyword: this.filterKey,
-        },
-      });
     },
-    // 键盘上下键 选择事件回调
-    emitChildKeyUp() {
-      if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
-        return;
-      }
-      if (this.curActiveIndex === -1) {
-        this.onKeyUp();
-      }
-      this.$refs.searchPanelList[this.curActiveIndex].onKeyUp();
-    },
-    emitChildKeyDown() {
-      if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
-        return;
-      }
-      if (this.curActiveIndex === -1) {
-        this.onKeyDown();
-      }
-      this.$refs.searchPanelList[this.curActiveIndex].onKeyDown();
-    },
-    getSelectListLength() {
-      return this.$refs.searchPanelList.length;
-    },
-    // 鼠标选择事件回调
-    selectAppCallback(item) {
-      // 清空搜索条件，不再显示APP下拉框
-      this.filterKey = '';
-      this.$refs.dropdown.close();
+    handleChange(text) {
+      this.filterKey = text;
     },
     // 监听滚动事件（滚动是头部样式切换）
     handleScroll() {
@@ -726,9 +668,15 @@ export default {
 
 <style lang="scss" scoped>
     .header-search-result {
-        width: 268px;
-        background: #FFF;
+        width: 720px;
+        height: 440px;
         margin-top: 5px;
+        background: #FFFFFF;
+        border: 1px solid #DCDEE5;
+        box-shadow: 0 2px 6px 0 #0000001a;
+        border-radius: 2px;
+        transition: all .1s;
+        overflow-y: auto;
 
         .search-result-panel {
             box-shadow: 0px 1px 5px #e5e5e5;
@@ -902,7 +850,7 @@ export default {
     .ps-head-right {
         position: relative;
         margin: 0;
-        padding: 8px 10px;
+        padding: 8px 10px 8px 0px;
         display: flex;
         align-items: center;
         color: #96A2B9;
@@ -914,10 +862,18 @@ export default {
     }
 
     .ps-search {
-        background: #252F43;
+        background: #303D55;
         overflow: hidden;
         border-radius: 2px;
         position: relative;
+
+        &.focus {
+          input[type="text"] {
+            outline: none;
+            width: 720px;
+            background: #303D55;
+          }
+        }
 
         input[type="text"] {
             cursor: text;
@@ -930,11 +886,12 @@ export default {
             color: #D3D9E4;
             border: none;
             z-index: 1;
-            transition: all .5s;
             border-radius: 2px;
 
             &:focus {
-                outline: none;
+              outline: none;
+              width: 720px;
+              background: #303D55;
             }
 
             &::-webkit-input-placeholder {
@@ -950,12 +907,19 @@ export default {
             height: 16px;
             border: none;
             z-index: 2;
-            border-left: 1px solid #979BA5;
-            color: #D3D9E4;
-            font-size: 16px;
-
-            .close-cursor {
-                cursor: pointer;
+            color: #C4C6CC;
+            font-size: 14px;
+            i {
+              cursor: pointer;
+              &.clear-icon:hover {
+                color: #979ba5;
+                transform: translateY(-1px);
+              }
+              &.icon-search {
+                &:hover {
+                  color: #3A84FF;
+                }
+              }
             }
         }
     }

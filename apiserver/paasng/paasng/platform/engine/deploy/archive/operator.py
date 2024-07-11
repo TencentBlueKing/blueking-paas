@@ -20,7 +20,7 @@ from typing import Type
 
 from blue_krill.async_utils.poll_task import CallbackHandler
 
-from paas_wl.bk_app.cnative.specs.resource import delete_bkapp
+from paas_wl.bk_app.cnative.specs.resource import delete_bkapp, delete_networking
 from paasng.platform.engine.deploy.archive.base import BaseArchiveManager
 from paasng.platform.engine.deploy.bg_wait.wait_deployment import wait_for_all_stopped
 from paasng.platform.engine.models.offline import OfflineOperation
@@ -32,6 +32,7 @@ class BkAppArchiveManager(BaseArchiveManager):
         op_id = str(offline_operation.pk)
         # 清理 BkApp crd
         delete_bkapp(self.env)
+        delete_networking(self.env)
         # 清理进程配置
         # 与普通应用不同, 由于云原生应用可由用户直接选择 plan, 重新部署后可恢复分配的 plan 记录
         # 因此下架应用可直接删除 ProcessSpec 数据, 无需担心在管理端后台分配的 plan 记录被清理

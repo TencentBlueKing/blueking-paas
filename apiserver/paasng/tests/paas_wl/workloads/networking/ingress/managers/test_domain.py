@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from unittest.mock import patch
 
 import pytest
+from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -277,6 +278,24 @@ class TestCustomDomainIngressMgr:
         mgr.delete()
         with pytest.raises(AppEntityNotFound):
             ingress_kmodel.get(bk_stag_wl_app, mgr.make_ingress_name())
+
+    def test_get_ingress_class(self, bk_stag_env, bk_stag_wl_app):
+        domain = G(
+            Domain,
+            name="foo.example.com",
+            module_id=bk_stag_env.module.id,
+            environment_id=bk_stag_env.id,
+        )
+        mgr = CustomDomainIngressMgr(domain)
+        assert mgr.get_annotations().get("kubernetes.io/ingress.class") is None
+
+        with override_settings(APP_INGRESS_CLASS="test-ingress"):
+            mgr = CustomDomainIngressMgr(domain)
+            assert mgr.get_annotations()["kubernetes.io/ingress.class"] == "test-ingress"
+
+        with override_settings(CUSTOM_DOMAIN_INGRESS_CLASS="test-custom-ingress"):
+            mgr = CustomDomainIngressMgr(domain)
+            assert mgr.get_annotations()["kubernetes.io/ingress.class"] == "test-custom-ingress"
 
 
 @pytest.mark.auto_create_ns()

@@ -232,7 +232,7 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             image=target_container.image if target_container else "",
             envs=envs,
             ready=health_status.status == HealthStatusType.HEALTHY,
-            restart_count1=c_status.restartCount if c_status else 0,
+            restart_count=c_status.restartCount if c_status else 0,
             terminated_info={
                 "exit_code": get_items(terminated_info_dict, "exitCode"),
                 "reason": get_items(terminated_info_dict, "reason"),

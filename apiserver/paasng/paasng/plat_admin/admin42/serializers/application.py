@@ -149,8 +149,8 @@ class AppOperationReportCollectionTaskOutputSLZ(serializers.Serializer):
 
 
 class EnvDeploySummarySLZ(serializers.Serializer):
-    latest_deployer = serializers.CharField(help_text="最新部署人")
-    latest_deployed_at = serializers.SerializerMethodField(help_text="最新部署时间")
+    latest_deployer = serializers.CharField(help_text="最新部署人", required=False)
+    latest_deployed_at = serializers.SerializerMethodField(help_text="最新部署时间", required=False)
 
     def get_latest_deployed_at(self, obj: Dict[str, Any]) -> str:
         return (
@@ -161,7 +161,7 @@ class EnvDeploySummarySLZ(serializers.Serializer):
 
 
 class ModuleDeploySummarySLZ(serializers.Serializer):
-    envs = serializers.DictField(help_text="环境列表", child=EnvDeploySummarySLZ())
+    envs = serializers.DictField(help_text="环境列表", child=EnvDeploySummarySLZ(), required=False)
 
 
 class DeploySummarySLZ(serializers.Serializer):

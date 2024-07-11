@@ -469,6 +469,10 @@ class TestCreateBkPlugin:
 class TestCreateCloudNativeApp:
     """Test 'cloud_native' type application's creation"""
 
+    @pytest.fixture(autouse=True)
+    def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
+        pass
+
     def test_create_with_image(self, api_client):
         """托管方式：仅镜像"""
         random_suffix = generate_random_string(length=6)

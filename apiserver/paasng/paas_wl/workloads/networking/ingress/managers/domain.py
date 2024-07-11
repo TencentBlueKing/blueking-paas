@@ -16,8 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import List, Set
+from typing import Dict, List, Set
 
+from django.conf import settings
 from django.db import transaction
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -121,6 +122,15 @@ class CustomDomainIngressMgr(AppIngressMgr):
                 DomainWithCert.from_custom_domain(region=self.app.region, domain=self.domain), raise_on_no_cert=False
             )
         ]
+
+    def get_annotations(self) -> Dict:
+        """update annotations if custom domain ingress class is set"""
+        annotations = super().get_annotations()
+
+        if settings.CUSTOM_DOMAIN_INGRESS_CLASS is not None:
+            annotations["kubernetes.io/ingress.class"] = settings.CUSTOM_DOMAIN_INGRESS_CLASS
+
+        return annotations
 
 
 class IngressDomainFactory:

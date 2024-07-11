@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.test.utils import override_settings
 
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.managers.subpath import SubPathAppIngressMgr, assign_subpaths
@@ -96,3 +97,8 @@ class TestAssignSubpaths:
         ingress = SubPathAppIngressMgr(bk_prod_wl_app).get()
         assert len(ingress.domains) == 1
         assert ingress.domains[0].path_prefix_list == paths
+
+    def test_get_ingress_class(self, bk_stag_wl_app):
+        with override_settings(APP_INGRESS_CLASS="test-foo-ingress"):
+            ingress_mgr = SubPathAppIngressMgr(bk_stag_wl_app)
+            assert ingress_mgr.get_annotations()["kubernetes.io/ingress.class"] == "test-foo-ingress"

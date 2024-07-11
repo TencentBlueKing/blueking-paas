@@ -294,6 +294,10 @@ const srvStaticLesscode = () => import(/* webpackChunkName: 'services-info' */'@
   window.showDeployTip(error);
 });
 
+const serviceCopilot = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/copilot').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const srvStaticSDKBlueapps = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/sdk-blueapps').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -981,6 +985,11 @@ const router = new Router({
           path: 'lesscode',
           component: srvStaticLesscode,
           name: 'serviceLesscode',
+        },
+        {
+          path: 'copilot',
+          component: serviceCopilot,
+          name: 'serviceCopilot',
         },
         {
           path: 'framework',

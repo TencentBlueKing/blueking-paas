@@ -834,7 +834,7 @@ export default {
       return this.$store.state.userFeature;
     },
     mirrorExamplePlaceholder() {
-      return `${this.$t('示例镜像：')}${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
+      return `${this.$t('请输入镜像仓库，如')}：${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
     },
     // 蓝鲸可视化平台
     isBkLesscode() {

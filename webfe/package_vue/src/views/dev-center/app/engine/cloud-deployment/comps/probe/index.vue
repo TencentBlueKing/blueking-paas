@@ -53,19 +53,24 @@
         <span>{{ $t('健康探测') }}：</span>
       </div>
       <div class="view-content">
-        <!-- 存活探测 -->
-        <probe-view
-          class="mr24"
-          :title="$t('存活探测')"
-          :data="processData"
-          :probe-type="'liveness'"
-        />
-        <!-- 就绪探测 -->
-        <probe-view
-          :title="$t('就绪探测')"
-          :data="processData"
-          :probe-type="'readiness'"
-        />
+        <template v-if="probeList.length">
+          <!-- 存活探测 -->
+          <probe-view
+            class="mr24"
+            :title="$t('存活探测')"
+            :data="processData"
+            :probe-type="'liveness'"
+          />
+          <!-- 就绪探测 -->
+          <probe-view
+            :title="$t('就绪探测')"
+            :data="processData"
+            :probe-type="'readiness'"
+          />
+        </template>
+        <span v-else class="probe-tag">
+          {{ $t('未启用') }}
+        </span>
       </div>
     </div>
   </div>
@@ -133,7 +138,8 @@ export default {
     },
     // 探针校验
     async probeValidate() {
-      return await this.$refs.livenessRef?.validateFun() && this.$refs.readinessRef?.validateFun();
+      await this.$refs.livenessRef?.validateFun();
+      await this.$refs.readinessRef?.validateFun();
     },
     handlerProbeChange() {
       if (this.probeList.includes(LIVENESS)) {
@@ -233,6 +239,16 @@ export default {
 
     .mr24 {
       margin-right: 24px;
+    }
+    .probe-tag {
+      display: inline-block;
+      height: 22px;
+      padding: 0 8px;
+      font-size: 12px;
+      line-height: 22px;
+      color: #63656E;
+      background: #F0F1F5;
+      border-radius: 2px;
     }
   }
 }

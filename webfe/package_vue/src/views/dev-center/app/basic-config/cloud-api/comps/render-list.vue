@@ -69,7 +69,7 @@
               :true-value="true"
               :false-value="false"
             >
-              {{ $t('显示可申请权限') }}
+              {{ $t('仅显示可申请 API') }}
             </bk-checkbox>
           </div>
           <div class="overflow shaixuan">
@@ -78,7 +78,7 @@
               :true-value="true"
               :false-value="false"
             >
-              {{ $t('显示可续期权限') }}
+              {{ $t('仅显示可续期 API') }}
             </bk-checkbox>
           </div>
         </div>

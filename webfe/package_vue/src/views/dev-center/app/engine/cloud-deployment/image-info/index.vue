@@ -51,7 +51,7 @@
               ref="imageRef"
               v-model="buildConfig.image_repository"
               style="width: 450px;"
-              :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
+              :placeholder="$t('请输入镜像仓库，如') + '：mirrors.tencent.com/bkpaas/django-helloworld'"
             >
             </bk-input>
             <p slot="tip" class="input-tips">{{ $t('一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。') }}</p>

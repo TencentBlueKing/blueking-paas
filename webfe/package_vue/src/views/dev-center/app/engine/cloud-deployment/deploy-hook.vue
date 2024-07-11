@@ -16,7 +16,6 @@
               {{ $t('部署前置命令') }}
             </div>
           </div>
-
           <div
             class="edit-container"
             @click="handleEditClick"
@@ -25,6 +24,15 @@
             <i class="paasng-icon paasng-edit-2" />
             {{ $t('编辑') }}
           </div>
+        </div>
+        <div class="deploy-command-tip">
+          {{ $t('部署前置命令在独立容器中执行，适用于数据库表变更等操作。') }}
+          <a
+            :href="GLOBAL.DOC.DEPLOY_ORDER"
+            target="_blank"
+          >
+            {{ $t('使用指南') }}
+          </a>
         </div>
         <!-- 不启用时隐藏 -->
         <bk-form
@@ -98,7 +106,7 @@
             class="pt20"
             style="position: relative;"
           >
-            <span :class="['hook-tag', { 'enabled': preFormData.enabled } ]">
+            <span :class="['hook-tag', { 'enabled': preFormData.enabled }]">
               {{ preFormData.enabled ? $t('已启用') : $t('未启用') }}
             </span>
           </bk-form-item>
@@ -107,7 +115,7 @@
             :label="`${$t('启动命令')}：`"
             style="position: relative;"
           >
-            <div v-if="preFormData.command.length">
+            <div class="hook-tag-cls" v-if="preFormData.command.length">
               <bk-tag
                 v-for="item in preFormData.command"
                 :key="item"
@@ -115,10 +123,7 @@
                 {{ item }}
               </bk-tag>
             </div>
-            <div
-              v-else
-              class="pl10"
-            >
+            <div v-else>
               --
             </div>
           </bk-form-item>
@@ -128,7 +133,7 @@
             class="pt20 hook-form-cls"
             style="position: relative;"
           >
-            <div v-if="preFormData.args.length">
+            <div class="hook-tag-cls" v-if="preFormData.args.length">
               <bk-tag
                 v-for="item in preFormData.args"
                 :key="item"
@@ -136,10 +141,7 @@
                 {{ item }}
               </bk-tag>
             </div>
-            <div
-              v-else
-              class="pl10"
-            >
+            <div v-else>
               --
             </div>
           </bk-form-item>
@@ -410,6 +412,13 @@ export default {
     margin-left: 150px;
     margin-top: 24px;
   }
+
+  .deploy-command-tip {
+    padding-left: 20px;
+    color: #979ba5;
+    font-size: 12px;
+    margin-top: 8px;
+  }
 }
 
 .info-special-form.bk-form.bk-inline-form {
@@ -436,7 +445,6 @@ export default {
   }
 }
 .hook-tag {
-  margin-left: 6px;
   display: inline-block;
   height: 22px;
   padding: 0 8px;
@@ -452,5 +460,8 @@ export default {
 }
 .deploy-hook-container {
   min-height: 200px;
+}
+.hook-tag-cls .bk-tag:first-child {
+  margin-left: 0px;
 }
 </style>

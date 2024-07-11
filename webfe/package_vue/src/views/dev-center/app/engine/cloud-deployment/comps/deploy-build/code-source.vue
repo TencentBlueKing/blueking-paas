@@ -28,6 +28,14 @@
             <bk-form :model="sourceCodeData">
               <bk-form-item :label="`${$t('代码源')}：`">
                 <span class="form-text">{{curAppModule.repo?.display_name || '--'}}</span>
+                <a
+                  v-if="sourceControlType === 'tc_git'"
+                  :href="tcgitCopilotUrl"
+                  target="_blank"
+                  class="copilot-link">
+                  {{`${$t('体验')}${$t('工蜂 Copilot')}`}}
+                  <i class="paasng-icon paasng-jump-link"></i>
+                </a>
               </bk-form-item>
               <bk-form-item :label="`${$t('代码仓库')}：`">
                 <a
@@ -335,6 +343,9 @@ export default {
     },
     isShowEdit() {
       return !this.isCodeSourceEdit ? this.isEmptyData : false;
+    },
+    tcgitCopilotUrl() {
+      return window.BK_TCGIT_COPILOT_URL;
     },
   },
 
@@ -766,8 +777,16 @@ export default {
       display: flex;
     }
 
-    .code-detail .code-link {
-      color: #3A84FF;
+    .code-detail {
+      .code-link {
+        color: #3A84FF;
+      }
+      .copilot-link {
+        margin-left: 10px;
+        i {
+          font-size: 16px;
+        }
+      }
     }
 
     .form-group-dir {

@@ -121,6 +121,7 @@ def deploy_networking(env: ModuleEnvironment) -> None:
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
     with get_client_by_app(wl_app) as client:
+        # 需要指定 api_version, 因为 DomainGroupMapping 只有 v1alpha1 版本
         crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).create_or_update(
             mapping.metadata.name,
             namespace=wl_app.namespace,
@@ -149,7 +150,10 @@ def delete_networking(env: ModuleEnvironment):
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
-        crd.DomainGroupMapping(client).delete(mapping.metadata.name, namespace=wl_app.namespace)
+        # 需要指定 api_version, 因为 DomainGroupMapping 只有 v1alpha1 版本
+        crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).delete(
+            mapping.metadata.name, namespace=wl_app.namespace
+        )
 
 
 @define

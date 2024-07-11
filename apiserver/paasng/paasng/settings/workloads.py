@@ -153,8 +153,17 @@ DEFAULT_POD_LOGS_LINE = 512
 # Ingress 配置
 # ---------------
 
-# 不指定则使用默认，可以指定为 bk-ingress-nginx
+# 当集群内存在多套 nginx controller 时, 需要设置 kubernetes.io/ingress.class 注解, 将 ingress 规则绑定到具体的 controller.
+# - APP_INGRESS_CLASS 是子域名/子路径/独立域名三种 ingress 默认的 ingress.class 配置
+# - CUSTOM_DOMAIN_INGRESS_CLASS 是独立域名特有的 ingress.class 配置, 优先级高于 APP_INGRESS_CLASS
+#
+# 配置项说明:
+# 如果集群中只有一套 nginx controller, 通过 APP_INGRESS_CLASS 设置注解值即可, 不需要再单独设置 CUSTOM_DOMAIN_INGRESS_CLASS;
+# 如果集群中有多套 nginx controller, 并且独立域名需要绑定具体 controller 时, 可以通过设置 CUSTOM_DOMAIN_INGRESS_CLASS 达到目的.
+# 以蓝鲸私有化版本架构为例, 其采用了两层 nginx controller(第一层向第二层转发请求). 可以通过设置 CUSTOM_DOMAIN_INGRESS_CLASS 将独立域名
+# 绑定到第一层的 controller, 而子路径通过设置 APP_INGRESS_CLASS 绑定到第二层的 controller.
 APP_INGRESS_CLASS = settings.get("APP_INGRESS_CLASS")
+CUSTOM_DOMAIN_INGRESS_CLASS = settings.get("CUSTOM_DOMAIN_INGRESS_CLASS")
 
 # 控制 ingress 资源路径是否严格匹配末尾斜杆, 如某个 ingress 路径设置成 "/foo/", 开启严格匹配将无法通过 "/foo" 访问应用
 # 如果希望通过 "/foo" 也能访问, 则需要设置 APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH、APP_INGRESS_V1_PATH_TRAILING_SLASH 为 False

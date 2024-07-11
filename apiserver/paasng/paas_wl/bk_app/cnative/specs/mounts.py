@@ -197,7 +197,7 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
     def delete_by_app(self, application_id: str, source_name: str) -> None:
         # 删除持久存储资源前，需要确保对应挂载卷资源已被删除
         if Mount.objects.filter(source_config=self.build_volume_source(source_name)).exists():
-            raise ValidationError(_("删除持久存储资源失败,请先删除相应挂载卷资源"))
+            raise ValidationError(_("删除持久存储资源失败，请先删除相应挂载卷资源"))
 
         app = Application.objects.get(id=application_id)
         app_envs = app.get_app_envs()

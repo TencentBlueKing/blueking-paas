@@ -31,6 +31,8 @@ type ProjectConfigReader interface {
 
 	// Platform related methods
 	GetIngressClassName() string
+	// GetCustomDomainIngressClassName returns the ingress class name for custom domain ingress
+	GetCustomDomainIngressClassName() string
 	IsAutoscalingEnabled() bool
 }
 
@@ -64,6 +66,11 @@ func (d defaultConfig) GetProcDefaultMemRequest() string {
 
 func (d defaultConfig) GetIngressClassName() string {
 	return "nginx"
+}
+
+// GetCustomDomainIngressClassName returns the ingress class name for custom domain ingress
+func (d defaultConfig) GetCustomDomainIngressClassName() string {
+	return d.GetIngressClassName()
 }
 
 func (d defaultConfig) IsAutoscalingEnabled() bool {

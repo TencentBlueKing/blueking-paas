@@ -139,7 +139,7 @@ func main() {
 	mgrCli := kubeutil.NewTracedClient(mgr.GetClient())
 	mgrScheme := mgr.GetScheme()
 
-	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf.Controller)
+	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha2.GroupKindBkApp, projConf.Controller)
 	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, bkappMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")

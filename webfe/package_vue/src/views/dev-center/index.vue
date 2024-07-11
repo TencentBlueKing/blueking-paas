@@ -381,14 +381,16 @@
                 {{ $t(PAAS_APP_TYPE[row.application.type]) }}
               </span>
               <!-- 是否显示迁移应用icon, 需要后台提供字段 -->
-              <div
-                v-if="userFeature.CNATIVE_MGRLEGACY && !noMigrationNeededStatus.includes(row.migration_status?.status)"
-                v-bk-tooltips="{ content: row.application.type === 'cloud_native' ? $t('查看迁移进度') : $t('点击可迁移为云原生应用') }"
-                class="migration-wrapper"
-                @click.stop="showAppMigrationDialog(row.application)"
-              >
-                <i class="paasng-icon paasng-qianyi-mianxing" />
-              </div>
+              <template v-if="row.application.is_active">
+                <div
+                  v-if="userFeature.CNATIVE_MGRLEGACY && !noMigrationNeededStatus.includes(row.migration_status?.status)"
+                  v-bk-tooltips="{ content: row.application.type === 'cloud_native' ? $t('查看迁移进度') : $t('点击可迁移为云原生应用') }"
+                  class="migration-wrapper"
+                  @click.stop="showAppMigrationDialog(row.application)"
+                >
+                  <i class="paasng-icon paasng-qianyi-mianxing" />
+                </div>
+              </template>
             </div>
           </template>
         </bk-table-column>

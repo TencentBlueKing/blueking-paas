@@ -186,7 +186,7 @@ class SourcePackageStatReader:
             logo_b64data = "base64," + base64.b64encode(archive.read_file(relative_path + "logo.png")).decode()
         except (RuntimeError, KeyError) as e:
             if "Don't exists" in str(e) or "Not found in archive" in str(e):
-                logger.info("The logo.png does not exist,using default logo.")
+                logger.info("The logo.png does not exist, using default logo.")
             else:
                 logger.exception("Can't read logo.png.")
         return logo_b64data

@@ -219,7 +219,8 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             annotations = pod.metadata.annotations or {}
             version = int(annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY, 0))
 
-        terminated_info_dict = get_items(c_status.to_dict(), "lastState.terminated") if c_status else {}
+        c_status_dict = get_items(pod.to_dict(), "status.containerStatuses", [{}])[0]
+        terminated_info_dict = get_items(c_status_dict, "lastState.terminated") if c_status_dict else None
         return self.entity_type(
             app=app,
             name=pod.metadata.name,

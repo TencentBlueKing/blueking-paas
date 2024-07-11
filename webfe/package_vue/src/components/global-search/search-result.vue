@@ -270,7 +270,7 @@ export default {
     // 概览
     toAppSummary(appItem) {
       this.$router.push({
-        name: 'appSummary',
+        name: appItem.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
         params: {
           id: appItem.code,
           moduleId: appItem.modules.find(item => item.is_default).name,
@@ -292,7 +292,7 @@ export default {
     toAppDetail(appItem) {
       this.$emit('close-search-mode');
       this.clearData();
-      if (appItem.config_info.engine_enabled) {
+      if (appItem.type === 'engineless_app' || appItem.config_info.engine_enabled) {
         this.toAppSummary(appItem);
         return;
       }

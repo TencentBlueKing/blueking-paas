@@ -81,8 +81,9 @@ class CreateAiAgentAppSLZ(AppBasicInfoMixin):
         data = super().to_internal_value(data)
         # 以下参数使用默认值，不需要传入
         data["is_ai_agent_app"] = True
+        # AI Agent 应用也是一个插件，也需要自动注册网关
+        data["is_plugin_app"] = True
         data["type"] = ApplicationType.CLOUD_NATIVE.value
-        data["is_plugin_app"] = False
         data["engine_enabled"] = True
         data["engine_params"] = {
             "source_origin": SourceOrigin.AI_AGENT.value,

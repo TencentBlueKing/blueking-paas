@@ -193,6 +193,13 @@ spec:
                 type: string
               bkAppSecret:
                 type: string
+              customDomainIngressClassName:
+                description: CustomDomainIngressClassName works the same as IngressClassName,
+                  but only for ingress with custom domains. Set customDomainIngressClassName
+                  if custom domain ingress needs to bound to a specific ingress controller,
+                  otherwise it will be bound to the ingress controller specified by
+                  ingressClassName config
+                type: string
               ingressClassName:
                 description: if ingressClassName configured, kubernetes.io/ingress.class=$value
                   will be added to ingress's annotations
@@ -205,6 +212,7 @@ spec:
             - bkAPIGatewayURL
             - bkAppCode
             - bkAppSecret
+            - customDomainIngressClassName
             - ingressClassName
             - sentryDSN
             type: object

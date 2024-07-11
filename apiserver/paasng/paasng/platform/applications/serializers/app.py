@@ -87,7 +87,7 @@ class CreateAiAgentAppSLZ(AppBasicInfoMixin):
         data["engine_enabled"] = True
         data["engine_params"] = {
             "source_origin": SourceOrigin.AI_AGENT.value,
-            # 目前是直接使用 Python 插件的模板
+            # TODO AI agent 还没有提供模板，目前是直接使用 Python 插件的模板
             "source_init_template": "bk-saas-plugin-python",
         }
         return data

@@ -27,7 +27,7 @@ from paasng.infras.iam.helpers import fetch_role_members
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, JustLeaveAppManager
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import Deployment
 from paasng.platform.evaluation.collectors import AppDeploymentCollector, AppResQuotaCollector, AppUserVisitCollector
@@ -194,6 +194,11 @@ def send_idle_email_to_app_developers(app_codes: List[str], only_specified_users
     for idx, username in enumerate(waiting_notify_usernames):
         filters = ApplicationPermission().gen_develop_app_filters(username)
         app_codes = Application.objects.filter(filters).values_list("code", flat=True)
+
+        # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况
+        if just_leave_app_codes := JustLeaveAppManager(username).list():
+            app_codes = [c for c in app_codes if c not in just_leave_app_codes]
+
         user_idle_app_reports = reports.filter(app__code__in=app_codes)
 
         if not user_idle_app_reports.exists():

@@ -82,6 +82,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import (
     Application,
     ApplicationEnvironment,
+    JustLeaveAppManager,
     UserApplicationFilter,
     UserMarkedApplication,
 )
@@ -822,6 +823,9 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         except BKIAMGatewayServiceError as e:
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
+        # 将该应用 Code 标记为刚退出，避免出现退出用户组，权限中心权限未同步的情况
+        JustLeaveAppManager(request.user.username).add(application.code)
+
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -836,6 +840,9 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
             remove_user_all_roles(application.code, username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
+
+        # 将该应用 Code 标记为刚退出，避免出现退出用户组，权限中心权限未同步的情况
+        JustLeaveAppManager(username).add(application.code)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)

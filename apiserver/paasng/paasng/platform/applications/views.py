@@ -600,6 +600,20 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+    @transaction.atomic
+    @swagger_auto_schema(request_body=slzs.CreateAiAgentAppSLZ, tags=["ai-agent-app"])
+    def create_ai_agent_app(self, request):
+        """创建 AI Agent 插件应用"""
+        serializer = slzs.CreateAiAgentAppSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        params = serializer.validated_data
+        self.validate_region_perm(params["region"])
+
+        engine_params = params.get("engine_params", {})
+        source_origin = SourceOrigin(engine_params["source_origin"])
+        cluster_name = None
+        return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
+
     def get_creation_options(self, request):
         """[API] 获取创建应用模块时的选项信息"""
         # 是否允许用户使用高级选项
@@ -659,6 +673,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             name_en=params["name_en"],
             type_=params["type"],
             is_plugin_app=params["is_plugin_app"],
+            is_ai_agent_app=params["is_ai_agent_app"],
             operator=operator,
         )
 

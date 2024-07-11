@@ -240,7 +240,7 @@ def get_metadata_reader(
     source_origin = module.get_source_origin()
     if source_origin == SourceOrigin.AUTHORIZED_VCS:
         return VCSMetaDataReader(get_repo_controller(module, operator), source_dir=source_dir)
-    elif source_origin in [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART]:
+    elif source_origin in SourceOrigin.get_package_origins():
         return PackageMetaDataReader(module, source_dir)
     elif source_origin == SourceOrigin.IMAGE_REGISTRY:
         raise NotImplementedError("IMAGE_REGISTRY doesn't support read AppDescription")

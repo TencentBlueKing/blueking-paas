@@ -39,6 +39,7 @@ class TestModuleSpecs:
             (SourceOrigin.AUTHORIZED_VCS, True),
             (SourceOrigin.S_MART, False),
             (SourceOrigin.BK_LESS_CODE, False),
+            (SourceOrigin.AI_AGENT, False),
             (SourceOrigin.IMAGE_REGISTRY, False),
         ],
     )
@@ -57,6 +58,7 @@ class TestModuleSpecs:
             (SourceOrigin.AUTHORIZED_VCS, RuntimeType.BUILDPACK, True, False),
             (SourceOrigin.S_MART, RuntimeType.BUILDPACK, False, True),
             (SourceOrigin.BK_LESS_CODE, RuntimeType.BUILDPACK, False, True),
+            (SourceOrigin.AI_AGENT, RuntimeType.BUILDPACK, False, True),
             (SourceOrigin.IMAGE_REGISTRY, RuntimeType.CUSTOM_IMAGE, False, False),
         ],
     )

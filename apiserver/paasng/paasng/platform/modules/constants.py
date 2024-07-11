@@ -46,10 +46,16 @@ class SourceOrigin(int, StructuredEnum):
     SCENE = EnumField(5, "Scene")
     # 仅托管镜像的云原生应用
     CNATIVE_IMAGE = EnumField(6, "CNative Image")
+    # AI agent 工具应用
+    AI_AGENT = EnumField(7, "AI Agent")
 
     @classmethod
     def get_default_origins(cls) -> List["SourceOrigin"]:
         return [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.CNATIVE_IMAGE]
+
+    @classmethod
+    def get_package_origins(cls) -> List["SourceOrigin"]:
+        return [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART, SourceOrigin.AI_AGENT]
 
 
 class APP_CATEGORY(str, StructuredEnum):

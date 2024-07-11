@@ -258,6 +258,10 @@ class Application(OwnerTimestampedModel):
         default=False,
         help_text="蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑",
     )
+    is_ai_agent_app = models.BooleanField(
+        verbose_name="是否为 AI Agent 插件应用",
+        default=False,
+    )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 
     creator = BkUserField()

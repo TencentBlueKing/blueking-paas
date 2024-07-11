@@ -161,10 +161,17 @@ class TestModuleInitializer:
             assert result["dest_type"] == "svn"
             assert "extra_info" in result
 
+    @pytest.mark.parametrize(
+        ("source_origin"),
+        [
+            (SourceOrigin.BK_LESS_CODE),
+            (SourceOrigin.AI_AGENT),
+        ],
+    )
     @pytest.mark.usefixtures("_init_tmpls")
-    def test_external_package(self, raw_module):
+    def test_external_package(self, raw_module, source_origin):
         raw_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
-        raw_module.source_origin = SourceOrigin.BK_LESS_CODE
+        raw_module.source_origin = source_origin
         raw_module.save()
 
         assert ModuleInitializer(raw_module)._should_initialize_vcs() is False

@@ -52,6 +52,7 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
     engine_params = ModuleSourceConfigSLZ(required=False)
     advanced_options = AdvancedCreationParamsMixin(required=False)
     is_plugin_app = serializers.BooleanField(default=False)
+    is_ai_agent_app = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -72,6 +73,22 @@ class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):
     def to_internal_value(self, data: Dict):
         data = super().to_internal_value(data)
         data["type"] = ApplicationType.CLOUD_NATIVE.value
+        return data
+
+
+class CreateAiAgentAppSLZ(AppBasicInfoMixin):
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        # 以下参数使用默认值，不需要传入
+        data["is_ai_agent_app"] = True
+        data["type"] = ApplicationType.CLOUD_NATIVE.value
+        data["is_plugin_app"] = False
+        data["engine_enabled"] = True
+        data["engine_params"] = {
+            "source_origin": SourceOrigin.AI_AGENT.value,
+            # 目前是直接使用 Python 插件的模板
+            "source_init_template": "bk-saas-plugin-python",
+        }
         return data
 
 

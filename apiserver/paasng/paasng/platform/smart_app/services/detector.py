@@ -184,8 +184,11 @@ class SourcePackageStatReader:
             # Q: 为什么需要进行 base64 编码?
             # A: 因为 meta_info 会被归档存储进数据库, bytes 类型无法序列化成 json
             logo_b64data = "base64," + base64.b64encode(archive.read_file(relative_path + "logo.png")).decode()
-        except (RuntimeError, KeyError):
-            logger.info("Can't read logo.png.")
+        except (RuntimeError, KeyError) as e:
+            if "Don't exists" in str(e) or "Not found in archive" in str(e):
+                logger.info("The logo.png does not exist,using default logo.")
+            else:
+                logger.exception("Can't read logo.png.")
         return logo_b64data
 
 

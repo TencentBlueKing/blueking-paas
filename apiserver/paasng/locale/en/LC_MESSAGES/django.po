@@ -138,7 +138,7 @@ msgid "挂载点的名称"
 msgstr "Name of the mount point"
 
 #: paas_wl/bk_app/cnative/specs/mounts.py:198
-msgid "删除持久存储资源失败,请先删除相应挂载卷资源"
+msgid "删除持久存储资源失败，请先删除相应挂载卷资源"
 msgstr "Failed to delete persistent storage resources, please delete the corresponding mounted volume resources first."
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:58

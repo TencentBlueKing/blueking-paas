@@ -36,7 +36,7 @@ class EmailReceiverType(str, StructuredEnum):
     """邮件接收者类型"""
 
     PLAT_ADMIN = EnumField("plat_admin", label=_("平台管理员"))
-    APP_ADMIN = EnumField("app_admin", label=_("应用管理员"))
+    APP_DEVELOPER = EnumField("app_developer", label=_("应用开发者"))
 
 
 class OperationIssueType(str, StructuredEnum):

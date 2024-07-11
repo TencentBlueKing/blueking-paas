@@ -193,8 +193,8 @@ def send_idle_email_to_app_developers(app_codes: List[str], only_specified_users
     )
     for idx, username in enumerate(waiting_notify_usernames):
         filters = ApplicationPermission().gen_develop_app_filters(username)
-        app_codes = Application.objects.filter(filters).values_list("code", flat=True)
-        user_idle_app_reports = reports.filter(app__code__in=app_codes)
+        app_codes = Application.objects.filter(is_active=True).filter(filters).values_list("code", flat=True)
+        user_idle_app_reports = reports.filter(app__code__in=app_codes).select_related("app")
 
         if not user_idle_app_reports.exists():
             total_cnt -= 1
@@ -202,7 +202,7 @@ def send_idle_email_to_app_developers(app_codes: List[str], only_specified_users
             continue
 
         try:
-            AppOperationReportNotifier().send(user_idle_app_reports, EmailReceiverType.APP_ADMIN, [username])
+            AppOperationReportNotifier().send(user_idle_app_reports, EmailReceiverType.APP_DEVELOPER, [username])
         except Exception:
             failed_usernames.append(username)
             logger.exception("failed to send idle module envs email to %s", username)

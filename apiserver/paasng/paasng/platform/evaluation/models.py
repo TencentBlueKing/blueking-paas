@@ -19,6 +19,7 @@ from django.db import models
 
 from paasng.platform.applications.models import Application
 from paasng.platform.evaluation.constants import BatchTaskStatus, OperationIssueType
+from paasng.utils.models import AuditedModel, BkUserField
 
 
 class AppOperationReportCollectionTask(models.Model):
@@ -86,3 +87,19 @@ class AppOperationEmailNotificationTask(models.Model):
         choices=BatchTaskStatus.get_choices(),
         default=BatchTaskStatus.RUNNING,
     )
+
+
+class IdleAppNotificationMuteRule(AuditedModel):
+    """闲置应用通知屏蔽规则"""
+
+    user = BkUserField("屏蔽人")
+    app_code = models.CharField("应用 Code", max_length=32)
+    module_name = models.CharField("模块名称", max_length=32)
+    environment = models.CharField("部署环境", max_length=32)
+    expired_at = models.DateTimeField("过期时间")
+
+    class Meta:
+        unique_together = ("user", "app_code", "module_name", "environment")
+
+    def __str__(self):
+        return f"{self.user}-{self.app_code}-{self.module_name}-{self.environment}"

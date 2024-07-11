@@ -22,13 +22,14 @@ import string
 from collections import Counter, defaultdict
 from io import BytesIO
 from operator import itemgetter
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -105,7 +106,11 @@ from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
+from paasng.platform.evaluation.models import (
+    AppOperationReport,
+    AppOperationReportCollectionTask,
+    IdleAppNotificationMuteRule,
+)
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.mgrlegacy.migrate import get_migration_process_status
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
@@ -114,6 +119,7 @@ from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.scene_app.initializer import SceneAPPInitializer
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
+from paasng.utils import dictx
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
@@ -298,13 +304,62 @@ class ApplicationViewSet(viewsets.ViewSet):
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
             latest_collected_at = collect_task.start_at
 
-        resp_data = {
-            "collected_at": latest_collected_at,
-            "applications": AppOperationReport.objects.filter(
-                app__code__in=app_codes, issue_type=OperationIssueType.IDLE
-            ),
+        mute_rules = {
+            (r.app_code, r.module_name, r.environment)
+            for r in IdleAppNotificationMuteRule.objects.filter(user=request.user, expired_at__gt=timezone.now())
         }
+
+        applications = []
+        for report in AppOperationReport.objects.filter(
+            app__code__in=app_codes, issue_type=OperationIssueType.IDLE
+        ).select_related("app"):
+            idle_module_envs = self._list_idle_module_envs(report, mute_rules)
+            if not idle_module_envs:
+                continue
+
+            applications.append(
+                {
+                    "code": report.app.code,
+                    "name": report.app.name,
+                    "type": report.app.type,
+                    "is_plugin_app": report.app.is_plugin_app,
+                    "logo_url": report.app.get_logo_url(),
+                    "administrators": report.administrators,
+                    "developers": report.developers,
+                    "module_envs": idle_module_envs,
+                }
+            )
+
+        resp_data = {"collected_at": latest_collected_at, "applications": applications}
         return Response(data=slzs.IdleApplicationListOutputSLZ(resp_data).data)
+
+    @staticmethod
+    def _list_idle_module_envs(report: AppOperationReport, mute_rules: Set[Tuple[str, str, str]]) -> List[Dict]:
+        idle_module_envs = []
+
+        for module_name, mod_evaluate_result in report.evaluate_result["modules"].items():
+            for env_name, env_evaluate_result in mod_evaluate_result["envs"].items():
+                if env_evaluate_result["issue_type"] != OperationIssueType.IDLE:
+                    continue
+                # 有未过期的屏蔽规则的跳过
+                if (report.app.code, module_name, env_name) in mute_rules:
+                    continue
+
+                path = f"modules.{module_name}.envs.{env_name}"
+                env_res_summary = dictx.get_items(report.res_summary, path)
+                env_deploy_summary = dictx.get_items(report.deploy_summary, path)
+                idle_module_envs.append(
+                    {
+                        "module_name": module_name,
+                        "env_name": env_name,
+                        "cpu_quota": env_res_summary["cpu_limits"],
+                        "memory_quota": env_res_summary["mem_limits"],
+                        "cpu_usage_avg": env_res_summary["cpu_usage_avg"],
+                        "latest_deployed_at": env_deploy_summary["latest_deployed_at"],
+                    }
+                )
+
+        return slzs.IdleModuleEnvSLZ(idle_module_envs, many=True).data
 
     def destroy(self, request, code):
         """

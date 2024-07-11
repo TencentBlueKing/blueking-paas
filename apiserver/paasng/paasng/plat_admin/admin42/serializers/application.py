@@ -16,8 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import List
+from typing import Any, Dict, List
 
+import arrow
+import pytz
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -145,6 +148,28 @@ class AppOperationReportCollectionTaskOutputSLZ(serializers.Serializer):
         return BatchTaskStatus.get_choice_label(obj.status)
 
 
+class EnvDeploySummarySLZ(serializers.Serializer):
+    latest_deployer = serializers.CharField(help_text="最新部署人")
+    latest_deployed_at = serializers.SerializerMethodField(help_text="最新部署时间")
+
+    def get_latest_deployed_at(self, obj: Dict[str, Any]) -> str:
+        return (
+            arrow.get(obj["latest_deployed_at"])
+            .astimezone(tz=pytz.timezone(settings.TIME_ZONE))
+            .strftime("%Y-%m-%d %H:%M:%S")
+        )
+
+
+class ModuleDeploySummarySLZ(serializers.Serializer):
+    envs = serializers.DictField(help_text="环境列表", child=EnvDeploySummarySLZ())
+
+
+class DeploySummarySLZ(serializers.Serializer):
+    app_code = serializers.CharField(help_text="应用 Code", required=False)
+    app_type = serializers.CharField(help_text="应用类型", required=False)
+    modules = serializers.DictField(help_text="模块列表", child=ModuleDeploySummarySLZ(), required=False)
+
+
 class AppOperationReportOutputSLZ(serializers.Serializer):
     """应用运营评估报告"""
 
@@ -165,7 +190,7 @@ class AppOperationReportOutputSLZ(serializers.Serializer):
     latest_operated_at = serializers.DateTimeField(help_text="最新操作时间")
     latest_operator = serializers.CharField(help_text="最新操作人")
     latest_operation = serializers.CharField(help_text="最新操作内容")
-    deploy_summary = serializers.JSONField(help_text="部署汇总")
+    deploy_summary = DeploySummarySLZ(help_text="部署汇总")
     issue_type = serializers.CharField(help_text="问题类型")
     issues = serializers.SerializerMethodField(help_text="问题详情")
     evaluate_result = serializers.JSONField(help_text="评估结果")

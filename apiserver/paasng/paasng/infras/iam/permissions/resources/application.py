@@ -27,7 +27,7 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from iam.exceptions import AuthAPIError
 
-from paasng.infras.iam.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP, ResourceType
+from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.perm import PermCtx, Permission, ResCreatorAction, validate_empty
 from paasng.infras.iam.permissions.request import ResourceRequest
 
@@ -224,7 +224,7 @@ class ApplicationPermission(Permission):
         # 因此在应用创建后的短时间内，需特殊豁免以免在列表页无法查询到最新的应用
         perm_exempt_filter = Q(
             owner=user_id_encoder.encode(settings.USER_TYPE, request.subject.id),
-            created__gt=datetime.now() - timedelta(seconds=PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP),
+            created__gt=datetime.now() - timedelta(seconds=settings.IAM_PERM_EFFECTIVE_TIMEDELTA),
         )
         if not filters:
             return perm_exempt_filter

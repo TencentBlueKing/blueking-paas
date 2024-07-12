@@ -47,38 +47,6 @@
                 </p>
               </div>
             </div>
-
-            <div
-              v-if="curUserFeature.ENABLE_TC_DOCKER"
-              class="form-group"
-              style="margin-top: 7px;margin-left: 10px"
-            >
-              <label class="form-label"> {{ $t('构建方式') }} </label>
-              <div
-                class="form-group-flex-radio"
-                style="width: 100%"
-              >
-                <div class="form-group-radio mt10">
-                  <bk-radio-group
-                    v-model="structureType"
-                    class="construction-manner"
-                  >
-                    <bk-radio :value="'soundCode'">
-                      {{ $t('提供源码') }}
-                    </bk-radio>
-                    <bk-radio :value="'mirror'">
-                      {{ $t('提供镜像') }}
-                    </bk-radio>
-                    <bk-radio
-                      :value="'isMirror'"
-                      disabled
-                    >
-                      {{ $t('从源码构建镜像') }}
-                    </bk-radio>
-                  </bk-radio-group>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- 镜像管理 -->

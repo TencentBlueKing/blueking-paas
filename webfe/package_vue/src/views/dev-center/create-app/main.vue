@@ -16,7 +16,6 @@
         {{ $t('普通应用') }}
       </li> -->
       <li
-        v-if="cloudFlag"
         :class="['tab-item', { 'active': appType === 'cloud' }]"
         @click="handleToggleType('cloud')"
       >
@@ -70,15 +69,6 @@ export default {
     };
   },
   computed: {
-    userFeature() {
-      return this.$store.state.userFeature;
-    },
-    cloudFlag() {
-      if (this.$store.state.userFeature) {
-        return this.$store.state.userFeature.ALLOW_CREATE_CLOUD_NATIVE_APP;
-      }
-      return false;
-    },
     searchQuery() {
       return this.$route.query;
     },

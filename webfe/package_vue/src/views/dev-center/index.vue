@@ -680,6 +680,7 @@ export default {
         data: {},
       },
       noMigrationNeededStatus: ['no_need_migration', 'confirmed'],
+      appTypeList: APP_TYPE_MAP,
     };
   },
   computed: {
@@ -688,12 +689,6 @@ export default {
     },
     platformFeature() {
       return this.$store.state.platformFeature;
-    },
-    appTypeList() {
-      if (!this.$store.state.userFeature?.ALLOW_CREATE_CLOUD_NATIVE_APP) {
-        return APP_TYPE_MAP.filter(item => item.key !== 'cloud_native_app_count');
-      }
-      return APP_TYPE_MAP;
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -972,6 +967,7 @@ export default {
     },
 
     switchAppType(item) {
+      if (item.key === this.curAppTypeActive) return;
       this.curAppType = item.type !== 'all' ? item.type : '';
       this.curAppTypeActive = item.key;
       this.fetchAppList();

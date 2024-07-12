@@ -29,7 +29,7 @@ class TestIdleAppNotificationMuteRuleViewSet:
     def test_create(self, bk_user, api_client, bk_app, bk_module, bk_stag_env):
         resp = api_client.post(
             path=f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}"
-            + f"/envs/{bk_stag_env.environment}/idle_notification_mute_rules/"
+            + f"/envs/{bk_stag_env.environment}/idle_notification/mute_rules/"
         )
         assert resp.status_code == status.HTTP_201_CREATED
 

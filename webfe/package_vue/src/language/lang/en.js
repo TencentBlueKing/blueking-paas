@@ -2709,4 +2709,5 @@ export default {
   '当前分支正在测试中，请先终止测试才能新建版本': 'The current branch is under testing, please terminate the test before creating a new version',
   暂无可对比的代码版本: 'No comparable code versions available',
   暂无已发布成功的版本: 'No successfully published versions available',
+  退出插件成功: 'Successfully Exited Plugin',
 };

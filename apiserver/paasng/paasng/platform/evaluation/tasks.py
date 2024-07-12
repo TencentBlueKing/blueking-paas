@@ -193,7 +193,7 @@ def send_idle_email_to_app_developers(app_codes: List[str], only_specified_users
     )
     for idx, username in enumerate(waiting_notify_usernames):
         filters = ApplicationPermission().gen_develop_app_filters(username)
-        app_codes = Application.objects.filter(filters).values_list("code", flat=True)
+        app_codes = Application.objects.filter(is_active=True).filter(filters).values_list("code", flat=True)
 
         # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况
         if just_leave_app_codes := JustLeaveAppManager(username).list():
@@ -207,7 +207,7 @@ def send_idle_email_to_app_developers(app_codes: List[str], only_specified_users
             continue
 
         try:
-            AppOperationReportNotifier().send(user_idle_app_reports, EmailReceiverType.APP_ADMIN, [username])
+            AppOperationReportNotifier().send(user_idle_app_reports, EmailReceiverType.APP_DEVELOPER, [username])
         except Exception:
             failed_usernames.append(username)
             logger.exception("failed to send idle module envs email to %s", username)

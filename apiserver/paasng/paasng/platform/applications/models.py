@@ -210,8 +210,6 @@ class JustLeaveAppManager:
     A：这个 manager 只是优化体验，如果 redis 挂了（虽然概率不大），也不该阻塞主流程
     """
 
-    EXPIRE_TIME = 300
-
     def __init__(self, username: str):
         self.redis_db = get_default_redis()
         self.username = username
@@ -220,7 +218,7 @@ class JustLeaveAppManager:
     def add(self, app_code: str) -> None:
         try:
             self.redis_db.rpush(self.cache_key, app_code)
-            self.redis_db.expire(self.cache_key, self.EXPIRE_TIME)
+            self.redis_db.expire(self.cache_key, settings.IAM_PERM_EFFECTIVE_TIMEDELTA)
         except Exception:
             pass
 

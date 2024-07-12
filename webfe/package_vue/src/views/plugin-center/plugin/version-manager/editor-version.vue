@@ -7,20 +7,20 @@
       class="app-container middle"
     >
       <div class="new-version">
-        <div
-          v-if="curVersion.current_release"
-          class="summary-box status"
-        >
+        <div class="summary-box status">
           <div class="wrapper default-box">
-            <div class="fl mr25">{{ $t('当前版本：') }} {{ curVersion.current_release.version || '--' }}</div>
-            <div class="fl mr25">
-              {{ $t('代码分支：') }} {{ curVersion.current_release.source_version_name || '--' }}
-            </div>
-            <div class="fl mr25">{{ $t('CommitID：') }} {{ curVersion.current_release.source_hash || '--' }}</div>
-            <div class="fl">
-              {{ $t('由') }} {{ curVersion.current_release.creator || '--' }} {{ $t(' 于 ') }}
-              {{ curVersion.current_release.created }} {{ $t('发布') }}
-            </div>
+            <template v-if="curVersion.current_release">
+              <div class="fl mr25">{{ $t('当前版本：') }} {{ curVersion.current_release.version || '--' }}</div>
+              <div class="fl mr25">
+                {{ $t('代码分支：') }} {{ curVersion.current_release.source_version_name || '--' }}
+              </div>
+              <div class="fl mr25">{{ $t('CommitID：') }} {{ curVersion.current_release.source_hash || '--' }}</div>
+              <div class="fl">
+                {{ $t('由') }} {{ curVersion.current_release.creator || '--' }} {{ $t(' 于 ') }}
+                {{ curVersion.current_release.created }} {{ $t('发布') }}
+              </div>
+            </template>
+            <div class="fl mr25" v-else>{{ $t('暂无已发布成功的版本') }}</div>
           </div>
         </div>
 
@@ -93,15 +93,17 @@
                     {{ $t('新建 Tag') }}
                   </div>
                 </bk-select>
-                <bk-button
-                  v-if="curVersion.current_release"
-                  class="code-differences"
-                  :theme="'default'"
-                  type="submit"
-                  @click="handleShowCommits">
-                  <i class="paasng-icon paasng-diff-4"></i>
-                  {{ $t('代码差异') }}
-                </bk-button>
+                <span v-bk-tooltips="{ content: $t('暂无可对比的代码版本'), disabled: curVersion.current_release }">
+                  <bk-button
+                    class="code-differences"
+                    :theme="'default'"
+                    type="submit"
+                    :disabled="!curVersion.current_release"
+                    @click="handleShowCommits">
+                    <i class="paasng-icon paasng-diff-4"></i>
+                    {{ $t('代码差异') }}
+                  </bk-button>
+                </span>
               </div>
               <div
                 class="ribbon"
@@ -737,16 +739,7 @@ export default {
   background: #fff;
   font-size: 12px;
 
-  // & + .summary-box {
-  //     padding-top: 0;
-  // }
-
   .wrapper {
-    // padding: 20px;
-    // background: #F5F6FA;
-    // border-radius: 2px;
-    // padding: 11px 12px 11px 20px;
-    // line-height: 16px;
     height: 64px;
     background: #f5f6fa;
     border-radius: 2px;

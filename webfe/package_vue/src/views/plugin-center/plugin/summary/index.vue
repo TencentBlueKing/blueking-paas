@@ -165,6 +165,12 @@
                       v-for="(item, itemIndex) in operationsList"
                       :key="itemIndex"
                     >
+                      <p
+                        v-bk-overflow-tips
+                        class="dynamic-content"
+                      >
+                        {{ $t('由') }} {{ item.display_text }}
+                      </p>
                       <p class="dynamic-time">
                         <span
                           v-bk-tooltips="item.updated"
@@ -172,13 +178,6 @@
                         >
                           {{ item.created_format }}
                         </span>
-                      </p>
-                      <p
-                        v-bk-overflow-tips
-                        class="dynamic-content"
-                        style="-webkit-line-clamp: 2; -webkit-box-orient: vertical"
-                      >
-                        {{ $t('由') }} {{ item.display_text }}
                       </p>
                     </li>
                     <li />
@@ -551,12 +550,6 @@ export default {
 <style lang="scss" scoped>
 @import '~@/assets/css/mixins/ellipsis.scss';
 
-/* 最新动态 */
-$initial-opacity: 1;
-$opacity-step: 0.1;
-$min-opacity: 0.3;
-$total-items: 100;
-
 .visible-range {
   .desc {
     font-size: 12px;
@@ -769,20 +762,20 @@ $total-items: 100;
   font-size: 12px;
   color: #63656e;
   .dynamic-time {
-    line-height: 18px;
+    margin-top: 5px;
+    line-height: 20px;
+    height: 36px;
     font-size: 12px;
-    color: #c0c9d3;
+    color: #979BA5;
     cursor: default;
   }
   .dynamic-content {
-    line-height: 24px;
-    height: 48px;
+    font-size: 14px;
+    line-height: 22px;
     overflow: hidden;
-    color: #666;
     text-overflow: ellipsis;
-    white-space: normal;
-    word-break: break-all;
-    display: -webkit-box;
+    white-space: nowrap;
+    color: #63656E;
   }
   li {
     padding-bottom: 15px;
@@ -804,11 +797,11 @@ $total-items: 100;
 .dynamic-list li:before {
   position: absolute;
   content: '';
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   top: 3px;
   left: 1px;
-  border: solid 1px rgba(87, 163, 241, 1);
+  border: 2px solid #D8D8D8;
   border-radius: 50%;
 }
 
@@ -816,35 +809,14 @@ $total-items: 100;
   position: absolute;
   content: '';
   width: 1px;
-  height: 70px;
-  top: 15px;
-  left: 6px;
-  background: rgba(87, 163, 241, 1);
-}
-
-@function calculate-opacity($index) {
-  $opacity: $initial-opacity - ($opacity-step * ($index - 1));
-  @if $opacity < $min-opacity {
-    @return $min-opacity;
-  }
-  @return $opacity;
-}
-
-.dynamic-list {
-  @for $i from 1 through $total-items {
-    li:nth-child(#{$i}) {
-      &:before {
-        border: solid 1px rgba(87, 163, 241, calculate-opacity($i));
-      }
-      &:after {
-        background: rgba(87, 163, 241, calculate-opacity($i));
-      }
-    }
-  }
+  height: 62px;
+  top: 13px;
+  left: 5px;
+  background: #D8D8D8;
 }
 
 .dynamic-list li:last-child:after {
-  background: rgba(87, 163, 241, 0);
+  background: transparent;
 }
 
 .summary-content {

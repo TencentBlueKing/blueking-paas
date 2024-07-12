@@ -21,7 +21,7 @@ from . import views
 
 urlpatterns = [
     re_path(
-        make_app_pattern("/idle_notification_mute_rules/$", include_envs=True),
+        make_app_pattern("/idle_notification/mute_rules/$", include_envs=True),
         views.IdleAppNotificationMuteRuleViewSet.as_view({"post": "create"}),
         name="api.evaluation.idle_notification_mute_rules",
     ),

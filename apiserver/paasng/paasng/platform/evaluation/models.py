@@ -100,6 +100,3 @@ class IdleAppNotificationMuteRule(AuditedModel):
 
     class Meta:
         unique_together = ("user", "app_code", "module_name", "environment")
-
-    def __str__(self):
-        return f"{self.user}-{self.app_code}-{self.module_name}-{self.environment}"

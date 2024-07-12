@@ -42,7 +42,7 @@ class InvalidPackageFileFormatError(Exception):
     """The package file is not in a valid format, it might be corrupt."""
 
 
-class FileDoesNotExistError(Exception):
+class FileDoesNotExistError(KeyError, RuntimeError):
     """The file does not exist."""
 
 

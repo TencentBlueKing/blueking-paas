@@ -38,7 +38,12 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.services.path import PathProtocol
 from paasng.platform.sourcectl.models import SPStat
-from paasng.platform.sourcectl.package.client import BinaryTarClient, InvalidPackageFileFormatError, ZipClient
+from paasng.platform.sourcectl.package.client import (
+    BinaryTarClient,
+    FileDoesNotExistError,
+    InvalidPackageFileFormatError,
+    ZipClient,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +189,7 @@ class SourcePackageStatReader:
             # Q: 为什么需要进行 base64 编码?
             # A: 因为 meta_info 会被归档存储进数据库, bytes 类型无法序列化成 json
             logo_b64data = "base64," + base64.b64encode(archive.read_file(relative_path + "logo.png")).decode()
-        except FileNotFoundError:
+        except FileDoesNotExistError:
             logger.info("The logo.png does not exist, using default logo.")
         except (RuntimeError, KeyError):
             logger.exception("Can't read logo.png.")

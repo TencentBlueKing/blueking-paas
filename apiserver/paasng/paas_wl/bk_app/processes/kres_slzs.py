@@ -220,7 +220,12 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             version = int(annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY, 0))
 
         c_status_dict = get_items(pod.to_dict(), "status.containerStatuses", [{}])[0]
-        terminated_info_dict = get_items(c_status_dict, "lastState.terminated") if c_status_dict else None
+        terminated_info = {}
+        if c_status_dict:
+            terminated_info = {
+                "exit_code": get_items(c_status_dict, "lastState.terminated.exitCode"),
+                "reason": get_items(c_status_dict, "lastState.terminated.reason"),
+            }
         return self.entity_type(
             app=app,
             name=pod.metadata.name,
@@ -234,12 +239,7 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             envs=envs,
             ready=health_status.status == HealthStatusType.HEALTHY,
             restart_count=c_status.restartCount if c_status else 0,
-            terminated_info={
-                "exit_code": get_items(terminated_info_dict, "exitCode"),
-                "reason": get_items(terminated_info_dict, "reason"),
-            }
-            if terminated_info_dict
-            else {},
+            terminated_info=terminated_info,
             version=version,
         )
 

@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from kubernetes.dynamic import ResourceField
 
@@ -64,7 +64,7 @@ class Instance(AppEntity):
     envs: Dict[str, str] = field(default_factory=dict)
     ready: bool = True
     restart_count: int = 0
-    terminated_info: Dict = field(default_factory=dict)
+    terminated_info: Dict[str, Optional[Union[str, int]]] = field(default_factory=dict)
 
     version: int = 0
 

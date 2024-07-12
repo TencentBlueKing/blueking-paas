@@ -34,6 +34,10 @@ type PlatformConfig struct {
 	SentryDSN string `json:"sentryDSN"`
 	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations
 	IngressClassName string `json:"ingressClassName"`
+	// CustomDomainIngressClassName works the same as IngressClassName, but only for ingress with custom domains.
+	// Set customDomainIngressClassName if custom domain ingress needs to bound to a specific ingress controller,
+	// otherwise it will be bound to the ingress controller specified by ingressClassName config
+	CustomDomainIngressClassName string `json:"customDomainIngressClassName"`
 }
 
 // IngressPluginConfig contains the config for controlling ingress config
@@ -164,6 +168,15 @@ func (p *ProjectConfig) GetProcDefaultMemRequest() string {
 // GetIngressClassName returns the ingress class name
 func (p *ProjectConfig) GetIngressClassName() string {
 	return p.Platform.IngressClassName
+}
+
+// GetCustomDomainIngressClassName returns the ingress class name for custom domain ingress.
+// if not set, return the common ingress class name
+func (p *ProjectConfig) GetCustomDomainIngressClassName() string {
+	if p.Platform.CustomDomainIngressClassName != "" {
+		return p.Platform.CustomDomainIngressClassName
+	}
+	return p.GetIngressClassName()
 }
 
 // IsAutoscalingEnabled returns whether autoscaling is enabled

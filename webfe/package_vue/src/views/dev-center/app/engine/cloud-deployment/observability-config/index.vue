@@ -78,7 +78,7 @@
               >
                 {{ $t('检索') }}
               </bk-button>
-              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin, allowHTML: true }">
                 <bk-button
                   class="mr10"
                   theme="primary"
@@ -89,7 +89,7 @@
                   {{ $t('编辑') }}
                 </bk-button>
               </span>
-              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin, allowHTML: true }">
                 <bk-button
                   theme="primary"
                   text

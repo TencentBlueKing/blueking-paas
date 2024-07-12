@@ -105,7 +105,8 @@
                 @click="toggleSwitch(row, $index)"
                 v-bk-tooltips="{
                   content: $t('S-mart 应用不支持停用增强服务'),
-                  disabled: !isSmartApp
+                  disabled: !isSmartApp,
+                  allowHTML: true
                 }"
                 v-if="row.isStartUp">
                 <bk-switcher
@@ -119,7 +120,11 @@
                 class="ps-switcher-wrapper"
                 v-else
                 @click="toggleSwitch(row, $index)"
-                v-bk-tooltips="enableTooltipsConfig"
+                v-bk-tooltips="{
+                  content: enableTooltipsConfig,
+                  allowHTML: true,
+                  disabled: !enableTooltipsConfig,
+                }"
                 :ref="`tooltipsHtml${$index}`"
               >
                 <bk-switcher
@@ -395,13 +400,7 @@ export default {
       return this.curAppInfo.application?.is_smart_app;
     },
     enableTooltipsConfig() {
-      this.switcherTips.disabled = this.isSmartApp;
-      if (this.isSmartApp) {
-        return {
-          content: this.$t('S-mart 应用请在应用描述文件中启用增强服务'),
-        };
-      }
-      return this.switcherTips;
+      return this.isSmartApp ? this.$t('S-mart 应用请在应用描述文件中启用增强服务') : '';
     },
   },
   watch: {

@@ -1,10 +1,10 @@
 <template>
-  <div :class="['search-content', { 'empty-search-cls': !searchHistory.length }]">
+  <div class="search-content">
     <section
       v-if="!curSearchKeyword"
       class="search-history-wrapper"
     >
-      <template v-if="searchHistory.length">
+      <section class="search-history" v-if="searchHistory.length">
         <div class="top-wrapper">
           <p class="sub-title">{{ $t('历史搜索') }}</p>
           <div class="clear-history" @click="handleClearHistory">
@@ -20,13 +20,21 @@
         >
           {{ item }}
         </span>
-      </template>
-      <bk-exception v-else type="search-empty" scene="part">
-        <span>{{ $t('请输入关键词进行搜索') }}</span>
-      </bk-exception>
+      </section>
+      <!-- 推荐搜索 -->
+      <section class="recommended-search">
+        <p class="sub-title">{{ $t('推荐搜索') }}</p>
+        <span
+          class="tag"
+          v-for="item in recommendedSearch"
+          :key="item"
+          @click="historicalSearch(item)"
+        >
+          {{ item }}
+        </span>
+      </section>
     </section>
     <div v-else v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
-
       <div class="search-tip-cls" v-html="searchTip"></div>
       <!-- 蓝鲸应用 -->
       <section class="app">
@@ -123,6 +131,16 @@ export default {
       totalDataCount: 0,
       isSearchHistory: false,
       curSearchKeyword: '',
+      recommendedSearch: [
+        '开发框架',
+        '自定义 Python 版本',
+        '安装 apt 包',
+        'Celery 开发',
+        '数据库慢查询',
+        '蓝盾流水线构建云原生应用镜像',
+        'bkpaas-cli',
+        '内置环境变量',
+      ],
     };
   },
   computed: {
@@ -322,19 +340,24 @@ export default {
     border-bottom: 1px solid #EAEBF0;
   }
 }
-.empty-search-cls {
-  margin-top: 100px;
-}
 .search-history-wrapper {
-  .top-wrapper {
-    @include flex-center-space;
-    margin-bottom: 3px;
-    font-size: 12px;
-    color: #979ba5;
-
-    .clear-history:hover {
-      color: #3a84ff;
-      cursor: pointer;
+  .search-history {
+    margin-bottom: 24px;
+    .top-wrapper {
+      @include flex-center-space;
+      margin-bottom: 3px;
+      font-size: 12px;
+      color: #979ba5;
+      .clear-history:hover {
+        color: #3a84ff;
+        cursor: pointer;
+      }
+    }
+  }
+  .recommended-search {
+    .sub-title {
+      font-size: 12px;
+      color: #979ba5;
     }
   }
   .tag {

@@ -2697,6 +2697,7 @@ export default {
   '已找到 “{k}” 相关的 <i>{n}</i> 条数据': 'Found <i>{n}</i> results related to “{k}”',
   历史搜索: 'Search History',
   清空历史: 'Clear History',
+  推荐搜索: 'Recommended Searches',
   查看更多: 'View More',
   请输入关键词进行搜索: 'Please enter keywords to search',
   没有找到相关结果: 'No related results found',

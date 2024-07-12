@@ -157,6 +157,7 @@ export default {
   border: none;
   z-index: 1;
   border-radius: 2px;
+  font-size: 12px;
 }
 .global-search-modal {
   .global-search-focus {
@@ -171,15 +172,14 @@ export default {
     align-items: center;
     position: relative;
     width: 240px;
-    background: #303d55;
-    font-size: 12px;
+    background: #252f43;
+    color: #979ba5;
 
     .icon-search {
       position: absolute;
       right: 12px;
       top: 9px;
       font-size: 14px;
-      color: #979ba5;
       cursor: pointer;
     }
   }
@@ -241,7 +241,8 @@ export default {
     input[type='text'] {
       outline: none;
       width: 720px;
-      background: #303d55;
+      background: #394561 !important;
+      color: #fff;
     }
   }
 
@@ -251,18 +252,15 @@ export default {
 
     &:focus {
       outline: none;
-      background: #303d55;
-    }
-
-    &::-webkit-input-placeholder {
-      color: #d3d9e4;
+      background: #394561;
     }
   }
 
   .clear-icon,
   .icon-search {
-    cursor: pointer;
     position: absolute;
+    cursor: pointer;
+    color: #c4c6cc;
     top: 9px;
   }
   i.clear-icon {

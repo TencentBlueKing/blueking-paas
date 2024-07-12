@@ -26,6 +26,7 @@ from django.test.utils import override_settings
 from paasng.platform.sourcectl.package.client import (
     BasePackageClient,
     BinaryTarClient,
+    FileDoesNotExistError,
     GenericLocalClient,
     GenericRemoteClient,
     InvalidPackageFileFormatError,
@@ -100,7 +101,7 @@ class TestLocalClient:
         [
             (dict(Procfile="web: npm run dev\n"), "Procfile", does_not_raise(), b"web: npm run dev\n"),
             (dict(Procfile="web: npm run dev\n"), "./Procfile", does_not_raise(), b"web: npm run dev\n"),
-            (dict(Procfile="web: npm run dev\n"), "procfile", pytest.raises(KeyError), None),
+            (dict(Procfile="web: npm run dev\n"), "procfile", pytest.raises((KeyError, FileDoesNotExistError)), None),
         ],
     )
     def test_read_file(self, client_cls, archive_maker, contents, filename, ctx, expected):
@@ -119,16 +120,22 @@ class TestLocalClient:
             ({"foo/foo": "1"}, "./", "./foo/foo", does_not_raise(), b"1"),
             ({"foo/foo": "1"}, "./foo", "foo", does_not_raise(), b"1"),
             ({"foo/foo": "1"}, "./foo", "./foo", does_not_raise(), b"1"),
-            ({"foo/foo": "1"}, "./foo", "./foo/foo", pytest.raises(KeyError), b"1"),
-            ({"foo/foo": "1"}, "./foo", "foo/foo", pytest.raises(KeyError), b"1"),
+            ({"foo/foo": "1"}, "./foo", "./foo/foo", pytest.raises((KeyError, FileDoesNotExistError)), b"1"),
+            ({"foo/foo": "1"}, "./foo", "foo/foo", pytest.raises((KeyError, FileDoesNotExistError)), b"1"),
             ({"foo/foo/foo": "3"}, "./", "foo/foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./", "./foo/foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/", "foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/", "./foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/foo", "foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/foo", "./foo", does_not_raise(), b"3"),
-            ({"foo/foo/foo": "3"}, "./foo/foo", "foo/foo/foo", pytest.raises(KeyError), b"3"),
-            ({"foo/foo/foo": "3"}, "./foo/foo", "./foo/foo/foo", pytest.raises(KeyError), b"3"),
+            ({"foo/foo/foo": "3"}, "./foo/foo", "foo/foo/foo", pytest.raises((KeyError, FileDoesNotExistError)), b"3"),
+            (
+                {"foo/foo/foo": "3"},
+                "./foo/foo",
+                "./foo/foo/foo",
+                pytest.raises((KeyError, FileDoesNotExistError)),
+                b"3",
+            ),
         ],
     )
     def test_read_file_with_relative_path(

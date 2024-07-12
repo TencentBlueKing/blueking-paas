@@ -42,6 +42,10 @@ class InvalidPackageFileFormatError(Exception):
     """The package file is not in a valid format, it might be corrupt."""
 
 
+class FileDoesNotExistError(Exception):
+    """The file does not exist."""
+
+
 class BasePackageClient(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def read_file(self, file_path: str) -> bytes:
@@ -99,7 +103,7 @@ class TarClient(BasePackageClient):
         key = os.path.join(self.relative_path, key)
         file = self.tar.extractfile(key)
         if not file:
-            raise KeyError(f"filename: {file_path} Don't exists.")
+            raise FileDoesNotExistError(f"filename: {file_path} Don't exists.")
         return file.read()
 
     def export(self, local_path: str):
@@ -144,7 +148,7 @@ class BinaryTarClient(BasePackageClient):
                 if self._is_invalid_file_format_error(stderr):
                     raise InvalidPackageFileFormatError()
                 if "Not found in archive" in stderr:
-                    raise FileNotFoundError(f"Failed to extractfile from the tarball, error: {stderr!r}")
+                    raise FileDoesNotExistError(f"Failed to extractfile from the tarball, error: {stderr!r}")
                 else:
                     raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
             return (temp_dir / filename).read_bytes()
@@ -223,7 +227,7 @@ class ZipClient(BasePackageClient):
         try:
             info = self.zip_.getinfo(key)
         except KeyError as e:
-            raise FileNotFoundError(f"filename: {file_path} Don't exists.") from e
+            raise FileDoesNotExistError(f"filename: {file_path} Don't exists.") from e
 
         return self.zip_.read(info)
 

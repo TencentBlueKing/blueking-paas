@@ -143,7 +143,10 @@ class BinaryTarClient(BasePackageClient):
             if p.returncode != 0:
                 if self._is_invalid_file_format_error(stderr):
                     raise InvalidPackageFileFormatError()
-                raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
+                if "Not found in archive" in stderr:
+                    raise FileNotFoundError(f"Failed to extractfile from the tarball, error: {stderr!r}")
+                else:
+                    raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
             return (temp_dir / filename).read_bytes()
 
     def export(self, local_path: str):
@@ -220,7 +223,7 @@ class ZipClient(BasePackageClient):
         try:
             info = self.zip_.getinfo(key)
         except KeyError as e:
-            raise KeyError(f"filename: {file_path} Don't exists.") from e
+            raise FileNotFoundError(f"filename: {file_path} Don't exists.") from e
 
         return self.zip_.read(info)
 

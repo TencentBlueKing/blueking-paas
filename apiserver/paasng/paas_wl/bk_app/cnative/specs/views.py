@@ -103,6 +103,8 @@ class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def _validate_registry_permission(self, registry_service: DockerRegistryController):
         """Validates the registry permission by attempting to touch it.
 

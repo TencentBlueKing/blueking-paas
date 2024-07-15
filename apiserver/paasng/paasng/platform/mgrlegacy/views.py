@@ -151,11 +151,6 @@ class MigrationDetailViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         return MigrationProcess.objects.all().order_by("-id")
 
-    def list(self, request, *args, **kwargs):
-        migration_processes = self.get_queryset()
-        response_serializer = MigrationProcessDetailSLZ(migration_processes, many=True)
-        return Response(data=response_serializer.data)
-
     def state(self, request, id):
         migration_process = MigrationProcess.objects.get(id=id)
         with console_db.session_scope() as session:
@@ -241,6 +236,8 @@ class MigrationConfirmViewset(viewsets.GenericViewSet):
 
 
 class ApplicationMigrationInfoAPIView(viewsets.ViewSet):
+    # TODO: set permission_classes and do perm check
+
     def retrieve(self, request, code):
         migration_process_qs = MigrationProcess.objects.filter(app__code=code)
         has_migration_record = migration_process_qs.exists()

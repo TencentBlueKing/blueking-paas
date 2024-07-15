@@ -185,6 +185,8 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
     serializer_class = AlertRuleSLZ
     pagination_class = None
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(query_serializer=ListAlertRulesSLZ)
     @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     def list(self, request, code, module_name):

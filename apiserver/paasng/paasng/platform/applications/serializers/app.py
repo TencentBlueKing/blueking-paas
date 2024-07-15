@@ -15,13 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
-from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -32,11 +31,8 @@ from paasng.platform.applications.models import Application, UserMarkedApplicati
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.models import AppOperationReport
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
-from paasng.utils import dictx
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.validators import RE_APP_SEARCH
 
@@ -159,40 +155,15 @@ class IdleModuleEnvSLZ(serializers.Serializer):
 
 
 class IdleApplicationSLZ(serializers.Serializer):
-    code = serializers.CharField(help_text="应用 Code", source="app.code")
-    name = serializers.CharField(help_text="应用名称", source="app.name")
-    type = serializers.CharField(help_text="应用类型", source="app.type")
-    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用", source="app.is_plugin_app")
-    logo_url = serializers.CharField(help_text="应用 Logo 访问地址", source="app.get_logo_url")
+    code = serializers.CharField(help_text="应用 Code")
+    name = serializers.CharField(help_text="应用名称")
+    type = serializers.CharField(help_text="应用类型")
+    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用")
+    logo_url = serializers.CharField(help_text="应用 Logo 访问地址")
 
     administrators = serializers.JSONField(help_text="应用管理员列表")
     developers = serializers.JSONField(help_text="应用开发者列表")
-    module_envs = serializers.SerializerMethodField(help_text="闲置模块 & 环境列表")
-
-    @swagger_serializer_method(serializer_or_field=IdleModuleEnvSLZ(many=True))
-    def get_module_envs(self, obj: AppOperationReport) -> List[Dict[str, Any]]:
-        idle_module_envs = []
-
-        for module_name, mod_evaluate_result in obj.evaluate_result["modules"].items():
-            for env_name, env_evaluate_result in mod_evaluate_result["envs"].items():
-                if env_evaluate_result["issue_type"] != OperationIssueType.IDLE:
-                    continue
-
-                path = f"modules.{module_name}.envs.{env_name}"
-                env_res_summary = dictx.get_items(obj.res_summary, path)
-                env_deploy_summary = dictx.get_items(obj.deploy_summary, path)
-                idle_module_envs.append(
-                    {
-                        "module_name": module_name,
-                        "env_name": env_name,
-                        "cpu_quota": env_res_summary["cpu_limits"],
-                        "memory_quota": env_res_summary["mem_limits"],
-                        "cpu_usage_avg": env_res_summary["cpu_usage_avg"],
-                        "latest_deployed_at": env_deploy_summary["latest_deployed_at"],
-                    }
-                )
-
-        return IdleModuleEnvSLZ(idle_module_envs, many=True).data
+    module_envs = serializers.ListField(help_text="闲置模块 & 环境列表", child=IdleModuleEnvSLZ())
 
 
 class IdleApplicationListOutputSLZ(serializers.Serializer):

@@ -128,7 +128,7 @@ msgstr ""
 #: paas_wl/bk_app/cnative/specs/models/mount.py:41
 #: paas_wl/bk_app/cnative/specs/models/mount.py:60
 msgid "挂载资源名"
-msgstr ""
+msgstr "Mounted resource name"
 
 #: paas_wl/bk_app/cnative/specs/models/mount.py:43
 #: paas_wl/bk_app/cnative/specs/models/mount.py:63
@@ -137,11 +137,11 @@ msgstr ""
 
 #: paas_wl/bk_app/cnative/specs/models/mount.py:81
 msgid "挂载点的名称"
-msgstr ""
+msgstr "Name of the mount point"
 
-#: paas_wl/bk_app/cnative/specs/mounts.py:200
-msgid "删除持久存储资源失败,请先删除相应挂载卷资源"
-msgstr ""
+#: paas_wl/bk_app/cnative/specs/mounts.py:198
+msgid "删除持久存储资源失败，请先删除相应挂载卷资源"
+msgstr "Failed to delete persistent storage resources, please delete the corresponding mounted volume resources first."
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:57
 msgid ""
@@ -168,11 +168,11 @@ msgstr "Mount volume content cannot be empty"
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:119
 msgid "configmap 挂载"
-msgstr ""
+msgstr "ConfigMap mounting"
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:120
 msgid "持久存储资源"
-msgstr ""
+msgstr "Persistent storage resources"
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:150
 #: paas_wl/bk_app/cnative/specs/serializers.py:164
@@ -189,19 +189,19 @@ msgstr ""
 #: paas_wl/bk_app/cnative/specs/serializers.py:217
 #: paas_wl/bk_app/cnative/specs/serializers.py:223
 msgid "挂载资源的名称"
-msgstr ""
+msgstr "Name of the mounted resource"
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:247
 msgid "挂载卷资源类型"
-msgstr ""
+msgstr "Mount volume resource type"
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:248
 msgid "已绑定模块信息"
-msgstr ""
+msgstr "Bound module information"
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:252
 msgid "显示名称"
-msgstr ""
+msgstr "Display name"
 
 #: paas_wl/bk_app/cnative/specs/views.py:115
 msgid "权限不足或仓库不可达"
@@ -228,7 +228,7 @@ msgstr "Mount volume already exists in the same environment and path."
 
 #: paas_wl/bk_app/cnative/specs/views.py:321
 msgid "当前应用暂不支持持久存储功能，请联系管理员"
-msgstr ""
+msgstr "The current application does not support persistent storage functionality. Please contact the administrator."
 
 #: paas_wl/bk_app/processes/controllers.py:50
 msgid "进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"
@@ -460,7 +460,7 @@ msgstr "Credential with the same name already exists"
 
 #: paas_wl/workloads/images/views.py:75
 msgid "该凭证已被应用使用"
-msgstr ""
+msgstr "The credential is already in use by an application."
 
 #: paas_wl/workloads/networking/egress/views.py:64
 msgid "新建出口 IP 绑定功能已禁用，如有需要请联系管理员"
@@ -474,8 +474,7 @@ msgstr "Parameter format error"
 
 #: paas_wl/workloads/networking/entrance/serializers.py:64
 msgid "该域名与路径组合已被其他应用或模块使用"
-msgstr ""
-"This domain and path combination is already in use by another APP or module."
+msgstr "This domain and path combination is already in use by another APP or module."
 
 #: paas_wl/workloads/networking/ingress/serializers.py:51
 msgid "内部服务端口列表 ports 不能为空"

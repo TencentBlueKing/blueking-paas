@@ -617,6 +617,12 @@ BK_IAM_MIGRATION_APP_NAME = "bkpaas_iam_migration"
 # 跳过初始化已有应用数据到权限中心（注意：仅跳过初始化数据，所有权限相关的操作还是依赖权限中心）
 BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
 
+# IAM 权限生效时间（单位：秒）
+# 权限中心的用户组授权是异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
+# 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
+# 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
+IAM_PERM_EFFECTIVE_TIMEDELTA = 5 * 60
+
 BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项

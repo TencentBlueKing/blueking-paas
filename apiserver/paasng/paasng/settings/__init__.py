@@ -807,7 +807,7 @@ BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
 # 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
 BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 
-# PaaS2.0 注入的系统环境变量
+# 兼容 PaaS 2.0 注入的内置环境变量，确保应用迁移到 PaaS 3.0 后内置系统环境变量仍然有效
 BK_PAAS2_PLATFORM_ENVS = settings.get(
     "BK_PAAS2_PLATFORM_ENVS",
     {

@@ -30,7 +30,7 @@ class DefaultEnvironmentVariableMigration(BaseEnvironmentVariableMigration):
             BK_PAAS_HOST=settings.BK_PAAS2_URL,
             BK_PAAS_INNER_HOST=settings.BK_PAAS2_INNER_URL,
         )
-        # PaaS2.0 注入的系统环境变量
+        # 兼容 PaaS 2.0 注入的内置环境变量，确保应用迁移到 PaaS 3.0 后内置系统环境变量仍然有效
         variables.update(settings.BK_PAAS2_PLATFORM_ENVS)
         return variables
 

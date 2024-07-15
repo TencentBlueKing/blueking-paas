@@ -204,9 +204,7 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> Dict[str, Dict
         },
         "BK_CRYPTO_TYPE": {
             "value": settings.BK_CRYPTO_TYPE,
-            "description": _(
-                "加密数据库内容的推荐算法，可选值有：`SHANGMI` , `CLASSIC`，分别对应 `SM4CTR`和`Fernet` 算法"
-            ),
+            "description": _("加密数据库内容的推荐算法有：SHANGMI（对应 SM4CTR 算法）和 CLASSIC（对应 Fernet 算法）"),
         },
     }
     # 系统环境变量需要添加统一的前缀

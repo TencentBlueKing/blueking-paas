@@ -149,7 +149,7 @@ global_site_resource = _init_global_site_resource()
 
 
 def site_perm_class(action: SiteAction):
-    """构建 DRF 可用的权限类"""
+    """构建 DRF 可用的权限类，管理站点访问相关权限。"""
 
     class Permission(BasePermission):
         def has_permission(self, request, *args, **kwargs):

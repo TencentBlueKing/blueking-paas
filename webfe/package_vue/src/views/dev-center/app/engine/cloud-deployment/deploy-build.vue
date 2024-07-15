@@ -29,7 +29,7 @@
       <template v-else>
         <!-- lesscode/smart应用 源码信息 -->
         <packages-view
-          v-if="isLesscodeApp || isSmartApp"
+          v-if="isLesscodeApp || isSmartApp || isAidevPlugin"
           @close-content-loader="closeContentLoader"
         />
         <!-- 代码源 -->
@@ -49,7 +49,8 @@
   </div>
 </template>
 
-<script>import codeSource from './comps/deploy-build/code-source.vue';
+<script>
+import codeSource from './comps/deploy-build/code-source.vue';
 import mirror from './comps/deploy-build/mirror.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import packagesView from '@/views/dev-center/app/engine/packages/index.vue';
@@ -77,6 +78,10 @@ export default {
   computed: {
     isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
+    },
+    // AIDEV 插件
+    isAidevPlugin() {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.AIDEV;
     },
   },
   async created() {

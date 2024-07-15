@@ -33,7 +33,8 @@ export const PLATFORM_CONFIG = {
         SMART_APP: 3,
         IMAGE: 4,
         SCENE_APP: 5,
-        CNATIVE_IMAGE: 6        //仅镜像的云原生
+        CNATIVE_IMAGE: 6, //仅镜像的云原生
+        AIDEV: 7, // AIDEV插件
     },
 
     // 默认使用的代码库类型

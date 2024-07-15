@@ -157,10 +157,6 @@ export default {
       return ['docu', 'iwiki'].includes(this.curTab);
     },
   },
-  beforeRouteLeave(to, from, next) {
-    bus.$emit('on-leave-search');
-    next();
-  },
   created() {
     bus.$emit('on-being-search');
     this.value = this.$route.query.keyword || '';

@@ -404,6 +404,9 @@ const router = new Router({
       path: '/developer-center/apps/search',
       name: 'search',
       component: searchIndex,
+      meta: {
+        hideGlobalSearch: true,
+      },
     },
     {
       path: '/developer-center/app/create',

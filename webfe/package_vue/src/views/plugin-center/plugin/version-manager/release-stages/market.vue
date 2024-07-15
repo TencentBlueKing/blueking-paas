@@ -176,7 +176,7 @@ export default {
         if (res.contact) {
           this.form.contact = res.contact.split(',') || [];
         } else {
-          const founder = this.curPluginInfo.latest_release.creator || '';
+          const founder = this.curPluginInfo?.latest_release?.creator || '';
           this.form.contact = founder.split(',');
         }
       } catch (e) {
@@ -235,6 +235,8 @@ export default {
         } finally {
           this.cateLoading = false;
         }
+      }, (e) => {
+        console.error(e);
       });
     },
   },

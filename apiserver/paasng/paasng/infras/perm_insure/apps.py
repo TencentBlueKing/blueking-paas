@@ -22,6 +22,6 @@ class PermInsureConfig(AppConfig):
     name = "paasng.infras.perm_insure"
 
     def ready(self):
-        from .views import ensure_views_perm_configured
+        from .views_perm import ensure_views_perm_configured
 
         ensure_views_perm_configured()

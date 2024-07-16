@@ -33,7 +33,8 @@ export const PLATFORM_CONFIG = {
         SMART_APP: 3,
         IMAGE: 4,
         SCENE_APP: 5,
-        CNATIVE_IMAGE: 6        //仅镜像的云原生
+        CNATIVE_IMAGE: 6, //仅镜像的云原生
+        AIDEV: 7, // AIDEV插件
     },
 
     // 默认使用的代码库类型
@@ -286,6 +287,9 @@ export const PLATFORM_CONFIG = {
 
         // 部署维护
         DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
+
+        // 插件-工具框架
+        PLUGIN_TOOL_FRAMEWORK: DOCS_URL_PREFIX + '/p/80458883'
     },
 
     CONFIG: {

@@ -129,5 +129,21 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/`;
       return http.delete(url, {}, config);
     },
+
+    /**
+     * 获取服务详情
+     */
+    getServiceDetail({}, { service }, config = {}) {
+      const url = `${BACKEND_URL}/api/services/${service}/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+     * 获取增强服务详情列表
+     */
+    getServiceInstances({}, { appCode, moduleId,  service }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/`;
+      return http.get(url, {}, config);
+    },
   },
 };

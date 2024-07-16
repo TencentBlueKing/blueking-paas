@@ -1046,3 +1046,6 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-qianyi-xianxing:before {
 	content: "\e26f";
 }
+.paasng-diff-4:before {
+	content: "\e270";
+}

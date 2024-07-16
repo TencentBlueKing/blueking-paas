@@ -84,7 +84,7 @@
               <template v-if="canManageMe(props.row)">
                 <bk-button
                   text
-                  class="mr5"
+                  class="mr8"
                   @click="leaveApp(props.row.user.id, props.row.user.username)"
                 >
                   {{ $t('退出应用') }}
@@ -93,7 +93,7 @@
               <bk-button
                 v-if="canChangeMembers()"
                 text
-                class="mr5"
+                class="mr8"
                 @click="updateMember(props.row.user.id, props.row.user.username, props.row.roles)"
               >
                 {{ $t('更换角色') }}
@@ -101,7 +101,7 @@
               <bk-button
                 v-if="canManageMembers(props.row)"
                 text
-                class="mr5"
+                class="mr8"
                 @click="delMember(props.row.user.username, props.row.user.id)"
               >
                 {{ $t('删除成员') }}
@@ -233,7 +233,7 @@
       :title="$t('权限须知')"
       :theme="'primary'"
       :mask-close="false"
-      :loading="leaveAppDialog.isLoading"
+      :loading="permissionNoticeDialog.isLoading"
     >
       <div class="tc">
         {{ $t('由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作') }}
@@ -250,7 +250,8 @@
   </div>
 </template>
 
-<script>import { APP_ROLE_NAMES } from '@/common/constants';
+<script>
+import { APP_ROLE_NAMES } from '@/common/constants';
 import auth from '@/auth';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
@@ -349,6 +350,7 @@ export default {
       },
       permissionNoticeDialog: {
         visiable: false,
+        isLoading: false,
       },
 
       pagination: {
@@ -393,22 +395,13 @@ export default {
         return;
       }
       this.pagination.current = page;
-
       this.handleSearch();
-      // const start = this.pagination.limit * (this.pagination.current - 1)
-      // const end = start + this.pagination.limit
-      // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
     },
 
     limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
-
       this.handleSearch();
-
-      // const start = this.pagination.limit * (this.pagination.current - 1)
-      // const end = start + this.pagination.limit
-      // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
     },
 
     iKnow() {
@@ -526,6 +519,7 @@ export default {
     },
 
     async leaveSave() {
+      this.leaveAppDialog.isLoading = true;
       try {
         await this.$store.dispatch('member/quitApplication', { appCode: this.appCode });
         this.closeLeaveApp();
@@ -605,6 +599,7 @@ export default {
     },
 
     async delSave() {
+      this.removeUserDialog.isLoading = true;
       try {
         await this.$store.dispatch('member/deleteRole', { appCode: this.appCode, id: this.selectedMember.id });
         this.closeDelModal();
@@ -618,6 +613,8 @@ export default {
           theme: 'error',
           message: `${this.$t('删除成员失败：')} ${e.detail}`,
         });
+      } finally {
+        this.removeUserDialog.isLoading = false;
       }
     },
 

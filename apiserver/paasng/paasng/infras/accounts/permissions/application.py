@@ -19,11 +19,11 @@ import logging
 import time
 from typing import Union
 
+from django.conf import settings
 from iam.exceptions import AuthAPIError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from paasng.infras.iam.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 from paasng.infras.iam.helpers import user_group_apply_url
 from paasng.infras.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.platform.applications.models import Application
@@ -71,7 +71,7 @@ def can_exempt_application_perm(user, application: Application) -> bool:
     # 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
     return (
         user.pk == application.owner
-        and time.time() - application.created.timestamp() < PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
+        and time.time() - application.created.timestamp() < settings.IAM_PERM_EFFECTIVE_TIMEDELTA
     )
 
 

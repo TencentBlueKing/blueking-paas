@@ -18,7 +18,8 @@
 from django.db import models
 
 from paasng.platform.applications.models import Application
-from paasng.platform.evaluation.constants import CollectionTaskStatus, OperationIssueType
+from paasng.platform.evaluation.constants import BatchTaskStatus, OperationIssueType
+from paasng.utils.models import AuditedModel, BkUserField
 
 
 class AppOperationReportCollectionTask(models.Model):
@@ -33,8 +34,8 @@ class AppOperationReportCollectionTask(models.Model):
     status = models.CharField(
         verbose_name="任务状态",
         max_length=32,
-        choices=CollectionTaskStatus.get_choices(),
-        default=CollectionTaskStatus.RUNNING,
+        choices=BatchTaskStatus.get_choices(),
+        default=BatchTaskStatus.RUNNING,
     )
 
 
@@ -68,3 +69,34 @@ class AppOperationReport(models.Model):
     issue_type = models.CharField(verbose_name="问题类型", default=OperationIssueType.NONE, max_length=32)
     evaluate_result = models.JSONField(verbose_name="评估结果", default=dict)
     collected_at = models.DateTimeField(verbose_name="采集时间")
+
+
+class AppOperationEmailNotificationTask(models.Model):
+    """应用运营报告邮件通知任务"""
+
+    start_at = models.DateTimeField(verbose_name="任务开始时间", auto_now_add=True)
+    end_at = models.DateTimeField(verbose_name="任务结束时间", null=True)
+    total_count = models.IntegerField(verbose_name="应用总数", default=0)
+    succeed_count = models.IntegerField(verbose_name="采集成功数", default=0)
+    failed_count = models.IntegerField(verbose_name="采集失败数", default=0)
+    failed_usernames = models.JSONField(verbose_name="通知失败的应用数量", default=list)
+    notification_type = models.CharField(verbose_name="通知类型", max_length=64)
+    status = models.CharField(
+        verbose_name="任务状态",
+        max_length=32,
+        choices=BatchTaskStatus.get_choices(),
+        default=BatchTaskStatus.RUNNING,
+    )
+
+
+class IdleAppNotificationMuteRule(AuditedModel):
+    """闲置应用通知屏蔽规则"""
+
+    user = BkUserField("屏蔽人")
+    app_code = models.CharField("应用 Code", max_length=32)
+    module_name = models.CharField("模块名称", max_length=32)
+    environment = models.CharField("部署环境", max_length=32)
+    expired_at = models.DateTimeField("过期时间")
+
+    class Meta:
+        unique_together = ("user", "app_code", "module_name", "environment")

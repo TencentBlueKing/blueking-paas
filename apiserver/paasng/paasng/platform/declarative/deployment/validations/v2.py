@@ -85,7 +85,7 @@ class HTTPGetSLZ(serializers.Serializer):
     http_headers = serializers.ListField(
         help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ(), source="httpHeaders"
     )
-    scheme = serializers.CharField(help_text="连接主机的方案", required=False)
+    scheme = serializers.CharField(help_text="连接主机的方案", required=False, default="HTTP")
 
 
 class TCPSocketSLZ(serializers.Serializer):

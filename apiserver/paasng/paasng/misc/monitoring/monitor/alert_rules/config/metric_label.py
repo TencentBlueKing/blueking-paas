@@ -27,7 +27,6 @@ from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.misc.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
-from paasng.platform.modules.constants import ModuleName
 
 from .constants import BKREPO_SERVICE_NAME, GCS_MYSQL_SERVICE_NAME, RABBITMQ_SERVICE_NAME
 
@@ -83,8 +82,9 @@ def get_gcs_mysql_user(app_code: str, run_env: str, module_name: Optional[str] =
 
 
 def get_namespace(app_code: str, run_env: str, module_name: Optional[str] = None) -> str:
-    # 如果不传递模块, 则使用 default 模块(云原生应用各个模块和 default 模块部署在相同的命名空间下)
-    module_name = module_name or ModuleName.DEFAULT.value
+    # 如果不传递模块, 则使用 default 模块(云原生应用相同环境下的各个模块都在一个命名空间下)
+    module_name = module_name or Application.objects.get(code=app_code).default_module.name
+
     return _get_namespace_cache(app_code, run_env, module_name)
 
 
@@ -97,8 +97,9 @@ def get_cluster_id(app_code: str, run_env: str, module_name: Optional[str] = Non
     :param module_name: 模块名
     :raises NotImplementedError: 集群版本低于 1.12
     """
-    # 如果不传递模块, 则使用 default 模块(云原生应用各个模块和 default 模块部署在相同的命名空间下)
-    module_name = module_name or ModuleName.DEFAULT.value
+    # 如果不传递模块, 则使用 default 模块(云原生应用相同环境下的各个模块都在一个命名空间下)
+    module_name = module_name or Application.objects.get(code=app_code).default_module.name
+
     cluster_info = _get_cluster_info_cache(app_code, run_env, module_name)
     version = cluster_info["version"]
     if (int(version.major), int(version.minor.rstrip("+"))) < (1, 12):

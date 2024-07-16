@@ -68,19 +68,17 @@ class RedisTokenBucketRateLimiter(abc.ABC):
         key = self._gen_key()
 
         raw = self.redis_db.get(key)
-        records = msgpack.unpackb(raw) if raw else []
+        self.records = msgpack.unpackb(raw) if raw else []
 
-        if len(records) < self.threshold:
-            records.insert(0, cur_timestamp)
-            self.redis_db.set(key, msgpack.packb(records), ex=self.window_size)
+        if len(self.records) < self.threshold:
+            self.records.insert(0, cur_timestamp)
+            self.redis_db.set(key, msgpack.packb(self.records), ex=self.window_size)
             return True
 
-        while cur_timestamp - records[-1] >= self.window_size:
-            records.pop(-1)
-
-        if len(records) < self.threshold:
-            records.insert(0, cur_timestamp)
-            self.redis_db.set(key, msgpack.packb(records), ex=self.window_size)
+        if cur_timestamp - self.records[-1] >= self.window_size:
+            self.records.insert(0, cur_timestamp)
+            self.records.pop()
+            self.redis_db.set(key, msgpack.packb(self.records), ex=self.window_size)
             return True
 
         return False

@@ -22,111 +22,118 @@ from unittest import mock
 
 import pytest
 import yaml
-from blue_krill.contextlib import nullcontext as does_not_raise
 
 from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
-from paasng.platform.declarative.handlers import CNativeAppDescriptionHandler, DescriptionHandler
-from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
+from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def get_desc_handler(yaml_content: str) -> DescriptionHandler:
-    handler = _get_desc_handler(yaml.safe_load(yaml_content))
-    assert isinstance(handler, CNativeAppDescriptionHandler), "handler is not CNativeAppDescriptionHandler"
-    return handler
-
-
-class TestAppDescriptionHandler:
-    @pytest.mark.parametrize(
-        ("yaml_content", "ctx"),
-        [
-            (
-                dedent(
-                    """
-                specVersion: 3
-                module:
-                  name: default
-                  language: python
-                  spec:
-                    configuration:
-                      env:
-                      - name: FOO
-                        value: 1
-                    processes:
-                      - name: web
-                        replicas: 1
-                        procCommand: python manage.py runserver
-                    hooks:
-                      preRelease:
-                        procCommand: python manage.py migrate
-                    svcDiscovery:
-                      bkSaaS:
-                      - bkAppCode: foo-app
-                      - bkAppCode: bar-app
-                        moduleName: api
-                """
-                ),
-                does_not_raise(
-                    {
-                        "env_variables": {"FOO": "1"},
-                        "procfile": {"web": "python manage.py runserver"},
-                        "hooks": {"args": ["python", "manage.py", "migrate"], "command": []},
-                        "svc_discovery": {
-                            "BKPAAS_SERVICE_ADDRESSES_BKSAAS": base64.b64encode(
-                                json.dumps(
-                                    [
-                                        {
-                                            "key": {"bk_app_code": "foo-app", "module_name": None},
-                                            "value": {
-                                                "stag": "http://stag-dot-foo-app.bkapps.example.com",
-                                                "prod": "http://foo-app.bkapps.example.com",
-                                            },
-                                        },
-                                        {
-                                            "key": {"bk_app_code": "bar-app", "module_name": "api"},
-                                            "value": {
-                                                "stag": "http://stag-dot-api-dot-bar-app.bkapps.example.com",
-                                                "prod": "http://prod-dot-api-dot-bar-app.bkapps.example.com",
-                                            },
-                                        },
-                                    ]
-                                ).encode()
-                            ).decode()
-                        },
-                    }
-                ),
-            ),
-            (
-                dedent(
-                    """
-                    version: 1
-                    module:
-                        language: python
-                        env_variables:
-                            - key: BKPAAS_RESERVED_KEY
-                              value: raise error
-                    """
-                ),
-                pytest.raises(AssertionError, match="handler is not CNativeAppDescriptionHandler"),
-            ),
-        ],
+@pytest.fixture()
+def yaml_v3_example() -> str:
+    """An example of YAML content using v3 spec version."""
+    return dedent(
+        """
+        specVersion: 3
+        module:
+          name: default
+          language: python
+          spec:
+            configuration:
+              env:
+              - name: FOO
+                value: 1
+            processes:
+              - name: web
+                replicas: 1
+                procCommand: python manage.py runserver
+            hooks:
+              preRelease:
+                procCommand: python manage.py migrate
+            svcDiscovery:
+                bkSaaS:
+                  - bkAppCode: foo-app
+                  - bkAppCode: bar-app
+                    moduleName: api
+    """
     )
-    def test_deployment_normal(self, bk_deployment, yaml_content, ctx):
-        with ctx as expected, mock.patch(
+
+
+class TestCnativeAppDescriptionHandler:
+    def test_handle_deployment_normal(self, bk_deployment, yaml_v3_example):
+        with mock.patch(
             "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
         ) as update_bkmonitor:
-            handler = get_desc_handler(yaml_content)
+            handler = get_desc_handler(yaml.safe_load(yaml_v3_example))
 
             handler.handle_deployment(bk_deployment)
 
             deploy_desc = handler.get_deploy_desc(bk_deployment.app_environment.module.name)
-            assert deploy_desc.get_procfile() == expected["procfile"]
+            assert deploy_desc.get_procfile() == {"web": "python manage.py runserver"}
 
-            assert bk_deployment.hooks[0].command == expected["hooks"]["command"]
-            assert bk_deployment.hooks[0].args == expected["hooks"]["args"]
+            assert bk_deployment.hooks[0].command == []
+            assert bk_deployment.hooks[0].args == ["python", "manage.py", "migrate"]
 
-            assert get_preset_env_variables(bk_deployment.app_environment) == expected["env_variables"]
-            assert get_svc_disc_as_env_variables(bk_deployment.app_environment) == expected["svc_discovery"]
+            assert get_preset_env_variables(bk_deployment.app_environment) == {"FOO": "1"}
+            assert get_svc_disc_as_env_variables(bk_deployment.app_environment) == {
+                "BKPAAS_SERVICE_ADDRESSES_BKSAAS": base64.b64encode(
+                    json.dumps(
+                        [
+                            {
+                                "key": {"bk_app_code": "foo-app", "module_name": None},
+                                "value": {
+                                    "stag": "http://stag-dot-foo-app.bkapps.example.com",
+                                    "prod": "http://foo-app.bkapps.example.com",
+                                },
+                            },
+                            {
+                                "key": {"bk_app_code": "bar-app", "module_name": "api"},
+                                "value": {
+                                    "stag": "http://stag-dot-api-dot-bar-app.bkapps.example.com",
+                                    "prod": "http://prod-dot-api-dot-bar-app.bkapps.example.com",
+                                },
+                            },
+                        ]
+                    ).encode()
+                ).decode()
+            }
+
             assert not update_bkmonitor.called
+
+    def test_with_modules_found(self, bk_deployment, bk_module):
+        _yaml_content = dedent(
+            f"""\
+            specVersion: 3
+            modules:
+              - name: {bk_module.name}
+                language: python
+                spec:
+                  processes:
+                    - name: web
+                      replicas: 1
+                      procCommand: python manage.py runserver
+        """
+        )
+        get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+
+    def test_with_modules_not_found(self, bk_deployment):
+        _yaml_content = dedent(
+            """\
+            specVersion: 3
+            modules:
+              - name: wrong-module-name
+                language: python
+                spec:
+                  processes:
+                    - name: web
+                      replicas: 1
+                      procCommand: python manage.py runserver
+        """
+        )
+        with pytest.raises(DescriptionValidationError, match="未找到.*当前已配置"):
+            get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+
+    # Other tests that cover different cases when modules/module field uses different values
+    # share similar logic with TestAppDescriptionHandler, no need to duplicate in here.

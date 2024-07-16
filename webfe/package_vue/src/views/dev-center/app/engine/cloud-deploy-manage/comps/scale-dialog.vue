@@ -185,8 +185,8 @@ export default {
       },
       curActiveType: 'manual',
       scaleTypes: [
-        { label: '手动调节', type: 'manual', value: false },
-        { label: '自动调节', type: 'automatic', value: true },
+        { label: this.$t('手动调节'), type: 'manual', value: false },
+        { label: this.$t('自动调节'), type: 'automatic', value: true },
       ],
       // CPU 使用率
       defaultUtilizationRate: '85%',

@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('succeed_count', models.IntegerField(default=0, verbose_name='采集成功数')),
                 ('failed_count', models.IntegerField(default=0, verbose_name='采集失败数')),
                 ('failed_app_codes', models.JSONField(default=list, verbose_name='采集失败应用 Code 列表')),
-                ('status', models.CharField(choices=[('running', '运行中'), ('finished', '已完成')], default=paasng.platform.evaluation.constants.CollectionTaskStatus['RUNNING'], max_length=32, verbose_name='任务状态')),
+                ('status', models.CharField(choices=[('running', '运行中'), ('finished', '已完成')], default=paasng.platform.evaluation.constants.BatchTaskStatus['RUNNING'], max_length=32, verbose_name='任务状态')),
             ],
         ),
         migrations.RemoveField(

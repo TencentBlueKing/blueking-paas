@@ -71,7 +71,7 @@ class HTTPGetAction(BaseModel):
     host: Optional[str] = None
     path: Optional[str] = None
     httpHeaders: List[HTTPHeader] = Field(default_factory=list)
-    scheme: Optional[Literal["HTTP", "HTTPS"]] = None
+    scheme: Optional[Literal["HTTP", "HTTPS"]] = "HTTP"
 
 
 class TCPSocketAction(BaseModel):

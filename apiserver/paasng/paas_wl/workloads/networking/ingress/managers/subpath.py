@@ -16,9 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict, List, Set
-
-from django.conf import settings
+from typing import List, Set
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.utils import get_cluster_by_app
@@ -94,15 +92,6 @@ class SubPathAppIngressMgr(AppIngressMgr):
             return []
 
         return [self.create_ingress_domain(domain.name, paths, domain.https_enabled) for domain in domains]
-
-    def get_annotations(self) -> Dict:
-        annotations = {}
-
-        # 当有多个 ingress controller 存在时，可以指定需要使用的链路
-        if settings.APP_INGRESS_CLASS is not None:
-            annotations["kubernetes.io/ingress.class"] = settings.APP_INGRESS_CLASS
-
-        return annotations
 
     def create_ingress_domain(self, host: str, path_prefix_list: List[str], https_enabled: bool) -> PIngressDomain:
         """Create a domain object, will create HTTPS related Secret resource on demand"""

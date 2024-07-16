@@ -397,9 +397,8 @@ class NameBasedOperations(BaseOperations):
             request_kwargs.update(grace_period_seconds=grace_period_seconds)
             body.grace_period_seconds = grace_period_seconds
 
-        resource = self.kres.dynamic_client.get_preferred_resource(self.kres.kind)
         try:
-            resource.delete(name=name, body=cattr.unstructure(body), namespace=namespace, **request_kwargs)
+            self.resource.delete(name=name, body=cattr.unstructure(body), namespace=namespace, **request_kwargs)
         except ApiException as e:
             if e.status == 404:
                 if raise_if_non_exists:

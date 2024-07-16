@@ -30,7 +30,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
-from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
+from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -57,10 +57,10 @@ def another_user(request):
 
 
 @pytest.fixture(autouse=True)
-def _turn_on_bk_log_feature():
-    post_create_application.connect(turn_on_bk_log_feature)
+def _turn_on_bk_log_feature_for_app():
+    post_create_application.connect(turn_on_bk_log_feature_for_app)
     yield
-    post_create_application.disconnect(turn_on_bk_log_feature)
+    post_create_application.disconnect(turn_on_bk_log_feature_for_app)
 
 
 class TestMembershipViewset:

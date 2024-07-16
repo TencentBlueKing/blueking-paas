@@ -381,14 +381,19 @@
                 {{ $t(PAAS_APP_TYPE[row.application.type]) }}
               </span>
               <!-- 是否显示迁移应用icon, 需要后台提供字段 -->
-              <div
-                v-if="userFeature.CNATIVE_MGRLEGACY && !noMigrationNeededStatus.includes(row.migration_status?.status)"
-                v-bk-tooltips="{ content: row.application.type === 'cloud_native' ? $t('查看迁移进度') : $t('点击可迁移为云原生应用') }"
-                class="migration-wrapper"
-                @click.stop="showAppMigrationDialog(row.application)"
-              >
-                <i class="paasng-icon paasng-qianyi-mianxing" />
-              </div>
+              <template v-if="row.application.is_active">
+                <div
+                  v-if="userFeature.CNATIVE_MGRLEGACY && !noMigrationNeededStatus.includes(row.migration_status?.status)"
+                  v-bk-tooltips="{
+                    content: row.application.type === 'cloud_native' ? $t('查看迁移进度') : $t('点击可迁移为云原生应用'),
+                    allowHTML: true
+                  }"
+                  class="migration-wrapper"
+                  @click.stop="showAppMigrationDialog(row.application)"
+                >
+                  <i class="paasng-icon paasng-qianyi-mianxing" />
+                </div>
+              </template>
             </div>
           </template>
         </bk-table-column>
@@ -420,7 +425,11 @@
                 <i class="paasng-icon paasng-keys cloud-icon" />
               </bk-button>
               <span
-                v-bk-tooltips.top="{ content: $t('应用未设置访问路径'), disabled: row.market_config.source_tp_url }"
+                v-bk-tooltips.top="{
+                  content: $t('应用未设置访问路径'),
+                  disabled: row.market_config.source_tp_url,
+                  allowHTML: true
+                }"
                 class="link-btn-cls right-text"
               >
                 <bk-button
@@ -446,7 +455,12 @@
                   @click="visitLink(row, 'stag')"
                 >
                   <template v-if="!row.application.deploy_info.stag.deployed">
-                    <span v-bk-tooltips="$t('应用未部署，不能访问')">
+                    <span
+                      v-bk-tooltips="{
+                        content: $t('应用未部署，不能访问'),
+                        placement: 'top',
+                        allowHTML: true
+                      }">
                       {{ $t('访问预发布环境') }} <i class="paasng-icon paasng-external-link" />
                     </span>
                   </template>
@@ -464,7 +478,12 @@
                   @click="visitLink(row, 'prod')"
                 >
                   <template v-if="!row.application.deploy_info.prod.deployed">
-                    <span v-bk-tooltips="$t('应用未部署，不能访问')">
+                    <span
+                      v-bk-tooltips="{
+                        content: $t('应用未部署，不能访问'),
+                        placement: 'top',
+                        allowHTML: true
+                      }">
                       {{ $t('访问生产环境') }} <i class="paasng-icon paasng-external-link" />
                     </span>
                   </template>
@@ -582,7 +601,7 @@ export default {
       // 搜索条件筛选
       appFilter: {
         // 显示已下架应用
-        includeInactive: false,
+        includeInactive: true,
         // 显示我创建的
         excludeCollaborated: false,
         // 版本选择
@@ -602,8 +621,8 @@ export default {
         offset: 0,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: false,
-        // 是否包含已下架应用，默认不包含
-        include_inactive: false,
+        // 是否包含已下架应用，默认包含
+        include_inactive: true,
         // limit
         limit: 0,
         order_by: 'code',
@@ -655,12 +674,13 @@ export default {
       isFilterConditionPresent: false,
       filterRegion: [],
       appExtraData: {},
-      tableHeaderFilterValue: 'normal',
+      tableHeaderFilterValue: 'all',
       appMigrationDialogConfig: {
         visible: false,
         data: {},
       },
       noMigrationNeededStatus: ['no_need_migration', 'confirmed'],
+      appTypeList: APP_TYPE_MAP,
     };
   },
   computed: {
@@ -669,12 +689,6 @@ export default {
     },
     platformFeature() {
       return this.$store.state.platformFeature;
-    },
-    appTypeList() {
-      if (!this.$store.state.userFeature?.ALLOW_CREATE_CLOUD_NATIVE_APP) {
-        return APP_TYPE_MAP.filter(item => item.key !== 'cloud_native_app_count');
-      }
-      return APP_TYPE_MAP;
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -853,7 +867,7 @@ export default {
         limit: this.pagination.limit,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: this.appFilter.excludeCollaborated,
-        // 是否包含已下架应用，默认不包含
+        // 是否包含已下架应用，默认包含
         include_inactive: this.tableHeaderFilterValue === 'all',
         // 对应类型
         type: this.curAppType,
@@ -914,8 +928,8 @@ export default {
 
     reset() {
       this.appFilter = {
-        // 已下架
-        includeInactive: false,
+        // 默认包含已下架应用
+        includeInactive: true,
         // 我创建的
         excludeCollaborated: false,
         languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
@@ -953,6 +967,7 @@ export default {
     },
 
     switchAppType(item) {
+      if (item.key === this.curAppTypeActive) return;
       this.curAppType = item.type !== 'all' ? item.type : '';
       this.curAppTypeActive = item.key;
       this.fetchAppList();

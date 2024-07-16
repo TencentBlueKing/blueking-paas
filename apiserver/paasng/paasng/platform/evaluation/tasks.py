@@ -24,15 +24,25 @@ from django.conf import settings
 from django.utils import timezone
 
 from paasng.infras.iam.helpers import fetch_role_members
+from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, JustLeaveAppManager
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import Deployment
 from paasng.platform.evaluation.collectors import AppDeploymentCollector, AppResQuotaCollector, AppUserVisitCollector
-from paasng.platform.evaluation.constants import CollectionTaskStatus, EmailReceiverType
+from paasng.platform.evaluation.constants import (
+    BatchTaskStatus,
+    EmailNotificationType,
+    EmailReceiverType,
+    OperationIssueType,
+)
 from paasng.platform.evaluation.evaluators import AppOperationEvaluator
-from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
+from paasng.platform.evaluation.models import (
+    AppOperationEmailNotificationTask,
+    AppOperationReport,
+    AppOperationReportCollectionTask,
+)
 from paasng.platform.evaluation.notifiers import AppOperationReportNotifier
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
@@ -131,11 +141,11 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
     for idx, app in enumerate(applications, start=1):
         try:
             _update_or_create_operation_report(app)
-            succeed_cnt += 1
         except Exception:
             failed_app_codes.append(app.code)
             logger.exception("failed to collect app: %s operation report", app.code)
 
+        succeed_cnt += 1
         # 完整采集完需要较长时间，因此每隔一段时间更新下进度
         if idx % 20 == 0:
             task.succeed_count = succeed_cnt
@@ -145,10 +155,74 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
     task.succeed_count = succeed_cnt
     task.failed_count = len(failed_app_codes)
     task.failed_app_codes = failed_app_codes
-    task.status = CollectionTaskStatus.FINISHED
+    task.status = BatchTaskStatus.FINISHED
     task.end_at = timezone.now()
     task.save(update_fields=["succeed_count", "failed_count", "failed_app_codes", "status", "end_at"])
 
     # 根据配置判断是否发送报告邮件给到平台管理员
     if settings.ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE:
-        AppOperationReportNotifier().send(EmailReceiverType.PLAT_ADMIN, settings.BKPAAS_PLATFORM_MANAGERS)
+        reports = AppOperationReport.objects.exclude(issue_type=OperationIssueType.NONE)
+        AppOperationReportNotifier().send(reports, EmailReceiverType.PLAT_ADMIN, settings.BKPAAS_PLATFORM_MANAGERS)
+
+
+@shared_task
+def send_idle_email_to_app_developers(app_codes: List[str], only_specified_users: List[str]):
+    """发送应用闲置模块邮件给应用管理员/开发者"""
+    reports = AppOperationReport.objects.filter(issue_type=OperationIssueType.IDLE)
+    if app_codes:
+        reports = reports.filter(app__code__in=app_codes)
+
+    if not reports.exists():
+        logger.info("no idle app reports, skip current notification task")
+        return
+
+    waiting_notify_usernames = set()
+    for r in reports:
+        waiting_notify_usernames.update(r.administrators)
+        waiting_notify_usernames.update(r.developers)
+
+    # 如果特殊指定用户，只发送给指定的用户
+    if only_specified_users:
+        waiting_notify_usernames &= set(only_specified_users)
+
+    total_cnt, succeed_cnt = len(waiting_notify_usernames), 0
+    failed_usernames = []
+
+    task = AppOperationEmailNotificationTask.objects.create(
+        total_count=total_cnt, notification_type=EmailNotificationType.IDLE_APP_MODULE_ENVS
+    )
+    for idx, username in enumerate(waiting_notify_usernames):
+        filters = ApplicationPermission().gen_develop_app_filters(username)
+        app_codes = Application.objects.filter(is_active=True).filter(filters).values_list("code", flat=True)
+
+        # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况
+        if just_leave_app_codes := JustLeaveAppManager(username).list():
+            app_codes = [c for c in app_codes if c not in just_leave_app_codes]
+
+        user_idle_app_reports = reports.filter(app__code__in=app_codes)
+
+        if not user_idle_app_reports.exists():
+            total_cnt -= 1
+            logger.info("no idle app reports, skip notification to %s", username)
+            continue
+
+        try:
+            AppOperationReportNotifier().send(user_idle_app_reports, EmailReceiverType.APP_DEVELOPER, [username])
+        except Exception:
+            failed_usernames.append(username)
+            logger.exception("failed to send idle module envs email to %s", username)
+
+        succeed_cnt += 1
+        # 通知完所有用户需要较长时间，因此每隔一段时间更新下进度
+        if idx % 20 == 0:
+            task.succeed_count = succeed_cnt
+            task.failed_count = len(failed_usernames)
+            task.save(update_fields=["succeed_count", "failed_count"])
+
+    task.total_count = total_cnt
+    task.succeed_count = succeed_cnt
+    task.failed_count = len(failed_usernames)
+    task.failed_usernames = failed_usernames
+    task.status = BatchTaskStatus.FINISHED
+    task.end_at = timezone.now()
+    task.save(update_fields=["total_count", "succeed_count", "failed_count", "failed_usernames", "status", "end_at"])

@@ -19,18 +19,24 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 
-class CollectionTaskStatus(str, StructuredEnum):
-    """采集任务状态"""
+class BatchTaskStatus(str, StructuredEnum):
+    """任务状态"""
 
     RUNNING = EnumField("running", label=_("运行中"))
     FINISHED = EnumField("finished", label=_("已完成"))
+
+
+class EmailNotificationType(str, StructuredEnum):
+    """邮件通知类型"""
+
+    IDLE_APP_MODULE_ENVS = EnumField("idle_app_module_envs", label=_("闲置应用模块"))
 
 
 class EmailReceiverType(str, StructuredEnum):
     """邮件接收者类型"""
 
     PLAT_ADMIN = EnumField("plat_admin", label=_("平台管理员"))
-    APP_ADMIN = EnumField("app_admin", label=_("应用管理员"))
+    APP_DEVELOPER = EnumField("app_developer", label=_("应用开发者"))
 
 
 class OperationIssueType(str, StructuredEnum):

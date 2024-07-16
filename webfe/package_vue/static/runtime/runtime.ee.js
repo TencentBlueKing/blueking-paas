@@ -29,6 +29,7 @@ var BK_ANALYSIS_JS = process.env.BK_ANALYSIS_JS || '' //上报js 内部版需要
 var BK_PAAS_VERSION = process.env.BK_PAAS_VERSION || ''
 var BK_MAX_PACKAGE_SIZE = process.env.BK_MAX_PACKAGE_SIZE || ''
 var BK_SHARED_RES_URL = process.env.BK_SHARED_RES_URL || ''
+var BK_TCGIT_COPILOT_URL = process.env.BK_TCGIT_COPILOT_URL  || ''
 
 var BACKEND_URL = `${SITE_URL}/backend` // 后端接口前缀
 var DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide`

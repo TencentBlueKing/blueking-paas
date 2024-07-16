@@ -32,14 +32,15 @@ class ApplicationCodeInPathMixin:
     Provide a shortcut to get current application and do permission checks
     """
 
-    # TODO: consider print a warning message when subclasses doesn't set the `permission_classes`
-    # attribute or set a default value for the `permission_classes` instead.
+    # To use this mixin, the subclass should set the `permission_classes` attribute and
+    # use a application permission class, e.g.:
     #
-    # This can help us eliminate bugs related to permission checks.
+    # permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     request: HttpRequest
     kwargs: Dict[str, Any]
     check_object_permissions: Callable
+    get_permissions: Callable
 
     def get_application_without_perm(self):
         code = self._get_param_from_kwargs(["code", "app_code"])
@@ -55,8 +56,11 @@ class ApplicationCodeInPathMixin:
         if not hasattr(self, "check_object_permissions"):
             raise NotImplementedError("Only support the class which inherited from rest_framework.viewset")
 
-        # TODO: Consider printing a warning message or raise an exception if `self.permission_classes`
-        # doesn't contain a class associated with application permission checks.
+        # raise an exception if current view class don't have any application permission classes
+        # to prevent any potential security issues.
+        if not any(p.__class__.__name__ == "AppModulePermission" for p in self.get_permissions()):
+            raise ValueError("No application permission classes found in the view class.")
+
         self.check_object_permissions(self.request, application)
         return application
 

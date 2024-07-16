@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from rest_framework import status
 from rest_framework.mixins import ListModelMixin
@@ -32,7 +33,7 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 
@@ -41,14 +42,14 @@ class EgressManageView(ApplicationDetailBaseView):
     template_name = "admin42/applications/detail/engine/egress.html"
 
 
-class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathMixin):
+class EgressManageViewSet(ListModelMixin, GenericViewSet):
     """Egress 管理 API"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get(self, request, code, module_name, environment):
         """获取 Egress 配置"""
-        wl_app = self.get_wl_app_via_path()
+        wl_app = self._get_wl_app(code, module_name, environment)
         spec = EgressSpec.objects.filter(wl_app=wl_app).first()
         if not spec:
             return Response(data={"enabled": False})
@@ -69,7 +70,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         slz.is_valid(raise_exception=True)
 
         # 1. 检查当前环境所在集群是否支持 Egress IP
-        wl_app = self.get_wl_app_via_path()
+        wl_app = self._get_wl_app(code, module_name, environment)
         cluster = get_cluster_by_app(wl_app)
 
         if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BCS_EGRESS):
@@ -121,7 +122,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         return Response(status=status.HTTP_201_CREATED)
 
     def destroy(self, request, code, module_name, environment):
-        wl_app = self.get_wl_app_via_path()
+        wl_app = self._get_wl_app(code, module_name, environment)
         spec = EgressSpec.objects.filter(wl_app=wl_app).first()
         if not spec:
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -139,7 +140,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_egress_ips(self, request, code, module_name, environment):
-        wl_app = self.get_wl_app_via_path()
+        wl_app = self._get_wl_app(code, module_name, environment)
         spec = EgressSpec.objects.filter(wl_app=wl_app).first()
         if not spec:
             raise error_codes.EGRESS_SPEC_NOT_FOUND
@@ -157,3 +158,9 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
 
         pod_ips = [p.status.podIP for p in pods.items if p.status]
         return Response(data={"ips": pod_ips})
+
+    def _get_wl_app(self, code, module_name, environment):
+        """Get the workloads app object."""
+        application = get_object_or_404(Application, code=code)
+        env = application.get_module(module_name).envs.get(environment=environment)
+        return env.wl_app

@@ -74,6 +74,8 @@ class CIJobViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class CIInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """获取 CI 信息"""
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def query(self, request, code, module_name):
         application = self.get_application()
         module = application.get_module(module_name)

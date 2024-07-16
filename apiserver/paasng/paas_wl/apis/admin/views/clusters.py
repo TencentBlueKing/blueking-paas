@@ -119,6 +119,8 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 class ClusterComponentViewSet(ViewSet):
     """集群组件信息相关"""
 
+    permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
     def get_operator_info(self, requests, cluster_name, *args, **kwargs):
         """获取各集群 Operator 相关信息"""
         resp_data = {"cluster_name": cluster_name}

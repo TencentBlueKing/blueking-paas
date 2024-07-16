@@ -55,12 +55,6 @@ urlpatterns = [
         views.MigrationConfirmViewset.as_view({"post": "confirm"}),
         name="api.mgrlegacy.migrations.progress.confirm",
     ),
-    # just for local debug
-    url(
-        r"^api/mgrlegacy/migrations/progress/records/",
-        views.MigrationDetailViewset.as_view({"get": "list"}),
-        name="api.mgrlegacy.migrations.progress.records",
-    ),
     url(
         r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/rollback",
         views.MigrationDetailViewset.as_view({"post": "rollback"}),

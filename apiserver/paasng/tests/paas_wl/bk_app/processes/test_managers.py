@@ -23,6 +23,7 @@ from django.conf import settings
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.kres_slzs import extract_type_from_name
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
+from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
@@ -230,3 +231,17 @@ class TestExtractTypeFromName:
     )
     def test_main(self, name, namespace, proc_type):
         assert extract_type_from_name(name, namespace) == proc_type
+
+
+class TestProcessManager:
+    @pytest.fixture()
+    def process(self, wl_app, release, process_manager, process, v2_mapper):
+        process_manager.create(process, mapper_version=v2_mapper)
+        return process
+
+    def test_get_previous_logs(self, bk_stag_env, wl_app, process):
+        processes = process_kmodel.list_by_app(process.app)
+        instances = instance_kmodel.list_by_process_type(process.app, processes[0].type)
+        manager = ProcessManager(bk_stag_env)
+        logs = manager.get_previous_logs(processes[0].type, instances[0].name)
+        assert logs == "此进程没有重启记录"

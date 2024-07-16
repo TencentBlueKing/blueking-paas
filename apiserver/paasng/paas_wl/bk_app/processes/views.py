@@ -411,3 +411,18 @@ class InstanceEventsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         events = event_kmodel.list_by_app_instance_name(wl_app, instance_name).items
         return Response(EventSerializer(events, many=True).data)
+
+
+class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """适用于所有类型应用，应用进程上次重启日志相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def retrieve(self, request, code, module_name, environment, process_type, process_instance_name):
+        """获取进程实例的上次重启日志"""
+        _ = self.get_application()
+        env = self.get_env_via_path()
+
+        manager = ProcessManager(env)
+        logs = manager.get_previous_logs(process_type, process_instance_name)
+        return Response(status=status.HTTP_200_OK, data=logs)

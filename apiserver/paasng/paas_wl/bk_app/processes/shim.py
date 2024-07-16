@@ -14,10 +14,11 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+import json
 from typing import Dict, List, Optional
 
 from django.utils.functional import cached_property
+from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import Process, list_processes
@@ -27,6 +28,8 @@ from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs_client import BCSClient
+from paas_wl.infras.resources.base.kres import KPod
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.models.deployment import ProcessTmpl
 
@@ -123,3 +126,30 @@ class ProcessManager:
                 "version": "v4",
             },
         )
+
+    def get_previous_logs(
+        self,
+        process_type: str,
+        process_instance_name: str,
+        container_name=None,
+    ):
+        """获取进程实例的上次重启日志"""
+        if not container_name:
+            container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
+
+        k8s_client = get_client_by_app(self.wl_app)
+
+        try:
+            response = KPod(k8s_client).get_log(
+                name=process_instance_name,
+                namespace=self.wl_app.namespace,
+                container=container_name,
+                previous=True,
+            )
+        except ApiException as e:
+            if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
+                return "此进程没有重启记录"
+            else:
+                raise
+
+        return response.data

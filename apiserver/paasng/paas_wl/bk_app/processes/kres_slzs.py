@@ -199,8 +199,10 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
 
         # Use first container's status
         c_status = None
+        c_status_dict = {}
         if pod.status.get("containerStatuses"):
             c_status = pod.status.containerStatuses[0]
+            c_status_dict = get_items(pod.to_dict(), "status.containerStatuses", [{}])[0]
 
         process_type = self.get_process_type(pod)
         target_container = self._get_main_container(app, pod)
@@ -219,7 +221,6 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             annotations = pod.metadata.annotations or {}
             version = int(annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY, 0))
 
-        c_status_dict = get_items(pod.to_dict(), "status.containerStatuses", [{}])[0]
         terminated_info = {}
         if c_status_dict:
             terminated_info = {

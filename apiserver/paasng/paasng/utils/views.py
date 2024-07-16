@@ -268,6 +268,9 @@ def permission_classes(permission_classes, policy: str = "replace"):
     """
 
     def decorator(func):
+        # Set an attribute to store the permission_classes so other module like `perm_insure` knows.
+        func._action_permission_classes = permission_classes
+
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
             # try to unwrap partial from method_decorator

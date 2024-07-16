@@ -35,6 +35,9 @@ from paasng.utils.api_docs import openapi_empty_response
 class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """管理应用独立域名的 ViewSet"""
 
+    # INFO: This viewset doesn't use any `application_perm_class` perm class so the
+    # application-level permission check is skipped. It would be better to just use
+    # normal DB query to get the application and remove the `ApplicationCodeInPathMixin`.
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_queryset(self, application: Application) -> QuerySet:

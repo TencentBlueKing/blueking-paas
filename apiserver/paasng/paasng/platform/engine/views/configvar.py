@@ -133,6 +133,8 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """View the built-in environment variables of the app"""
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def _get_enum_choices_dict(self, enum_obj) -> Dict[str, str]:
         return {field[0]: field[1] for field in enum_obj.get_choices()}
 

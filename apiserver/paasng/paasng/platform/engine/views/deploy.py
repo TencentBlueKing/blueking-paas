@@ -178,7 +178,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             return VersionInfo(version_type=VersionType.IMAGE.value, version_name=image_tag, revision=image_tag)
 
         version_type = params["version_type"]
-        revision = params.get("revision", None)
+        revision = params.get("revision")
         try:
             # 尝试根据 smart_revision 获取最新的 revision
             version_service = get_version_service(module, operator=user.pk)
@@ -286,6 +286,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     @swagger_auto_schema(tags=["部署阶段"], responses={"200": DeployFramePhaseSLZ(many=True)})
     def get_frame(self, request, code, module_name, environment):
         env = self.get_env_via_path()
@@ -298,8 +300,9 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["部署阶段"], responses={"200": DeployPhaseSLZ(many=True)})
     def get_result(self, request, code, module_name, environment, uuid):
+        env = self.get_env_via_path()
         try:
-            deployment = Deployment.objects.get(pk=uuid)
+            deployment = env.deployments.get(pk=uuid)
         except ObjectDoesNotExist:
             raise error_codes.CANNOT_GET_DEPLOYMENT
 

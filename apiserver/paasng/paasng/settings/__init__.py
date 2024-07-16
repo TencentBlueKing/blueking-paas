@@ -39,6 +39,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量比 YAML 配置的优先级更高
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
+
 import copy
 import os
 import sys
@@ -174,6 +175,8 @@ INSTALLED_APPS = [
     "paas_wl.infras.resources.generation",
     # 蓝鲸通知中心
     "bk_notice_sdk",
+    # This app helps us to make sure the permission was configured correctly
+    "paasng.infras.perm_insure",
 ]
 
 # Allow extending installed apps

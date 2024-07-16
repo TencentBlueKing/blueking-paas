@@ -162,7 +162,7 @@ export default {
 .global-search-modal {
   .global-search-focus {
     position: fixed;
-    top: 9px;
+    top: calc(var(--app-notice-height) + 9px);
     right: 0;
     z-index: 999;
   }

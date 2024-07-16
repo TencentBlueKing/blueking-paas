@@ -2710,4 +2710,9 @@ export default {
   暂无可对比的代码版本: 'No comparable code versions available',
   暂无已发布成功的版本: 'No successfully published versions available',
   退出插件成功: 'Successfully Exited Plugin',
+  忽略: 'Ignore',
+  '忽略失败，请稍候再试': 'Ignore failed, please try again later',
+  '是否忽略 {n} 模块闲置提醒？': 'Ignore the idle reminder for {n} modules?',
+  '忽略后，该模块的': 'After ignoring, the',
+  '将在 6 个月内不出现在闲置应用列表中，若 6 个月后继续闲置，将重新提醒。': 'of this module will not appear in the idle application list for 6 months. If it remains idle after 6 months, you will be reminded again.',
 };

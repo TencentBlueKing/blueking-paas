@@ -36,6 +36,7 @@ from paas_wl.infras.resource_templates.managers import AddonManager, ProcessProb
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.utils.dictx import get_items
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.processes.kres_entities import Instance, Process
@@ -198,8 +199,10 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
 
         # Use first container's status
         c_status = None
+        c_status_dict = {}
         if pod.status.get("containerStatuses"):
             c_status = pod.status.containerStatuses[0]
+            c_status_dict = get_items(pod.to_dict(), "status.containerStatuses", [{}])[0]
 
         process_type = self.get_process_type(pod)
         target_container = self._get_main_container(app, pod)
@@ -218,6 +221,12 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             annotations = pod.metadata.annotations or {}
             version = int(annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY, 0))
 
+        terminated_info = {}
+        if c_status_dict:
+            terminated_info = {
+                "exit_code": get_items(c_status_dict, "lastState.terminated.exitCode"),
+                "reason": get_items(c_status_dict, "lastState.terminated.reason"),
+            }
         return self.entity_type(
             app=app,
             name=pod.metadata.name,
@@ -231,6 +240,7 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             envs=envs,
             ready=health_status.status == HealthStatusType.HEALTHY,
             restart_count=c_status.restartCount if c_status else 0,
+            terminated_info=terminated_info,
             version=version,
         )
 

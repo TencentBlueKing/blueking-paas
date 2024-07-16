@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from kubernetes.dynamic import ResourceField
 
@@ -50,6 +50,7 @@ class Instance(AppEntity):
     :param envs: 直接在 Pod 中声明的环境变量
     :param ready: 进程实例是否就绪
     :param restart_count: 重启次数
+    :param terminated_info: 终止信息(包含终止原因和退出码)
     :param version: 当前实例的版本号, 每次部署递增
     """
 
@@ -63,6 +64,7 @@ class Instance(AppEntity):
     envs: Dict[str, str] = field(default_factory=dict)
     ready: bool = True
     restart_count: int = 0
+    terminated_info: Dict[str, Optional[Union[str, int]]] = field(default_factory=dict)
 
     version: int = 0
 

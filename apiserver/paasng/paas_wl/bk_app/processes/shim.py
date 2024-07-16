@@ -147,6 +147,8 @@ class ProcessManager:
                 previous=True,
             )
         except ApiException as e:
+            # k8s 没有找到上一个终止的容器，即容器没有重启过
+            # TODO: 未重启判断抽象成一个方法？
             if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
                 return "此进程没有重启记录"
             else:

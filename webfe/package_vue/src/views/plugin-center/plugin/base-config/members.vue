@@ -485,7 +485,7 @@ export default {
       try {
         await this.$store.dispatch('pluginMembers/leavePlugin', { pdId: this.pdId, pluginId: this.pluginId });
         this.$paasMessage({
-          theme: 'error',
+          theme: 'success',
           message: this.$t('退出插件成功'),
         });
         // 退出插件跳转

@@ -42,6 +42,14 @@ class InvalidPackageFileFormatError(Exception):
     """The package file is not in a valid format, it might be corrupt."""
 
 
+class FileDoesNotExistError(KeyError, RuntimeError):
+    """The file does not exist.
+
+    This exception is used to maintain compatibility with existing code that handles missing files.
+    TODO: Consider unifying exception handling for read_file.
+    """
+
+
 class BasePackageClient(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def read_file(self, file_path: str) -> bytes:
@@ -99,7 +107,7 @@ class TarClient(BasePackageClient):
         key = os.path.join(self.relative_path, key)
         file = self.tar.extractfile(key)
         if not file:
-            raise KeyError(f"filename: {file_path} Don't exists.")
+            raise FileDoesNotExistError(f"filename: {file_path} Don't exists.")
         return file.read()
 
     def export(self, local_path: str):
@@ -143,7 +151,10 @@ class BinaryTarClient(BasePackageClient):
             if p.returncode != 0:
                 if self._is_invalid_file_format_error(stderr):
                     raise InvalidPackageFileFormatError()
-                raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
+                if self._is_not_found_error(stderr):
+                    raise FileDoesNotExistError(f"Failed to extractfile from the tarball, error: {stderr!r}")
+                else:
+                    raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
             return (temp_dir / filename).read_bytes()
 
     def export(self, local_path: str):
@@ -185,6 +196,13 @@ class BinaryTarClient(BasePackageClient):
             return True
         return False
 
+    @staticmethod
+    def _is_not_found_error(message: str) -> bool:
+        """Check if the stderr message indicates a file not found."""
+        if re.search(r"tar:.*: Not found in archive", message):
+            return True
+        return False
+
 
 class ZipClient(BasePackageClient):
     """基于本地 zip 包初始化的 client"""
@@ -220,7 +238,7 @@ class ZipClient(BasePackageClient):
         try:
             info = self.zip_.getinfo(key)
         except KeyError as e:
-            raise KeyError(f"filename: {file_path} Don't exists.") from e
+            raise FileDoesNotExistError(f"filename: {file_path} Don't exists.") from e
 
         return self.zip_.read(info)
 

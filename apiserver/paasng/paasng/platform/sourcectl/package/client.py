@@ -43,7 +43,11 @@ class InvalidPackageFileFormatError(Exception):
 
 
 class FileDoesNotExistError(KeyError, RuntimeError):
-    """The file does not exist."""
+    """The file does not exist.
+
+    This exception is used to maintain compatibility with existing code that handles missing files.
+    TODO: Consider unifying exception handling for read_file.
+    """
 
 
 class BasePackageClient(metaclass=abc.ABCMeta):
@@ -147,7 +151,7 @@ class BinaryTarClient(BasePackageClient):
             if p.returncode != 0:
                 if self._is_invalid_file_format_error(stderr):
                     raise InvalidPackageFileFormatError()
-                if "Not found in archive" in stderr:
+                if self._is_not_found_error(stderr):
                     raise FileDoesNotExistError(f"Failed to extractfile from the tarball, error: {stderr!r}")
                 else:
                     raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
@@ -189,6 +193,13 @@ class BinaryTarClient(BasePackageClient):
     def _is_invalid_file_format_error(message: str) -> bool:
         """Check if the stderr message indicates an invalid file format."""
         if re.search(r"tar:.* not look like a tar archive", message):
+            return True
+        return False
+
+    @staticmethod
+    def _is_not_found_error(message: str) -> bool:
+        """Check if the stderr message indicates a file not found."""
+        if re.search(r"tar:.*: Not found in archive", message):
             return True
         return False
 

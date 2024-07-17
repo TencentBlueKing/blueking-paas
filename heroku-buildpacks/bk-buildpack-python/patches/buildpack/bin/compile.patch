@@ -4,7 +4,7 @@
 > if [[ -f $APT_SH_FILE_PATH ]]; then
 >     source $APT_SH_FILE_PATH
 > fi
->
+> 
 37a38,40
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/setup-user-compile-hook

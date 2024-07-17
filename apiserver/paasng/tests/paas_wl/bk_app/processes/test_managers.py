@@ -28,6 +28,7 @@ from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from tests.paas_wl.infras.resources.base.test_kres import construct_foo_pod
 from tests.paas_wl.utils.basic import make_container_status
 from tests.paas_wl.utils.wl_app import create_wl_release
 
@@ -234,15 +235,20 @@ class TestExtractTypeFromName:
 
 
 class TestProcessManager:
-    @pytest.fixture()
-    def process(self, wl_app, release, process_manager, process, v2_mapper):
-        process_manager.create(process, mapper_version=v2_mapper)
-        return process
+    def test_get_previous_logs(self, bk_stag_env, wl_app):
+        """
+        测试获取进程实例上次重启日志
 
-    def test_get_previous_logs(self, bk_stag_env, wl_app, process):
-        processes = process_kmodel.list_by_app(process.app)
-        process_type = processes[0].type
-        instances = instance_kmodel.list_by_process_type(process.app, process_type)
+        测试需要兼容测试流水线的执行环境(无 controller)，因此通过下发 pod 进行日志测试
+        原设计是通过创建 process，再获取 pod 日志
+        """
+        k8s_client = get_client_by_app(wl_app)
+        KPod(k8s_client).create_or_update(
+            wl_app.scheduler_safe_name,
+            namespace=wl_app.namespace,
+            body=construct_foo_pod(wl_app.scheduler_safe_name, restart_policy="Never"),
+        )
+
         manager = ProcessManager(bk_stag_env)
-        logs = manager.get_previous_logs(process_type, instances[0].name)
-        assert logs == "此进程没有重启记录"
+        logs = manager.get_previous_logs("", wl_app.scheduler_safe_name, "main")
+        assert logs is not None

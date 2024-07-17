@@ -241,7 +241,8 @@ class TestProcessManager:
 
     def test_get_previous_logs(self, bk_stag_env, wl_app, process):
         processes = process_kmodel.list_by_app(process.app)
-        instances = instance_kmodel.list_by_process_type(process.app, processes[0].type)
+        process_type = processes[0].type
+        instances = instance_kmodel.list_by_process_type(process.app, process_type)
         manager = ProcessManager(bk_stag_env)
-        logs = manager.get_previous_logs(processes[0].type, instances[0].name)
+        logs = manager.get_previous_logs(process_type, instances[0].name)
         assert logs == "此进程没有重启记录"

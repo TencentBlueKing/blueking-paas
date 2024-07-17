@@ -1,3 +1,10 @@
+27a28,33
+> # -- Export Path variables from 000_apt.sh if exists
+> APT_SH_FILE_PATH="/layers/bk-buildpack-apt/profile/profile.d/000_apt.sh"
+> if [[ -f $APT_SH_FILE_PATH ]]; then
+>     source $APT_SH_FILE_PATH
+> fi
+>
 37a38,40
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/setup-user-compile-hook

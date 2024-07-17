@@ -1894,7 +1894,7 @@ export default {
   应用运行时信息: 'APP runtime information',
   蓝鲸体系内平台地址: 'The platform address in the BlueKing system',
   变量: 'Variable',
-  '增强服务也会写入内置环境变量，详情请查看增强服务页面。更多说明请参考': 'Enhanced services will also be written into built-in environment variables. For details, please refer to the enhanced services page. For more information, please refer to',
+  '增强服务也会写入内置环境变量，详情请查看增强服务页面。更多说明请参考': 'Add-ons will also be written into built-in environment variables. For details, please refer to the Add-ons page. For more information, please refer to',
   内置环境变量说明: 'Built-in Environment Variables Description',
   操作记录: 'Operation record',
   发布: 'Release',

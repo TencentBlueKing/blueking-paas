@@ -2415,10 +2415,8 @@ msgid "应用版本，默认版本为 default"
 msgstr "APP version, the default version is default"
 
 #: paasng/platform/engine/constants.py:172
-msgid ""
-"应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": "
-"\"http://prod.com\"}"
-msgstr ""
+msgid "应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": \"http://prod.com\"}"
+msgstr "Access URLs for different environments of the application modules, such as {\"stag\": \"http://stag.com\", \"prod\": \"http://prod.com\"}"
 
 #: paasng/platform/engine/constants.py:179
 msgid "目标端口号，值为 5000"

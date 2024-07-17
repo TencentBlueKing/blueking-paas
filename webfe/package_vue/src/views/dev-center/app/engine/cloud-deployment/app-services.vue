@@ -120,11 +120,7 @@
                 class="ps-switcher-wrapper"
                 v-else
                 @click="toggleSwitch(row, $index)"
-                v-bk-tooltips="{
-                  content: enableTooltipsConfig,
-                  allowHTML: true,
-                  disabled: !enableTooltipsConfig,
-                }"
+                v-bk-tooltips="{ ...enableTooltipsConfig, allowHTML: true }"
                 :ref="`tooltipsHtml${$index}`"
               >
                 <bk-switcher
@@ -400,7 +396,13 @@ export default {
       return this.curAppInfo.application?.is_smart_app;
     },
     enableTooltipsConfig() {
-      return this.isSmartApp ? this.$t('S-mart 应用请在应用描述文件中启用增强服务') : '';
+      this.switcherTips.disabled = this.isSmartApp;
+      if (this.isSmartApp) {
+        return {
+          content: this.$t('S-mart 应用请在应用描述文件中启用增强服务'),
+        };
+      }
+      return this.switcherTips;
     },
   },
   watch: {

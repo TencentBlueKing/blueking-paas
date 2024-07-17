@@ -78,6 +78,10 @@ func (r *BkApp) Default() {
 		r.Spec.Build.ImagePullPolicy = corev1.PullIfNotPresent
 	}
 
+	if HasProcServices(r) {
+		r.defaultProcServices()
+	}
+
 	// 为进程的端口号、资源配额方案等设置默认值
 	for i, proc := range r.Spec.Processes {
 		if proc.TargetPort == 0 {
@@ -87,6 +91,26 @@ func (r *BkApp) Default() {
 			proc.ResQuotaPlan = ResQuotaPlanDefault
 		}
 		r.Spec.Processes[i] = proc
+	}
+}
+
+// defaultProcServices 为 ProcServices 配置默认值
+func (r *BkApp) defaultProcServices() {
+	if r.Annotations == nil {
+		r.Annotations = make(map[string]string)
+	}
+	r.Annotations[ProcServicesFeatureEnabledAnnoKey] = "true"
+
+	for pIdx, proc := range r.Spec.Processes {
+		for sIdx, procSvc := range proc.Services {
+			if procSvc.Protocol == "" {
+				r.Spec.Processes[pIdx].Services[sIdx].Protocol = corev1.ProtocolTCP
+			}
+
+			if procSvc.Port == 0 {
+				r.Spec.Processes[pIdx].Services[sIdx].Port = procSvc.TargetPort
+			}
+		}
 	}
 }
 
@@ -256,6 +280,12 @@ func (r *BkApp) validateAppSpec() *field.Error {
 		}
 	}
 
+	if HasProcServices(r) {
+		if err := r.validateExposedTypes(); err != nil {
+			return err
+		}
+	}
+
 	return r.validateMounts()
 }
 
@@ -380,6 +410,13 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 			return err
 		}
 	}
+
+	if len(proc.Services) > 0 {
+		if err := r.validateProcServices(pField.Child("services"), proc.Services); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -513,6 +550,83 @@ func validateProbe(pField *field.Path, probe *corev1.Probe) *field.Error {
 			"failureThreshold must be between 1 and 50",
 		)
 	}
+	return nil
+}
+
+// validateProcServices validates the process services
+func (r *BkApp) validateProcServices(pPath *field.Path, services []ProcService) *field.Error {
+	serviceNames, ports, targetPorts := sets.String{}, sets.Int32{}, sets.Int32{}
+
+	for _, svc := range services {
+		// 校验 service name 是否重复
+		if serviceNames.Has(svc.Name) {
+			return field.Duplicate(pPath.Child("name"), svc.Name)
+		}
+		serviceNames.Insert(svc.Name)
+
+		// port 有效范围：1-65535
+		if svc.Port < 1 || svc.Port > 65535 {
+			return field.Invalid(pPath.Child("port"), svc.Port, "port must be between 1 and 65535")
+		}
+		// 校验 port 是否重复
+		if ports.Has(svc.Port) {
+			return field.Duplicate(pPath.Child("port"), svc.Port)
+		}
+		ports.Insert(svc.Port)
+
+		// targetPort 有效范围：1-65535
+		if svc.TargetPort < 1 || svc.TargetPort > 65535 {
+			return field.Invalid(pPath.Child("targetPort"), svc.TargetPort, "targetPort must be between 1 and 65535")
+		}
+		// 校验 targetPort 是否重复
+		if targetPorts.Has(svc.TargetPort) {
+			return field.Duplicate(pPath.Child("targetPort"), svc.TargetPort)
+		}
+		targetPorts.Insert(svc.TargetPort)
+
+		// 校验协议
+		if err := validateServiceProtocol(svc.Protocol); err != nil {
+			return field.Invalid(pPath.Child("protocol"), svc.Protocol, err.Error())
+		}
+
+	}
+
+	return nil
+}
+
+// validateExposedTypes validates exposed types in BkApp scope.
+// 目前只支持 bk/http 类型，并且一个 BkApp 只能有一个 bk/http 类型的暴露服务作为主入口
+func (r *BkApp) validateExposedTypes() *field.Error {
+	exposedTypes := sets.String{}
+
+	procsField := field.NewPath("spec").Child("processes")
+
+	for pIdx, proc := range r.Spec.Processes {
+		for sIdx, svc := range proc.Services {
+			if svc.ExposedType != nil {
+				if err := validateExposedType(svc.ExposedType); err != nil {
+					return field.Invalid(
+						procsField.Index(pIdx).Child("services").Index(sIdx).Child("exposedType"),
+						svc.ExposedType,
+						err.Error(),
+					)
+				}
+
+				exposedTypeName := string(svc.ExposedType.Name)
+
+				// 检查是否有重复的暴露类型
+				if exposedTypes.Has(exposedTypeName) {
+					return field.Duplicate(
+						procsField.Index(pIdx).Child("services").Index(sIdx).Child("exposedType"),
+						svc.ExposedType.Name,
+					)
+				}
+
+				exposedTypes.Insert(exposedTypeName)
+			}
+		}
+	}
+
 	return nil
 }
 

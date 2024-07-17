@@ -52,6 +52,10 @@ type ServiceReconciler struct {
 
 // Reconcile ...
 func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
+	if !needReconcile(bkapp) {
+		return r.Result
+	}
+
 	current, err := r.listCurrentServices(ctx, bkapp)
 	if err != nil {
 		return r.Result.WithError(err)
@@ -98,7 +102,9 @@ func (r *ServiceReconciler) listCurrentServices(
 func (r *ServiceReconciler) getWantedService(bkapp *paasv1alpha2.BkApp) (result []*corev1.Service) {
 	for _, process := range bkapp.Spec.Processes {
 		svc := BuildService(bkapp, &process)
-		result = append(result, svc)
+		if svc != nil {
+			result = append(result, svc)
+		}
 	}
 	return result
 }
@@ -144,6 +150,10 @@ func BuildService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *cor
 		return nil
 	}
 
+	if bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey] == "true" {
+		return buildServiceByProcServices(bkapp, process)
+	}
+
 	name := names.Service(bkapp, process.Name)
 	svcLabels := labels.Deployment(bkapp, process.Name)
 	selector := labels.PodSelector(bkapp, process.Name)
@@ -168,6 +178,55 @@ func BuildService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *cor
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
+			Selector: selector,
+		},
+	}
+}
+
+// needReconcile check if bkapp need to reconcile services
+func needReconcile(bkapp *paasv1alpha2.BkApp) bool {
+	if bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey] == "true" &&
+		!paasv1alpha2.HasProcServices(bkapp) {
+		return false
+	}
+	return true
+}
+
+// buildServiceByProcServices build service by proc services config
+func buildServiceByProcServices(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *corev1.Service {
+	if len(process.Services) == 0 {
+		return nil
+	}
+
+	name := names.Service(bkapp, process.Name)
+	svcLabels := labels.Deployment(bkapp, process.Name)
+	selector := labels.PodSelector(bkapp, process.Name)
+
+	ports := []corev1.ServicePort{}
+	for _, procSvc := range process.Services {
+		svcPort := corev1.ServicePort{
+			Name:       procSvc.Name,
+			TargetPort: intstr.FromInt(int(procSvc.TargetPort)),
+			Protocol:   procSvc.Protocol,
+			Port:       procSvc.Port,
+		}
+
+		ports = append(ports, svcPort)
+	}
+
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   bkapp.Namespace,
+			Labels:      svcLabels,
+			Annotations: map[string]string{},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports:    ports,
 			Selector: selector,
 		},
 	}

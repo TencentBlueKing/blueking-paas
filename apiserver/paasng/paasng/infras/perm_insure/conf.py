@@ -24,13 +24,9 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "ExportToDjangoView",
     "ResourceAPIView",
     "PluginCallBackApiViewSet",
+    "PluginSelectionView",
     # FIXME: Should update the permission checking logic
     "ApplicationMigrationInfoAPIView",
-    # FIXME: bk_plugins permissions
-    "DistributorsViewSet",
-    "BkPluginTagsViewSet",
-    "SchemaViewSet",
-    "PluginSelectionView",
     # APIs bound with current user/account context, such as creating new applications
     # TODO: This type of views should use a same base class so that we can easily
     # skip the insure checking for them.
@@ -81,6 +77,9 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "RegionTemplateViewSet",
     "ChangelogViewSet",
     "ResQuotaPlanOptionsView",
+    "DistributorsViewSet",
+    "BkPluginTagsViewSet",
+    "SchemaViewSet",
     #
     # == Django views start
     #

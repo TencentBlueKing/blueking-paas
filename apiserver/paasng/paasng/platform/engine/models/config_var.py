@@ -139,7 +139,7 @@ class BuiltInEnvVarDetail:
 
     def __post_init__(self):
         if self.prefix:
-            self.key = f"{self.prefix}_{self.key}"
+            self.key = f"{self.prefix}{self.key}"
 
     def to_dict(self):
         return {self.key: {"value": self.value, "description": self.description}}

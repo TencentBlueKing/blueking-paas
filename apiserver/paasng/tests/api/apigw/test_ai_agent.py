@@ -85,13 +85,14 @@ class TestAIAgentViewSet:
             "name": bk_app_name,
         }
         response = api_client.post(
-            "/api/bkapps/ai_agent_app/",
+            "/api/bkapps/ai_agent/",
             data=params,
         )
         assert response.status_code == 201
         assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.AI_AGENT
         assert response.json()["application"]["type"] == ApplicationType.CLOUD_NATIVE
         assert response.json()["application"]["is_ai_agent_app"] is True
+        assert response.json()["application"]["is_plugin_app"] is True
 
     def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path):
         bk_module.source_origin = SourceOrigin.AI_AGENT

@@ -515,10 +515,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
             cluster_name = advanced_options.get("cluster_name")
 
-        # Permission check for non-default source origin
         engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
-        self._ensure_source_origin_available(request.user, source_origin)
 
         # Guide: check if a bk_plugin can be created
         if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
@@ -571,10 +569,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         engine_params = params.get("engine_params", {})
 
-        # Permission check for non-default source origin
         source_origin = SourceOrigin(engine_params["source_origin"])
-        self._ensure_source_origin_available(request.user, source_origin)
-
         cluster_name = None
         return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
 
@@ -590,9 +585,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     @swagger_auto_schema(request_body=slzs.CreateCloudNativeAppSLZ, tags=["创建应用"])
     def create_cloud_native(self, request):
         """[API] 创建云原生架构应用"""
-        if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP):
-            raise ValidationError(_("你无法创建云原生应用"))
-
         serializer = slzs.CreateCloudNativeAppSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
@@ -608,7 +600,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         module_src_cfg: Dict[str, Any] = {"source_origin": SourceOrigin.CNATIVE_IMAGE}
         source_config = params["source_config"]
         source_origin = SourceOrigin(source_config["source_origin"])
-        self._ensure_source_origin_available(request.user, source_origin)
 
         # Guide: check if a bk_plugin can be created
         if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
@@ -665,6 +656,24 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
             status=status.HTTP_201_CREATED,
         )
+
+    @transaction.atomic
+    @swagger_auto_schema(request_body=slzs.CreateAIAgentAppSLZ, tags=["ai-agent-app"])
+    def create_ai_agent_app(self, request):
+        """创建 AI Agent 插件应用"""
+        serializer = slzs.CreateAIAgentAppSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        params = serializer.validated_data
+        self.validate_region_perm(params["region"])
+
+        source_origin = SourceOrigin.AI_AGENT
+        engine_params = {
+            "source_origin": source_origin,
+            # TODO AI agent 还没有提供模板，目前是直接使用 Python 插件的模板
+            "source_init_template": "bk-saas-plugin-python",
+        }
+        cluster_name = None
+        return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
 
     def get_creation_options(self, request):
         """[API] 获取创建应用模块时的选项信息"""
@@ -725,6 +734,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             name_en=params["name_en"],
             type_=params["type"],
             is_plugin_app=params["is_plugin_app"],
+            is_ai_agent_app=params["is_ai_agent_app"],
             operator=operator,
         )
 
@@ -800,13 +810,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
-
-    def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
-        """对使用非默认源码来源的，需要检查是否有权限"""
-        if source_origin not in SourceOrigin.get_default_origins() and not AccountFeatureFlag.objects.has_feature(
-            user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN
-        ):
-            raise ValidationError(_("你无法使用非默认的源码来源"))
 
     def _init_image_credential(self, application: Application, image_credential: Dict):
         try:

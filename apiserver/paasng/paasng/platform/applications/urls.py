@@ -196,6 +196,12 @@ urlpatterns += [
         views.ApplicationCreateViewSet.as_view({"post": "create_lesscode_app"}),
         name="api.applications.apigw.create_lesscode_app",
     ),
+    # 创建 AI Agent 插件应用
+    url(
+        r"^api/bkapps/ai_agent/$",
+        views.ApplicationCreateViewSet.as_view({"post": "create_ai_agent_app"}),
+        name="api.applications.create_ai_agent_app",
+    ),
     # 系统 API，给固定的系统使用
     url(
         r"^sys/api/bkapps/(?P<sys_id>[^/]+)/third_app/$",

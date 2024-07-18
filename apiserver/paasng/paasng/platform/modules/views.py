@@ -35,8 +35,6 @@ from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.core.region.models import get_region
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -103,7 +101,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # Permission check for non-default source origin
         source_origin = SourceOrigin(data["source_origin"])
-        self._ensure_source_origin_available(request.user, source_origin)
 
         # lesscode app needs to create an application on the bk_lesscode platform first
         if source_origin == SourceOrigin.BK_LESS_CODE:
@@ -260,9 +257,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         module_src_cfg: Dict[str, Any] = {}
         source_config = data["source_config"]
-        # 检查当前用户能否使用指定的 source_origin
         source_origin = SourceOrigin(source_config["source_origin"])
-        self._ensure_source_origin_available(request.user, source_origin)
 
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
@@ -308,13 +303,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CREATE_MODULE_QUOTA_EXCEEDED.f(
                 _("单个应用下最多能创建 {num} 个模块").format(num=settings.MAX_MODULES_COUNT_PER_APPLICATION)
             )
-
-    def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
-        """对使用非默认源码来源的，需要检查是否有权限"""
-        if source_origin in SourceOrigin.get_default_origins():
-            return
-        if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-            raise ValidationError(_("你无法使用非默认的源码来源"))
 
     def _init_image_credential(self, application: Application, image_credential: Dict):
         try:

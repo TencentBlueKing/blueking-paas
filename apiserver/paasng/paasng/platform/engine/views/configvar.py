@@ -142,6 +142,7 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def get_builtin_envs_bk_platform(self, request, code):
         bk_address_envs = generate_env_vars_for_bk_platform(settings.CONFIGVAR_SYSTEM_PREFIX)
+        bk_address_envs_list = [env.to_dict() for env in bk_address_envs]
 
         application = self.get_application()
         region = application.region
@@ -150,8 +151,12 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         envs_by_region_and_env = generate_env_vars_by_region_and_env(
             region, environment, settings.CONFIGVAR_SYSTEM_PREFIX
         )
+        envs_by_region_and_env_list = [env.to_dict() for env in envs_by_region_and_env]
 
-        return Response({**bk_address_envs, **envs_by_region_and_env})
+        builtin_envs_bk_platform = {}
+        for env_dict in bk_address_envs_list + envs_by_region_and_env_list:
+            builtin_envs_bk_platform.update(env_dict)
+        return Response(builtin_envs_bk_platform)
 
     def get_runtime_envs(self, request, code):
         env_dict = self._get_enum_choices_dict(AppRunTimeBuiltinEnv)

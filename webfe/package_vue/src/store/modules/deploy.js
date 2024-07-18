@@ -605,6 +605,15 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/instance_events/${name}/`;
     return http.get(url, {}, config);
   },
+
+  /**
+   * 忽略模块
+   * @param {Object} params 请求参数：appCode, moduleId, en
+   */
+  ignoreModule({}, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/idle_notification/mute_rules/`;
+    return http.post(url, {}, config);
+  },
 };
 
 export default {

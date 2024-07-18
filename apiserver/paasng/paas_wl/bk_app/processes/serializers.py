@@ -83,6 +83,7 @@ class InstanceForDisplaySLZ(serializers.Serializer):
     rich_status = serializers.CharField(read_only=True)
     ready = serializers.BooleanField(read_only=True)
     restart_count = serializers.IntegerField()
+    terminated_info = serializers.DictField(read_only=True, help_text="终止信息")
     version = serializers.CharField(read_only=True)
 
     def get_state(self, obj: Instance) -> str:

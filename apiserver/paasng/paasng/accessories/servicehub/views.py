@@ -236,6 +236,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module_attachment.delete()
         return Response(status=status.HTTP_200_OK)
 
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def list_provisioned_env_keys(self, request, code, module_name):
         """获取已经生效的增强服务环境变量 KEY"""
         module = self.get_module_via_path()

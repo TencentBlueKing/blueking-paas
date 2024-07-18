@@ -66,8 +66,8 @@
                   ext-cls="idle-popover-cls">
                   <bk-button
                     :text="true"
-                    title="primary"
-                    @click="hanleOfflinesModule(childRow, props.row)">
+                    :title="$t('下架')"
+                    @click="handleShowPopover(childRow, props.row)">
                     {{ $t('下架') }}
                   </bk-button>
                   <div slot="content">
@@ -83,13 +83,56 @@
                         size="small"
                         class="mr4"
                         :loading="isPopoverLoading"
-                        @click="confirmOfflineApp(`removed${childRow.env_name}-${childRow.module_name}`)">
+                        @click="handleConfirm('offlineApp', `removed${childRow.env_name}-${childRow.module_name}`)">
                         {{ $t('确定') }}
                       </bk-button>
                       <bk-button
                         :theme="'default'"
                         size="small"
                         @click="handleCancel(`removed${childRow.env_name}-${childRow.module_name}`)">
+                        {{ $t('取消') }}
+                      </bk-button>
+                    </div>
+                  </div>
+                </bk-popover>
+                <!-- 忽略 -->
+                <bk-popover
+                  :ref="`ignore${childRow.env_name}-${childRow.module_name}`"
+                  placement="top"
+                  theme="light-border"
+                  trigger="click"
+                  width="260"
+                  :on-hide="handleHide"
+                  ext-cls="idle-popover-cls">
+                  <bk-button
+                    :text="true"
+                    class="ml10"
+                    :title="$t('忽略')"
+                    @click="handleShowPopover(childRow, props.row)">
+                    {{ $t('忽略') }}
+                  </bk-button>
+                  <div slot="content">
+                    <div class="popover-title">
+                      {{ $t('是否忽略 {n} 模块闲置提醒？', { n: curOperationAppData.module_name }) }}
+                    </div>
+                    <div class="popover-content tl">
+                      {{ $t('忽略后，该模块的') }}
+                      <em>{{ curOperationAppData.env_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</em>
+                      {{ $t('将在 6 个月内不出现在闲置应用列表中，若 6 个月后继续闲置，将重新提醒。') }}
+                    </div>
+                    <div class="popover-operate">
+                      <bk-button
+                        :theme="'primary'"
+                        size="small"
+                        class="mr4"
+                        :loading="isPopoverLoading"
+                        @click="handleConfirm('ignoreModule', `ignore${childRow.env_name}-${childRow.module_name}`)">
+                        {{ $t('忽略') }}
+                      </bk-button>
+                      <bk-button
+                        :theme="'default'"
+                        size="small"
+                        @click="handleCancel(`ignore${childRow.env_name}-${childRow.module_name}`)">
                         {{ $t('取消') }}
                       </bk-button>
                     </div>
@@ -265,18 +308,19 @@ export default {
         this.isPopoverLoading = false;
       }
     },
-    // 下架模块
-    hanleOfflinesModule(data, appData) {
+    // 下架/忽略模块
+    handleShowPopover(data, appData) {
       this.curOperationAppData = {
         ...data,
         ...appData,
       };
     },
-    // 确定下架
-    async confirmOfflineApp(refName) {
+    // 确定下架/忽略
+    async handleConfirm(name, refName) {
+      const dispatchName = `deploy/${name}`;
       this.isPopoverLoading = true;
       try {
-        await this.$store.dispatch('deploy/offlineApp', {
+        await this.$store.dispatch(dispatchName, {
           appCode: this.curOperationAppData.code,
           moduleId: this.curOperationAppData.module_name,
           env: this.curOperationAppData.env_name,
@@ -284,23 +328,17 @@ export default {
         this.handleCancel(refName);
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('下架成功'),
+          message: name === 'offlineApp' ? this.$t('下架成功') : this.$t('忽略成功'),
         });
         this.getIdleAppList();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || e.message || this.$t('下架失败，请稍候再试'),
+          message: e.detail || e.message || (name === 'offlineApp' ? this.$t('下架失败，请稍候再试') : this.$t('忽略失败，请稍候再试')),
         });
       } finally {
         this.isPopoverLoading = false;
       }
-    },
-    // 滚动到记录位置
-    resetScrollPosition() {
-      this.$nextTick(() => {
-        window.scrollTo(0, this.scrollPosition);
-      });
     },
     // 应用详情
     toAppDetail(row) {

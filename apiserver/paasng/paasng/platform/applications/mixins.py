@@ -32,6 +32,11 @@ class ApplicationCodeInPathMixin:
     Provide a shortcut to get current application and do permission checks
     """
 
+    # TODO: consider print a warning message when subclasses doesn't set the `permission_classes`
+    # attribute or set a default value for the `permission_classes` instead.
+    #
+    # This can help us eliminate bugs related to permission checks.
+
     request: HttpRequest
     kwargs: Dict[str, Any]
     check_object_permissions: Callable
@@ -49,6 +54,9 @@ class ApplicationCodeInPathMixin:
         application = self.get_application_without_perm()
         if not hasattr(self, "check_object_permissions"):
             raise NotImplementedError("Only support the class which inherited from rest_framework.viewset")
+
+        # TODO: Consider printing a warning message or raise an exception if `self.permission_classes`
+        # doesn't contain a class associated with application permission checks.
         self.check_object_permissions(self.request, application)
         return application
 

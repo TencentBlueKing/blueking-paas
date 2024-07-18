@@ -84,7 +84,12 @@ class TestProcInstManager:
         new_status = {
             "status": {
                 "phase": "Running",
-                "containerStatuses": [make_container_status({"terminated": {"reason": "", "exitCode": 1}}, {})],
+                "containerStatuses": [
+                    make_container_status(
+                        {"terminated": {"reason": "", "exitCode": 1}},
+                        {"terminated": {"reason": "test exit", "exitCode": 137}},
+                    )
+                ],
             }
         }
         KPod(client).patch(
@@ -105,6 +110,8 @@ class TestProcInstManager:
         inst = instance_kmodel.list_by_process_type(wl_app, "web")[0]
         assert inst.state == "Failed"
         assert inst.rich_status == "Terminated"
+        assert inst.terminated_info["exit_code"] == 137
+        assert inst.terminated_info["reason"] == "test exit"
 
     def test_query_instances_without_process_id_label(self, client, wl_app, pod):
         # Delete `process_id` label to simulate resources created by legacy engine versions

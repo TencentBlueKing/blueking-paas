@@ -25,8 +25,13 @@ from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory
 from rest_framework.viewsets import ViewSet
 
-from paasng.utils.views import ERROR_CODE_NUM_HEADER, BkStandardApiJSONRenderer, HookChain, one_line_error
-from paasng.utils.views import permission_classes as _permission_classes
+from paasng.utils.views import (
+    ERROR_CODE_NUM_HEADER,
+    BkStandardApiJSONRenderer,
+    HookChain,
+    action_perms,
+    one_line_error,
+)
 
 
 @pytest.mark.parametrize(
@@ -109,8 +114,7 @@ class TestBkStandardApiJSONRenderer:
 
 
 def make_permission():
-    class Permission(BasePermission):
-        ...
+    class Permission(BasePermission): ...
 
     return Permission
 
@@ -120,17 +124,17 @@ def test_permission_classes():
     bar = make_permission()
     baz = make_permission()
 
-    @method_decorator(_permission_classes([]), name="action_c")
+    @method_decorator(action_perms([]), name="action_c")
     class TestViewSet(ViewSet):
         permission_classes = [baz]
 
-        @_permission_classes([foo])
+        @action_perms([foo])
         def action_a(self, request):
             assert self.permission_classes == [foo]
             assert type(self).permission_classes != self.permission_classes
             return Response()
 
-        @_permission_classes([bar], policy="merge")
+        @action_perms([bar], policy="extend")
         def action_b(self, request):
             assert self.permission_classes == [baz, bar]
             assert type(self).permission_classes != self.permission_classes

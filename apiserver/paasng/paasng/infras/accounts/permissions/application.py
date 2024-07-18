@@ -17,7 +17,7 @@
 
 import logging
 import time
-from typing import Union
+from typing import Type, Union
 
 from django.conf import settings
 from iam.exceptions import AuthAPIError
@@ -29,17 +29,23 @@ from paasng.infras.iam.permissions.resources.application import AppAction, Appli
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
+from paasng.utils.views import action_perms
 
 logger = logging.getLogger(__name__)
 
 
-def application_perm_class(action: AppAction):
-    """
-    构建 DRF 可用的应用权限类
+def app_action_required(action: AppAction, policy: str = "extend"):
+    """A decorator to require the user to have the specified application action permission,
+    must be used on viewset method.
 
-    注意：该权限类使用装饰器附加到 viewset 方法时，需要使用 paasng.utils.views.permission_classes 并指定 policy='merge'
-    原因是 self.get_application() 时, check_object_permissions 用的是 self.get_permissions，会使用类的权限类
-    而 drf 的装饰器只是修改 func.permission_classes，会导致鉴权失效
+    :param action: Application action type.
+    :param policy: How to combine the permission classes. Default is "extend".
+    """
+    return action_perms(permission_classes=[application_perm_class(action)], policy=policy)
+
+
+def application_perm_class(action: AppAction) -> Type[BasePermission]:
+    """构建 DRF 可用的应用权限类
 
     :param action: Application operation type.
     :return: Application permission class.

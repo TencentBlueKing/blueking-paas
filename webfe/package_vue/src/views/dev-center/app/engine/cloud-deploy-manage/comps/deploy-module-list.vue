@@ -223,12 +223,13 @@
   </div>
 </template>
 
-<script>import deployDetail from './deploy-detail';
+<script>
+import deployDetail from './deploy-detail';
 import deployPreview from './deploy-preview';
 import deployDialog from './deploy-dialog';
 import deployStatusDetail from './deploy-status-detail';
 import appBaseMixin from '@/mixins/app-base-mixin';
-import _ from 'lodash';
+import { cloneDeep } from 'lodash';
 import { bus } from '@/common/bus';
 
 export default {
@@ -258,7 +259,6 @@ export default {
         isLoading: false,
       },
       isShowDialog: false,
-      isAppOffline: false, // 是否下架
       isFirstDeploy: false,   // 是否是第一次部署
       listLoading: false,
       deploymentInfoData: [],    // 部署信息列表
@@ -287,6 +287,10 @@ export default {
     },
     disableModuleTitle() {
       return this.$t('是否下架 {n} 模块', { n: this.curModuleId });
+    },
+    // 普通应用app
+    isDefaultApp() {
+      return this.curAppInfo.application.type === 'default';
     },
   },
 
@@ -402,8 +406,10 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      if (this.intervalTimer || this.isShowSideslider
-      || this.isDialogShowSideslider) return;  // 如果已经有了timer则return 打开了侧边栏也不需要watch
+      // 避免切换切换应用时，普通应用请求当前list接口
+      if (this.isDefaultApp) return;
+      // 如果已经有了timer则return 打开了侧边栏也不需要watch
+      if (this.intervalTimer || this.isShowSideslider || this.isDialogShowSideslider) return;
       try {
         this.listLoading = listLoading;
         const res = await this.$store.dispatch('deploy/getModuleReleaseList', {
@@ -434,7 +440,7 @@ export default {
           rvInst: res.rv_inst,
           rvProc: res.rv_proc,
         };
-        this.deploymentInfoDataBackUp = _.cloneDeep(res.data);
+        this.deploymentInfoDataBackUp = cloneDeep(res.data);
         const hasOfflinedData = res.data.filter(e => e.state.offline.pending) || [];    // 有正在下架的数据
         const hasDeployData = res.data.filter(e => e.state.deployment.pending) || [];    // 有正在部署的数据
         this.isWatchOfflineing = !!(hasOfflinedData.length);   // 如果还存在下架中的数据，这说明还有模块在下架中

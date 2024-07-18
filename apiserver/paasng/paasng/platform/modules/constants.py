@@ -46,7 +46,7 @@ class SourceOrigin(int, StructuredEnum):
     SCENE = EnumField(5, "Scene")
     # 仅托管镜像的云原生应用
     CNATIVE_IMAGE = EnumField(6, "CNative Image")
-    # AI agent 工具应用
+    # AI agent 工具应用，使用蓝鲸 AI 平台提供的源码包部署
     AI_AGENT = EnumField(7, "AI Agent")
 
     @classmethod

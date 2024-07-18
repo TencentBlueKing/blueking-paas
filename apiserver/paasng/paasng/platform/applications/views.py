@@ -602,16 +602,20 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
     @transaction.atomic
-    @swagger_auto_schema(request_body=slzs.CreateAiAgentAppSLZ, tags=["ai-agent-app"])
+    @swagger_auto_schema(request_body=slzs.CreateAIAgentAppSLZ, tags=["ai-agent-app"])
     def create_ai_agent_app(self, request):
         """创建 AI Agent 插件应用"""
-        serializer = slzs.CreateAiAgentAppSLZ(data=request.data)
+        serializer = slzs.CreateAIAgentAppSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
         self.validate_region_perm(params["region"])
 
-        engine_params = params.get("engine_params", {})
-        source_origin = SourceOrigin(engine_params["source_origin"])
+        source_origin = SourceOrigin.AI_AGENT
+        engine_params = {
+            "source_origin": source_origin,
+            # TODO AI agent 还没有提供模板，目前是直接使用 Python 插件的模板
+            "source_init_template": "bk-saas-plugin-python",
+        }
         cluster_name = None
         return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
 

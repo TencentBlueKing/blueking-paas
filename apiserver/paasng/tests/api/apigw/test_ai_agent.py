@@ -42,7 +42,7 @@ def bk_app_name():
     return generate_random_string(8)
 
 
-class TestAiAgentViewSet:
+class TestAIAgentViewSet:
     """AI Agent 插件创建、上传源码包接口测试"""
 
     @pytest.fixture()

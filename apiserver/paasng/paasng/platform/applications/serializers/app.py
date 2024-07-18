@@ -76,7 +76,7 @@ class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):
         return data
 
 
-class CreateAiAgentAppSLZ(AppBasicInfoMixin):
+class CreateAIAgentAppSLZ(AppBasicInfoMixin):
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
         # 以下参数使用默认值，不需要传入
@@ -85,11 +85,6 @@ class CreateAiAgentAppSLZ(AppBasicInfoMixin):
         data["is_plugin_app"] = True
         data["type"] = ApplicationType.CLOUD_NATIVE.value
         data["engine_enabled"] = True
-        data["engine_params"] = {
-            "source_origin": SourceOrigin.AI_AGENT.value,
-            # TODO AI agent 还没有提供模板，目前是直接使用 Python 插件的模板
-            "source_init_template": "bk-saas-plugin-python",
-        }
         return data
 
 

@@ -162,7 +162,7 @@ class BkLessCodeSpecs(PackageMixin, SourceOriginSpecs):
     source_origin = SourceOrigin.BK_LESS_CODE
 
 
-class AiAgentSpecs(PackageMixin, SourceOriginSpecs):
+class AIAgentSpecs(PackageMixin, SourceOriginSpecs):
     """Specs for source_origin: AI_AGENT"""
 
     source_origin = SourceOrigin.AI_AGENT

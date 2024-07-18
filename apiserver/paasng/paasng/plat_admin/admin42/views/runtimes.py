@@ -69,6 +69,7 @@ class RuntimeAdminViewGenerator:
         class APIViewSet(ModelViewSet):
             serializer_class = self.serializer_class
             queryset = self.queryset.all()
+            permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
         return APIViewSet
 

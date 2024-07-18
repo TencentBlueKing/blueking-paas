@@ -24,17 +24,9 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "ExportToDjangoView",
     "ResourceAPIView",
     "PluginCallBackApiViewSet",
-    # FIXME: Should update the permission checking logic
-    "SlugBuilderAPIViewSet",
-    "AccessControlUserManageViewSet",
-    "AccessControlIpManageViewSet",
-    "ApplicationMigrationInfoAPIView",
-    # FIXME: bk_plugins permissions
-    "DistributorRelsViewSet",
-    "DistributorsViewSet",
-    "BkPluginTagsViewSet",
-    "SchemaViewSet",
     "PluginSelectionView",
+    # FIXME: Should update the permission checking logic
+    "ApplicationMigrationInfoAPIView",
     # APIs bound with current user/account context, such as creating new applications
     # TODO: This type of views should use a same base class so that we can easily
     # skip the insure checking for them.
@@ -42,10 +34,10 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "UserInfoViewSet",
     "AccountFeatureFlagViewSet",
     "ApplicationCreateViewSet",
-    "ApplicationViewSet.list_detailed",
-    "ApplicationViewSet.list_minimal",
-    "ApplicationViewSet.list_search",
-    "ApplicationViewSet.list_idle",
+    "ApplicationListViewSet.list_detailed",
+    "ApplicationListViewSet.list_minimal",
+    "ApplicationListViewSet.list_search",
+    "ApplicationListViewSet.list_idle",
     "UserVerificationGenerationView",
     "UserVerificationValidationView",
     "Oauth2BackendsViewSet",
@@ -68,11 +60,6 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "LegacyAppViewset",
     "MigrationCreateViewset",
     "MigrationConfirmViewset.confirm",
-    # TODO: Using `ApplicationCodeInPathMixin` to replace current permission checking approach
-    "ApplicationViewSet.retrieve",
-    "ApplicationViewSet.update",
-    "ApplicationViewSet.destroy",
-    "ApplicationViewSet.get_overview",
     # Non-sensitive APIs
     "FrontendFeatureViewSet.get_features",
     "ApplicationMembersViewSet.get_roles",
@@ -90,6 +77,9 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "RegionTemplateViewSet",
     "ChangelogViewSet",
     "ResQuotaPlanOptionsView",
+    "DistributorsViewSet",
+    "BkPluginTagsViewSet",
+    "SchemaViewSet",
     #
     # == Django views start
     #

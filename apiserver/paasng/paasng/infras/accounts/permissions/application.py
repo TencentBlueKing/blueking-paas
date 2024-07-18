@@ -40,9 +40,14 @@ def application_perm_class(action: AppAction):
     注意：该权限类使用装饰器附加到 viewset 方法时，需要使用 paasng.utils.views.permission_classes 并指定 policy='merge'
     原因是 self.get_application() 时, check_object_permissions 用的是 self.get_permissions，会使用类的权限类
     而 drf 的装饰器只是修改 func.permission_classes，会导致鉴权失效
+
+    :param action: Application operation type.
+    :return: Application permission class.
     """
 
-    class Permission(BasePermission):
+    class AppModulePermission(BasePermission):
+        """The permission class for application and module."""
+
         def has_object_permission(self, request, view, obj: Union[Application, Module]):
             """Check if the current request has permission to operate the object.
             If the object type is not supported, return `false`.
@@ -55,11 +60,11 @@ def application_perm_class(action: AppAction):
                 logger.error("Application permission checked on incorrect object, type: %s", type(obj))
                 return False
 
-    return Permission
+    return AppModulePermission
 
 
 def check_application_perm(user, application: Application, action: AppAction):
-    """检查指定用户是否对应用的某个操作具有权限"""
+    """检查指定用户是否对应用的某个操作具有权限。"""
     if not user_has_app_action_perm(user, application, action):
         raise PermissionDenied(
             {"message": "You are not allowed to do this operation.", **user_group_apply_url(application.code)}

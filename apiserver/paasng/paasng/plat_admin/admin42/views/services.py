@@ -17,6 +17,7 @@
 
 from django.db.transaction import atomic
 from django.http.response import Http404
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -45,7 +46,7 @@ from paasng.plat_admin.admin42.serializers.services import (
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 
@@ -80,7 +81,7 @@ class ApplicationServicesView(ApplicationDetailBaseView):
         return kwargs
 
 
-class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class ApplicationServicesManageViewSet(GenericViewSet):
     """应用增强服务管理-服务管理API"""
 
     schema = None
@@ -89,7 +90,8 @@ class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixi
 
     def list(self, request, code):
         service_instance_list = []
-        for module in self.get_application().modules.all():
+        application = get_object_or_404(Application, code=code)
+        for module in application.modules.all():
             for env in module.envs.all():
                 for rel in mixed_service_mgr.list_all_rels(engine_app=env.engine_app):
                     instance = None
@@ -109,8 +111,9 @@ class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixi
 
     @atomic
     def provision_instance(self, request, code, module_name, environment, service_id):
-        module = self.get_module_via_path()
-        env = self.get_env_via_path()
+        application = get_object_or_404(Application, code=code)
+        module = application.get_module(module_name)
+        env = module.envs.get(environment=environment)
         service = mixed_service_mgr.get_or_404(service_id, module.region)
 
         rel = next(mixed_service_mgr.list_unprovisioned_rels(env.engine_app, service=service), None)
@@ -122,7 +125,8 @@ class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixi
 
     @atomic
     def recycle_resource(self, request, code, module_name, service_id, instance_id):
-        module = self.get_module_via_path()
+        application = get_object_or_404(Application, code=code)
+        module = application.get_module(module_name)
         service = mixed_service_mgr.get_or_404(service_id, module.region)
 
         try:

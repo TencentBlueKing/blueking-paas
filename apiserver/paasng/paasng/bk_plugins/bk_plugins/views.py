@@ -227,6 +227,8 @@ class BkPluginTagsViewSet(viewsets.ViewSet):
 class DistributorRelsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Viewset for managing a single bk_plugin's distributor relations"""
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
     @swagger_auto_schema(tags=["bk_plugin"], responses={200: serializers.DistributorSLZ(many=True)})
     def list(self, request, code):
         """查看某个插件应用目前启用的“插件使用方”列表"""

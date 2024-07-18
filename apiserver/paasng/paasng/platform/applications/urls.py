@@ -49,6 +49,11 @@ urlpatterns = [
         name="api.applications.detail",
     ),
     url(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/overview/$",
+        views.ApplicationViewSet.as_view({"get": "get_overview"}),
+        name="api.applications.overview",
+    ),
+    url(
         r"^api/bkapps/applications/(?P<code>[^/]+)/logo/$",
         views.ApplicationLogoViewSet.as_view({"get": "retrieve", "put": "update"}),
         name="api.applications.logo",
@@ -60,28 +65,23 @@ urlpatterns = [
     ),
     url(
         r"^api/bkapps/applications/lists/detailed$",
-        views.ApplicationViewSet.as_view({"get": "list_detailed"}),
+        views.ApplicationListViewSet.as_view({"get": "list_detailed"}),
         name="api.applications.lists.detailed",
     ),
     url(
         r"^api/bkapps/applications/lists/minimal$",
-        views.ApplicationViewSet.as_view({"get": "list_minimal"}),
+        views.ApplicationListViewSet.as_view({"get": "list_minimal"}),
         name="api.applications.lists.minimal",
     ),
     url(
         r"^api/bkapps/applications/lists/search$",
-        views.ApplicationViewSet.as_view({"get": "list_search"}),
+        views.ApplicationListViewSet.as_view({"get": "list_search"}),
         name="api.applications.lists.search",
     ),
     url(
         r"^api/bkapps/applications/lists/idle/$",
-        views.ApplicationViewSet.as_view({"get": "list_idle"}),
+        views.ApplicationListViewSet.as_view({"get": "list_idle"}),
         name="api.applications.lists.idle",
-    ),
-    url(
-        r"^api/bkapps/applications/(?P<code>[^/]+)/overview/$",
-        views.ApplicationViewSet.as_view({"get": "get_overview"}),
-        name="api.applications.overview",
     ),
     url(
         r"^api/bkapps/applications/(?P<code>[^/]+)/members/$",

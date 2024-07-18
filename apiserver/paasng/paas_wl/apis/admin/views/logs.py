@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -23,10 +24,10 @@ from rest_framework.viewsets import ViewSet
 
 from paas_wl.apis.admin.serializers.logs import ModuleEnvLogsConfigSLZ
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 
 
-class AppLogConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
+class AppLogConfigViewSet(ViewSet):
     """管理应用日志采集配置的 ViewSet"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -37,7 +38,7 @@ class AppLogConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
 
         结果默认按（“模块名”、“环境”）排序
         """
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
         data = []
         for module in application.modules.all():
             for env in module.get_envs():
@@ -60,7 +61,7 @@ class AppLogConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         module = application.get_module(data["module_name"])
         env = module.get_envs(data["environment"])
         wl_app = env.wl_app

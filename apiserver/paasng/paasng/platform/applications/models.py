@@ -349,7 +349,7 @@ class Application(OwnerTimestampedModel):
         """获取 Application 对应的源码 Repo 对象"""
         return self.get_default_module().get_source_obj()
 
-    def get_engine_app(self, environment, module_name=None):
+    def get_engine_app(self, environment: str, module_name=None):
         """Get the engine app of current application"""
         module = self.get_module(module_name=module_name)
         engine_app = module.get_envs(environment=environment).engine_app

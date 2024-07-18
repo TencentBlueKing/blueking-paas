@@ -53,7 +53,7 @@ from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
-from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.permissions.user import user_can_create_in_region
@@ -135,8 +135,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class ApplicationViewSet(viewsets.ViewSet):
-    """View class for applications"""
+class ApplicationListViewSet(viewsets.ViewSet):
+    """View class for application lists."""
 
     @swagger_auto_schema(query_serializer=slzs.ApplicationListDetailedSLZ)
     def list_detailed(self, request):
@@ -240,29 +240,6 @@ class ApplicationViewSet(viewsets.ViewSet):
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
         return Response({"count": len(results), "results": serializer.data})
 
-    def retrieve(self, request, code):
-        """获取单个应用的信息"""
-        application = get_object_or_404(Application, code=code)
-        check_application_perm(request.user, application, AppAction.VIEW_BASIC_INFO)
-
-        main_role = fetch_user_main_role(code, request.user.username)
-        product = application.get_product()
-
-        web_config = application.config_info
-        # We may not reuse this structure, so I will not make it a serializer
-        return Response(
-            {
-                "role": slzs.RoleField().to_representation(main_role),
-                "application": slzs.ApplicationSLZ(application).data,
-                "product": slzs.ProductSLZ(product).data if product else None,
-                "marked": UserMarkedApplication.objects.filter(
-                    application=application, owner=request.user.pk
-                ).exists(),
-                "web_config": web_config,
-                "migration_status": get_migration_process_status(application),
-            }
-        )
-
     @swagger_auto_schema(query_serializer=slzs.SearchApplicationSLZ)
     def list_search(self, request):
         """
@@ -362,15 +339,40 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         return slzs.IdleModuleEnvSLZ(idle_module_envs, many=True).data
 
+
+class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """View class for a single application."""
+
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    def retrieve(self, request, code):
+        """获取单个应用的信息"""
+        application = self.get_application()
+
+        main_role = fetch_user_main_role(code, request.user.username)
+        product = application.get_product()
+
+        web_config = application.config_info
+        # We may not reuse this structure, so I will not make it a serializer
+        return Response(
+            {
+                "role": slzs.RoleField().to_representation(main_role),
+                "application": slzs.ApplicationSLZ(application).data,
+                "product": slzs.ProductSLZ(product).data if product else None,
+                "marked": UserMarkedApplication.objects.filter(
+                    application=application, owner=request.user.pk
+                ).exists(),
+                "web_config": web_config,
+                "migration_status": get_migration_process_status(application),
+            }
+        )
+
+    @perm_classes([application_perm_class(AppAction.DELETE_APPLICATION)], policy="merge")
     def destroy(self, request, code):
-        """
-        删除蓝鲸应用
+        """删除蓝鲸应用
 
         - [测试地址](/api/bkapps/applications/{code}/)
         """
-        # TODO can create get_application func and refactor all the permissions logic in ApplicationViewset
-        application = get_object_or_404(Application, code=code)
-        check_application_perm(self.request.user, application, AppAction.DELETE_APPLICATION)
+        application = self.get_application()
 
         market_config, _created = MarketConfig.objects.get_or_create_by_app(application)
         if market_config.enabled:
@@ -412,6 +414,8 @@ class ApplicationViewSet(viewsets.ViewSet):
             logger.exception(f"unable to delete application {application.code}")
             raise error_codes.CANNOT_DELETE_APP.f(str(e))
 
+    # 编辑应用名称的权限：管理员、运营
+    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy="merge")
     @transaction.atomic
     def update(self, request, code):
         """
@@ -420,9 +424,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         - param: name, string, 应用名称
         - param: logo, file, 应用LOGO，不传则不更新
         """
-        application = get_object_or_404(Application, code=code)
-        # 编辑应用名称的权限：管理员、运营
-        check_application_perm(self.request.user, application, AppAction.EDIT_BASIC_INFO)
+        application = self.get_application()
         # Check if app was protected
         raise_if_protected(application, ProtectedRes.BASIC_INFO_MODIFICATIONS)
 
@@ -448,17 +450,12 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         return Response(serializer.data)
 
-    def check_manage_permissions(self, request, application):
-        check_application_perm(request.user, application, AppAction.BASIC_DEVELOP)
-
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
     @swagger_auto_schema(tags=["普通应用概览数据"])
     def get_overview(self, request, code):
         """普通应用、云原生应用概览页面数据"""
-        application = get_object_or_404(Application, code=code)
-        check_application_perm(request.user, application, AppAction.VIEW_BASIC_INFO)
-
+        application = self.get_application()
         data = get_app_overview(application)
-
         return Response(data)
 
 

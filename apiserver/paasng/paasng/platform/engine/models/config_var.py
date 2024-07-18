@@ -14,8 +14,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from typing import TYPE_CHECKING, Dict
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
@@ -126,5 +126,20 @@ class ConfigVar(TimestampedModel):
         )
 
 
-def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, str]:
+def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, Any]:
     return {f"{prefix}{key}": value for key, value in items.items()}
+
+
+@dataclass
+class BuiltInEnvVarDetail:
+    key: str
+    value: str
+    description: Optional[str]
+    prefix: str = field(default="")
+
+    def __post_init__(self):
+        if self.prefix:
+            self.key = f"{self.prefix}{self.key}"
+
+    def to_dict(self):
+        return {self.key: {"value": self.value, "description": self.description}}

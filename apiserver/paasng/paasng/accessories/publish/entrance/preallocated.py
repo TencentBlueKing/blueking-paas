@@ -28,7 +28,7 @@ from paasng.accessories.publish.entrance.domains import get_preallocated_domain,
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName, AppRunTimeBuiltinEnv
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_clusters
 
@@ -102,7 +102,7 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
         addrs_value = json.dumps(addrs._asdict())
     except ValueError:
         logger.warning("Fail to get preallocated address for application: %s, module: %s", application, env.module)
-    return {settings.CONFIGVAR_SYSTEM_PREFIX + "DEFAULT_PREALLOCATED_URLS": addrs_value}
+    return {settings.CONFIGVAR_SYSTEM_PREFIX + AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value: addrs_value}
 
 
 class PreAddresses(NamedTuple):

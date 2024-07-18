@@ -11,13 +11,21 @@
       ]"
       @click="handleItemClick(item, index + 1)"
     >
-      <div class="icon">{{ item.icon }}</div>
+      <span
+        v-if="item.icon < maxConversionCount"
+        class="numeric-symbols">
+        {{ CIRCLED_NUMBERS[item.icon - 1] }}
+      </span>
+      <div class="icon" v-else>
+        <span>{{ item.icon }}</span>
+      </div>
       <span>{{ item.name }}</span>
     </li>
   </ul>
 </template>
 
 <script>
+import { CIRCLED_NUMBERS } from '@/common/constants';
 export default {
   name: 'VersionSteps',
   props: {
@@ -33,6 +41,12 @@ export default {
       type: Boolean,
       default: false,
     },
+  },
+  data() {
+    return {
+      CIRCLED_NUMBERS,
+      maxConversionCount: 20,
+    };
   },
   methods: {
     handleItemClick(item, index) {
@@ -109,12 +123,19 @@ export default {
       }
     }
 
+    .numeric-symbols {
+      margin-right: 5px;
+      font-size: 12px;
+    }
+
     .icon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
       margin-right: 5px;
       font-size: 10px;
       width: 12px;
       height: 12px;
-      line-height: 12px;
       border-radius: 50%;
       text-align: center;
       color: #979BA5;
@@ -126,6 +147,9 @@ export default {
       .icon {
         color: #fff;
         border: 1px solid #fff;
+      }
+      .numeric-symbols {
+        color: #fff;
       }
     }
   }

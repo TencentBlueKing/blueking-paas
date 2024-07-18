@@ -70,6 +70,7 @@ urlpatterns = [
     url(r"^", include("paasng.misc.monitoring.monitor.urls")),
     url(r"^", include("paasng.plat_admin.system.urls")),
     url(r"^", include("paasng.platform.bk_lesscode.urls")),
+    url(r"^", include("paasng.platform.evaluation.urls")),
     url(r"^", include("paasng.bk_plugins.pluginscenter.urls")),
     url(r"^", include("paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.urls")),
     url(r"^", include("paasng.accessories.app_secret.urls")),

@@ -16,6 +16,7 @@
               v-model="moduleValue"
               style="width: 150px;"
               :clearable="false"
+              @change="getDeployHistory(1)"
             >
               <bk-option
                 v-for="option in curAppModuleList"
@@ -34,20 +35,9 @@
               v-model="personnelSelectorList"
               style="width: 350px;"
               :placeholder="$t('请输入')"
-              :max-data="1"
+              :multiple="false"
+              @change="getDeployHistory(1)"
             />
-          </bk-form-item>
-          <bk-form-item
-            label=""
-            style="vertical-align: top;"
-          >
-            <bk-button
-              theme="primary"
-              type="button"
-              @click.stop.prevent="getDeployHistory(1)"
-            >
-              {{ $t('查询') }}
-            </bk-button>
           </bk-form-item>
         </bk-form>
       </section>

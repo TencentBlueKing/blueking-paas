@@ -15,12 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.application import app_view_actions_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.utils import batch_save_protections
@@ -33,13 +34,15 @@ from .models import EnvRoleProtection
 class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
     queryset = EnvRoleProtection.objects.all()
     serializer_class = serializers.EnvRoleProtectionSLZ
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_ENV_PROTECTION)]
-
-    def get_permissions(self):
-        if self.action in ["list"]:
-            return [IsAuthenticated()]
-        else:
-            return [permission() for permission in self.permission_classes]
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "list": AppAction.VIEW_BASIC_INFO,
+            },
+            default_action=AppAction.MANAGE_ENV_PROTECTION,
+        ),
+    ]
 
     def get_envs(self, module_name, env):
         application = self.get_application()

@@ -113,9 +113,9 @@ def submit_visible_range_ticket(
     callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
 
     visible_range_fields = [
-        {"key": "bkci_project", "value": bkci_project},
+        {"key": "bkci_project", "value": _get_bkci_project_display_name(bkci_project)},
         {"key": "organization", "value": _get_organization_display_name(organization)},
-        {"key": "current_bkci_project", "value": visible_range_obj.bkci_project},
+        {"key": "current_bkci_project", "value": _get_bkci_project_display_name(visible_range_obj.bkci_project)},
         {"key": "current_organization", "value": _get_organization_display_name(visible_range_obj.organization)},
     ]
 
@@ -220,9 +220,16 @@ def _get_advanced_fields(
     return fields
 
 
-def _get_organization_display_name(organization) -> str:
+def _get_organization_display_name(organization: Optional[List[dict]]) -> str:
     if not organization:
-        return ""
+        return "--"
 
     organization_names = [r["name"] for r in organization]
     return ";".join(organization_names)
+
+
+def _get_bkci_project_display_name(bkci_project: Optional[List[str]]) -> str:
+    if not bkci_project:
+        return "--"
+
+    return ";".join(bkci_project)

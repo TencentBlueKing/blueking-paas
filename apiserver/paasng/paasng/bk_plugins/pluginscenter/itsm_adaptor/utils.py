@@ -113,6 +113,9 @@ def submit_visible_range_ticket(
     callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
 
     visible_range_fields = [
+        # 原始数据用户审批成功后回调后更新 DB 的可见范围
+        {"key": "origin_bkci_project", "value": bkci_project},
+        {"key": "origin_organization", "value": organization},
         {"key": "bkci_project", "value": _get_bkci_project_display_name(bkci_project)},
         {"key": "organization", "value": _get_organization_display_name(organization)},
         {"key": "current_bkci_project", "value": _get_bkci_project_display_name(visible_range_obj.bkci_project)},

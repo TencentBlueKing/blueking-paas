@@ -18,7 +18,7 @@
 import functools
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 from blue_krill.web.drf_utils import stringify_validation_error
 from blue_krill.web.std_error import APIError
@@ -27,6 +27,7 @@ from django.utils.translation import gettext as _
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
 from rest_framework.negotiation import BaseContentNegotiation
+from rest_framework.permissions import BasePermission
 from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import exception_handler, set_rollback
@@ -241,25 +242,39 @@ def unwrap_partial(func):
     return func
 
 
-def permission_classes(permission_classes, policy: str = "replace"):
-    """A decorator that gives support for having action-based permission_classes
+def action_perms(permission_classes: List[Type[BasePermission]], policy: str = "replace"):
+    """A decorator that support action level permission_classes for ViewSet.
 
-    usage:
+    :param permission_classes: A list of permission classes.
+    :param policy: The policy for setting the permission_classes, default is "replace".
+        Can be "replace" or "extend".
+
+    ### Why we need this?
+
+    DRF provides 2 ways to set permission_classes at method level: `@action' and
+    `@permission_classes`. But they don't work in our case because `@action' must be
+    used with the with DRF's `Router` object and `@permission_classes` is only for
+    function-based views and should be used with `@api_view`.
+
+    Our project uses ViewSet standalone without `Router`, so we need another way to
+    set the permission_classes at method level. This decorator solves this problem by
+    dynamically setting the permission_classes attribute dynamically when the method
+    is invoked.
+
+    ### Examples
+
     from django.utils.decorators import method_decorator
-    _permission_classes = <this decorator>
+    action_perms = <this decorator>
 
-    @method_decorator(
-        _permission_classes([]),
-        name="action_c"
-    )
+    @method_decorator(action_perms([]), name="action_c")
     class ViewSet:
         permission_classes = [Baz]
 
-        @_permission_classes([Foo])
+        @action_perms([Foo])
         def action_a(self, request):
             assert self.permission_classes == [Foo]
 
-        @_permission_classes([Bar], policy="merge")
+        @action_perms([Bar], policy="extend")
         def action_b(self, request):
             assert self.permission_classes == [Bar, Baz]
 
@@ -273,7 +288,8 @@ def permission_classes(permission_classes, policy: str = "replace"):
 
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
-            # try to unwrap partial from method_decorator
+            # Try to unwrap partial from method_decorator and get the current class
+            # instance object "self".
             bound_method = unwrap_partial(func)
             if hasattr(bound_method, "__self__"):
                 # when use permission_classes with django method_decorator, we can only get self from bound_method
@@ -281,10 +297,15 @@ def permission_classes(permission_classes, policy: str = "replace"):
             else:
                 # when use permission_classes as a normal decorator, we can only get self from args[0]
                 self = args[0]
-            if policy == "merge":
+
+            # Update the permission_classes attribute based on the policy
+            if policy == "extend":
+                # Use list extend to create a new list to avoid modifying the original list
                 self.permission_classes = getattr(self, "permission_classes", []) + permission_classes
-            else:
+            elif policy == "replace":
                 self.permission_classes = permission_classes
+            else:
+                raise ValueError(f"Unknown policy: {policy}")
             return func(*args, **kwargs)
 
         return wrapped

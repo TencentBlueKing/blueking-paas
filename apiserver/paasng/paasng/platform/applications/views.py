@@ -53,7 +53,7 @@ from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
-from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.permissions.user import user_can_create_in_region
@@ -123,7 +123,6 @@ from paasng.platform.templates.models import Template
 from paasng.utils import dictx
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
-from paasng.utils.views import permission_classes as perm_classes
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
@@ -343,7 +342,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """View class for a single application."""
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def retrieve(self, request, code):
         """获取单个应用的信息"""
         application = self.get_application()
@@ -366,7 +365,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             }
         )
 
-    @perm_classes([application_perm_class(AppAction.DELETE_APPLICATION)], policy="merge")
+    @app_action_required(AppAction.DELETE_APPLICATION)
     def destroy(self, request, code):
         """删除蓝鲸应用
 
@@ -415,7 +414,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DELETE_APP.f(str(e))
 
     # 编辑应用名称的权限：管理员、运营
-    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.EDIT_BASIC_INFO)
     @transaction.atomic
     def update(self, request, code):
         """
@@ -450,7 +449,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     @swagger_auto_schema(tags=["普通应用概览数据"])
     def get_overview(self, request, code):
         """普通应用、云原生应用概览页面数据"""
@@ -821,13 +820,13 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     pagination_class = None
     permission_classes = [IsAuthenticated]
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list(self, request, **kwargs):
         """Always add 'result' key in response"""
         members = fetch_application_members(self.get_application().code)
         return Response({"results": ApplicationMemberSLZ(members, many=True).data})
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy="merge")
+    @app_action_required(AppAction.MANAGE_MEMBERS)
     def create(self, request, **kwargs):
         application = self.get_application()
 
@@ -849,7 +848,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         sync_developers_to_sentry.delay(application.id)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy="merge")
+    @app_action_required(AppAction.MANAGE_MEMBERS)
     def update(self, request, *args, **kwargs):
         application = self.get_application()
 
@@ -868,7 +867,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
 
@@ -885,7 +884,7 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy="merge")
+    @app_action_required(AppAction.MANAGE_MEMBERS)
     def destroy(self, request, *args, **kwargs):
         application = self.get_application()
 
@@ -1074,13 +1073,13 @@ class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(tags=["特性标记"])
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list(self, request, code):
         application = self.get_application()
         return Response(application.feature_flag.get_application_features())
 
     @swagger_auto_schema(tags=["特性标记"])
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list_with_env(self, request, code, module_name, environment):
         """根据应用部署环境获取 FeatureFlag 信息，适用于需要区分环境的场景"""
         cluster = get_cluster_by_app(self.get_wl_app_via_path())
@@ -1088,7 +1087,7 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
         return Response(response_data)
 
     @swagger_auto_schema(tags=["特性标记"])
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
+    @app_action_required(AppAction.BASIC_DEVELOP)
     def switch_app_desc_flag(self, request, code):
         application = self.get_application()
         flag = AppFeatureFlag.APPLICATION_DESCRIPTION
@@ -1362,13 +1361,13 @@ class ApplicationLogoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     serializer_class = slzs.ApplicationLogoSLZ
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def retrieve(self, request, code):
         """查看应用 Logo 相关信息"""
         serializer = slzs.ApplicationLogoSLZ(instance=self.get_application())
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.EDIT_BASIC_INFO)
     def update(self, request, code):
         """修改应用 Logo"""
         application = self.get_application()

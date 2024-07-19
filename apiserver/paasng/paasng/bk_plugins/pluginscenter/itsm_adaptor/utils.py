@@ -171,6 +171,10 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
             "value": pd.name,
         },
         {
+            "key": "plugin_id",
+            "value": plugin.id,
+        },
+        {
             "key": "plugin_name",
             "value": plugin.name,
         },

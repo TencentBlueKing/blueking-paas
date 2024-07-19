@@ -1190,6 +1190,11 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
         plugin_action_permission_class([Actions.EDIT_PLUGIN]),
     ]
 
+    def retrieve(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        visible_range_obj = get_object_or_404(PluginVisibleRange, plugin=plugin)
+        return Response(data=self.get_serializer(visible_range_obj).data)
+
     @atomic
     @swagger_auto_schema(request_body=serializers.PluginVisibleRangeUpdateSLZ)
     def update(self, request, pd_id, plugin_id):

@@ -104,7 +104,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 	}
 	annotations := map[string]string{
 		paasv1alpha2.DeployIDAnnoKey:                  deployID,
-		paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: string(bkAppJson),
+		paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: bkAppJson,
 	}
 
 	deployment := &appsv1.Deployment{

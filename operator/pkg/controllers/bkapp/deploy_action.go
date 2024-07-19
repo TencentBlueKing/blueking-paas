@@ -77,9 +77,8 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	// If this is not the initial deploy action, check if there is any preceding running hooks,
 	// wait for these hooks by return an error to delay for another reconcile cycle.
 	//
-	// TODO: Should we remove this logic and allow every new deploy action to start even the
-	// hook triggered by older deploy is not finished yet?
-	if bkapp.Status.DeployId != "" {
+	// If hook already turned off, validateNoRunningHooks will not execute (disregarding previous hooks).
+	if bkapp.Spec.Hooks != nil && bkapp.Status.DeployId != "" {
 		if err = r.validateNoRunningHooks(ctx, bkapp); err != nil {
 			return r.Result.WithError(err)
 		}

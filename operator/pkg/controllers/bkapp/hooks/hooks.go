@@ -65,7 +65,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 
 	log.V(1).Info("handling pre-release-hook reconciliation")
 	if current.Pod != nil {
-		if err := r.UpdateStatus(ctx, bkapp, current, hookres.HookExecuteTimeoutThreshold); err != nil {
+		if err := r.UpdateStatus(bkapp, current, hookres.HookExecuteTimeoutThreshold); err != nil {
 			return r.Result.WithError(err)
 		}
 
@@ -87,7 +87,6 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 			return r.Result.End()
 		case current.Progressing():
 			// 当 Hook 执行成功或失败时会由 owned pod 触发新的调和循环, 因此只需要通过 Requeue 处理超时事件即可
-
 			return r.Result.Requeue(hookres.HookExecuteTimeoutThreshold)
 		case current.Succeeded():
 			return r.Result
@@ -139,11 +138,18 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 // 获取应用当前在集群中的状态
 func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha2.BkApp) hookres.HookInstance {
 	pod := corev1.Pod{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
-	if err != nil {
+	key := types.NamespacedName{Namespace: bkapp.Namespace, Name: names.PreReleaseHook(bkapp)}
+	if err := r.Client.Get(ctx, key, &pod); err != nil {
 		return hookres.HookInstance{
-			Pod:    nil,
-			Status: nil,
+			Pod: nil,
+			Status: &paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Started:   lo.ToPtr(false),
+				StartTime: nil,
+				Phase:     paasv1alpha2.HealthUnknown,
+				Reason:    "Failed",
+				Message:   "PreReleaseHook not found, consider it is failed",
+			},
 		}
 	}
 
@@ -213,7 +219,6 @@ func (r *HookReconciler) ExecuteHook(
 
 // UpdateStatus will update bkapp hook status from the given instance status
 func (r *HookReconciler) UpdateStatus(
-	ctx context.Context,
 	bkapp *paasv1alpha2.BkApp,
 	instance hookres.HookInstance,
 	timeoutThreshold time.Duration,
@@ -226,6 +231,19 @@ func (r *HookReconciler) UpdateStatus(
 		observedGeneration = hookCond.ObservedGeneration
 	} else {
 		observedGeneration = bkapp.Generation
+	}
+
+	// 若 Hook Pod 不存在，则应该判定 Hook 执行失败
+	if instance.Pod == nil {
+		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
+			Type:               paasv1alpha2.HooksFinished,
+			Status:             metav1.ConditionFalse,
+			Reason:             instance.Status.Reason,
+			Message:            instance.Status.Message,
+			ObservedGeneration: observedGeneration,
+		})
+		r.updateAppProgressingStatus(bkapp, metav1.ConditionFalse)
+		return nil
 	}
 
 	switch {
@@ -325,11 +343,7 @@ func CheckAndUpdatePreReleaseHookStatus(
 	r := NewHookReconciler(cli)
 	instance := r.getCurrentState(ctx, bkapp)
 
-	if instance.Pod == nil {
-		return false, errors.New("pre-release-hook not found")
-	}
-
-	if err = r.UpdateStatus(ctx, bkapp, instance, timeout); err != nil {
+	if err = r.UpdateStatus(bkapp, instance, timeout); err != nil {
 		return false, err
 	}
 

@@ -34,6 +34,12 @@ from paasng.utils.views import action_perms
 logger = logging.getLogger(__name__)
 
 
+class BaseAppPermission(BasePermission):
+    """The base class for application permission. It doesn't provide any functionality
+    yet but it can be useful for other modules to check the permission type.
+    """
+
+
 def app_action_required(action: AppAction, policy: str = "extend"):
     """A decorator to require the user to have the specified application action permission,
     must be used on viewset method.
@@ -51,7 +57,7 @@ def application_perm_class(action: AppAction) -> Type[BasePermission]:
     :return: Application permission class.
     """
 
-    class AppModulePermission(BasePermission):
+    class AppModulePermission(BaseAppPermission):
         """The permission class for application and module."""
 
         def has_object_permission(self, request, view, obj: Union[Application, Module]):

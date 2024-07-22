@@ -113,7 +113,7 @@ def submit_visible_range_ticket(
     callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
 
     visible_range_fields = [
-        # 原始数据用户审批成功后回调后更新 DB 的可见范围
+        # 需要单独存储原始数据，用户审批成功后回调后用于更新 DB 的可见范围
         {"key": "origin_bkci_project", "value": bkci_project},
         {"key": "origin_organization", "value": organization},
         {"key": "bkci_project", "value": _get_bkci_project_display_name(bkci_project)},
@@ -224,6 +224,10 @@ def _get_advanced_fields(
 
 
 def _get_organization_display_name(organization: Optional[List[dict]]) -> str:
+    """
+    Display only the organization names, separated by semicolons if there are multiple.
+    Show a placeholder if empty (ITSM does not allow empty data).
+    """
     if not organization:
         return "--"
 
@@ -232,6 +236,10 @@ def _get_organization_display_name(organization: Optional[List[dict]]) -> str:
 
 
 def _get_bkci_project_display_name(bkci_project: Optional[List[str]]) -> str:
+    """
+    Multiple projects separated by semicolons.
+    Show a placeholder if empty (ITSM does not allow passing empty data).
+    """
     if not bkci_project:
         return "--"
 

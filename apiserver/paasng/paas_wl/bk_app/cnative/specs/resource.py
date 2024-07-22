@@ -108,14 +108,14 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         # 创建或更新 BkApp
         bkapp = create_or_update_bkapp_with_retries(client, env, manifest)
 
-    sync_networking(env, bkapp)
+    sync_networking(env, BkAppResource(**bkapp))
     return bkapp.to_dict()
 
 
-def sync_networking(env: ModuleEnvironment, model_res: BkAppResource) -> None:
+def sync_networking(env: ModuleEnvironment, res: BkAppResource) -> None:
     """Sync the networking related resources for env, such as Ingress etc."""
 
-    if _need_deploy_networking(model_res):
+    if _need_deploy_networking(res):
         deploy_networking(env)
     else:
         delete_networking(env)
@@ -209,17 +209,17 @@ class MresConditionParser:
         return None
 
 
-def _need_deploy_networking(model_res: BkAppResource) -> bool:
+def _need_deploy_networking(res: BkAppResource) -> bool:
     """
     _need_deploy_networking checks if networking needs to be deployed based on the given BkAppResource.
     """
-    val = model_res.metadata.annotations.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY)
+    val = res.metadata.annotations.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY)
     # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: false 时, 表示版本低于 specVersion: 3, 因此向后兼容, 需要部署网络
     if val == "false":
         return True
 
     # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要部署网络
-    for proc in model_res.spec.processes:
+    for proc in res.spec.processes:
         for svc in proc.services or []:
             if svc.exposedType and svc.exposedType.name == ExposedTypeName.BK_HTTP:
                 return True

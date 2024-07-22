@@ -31,3 +31,33 @@ class ConfigVarSLZ(BaseConfigVarSLZ):
         required=True,
         error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
     )
+
+
+class DefaultConfigVarCreateInputSLZ(serializers.Serializer):
+    key = serializers.RegexField(
+        RE_CONFIG_VAR_KEY,
+        max_length=1024,
+        required=True,
+        error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
+    )
+    value = serializers.CharField(required=True)
+    description = serializers.CharField(
+        allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
+    )
+
+
+class DefaultConfigVarUpdateInputSLZ(DefaultConfigVarCreateInputSLZ):
+    pass
+
+
+class DefaultConfigVarListOutputSLZ(serializers.Serializer):
+    id = serializers.IntegerField()
+    key = serializers.CharField()
+    value = serializers.CharField()
+    description = serializers.CharField(allow_blank=True)
+    updated_at = serializers.DateTimeField()
+    updater = serializers.CharField()
+
+
+class DefaultConfigVarCreateOutputSLZ(serializers.Serializer):
+    id = serializers.IntegerField()

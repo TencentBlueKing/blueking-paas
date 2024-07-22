@@ -143,3 +143,20 @@ class BuiltInEnvVarDetail:
 
     def to_dict(self):
         return {self.key: {"value": self.value, "description": self.description}}
+
+
+class DefaultConfigVar(models.Model):
+    """Default config vars for global, can be added or edited in admin42."""
+
+    key = models.CharField(verbose_name="环境变量名", max_length=128, null=False)
+    value = models.TextField(verbose_name="环境变量值", null=False)
+    description = models.CharField(verbose_name="描述", max_length=200, null=True)
+
+    updater = models.CharField(verbose_name="更新者", max_length=128, null=True)
+    updated_at = models.DateTimeField(verbose_name="更新时间", auto_now=True)
+
+    class Meta:
+        unique_together = ("key",)
+
+    def __str__(self):
+        return "{var_name}-{var_value}".format(var_name=self.key, var_value=self.value)

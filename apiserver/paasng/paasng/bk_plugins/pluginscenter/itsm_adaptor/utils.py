@@ -36,6 +36,10 @@ if typing.TYPE_CHECKING:
     from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
 
 
+# ITSM 提单字段中必填字段的占位符
+ITSM_FIELD_PLACEHOLDER = "--"
+
+
 def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, operator: str):
     """提交创建申请单据"""
     basic_fields = _get_basic_fields(pd, plugin)
@@ -229,7 +233,7 @@ def _get_organization_display_name(organization: Optional[List[dict]]) -> str:
     Show a placeholder if empty (ITSM does not allow empty data).
     """
     if not organization:
-        return "--"
+        return ITSM_FIELD_PLACEHOLDER
 
     organization_names = [r["name"] for r in organization]
     return ";".join(organization_names)
@@ -241,6 +245,6 @@ def _get_bkci_project_display_name(bkci_project: Optional[List[str]]) -> str:
     Show a placeholder if empty (ITSM does not allow passing empty data).
     """
     if not bkci_project:
-        return "--"
+        return ITSM_FIELD_PLACEHOLDER
 
     return ";".join(bkci_project)

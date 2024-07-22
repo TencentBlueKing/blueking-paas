@@ -185,7 +185,7 @@ class SysAddonsAPIViewSet(viewsets.ViewSet):
         """分配增强服务实例"""
         application = get_object_or_404(Application, code=code)
         module = application.get_module(module_name)
-        engine_app = module.envs.get(environment=environment).wl_app
+        engine_app = application.get_engine_app(environment, module_name=module_name)
 
         try:
             svc = mixed_service_mgr.find_by_name(name=service_name, region=application.region)

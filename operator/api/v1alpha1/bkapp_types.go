@@ -149,7 +149,7 @@ type Process struct {
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
 
-	// Services is the list of services for the process
+	// Services is a list of ProcService which used to expose process network for access within or outside the cluster.
 	// +optional
 	Services []paasv1alpha2.ProcService `json:"services,omitempty"`
 

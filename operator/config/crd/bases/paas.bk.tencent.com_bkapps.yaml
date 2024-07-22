@@ -785,7 +785,8 @@ spec:
                         how much resources current process can consume.
                       type: string
                     services:
-                      description: Services is the list of services for the process
+                      description: Services is a list of ProcService which used to
+                        expose process network for access within or outside the cluster.
                       items:
                         description: ProcService is a process service which used to
                           expose network

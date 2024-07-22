@@ -14,10 +14,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from pydantic import ValidationError as PDValidationError
 from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
+from paas_wl.utils.basic import to_error_string
 from paas_wl.workloads.networking.constants import ExposedTypeName, NetworkProtocol
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
@@ -332,3 +334,13 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     envOverlay = EnvOverlayInputSLZ(required=False)
     svcDiscovery = ServiceDiscoveryInputSLZ(required=False)
     domainResolution = DomainResolutionInputSLZ(required=False)
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        try:
+            bk_app.BkAppSpec(processes=data["processes"])
+        except PDValidationError as e:
+            raise serializers.ValidationError(to_error_string(e))
+
+        return data

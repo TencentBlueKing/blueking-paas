@@ -61,6 +61,8 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
         if probes := process.probes:
             defaults["probes"] = probes.to_snake_case() if probes else None
 
+        defaults["services"] = [s.to_snake_case() for s in process.services] if process.services else None
+
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
         ret.incr_by_created_flag(created)
         # Move out from the index

@@ -19,8 +19,8 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
-from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.engine.models.deployment import AutoscalingConfig
+from paasng.platform.engine.constants import ExposedTypeName, RuntimeType
+from paasng.platform.engine.models.deployment import AutoscalingConfig, ExposedType, ProcService
 from paasng.platform.modules.models import BuildConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -68,11 +68,13 @@ class TestModuleProcessSpecViewSet:
             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
             "policy": "default",
         }
+        assert proc_specs[0]["services"] is None
 
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["image"] == "example.com/foo"
         assert proc_specs[1]["command"] == ["celery"]
         assert proc_specs[1]["args"] == []
+        assert proc_specs[1]["services"] is None
 
     def test_save(self, api_client, bk_cnative_app, bk_module, web, celery_worker):
         G(
@@ -211,6 +213,21 @@ class TestModuleProcessSpecViewSet:
 
 
 class TestModuleProcessSpecWithProcServicesViewSet:
+    @pytest.fixture()
+    def web(self, bk_module):
+        return G(
+            ModuleProcessSpec,
+            module=bk_module,
+            name="web",
+            command=["python"],
+            args=["-m", "http.server"],
+            port=8000,
+            services=[
+                ProcService(name="web", target_port=8000, exposed_type=ExposedType(name=ExposedTypeName.BK_HTTP)),
+                ProcService(name="backend", target_port=8001, port=80),
+            ],
+        )
+
     @pytest.mark.parametrize(
         ("proc_services", "expected_status_code", "expected_detail_str"),
         [
@@ -294,7 +311,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
         assert resp.status_code == 400
         assert "exposed type bk/http is duplicated in one app module" in resp.data.get("detail", "")
 
-    def test_save_with_proc_services(self, api_client, bk_cnative_app, bk_module):
+    def test_save(self, api_client, bk_cnative_app, bk_module, web):
         request_data = [
             {
                 "name": "web",
@@ -334,3 +351,15 @@ class TestModuleProcessSpecWithProcServicesViewSet:
 
         celery_process_spec = ModuleProcessSpec.objects.get(module=bk_module, name="celery")
         assert celery_process_spec.services is None
+
+    def test_retrieve(self, api_client, bk_cnative_app, bk_module, web):
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.get(url)
+        data = resp.json()
+        proc_specs = data["proc_specs"]
+
+        assert len(proc_specs) == 1
+        assert proc_specs[0]["services"] == [
+            {"name": "web", "target_port": 8000, "port": 8000, "exposed_type": {"name": "bk/http"}, "protocol": "TCP"},
+            {"name": "backend", "target_port": 8001, "port": 80, "exposed_type": None, "protocol": "TCP"},
+        ]

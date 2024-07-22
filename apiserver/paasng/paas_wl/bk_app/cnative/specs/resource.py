@@ -26,6 +26,7 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.addresses import AddrResourceManager, save_addresses
 from paas_wl.bk_app.cnative.specs.constants import (
+    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
     ApiVersion,
     ConditionStatus,
     DeployStatus,
@@ -39,8 +40,8 @@ from paas_wl.infras.resources.base import base, crd
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
+from paas_wl.workloads.networking.constants import ExposedTypeName
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -107,16 +108,21 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         # 创建或更新 BkApp
         bkapp = create_or_update_bkapp_with_retries(client, env, manifest)
 
-    # Deploy other dependencies
-    deploy_networking(env)
+    sync_networking(env, bkapp)
     return bkapp.to_dict()
+
+
+def sync_networking(env: ModuleEnvironment, model_res: BkAppResource) -> None:
+    """Sync the networking related resources for env, such as Ingress etc."""
+
+    if _need_deploy_networking(model_res):
+        deploy_networking(env)
+    else:
+        delete_networking(env)
 
 
 def deploy_networking(env: ModuleEnvironment) -> None:
     """Deploy the networking related resources for env, such as Ingress etc."""
-    if not _has_web_process(env):
-        return
-
     save_addresses(env)
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
@@ -144,9 +150,6 @@ def delete_bkapp(env: ModuleEnvironment):
 
 def delete_networking(env: ModuleEnvironment):
     """Delete network group mapping in cluster"""
-    if not _has_web_process(env):
-        return
-
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
@@ -206,6 +209,19 @@ class MresConditionParser:
         return None
 
 
-def _has_web_process(env: ModuleEnvironment) -> bool:
-    """Check if the module has web process"""
-    return ModuleProcessSpec.objects.filter(module=env.module, name="web").exists()
+def _need_deploy_networking(model_res: BkAppResource) -> bool:
+    """
+    _need_deploy_networking checks if networking needs to be deployed based on the given BkAppResource.
+    """
+    val = model_res.metadata.annotations.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY)
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: false 时, 表示版本低于 specVersion: 3, 因此向后兼容, 需要部署网络
+    if val == "false":
+        return True
+
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要部署网络
+    for proc in model_res.spec.processes:
+        for svc in proc.services or []:
+            if svc.exposedType and svc.exposedType.name == ExposedTypeName.BK_HTTP:
+                return True
+
+    return False

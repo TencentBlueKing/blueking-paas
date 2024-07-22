@@ -123,6 +123,8 @@ class DeploymentDeclarativeController:
         # specVersion: 3 ，默认开启 proc services 特性
         if desc.spec_version == AppSpecVersion.VER_3:
             runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "true"
+        else:
+            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "false"
 
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,

@@ -55,6 +55,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     EnvVar,
     EnvVarOverlay,
     ExecAction,
+    ExposedType,
     Hook,
     HTTPGetAction,
     HTTPHeader,
@@ -62,6 +63,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import (
     ObjectMetadata,
     Probe,
     ProbeSet,
+    ProcService,
     ReplicasOverlay,
     ResQuotaOverlay,
     TCPSocketAction,
@@ -96,6 +98,7 @@ from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, Runti
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.deployment import Probe as ProbeConfig
+from paasng.platform.engine.models.deployment import ProcService as ProcServiceConfig
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -228,6 +231,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                     resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
                     autoscaling=autoscaling_spec,
                     probes=probes_spec,
+                    services=self._sanitize_services(process_spec.services),
                 )
             )
 
@@ -370,6 +374,21 @@ class ProcessesManifestConstructor(ManifestConstructor):
             successThreshold=cfg.success_threshold,
             failureThreshold=cfg.failure_threshold,
         )
+
+    def _sanitize_services(self, services: Optional[List[ProcServiceConfig]]) -> Optional[List[ProcService]]:
+        if services is None:
+            return None
+
+        return [
+            ProcService(
+                name=svc.name,
+                targetPort=svc.target_port,
+                port=svc.port,
+                protocol=svc.protocol,
+                exposedType=ExposedType(name=svc.exposed_type.name) if svc.exposed_type else None,
+            )
+            for svc in services
+        ]
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):
@@ -555,12 +574,11 @@ def get_bkapp_resource_for_deploy(
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
     # 设置 bkapp.paas.bk.tencent.com/proc-services-feature-enabled 注解值
-    if deployment:
-        desc_obj = DeploymentDescription.objects.first(deployment=deployment)
-        if desc_obj:
-            model_res.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = desc_obj.runtime.get(
-                PROC_SERVICES_ENABLED_ANNOTATION_KEY, "false"
-            )
+    model_res.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "true"
+    if deployment and (desc_obj := DeploymentDescription.objects.first(deployment=deployment)):
+        model_res.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = desc_obj.runtime.get(
+            PROC_SERVICES_ENABLED_ANNOTATION_KEY, "true"
+        )
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

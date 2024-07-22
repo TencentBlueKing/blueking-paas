@@ -23,7 +23,7 @@ from django.db.transaction import atomic
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-from pydantic import ValidationError
+from pydantic import ValidationError as PDValidationError
 from rest_framework import exceptions, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -191,7 +191,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # 校验 processes
             bk_app_spec = BkAppSpec(processes=processes)
 
-        except ValidationError as e:
+        except PDValidationError as e:
             raise exceptions.ValidationError(to_error_string(e))
 
         mgr = ModuleProcessSpecManager(module)

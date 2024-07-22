@@ -96,11 +96,6 @@ func (r *BkApp) Default() {
 
 // defaultProcServices 为 ProcServices 配置默认值
 func (r *BkApp) defaultProcServices() {
-	if r.Annotations == nil {
-		r.Annotations = make(map[string]string)
-	}
-	r.Annotations[ProcServicesFeatureEnabledAnnoKey] = "true"
-
 	for pIdx, proc := range r.Spec.Processes {
 		for sIdx, procSvc := range proc.Services {
 			if procSvc.Protocol == "" {

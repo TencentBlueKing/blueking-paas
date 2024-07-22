@@ -27,7 +27,7 @@ from jsonfield import JSONField
 
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
+from paasng.platform.engine.constants import BuildStatus, ExposedTypeName, ImagePullPolicy, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
@@ -142,6 +142,26 @@ class ProbeSet:
 
 
 @dataclass
+class ExposedType:
+    """ExposedType is the exposed type of the ProcService"""
+
+    name: Literal[ExposedTypeName.BK_HTTP] = ExposedTypeName.BK_HTTP
+
+
+@dataclass
+class ProcService:
+    name: str
+    target_port: int
+    protocol: Literal["TCP", "UDP"] = "TCP"
+    exposed_type: Optional[ExposedType] = None
+    port: Optional[int] = None
+
+    def __post_init__(self):
+        if not self.port:
+            self.port = self.target_port
+
+
+@dataclass
 class ProcessTmpl:
     """This class is a duplication of paas_wl.bk_app.processes.models.ProcessTmpl, it
     avoids a circular import problem.
@@ -154,6 +174,7 @@ class ProcessTmpl:
     autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
     probes: Optional[ProbeSet] = None
+    services: Optional[List[ProcService]] = None
 
     def __post_init__(self):
         self.name = self.name.lower()

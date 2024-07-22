@@ -35,6 +35,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
     USE_CNB_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -89,6 +90,7 @@ from paasng.platform.bkapp_model.utils import (
     merge_env_vars_overlay,
     override_env_vars_overlay,
 )
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models import Deployment
@@ -551,6 +553,14 @@ def get_bkapp_resource_for_deploy(
     # Set log collector type to inform operator do some special logic.
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
+
+    # 设置 bkapp.paas.bk.tencent.com/proc-services-feature-enabled 注解值
+    if deployment:
+        desc_obj = DeploymentDescription.objects.first(deployment=deployment)
+        if desc_obj:
+            model_res.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = desc_obj.runtime.get(
+                PROC_SERVICES_ENABLED_ANNOTATION_KEY, "false"
+            )
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

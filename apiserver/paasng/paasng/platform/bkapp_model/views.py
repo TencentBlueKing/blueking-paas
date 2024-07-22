@@ -23,13 +23,15 @@ from django.db.transaction import atomic
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, viewsets
+from pydantic import ValidationError
+from rest_framework import exceptions, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess, BkAppSpec
 from paas_wl.bk_app.cnative.specs.models import update_app_resource
+from paas_wl.utils.basic import to_error_string
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -154,6 +156,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     for environment_name in AppEnvName
                 },
                 "probes": proc_spec.probes or {},
+                "services": proc_spec.services,
             }
             for proc_spec in proc_specs
         ]
@@ -172,20 +175,28 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         proc_specs = slz.validated_data
 
-        processes = [
-            BkAppProcess(
-                name=proc_spec["name"],
-                command=proc_spec["command"],
-                args=proc_spec["args"],
-                targetPort=proc_spec.get("port", None),
-                probes=proc_spec.get("probes", None),
-            )
-            for proc_spec in proc_specs
-        ]
+        try:
+            processes = [
+                BkAppProcess(
+                    name=proc_spec["name"],
+                    command=proc_spec["command"],
+                    args=proc_spec["args"],
+                    targetPort=proc_spec.get("port", None),
+                    probes=proc_spec.get("probes", None),
+                    services=proc_spec.get("services"),
+                )
+                for proc_spec in proc_specs
+            ]
+
+            # 校验 processes
+            bk_app_spec = BkAppSpec(processes=processes)
+
+        except ValidationError as e:
+            raise exceptions.ValidationError(to_error_string(e))
 
         mgr = ModuleProcessSpecManager(module)
         # 更新进程配置
-        mgr.sync_from_bkapp(processes)
+        mgr.sync_from_bkapp(bk_app_spec.processes)
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):

@@ -173,3 +173,7 @@ class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):
     """Built-in envs without prefix in the app runtime"""
 
     PORT = EnumField("PORT", label=_("目标端口号，值为 5000"))
+
+
+class ExposedTypeName(str, StructuredEnum):
+    BK_HTTP = "bk/http"

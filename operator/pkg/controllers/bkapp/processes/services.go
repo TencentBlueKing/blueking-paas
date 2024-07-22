@@ -52,10 +52,6 @@ type ServiceReconciler struct {
 
 // Reconcile ...
 func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
-	if !needReconcile(bkapp) {
-		return r.Result
-	}
-
 	current, err := r.listCurrentServices(ctx, bkapp)
 	if err != nil {
 		return r.Result.WithError(err)
@@ -181,15 +177,6 @@ func BuildService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *cor
 			Selector: selector,
 		},
 	}
-}
-
-// needReconcile check if bkapp need to reconcile services
-func needReconcile(bkapp *paasv1alpha2.BkApp) bool {
-	if bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey] == "true" &&
-		!paasv1alpha2.HasProcServices(bkapp) {
-		return false
-	}
-	return true
 }
 
 // buildServiceByProcServices build service by proc services config

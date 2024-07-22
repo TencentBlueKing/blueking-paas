@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field, validator
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
+from paas_wl.workloads.networking.constants import ExposedTypeName
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
@@ -147,6 +148,40 @@ class ProbeSet(BaseModel):
         }
 
 
+class ExposedType(BaseModel):
+    """ExposedType is the exposed type of the ProcService"""
+
+    name: Literal[ExposedTypeName.BK_HTTP] = ExposedTypeName.BK_HTTP
+
+
+class ProcService(BaseModel):
+    """ProcService is a process service which used to expose network"""
+
+    name: str
+    targetPort: int
+    protocol: Literal["TCP", "UDP"] = "TCP"
+    exposedType: Optional[ExposedType] = None
+    port: Optional[int] = None
+
+    def __init__(self, **data):
+        if not data.get("port"):
+            data["port"] = data["targetPort"]
+        super().__init__(**data)
+
+    def to_snake_case(self) -> Dict[str, Any]:
+        exposed_type = None
+        if self.exposedType:
+            exposed_type = {"name": self.exposedType.name}
+
+        return {
+            "name": self.name,
+            "target_port": self.targetPort,
+            "protocol": self.protocol,
+            "exposed_type": exposed_type,
+            "port": self.port,
+        }
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -158,6 +193,7 @@ class BkAppProcess(BaseModel):
     resQuotaPlan: Optional[ResQuotaPlan] = None
     autoscaling: Optional[AutoscalingSpec] = None
     probes: Optional[ProbeSet] = None
+    services: Optional[List[ProcService]] = None
 
     # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
     proc_command: Optional[str] = Field(None)
@@ -176,6 +212,31 @@ class BkAppProcess(BaseModel):
         if self.proc_command:
             return self.proc_command
         return generate_bash_command_with_tokens(self.command or [], self.args or [])
+
+    @validator("services")
+    def validate_services(cls, services):  # noqa: N805
+        """validate services. it checks whether names, targetPort and ports are duplicated"""
+        if not services:
+            return services
+
+        names = set()
+        target_ports = set()
+        ports = set()
+
+        for svc in services:
+            if svc.name in names:
+                raise ValueError(f"duplicate service name: {svc.name}")
+            names.add(svc.name)
+
+            if svc.targetPort in target_ports:
+                raise ValueError(f"duplicate target port: {svc.targetPort}")
+            target_ports.add(svc.targetPort)
+
+            if svc.port and svc.port in ports:
+                raise ValueError(f"duplicate port: {svc.port}")
+            ports.add(svc.port)
+
+        return services
 
 
 class Hook(BaseModel):
@@ -388,6 +449,31 @@ class BkAppSpec(BaseModel):
     domainResolution: Optional[DomainResolution] = None
     svcDiscovery: Optional[SvcDiscConfig] = None
     envOverlay: Optional[EnvOverlay] = None
+
+    @validator("processes")
+    def validate_processes(cls, processes):  # noqa: N805
+        """validate processes.
+        - check whether exposed types are duplicated. 一个 BkApp 只能有一个 bk/http 类型的暴露服务作为主入口
+        """
+        if not processes:
+            return processes
+
+        exposed_types = set()
+
+        for proc in processes:
+            if not proc.services:
+                continue
+
+            for svc in proc.services:
+                if not svc.exposedType:
+                    continue
+
+                if svc.exposedType.name in exposed_types:
+                    raise ValueError(f"exposed type {svc.exposedType.name} is duplicated in one app module")
+
+                exposed_types.add(svc.exposedType.name)
+
+        return processes
 
 
 class BkAppStatus(BaseModel):

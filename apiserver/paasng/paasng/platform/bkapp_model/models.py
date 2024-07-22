@@ -29,7 +29,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.declarative.deployment.resources import BkSaaSItem
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models.deployment import AutoscalingConfig, ProbeSet
+from paasng.platform.engine.models.deployment import AutoscalingConfig, ProbeSet, ProcService
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
 from paasng.utils.models import make_json_field
@@ -51,6 +51,7 @@ def env_overlay_getter_factory(field_name: str):
 
 
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
+ProcServicesField = make_json_field("ProcServicesField", List[ProcService])
 
 ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
 cattr.register_structure_hook(Union[int, str], lambda items, cl: items)  # type: ignore
@@ -73,6 +74,7 @@ class ModuleProcessSpec(TimestampedModel):
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
+    services: Optional[List[ProcService]] = ProcServicesField(help_text="进程服务列表", default=None, null=True)
 
     # Global settings
     target_replicas = models.IntegerField("期望副本数", default=1)

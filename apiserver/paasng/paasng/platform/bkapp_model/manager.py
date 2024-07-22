@@ -48,7 +48,7 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_from_bkapp(self, processes: List["BkAppProcess"]):
+    def sync_from_bkapp(self, processes: List["BkAppProcess"]):  # noqa: C901
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess
@@ -68,6 +68,8 @@ class ModuleProcessSpecManager:
 
         def process_spec_builder(process: BkAppProcess) -> ModuleProcessSpec:
             probes = process.probes.to_snake_case() if process.probes else None
+            services = [s.to_snake_case() for s in process.services] if process.services else None
+
             return ModuleProcessSpec(
                 module=self.module,
                 name=process.name,
@@ -77,6 +79,7 @@ class ModuleProcessSpecManager:
                 target_replicas=process.replicas,
                 plan_name=process.resQuotaPlan or ResQuotaPlan.P_DEFAULT,
                 probes=probes,
+                services=services,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -107,6 +110,10 @@ class ModuleProcessSpecManager:
                 if process_spec.probes != probes:
                     recorder.setattr("probes", probes)
 
+            proc_services = [s.to_snake_case() for s in process.services] if process.services else None
+            if process_spec.services != proc_services:
+                recorder.setattr("services", proc_services)
+
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
@@ -119,6 +126,7 @@ class ModuleProcessSpecManager:
                 "plan_name",
                 "port",
                 "probes",
+                "services",
                 "updated",
             ],
         )
@@ -151,6 +159,7 @@ class ModuleProcessSpecManager:
                 target_replicas=process.replicas or PROC_DEFAULT_REPLICAS,
                 plan_name=process.plan or ResQuotaPlan.P_DEFAULT,
                 probes=asdict(process.probes) if process.probes else None,
+                services=[asdict(s) for s in process.services] if process.services else None,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -170,12 +179,17 @@ class ModuleProcessSpecManager:
                 recorder.setattr("target_replicas", process.replicas)
             if process.probes and process_spec.probes != asdict(process.probes):
                 recorder.setattr("probes", asdict(process.probes))
+
+            proc_services = [asdict(s) for s in process.services] if process.services else None
+            if process_spec.services != proc_services:
+                recorder.setattr("services", proc_services)
+
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
             proc_updator=process_spec_updator,
             updating_procs=updating_procs,
-            updated_fields=["proc_command", "target_replicas", "plan_name", "probes", "updated"],
+            updated_fields=["proc_command", "target_replicas", "plan_name", "services", "probes", "updated"],
         )
         # update spec objects end
 

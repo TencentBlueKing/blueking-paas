@@ -39,6 +39,7 @@ def _auto_binding_phases(bk_prod_env, bk_deployment):
         manager.attach(DeployPhaseTypes(p.type), bk_deployment)
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 @pytest.mark.usefixtures("_auto_binding_phases")
 class TestApplicationReleaseMgr:
     """Tests for ApplicationReleaseMgr"""

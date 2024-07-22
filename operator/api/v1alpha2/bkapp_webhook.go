@@ -79,6 +79,12 @@ func (r *BkApp) Default() {
 	}
 
 	if HasProcServices(r) {
+		if r.Annotations == nil {
+			r.Annotations = make(map[string]string)
+		}
+		if _, ok := r.Annotations[ProcServicesFeatureEnabledAnnoKey]; !ok {
+			r.Annotations[ProcServicesFeatureEnabledAnnoKey] = "true"
+		}
 		r.defaultProcServices()
 	}
 

@@ -59,8 +59,8 @@ const (
 	WlAppNameKey = "bkapp.paas.bk.tencent.com/wl-app-name"
 
 	// ProcServicesFeatureEnabledAnnoKey 注解表示是否启用 process services 特性, 可选值为 "true" 或 "false".
-	// true 表示根据 Process.Services 来显示地管理 process services; false 表示按旧的隐式调和逻辑处理 service,
-	// 即为每个 process 默认创建并关联一个 service.
+	// true 表示启用; false 或未设置该注解值, 表示不启用, 仍按旧的隐式调和逻辑处理 service, 即为每个 process 默认
+	// 创建并关联一个 service.
 	ProcServicesFeatureEnabledAnnoKey = "bkapp.paas.bk.tencent.com/proc-services-feature-enabled"
 
 	// LegacyProcImageAnnoKey, In API version "v1alpha1", every process can use a different image.

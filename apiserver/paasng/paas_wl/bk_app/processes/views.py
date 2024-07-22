@@ -434,7 +434,7 @@ class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except PreviousInstanceNotFound:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        return Response(status=status.HTTP_200_OK, data=logs)
+        return Response(status=status.HTTP_200_OK, data=logs.splitlines())
 
     def download(self, request, code, module_name, environment, process_type, process_instance_name):
         """下载进程实例上一次运行时的日志"""

@@ -142,8 +142,8 @@ class ProcessManager:
         :param instance_name: 进程实例的名称
         :param container_name: 容器名称
         :param tail_lines: 获取日志末尾的行数
-        :return: List[str]
-        :raise:
+        :return: str
+        :raise: PreviousInstanceNotFound when previous instance not found
         """
         if not container_name:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
@@ -156,7 +156,6 @@ class ProcessManager:
                 namespace=self.wl_app.namespace,
                 container=container_name,
                 previous=True,
-                timestamps=True,
                 tail_lines=tail_lines,
             )
         except ApiException as e:
@@ -167,5 +166,4 @@ class ProcessManager:
             else:
                 raise
 
-        logs = ensure_text(response.data)
-        return logs.splitlines()
+        return ensure_text(response.data)

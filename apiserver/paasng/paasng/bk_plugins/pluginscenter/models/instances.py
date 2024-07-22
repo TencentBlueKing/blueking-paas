@@ -412,13 +412,13 @@ class PluginVisibleRange(AuditedModel):
     @property
     def itsm_bkci_project(self):
         if self.itsm_detail_fields:
-            return self.itsm_detail_fields.get("bkci_project")
+            return self.itsm_detail_fields.get("origin_bkci_project")
         return None
 
     @property
     def itsm_organization(self):
         if self.itsm_detail_fields:
-            return self.itsm_detail_fields.get("organization")
+            return self.itsm_detail_fields.get("origin_organization")
         return None
 
 

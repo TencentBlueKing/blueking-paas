@@ -139,7 +139,7 @@ class ProcessManager:
         """获取进程实例上一次运行时日志
 
         :param process_type: 进程类型
-        :param instance_name: 进程实例的名称
+        :param instance_name: 进程实例名称
         :param container_name: 容器名称
         :param tail_lines: 获取日志末尾的行数
         :return: str

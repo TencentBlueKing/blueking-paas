@@ -21,7 +21,7 @@ import logging
 from operator import attrgetter
 from typing import Dict, Optional
 
-from django.http import StreamingHttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -34,7 +34,12 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
-from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
+from paas_wl.bk_app.processes.exceptions import (
+    PreviousInstanceNotFound,
+    ProcessNotFound,
+    ProcessOperationTooOften,
+    ScaleProcessError,
+)
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
@@ -419,10 +424,29 @@ class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def retrieve(self, request, code, module_name, environment, process_type, process_instance_name):
-        """获取进程实例的上次重启日志"""
+        """获取进程实例上一次运行时的日志（100行）"""
         _ = self.get_application()
         env = self.get_env_via_path()
 
         manager = ProcessManager(env)
-        logs = manager.get_previous_logs(process_type, process_instance_name)
+        try:
+            logs = manager.get_previous_logs(process_type, process_instance_name, tail_lines=100)
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
         return Response(status=status.HTTP_200_OK, data=logs)
+
+    def download(self, request, code, module_name, environment, process_type, process_instance_name):
+        """下载进程实例上一次运行时的日志"""
+        _ = self.get_application()
+        env = self.get_env_via_path()
+
+        manager = ProcessManager(env)
+        try:
+            logs = manager.get_previous_logs(process_type, process_instance_name)
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        response = HttpResponse(logs, content_type="text/plain")
+        response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'
+        return response

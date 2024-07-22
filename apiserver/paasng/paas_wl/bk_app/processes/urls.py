@@ -63,4 +63,11 @@ urlpatterns = [
         views.InstancePreviousLogsViewSet.as_view({"get": "retrieve"}),
         name="api.instances.previous_logs",
     ),
+    re_path(
+        make_app_pattern(
+            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/previous_logs/download/$"
+        ),
+        views.InstancePreviousLogsViewSet.as_view({"get": "download"}),
+        name="api.instances.previous_logs_download",
+    ),
 ]

@@ -19,9 +19,11 @@ from typing import Dict, List, Optional
 
 from django.utils.functional import cached_property
 from kubernetes.client.exceptions import ApiException
+from six import ensure_text
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import Process, list_processes
+from paas_wl.bk_app.processes.exceptions import PreviousInstanceNotFound
 from paas_wl.bk_app.processes.models import ProcessProbeManager, ProcessSpecManager
 from paas_wl.bk_app.processes.processes import PlainProcess, condense_processes
 from paas_wl.bk_app.processes.readers import process_kmodel
@@ -130,10 +132,19 @@ class ProcessManager:
     def get_previous_logs(
         self,
         process_type: str,
-        process_instance_name: str,
+        instance_name: str,
         container_name=None,
+        tail_lines: Optional[int] = None,
     ):
-        """获取进程实例的上次重启日志"""
+        """获取进程实例上一次运行时日志
+
+        :param process_type: 进程类型
+        :param instance_name: 进程实例的名称
+        :param container_name: 容器名称
+        :param tail_lines: 获取日志末尾的行数
+        :return: List[str]
+        :raise:
+        """
         if not container_name:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
 
@@ -141,17 +152,20 @@ class ProcessManager:
 
         try:
             response = KPod(k8s_client).get_log(
-                name=process_instance_name,
+                name=instance_name,
                 namespace=self.wl_app.namespace,
                 container=container_name,
                 previous=True,
+                timestamps=True,
+                tail_lines=tail_lines,
             )
         except ApiException as e:
-            # k8s 没有找到上一个终止的容器，即容器没有重启过
+            # k8s 没有找到上一个终止的容器
             # TODO: 未重启判断抽象成一个方法？
             if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
-                return "此进程没有重启记录"
+                raise PreviousInstanceNotFound
             else:
                 raise
 
-        return response.data
+        logs = ensure_text(response.data)
+        return logs.splitlines()

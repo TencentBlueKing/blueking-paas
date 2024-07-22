@@ -24,7 +24,12 @@ from django.conf import settings
 
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
-from paasng.platform.engine.configurations.config_var import get_builtin_env_variables, get_env_variables
+from paasng.platform.engine.configurations.config_var import (
+    _flatten_envs,
+    generate_wl_builtin_env_vars,
+    get_builtin_env_variables,
+    get_env_variables,
+)
 from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
 from paasng.platform.engine.models.config_var import ConfigVar
 from tests.utils.helpers import override_region_configs
@@ -32,6 +37,7 @@ from tests.utils.helpers import override_region_configs
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 class TestGetEnvVariables:
     @pytest.mark.parametrize(
         ("include_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
@@ -44,8 +50,15 @@ class TestGetEnvVariables:
 
     def test_builtin_id_and_secret(self, bk_app, bk_stag_env):
         env_vars = get_env_variables(bk_stag_env)
+
         assert env_vars["BKPAAS_APP_ID"] == bk_app.code
         assert env_vars["BKPAAS_APP_SECRET"] != ""
+
+    def test_wl_vars_exists(self, bk_stag_env):
+        env_vars = get_env_variables(bk_stag_env)
+
+        assert env_vars["PORT"] != ""
+        assert env_vars["BKPAAS_PROCESS_TYPE"] != ""
 
     @pytest.mark.parametrize(
         ("yaml_content", "ctx"),
@@ -144,9 +157,7 @@ class TestBuiltInEnvVars:
             if provide_env_vars_platform:
                 assert set(settings.BK_PAAS2_PLATFORM_ENVS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
 
-    def test_builtin_env_keys(self, bk_app):
-        bk_module = bk_app.get_default_module()
-        bk_stag_env = bk_module.envs.get(environment="stag")
+    def test_builtin_env_keys(self, bk_stag_env):
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
 
         assert {"BKPAAS_LOGIN_URL", "BKPAAS_APP_CODE", "BKPAAS_APP_ID", "BKPAAS_APP_SECRET"}.issubset(
@@ -160,3 +171,14 @@ class TestBuiltInEnvVars:
             if key != AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value
         ]
         assert set(runtime_env_keys).issubset(config_vars.keys())
+
+
+@pytest.mark.usefixtures("_with_wl_apps")
+def test_generate_wl_builtin_env_vars(bk_stag_env):
+    env_vars = _flatten_envs(generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, bk_stag_env))
+
+    assert "PORT" in env_vars
+    assert "BKPAAS_APP_LOG_PATH" in env_vars
+    assert "BKPAAS_SUB_PATH" in env_vars
+    assert env_vars["BKPAAS_PROCESS_TYPE"] == "{{bk_var_process_type}}"
+    assert env_vars["BKPAAS_LOG_NAME_PREFIX"].endswith("-{{bk_var_process_type}}")

@@ -17,7 +17,7 @@
 
 import logging
 import time
-from typing import Type, Union
+from typing import Dict, Optional, Type, Union
 
 from django.conf import settings
 from iam.exceptions import AuthAPIError
@@ -73,6 +73,38 @@ def application_perm_class(action: AppAction) -> Type[BasePermission]:
                 return False
 
     return AppModulePermission
+
+
+def app_view_actions_perm(
+    view_action_map: Dict[str, AppAction], default_action: Optional[AppAction] = None
+) -> Type[BasePermission]:
+    """Create a permission class for application view, it allows using different
+    application action for different view actions.
+
+    :param view_action_map: A map from view action to application action.
+    :param default_action: Optional, the default application action if the view action
+        is not found.
+    :return: Application permission class.
+    """
+
+    class AppViewActionsPermission(BaseAppPermission):
+        """The permission class for application and module."""
+
+        def has_object_permission(self, request, view, obj: Union[Application, Module]):
+            # Get the action from the view action map, if not found, use the default action.
+            action = view_action_map.get(view.action, default_action)
+            if not action:
+                raise ValueError('No app action found for view action "%s".' % view.action)
+
+            if isinstance(obj, Application):
+                return user_has_app_action_perm(request.user, obj, action)
+            elif isinstance(obj, Module):
+                return user_has_app_action_perm(request.user, obj.application, action)
+            else:
+                logger.error("Application permission checked on incorrect object, type: %s", type(obj))
+                return False
+
+    return AppViewActionsPermission
 
 
 def check_application_perm(user, application: Application, action: AppAction):

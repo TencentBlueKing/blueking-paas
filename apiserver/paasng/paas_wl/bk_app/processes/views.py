@@ -419,7 +419,7 @@ class InstanceEventsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
-    """适用于所有类型应用，应用进程上次重启日志相关视图"""
+    """适用于所有类型应用，应用进程上一次运行时日志相关视图"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 

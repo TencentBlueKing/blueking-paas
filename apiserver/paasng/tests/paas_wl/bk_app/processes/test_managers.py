@@ -237,7 +237,7 @@ class TestExtractTypeFromName:
 class TestProcessManager:
     def test_get_previous_logs(self, bk_stag_env, wl_app):
         """
-        测试获取进程实例上次重启日志
+        测试获取进程实例上一次运行时重启日志
 
         测试需要兼容测试流水线的执行环境(无 controller)，因此通过下发 pod 进行日志测试
         原设计是通过创建 process，再获取 pod 日志

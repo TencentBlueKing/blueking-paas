@@ -198,7 +198,7 @@ func (r *DeploymentReconciler) cleanUpDeployments(ctx context.Context,
 		}
 		if err := r.Client.Delete(ctx, d); err != nil {
 			metrics.IncDeleteOutdatedDeployFailures(bkapp, d.Name)
-			return errors.Wrapf(err, "error cleaning up deployment")
+			return errors.Wrapf(err, "cleaning up deployment")
 		}
 	}
 	return nil
@@ -323,7 +323,7 @@ func (r *DeploymentReconciler) updateHandler(
 	// Perform the resource update
 	if err := cli.Update(ctx, want); err != nil {
 		return errors.Wrapf(
-			err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
+			err, "update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
 		)
 	}
 	return nil

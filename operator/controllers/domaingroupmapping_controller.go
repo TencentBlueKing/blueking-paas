@@ -141,22 +141,19 @@ func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *paas
 			}
 			return nil
 		}
-		log.Error(errRef, "Unable to get referenced object from mapping")
-		return errRef
+		return errors.Wrap(errRef, "get referenced object from mapping")
 	}
 
 	// Start sync procedure only if the referenced BkApp exists
 	mappingSyncer := dgroupmapping.NewDGroupMappingSyncer(r.client, &bkapp)
 	domainGroups, err := mappingSyncer.Sync(ctx, dgmapping)
 	if err != nil {
-		log.Error(err, "Fail to sync mapping", "DGroupMappingName", dgmapping.Name)
-		return err
+		return errors.Wrapf(err, "sync mapping by dgmapping %s", dgmapping.Name)
 	}
 
 	// Sync status field in the end
 	if err = r.syncProcessedStatus(ctx, &bkapp, dgmapping, domainGroups); err != nil {
-		log.Error(err, "Error updating status for processed item", "DGroupMappingName", dgmapping.Name)
-		return err
+		return errors.Wrapf(err, "updating status for processed item by dgmapping %s", dgmapping.Name)
 	}
 	return nil
 }
@@ -204,7 +201,7 @@ func (r *DomainGroupMappingReconciler) GetRef(
 	// TODO: Handler different apiVersions
 	key := client.ObjectKey{Namespace: dgmapping.Namespace, Name: dgmapping.Spec.Ref.Name}
 	if err := r.client.Get(ctx, key, &refObj); err != nil {
-		return refObj, errors.Wrap(err, "fail to get referenced obj")
+		return refObj, errors.Wrap(err, "get referenced obj")
 	}
 	return refObj, nil
 }

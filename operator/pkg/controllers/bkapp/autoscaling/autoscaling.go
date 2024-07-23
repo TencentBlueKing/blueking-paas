@@ -115,7 +115,7 @@ func (r *AutoscalingReconciler) updateHandler(
 	want.CreationTimestamp = current.CreationTimestamp
 
 	if err := cli.Update(ctx, want); err != nil {
-		return errors.Wrapf(err, "failed to update GPA(%s)", want.GetName())
+		return errors.Wrapf(err, "update GPA(%s)", want.GetName())
 	}
 	return nil
 }

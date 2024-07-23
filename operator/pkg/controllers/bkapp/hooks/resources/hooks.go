@@ -122,6 +122,11 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 		command = append([]string{"launcher"}, command...)
 	}
 
+	// Generate the environment variables and render the "{{bk_var_*}}" var placeholder which
+	// might be used in the values.
+	envVars := common.GetAppEnvs(bkapp)
+	envVars = common.RenderAppVars(envVars, common.VarsRenderContext{ProcessType: "sys-pre-rel"})
+
 	return &HookInstance{
 		Pod: &corev1.Pod{
 			TypeMeta: metav1.TypeMeta{
@@ -146,7 +151,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 						Image:           bkapp.Spec.Build.Image,
 						Command:         kubeutil.ReplaceCommandEnvVariables(command),
 						Args:            kubeutil.ReplaceCommandEnvVariables(args),
-						Env:             common.GetAppEnvs(bkapp),
+						Env:             envVars,
 						Name:            "hook",
 						ImagePullPolicy: bkapp.Spec.Build.ImagePullPolicy,
 						// pre-hook 使用默认资源配置

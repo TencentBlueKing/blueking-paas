@@ -173,7 +173,7 @@
                       </p>
                       <p class="dynamic-time">
                         <span
-                          v-bk-tooltips="item.updated"
+                          v-bk-tooltips="{ content: item.updated, allowHTML: true }"
                           class="tooltip-time"
                         >
                           {{ item.created_format }}
@@ -763,8 +763,7 @@ export default {
   color: #63656e;
   .dynamic-time {
     margin-top: 5px;
-    line-height: 20px;
-    height: 36px;
+    line-height: 22px;
     font-size: 12px;
     color: #979BA5;
     cursor: default;
@@ -809,7 +808,7 @@ export default {
   position: absolute;
   content: '';
   width: 1px;
-  height: 62px;
+  height: 53px;
   top: 13px;
   left: 5px;
   background: #D8D8D8;

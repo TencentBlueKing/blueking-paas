@@ -33,8 +33,6 @@ export default {
     chartData: bartOptions,
     // 当前插件的基础信息
     curPluginInfo: {},
-    // curPluginId
-    // curPluginTypeId
     // 当前插件的当前发布版本
     curRelease: {},
     pluginApplyUrl: '',
@@ -83,8 +81,6 @@ export default {
     },
     updatePluginInfo(state, { pluginId, pluginTypeId, data }) {
       state.curPluginInfo = data;
-      state.curPluginId = pluginId;
-      state.curPluginTypeId = pluginTypeId;
     },
     updatePluginApplyUrl(state, url) {
       state.pluginApplyUrl = url;
@@ -587,6 +583,24 @@ export default {
      */
     updatePublisher({ commit, state }, { pdId, pluginId, data }, config) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/publisher/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+     * 获取可见范围数据
+     * @param {Object} params 请求参数：pdId, pluginId
+     */
+    getVisibleRange({}, { pdId, pluginId }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/visible_range/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+     * 可见范围
+     * @param {Object} params 请求参数：pdId, pluginId, data
+     */
+    updateVisibleRange({}, { pdId, pluginId, data }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/visible_range/`;
       return http.post(url, data, config);
     },
   },

@@ -30,7 +30,7 @@
             </bk-select>
             <bk-input
               v-model="keyword"
-              :placeholder="$t('用户或组织')"
+              :placeholder="$t(placeholder)"
               maxlength="64"
               :clearable="true"
               style="position: relative; left: -1px;"
@@ -78,8 +78,12 @@
         <div class="right">
           <div class="header">
             <div class="has-selected"> {{ $t('已选择') }} <template v-if="isShowSelectedText">
-              <span class="organization-count">{{ hasSelectedDepartments.length }}</span> {{ $t('个组织') }}，
-              <span class="user-count">{{ hasSelectedUsers.length }}</span> {{ $t('个用户') }}
+              <span class="organization-count">
+                {{ hasSelectedDepartments.length }}
+              </span> {{ $t('个组织') }}<span v-if="isUsingDefaultRule">，</span>
+              <template v-if="isUsingDefaultRule">
+                <span class="user-count">{{ hasSelectedUsers.length }}</span> {{ $t('个用户') }}
+              </template>
             </template>
               <template v-else>
                 <span class="user-count">0</span>
@@ -181,6 +185,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    placeholder: {
+      type: String,
+      default: '用户或组织',
+    },
+    range: {
+      type: String,
+      default: 'all',
+    },
   },
   data() {
     return {
@@ -250,6 +262,9 @@ export default {
         height: '383px',
       };
     },
+    isUsingDefaultRule() {
+      return this.range === 'all';
+    },
   },
   watch: {
     show: {
@@ -303,14 +318,15 @@ export default {
         this.focusItemIndex = len - 1;
       }
     },
-
+    // 用户
     fetchUser(params = {}) {
       return request.getData(this.userApi, params);
     },
+    // 组织
     fetchDepartment(params = {}) {
       return request.getData(this.departmentApi, params);
     },
-
+    // 搜索用户
     fetchSearchUser(params = {}) {
       return request.getData(this.userSearchApi, params);
     },
@@ -449,7 +465,12 @@ export default {
       }
 
       try {
-        const res = await Promise.all([this.fetchDepartment(requestDepartParams), this.fetchSearchUser(requestUserParams)]);
+        // 组织
+        const fetchList = [this.fetchDepartment(requestDepartParams)];
+        if (this.isUsingDefaultRule) { // 用户
+          fetchList.push(this.fetchSearchUser(requestUserParams));
+        }
+        const res = await Promise.all(fetchList);
         const departments = unique(res[0], 'id');
         const users = unique(res[1], 'id');
         departments.forEach((depart) => {
@@ -508,7 +529,12 @@ export default {
       };
 
       try {
-        const res = await Promise.all([this.fetchDepartment(requestDepartParams), this.fetchUser(requestUserParams)]);
+        // 组织
+        const fetchList = [this.fetchDepartment(requestDepartParams)];
+        if (this.isUsingDefaultRule) { // 用户
+          fetchList.push(this.fetchUser(requestUserParams));
+        }
+        const res = await Promise.all(fetchList);
         const categories = unique(res[0], 'id');
         const members = unique(res[1], 'id');
         const curIndex = this.treeList.findIndex(item => item.id === payload.id);

@@ -2756,4 +2756,13 @@ export default {
   '每个模块可以设置一个访问入口，请求访问地址时{t}会被转发到访问入口指向的目标服务上。': 'Each module can set an access entry. When requesting the access address {t}, it will be forwarded to the target service pointed to by the access entry.',
   '如：': 'e.g., ',
   '每次查询最多返回 {n} 条日志。如需查看全部日志，请缩小查询时间范围。': 'Each query returns a maximum of {n} logs. To view all logs, please narrow the query time range.',
+  未修改: 'Not Modified',
+  选择组织: 'Select Organization',
+  蓝盾项目: 'Blue Shield Project',
+  提交审核: 'Submit for Review',
+  正在审批中: 'Under Review',
+  请用英文分号分隔: 'Please use English semicolons to separate',
+  暂未设置可见范围: 'Visibility range not yet set',
+  '请输入蓝盾项目 Project ID，并用英文分号分隔': 'Please enter the Blue Shield Project ID and separate them with English semicolons',
+  '修改可见范围需由<i class="bold">平台管理员</i>进行审批': 'Changes to the visibility range require approval from the <i class="bold">platform administrator</i>',
 };

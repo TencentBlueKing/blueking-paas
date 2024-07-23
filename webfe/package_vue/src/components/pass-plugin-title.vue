@@ -41,6 +41,7 @@
           {{ $t('插件文档') }}
         </a>
       </div>
+      <span v-if="tips" class="tips">{{ tips }}</span>
     </div>
   </div>
 </template>
@@ -71,6 +72,10 @@ export default {
       default: false,
     },
     docUrl: {
+      type: String,
+      default: '',
+    },
+    tips: {
       type: String,
       default: '',
     },
@@ -203,6 +208,11 @@ export default {
       font-size: 20px;
       font-weight: bold;
       cursor: pointer;
+    }
+    .tips {
+      margin-left: 16px;
+      font-size: 12px;
+      color: #979BA5;
     }
   }
 }

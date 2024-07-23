@@ -833,6 +833,12 @@ export const PAAS_STATIC_CONFIG = {
                         ]
                     },
                     {
+                        "name": staticI18n.$t("可见范围"),
+                        "destRoute": {
+                          "name": "pluginVisibleRange"
+                        }
+                    },
+                    {
                         "name": staticI18n.$t("成员管理"),
                         "destRoute": {
                           "name": "pluginRoles"

@@ -67,8 +67,11 @@
       <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' && !isSmartApp">
         <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
         <div v-if="!allowMultipleImage">
-          <div class="code-depot mb15">
-            <span class="pr20">{{ $t('镜像仓库') }}：</span>
+          <div
+            class="code-depot mb15"
+            v-bk-overflow-tips="{ content: deploymentInfoBackUp.repo_url }"
+          >
+            <span>{{ $t('镜像仓库') }}：</span>
             {{ deploymentInfoBackUp.repo_url }}
           </div>
           <div>
@@ -145,10 +148,11 @@
       <div v-else>
         <template v-if="!isSmartApp">
           <div
-            class="code-depot mb10"
             v-if="deploymentInfoBackUp.repo_url"
+            class="code-depot mb10"
+            v-bk-overflow-tips="{ content: deploymentInfoBackUp.repo_url }"
           >
-            <span class="pr20">{{ $t('代码仓库') }}：</span>
+            <span>{{ $t('代码仓库') }}：</span>
             {{ deploymentInfoBackUp.repo_url }}
           </div>
           <div class="image-source">
@@ -1486,5 +1490,10 @@ export default {
     margin-bottom: 24px;
     min-height: 620px;
   }
+}
+.code-depot {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

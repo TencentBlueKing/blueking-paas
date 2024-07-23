@@ -15,6 +15,7 @@
           v-model="choosedEnv"
           style="width: 150px;"
           :clearable="false"
+          @change="getDeployHistory(1)"
         >
           <bk-option
             v-for="(option, index) in envList"
@@ -32,20 +33,9 @@
           v-model="personnelSelectorList"
           style="width: 350px;"
           :placeholder="$t('请选择')"
-          :max-data="1"
+          :multiple="false"
+          @change="getDeployHistory(1)"
         />
-      </bk-form-item>
-      <bk-form-item
-        label=""
-        style="vertical-align: top;"
-      >
-        <bk-button
-          theme="primary"
-          type="button"
-          @click.stop.prevent="getDeployHistory(1)"
-        >
-          {{ $t('查询') }}
-        </bk-button>
       </bk-form-item>
     </bk-form>
     <bk-table
@@ -215,346 +205,342 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import deployTimeline from './comps/deploy-timeline';
-    import user from '@/components/user';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import deployTimeline from './comps/deploy-timeline';
+import user from '@/components/user';
 
-    export default {
-        components: {
-            user,
-            deployTimeline
+export default {
+  components: {
+    user,
+    deployTimeline,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      choosedEnv: 'all',
+      historyList: [],
+      curDeployLog: '',
+      logDetail: '',
+      isLoading: true,
+      isPageLoading: true,
+      isLogLoading: false,
+      isTimelineLoading: false,
+      ansiUp: null,
+      personnelSelectorList: [],
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      envList: [
+        {
+          id: 'all',
+          text: this.$t('全部'),
         },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                choosedEnv: 'all',
-                historyList: [],
-                curDeployLog: '',
-                logDetail: '',
-                isLoading: true,
-                isPageLoading: true,
-                isLogLoading: false,
-                isTimelineLoading: false,
-                ansiUp: null,
-                personnelSelectorList: [],
-                formDatas: {},
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10
-                },
-                envList: [
-                    {
-                        id: 'all',
-                        text: this.$t('全部')
-                    },
-                    {
-                        id: 'prod',
-                        text: this.$t('生产环境')
-                    },
-                    {
-                        id: 'stag',
-                        text: this.$t('预发布环境')
-                    }
-                ],
-                timeLineList: [],
-                historySideslider: {
-                    title: '',
-                    isShow: false
-                },
-                errorTips: {},
-                tableEmptyConf: {
-                    keyword: '',
-                    isAbnormal: false
-                }
-            };
+        {
+          id: 'prod',
+          text: this.$t('生产环境'),
         },
-        computed: {
-            isMatchedSolutionsFound () {
-                return this.errorTips.matched_solutions_found;
-            }
+        {
+          id: 'stag',
+          text: this.$t('预发布环境'),
         },
-        watch: {
-            '$route': function () {
-                this.isLoading = true;
-                this.getDeployHistory();
-            }
-        },
-        created () {
-            this.isLoading = true;
-            this.getDeployHistory();
-        },
-        mounted () {
-            const AU = require('ansi_up');
-            // eslint-disable-next-line
-            this.ansiUp = new AU.default
-        },
-        methods: {
-            updateValue (curVal) {
-                curVal ? this.personnelSelectorList = curVal : this.personnelSelectorList = '';
-            },
-
-            computedDeployTime (payload) {
-                if (!payload.deployment) {
-                    return '--';
-                }
-
-                if (!payload.deployment.complete_time || !payload.deployment.start_time) {
-                    return '--';
-                }
-
-                const start = new Date(payload.deployment.start_time).getTime();
-                const end = new Date(payload.deployment.complete_time).getTime();
-                const interval = (end - start) / 1000;
-
-                if (!interval) {
-                    return `< 1${this.$t('秒')}`;
-                }
-
-                return this.getDisplayTime(interval);
-            },
-
-            computedDeployTimelineTime (startTime, endTime) {
-                if (!startTime || !endTime) {
-                    return '--';
-                }
-
-                const start = (new Date(startTime).getTime()) / 1000;
-                const end = (new Date(endTime).getTime()) / 1000;
-                const interval = Math.ceil(end - start);
-
-                if (!interval) {
-                    return `< 1${this.$t('秒')}`;
-                }
-
-                return this.getDisplayTime(interval);
-            },
-
-            getDisplayTime (payload) {
-                let theTime = payload;
-                if (theTime < 1) {
-                    return `< 1${this.$t('秒')}`;
-                }
-                let middle = 0;
-                let hour = 0;
-
-                if (theTime > 60) {
-                    middle = parseInt(theTime / 60, 10);
-                    theTime = parseInt(theTime % 60, 10);
-                    if (middle > 60) {
-                        hour = parseInt(middle / 60, 10);
-                        middle = parseInt(middle % 60, 10);
-                    }
-                }
-
-                let result = '';
-
-                if (theTime > 0) {
-                    result = `${theTime}${this.$t('秒')}`;
-                }
-                if (middle > 0) {
-                    result = `${middle}${this.$t('分')}${result}`;
-                }
-                if (hour > 0) {
-                    result = `${hour}${this.$t('时')}${result}`;
-                }
-
-                return result;
-            },
-
-            /**
-             * 获取部署记录
-             */
-            async getDeployHistory (page = 1) {
-                this.isPageLoading = true;
-                const curPage = page || this.pagination.current;
-                const pageParams = {
-                    limit: this.pagination.limit,
-                    offset: this.pagination.limit * (curPage - 1)
-                };
-                if (this.choosedEnv !== 'all') {
-                    pageParams.environment = this.choosedEnv;
-                }
-
-                if (this.personnelSelectorList.length) {
-                    pageParams.operator = this.personnelSelectorList[0];
-                }
-
-                try {
-                    const res = await this.$store.dispatch('deploy/getDeployHistory', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        pageParams
-                    });
-
-                    const reg = RegExp('^[a-z0-9]{40}$');
-                    res.results.forEach((operation) => {
-                        if (operation.operation_type === 'offline') {
-                            operation.logDetail = operation.offline_operation.log;
-                            operation.operation_act = this.$t('下架');
-                            operation.environment = operation.offline_operation.environment;
-
-                            operation.name = operation.offline_operation.repo.name;
-                            operation.revision = operation.offline_operation.repo.revision;
-                            operation.url = operation.offline_operation.repo.url;
-
-                            if (reg.test(operation.offline_operation.repo.revision)) {
-                                operation.revision = operation.offline_operation.repo.revision.substring(0, 8);
-                            }
-                        } else {
-                            operation.deployment_id = operation.deployment.deployment_id;
-                            operation.environment = operation.deployment.environment;
-                            operation.logDetail = '';
-                            operation.operation_act = this.$t('部署');
-
-                            operation.name = operation.deployment.repo.name;
-                            operation.revision = operation.deployment.repo.revision;
-                            operation.url = operation.deployment.repo.url;
-
-                            if (reg.test(operation.deployment.repo.revision)) {
-                                operation.revision = operation.deployment.repo.revision.substring(0, 8);
-                            }
-                        }
-                    });
-                    this.historyList = res.results;
-                    this.pagination.count = res.count;
-
-                    // 如果有deployid，默认显示
-                    if (this.$route.query.deployId) {
-                        const recordItem = this.historyList.find(item => {
-                            return item.deployment_id === this.$route.query.deployId;
-                        });
-                        if (recordItem) {
-                            this.handleShowLog(recordItem);
-                        }
-                    }
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (e) {
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || e.message
-                    });
-                } finally {
-                    this.isLoading = false;
-                    this.isPageLoading = false;
-                }
-            },
-
-            handlePageLimitChange (limit) {
-                this.pagination.limit = limit;
-                this.pagination.current = 1;
-                this.getDeployHistory(this.pagination.current);
-            },
-
-            handlePageChange (newPage) {
-                this.pagination.current = newPage;
-                this.getDeployHistory(newPage);
-            },
-
-            handleShowLog (row) {
-                this.timeLineList = [];
-                this.curDeployLog = '';
-                if (this.isTimelineLoading || this.isLogLoading) {
-                    return false;
-                }
-
-                const operator = row.operator.username;
-                const time = row.created;
-                if (row.operation_type === 'offline') {
-                    const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
-                    this.historySideslider.title = title;
-                    this.curDeployLog = row.logDetail;
-                } else {
-                    const branch = row.name;
-                    this.historySideslider.title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('部署日志')} (${operator}${this.$t('于')}${time}${this.$t('部署')}${branch}${this.$t('分支')})`;
-                    this.getDeployTimeline(row);
-                    this.getDeployLog(row);
-                }
-                this.historySideslider.isShow = true;
-            },
-
-            async getDeployTimeline (params) {
-                if (this.isTimelineLoading) {
-                    return false;
-                }
-
-                this.isTimelineLoading = true;
-                try {
-                    const res = await this.$store.dispatch('deploy/getDeployTimeline', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        env: params.environment,
-                        deployId: params.deployment_id
-                    });
-                    const timeLineList = [];
-                    res.forEach(stageItem => {
-                        timeLineList.push({
-                            tag: stageItem.display_name,
-                            content: this.computedDeployTimelineTime(stageItem.start_time, stageItem.complete_time),
-                            status: stageItem.status || 'default',
-                            stage: stageItem.type
-                        });
-
-                        stageItem.steps.forEach(stepItem => {
-                            timeLineList.push({
-                                tag: stepItem.display_name,
-                                content: this.computedDeployTimelineTime(stepItem.start_time, stepItem.complete_time),
-                                status: stepItem.status || 'default',
-                                parentStage: stageItem.type
-                            });
-                        });
-                    });
-                    this.timeLineList = timeLineList;
-                } catch (e) {
-                    this.timeLineList = [];
-                } finally {
-                    this.isTimelineLoading = false;
-                }
-            },
-
-            async getDeployLog (params) {
-                if (this.isLogLoading) {
-                    return false;
-                }
-                this.isLogLoading = true;
-                console.log(this.isLogLoading);
-                try {
-                    const res = await this.$store.dispatch('deploy/getDeployLog', {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        env: params.environment,
-                        deployId: params.deployment_id
-                    });
-                    this.curDeployLog = this.ansiUp ? this.ansiUp.ansi_to_html(res.logs) : res.logs;
-                    this.errorTips = Object.assign({}, res.error_tips);
-                } catch (e) {
-                    this.curDeployLog = '';
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || e.message
-                    });
-                } finally {
-                    this.isLogLoading = false;
-                }
-            },
-
-            clearFilter () {
-                this.choosedEnv = 'all';
-                this.personnelSelectorList = [];
-                this.getDeployHistory();
-            },
-
-            updateTableEmptyConfig () {
-                if (this.personnelSelectorList.length || this.choosedEnv !== 'all') {
-                    this.tableEmptyConf.keyword = 'placeholder';
-                    return;
-                }
-                this.tableEmptyConf.keyword = '';
-            }
-        }
+      ],
+      timeLineList: [],
+      historySideslider: {
+        title: '',
+        isShow: false,
+      },
+      errorTips: {},
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
     };
+  },
+  computed: {
+    isMatchedSolutionsFound() {
+      return this.errorTips.matched_solutions_found;
+    },
+  },
+  watch: {
+    $route() {
+      this.isLoading = true;
+      this.getDeployHistory();
+    },
+  },
+  created() {
+    this.isLoading = true;
+    this.getDeployHistory();
+  },
+  mounted() {
+    const AU = require('ansi_up');
+    // eslint-disable-next-line
+    this.ansiUp = new AU.default
+  },
+  methods: {
+    updateValue(curVal) {
+      curVal ? this.personnelSelectorList = curVal : this.personnelSelectorList = '';
+    },
+
+    computedDeployTime(payload) {
+      if (!payload.deployment) {
+        return '--';
+      }
+
+      if (!payload.deployment.complete_time || !payload.deployment.start_time) {
+        return '--';
+      }
+
+      const start = new Date(payload.deployment.start_time).getTime();
+      const end = new Date(payload.deployment.complete_time).getTime();
+      const interval = (end - start) / 1000;
+
+      if (!interval) {
+        return `< 1${this.$t('秒')}`;
+      }
+
+      return this.getDisplayTime(interval);
+    },
+
+    computedDeployTimelineTime(startTime, endTime) {
+      if (!startTime || !endTime) {
+        return '--';
+      }
+
+      const start = (new Date(startTime).getTime()) / 1000;
+      const end = (new Date(endTime).getTime()) / 1000;
+      const interval = Math.ceil(end - start);
+
+      if (!interval) {
+        return `< 1${this.$t('秒')}`;
+      }
+
+      return this.getDisplayTime(interval);
+    },
+
+    getDisplayTime(payload) {
+      let theTime = payload;
+      if (theTime < 1) {
+        return `<script 1${this.$t('秒')}`;
+      }
+      let middle = 0;
+      let hour = 0;
+
+      if (theTime > 60) {
+        middle = parseInt(theTime / 60, 10);
+        theTime = parseInt(theTime % 60, 10);
+        if (middle > 60) {
+          hour = parseInt(middle / 60, 10);
+          middle = parseInt(middle % 60, 10);
+        }
+      }
+
+      let result = '';
+
+      if (theTime > 0) {
+        result = `${theTime}${this.$t('秒')}`;
+      }
+      if (middle > 0) {
+        result = `${middle}${this.$t('分')}${result}`;
+      }
+      if (hour > 0) {
+        result = `${hour}${this.$t('时')}${result}`;
+      }
+
+      return result;
+    },
+
+    /**
+     * 获取部署记录
+     */
+    async getDeployHistory(page = 1) {
+      this.isPageLoading = true;
+      const curPage = page || this.pagination.current;
+      const pageParams = {
+        limit: this.pagination.limit,
+        offset: this.pagination.limit * (curPage - 1),
+      };
+      if (this.choosedEnv !== 'all') {
+        pageParams.environment = this.choosedEnv;
+      }
+
+      if (this.personnelSelectorList.length) {
+        pageParams.operator = this.personnelSelectorList[0];
+      }
+
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployHistory', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          pageParams,
+        });
+
+        const reg = RegExp('^[a-z0-9]{40}$');
+        res.results.forEach((operation) => {
+          if (operation.operation_type === 'offline') {
+            operation.logDetail = operation.offline_operation.log;
+            operation.operation_act = this.$t('下架');
+            operation.environment = operation.offline_operation.environment;
+
+            operation.name = operation.offline_operation.repo.name;
+            operation.revision = operation.offline_operation.repo.revision;
+            operation.url = operation.offline_operation.repo.url;
+
+            if (reg.test(operation.offline_operation.repo.revision)) {
+              operation.revision = operation.offline_operation.repo.revision.substring(0, 8);
+            }
+          } else {
+            operation.deployment_id = operation.deployment.deployment_id;
+            operation.environment = operation.deployment.environment;
+            operation.logDetail = '';
+            operation.operation_act = this.$t('部署');
+
+            operation.name = operation.deployment.repo.name;
+            operation.revision = operation.deployment.repo.revision;
+            operation.url = operation.deployment.repo.url;
+
+            if (reg.test(operation.deployment.repo.revision)) {
+              operation.revision = operation.deployment.repo.revision.substring(0, 8);
+            }
+          }
+        });
+        this.historyList = res.results;
+        this.pagination.count = res.count;
+
+        // 如果有deployid，默认显示
+        if (this.$route.query.deployId) {
+          const recordItem = this.historyList.find(item => item.deployment_id === this.$route.query.deployId);
+          if (recordItem) {
+            this.handleShowLog(recordItem);
+          }
+        }
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        this.tableEmptyConf.isAbnormal = true;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLoading = false;
+        this.isPageLoading = false;
+      }
+    },
+
+    handlePageLimitChange(limit) {
+      this.pagination.limit = limit;
+      this.pagination.current = 1;
+      this.getDeployHistory(this.pagination.current);
+    },
+
+    handlePageChange(newPage) {
+      this.pagination.current = newPage;
+      this.getDeployHistory(newPage);
+    },
+
+    handleShowLog(row) {
+      this.timeLineList = [];
+      this.curDeployLog = '';
+      if (this.isTimelineLoading || this.isLogLoading) {
+        return false;
+      }
+
+      const operator = row.operator.username;
+      const time = row.created;
+      if (row.operation_type === 'offline') {
+        const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
+        this.historySideslider.title = title;
+        this.curDeployLog = row.logDetail;
+      } else {
+        const branch = row.name;
+        this.historySideslider.title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('部署日志')} (${operator}${this.$t('于')}${time}${this.$t('部署')}${branch}${this.$t('分支')})`;
+        this.getDeployTimeline(row);
+        this.getDeployLog(row);
+      }
+      this.historySideslider.isShow = true;
+    },
+
+    async getDeployTimeline(params) {
+      if (this.isTimelineLoading) {
+        return false;
+      }
+
+      this.isTimelineLoading = true;
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployTimeline', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: params.environment,
+          deployId: params.deployment_id,
+        });
+        const timeLineList = [];
+        res.forEach((stageItem) => {
+          timeLineList.push({
+            tag: stageItem.display_name,
+            content: this.computedDeployTimelineTime(stageItem.start_time, stageItem.complete_time),
+            status: stageItem.status || 'default',
+            stage: stageItem.type,
+          });
+
+          stageItem.steps.forEach((stepItem) => {
+            timeLineList.push({
+              tag: stepItem.display_name,
+              content: this.computedDeployTimelineTime(stepItem.start_time, stepItem.complete_time),
+              status: stepItem.status || 'default',
+              parentStage: stageItem.type,
+            });
+          });
+        });
+        this.timeLineList = timeLineList;
+      } catch (e) {
+        this.timeLineList = [];
+      } finally {
+        this.isTimelineLoading = false;
+      }
+    },
+
+    async getDeployLog(params) {
+      if (this.isLogLoading) {
+        return false;
+      }
+      this.isLogLoading = true;
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployLog', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: params.environment,
+          deployId: params.deployment_id,
+        });
+        this.curDeployLog = this.ansiUp ? this.ansiUp.ansi_to_html(res.logs) : res.logs;
+        this.errorTips = Object.assign({}, res.error_tips);
+      } catch (e) {
+        this.curDeployLog = '';
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message,
+        });
+      } finally {
+        this.isLogLoading = false;
+      }
+    },
+
+    clearFilter() {
+      this.choosedEnv = 'all';
+      this.personnelSelectorList = [];
+      this.getDeployHistory();
+    },
+
+    updateTableEmptyConfig() {
+      if (this.personnelSelectorList.length || this.choosedEnv !== 'all') {
+        this.tableEmptyConf.keyword = 'placeholder';
+        return;
+      }
+      this.tableEmptyConf.keyword = '';
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

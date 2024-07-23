@@ -14,11 +14,14 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import Any, Dict
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
+from paasng.platform.engine.models.config_var import DefaultConfigVar
 from paasng.platform.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
@@ -45,9 +48,19 @@ class DefaultConfigVarCreateInputSLZ(serializers.Serializer):
         allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
 
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if DefaultConfigVar.objects.filter(key=data["key"]).exists():
+            raise ValidationError(
+                _("该环境下名称为 {key} 的变量已经存在，不能重复添加。").format(key=data["key"]), code="unique"
+            )
+        return data
+
 
 class DefaultConfigVarUpdateInputSLZ(DefaultConfigVarCreateInputSLZ):
-    pass
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if DefaultConfigVar.objects.exclude(id=self.context["id"]).filter(key=data["key"]).exists():
+            raise ValidationError(_("该环境下同名变量 {key} 已存在。").format(key=data["key"]), code="unique")
+        return data
 
 
 class DefaultConfigVarListOutputSLZ(serializers.Serializer):

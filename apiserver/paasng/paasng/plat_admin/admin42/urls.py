@@ -20,7 +20,17 @@ from __future__ import absolute_import
 from django.conf.urls import url
 
 from . import runtime_views, views
-from .views import accountmgr, applications, bk_plugins, runtimes, services, smart_advisor, sourcectl, templates
+from .views import (
+    accountmgr,
+    applications,
+    bk_plugins,
+    default_env,
+    runtimes,
+    services,
+    smart_advisor,
+    sourcectl,
+    templates,
+)
 from .views.engine import (
     certs,
     clusters,
@@ -490,5 +500,25 @@ urlpatterns += [
         r"configuration/bk_plugins/distributors/(?P<pk>[^/]+)/",
         bk_plugins.BKPluginDistributorsView.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.bk_plugins.distributors.detail",
+    ),
+]
+
+# 环境变量管理
+urlpatterns += [
+    url(
+        r"configuration/default_env/manage/$",
+        default_env.DefaultConfigVarView.as_view(),
+        name="admin.configuration.default_env.manage",
+    ),
+    # 环境变量管理API
+    url(
+        r"configuration/default_env/$",
+        default_env.DefaultConfigVarViewSet.as_view({"get": "list", "post": "create"}),
+        name="admin.configuration.default_env",
+    ),
+    url(
+        r"configuration/default_env/(?P<pk>[^/]+)/",
+        default_env.DefaultConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
+        name="admin.configuration.default_env.detail",
     ),
 ]

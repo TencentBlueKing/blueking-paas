@@ -1,0 +1,182 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-source-type-spec-list" class="p20">
+    <bk-button theme="primary" class="mb20" @click="handleCreate">
+        新建
+    </bk-button>
+    <bk-table :data="data">
+        <bk-table-column label="Key" prop="key" width="500" :formatter="addPrefix"></bk-table-column>
+        <bk-table-column label="Value" prop="value" width="500"></bk-table-column>
+        <bk-table-column label="描述" prop="description" width="500"></bk-table-column>
+        <bk-table-column label="更新时间" prop="updated_at" width="250"></bk-table-column>
+        <bk-table-column label="更新者" prop="updater" width="200"></bk-table-column>
+        <bk-table-column label="操作" width="200">
+            <template slot-scope="props">
+                <bk-button class="ml5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button class="ml5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <!-- 创建/编辑代码库配置用弹窗 -->
+    <bk-dialog
+        v-model="dialog.visible"
+        header-position="left"
+        width="800"
+        :confirm-fn="submitDialog"
+        @cancel="cancelDialog"
+        :mask-close="false"
+    >
+        <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]代码库配置</div>
+        <bk-form :label-width="140" :model="dialog.form" :rules="rules">
+            <bk-form-item label="Key" property="key" :required="true">
+                <bk-input v-model="dialog.form.key" placeholder="请输入key">
+                    <template slot="prepend">
+                        <div class="group-text">BKPAAS_</div>
+                    </template>
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="Value" :required="true">
+                <bk-input v-model="dialog.form.value" placeholder="请输入value"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="描述">
+                <bk-input v-model="dialog.form.description" placeholder="请输入描述"></bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+
+    <!-- 删除确认提示 -->
+    <bk-dialog
+        v-model="deleteConfirm.visible"
+        header-position="left"
+        width="400"
+        :confirm-fn="deleteRow"
+        @cancel="cancelDelete"
+        :mask-close="false"
+    >
+        <div slot="header">删除确认</div>
+        <p>确定要删除吗？</p>
+    </bk-dialog>
+</div>
+{% endblock %}
+
+{% block main_script %}
+<script>
+const URLRouter = {
+    create: decodeURI("{% url 'admin.configuration.default_env' %}"),
+    list: decodeURI("{% url 'admin.configuration.default_env' %}"),
+    detail: decodeURI("{% url 'admin.configuration.default_env.detail' pk='${id}' %}"),
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#platform-source-type-spec-list",
+        delimiters: ['$[', ']'],
+        data: function () {
+            return {
+                data: [],
+                dialog: {
+                    visible: false,
+                    type: '',
+                    form: {
+                        key: '',
+                        value: '',
+                        description: '',
+                    },
+                    row: undefined
+                },
+                deleteConfirm: {
+                    visible: false,
+                    row: undefined
+                },
+                rules: {
+                    key: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    value: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                }
+            }
+        },
+        methods: {
+            fetchSourceTypeSpecList: async function () {
+                const el = this.$bkLoading({title: '加载中'})
+                try {
+                    await this.$http.get(URLRouter.list).then(res => {
+                        this.data = res
+                    })
+                } finally {
+                    el.hide = true
+                }
+            },
+            cancelDialog: function () {
+                this.dialog.visible = false
+            },
+            submitDialog: async function () {
+                const url = this.dialog.type === 'create' ? URLRouter.create : this.fillUrlTemplate(URLRouter.detail, {row: this.dialog.row});
+                const method = this.dialog.type === 'create' ? 'post' : 'put';
+                await this.$http[method](url, this.dialog.form);
+
+                this.cancelDialog();
+                this.fetchSourceTypeSpecList();
+            },
+            handleCreate: function () {
+                this.dialog.type = "create"
+                this.dialog.row = undefined
+                this.dialog.form = {
+                    key: '',
+                    value: '',
+                    description: '',
+                }
+                this.dialog.visible = true
+            },
+            handleEdit: function (row) {
+                this.dialog.type = "edit"
+                this.dialog.row = row
+                this.dialog.form = { ...row }
+                this.dialog.visible = true
+            },
+            handleDelete: function (row) {
+                this.deleteConfirm.row = row
+                this.deleteConfirm.visible = true
+            },
+            deleteRow: async function () {
+                const url = this.fillUrlTemplate(URLRouter.detail, {row: this.deleteConfirm.row});
+                await this.$http.delete(url);
+
+                const index = this.data.findIndex(item => item.key === this.deleteConfirm.row.key);
+                if (index !== -1) {
+                    this.data.splice(index, 1);
+                }
+
+                this.deleteConfirm.visible = false
+            },
+            cancelDelete: function () {
+                this.deleteConfirm.visible = false
+            },
+            fillUrlTemplate: function (url_template, {row}) {
+                if (!row)
+                    row = {}
+                return url_template.replace("${id}", row.id)
+            },
+            addPrefix: function(row, column, cellValue, index) {
+                return `BKPAAS_${cellValue}`
+            }
+        },
+        mounted: function () {
+            this.fetchSourceTypeSpecList()
+        },
+    })
+})
+</script>
+{% endblock %}

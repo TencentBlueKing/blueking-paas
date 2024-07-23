@@ -19,6 +19,7 @@ import logging
 from typing import Any, Dict, List, Optional, cast
 
 from django.http.response import Http404
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -50,7 +51,6 @@ from paasng.plat_admin.system.serializers import (
     UniversalAppSLZ,
 )
 from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.operators import get_contact_info_by_appids
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
@@ -158,15 +158,15 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         return paginator.get_paginated_response(serializer.data)
 
 
-class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
+class SysAddonsAPIViewSet(viewsets.ViewSet):
     """System api for managing Application Addons"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def query_credentials(self, request, code, module_name, environment, service_name):
         """查询增强服务的 credentials 信息"""
-        application = self.get_application()
-        engine_app = self.get_engine_app_via_path()
+        application = get_object_or_404(Application, code=code)
+        engine_app = application.get_engine_app(environment, module_name=module_name)
         try:
             svc = mixed_service_mgr.find_by_name(name=service_name, region=application.region)
         except ServiceObjNotFound:
@@ -183,9 +183,9 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def provision_service(self, request, code, module_name, environment, service_name):
         """分配增强服务实例"""
-        application = self.get_application()
-        module = self.get_module_via_path()
-        engine_app = self.get_engine_app_via_path()
+        application = get_object_or_404(Application, code=code)
+        module = application.get_module(module_name)
+        engine_app = application.get_engine_app(environment, module_name=module_name)
 
         try:
             svc = mixed_service_mgr.find_by_name(name=service_name, region=application.region)
@@ -217,7 +217,9 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def list_services(self, request, code, module_name, environment):
         """查询增强服务启用/实例分配情况"""
-        engine_app = self.get_engine_app_via_path()
+        application = get_object_or_404(Application, code=code)
+        engine_app = application.get_engine_app(environment, module_name=module_name)
+
         service_info = ServicesInfo.get_detail(engine_app)["services_info"]
         return Response(data=service_info)
 
@@ -228,8 +230,8 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         """获取应用已绑定的服务规格.
         接口实现逻辑参考 paasng.accessories.servicehub.views.ModuleServicesViewSet.retrieve_specs
         """
-        application = self.get_application()
-        module = self.get_module_via_path()
+        application = get_object_or_404(Application, code=code)
+        module = application.get_module(module_name)
         service = mixed_service_mgr.get_or_404(service_id, region=application.region)
 
         # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
@@ -257,15 +259,17 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         return ServiceSpecificationHelper.from_service_public_specifications(svc).get_recommended_spec()
 
 
-class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
+class LessCodeSystemAPIViewSet(viewsets.ViewSet):
     """System api for lesscode"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI", "LESSCODE"])
     @site_perm_required(SiteAction.SYSAPI_READ_DB_CREDENTIAL)
     def query_db_credentials(self, request, code, module_name, environment):
         """查询数据库增强服务的 credentials 信息"""
-        svc = self.get_db_service()
-        engine_app = self.get_engine_app_via_path()
+        application = get_object_or_404(Application, code=code)
+        svc = self.get_db_service(application)
+
+        engine_app = application.get_engine_app(environment, module_name=module_name)
 
         credentials = mixed_service_mgr.get_env_vars(engine_app=engine_app, service=svc)
         if not credentials:
@@ -276,8 +280,10 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     @site_perm_required(SiteAction.SYSAPI_BIND_DB_SERVICE)
     def bind_db_service(self, request, code, module_name):
         """尝试绑定数据库增强服务"""
-        svc = self.get_db_service()
-        module = self.get_module_via_path()
+        application = get_object_or_404(Application, code=code)
+        module = application.get_module(module_name)
+
+        svc = self.get_db_service(application)
 
         try:
             mixed_service_mgr.get_module_rel(service_id=svc.uuid, module_id=module.id)
@@ -285,9 +291,8 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             mixed_service_mgr.bind_service(service=svc, module=module)
         return Response()
 
-    def get_db_service(self):
+    def get_db_service(self, application):
         """获取数据库增强服务"""
-        application = self.get_application()
         svc = None
         for service_name in ["gcs_mysql", "mysql"]:
             try:
@@ -301,14 +306,14 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         return svc
 
 
-class ClusterNamespaceInfoView(ApplicationCodeInPathMixin, viewsets.ViewSet):
+class ClusterNamespaceInfoView(viewsets.ViewSet):
     """System api for query app cluster/namespace info"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI"], responses={"200": ClusterNamespaceSLZ(many=True)})
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_by_app_code(self, request, code):
         """list app cluster/namespace info"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         wl_apps = [env.wl_app for env in application.envs.all()]
 
         namespace_cluster_map: Dict[str, str] = {}

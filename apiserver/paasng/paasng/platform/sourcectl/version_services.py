@@ -102,7 +102,7 @@ def get_version_service(module: "Module", operator: Optional[str] = None) -> Dep
         return RepoVersionService(get_repo_controller(module, operator))
     elif source_origin == SourceOrigin.IMAGE_REGISTRY:
         return DockerRegistryController.init_by_module(module, operator)
-    elif source_origin in [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART]:
+    elif source_origin in SourceOrigin.get_package_origins():
         from paasng.platform.sourcectl.controllers.package import PackageController
 
         return PackageController.init_by_module(module, operator)

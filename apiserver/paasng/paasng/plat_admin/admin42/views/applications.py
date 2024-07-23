@@ -21,6 +21,7 @@ import rest_framework.request
 import xlwt
 from django.db.models import Q
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -48,7 +49,6 @@ from paasng.plat_admin.admin42.serializers.application import (
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
@@ -244,7 +244,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
         return rows
 
 
-class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin):
+class ApplicationDetailBaseView(GenericTemplateView):
     """Application详情概览页"""
 
     template_name = "admin42/applications/detail/base.html"
@@ -255,12 +255,18 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
     def get_context_data(self, **kwargs):
         if "view" not in kwargs:
             kwargs["view"] = self
-        application = ApplicationDetailSLZ(self.get_application()).data
-        kwargs["application"] = application
+
+        application = self.get_application()
+        kwargs["application"] = ApplicationDetailSLZ(application).data
         return kwargs
 
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+    def get_application(self) -> Application:
+        """Get the application object from the URL path."""
+        code = self.kwargs["code"]
+        return get_object_or_404(Application, code=code)
 
 
 class ApplicationOverviewView(ApplicationDetailBaseView):
@@ -292,16 +298,21 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         return kwargs
 
 
-class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+class AppEnvConfManageView(viewsets.GenericViewSet):
     """应用部署环境配置管理"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def bind_cluster(self, request, code, module_name, environment):
+        """切换环境所绑定的集群"""
         slz = BindEnvClusterSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        EnvClusterService(env=self.get_env_via_path()).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
+        # Get the environment object
+        application = get_object_or_404(Application, code=code)
+        env = application.get_module(module_name).envs.get(environment=environment)
+
+        EnvClusterService(env=env).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -328,17 +339,18 @@ class ApplicationMembersManageView(ApplicationDetailBaseView):
         return kwargs
 
 
-class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
     """Application应用成员 CRUD 接口"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def list(self, request, *args, **kwargs):
-        members = fetch_application_members(self.get_application().code)
+        application = get_object_or_404(Application, code=kwargs["code"])
+        members = fetch_application_members(application.code)
         return Response(ApplicationMemberSLZ(members, many=True).data)
 
     def destroy(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         try:
             remove_user_all_roles(application.code, request.query_params["username"])
         except BKIAMGatewayServiceError as e:
@@ -348,7 +360,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         username, role = request.data["username"], request.data["role"]
 
         try:
@@ -373,9 +385,8 @@ class ApplicationFeatureFlagsView(ApplicationDetailBaseView):
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
-        application_features = ApplicationFeatureFlag.objects.get_application_features(
-            application=self.get_application()
-        )
+        application = self.get_application()
+        application_features = ApplicationFeatureFlag.objects.get_application_features(application=application)
         kwargs["APP_FEATUREFLAG_CHOICES"] = dict(AppFeatureFlag.get_django_choices())
         kwargs["feature_flag_list"] = ApplicationFeatureFlagSLZ(
             [{"name": key, "effect": value} for key, value in application_features.items()], many=True
@@ -383,16 +394,15 @@ class ApplicationFeatureFlagsView(ApplicationDetailBaseView):
         return kwargs
 
 
-class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+class ApplicationFeatureFlagsViewset(viewsets.GenericViewSet):
     """Application应用特性 CRUD 接口"""
 
     serializer_class = ApplicationFeatureFlagSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def list(self, request, code):
-        application_features = ApplicationFeatureFlag.objects.get_application_features(
-            application=self.get_application()
-        )
+        application = get_object_or_404(Application, code=code)
+        application_features = ApplicationFeatureFlag.objects.get_application_features(application=application)
         return Response(
             ApplicationFeatureFlagSLZ(
                 [{"name": key, "effect": value} for key, value in application_features.items()], many=True
@@ -400,6 +410,6 @@ class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.Generi
         )
 
     def update(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
         return Response(status=status.HTTP_204_NO_CONTENT)

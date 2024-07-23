@@ -25,8 +25,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
+from paasng.infras.accounts.models import UserProfile
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import Operation
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
@@ -254,24 +253,15 @@ class TestApplicationCreateWithEngine:
 
     @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        ("source_origin", "source_repo_url", "source_control_type", "with_feature_flag", "is_success"),
+        ("source_origin", "source_repo_url", "source_control_type", "is_success"),
         [
             (
                 SourceOrigin.BK_LESS_CODE,
                 "http://dummy.git",
                 "",
                 True,
-                True,
             ),
-            (
-                SourceOrigin.BK_LESS_CODE,
-                "http://dummy.git",
-                "",
-                False,
-                False,
-            ),
-            (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", True, True),
-            (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", False, True),
+            (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", True),
         ],
     )
     def test_create_non_default_origin(
@@ -282,12 +272,8 @@ class TestApplicationCreateWithEngine:
         source_origin,
         source_repo_url,
         source_control_type,
-        with_feature_flag,
         is_success,
     ):
-        # Set user feature flag
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
-
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
             "/api/bkapps/applications/v2/",
@@ -444,7 +430,6 @@ class TestCreateBkPlugin:
     )
     def test_normal(self, api_client, mock_wl_services_in_creation, settings, bk_user, source_init_template, language):
         settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = True
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
         response = self._send_creation_request(api_client, source_init_template)
 
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
@@ -486,7 +471,7 @@ class TestCreateCloudNativeApp:
 
     @pytest.fixture(autouse=True)
     def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
+        pass
 
     def test_create_with_image(self, api_client):
         """托管方式：仅镜像"""

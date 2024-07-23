@@ -337,66 +337,11 @@
         v-bkloading="{ isLoading: envLoading, zIndex: 10 }"
         class="slider-env-content"
       >
-        <div v-if="basicInfo.length">
-          <p class="env-title mb10">
-            {{ $t('应用基本信息') }}
-          </p>
-          <div ref="basicInfoWrapper">
-            <p
-              v-for="item in basicInfo"
-              :key="item.label"
-              class="env-item"
-            >
-              <span
-                ref="basicText"
-                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
-              >
-                {{ item.label }}: {{ item.value }}
-              </span>
-            </p>
-          </div>
-        </div>
-        <div v-if="appRuntimeInfo.length">
-          <p class="env-title mt15 mb10">
-            {{ $t('应用运行时信息') }}
-          </p>
-          <div ref="appRuntimeInfoWrapper">
-            <p
-              v-for="item in appRuntimeInfo"
-              :key="item.label"
-              class="env-item"
-            >
-              <span
-                ref="appRuntimeText"
-                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
-              >
-                {{ item.label }}: {{ item.value }}
-              </span>
-            </p>
-          </div>
-        </div>
-        <div v-if="bkPlatformInfo.length">
-          <p class="env-title mt15 mb10">
-            {{ $t('蓝鲸体系内平台地址') }}
-          </p>
-          <div ref="bkPlatformInfoWrapper">
-            <p
-              v-for="item in bkPlatformInfo"
-              :key="item.label"
-              class="env-item"
-            >
-              <span
-                ref="bkPlatformText"
-                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
-              >
-                {{ item.label }}={{ item.value }}
-              </span>
-            </p>
-          </div>
-        </div>
-        <p class="reminder">
-          {{ $t('增强服务也会写入相关的环境变量，可在增强服务的“实例详情”页面的“配置信息”中查看') }}
-        </p>
+        <builtIn-env-var-display
+          :basic-info="basicInfo"
+          :app-runtime-info="appRuntimeInfo"
+          :bk-platform-info="bkPlatformInfo"
+        />
       </div>
     </bk-sideslider>
 
@@ -541,13 +486,15 @@
   </div>
 </template>
 
-<script>import { cloneDeep } from 'lodash';
+<script>
+import { cloneDeep } from 'lodash';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
+import builtInEnvVarDisplay from '@/components/builtIn-env-var-display';
 
 export default {
-  components: {},
+  components: { builtInEnvVarDisplay },
   mixins: [appBaseMixin],
   props: {
     // 组件内部按钮操作
@@ -915,9 +862,6 @@ export default {
         this.loadingConf.basicLoading = true;
         const data = await this.$store.dispatch('envVar/getBasicInfo', { appCode: this.appCode });
         this.basicInfo = this.convertArray(data);
-        this.$nextTick(() => {
-          this.contrastTextWitch('basicInfoWrapper', 'basicText', this.basicInfo);
-        });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -933,9 +877,6 @@ export default {
         this.loadingConf.appRuntimeLoading = true;
         const data = await this.$store.dispatch('envVar/getAppRuntimeInfo', { appCode: this.appCode });
         this.appRuntimeInfo = this.convertArray(data);
-        this.$nextTick(() => {
-          this.contrastTextWitch('appRuntimeInfoWrapper', 'appRuntimeText', this.appRuntimeInfo);
-        });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -951,9 +892,6 @@ export default {
         this.loadingConf.bkPlatformLoading = true;
         const data = await this.$store.dispatch('envVar/getBkPlatformInfo', { appCode: this.appCode });
         this.bkPlatformInfo = this.convertArray(data);
-        this.$nextTick(() => {
-          this.contrastTextWitch('bkPlatformInfoWrapper', 'bkPlatformText', this.bkPlatformInfo);
-        });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -977,16 +915,6 @@ export default {
         return p;
       }, []);
       return list;
-    },
-
-    // 文字溢出显示tooltips
-    contrastTextWitch(parentRef, childRef, data) {
-      const containerWitch = this.$refs[parentRef].offsetWidth;
-      this.$refs[childRef].forEach((item, index) => {
-        if (item.offsetWidth > containerWitch) {
-          this.$set(data[index], 'isTips', false);
-        }
-      });
     },
 
     // 编辑页面
@@ -1838,7 +1766,7 @@ a.is-disabled {
 }
 
 .slider-env-content {
-  padding: 30px;
+  padding: 20px 24px;
   min-height: calc(100vh - 50px);
 }
 .env-title {
@@ -1855,13 +1783,6 @@ a.is-disabled {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.reminder {
-  margin-top: 15px;
-  line-height: 24px;
-  font-size: 13px;
-  color: #ff9c01;
 }
 
 .desc-env {

@@ -19,6 +19,7 @@ import logging
 
 from django.db import transaction
 from django.http.response import Http404
+from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
@@ -29,7 +30,7 @@ from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.serializers.runtime import AppBuildPackSLZ, AppSlugBuilderSLZ, AppSlugRunnerSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -100,20 +101,21 @@ class RuntimeManageView(ApplicationDetailBaseView):
         return kwargs
 
 
-class RuntimeManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class RuntimeManageViewSet(GenericViewSet):
     """运行时管理 API"""
 
     schema = None
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def list(self, request, *args, **kwargs):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
         return Response(ModuleRuntimeSLZ(module).to_dict() for module in application.modules.all())
 
     @transaction.atomic
     def bind(self, request, **kwargs):
         """绑定运行时"""
-        module = self.get_module_via_path()
+        application = get_object_or_404(Application, code=kwargs["code"])
+        module = application.get_module(kwargs["module_name"])
 
         slz = ModuleRuntimeBindSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

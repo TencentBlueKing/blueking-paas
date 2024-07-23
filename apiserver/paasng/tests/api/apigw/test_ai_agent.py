@@ -22,7 +22,6 @@ from unittest import mock
 import pytest
 import yaml
 from django.conf import settings
-from django.test.utils import override_settings
 
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
@@ -43,62 +42,27 @@ def bk_app_name():
     return generate_random_string(8)
 
 
-@pytest.fixture()
-def lesscode_public_params():
-    return {
-        "type": "default",
-        "engine_enabled": True,
-        "engine_params": {"source_origin": 2, "source_init_template": settings.DUMMY_TEMPLATE_NAME},
-    }
-
-
-class TestApiInAPIGW:
-    """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
-
-    @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(
-        ("is_lesscode_app_cloud_native", "app_type"),
-        [(True, ApplicationType.CLOUD_NATIVE.value), (False, ApplicationType.DEFAULT.value)],
-    )
-    def test_create_lesscode_api(
-        self,
-        bk_user,
-        api_client,
-        mock_wl_services_in_creation,
-        lesscode_public_params,
-        bk_app_code,
-        bk_app_name,
-        is_lesscode_app_cloud_native,
-        app_type,
-    ):
-        lesscode_public_params.update(
-            {
-                "region": settings.DEFAULT_REGION_NAME,
-                "code": bk_app_code,
-                "name": bk_app_name,
-            }
-        )
-        with override_settings(LESSCODE_APP_USE_CLOUD_NATIVE_TYPE=is_lesscode_app_cloud_native):
-            response = api_client.post(
-                "/apigw/api/bkapps/applications/",
-                data=lesscode_public_params,
-            )
-        assert response.status_code == 201
-        assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.BK_LESS_CODE
-        assert response.json()["application"]["type"] == app_type
-
-
-class TestModuleSourcePackageViewSet:
-    """测试源码包上传的接口"""
+class TestAIAgentViewSet:
+    """AI Agent 插件创建、上传源码包接口测试"""
 
     @pytest.fixture()
     def contents(self):
         """The default contents for making tar file."""
+
+        # 目前插件应用的模板都是使用 spec_version=2 的应用描述文件
         app_desc = {
             "spec_version": 2,
-            "module": {"is_default": True, "processes": {"web": {"command": "npm run online"}}, "language": "NodeJS"},
+            "module": {
+                "is_default": True,
+                "processes": {
+                    "web": {
+                        "command": "gunicorn bk_plugin_runtime.wsgi --timeout 120 -k gevent -w 2 --max-requests=1000"
+                    }
+                },
+                "language": "python",
+            },
         }
-        return {"app.yaml": yaml.safe_dump(app_desc)}
+        return {"app_desc.yml": yaml.safe_dump(app_desc)}
 
     @pytest.fixture()
     def tar_path(self, contents):
@@ -106,8 +70,32 @@ class TestModuleSourcePackageViewSet:
             gen_tar(file_path, contents)
             yield file_path
 
+    @pytest.mark.usefixtures("_init_tmpls")
+    def test_create_ai_agent_app(
+        self,
+        bk_user,
+        api_client,
+        mock_wl_services_in_creation,
+        bk_app_code,
+        bk_app_name,
+    ):
+        params = {
+            "region": settings.DEFAULT_REGION_NAME,
+            "code": bk_app_code,
+            "name": bk_app_name,
+        }
+        response = api_client.post(
+            "/api/bkapps/ai_agent/",
+            data=params,
+        )
+        assert response.status_code == 201
+        assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.AI_AGENT
+        assert response.json()["application"]["type"] == ApplicationType.CLOUD_NATIVE
+        assert response.json()["application"]["is_ai_agent_app"] is True
+        assert response.json()["application"]["is_plugin_app"] is True
+
     def test_upload_with_app_desc(self, api_client, bk_app, bk_module, tar_path):
-        bk_module.source_origin = SourceOrigin.BK_LESS_CODE
+        bk_module.source_origin = SourceOrigin.AI_AGENT
         bk_module.save()
         url = "/api/bkapps/applications/{code}/modules/{module_name}/source_package/link/".format(
             code=bk_app.code, module_name=bk_module.name

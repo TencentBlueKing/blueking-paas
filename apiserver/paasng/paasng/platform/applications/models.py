@@ -298,6 +298,10 @@ class Application(OwnerTimestampedModel):
         default=False,
         help_text="蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑",
     )
+    is_ai_agent_app = models.BooleanField(
+        verbose_name="是否为 AI Agent 插件应用",
+        default=False,
+    )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 
     creator = BkUserField()
@@ -345,7 +349,7 @@ class Application(OwnerTimestampedModel):
         """获取 Application 对应的源码 Repo 对象"""
         return self.get_default_module().get_source_obj()
 
-    def get_engine_app(self, environment, module_name=None):
+    def get_engine_app(self, environment: str, module_name=None):
         """Get the engine app of current application"""
         module = self.get_module(module_name=module_name)
         engine_app = module.get_envs(environment=environment).engine_app

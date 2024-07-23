@@ -50,10 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [
-        IsAuthenticated,
-        application_perm_class(AppAction.BASIC_DEVELOP),
-    ]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def _is_whitelisted_user(self, request):
         return user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self)

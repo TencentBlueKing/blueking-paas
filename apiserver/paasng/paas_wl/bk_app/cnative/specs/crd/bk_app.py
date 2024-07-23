@@ -149,13 +149,25 @@ class ProbeSet(BaseModel):
 
 
 class ExposedType(BaseModel):
-    """ExposedType is the exposed type of the ProcService"""
+    """ExposedType is the exposed type of the ProcService
+
+    :param name: the name of the exposed type
+    """
 
     name: Literal[ExposedTypeName.BK_HTTP] = ExposedTypeName.BK_HTTP
 
 
 class ProcService(BaseModel):
-    """ProcService is a process service which used to expose network"""
+    """ProcService is a process service which used to expose network
+
+    :param name: the name of the service
+    :param targetPort: the target port of the service
+    :param protocol: the protocol of the service
+    :param exposedType: the exposed type of the service. If not specified, the service can only
+        be accessed within the cluster, not from outside.
+    :param port: the port that will be exposed by this service. If not specified, the value of
+        the 'targetPort' field is used.
+    """
 
     name: str
     targetPort: int

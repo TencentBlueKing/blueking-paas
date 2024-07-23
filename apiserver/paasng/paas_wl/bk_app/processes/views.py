@@ -424,28 +424,26 @@ class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def retrieve(self, request, code, module_name, environment, process_type, process_instance_name):
-        """获取进程实例上一次运行时的日志（100行）"""
-        _ = self.get_application()
+        """获取进程实例上一次运行时的日志（400行）"""
         env = self.get_env_via_path()
 
         manager = ProcessManager(env)
         try:
-            logs = manager.get_previous_logs(process_type, process_instance_name, tail_lines=100)
+            logs = manager.get_previous_logs(process_type, process_instance_name, tail_lines=400)
         except PreviousInstanceNotFound:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         return Response(status=status.HTTP_200_OK, data=logs.splitlines())
 
     def download(self, request, code, module_name, environment, process_type, process_instance_name):
         """下载进程实例上一次运行时的日志"""
-        _ = self.get_application()
         env = self.get_env_via_path()
 
         manager = ProcessManager(env)
         try:
             logs = manager.get_previous_logs(process_type, process_instance_name)
         except PreviousInstanceNotFound:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         response = HttpResponse(logs, content_type="text/plain")
         response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'

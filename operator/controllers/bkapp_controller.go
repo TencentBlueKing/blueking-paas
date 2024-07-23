@@ -179,7 +179,7 @@ func (r *BkAppReconciler) updateStatus(
 	}
 
 	if err := r.client.Status().Patch(ctx, after, client.MergeFrom(before)); err != nil {
-		syncErr := errors.Wrapf(err, "failed to update bkapp(%s/%s) status", before.Namespace, before.Name)
+		syncErr := errors.Wrap(err, "failed to update bkapp status")
 		if reconcileErr == nil {
 			return syncErr
 		} else {

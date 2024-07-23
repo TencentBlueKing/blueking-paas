@@ -21,7 +21,6 @@ package main
 import (
 	"context"
 	"flag"
-	"go.uber.org/zap/zapcore"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,6 +33,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

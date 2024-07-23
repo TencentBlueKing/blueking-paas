@@ -96,7 +96,7 @@ func (r *DGroupMappingSyncer) ListCurrentIngresses(
 		client.MatchingLabels(labels.MappingIngress(dgmapping)),
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to list ingresses for bkapp %s/%s", r.bkapp.Namespace, r.bkapp.Name)
+		return nil, errors.Wrap(err, "failed to list ingresses")
 	}
 	return lo.ToSlicePtr(current.Items), nil
 }
@@ -110,11 +110,11 @@ func (r *DGroupMappingSyncer) getWantedIngresses(
 	for _, group := range domains {
 		builder, err := dgmingress.NewIngressBuilder(group.SourceType, r.bkapp)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fail to create builder for bkapp %s/%s", r.bkapp.Namespace, r.bkapp.Name)
+			return nil, errors.Wrap(err, "fail to create builder")
 		}
 		ings, err := builder.Build(group.Domains)
 		if err != nil {
-			return nil, errors.Wrapf(err, "fail to generate ingresses for bkapp %s/%s", r.bkapp.Namespace, r.bkapp.Name)
+			return nil, errors.Wrap(err, "fail to generate ingresses")
 		}
 		results = append(results, ings...)
 	}

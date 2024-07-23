@@ -83,7 +83,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 	// remove our finalizer from the finalizers list and update it.
 	controllerutil.RemoveFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)
 	if err = r.Client.Update(ctx, bkapp); err != nil {
-		return r.Result.WithError(errors.Wrapf(err, "failed to remove finalizer for app for bkapp %s/%s", bkapp.Namespace, bkapp.Name))
+		return r.Result.WithError(errors.Wrap(err, "failed to remove finalizer for app"))
 	}
 	return r.Result.End()
 }
@@ -131,7 +131,7 @@ func isPodExecTimeout(pod corev1.Pod, timeout time.Duration) bool {
 func (r *BkappFinalizer) deleteResources(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
 	var err error
 	if err = r.deleteHookPods(ctx, bkapp); err != nil {
-		return errors.Wrapf(err, "failed to delete hook pods for bkapp %s/%s", bkapp.Namespace, bkapp.Name)
+		return errors.Wrap(err, "failed to delete hook pods")
 	}
 	if err = r.deleteServices(ctx, bkapp); err != nil {
 		return errors.Wrap(err, "failed to delete services")
@@ -163,7 +163,7 @@ func (r *BkappFinalizer) deleteServices(ctx context.Context, bkapp *paasv1alpha2
 		client.MatchingLabels{paasv1alpha2.BkAppNameKey: bkapp.GetName()},
 	)
 	if err != nil {
-		return errors.Wrapf(err, "failed to query ServiceList for bkapp %s/%s", bkapp.Namespace, bkapp.Name)
+		return errors.Wrap(err, "failed to query ServiceList")
 	}
 	for _, svc := range svcList.Items {
 		if err = r.Client.Delete(ctx, &svc); err != nil {

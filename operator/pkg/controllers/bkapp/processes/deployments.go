@@ -100,7 +100,7 @@ func (r *DeploymentReconciler) getCurrentDeployments(
 		ctx, &deployList, client.InNamespace(bkapp.Namespace),
 		client.MatchingFields{paasv1alpha2.KubeResOwnerKey: bkapp.Name},
 	); err != nil {
-		return nil, errors.Wrapf(err, "failed to list app(%s/%s)'s deployments", bkapp.Namespace, bkapp.Name)
+		return nil, errors.Wrap(err, "failed to list app's deployments")
 	}
 
 	return lo.ToSlicePtr(deployList.Items), nil
@@ -137,7 +137,7 @@ func (r *DeploymentReconciler) getNewDeployments(
 		}
 
 		if err = kubeutil.UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {
-			return nil, errors.Wrapf(err, "get new deployment error, upsert failed for %s:%s.", bkapp.Name, proc.Name)
+			return nil, errors.Wrap(err, "get new deployment error")
 		}
 		results[proc.Name] = deployment
 	}
@@ -198,7 +198,7 @@ func (r *DeploymentReconciler) cleanUpDeployments(ctx context.Context,
 		}
 		if err := r.Client.Delete(ctx, d); err != nil {
 			metrics.IncDeleteOutdatedDeployFailures(bkapp, d.Name)
-			return errors.Wrapf(err, "error cleaning up deployment %s", d.Name)
+			return errors.Wrapf(err, "error cleaning up deployment")
 		}
 	}
 	return nil

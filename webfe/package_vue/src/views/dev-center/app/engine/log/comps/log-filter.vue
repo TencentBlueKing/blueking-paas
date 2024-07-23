@@ -1,13 +1,8 @@
 <template>
   <div class="ps-log-filter">
-    <div
-      v-bk-clickoutside="hideDatePicker"
-      class="header"
-    >
-      <div class="fl">
-        {{ $t('共') }} <strong>{{ logCount }}</strong> {{ $t('条日志') }}
-      </div>
-      <div class="reload-action fr">
+    <div class="header">
+      <div>{{ $t('共') }} <strong>{{ logCount }}</strong> {{ $t('条日志') }}</div>
+      <div class="reload-action">
         <bk-date-picker
           :ref="type"
           v-model="initDateTimeRange"
@@ -18,34 +13,21 @@
           :placeholder="$t('选择日期时间范围')"
           :shortcut-close="true"
           :type="'datetimerange'"
+          :editable="true"
           :options="datePickerOption"
-          :open="isDatePickerOpen"
           @change="handlerChange"
           @pick-success="handlerPickSuccess"
         >
-          <div
-            slot="trigger"
-            style="height: 28px;"
-            @click="toggleDatePicker"
-          >
-            <button class="action-btn timer fr">
-              <i class="left-icon paasng-icon paasng-clock f16" />
-              <span class="text">{{ $t(timerDisplay) }}</span>
-              <i class="right-icon paasng-icon paasng-down-shape f12" />
-            </button>
-          </div>
         </bk-date-picker>
 
         <button
           v-bk-clickoutside="handleClickOutSide"
           class="action-btn auto"
-          style="position: absolute; right: 38px; top: 0;"
           @click="isAutoPanelShow = !isAutoPanelShow"
         >
           <i class="left-icon paasng-icon paasng-tree-application f16" />
           <span class="text">{{ autoTimeConf.label }}</span>
           <i class="right-icon paasng-icon paasng-down-shape f12" />
-
           <div
             v-if="isAutoPanelShow"
             class="auto-time-list"
@@ -66,7 +48,6 @@
         <button
           v-bk-tooltips="$t('刷新')"
           class="action-btn refresh"
-          style="position: absolute; right: 0; top: 0;"
           @click="handleReload"
         >
           <round-loading v-if="loading" />
@@ -347,9 +328,6 @@ export default {
     return {
       env: 'all',
       stream: 'all',
-      timerDisplay: this.$t('最近1小时'),
-      pickerRenderIndex: 0,
-      isDatePickerOpen: false,
       isDropdownShow: false,
       isAutoPanelShow: false,
       keyword: '',
@@ -436,7 +414,6 @@ export default {
         },
       ],
       dateShortCut,
-
       searchHistoryList: [],
       searchHistoryDisplayList: [],
       isShowHistoryPanel: false,
@@ -496,7 +473,6 @@ export default {
 
       this.$emit('change', this.logParams);
     }, { deep: true });
-    console.log('this.logParams', this.logParams);
   },
   methods: {
     handleInput(payload) {
@@ -564,10 +540,6 @@ export default {
       this.curActiveIndex = -1;
     },
 
-    toggleDatePicker() {
-      this.isDatePickerOpen = !this.isDatePickerOpen;
-    },
-
     handleSearch() {
       // 只存储最近10条记录
       const MAX_LEN = 10;
@@ -606,22 +578,14 @@ export default {
       this.dateParams.start_time = dates[0];
       this.dateParams.end_time = dates[1];
       this.dateParams.time_range = timeRangeCache || 'customized';
-      if (timeShortCutText) {
-        this.timerDisplay = timeShortCutText;
-      } else {
-        this.timerDisplay = `${dates[0]} - ${dates[1]}`;
-      }
       timeShortCutText = ''; // 清空
       timeRangeCache = ''; // 清空
-      this.pickerRenderIndex++;
     },
 
     /**
-             * 选择自定义时间，并确定
-             */
+     * 选择自定义时间，并确定
+     */
     handlerPickSuccess() {
-      this.isDatePickerOpen = false;
-
       setTimeout(() => {
         this.logParams = Object.assign(this.logParams, {
           start_time: this.dateParams.start_time,
@@ -632,29 +596,14 @@ export default {
       }, 200);
     },
 
-    handleSetParams() {
-      // const isExistEnv = this.envList.some(item => item.id === this.logParams.environment)
-      // const isExistStream = this.streamList.some(item => item.id === this.logParams.stream)
-      // const isExistProcess = this.processList.some(item => item.id === this.logParams.process_id)
-      // if (!isExistEnv) this.logParams.environment = ''
-      // if (!isExistStream) this.logParams.stream = ''
-      // if (!isExistProcess) this.logParams.process_id = ''
-    },
-
     /**
-             * 清空查询条件
-             */
+     * 清空查询条件
+     */
     clearConditionParams() {
       this.logParams.environment = '';
       this.logParams.process_id = '';
       this.logParams.stream = '';
       this.logParams.levelname = '';
-    },
-
-    hideDatePicker() {
-      if (['standartLog', 'customLog', 'accessLog'].includes(this.type)) {
-        this.isDatePickerOpen = false;
-      }
     },
 
     setAutoLoad() {
@@ -696,17 +645,22 @@ export default {
     @import '~@/assets/css/mixins/clearfix.scss';
     .ps-log-filter {
         .header {
-            @include clearfix;
-            line-height: 28px;
-            margin-bottom: 7px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
         }
 
         .reload-action {
-            padding-right: 195px;
-            position: relative;
+            display: flex;
 
             .action-btn {
                 margin-left: 10px;
+            }
+            /deep/ .bk-date-picker-rel {
+                .icon-wrapper {
+                    left: 0 !important;
+                }
             }
         }
 
@@ -744,10 +698,10 @@ export default {
         }
 
         .action-btn {
-            height: 28px;
+            height: 32px;
             background: #F5F6FA;
-            line-height: 28px;
-            min-width: 28px;
+            line-height: 32px;
+            min-width: 32px;
             display: flex;
             border-radius: 2px;
             cursor: pointer;
@@ -755,7 +709,7 @@ export default {
 
             .text {
                 min-width: 90px;
-                line-height: 28px;
+                line-height: 32px;
                 text-align: left;
                 color: #63656E;
                 font-size: 12px;
@@ -764,16 +718,16 @@ export default {
 
             .left-icon,
             .right-icon {
-                width: 28px;
-                height: 28px;
-                line-height: 28px;
+                width: 32px;
+                height: 32px;
+                line-height: 32px;
                 color: #C4C6CC;
                 display: inline-block;
                 text-align: center;
             }
 
             &.refresh {
-                width: 28px;
+                width: 32px;
             }
         }
 
@@ -781,11 +735,6 @@ export default {
             display: flex;
             align-items: center;
         }
-
-        /deep/ .bk-date-picker.long {
-            width: auto;
-        }
-
         .log-search-input-wrapper {
             position: relative;
             flex: 1 1 0%;

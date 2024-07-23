@@ -183,7 +183,7 @@
 <script>import moment from 'moment';
 import xss from 'xss';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-import logFilter from './comps/log-filter.vue';
+import logFilter from '@/views/dev-center/app/engine/log/comps/log-filter.vue';
 import { formatDate } from '@/common/tools';
 
 const xssOptions = {

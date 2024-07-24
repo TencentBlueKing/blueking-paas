@@ -210,12 +210,6 @@ export default {
       type: Number,
       default: 0,
     },
-    envList: {
-      type: Array,
-      default() {
-        return [];
-      },
-    },
     processList: {
       type: Array,
       default() {
@@ -418,6 +412,10 @@ export default {
       searchHistoryDisplayList: [],
       isShowHistoryPanel: false,
       curActiveIndex: -1,
+      envList: [
+        { text: 'prod', id: 'prod' },
+        { text: 'stag', id: 'stag' },
+      ],
     };
   },
   computed: {

@@ -22,6 +22,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.region.models import get_all_regions
+from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 
 
@@ -71,6 +72,10 @@ class TemplateSLZ(serializers.ModelSerializer):
         blob_url_conf = attrs["blob_url"]
         if not isinstance(blob_url_conf, dict):
             raise ValidationError(_("二进制包存储配置必须为 Dict 格式"))
+
+        # 模板类型为插件的情况下，二进制包存储配置可为空
+        if attrs["type"] == TemplateType.PLUGIN and (blob_url_conf == {} or not blob_url_conf):
+            return attrs
 
         if regions := set(enabled_regions) - blob_url_conf.keys():
             raise ValidationError(_("Region {} 不存在对应的二进制包存储路径").format(regions))

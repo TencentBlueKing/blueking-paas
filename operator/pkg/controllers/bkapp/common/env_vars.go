@@ -62,7 +62,7 @@ func RenderAppVars(vars []corev1.EnvVar, context VarsRenderContext) []corev1.Env
 			return strings.HasSuffix(v.Name, suffix)
 		}) {
 			// TODO: Use other method to replace the variables when more variables are supported
-			newValue = strings.Replace(newValue, "{{bk_var_process_type}}", context.ProcessType, -1)
+			newValue = strings.ReplaceAll(newValue, "{{bk_var_process_type}}", context.ProcessType)
 		}
 
 		results[i] = corev1.EnvVar{Name: v.Name, Value: newValue}

@@ -512,6 +512,11 @@ urlpatterns += [
     ),
     # 环境变量管理API
     url(
+        r"configuration/default_env/builtin_env/$",
+        default_env.DefaultConfigVarViewSet.as_view({"get": "get_all_builtin_envs"}),
+        name="admin.configuration.default_env.builtin",
+    ),
+    url(
         r"configuration/default_env/$",
         default_env.DefaultConfigVarViewSet.as_view({"get": "list", "post": "create"}),
         name="admin.configuration.default_env",

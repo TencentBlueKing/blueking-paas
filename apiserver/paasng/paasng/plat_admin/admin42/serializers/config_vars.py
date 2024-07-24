@@ -20,6 +20,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.core.region.models import get_all_regions
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.platform.engine.models.config_var import DefaultConfigVar
 from paasng.platform.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
@@ -60,6 +61,15 @@ class DefaultConfigVarUpdateInputSLZ(DefaultConfigVarCreateInputSLZ):
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         if DefaultConfigVar.objects.exclude(id=self.context["id"]).filter(key=data["key"]).exists():
             raise ValidationError(_("该环境下同名变量 {key} 已存在。").format(key=data["key"]), code="unique")
+        return data
+
+
+class BuiltinConfigVarInputSLZ(serializers.Serializer):
+    region = serializers.CharField()
+
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if data["region"] not in list(get_all_regions().keys()):
+            raise ValidationError(_("无法找到指定的region: {region}").format(region=data["region"]))
         return data
 
 

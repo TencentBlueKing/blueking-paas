@@ -5,6 +5,11 @@
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         新建
     </bk-button>
+
+    <bk-button theme="primary" class="ml10 mb20" @click="handleShowBuiltinEnv">
+    显示内置环境变量
+    </bk-button>
+
     <bk-table :data="data">
         <bk-table-column label="Key" prop="key" width="500" :formatter="addPrefix"></bk-table-column>
         <bk-table-column label="Value" prop="value" width="500"></bk-table-column>
@@ -19,7 +24,7 @@
         </bk-table-column>
     </bk-table>
 
-    <!-- 创建/编辑代码库配置用弹窗 -->
+    <!-- 创建/编辑环境变量用弹窗 -->
     <bk-dialog
         v-model="dialog.visible"
         header-position="left"
@@ -28,17 +33,17 @@
         @cancel="cancelDialog"
         :mask-close="false"
     >
-        <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]代码库配置</div>
+        <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]环境变量</div>
         <bk-form :label-width="140" :model="dialog.form" :rules="rules">
             <bk-form-item label="Key" property="key" :required="true">
                 <bk-input v-model="dialog.form.key" placeholder="请输入key">
                     <template slot="prepend">
-                        <div class="group-text">BKPAAS_</div>
+                        <div class="group-text">{{system_prefix}}</div>
                     </template>
                 </bk-input>
             </bk-form-item>
             <bk-form-item label="Value" :required="true">
-                <bk-input v-model="dialog.form.value" placeholder="请输入value"></bk-input>
+                <bk-input v-model="dialog.form.value" placeholder="请输入变量名"></bk-input>
             </bk-form-item>
             <bk-form-item label="描述">
                 <bk-input v-model="dialog.form.description" placeholder="请输入描述"></bk-input>
@@ -58,11 +63,38 @@
         <div slot="header">删除确认</div>
         <p>确定要删除吗？</p>
     </bk-dialog>
+
+    <!-- 显示默认内置环境变量弹窗 -->
+    <bk-dialog
+        v-model="builtinEnvDialog.visible"
+        header-position="left"
+        width="1000"
+        @cancel="cancelBuiltinEnvDialog"
+        :mask-close="false"
+    >
+        <template v-for="tag in regions">
+            <bk-tag
+                type="stroke"
+                checkable
+                :checked="selectedRegion === tag"
+                :key="tag"
+                @change="checked => change_region(checked, tag)">
+            $[tag]
+            </bk-tag>
+        </template>
+        <div slot="header">内置环境变量</div>
+        <bk-table :data="builtinEnvData" class="mt10">
+                <bk-table-column label="变量" prop="label" width="500" show-overflow-tooltip="true"></bk-table-column>
+                <bk-table-column label="描述" prop="description" width="400" show-overflow-tooltip="true"></bk-table-column>
+        </bk-table>
+    </bk-dialog>
 </div>
 {% endblock %}
 
 {% block main_script %}
 <script>
+const system_prefix = {{ system_prefix | to_json }}
+const region_list = {{ region_list | to_json }}
 const URLRouter = {
     create: decodeURI("{% url 'admin.configuration.default_env' %}"),
     list: decodeURI("{% url 'admin.configuration.default_env' %}"),
@@ -105,8 +137,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             trigger: 'blur'
                         },
                     ],
-                }
+                },
+                builtinEnvDialog: {
+                    visible: false
+                },
+                builtinEnvData: [],
+                regions: region_list,
+                selectedRegion: region_list && region_list.length > 0 ? region_list[0] : '', // 默认选择第一个 region
             }
+        },
+        watch: {
+            selectedRegion: 'fetchBuiltinEnvData' // 当 selectedRegion 改变时，调用 fetchBuiltinEnvData 函数
         },
         methods: {
             fetchSourceTypeSpecList: async function () {
@@ -124,11 +165,25 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             submitDialog: async function () {
                 const url = this.dialog.type === 'create' ? URLRouter.create : this.fillUrlTemplate(URLRouter.detail, {row: this.dialog.row});
+                let success = true;
                 const method = this.dialog.type === 'create' ? 'post' : 'put';
-                await this.$http[method](url, this.dialog.form);
+                try {
+                    await this.$http[method](url, this.dialog.form);
+                }catch (e) {
+                    success = false;
+                    if (e.response.status === 400) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: e.response.data.detail,
+                        })
+                    }
+                }
+                if(success)
+                {
+                    this.cancelDialog();
+                    this.fetchSourceTypeSpecList();
+                }
 
-                this.cancelDialog();
-                this.fetchSourceTypeSpecList();
             },
             handleCreate: function () {
                 this.dialog.type = "create"
@@ -170,7 +225,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 return url_template.replace("${id}", row.id)
             },
             addPrefix: function(row, column, cellValue, index) {
-                return `BKPAAS_${cellValue}`
+                return system_prefix + cellValue
+            },
+            handleShowBuiltinEnv: function () {
+                this.builtinEnvDialog.visible = true;
+                this.fetchBuiltinEnvData();
+            },
+            cancelBuiltinEnvDialog: function () {
+                this.builtinEnvDialog.visible = false;
+            },
+            fetchBuiltinEnvData: async function () {
+                const baseURL = decodeURI("{% url 'admin.configuration.default_env.builtin' %}");
+                const url = `${baseURL}?region=${encodeURIComponent(this.selectedRegion)}`;
+                const el = this.$bkLoading({title: '加载中'})
+                try {
+                    const res = await this.$http.get(url);
+                    this.convertArray(res);
+                    console.log(this.regions);
+                } catch (err) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: '不存在该region'
+                    });
+                }
+                finally {
+                    el.hide = true;
+                }
+            },
+            convertArray: function (data) {
+                const list = Object.keys(data).reduce((p, key) => {
+                    if (typeof data[key] === 'string') {
+                        p.push({
+                            label: key,
+                            description: data[key],
+                        });
+                    } else if (typeof data[key] === 'object' && data[key] !== null) {
+                        p.push({
+                            label: `${key}=${data[key].value}`,
+                            description: data[key].description,
+                        });
+                    }
+                    return p;
+                }, []);
+                this.builtinEnvData = list;  // 确认赋值成功
+            },
+            change_region: function (checked, region) {
+                if(checked) {
+                    this.selectedRegion = region;
+                    console.log(this.selectedRegion, checked, region);
+                }
             }
         },
         mounted: function () {

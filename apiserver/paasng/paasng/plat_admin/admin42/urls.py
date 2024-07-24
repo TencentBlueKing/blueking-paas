@@ -24,7 +24,7 @@ from .views import (
     accountmgr,
     applications,
     bk_plugins,
-    default_env,
+    default_config_var,
     runtimes,
     services,
     smart_advisor,
@@ -506,24 +506,24 @@ urlpatterns += [
 # 环境变量管理
 urlpatterns += [
     url(
-        r"configuration/default_env/manage/$",
-        default_env.DefaultConfigVarView.as_view(),
-        name="admin.configuration.default_env.manage",
+        r"configuration/default_config_var/manage/$",
+        default_config_var.DefaultConfigVarView.as_view(),
+        name="admin.configuration.default_config_var.manage",
     ),
     # 环境变量管理API
     url(
-        r"configuration/default_env/builtin_env/$",
-        default_env.DefaultConfigVarViewSet.as_view({"get": "get_all_builtin_envs"}),
-        name="admin.configuration.default_env.builtin",
+        r"configuration/default_config_var/builtin_env/$",
+        default_config_var.DefaultConfigVarViewSet.as_view({"get": "get_all_builtin_envs"}),
+        name="admin.configuration.default_config_var.builtin",
     ),
     url(
-        r"configuration/default_env/$",
-        default_env.DefaultConfigVarViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.configuration.default_env",
+        r"configuration/default_config_var/$",
+        default_config_var.DefaultConfigVarViewSet.as_view({"get": "list", "post": "create"}),
+        name="admin.configuration.default_config_var",
     ),
     url(
-        r"configuration/default_env/(?P<pk>[^/]+)/",
-        default_env.DefaultConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="admin.configuration.default_env.detail",
+        r"configuration/default_config_var/(?P<pk>[^/]+)/",
+        default_config_var.DefaultConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
+        name="admin.configuration.default_config_var.detail",
     ),
 ]

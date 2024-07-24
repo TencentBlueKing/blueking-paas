@@ -11,11 +11,11 @@
     </bk-button>
 
     <bk-table :data="data">
-        <bk-table-column label="Key" prop="key" width="500" :formatter="addPrefix"></bk-table-column>
-        <bk-table-column label="Value" prop="value" width="500"></bk-table-column>
-        <bk-table-column label="描述" prop="description" width="500"></bk-table-column>
-        <bk-table-column label="更新时间" prop="updated_at" width="250"></bk-table-column>
-        <bk-table-column label="更新者" prop="updater" width="200"></bk-table-column>
+        <bk-table-column label="Key" prop="key" width="500" :formatter="addPrefix" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="Value" prop="value" width="500" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="描述" prop="description" width="500" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="更新时间" prop="updated_at" width="250" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="更新者" prop="updater" width="200" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="操作" width="200">
             <template slot-scope="props">
                 <bk-button class="ml5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
@@ -35,14 +35,14 @@
     >
         <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]环境变量</div>
         <bk-form :label-width="140" :model="dialog.form" :rules="rules">
-            <bk-form-item label="Key" property="key" :required="true">
+            <bk-form-item label="Key" property="key">
                 <bk-input v-model="dialog.form.key" placeholder="请输入key">
                     <template slot="prepend">
                         <div class="group-text">{{system_prefix}}</div>
                     </template>
                 </bk-input>
             </bk-form-item>
-            <bk-form-item label="Value" :required="true">
+            <bk-form-item label="Value" property="value">
                 <bk-input v-model="dialog.form.value" placeholder="请输入变量名"></bk-input>
             </bk-form-item>
             <bk-form-item label="描述">
@@ -96,9 +96,9 @@
 const system_prefix = {{ system_prefix | to_json }}
 const region_list = {{ region_list | to_json }}
 const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.default_env' %}"),
-    list: decodeURI("{% url 'admin.configuration.default_env' %}"),
-    detail: decodeURI("{% url 'admin.configuration.default_env.detail' pk='${id}' %}"),
+    create: decodeURI("{% url 'admin.configuration.default_config_var' %}"),
+    list: decodeURI("{% url 'admin.configuration.default_config_var' %}"),
+    detail: decodeURI("{% url 'admin.configuration.default_config_var.detail' pk='${id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -235,17 +235,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.builtinEnvDialog.visible = false;
             },
             fetchBuiltinEnvData: async function () {
-                const baseURL = decodeURI("{% url 'admin.configuration.default_env.builtin' %}");
+                const baseURL = decodeURI("{% url 'admin.configuration.default_config_var.builtin' %}");
                 const url = `${baseURL}?region=${encodeURIComponent(this.selectedRegion)}`;
                 const el = this.$bkLoading({title: '加载中'})
                 try {
                     const res = await this.$http.get(url);
                     this.convertArray(res);
                     console.log(this.regions);
-                } catch (err) {
+                } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
-                        message: '不存在该region'
+                        message: e.response.data.detail
                     });
                 }
                 finally {

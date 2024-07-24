@@ -32,7 +32,7 @@ from paasng.platform.engine.models.config_var import DefaultConfigVar, add_prefi
 class DefaultConfigVarView(GenericTemplateView):
     name = "环境变量管理"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    template_name = "admin42/platformmgr/default_env.html"
+    template_name = "admin42/platformmgr/default_config_var.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

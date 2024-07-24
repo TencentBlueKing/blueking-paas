@@ -17,6 +17,7 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
@@ -47,6 +48,12 @@ def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
         module=module, environment_id__in=(ENVIRONMENT_ID_FOR_GLOBAL, env_id)
     ).order_by("environment_id")
     return {obj.key: obj.value for obj in config_vars}
+
+
+def get_default_config_vars() -> Dict[str, str]:
+    """Get default config vars as dict, with prefix"""
+    default_config_vars = DefaultConfigVar.objects.all()
+    return add_prefix_to_key({obj.key: obj.value for obj in default_config_vars}, settings.CONFIGVAR_SYSTEM_PREFIX)
 
 
 class ConfigVarQuerySet(models.QuerySet):

@@ -33,7 +33,7 @@ from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
-from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars
+from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars, get_default_config_vars
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.utils.blobstore import make_blob_store_env
@@ -48,6 +48,7 @@ def get_env_variables(
     include_config_vars: bool = True,
     include_preset_env_vars: bool = True,
     include_svc_disc: bool = True,
+    include_default_config_vars: bool = True,
 ) -> Dict[str, str]:
     """Get env vars for current environment, this will include:
 
@@ -59,6 +60,7 @@ def get_env_variables(
     :param include_config_vars: if True, will add envs defined in ConfigVar models to result
     :param include_preset_env_vars: if True, will add preset env vars defined in PresetEnvVariable models to result
     :param include_svc_disc: if True, will add svc discovery as env vars to result
+    :param include_default_config_vars: if True, will add default config vars in admin42 to result
     :returns: Dict of env vars
 
     ---
@@ -90,6 +92,10 @@ def get_env_variables(
     # application.
     if include_config_vars:
         result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
+
+    # Part: default config vars from admin42
+    if include_default_config_vars:
+        result.update(get_default_config_vars())
 
     # Part: env vars shared from other modules
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))

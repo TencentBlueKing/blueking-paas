@@ -198,7 +198,7 @@ func (r *DeploymentReconciler) cleanUpDeployments(ctx context.Context,
 		}
 		if err := r.Client.Delete(ctx, d); err != nil {
 			metrics.IncDeleteOutdatedDeployFailures(bkapp, d.Name)
-			return errors.Wrapf(err, "cleaning up deployment")
+			return errors.Wrapf(err, "cleaning up deployments")
 		}
 	}
 	return nil

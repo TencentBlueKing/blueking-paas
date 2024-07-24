@@ -17,7 +17,7 @@
 
 import logging
 import time
-from typing import Union
+from typing import Dict, Optional, Type, Union
 
 from django.conf import settings
 from iam.exceptions import AuthAPIError
@@ -29,23 +29,35 @@ from paasng.infras.iam.permissions.resources.application import AppAction, Appli
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
+from paasng.utils.views import action_perms
 
 logger = logging.getLogger(__name__)
 
 
-def application_perm_class(action: AppAction):
+class BaseAppPermission(BasePermission):
+    """The base class for application permission. It doesn't provide any functionality
+    yet but it can be useful for other modules to check the permission type.
     """
-    构建 DRF 可用的应用权限类
 
-    注意：该权限类使用装饰器附加到 viewset 方法时，需要使用 paasng.utils.views.permission_classes 并指定 policy='merge'
-    原因是 self.get_application() 时, check_object_permissions 用的是 self.get_permissions，会使用类的权限类
-    而 drf 的装饰器只是修改 func.permission_classes，会导致鉴权失效
+
+def app_action_required(action: AppAction, policy: str = "extend"):
+    """A decorator to require the user to have the specified application action permission,
+    must be used on viewset method.
+
+    :param action: Application action type.
+    :param policy: How to combine the permission classes. Default is "extend".
+    """
+    return action_perms(permission_classes=[application_perm_class(action)], policy=policy)
+
+
+def application_perm_class(action: AppAction) -> Type[BasePermission]:
+    """构建 DRF 可用的应用权限类
 
     :param action: Application operation type.
     :return: Application permission class.
     """
 
-    class AppModulePermission(BasePermission):
+    class AppModulePermission(BaseAppPermission):
         """The permission class for application and module."""
 
         def has_object_permission(self, request, view, obj: Union[Application, Module]):
@@ -61,6 +73,38 @@ def application_perm_class(action: AppAction):
                 return False
 
     return AppModulePermission
+
+
+def app_view_actions_perm(
+    view_action_map: Dict[str, AppAction], default_action: Optional[AppAction] = None
+) -> Type[BasePermission]:
+    """Create a permission class for application view, it allows using different
+    application action for different view actions.
+
+    :param view_action_map: A map from view action to application action.
+    :param default_action: Optional, the default application action if the view action
+        is not found.
+    :return: Application permission class.
+    """
+
+    class AppViewActionsPermission(BaseAppPermission):
+        """The permission class for application and module."""
+
+        def has_object_permission(self, request, view, obj: Union[Application, Module]):
+            # Get the action from the view action map, if not found, use the default action.
+            action = view_action_map.get(view.action, default_action)
+            if not action:
+                raise ValueError('No app action found for view action "%s".' % view.action)
+
+            if isinstance(obj, Application):
+                return user_has_app_action_perm(request.user, obj, action)
+            elif isinstance(obj, Module):
+                return user_has_app_action_perm(request.user, obj.application, action)
+            else:
+                logger.error("Application permission checked on incorrect object, type: %s", type(obj))
+                return False
+
+    return AppViewActionsPermission
 
 
 def check_application_perm(user, application: Application, action: AppAction):

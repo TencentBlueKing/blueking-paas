@@ -99,11 +99,23 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 本项目的所有单元测试均基于 pytest, 请务必保证单元测试通过后再提交代码。
 
 ```shell
-❯ make test
+# 假设你当前在 apiserver 项目的根目录下
+❯ cd paasng
+❯ export DJANGO_SETTINGS_MODULE=paasng.settings
+❯ pytest --reuse-db -s --maxfail=5 ./tests/
 ```
 
 - `--reuse-db` 表示在每次启动测试时尝试复用测试数据库
 - `-s` 表示打印标准输出
+
+## 数据库迁移
+
+```shell
+# 假设你当前在 apiserver 项目的根目录下
+❯ cd paasng
+❯ python manage.py migrate --no-input
+❯ python manage.py migrate --no-input --database workloads
+```
 
 ## 启动服务
 
@@ -155,6 +167,27 @@ Template 页面开发模式与常规的 Django 项目无异, 但是使用了 [Vu
 4. 监听 `DOMContentLoaded` 事件完成 Vue 对象的初始化
 
 ## FAQ
+
 ### docker compose 安装 bundle 依赖问题
-如果在安装 docker 时, 安装了 docker-compose-plugin, 
-需要修改'blueking-paas/apiserver/dev_utils/bundle/start.sh' 中的 docker-compose 改为 docker compose
+
+如果在安装 docker 时, 安装了 docker-compose-plugin, 需要修改'blueking-paas/apiserver/dev_utils/bundle/start.sh' 中的 docker-compose 改为 docker compose
+
+### poetry install 时 hash 值对不上问题 
+
+先执行
+
+```shell
+poetry config experimental.new-installer false
+```
+
+再重新执行 poetry install 即可
+
+### admin42 页面 403 问题
+
+需要进入数据库执行以下命令
+
+```sql
+UPDATE `bk_paas_ng`.`accounts_userprofile` SET `role` = 4 WHERE `id` = 1;
+```
+
+该命令修改指定 id 的用户为超级用户

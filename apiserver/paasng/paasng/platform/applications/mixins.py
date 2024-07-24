@@ -21,6 +21,7 @@ from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 
 from paas_wl.bk_app.applications.models import WlApp
+from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
@@ -58,7 +59,7 @@ class ApplicationCodeInPathMixin:
 
         # raise an exception if current view class don't have any application permission classes
         # to prevent any potential security issues.
-        if not any(p.__class__.__name__ == "AppModulePermission" for p in self.get_permissions()):
+        if not any(isinstance(p, BaseAppPermission) for p in self.get_permissions()):
             raise ValueError("No application permission classes found in the view class.")
 
         self.check_object_permissions(self.request, application)

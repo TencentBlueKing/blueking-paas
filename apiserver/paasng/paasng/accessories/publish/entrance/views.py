@@ -34,12 +34,11 @@ from paasng.accessories.publish.entrance.serializers import (
     UpdateExposedURLTypeSLZ,
 )
 from paasng.accessories.publish.market.utils import ModuleEnvAvailableAddressHelper
-from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_prod_env_root_domains
-from paasng.utils.views import permission_classes as perm_classes
 
 
 class ExposedURLTypeViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -173,7 +172,7 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             ).data
         )
 
-    @perm_classes(permission_classes=[application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
+    @app_action_required(AppAction.BASIC_DEVELOP)
     def update_preferred_root_domain(self, request, code, module_name):
         """
         更新模块的偏好根域

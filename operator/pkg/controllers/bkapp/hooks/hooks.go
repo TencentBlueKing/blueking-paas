@@ -233,9 +233,8 @@ func (r *HookReconciler) UpdateStatus(
 		observedGeneration = bkapp.Generation
 	}
 
-	// 若 Hook Pod 不存在，则应该判定 Hook 执行失败
+	// 若 Hook Pod 不存在，则应该判定 Hook 执行失败，但不认为 bkapp 失败，因为可以通过后续调和循环重新创建 Hook Pod
 	if instance.Pod == nil {
-		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionFalse,

@@ -176,13 +176,16 @@ INSTALLED_APPS = [
     "paas_wl.infras.resources.generation",
     # 蓝鲸通知中心
     "bk_notice_sdk",
-    # This app helps us to make sure the permission was configured correctly
-    "paasng.infras.perm_insure",
 ]
 
 # Allow extending installed apps
 EXTRA_INSTALLED_APPS = settings.get("EXTRA_INSTALLED_APPS", [])
 INSTALLED_APPS += EXTRA_INSTALLED_APPS
+
+# The "perm_insure" module helps us to make sure that the permission is configured
+# correctly, put it at the end of the list to make sure that all URL confs have been
+# added to the root url before the perm checking starts.
+INSTALLED_APPS.append("paasng.infras.perm_insure")
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",

@@ -73,11 +73,8 @@ class TemplateSLZ(serializers.ModelSerializer):
         if not isinstance(blob_url_conf, dict):
             raise ValidationError(_("二进制包存储配置必须为 Dict 格式"))
 
-        # 模板类型为插件的情况下，二进制包存储配置可为空
-        if attrs["type"] == TemplateType.PLUGIN and (blob_url_conf == {} or not blob_url_conf):
-            return attrs
-
-        if regions := set(enabled_regions) - blob_url_conf.keys():
+        # 模板类型为插件的情况下，无需检查二进制包存储配置
+        if attrs["type"] != TemplateType.PLUGIN and (regions := set(enabled_regions) - blob_url_conf.keys()):
             raise ValidationError(_("Region {} 不存在对应的二进制包存储路径").format(regions))
 
         return attrs

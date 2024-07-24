@@ -148,7 +148,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 				StartTime: nil,
 				Phase:     paasv1alpha2.HealthUnknown,
 				Reason:    "Failed",
-				Message:   "PreReleaseHook not found, consider it is failed",
+				Message:   "PreReleaseHook not found",
 			},
 		}
 	}
@@ -235,6 +235,7 @@ func (r *HookReconciler) UpdateStatus(
 
 	// 若 Hook Pod 不存在，则应该判定 Hook 执行失败
 	if instance.Pod == nil {
+		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               paasv1alpha2.HooksFinished,
 			Status:             metav1.ConditionFalse,
@@ -348,12 +349,13 @@ func CheckAndUpdatePreReleaseHookStatus(
 	}
 
 	switch {
-	// 删除超时的 pod
+	// 删除超时的 Pod
 	case instance.TimeoutExceededProgressing(timeout):
 		if err = cli.Delete(ctx, instance.Pod); err != nil {
 			return false, err
 		}
 		return false, errors.WithStack(hookres.ErrExecuteTimeout)
+	// 若 instance.Pod 为 nil，会判定为失败
 	case instance.Failed():
 		return false, errors.Wrapf(
 			hookres.ErrPodEndsUnsuccessfully,

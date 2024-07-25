@@ -35,17 +35,17 @@
     >
         <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]环境变量</div>
         <bk-form ref="form" :label-width="140" :model="dialog.form" :rules="rules">
-            <bk-form-item label="Key" property="key">
+            <bk-form-item label="Key" property="key" :required="dialog.type === 'create'">
                 <bk-input v-model="dialog.form.key" :disabled="dialog.type !== 'create'" placeholder="请输入key">
                     <template slot="prepend">
                         <div class="group-text">{{system_prefix}}</div>
                     </template>
                 </bk-input>
             </bk-form-item>
-            <bk-form-item label="Value" property="value">
+            <bk-form-item label="Value" property="value" :required="true">
                 <bk-input v-model="dialog.form.value" placeholder="请输入变量名"></bk-input>
             </bk-form-item>
-            <bk-form-item label="描述">
+            <bk-form-item label="描述" property="description" :required="true">
                 <bk-input v-model="dialog.form.description" placeholder="请输入描述"></bk-input>
             </bk-form-item>
         </bk-form>
@@ -136,6 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             message: '必填项',
                             trigger: 'blur'
                         },
+                    ],
+                    description: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        }
                     ],
                 },
                 builtinEnvDialog: {

@@ -435,6 +435,26 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		}
 	})
 
+	Context("Test build deployment with container port", func() {
+		It("has process services", func() {
+			bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+				{Name: "web", TargetPort: 30000},
+				{Name: "metric", TargetPort: 30001},
+			}
+
+			web, _ := BuildProcDeployment(bkapp, "web")
+			Expect(
+				web.Spec.Template.Spec.Containers[0].Ports,
+			).To(Equal([]corev1.ContainerPort{{ContainerPort: 30000}, {ContainerPort: 30001}}))
+		})
+		It("has no process services", func() {
+			web, _ := BuildProcDeployment(bkapp, "web")
+			Expect(
+				web.Spec.Template.Spec.Containers[0].Ports,
+			).To(Equal([]corev1.ContainerPort{{ContainerPort: 80}}))
+		})
+	})
+
 	Context("Test getSerializedBkApp", func() {
 		It("normal case", func() {
 			bkapp = &paasv1alpha2.BkApp{}

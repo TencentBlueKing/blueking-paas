@@ -14,10 +14,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from pydantic import ValidationError as PDValidationError
 from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.crd import bk_app
+from paas_wl.utils.basic import to_error_string
+from paas_wl.workloads.networking.constants import ExposedTypeName, NetworkProtocol
 from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
@@ -232,6 +235,30 @@ class ProbeSetInputSLZ(serializers.Serializer):
         return bk_app.ProbeSet(**d)
 
 
+class ExposedTypeInputSLZ(serializers.Serializer):
+    name = serializers.ChoiceField(choices=ExposedTypeName.get_choices(), default=ExposedTypeName.BK_HTTP.value)
+
+    def to_internal_value(self, data) -> bk_app.ExposedType:
+        d = super().to_internal_value(data)
+        return bk_app.ExposedType(**d)
+
+
+class ProcServiceInputSLZ(serializers.Serializer):
+    name = serializers.CharField()
+    targetPort = serializers.IntegerField(min_value=1, max_value=65535)
+    protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
+    exposedType = ExposedTypeInputSLZ(allow_null=True, default=None)
+    port = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
+
+    def to_internal_value(self, data) -> bk_app.ProcService:
+        d = super().to_internal_value(data)
+
+        if not d.get("port"):
+            d["port"] = d["targetPort"]
+
+        return bk_app.ProcService(**d)
+
+
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
@@ -243,6 +270,7 @@ class ProcessInputSLZ(serializers.Serializer):
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
+    services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
 
     def to_internal_value(self, data) -> bk_app.BkAppProcess:
         d = super().to_internal_value(data)
@@ -306,3 +334,13 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     envOverlay = EnvOverlayInputSLZ(required=False)
     svcDiscovery = ServiceDiscoveryInputSLZ(required=False)
     domainResolution = DomainResolutionInputSLZ(required=False)
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        try:
+            bk_app.BkAppSpec(processes=data["processes"])
+        except PDValidationError as e:
+            raise serializers.ValidationError(to_error_string(e))
+
+        return data

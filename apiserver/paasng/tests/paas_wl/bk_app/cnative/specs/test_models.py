@@ -51,6 +51,7 @@ class TestCreateAppResource:
                         "command": [],
                         "args": [],
                         "targetPort": None,
+                        "services": None,
                         "resQuotaPlan": None,
                         "autoscaling": None,
                         "probes": None,

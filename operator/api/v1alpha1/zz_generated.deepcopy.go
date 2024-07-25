@@ -690,6 +690,13 @@ func (in *Process) DeepCopyInto(out *Process) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.Services != nil {
+		in, out := &in.Services, &out.Services
+		*out = make([]v1alpha2.ProcService, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Command != nil {
 		in, out := &in.Command, &out.Command
 		*out = make([]string, len(*in))

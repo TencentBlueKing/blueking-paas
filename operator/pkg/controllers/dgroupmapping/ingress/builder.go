@@ -298,18 +298,41 @@ func makePaths(bkapp *paasv1alpha2.BkApp, pathPrefixes []string) []networkingv1.
 		path := networkingv1.HTTPIngressPath{
 			Path:     makeLocationPath(prefix),
 			PathType: lo.ToPtr(networkingv1.PathTypeImplementationSpecific),
-			Backend: networkingv1.IngressBackend{
-				Service: &networkingv1.IngressServiceBackend{
-					Name: names.Service(bkapp, DefaultServiceProcName),
-					Port: networkingv1.ServiceBackendPort{
-						Name: DefaultServicePortName,
-					},
-				},
-			},
+			Backend:  makeIngressServiceBackend(bkapp),
 		}
 		results = append(results, path)
 	}
 	return results
+}
+
+// makeIngressServiceBackend return the ingress backend related to the process service with exposed type bk/http,
+// otherwise returns the default one.
+func makeIngressServiceBackend(bkapp *paasv1alpha2.BkApp) networkingv1.IngressBackend {
+	if bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey] == "true" {
+		for _, proc := range bkapp.Spec.Processes {
+			for _, procSvc := range proc.Services {
+				if procSvc.ExposedType != nil && procSvc.ExposedType.Name == paasv1alpha2.ExposedTypeNameBkHttp {
+					return networkingv1.IngressBackend{
+						Service: &networkingv1.IngressServiceBackend{
+							Name: names.Service(bkapp, proc.Name),
+							Port: networkingv1.ServiceBackendPort{
+								Name: procSvc.Name,
+							},
+						},
+					}
+				}
+			}
+		}
+	}
+
+	return networkingv1.IngressBackend{
+		Service: &networkingv1.IngressServiceBackend{
+			Name: names.Service(bkapp, DefaultServiceProcName),
+			Port: networkingv1.ServiceBackendPort{
+				Name: DefaultServicePortName,
+			},
+		},
+	}
 }
 
 // RegexLocationBuilder provide a generic location path which will rewrite request path to root

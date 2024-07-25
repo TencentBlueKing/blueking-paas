@@ -23,6 +23,7 @@ from typing_extensions import TypeAlias
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
+from paas_wl.workloads.networking.constants import ExposedTypeName, NetworkProtocol
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.serializers import IntegerOrCharField
@@ -64,6 +65,30 @@ class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
     """特性开关"""
 
     allow_multiple_image = serializers.BooleanField(default=False, help_text="是否允许使用多个不同镜像")
+
+
+class ExposedTypeSLZ(serializers.Serializer):
+    name = serializers.ChoiceField(help_text="暴露服务的类型名", choices=ExposedTypeName.get_django_choices())
+
+
+class ProcServiceSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="服务名称")
+    target_port = serializers.IntegerField(help_text="目标容器端口", min_value=1, max_value=65535)
+    protocol = serializers.ChoiceField(
+        help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value
+    )
+    exposed_type = ExposedTypeSLZ(help_text="暴露类型", required=False)
+    port = serializers.IntegerField(help_text="服务端口", min_value=1, max_value=65535, required=False)
+
+    def to_internal_value(self, data) -> Dict[str, Any]:
+        attrs = super().to_internal_value(data)
+
+        attrs["targetPort"] = attrs.pop("target_port")
+
+        if attrs.get("exposed_type"):
+            attrs["exposedType"] = attrs.pop("exposed_type")
+
+        return attrs
 
 
 class ExecProbeActionSLZ(serializers.Serializer):
@@ -156,6 +181,9 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     )
     args = serializers.ListSerializer(
         child=serializers.CharField(), help_text="命令参数", default=list, allow_null=True
+    )
+    services = serializers.ListSerializer(
+        child=ProcServiceSLZ(), help_text="进程服务列表", allow_null=True, required=False
     )
     port = serializers.IntegerField(
         help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False

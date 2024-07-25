@@ -228,3 +228,82 @@ var _ = Describe("test build expect service", func() {
 		Expect(service).To(BeNil())
 	})
 })
+
+var _ = Describe("test build expect service by proc services", func() {
+	var bkapp *paasv1alpha2.BkApp
+
+	BeforeEach(func() {
+		bkapp = &paasv1alpha2.BkApp{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "bkapp-sample",
+				Namespace:   "default",
+				Annotations: map[string]string{paasv1alpha2.ProcServicesFeatureEnabledAnnoKey: "true"},
+			},
+		}
+	})
+
+	It("build with proc services", func() {
+		procName := "web"
+		bkapp.Spec = paasv1alpha2.AppSpec{
+			Processes: []paasv1alpha2.Process{
+				{
+					Name:         procName,
+					Replicas:     paasv1alpha2.ReplicasTwo,
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+					Services: []paasv1alpha2.ProcService{
+						{
+							Name:        "web",
+							TargetPort:  5000,
+							Protocol:    corev1.ProtocolTCP,
+							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+							Port:        80,
+						},
+						{
+							Name:       "metric",
+							TargetPort: 5001,
+							Protocol:   corev1.ProtocolTCP,
+							Port:       5001,
+						},
+					},
+				},
+			},
+		}
+
+		service := BuildService(bkapp, bkapp.Spec.FindProcess(procName))
+		Expect(service.Spec.Ports).To(Equal([]corev1.ServicePort{
+			{
+				Name:       "web",
+				TargetPort: intstr.FromInt(5000),
+				Protocol:   corev1.ProtocolTCP,
+				Port:       80,
+			},
+			{
+				Name:       "metric",
+				TargetPort: intstr.FromInt(5001),
+				Protocol:   corev1.ProtocolTCP,
+				Port:       5001,
+			},
+		}))
+		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, procName)))
+		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, procName)))
+	})
+
+	It("build without proc services", func() {
+		bkapp.Spec = paasv1alpha2.AppSpec{
+			Processes: []paasv1alpha2.Process{
+				{
+					Name:         "web",
+					Replicas:     paasv1alpha2.ReplicasTwo,
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+				},
+			},
+		}
+
+		service := BuildService(bkapp, bkapp.Spec.FindProcess("web"))
+		Expect(service).To(BeNil())
+	})
+})

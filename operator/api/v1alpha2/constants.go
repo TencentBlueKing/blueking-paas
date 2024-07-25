@@ -58,6 +58,12 @@ const (
 	// WlAppNameKey 注解中存储当前 EngineApp 名称的键名
 	WlAppNameKey = "bkapp.paas.bk.tencent.com/wl-app-name"
 
+	// ProcServicesFeatureEnabledAnnoKey 注解表示是否启用 process services 特性, 可选值为 "true" 或 "false".
+	// true 表示启用; false 或未设置该注解值, 表示不启用, 仍按旧的隐式调和逻辑处理 service, 即为每个 process 默认
+	// 创建并关联一个 service.
+	// 说明: 未设置该注解值的 BkApp 均是线上存量资源, 为了兼容, 继续按照旧逻辑调和.
+	ProcServicesFeatureEnabledAnnoKey = "bkapp.paas.bk.tencent.com/proc-services-feature-enabled"
+
 	// LegacyProcImageAnnoKey, In API version "v1alpha1", every process can use a different image.
 	// This behaviour was changed in "v1alpha2", but we still need to save the legacy images configs
 	// in annotations to maintain backward compatibility.

@@ -49,6 +49,21 @@ var _ = Describe("test conversion back and forth", func() {
 						Replicas: ReplicasTwo,
 						CPU:      "500m",
 						Memory:   "256Mi",
+						Services: []paasv1alpha2.ProcService{
+							{
+								Name:        "web",
+								Protocol:    corev1.ProtocolTCP,
+								ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+								TargetPort:  5000,
+								Port:        80,
+							},
+							{
+								Name:       "metrics",
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: 5001,
+								Port:       5001,
+							},
+						},
 						Probes: &ProbeSet{
 							Liveness: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -194,6 +209,21 @@ var _ = Describe("test conversion back and forth", func() {
 						Name:         "web",
 						Replicas:     ReplicasTwo,
 						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						Services: []paasv1alpha2.ProcService{
+							{
+								Name:        "web",
+								Protocol:    corev1.ProtocolTCP,
+								ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+								TargetPort:  5000,
+								Port:        80,
+							},
+							{
+								Name:       "metrics",
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: 5001,
+								Port:       5001,
+							},
+						},
 						Probes: &paasv1alpha2.ProbeSet{
 							Liveness: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{

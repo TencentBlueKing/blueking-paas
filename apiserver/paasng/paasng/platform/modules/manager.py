@@ -32,7 +32,7 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess, BkAppSpec
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
@@ -285,12 +285,18 @@ class ModuleInitializer:
                 command=proc["command"],
                 args=proc["args"],
                 targetPort=proc.get("port", None),
+                probes=proc.get("probes", None),
+                services=proc.get("services", None),
             )
             for proc in bkapp_spec["processes"]
         ]
 
+        # 校验 processes
+        bkapp_spec_obj = BkAppSpec(processes=processes)
+
         mgr = ModuleProcessSpecManager(self.module)
-        mgr.sync_from_bkapp(processes)
+        mgr.sync_from_bkapp(bkapp_spec_obj.processes)
+
         for proc in bkapp_spec["processes"]:
             if env_overlay := proc.get("env_overlay"):
                 mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)

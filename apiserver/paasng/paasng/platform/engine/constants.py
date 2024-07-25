@@ -177,3 +177,11 @@ class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):
     """Built-in envs without prefix in the app runtime"""
 
     PORT = EnumField("PORT", label=_("目标端口号，值为 5000"))
+
+
+class ExposedTypeName(str, StructuredEnum):
+    """与 paas_wl.workloads.networking.constants.ExposedTypeName 重复定义
+    # TODO 将 paasng 和 paas_wl 中重复定义的一些常量, 合并放到更底层的模块中, 避免破坏当前 importlinter 的依赖规则?
+    """
+
+    BK_HTTP = "bk/http"

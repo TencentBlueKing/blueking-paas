@@ -50,6 +50,9 @@ class PerformResult:
     loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
 
     def set_processes(self, processes: Dict[str, Process]):
+        """Set the "loaded_processes" property, basically it do a type conversion
+        from Process to ProcessTmpl.
+        """
         self.loaded_processes = cattr.structure(
             {
                 proc_name: {
@@ -126,20 +129,50 @@ class DeploymentDeclarativeController:
             },
         )
         # apply desc to bkapp_model
-        result.set_processes(processes=processes)
         if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:
-            # 云原生应用
+            # == 云原生应用 或者 使用了 version 3 版本的应用描述文件
+            #
             # TODO: 优化 import 方式, 例如直接接受 desc.spec
             # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
             # Warning: import_manifest 时, proc_command 会被置为 None, 仅 command/args 会保留
+            #
+            # ---
+            #
+            # NOTE: 对于云原生应用， import_manifest() 的默认行为是将 manifest 中的数据导入
+            # 到平台中，所有数据以它为准，是类似 PUT 请求的全量更新行为。然后这会导致一个问题：
+            #
+            # - 用户只在描述文件中定义了进程，未通过 envOverlay 定义区分环境的 replicas 数据
+            # - 用户通过产品页面，对进程进行了扩缩容，数据记录在 ProcessSpecEnvOverlay 中（体现为
+            #   模型中的 envOverlay）
+            # - 用户重新部署，import_manifest() 将描述文件中的数据导入，其判断没有 envOverlay
+            #   数据，已有的 ProcessSpecEnvOverlay 数据被删除，用户设置的副本数丢失
+            #
+            # 为了解决这个问题，我们在 import_manifest() 中增加了 reset_overlays_when_absent 参数，
+            # 比在这里调用时，将其设置为 False，避免已有的 envOverlay 数据被删除。
+            #
+            # 然而，这也算不上是万全之策。因为用户仍然可能会在描述文件中定义 envOverlay 数据，
+            # 或删除已有的 envOverlay 数据，这些操作仍然可能会导致预期之外的后果。更彻底的解决
+            # 方法，可能包括以下方面：
+            #
+            # - 在 ProcessSpecEnvOverlay 等数据模型中增加字段（或增加新模型），以区分由
+            #   用户手动设置的数据和由描述文件导入的数据，并依据一定优先级来处理
+            # - 模仿和参考 kubectl apply 的行为，开发新方法 apply_manifest()，对于通过
+            #   由配置文件定义的内容（比如 ProcessSpecEnvOverlay），打上特定的 manage-by
+            #   标签，这样，当配置文件中没有定义时，仅在旧数据原本是由配置文件定义时才删除，
+            #   否则跳过。
+            #
             import_manifest(
                 module,
                 input_data=convert_bkapp_spec_to_manifest(deploy_desc.spec),
+                # Don't remove existed overlays data when no overlays data in input_data
+                # TODO: Use other function instead of import_manifest()
+                reset_overlays_when_absent=False,
             )
             if hooks := deploy_desc.get_deploy_hooks():
                 self.deployment.update_fields(hooks=hooks)
         else:
-            # 普通应用
+            # == 普通应用
+            #
             # Note: 由于普通应用可能在 Procfile 定义进程, 因此在应用构建时仍然存在其他位点会更新 ModuleProcessSpecManager
             # TODO: 优化如上所述的情况
             if result.loaded_processes:

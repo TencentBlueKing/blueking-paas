@@ -19,6 +19,7 @@
 
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
+
 import datetime
 import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
@@ -151,7 +152,8 @@ class BkAppProcess(BaseModel):
     """Process resource"""
 
     name: str
-    replicas: int = 1
+    # `None` value means the replicas is not specified.
+    replicas: Optional[int] = 1
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
     targetPort: Optional[int] = None

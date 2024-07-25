@@ -151,14 +151,15 @@ class DeploymentDescSLZ(serializers.Serializer):
 
     def to_internal_value(self, data) -> DeploymentDesc:
         attrs = super().to_internal_value(data)
-        # 尽可能将字段转换成 BkAppSepc
+        # 尽可能将字段转换成 BkAppSpec 对象
         # processes -> BkAppProcess
         processes = []
         for proc_type, process in attrs["processes"].items():
             processes.append(
                 {
                     "name": proc_type,
-                    "replicas": process["replicas"] or 1,
+                    # NOTE: 此处的 replicas 可能为 None，也被允许使用 None
+                    "replicas": process["replicas"],
                     "resQuotaPlan": get_quota_plan(process["plan"]) if process.get("plan") else None,
                     "command": None,
                     "args": shlex.split(process["command"]),

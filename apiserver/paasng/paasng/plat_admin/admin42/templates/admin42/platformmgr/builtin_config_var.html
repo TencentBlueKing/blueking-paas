@@ -34,7 +34,7 @@
         :mask-close="false"
     >
         <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]环境变量</div>
-        <bk-form :label-width="140" :model="dialog.form" :rules="rules">
+        <bk-form ref="form" :label-width="140" :model="dialog.form" :rules="rules">
             <bk-form-item label="Key" property="key">
                 <bk-input v-model="dialog.form.key" :disabled="dialog.type !== 'create'" placeholder="请输入key">
                     <template slot="prepend">
@@ -194,12 +194,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     value: '',
                     description: '',
                 }
+                this.$nextTick(() => {
+                    // Clear any previous errors
+                    this.$refs.form.clearError();
+                });
                 this.dialog.visible = true
             },
             handleEdit: function (row) {
                 this.dialog.type = "edit"
                 this.dialog.row = row
                 this.dialog.form = { ...row }
+                this.$nextTick(() => {
+                    // Clear any previous errors
+                    this.$refs.form.clearError();
+                });
                 this.dialog.visible = true
             },
             handleDelete: function (row) {

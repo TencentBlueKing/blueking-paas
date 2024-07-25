@@ -22,7 +22,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.utils.models import TimestampedModel
+from paasng.utils.models import AuditedModel, TimestampedModel
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models.module import Module
@@ -50,10 +50,10 @@ def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
     return {obj.key: obj.value for obj in config_vars}
 
 
-def get_default_config_vars() -> Dict[str, str]:
+def get_builtin_config_vars() -> Dict[str, str]:
     """Get default config vars as dict, with prefix"""
-    default_config_vars = DefaultConfigVar.objects.all()
-    return add_prefix_to_key({obj.key: obj.value for obj in default_config_vars}, settings.CONFIGVAR_SYSTEM_PREFIX)
+    builtin_config_vars = dict(BuiltinConfigVar.objects.values_list("key", "value"))
+    return add_prefix_to_key(builtin_config_vars, settings.CONFIGVAR_SYSTEM_PREFIX)
 
 
 class ConfigVarQuerySet(models.QuerySet):
@@ -152,18 +152,11 @@ class BuiltInEnvVarDetail:
         return {self.key: {"value": self.value, "description": self.description}}
 
 
-class DefaultConfigVar(models.Model):
+class BuiltinConfigVar(AuditedModel):
     """Default config vars for global, can be added or edited in admin42."""
 
-    key = models.CharField(verbose_name="环境变量名", max_length=128, null=False)
+    key = models.CharField(verbose_name="环境变量名", max_length=128, null=False, unique=True)
     value = models.TextField(verbose_name="环境变量值", null=False)
-    description = models.CharField(verbose_name="描述", max_length=200, null=True)
+    description = models.CharField(verbose_name="描述", max_length=200, null=False)
 
     updater = models.CharField(verbose_name="更新者", max_length=128, null=True)
-    updated_at = models.DateTimeField(verbose_name="更新时间", auto_now=True)
-
-    class Meta:
-        unique_together = ("key",)
-
-    def __str__(self):
-        return "{var_name}-{var_value}".format(var_name=self.key, var_value=self.value)

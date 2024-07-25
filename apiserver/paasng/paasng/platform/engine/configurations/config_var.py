@@ -15,7 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Config variables related functions"""
-from typing import TYPE_CHECKING, Dict, Iterator, List
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -32,8 +32,13 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
-from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars, get_default_config_vars
+from paasng.platform.engine.constants import (
+    AppInfoBuiltinEnv,
+    AppRunTimeBuiltinEnv,
+    ConfigVarEnvName,
+    NoPrefixAppRunTimeBuiltinEnv,
+)
+from paasng.platform.engine.models.config_var import add_prefix_to_key, get_builtin_config_vars, get_config_vars
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.utils.blobstore import make_blob_store_env
@@ -48,7 +53,7 @@ def get_env_variables(
     include_config_vars: bool = True,
     include_preset_env_vars: bool = True,
     include_svc_disc: bool = True,
-    include_default_config_vars: bool = True,
+    include_builtin_config_vars: bool = True,
 ) -> Dict[str, str]:
     """Get env vars for current environment, this will include:
 
@@ -60,7 +65,7 @@ def get_env_variables(
     :param include_config_vars: if True, will add envs defined in ConfigVar models to result
     :param include_preset_env_vars: if True, will add preset env vars defined in PresetEnvVariable models to result
     :param include_svc_disc: if True, will add svc discovery as env vars to result
-    :param include_default_config_vars: if True, will add default config vars in admin42 to result
+    :param include_builtin_config_vars: if True, will add builtin config vars in admin42 to result
     :returns: Dict of env vars
 
     ---
@@ -94,8 +99,8 @@ def get_env_variables(
         result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
 
     # Part: default config vars from admin42
-    if include_default_config_vars:
-        result.update(get_default_config_vars())
+    if include_builtin_config_vars:
+        result.update(get_builtin_config_vars())
 
     # Part: env vars shared from other modules
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
@@ -335,6 +340,36 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
         **envs_by_region_and_env,
         "BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix(),
     }
+
+
+def _get_enum_choices_dict(enum_obj) -> Dict[str, str]:
+    return {element[0]: element[1] for element in enum_obj.get_choices()}
+
+
+def get_default_builtin_config_vars(region: str, environment: str) -> Dict[str, Any]:
+    """获取所有内置环境变量，包括应用基本信息、应用运行时信息和蓝鲸体系内平台地址，其中和应用相关的环境变量只包括变量名和描述"""
+    builtin_envs = {}
+    # 应用基本信息
+    app_info_envs = add_prefix_to_key(_get_enum_choices_dict(AppInfoBuiltinEnv), settings.CONFIGVAR_SYSTEM_PREFIX)
+    builtin_envs.update(app_info_envs)
+    # 应用运行时信息
+    app_runtime_envs = add_prefix_to_key(
+        _get_enum_choices_dict(AppRunTimeBuiltinEnv), settings.CONFIGVAR_SYSTEM_PREFIX
+    )
+    builtin_envs.update(app_runtime_envs)
+    no_prefix_app_run_time_envs = _get_enum_choices_dict(NoPrefixAppRunTimeBuiltinEnv)
+    builtin_envs.update(no_prefix_app_run_time_envs)
+    # 蓝鲸体系内平台地址
+    bk_address_envs = generate_env_vars_for_bk_platform(settings.CONFIGVAR_SYSTEM_PREFIX)
+    bk_address_envs_list = [env.to_dict() for env in bk_address_envs]
+
+    envs_by_region_and_env = generate_env_vars_by_region_and_env(region, environment, settings.CONFIGVAR_SYSTEM_PREFIX)
+    envs_by_region_and_env_list = [env.to_dict() for env in envs_by_region_and_env]
+
+    for env in bk_address_envs_list + envs_by_region_and_env_list:
+        builtin_envs.update(env)
+
+    return builtin_envs
 
 
 def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:

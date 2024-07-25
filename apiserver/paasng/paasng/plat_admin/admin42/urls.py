@@ -24,7 +24,7 @@ from .views import (
     accountmgr,
     applications,
     bk_plugins,
-    default_config_var,
+    builtin_config_var,
     runtimes,
     services,
     smart_advisor,
@@ -503,27 +503,28 @@ urlpatterns += [
     ),
 ]
 
-# 环境变量管理
+# 平台管理-环境变量管理
 urlpatterns += [
+    # 环境变量管理页
     url(
-        r"configuration/default_config_var/manage/$",
-        default_config_var.DefaultConfigVarView.as_view(),
-        name="admin.configuration.default_config_var.manage",
+        r"platform/builtin_config_var/manage/$",
+        builtin_config_var.BuiltinConfigVarView.as_view(),
+        name="admin.builtin_config_var.manage",
     ),
     # 环境变量管理API
     url(
-        r"configuration/default_config_var/builtin_env/$",
-        default_config_var.DefaultConfigVarViewSet.as_view({"get": "get_all_builtin_envs"}),
-        name="admin.configuration.default_config_var.builtin",
+        r"platform/builtin_config_var/builtin_env/$",
+        builtin_config_var.BuiltinConfigVarViewSet.as_view({"get": "get_default_builtin_envs"}),
+        name="admin.builtin_config_var.builtin",
     ),
     url(
-        r"configuration/default_config_var/$",
-        default_config_var.DefaultConfigVarViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.configuration.default_config_var",
+        r"platform/builtin_config_var/$",
+        builtin_config_var.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "upsert"}),
+        name="admin.builtin_config_var",
     ),
     url(
-        r"configuration/default_config_var/(?P<pk>[^/]+)/",
-        default_config_var.DefaultConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="admin.configuration.default_config_var.detail",
+        r"platform/builtin_config_var/(?P<pk>[^/]+)/",
+        builtin_config_var.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "upsert"}),
+        name="admin.builtin_config_var.detail",
     ),
 ]

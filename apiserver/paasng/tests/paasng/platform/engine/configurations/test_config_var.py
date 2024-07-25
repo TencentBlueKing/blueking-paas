@@ -26,7 +26,7 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.engine.configurations.config_var import get_builtin_env_variables, get_env_variables
 from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
-from paasng.platform.engine.models.config_var import ConfigVar, DefaultConfigVar
+from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
 from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -164,10 +164,10 @@ class TestBuiltInEnvVars:
 
 class TestDefaultEnvVars:
     @pytest.mark.parametrize(
-        ("include_default_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
+        ("include_builtin_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
     )
-    def test_param_include_default_config_vars(self, bk_stag_env, include_default_config_vars, ctx):
-        DefaultConfigVar.objects.create(key="FOO", value="bar")
-        env_vars = get_env_variables(bk_stag_env, include_default_config_vars=include_default_config_vars)
+    def test_param_include_builtin_config_vars(self, bk_stag_env, include_builtin_config_vars, ctx):
+        BuiltinConfigVar.objects.create(key="FOO", value="bar")
+        env_vars = get_env_variables(bk_stag_env, include_builtin_config_vars=include_builtin_config_vars)
         with ctx as expected:
             assert env_vars["BKPAAS_FOO"] == expected

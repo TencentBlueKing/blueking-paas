@@ -6,7 +6,7 @@
         新建
     </bk-button>
 
-    <bk-button theme="primary" class="ml10 mb20" @click="handleShowBuiltinEnv">
+    <bk-button class="ml10 mb20" @click="handleShowBuiltinEnv">
     显示内置环境变量
     </bk-button>
 
@@ -14,7 +14,7 @@
         <bk-table-column label="Key" prop="key" width="500" :formatter="addPrefix" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="Value" prop="value" width="500" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="描述" prop="description" width="500" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="更新时间" prop="updated_at" width="250" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="更新时间" prop="updated" width="250" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="更新者" prop="updater" width="200" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="操作" width="200">
             <template slot-scope="props">
@@ -36,7 +36,7 @@
         <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]环境变量</div>
         <bk-form :label-width="140" :model="dialog.form" :rules="rules">
             <bk-form-item label="Key" property="key">
-                <bk-input v-model="dialog.form.key" placeholder="请输入key">
+                <bk-input v-model="dialog.form.key" :disabled="dialog.type !== 'create'" placeholder="请输入key">
                     <template slot="prepend">
                         <div class="group-text">{{system_prefix}}</div>
                     </template>
@@ -78,7 +78,7 @@
                 checkable
                 :checked="selectedRegion === tag"
                 :key="tag"
-                @change="checked => change_region(checked, tag)">
+                @change="checked => changeRegion(checked, tag)">
             $[tag]
             </bk-tag>
         </template>
@@ -94,11 +94,11 @@
 {% block main_script %}
 <script>
 const system_prefix = {{ system_prefix | to_json }}
-const region_list = {{ region_list | to_json }}
+const regions = {{ regions | to_json }}
 const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.default_config_var' %}"),
-    list: decodeURI("{% url 'admin.configuration.default_config_var' %}"),
-    detail: decodeURI("{% url 'admin.configuration.default_config_var.detail' pk='${id}' %}"),
+    create: decodeURI("{% url 'admin.builtin_config_var' %}"),
+    list: decodeURI("{% url 'admin.builtin_config_var' %}"),
+    detail: decodeURI("{% url 'admin.builtin_config_var.detail' '${id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -142,15 +142,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     visible: false
                 },
                 builtinEnvData: [],
-                regions: region_list,
-                selectedRegion: region_list && region_list.length > 0 ? region_list[0] : '', // 默认选择第一个 region
+                regions: regions,
+                // 默认选择第一个 region
+                selectedRegion: regions && regions.length > 0 ? regions[0] : '',
             }
         },
         watch: {
-            selectedRegion: 'fetchBuiltinEnvData' // 当 selectedRegion 改变时，调用 fetchBuiltinEnvData 函数
+            // 当 selectedRegion 改变时，调用 fetchBuiltinEnvData 函数
+            selectedRegion: 'fetchBuiltinEnvData'
         },
         methods: {
-            fetchSourceTypeSpecList: async function () {
+            fetchBuiltinEnvList: async function () {
                 const el = this.$bkLoading({title: '加载中'})
                 try {
                     await this.$http.get(URLRouter.list).then(res => {
@@ -169,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const method = this.dialog.type === 'create' ? 'post' : 'put';
                 try {
                     await this.$http[method](url, this.dialog.form);
-                }catch (e) {
+                } catch (e) {
                     success = false;
                     if (e.response.status === 400) {
                         this.$bkMessage({
@@ -178,10 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         })
                     }
                 }
-                if(success)
-                {
+                if(success) {
                     this.cancelDialog();
-                    this.fetchSourceTypeSpecList();
+                    this.fetchBuiltinEnvList();
                 }
 
             },
@@ -220,8 +221,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.deleteConfirm.visible = false
             },
             fillUrlTemplate: function (url_template, {row}) {
-                if (!row)
+                if (!row) {
                     row = {}
+                }
                 return url_template.replace("${id}", row.id)
             },
             addPrefix: function(row, column, cellValue, index) {
@@ -235,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.builtinEnvDialog.visible = false;
             },
             fetchBuiltinEnvData: async function () {
-                const baseURL = decodeURI("{% url 'admin.configuration.default_config_var.builtin' %}");
+                const baseURL = decodeURI("{% url 'admin.builtin_config_var.builtin' %}");
                 const url = `${baseURL}?region=${encodeURIComponent(this.selectedRegion)}`;
                 const el = this.$bkLoading({title: '加载中'})
                 try {
@@ -267,9 +269,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     return p;
                 }, []);
-                this.builtinEnvData = list;  // 确认赋值成功
+                this.builtinEnvData = list;
             },
-            change_region: function (checked, region) {
+            changeRegion: function (checked, region) {
                 if(checked) {
                     this.selectedRegion = region;
                     console.log(this.selectedRegion, checked, region);
@@ -277,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         mounted: function () {
-            this.fetchSourceTypeSpecList()
+            this.fetchBuiltinEnvList()
         },
     })
 })

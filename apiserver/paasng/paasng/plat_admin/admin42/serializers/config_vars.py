@@ -22,7 +22,9 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.core.region.models import get_all_regions
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
-from paasng.platform.engine.models.config_var import DefaultConfigVar
+from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.engine.configurations.config_var import get_default_builtin_config_vars
+from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.platform.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
@@ -37,7 +39,7 @@ class ConfigVarSLZ(BaseConfigVarSLZ):
     )
 
 
-class DefaultConfigVarCreateInputSLZ(serializers.Serializer):
+class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
     key = serializers.RegexField(
         RE_CONFIG_VAR_KEY,
         max_length=1024,
@@ -45,27 +47,32 @@ class DefaultConfigVarCreateInputSLZ(serializers.Serializer):
         error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
     )
     value = serializers.CharField(required=True)
-    description = serializers.CharField(
-        allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
-    )
+    description = serializers.CharField(max_length=200, required=True, help_text="变量描述")
 
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        if DefaultConfigVar.objects.filter(key=data["key"]).exists():
-            raise ValidationError(
-                _("该环境下名称为 {key} 的变量已经存在，不能重复添加。").format(key=data["key"]), code="unique"
-            )
+        if BuiltinConfigVar.objects.filter(key=data["key"]).exists():
+            raise ValidationError(_("名称为 {key} 的变量已经存在，不能重复添加。").format(key=data["key"]))
+
+        # region 和 environment 不影响默认内置环境变量的 key
+        region = list(get_all_regions().keys())[0]
+        environment = AppEnvironment.PRODUCTION.value
+        if data["key"] in get_default_builtin_config_vars(region, environment).keys():  # noqa: SIM118
+            raise ValidationError(_("名称为 {key} 的变量已存在于系统内置变量，不能添加。").format(key=data["key"]))
+
         return data
 
 
-class DefaultConfigVarUpdateInputSLZ(DefaultConfigVarCreateInputSLZ):
-    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        if DefaultConfigVar.objects.exclude(id=self.context["id"]).filter(key=data["key"]).exists():
-            raise ValidationError(_("该环境下同名变量 {key} 已存在。").format(key=data["key"]), code="unique")
-        return data
+class BuiltinConfigVarCreateOutputSLZ(serializers.Serializer):
+    id = serializers.IntegerField()
 
 
-class BuiltinConfigVarInputSLZ(serializers.Serializer):
-    region = serializers.CharField()
+class BuiltinConfigVarUpdateInputSLZ(serializers.Serializer):
+    value = serializers.CharField(required=True)
+    description = serializers.CharField(max_length=200, required=True, help_text="变量描述")
+
+
+class BuiltinConfigVarListInputSLZ(serializers.Serializer):
+    region = serializers.ChoiceField(choices=[(region, region) for region in list(get_all_regions().keys())])
 
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         if data["region"] not in list(get_all_regions().keys()):
@@ -73,14 +80,10 @@ class BuiltinConfigVarInputSLZ(serializers.Serializer):
         return data
 
 
-class DefaultConfigVarListOutputSLZ(serializers.Serializer):
+class BuiltinConfigVarListOutputSLZ(serializers.Serializer):
     id = serializers.IntegerField()
     key = serializers.CharField()
     value = serializers.CharField()
     description = serializers.CharField(allow_blank=True)
-    updated_at = serializers.DateTimeField()
+    updated = serializers.DateTimeField()
     updater = serializers.CharField()
-
-
-class DefaultConfigVarCreateOutputSLZ(serializers.Serializer):
-    id = serializers.IntegerField()

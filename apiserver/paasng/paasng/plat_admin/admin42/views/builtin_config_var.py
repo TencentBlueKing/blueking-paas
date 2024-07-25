@@ -1,0 +1,101 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from paasng.core.region.models import get_all_regions
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.plat_admin.admin42.serializers.config_vars import (
+    BuiltinConfigVarCreateInputSLZ,
+    BuiltinConfigVarCreateOutputSLZ,
+    BuiltinConfigVarListInputSLZ,
+    BuiltinConfigVarListOutputSLZ,
+    BuiltinConfigVarUpdateInputSLZ,
+)
+from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.engine.configurations.config_var import get_default_builtin_config_vars
+from paasng.platform.engine.models.config_var import BuiltinConfigVar
+
+
+class BuiltinConfigVarView(GenericTemplateView):
+    name = "环境变量管理"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+    template_name = "admin42/platformmgr/builtin_config_var.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["system_prefix"] = settings.CONFIGVAR_SYSTEM_PREFIX
+        context["regions"] = list(get_all_regions().keys())
+        return context
+
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
+    """环境变量管理 API 接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def list(self, request):
+        envs = BuiltinConfigVar.objects.order_by("-updated")
+        return Response(BuiltinConfigVarListOutputSLZ(envs, many=True).data)
+
+    def upsert(self, request, pk=None):
+        if pk:
+            slz = BuiltinConfigVarUpdateInputSLZ(data=request.data)
+        else:
+            slz = BuiltinConfigVarCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+        # update
+        if pk:
+            config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
+            config_var.value = data["value"]
+            config_var.description = data["description"]
+            config_var.updater = request.user.username
+            config_var.save(update_fields=["value", "description", "updater", "updated"])
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        # create
+        config_var = BuiltinConfigVar.objects.create(
+            key=data["key"],
+            value=data["value"],
+            description=data["description"],
+            updater=request.user.username,
+        )
+        output_slz = BuiltinConfigVarCreateOutputSLZ(config_var)
+        return Response(output_slz.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk):
+        config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
+        config_var.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_default_builtin_envs(self, request):
+        """获取所有内置环境变量，包括应用基本信息、应用运行时信息和蓝鲸体系内平台地址，其中和应用相关的环境变量只显示变量名和描述"""
+        slz = BuiltinConfigVarListInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        region = slz.validated_data["region"]
+        # 默认展示正式环境的环境变量
+        environment = AppEnvironment.PRODUCTION.value
+        return Response(get_default_builtin_config_vars(region, environment))

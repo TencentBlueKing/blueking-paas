@@ -59,7 +59,7 @@ class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
         environment = AppEnvironment.PRODUCTION.value
         key_with_prefix = settings.CONFIGVAR_SYSTEM_PREFIX + data["key"]
         if key_with_prefix in get_default_builtin_config_vars(region, environment):
-            raise ValidationError(_("名称为 {key} 的变量已存在于系统内置变量，不能添加。").format(key=data["key"]))
+            raise ValidationError(_("名称为 {key} 的变量已存在于系统内置变量，不能添加。").format(key=key_with_prefix))
 
         return data
 

@@ -7,7 +7,13 @@
       :cur-module="curAppModule"
     />
 
-    <section :class="['instance-detail', { 'default-instance-detail-cls': !isCloudNativeApp }]">
+    <section
+      :class="[
+        'instance-detail',
+        { 'default-instance-detail-cls': !isCloudNativeApp },
+        { 'collapsed': isCollapsed }
+      ]"
+    >
       <bk-resize-layout
         ref="resizeLayoutRef"
         :placement="'right'"
@@ -421,6 +427,7 @@ export default {
       isExpand: true,
       isEnhancedFeatureEnabled: true,
       isEnabled: false,
+      isCollapsed: false,
     };
   },
   computed: {
@@ -767,7 +774,7 @@ export default {
     },
 
     handleSetCollapse() {
-      this.$refs.resizeLayoutRef?.setCollapse();
+      this.isCollapsed = !this.isCollapsed;
     },
 
     handleCollapseChange(data) {
@@ -1329,6 +1336,12 @@ export default {
       font-size: 12px;
     }
   }
+}
+.collapsed .instance-resize-layout-cls aside.bk-resize-layout-aside {
+  .bk-resize-trigger {
+    display: none;
+  }
+  width: 0px !important;
 }
 .instance-resize-layout-cls {
   .bk-resize-layout-aside .bk-resize-layout-aside-content {

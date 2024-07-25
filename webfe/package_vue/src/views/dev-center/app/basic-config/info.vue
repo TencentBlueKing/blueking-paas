@@ -50,7 +50,7 @@
                 </div>
               </section>
               <div class="logo-wrapper">
-                <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
+                <img :src="localeAppInfo.logo || '/static/images/default_logo.png'" />
               </div>
             </div>
             <!-- 编辑态 -->
@@ -72,34 +72,16 @@
                   <bk-input disabled v-model="curAppInfo.application.region_name"></bk-input>
                 </bk-form-item>
                 <bk-form-item label="LOGO">
-                  <div class="logoupload-wrapper">
-                    <div
-                      :class="['logoupload-cls', { 'preview': appBaseInfoConfig.isPreviewImageShow }]"
-                      @mouseenter="isMaskLayerShown = true"
-                      @mouseleave="isMaskLayerShown = false"
-                    >
-                      <!-- 默认 -->
-                      <div class="logoupload-content">
-                        <i class="bk-icon icon-plus-line"></i>
-                        <p>{{ $t('点击上传') }}</p>
-                      </div>
-                      <!-- 预览图 -->
-                      <div class="preview-image-cls">
-                        <img id="preview-image" />
-                      </div>
-                      <!-- 遮罩层 -->
-                      <div class="logo-mask-layer-cls" v-if="appBaseInfoConfig.isPreviewImageShow && isMaskLayerShown">
-                        <i class="paasng-icon paasng-close" @click="handleClose"></i>
-                        <i class="paasng-icon paasng-upload-2" @click="handleInputClick"></i>
-                      </div>
-                      <input
-                        ref="logoInputRef"
-                        type="file"
-                        accept="image/jpeg, image/png"
-                        name="logo"
-                        @change="beforeFileUploadProcessing"
-                      >
-                    </div>
+                  <div :class="['logoupload-wrapper', { selected: curFileData.length }]">
+                    <bk-upload
+                      :files="curFileData"
+                      :theme="'picture'"
+                      accept="image/jpeg, image/png"
+                      :multiple="false"
+                      ext-cls="app-logo-upload-cls"
+                      :custom-request="customRequest"
+                      @on-delete="handleDelete"
+                    ></bk-upload>
                     <p class="tip">
                       {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
                     </p>
@@ -116,7 +98,7 @@
                   <bk-button
                     ext-cls="mr8"
                     theme="default"
-                    :disabled="appBaseInfoConfig.logoData === null"
+                    :disabled="!curFileData.length"
                     @click="handlePreview">{{ $t('预览') }}</bk-button>
                   <bk-button
                     theme="default"
@@ -238,28 +220,23 @@
       ext-cls="base-info-preview-dialog-cls"
       theme="primary">
       <div class="content">
-        <img id="dislog-preview-image" />
+        <img id="dislog-preview-image" :src="previewImageRrl" />
         <h3 class="title">{{ localeAppInfo.name }}</h3>
       </div>
     </bk-dialog>
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
-// import BluekingUserSelector from '@blueking/user-selector';
 import authenticationInfo from '@/components/authentication-info.vue';
-// import 'BKSelectMinCss';
 import pluginInfo from './plugin-info.vue';
 
 export default {
   components: {
     authenticationInfo,
     pluginInfo,
-    // BluekingUserSelector,
-    //   'bk-member-selector': () => {
-    //       return import('@/components/user/member-selector/member-selector.vue');
-    //   }
   },
   mixins: [appBaseMixin],
   data() {
@@ -302,14 +279,13 @@ export default {
       descAppDisabled: false,
       appBaseInfoConfig: {
         isEdit: false,
-        isPreviewImageShow: false,
         logoData: null,
         isLoading: false,
       },
       previewDialogConfig: {
         visible: false,
       },
-      isMaskLayerShown: false,
+      curFileData: [],
     };
   },
   computed: {
@@ -326,7 +302,6 @@ export default {
       return this.curAppInfo.application.code === this.formRemoveConfirmCode;
     },
     platformFeature() {
-      console.warn(this.$store.state.platformFeature);
       return this.$store.state.platformFeature;
     },
     userFeature() {
@@ -337,6 +312,9 @@ export default {
     },
     curAppName() {
       return this.curAppInfo.application?.name;
+    },
+    previewImageRrl() {
+      return this.curFileData[0]?.url;
     },
   },
   watch: {
@@ -505,48 +483,17 @@ export default {
     // 基本信息编辑
     handleEditBaseInfo() {
       if (!this.isBasicInfoEditable) return;
-      this.appBaseInfoConfig.isEdit = true;
-    },
-
-    // 处理文件选择，显示选择后的预览图
-    beforeFileUploadProcessing(e) {
-      e.preventDefault();
-      const file = e.target.files[0];
-      if (!file) return;
-      const maxSize = 2 * 1024;
-
-      // 支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。验证
-      const imgSize = file.size / 1024;
-      if (imgSize > maxSize) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('文件大小应<2M！'),
-        });
-        return;
+      if (this.localeAppInfo.logo) {
+        this.curFileData = [{
+          url: this.localeAppInfo.logo,
+        }];
       }
-
-      // 显示预览图
-      const imgEl = document.querySelector('#preview-image');
-      const previewImageUrl = URL.createObjectURL(file);
-      imgEl.style.display = 'block';
-      imgEl.src = previewImageUrl;
-      this.appBaseInfoConfig.isPreviewImageShow = true;
-      this.appBaseInfoConfig.logoData = file;
-    },
-
-    // 设置预览图
-    setPreviewImage(imgEl, file) {
-      const previewImageUrl = URL.createObjectURL(file);
-      imgEl.style.display = 'block';
-      imgEl.src = previewImageUrl;
+      this.appBaseInfoConfig.isEdit = true;
     },
 
     // 预览
     handlePreview() {
       this.previewDialogConfig.visible = true;
-      // 显示预览图
-      const imgEl = document.querySelector('#dislog-preview-image');
-      this.setPreviewImage(imgEl, this.appBaseInfoConfig.logoData);
     },
 
     // 基本信息取消
@@ -558,7 +505,6 @@ export default {
     // 数据重置
     resetAppBaseInfoConfig() {
       this.appBaseInfoConfig.isEdit = false;
-      this.appBaseInfoConfig.isPreviewImageShow = false;
       this.appBaseInfoConfig.logoData = null;
       this.appBaseInfoConfig.isLoading = false;
     },
@@ -572,17 +518,29 @@ export default {
       });
     },
 
-    handleClose() {
-      const imgEl = document.querySelector('#preview-image');
-      imgEl.src = '';
-      imgEl.style.display = 'none';
-      this.$refs.logoInputRef.value = '';
-      this.appBaseInfoConfig.logoData = null;
-      this.appBaseInfoConfig.isPreviewImageShow = false;
-    },
+    // 自定义上传处理
+    customRequest(file) {
+      const fileData = file.fileObj.origin;
 
-    handleInputClick() {
-      this.$refs.logoInputRef?.click();
+      // 支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。验证
+      const imgSize = fileData.size / 1024;
+      const maxSize = 2 * 1024;
+      if (imgSize > maxSize) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('文件大小应<2M！'),
+        });
+        return;
+      }
+      this.appBaseInfoConfig.logoData = fileData;
+      const previewImageUrl = URL.createObjectURL(fileData);
+      this.curFileData = [{
+        name: fileData.name,
+        url: previewImageUrl,
+      }];
+    },
+    handleDelete() {
+      this.curFileData = [];
     },
   },
 };
@@ -879,98 +837,32 @@ export default {
         .logoupload-wrapper {
           display: flex;
           align-items: center;
+          &.selected {
+            .app-logo-upload-cls /deep/ .file-wrapper .picture-btn {
+              background: #fff;
+            }
+          }
+          .app-logo-upload-cls {
+            /deep/ .file-wrapper {
+              width: 96px;
+              height: 96px;
+              padding-top: 0px;
+              .picture-btn {
+                background: #fafbfd;
+              }
+              .upload-btn {
+                width: 96px;
+                height: 96px;
+                display: flex;
+                align-items: center;
+                flex-direction: column;
+                justify-content: center;
+              }
+            }
+          }
           .tip {
             margin-left: 12px;
             color: #979BA5;
-          }
-        }
-        .logoupload-cls {
-          flex-shrink: 0;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          width: 96px;
-          height: 96px;
-          color: #63656E;
-          background: #FAFBFD;
-          border: 1px dashed #C4C6CC;
-          border-radius: 2px;
-          cursor: pointer;
-
-          &.preview {
-            background: #FFFFFF;
-            border: 1px solid #C4C6CC !important;
-          }
-
-          &:hover {
-            color: #3A84FF;
-            border-color: #3A84FF;
-            .icon-plus-line {
-              color: #3A84FF;
-            }
-          }
-
-          .logoupload-content {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-          }
-
-          .preview-image-cls {
-            position: absolute;
-            left: 3px;
-            top: 3px;
-            width: calc(100% - 6px);
-            height: calc(100% - 6px);
-          }
-
-          .logo-mask-layer-cls {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: calc(100% - 6px);
-            height: calc(100% - 6px);
-            background: #00000099;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: default;
-
-            i {
-              cursor: pointer;
-              color: #FAFBFD;
-              font-size: 20px;
-            }
-
-            i:hover {
-              color: #3A84FF;
-            }
-
-            .paasng-close {
-              position: absolute;
-              right: 3px;
-              top: 3px;
-            }
-          }
-
-          i {
-            font-size: 22px;
-            color: #979BA5;
-          }
-          p {
-            text-align: center;
-          }
-          input {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            left: 0;
-            top: 0;
-            z-index: 10;
-            cursor: pointer;
-            opacity: 0;
           }
         }
       }
@@ -979,7 +871,6 @@ export default {
       width: 88px;
     }
     .logoupload-cls .preview-image-cls #preview-image {
-      display: none;
       position: absolute;
       width: 100%;
       height: 100%;

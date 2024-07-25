@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 from typing import Any, Dict
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -56,7 +57,8 @@ class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
         # region 和 environment 不影响默认内置环境变量的 key
         region = list(get_all_regions().keys())[0]
         environment = AppEnvironment.PRODUCTION.value
-        if data["key"] in get_default_builtin_config_vars(region, environment).keys():  # noqa: SIM118
+        key_with_prefix = settings.CONFIGVAR_SYSTEM_PREFIX + data["key"]
+        if key_with_prefix in get_default_builtin_config_vars(region, environment):
             raise ValidationError(_("名称为 {key} 的变量已存在于系统内置变量，不能添加。").format(key=data["key"]))
 
         return data

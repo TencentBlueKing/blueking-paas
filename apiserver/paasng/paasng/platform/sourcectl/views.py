@@ -230,6 +230,11 @@ class GitRepoViewSet(viewsets.ViewSet):
         except AccessTokenForbidden as e:
             raise error_codes.CANNOT_GET_REPO.f(_("当前 AccessToken 无法获取到仓库列表，请检查后重试")) from e
         except Exception as e:
+            logger.exception(
+                "Unknown error occurred when getting repo list, user_id: %s, sourcectl_type: %s",
+                request.user.pk,
+                source_control_type,
+            )
             raise error_codes.CANNOT_GET_REPO.f(_("访问源码仓库失败，请联系项目管理员")) from e
 
         return Response({"results": slzs.RepoSLZ(repos, many=True).data})
@@ -479,6 +484,7 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except AccessTokenForbidden:
             raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
         except Exception as e:
+            logger.exception("Unknown error occurred when getting compare url, user_id: %s", request.user.pk)
             raise error_codes.CANNOT_GET_REPO.f(_(f"仓库信息查询异常: {e}"))
         return Response({"result": compare_url})
 
@@ -543,7 +549,11 @@ class RevisionInspectViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except AccessTokenForbidden:
             raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
         except Exception:
-            logger.exception("unable to fetch repo info")
+            logger.exception(
+                "Unknown error occurred when inspecting version, user_id: %s, version: %s",
+                request.user.pk,
+                smart_revision,
+            )
             raise error_codes.CANNOT_GET_REPO.f(_("{module} 的仓库信息查询异常").format(module=module))
         else:
             return Response(data)

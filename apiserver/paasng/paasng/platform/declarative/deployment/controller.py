@@ -128,6 +128,7 @@ class DeploymentDeclarativeController:
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
+        result.set_processes(processes=processes)
         # apply desc to bkapp_model
         if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:
             # == 云原生应用 或者 使用了 version 3 版本的应用描述文件

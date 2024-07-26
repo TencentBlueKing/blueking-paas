@@ -59,15 +59,16 @@
         @cancel="cancelBuiltinEnvDialog"
         :mask-close="false"
     >
-        <template v-for="tag in regions">
-            <bk-tag
-                type="stroke"
-                checkable
-                :checked="selectedRegion === tag"
-                :key="tag"
-                @change="checked => changeRegion(checked, tag)">
-            $[tag]
-            </bk-tag>
+        <template>
+            <div>
+                <bk-radio-group v-model="selectedRegion" @change="changeRegion">
+                    <template v-for="region in regions">
+                        <bk-radio-button :value="region">
+                            $[region]
+                        </bk-radio-button>
+                    </template>
+                </bk-radio-group>
+            </div>
         </template>
         <div slot="header">内置环境变量</div>
         <bk-table :data="builtinEnvData" class="mt10">
@@ -252,7 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchBuiltinEnvData: async function () {
                 const baseURL = decodeURI("{% url 'admin.builtin_config_var.builtin' %}");
                 const url = `${baseURL}?region=${encodeURIComponent(this.selectedRegion)}`;
-                const el = this.$bkLoading({title: '加载中'})
                 try {
                     const res = await this.$http.get(url);
                     this.convertArray(res);
@@ -261,9 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         theme: 'error',
                         message: e.response.data.detail
                     });
-                }
-                finally {
-                    el.hide = true;
                 }
             },
             convertArray: function (data) {
@@ -283,8 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, []);
                 this.builtinEnvData = list;
             },
-            changeRegion: function (checked, region) {
-                if(checked) {
+            changeRegion: function (region) {
+                if (this.selectedRegion !== region) {
                     this.selectedRegion = region;
                 }
             }

@@ -24,7 +24,7 @@ from .views import (
     accountmgr,
     applications,
     bk_plugins,
-    builtin_config_var,
+    builtin_config_vars,
     runtimes,
     services,
     smart_advisor,
@@ -508,23 +508,23 @@ urlpatterns += [
     # 环境变量管理页
     url(
         r"platform/builtin_config_var/manage/$",
-        builtin_config_var.BuiltinConfigVarView.as_view(),
+        builtin_config_vars.BuiltinConfigVarView.as_view(),
         name="admin.builtin_config_var.manage",
     ),
     # 环境变量管理API
     url(
         r"platform/builtin_config_var/builtin_env/$",
-        builtin_config_var.BuiltinConfigVarViewSet.as_view({"get": "get_default_builtin_envs"}),
+        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "get_default_builtin_config_vars"}),
         name="admin.builtin_config_var.builtin",
     ),
     url(
         r"platform/builtin_config_var/$",
-        builtin_config_var.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "upsert"}),
+        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
         name="admin.builtin_config_var",
     ),
     url(
         r"platform/builtin_config_var/(?P<pk>[^/]+)/",
-        builtin_config_var.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "upsert"}),
+        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
         name="admin.builtin_config_var.detail",
     ),
 ]

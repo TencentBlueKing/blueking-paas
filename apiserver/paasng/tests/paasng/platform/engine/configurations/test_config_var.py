@@ -161,13 +161,8 @@ class TestBuiltInEnvVars:
         ]
         assert set(runtime_env_keys).issubset(config_vars.keys())
 
-
-class TestDefaultEnvVars:
-    @pytest.mark.parametrize(
-        ("include_builtin_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
-    )
-    def test_param_include_builtin_config_vars(self, bk_stag_env, include_builtin_config_vars, ctx):
+    def test_param_include_custom_builtin_config_vars(self, bk_stag_env):
         BuiltinConfigVar.objects.create(key="FOO", value="bar")
-        env_vars = get_env_variables(bk_stag_env, include_builtin_config_vars=include_builtin_config_vars)
-        with ctx as expected:
+        env_vars = get_env_variables(bk_stag_env)
+        with does_not_raise("bar") as expected:
             assert env_vars["BKPAAS_FOO"] == expected

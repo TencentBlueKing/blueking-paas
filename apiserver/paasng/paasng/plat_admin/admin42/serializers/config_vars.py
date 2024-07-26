@@ -14,7 +14,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import Any, Dict
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -43,25 +42,25 @@ class ConfigVarSLZ(BaseConfigVarSLZ):
 class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
     key = serializers.RegexField(
         RE_CONFIG_VAR_KEY,
-        max_length=1024,
+        max_length=128,
         required=True,
         error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
     )
-    value = serializers.CharField(required=True)
-    description = serializers.CharField(max_length=200, required=True, help_text="变量描述")
+    value = serializers.CharField(max_length=512, required=True)
+    description = serializers.CharField(max_length=512, required=True, help_text="变量描述")
 
-    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        if BuiltinConfigVar.objects.filter(key=data["key"]).exists():
-            raise ValidationError(_("名称为 {key} 的变量已经存在，不能重复添加。").format(key=data["key"]))
+    def validate_key(self, key: str) -> str:
+        if BuiltinConfigVar.objects.filter(key=key).exists():
+            raise ValidationError(_("内置环境变量 {key} 已存在").format(key=key))
 
         # region 和 environment 不影响默认内置环境变量的 key
         region = list(get_all_regions().keys())[0]
         environment = AppEnvironment.PRODUCTION.value
-        key_with_prefix = settings.CONFIGVAR_SYSTEM_PREFIX + data["key"]
+        key_with_prefix = settings.CONFIGVAR_SYSTEM_PREFIX + key
         if key_with_prefix in get_default_builtin_config_vars(region, environment):
-            raise ValidationError(_("名称为 {key} 的变量已存在于系统内置变量，不能添加。").format(key=key_with_prefix))
+            raise ValidationError(_("名称 {key} 与系统内置变量名冲突").format(key=key_with_prefix))
 
-        return data
+        return key
 
 
 class BuiltinConfigVarCreateOutputSLZ(serializers.Serializer):
@@ -69,23 +68,23 @@ class BuiltinConfigVarCreateOutputSLZ(serializers.Serializer):
 
 
 class BuiltinConfigVarUpdateInputSLZ(serializers.Serializer):
-    value = serializers.CharField(required=True)
-    description = serializers.CharField(max_length=200, required=True, help_text="变量描述")
+    value = serializers.CharField(max_length=512, required=True)
+    description = serializers.CharField(max_length=512, required=True, help_text="变量描述")
 
 
 class BuiltinConfigVarListInputSLZ(serializers.Serializer):
     region = serializers.ChoiceField(choices=[(region, region) for region in list(get_all_regions().keys())])
 
-    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        if data["region"] not in list(get_all_regions().keys()):
-            raise ValidationError(_("无法找到指定的region: {region}").format(region=data["region"]))
-        return data
+    def validate_region(self, region: str) -> str:
+        if region not in list(get_all_regions().keys()):
+            raise ValidationError(_("无法找到指定的 region: {region}").format(region=region))
+        return region
 
 
 class BuiltinConfigVarListOutputSLZ(serializers.Serializer):
     id = serializers.IntegerField()
     key = serializers.CharField()
     value = serializers.CharField()
-    description = serializers.CharField(allow_blank=True)
+    description = serializers.CharField()
     updated = serializers.DateTimeField()
     updater = serializers.CharField()

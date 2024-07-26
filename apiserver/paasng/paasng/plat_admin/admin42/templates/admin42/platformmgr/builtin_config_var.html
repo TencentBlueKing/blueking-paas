@@ -1,7 +1,7 @@
 {% extends "admin42/platformmgr/base.html" %}
 {% load admin_utils %}
 {% block main_content %}
-<div id="platform-source-type-spec-list" class="p20">
+<div id="builtin-config-var-list" class="p20">
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         新建
     </bk-button>
@@ -36,32 +36,19 @@
         <div slot="header">$[ dialog.type === 'create'?'添加':'编辑' ]环境变量</div>
         <bk-form ref="form" :label-width="140" :model="dialog.form" :rules="rules">
             <bk-form-item label="Key" property="key" :required="dialog.type === 'create'">
-                <bk-input v-model="dialog.form.key" :disabled="dialog.type !== 'create'" placeholder="请输入key">
+                <bk-input v-model="dialog.form.key" :disabled="dialog.type !== 'create'">
                     <template slot="prepend">
                         <div class="group-text">{{system_prefix}}</div>
                     </template>
                 </bk-input>
             </bk-form-item>
             <bk-form-item label="Value" property="value" :required="true">
-                <bk-input v-model="dialog.form.value" placeholder="请输入变量名"></bk-input>
+                <bk-input v-model="dialog.form.value"></bk-input>
             </bk-form-item>
             <bk-form-item label="描述" property="description" :required="true">
-                <bk-input v-model="dialog.form.description" placeholder="请输入描述"></bk-input>
+                <bk-input v-model="dialog.form.description"></bk-input>
             </bk-form-item>
         </bk-form>
-    </bk-dialog>
-
-    <!-- 删除确认提示 -->
-    <bk-dialog
-        v-model="deleteConfirm.visible"
-        header-position="left"
-        width="400"
-        :confirm-fn="deleteRow"
-        @cancel="cancelDelete"
-        :mask-close="false"
-    >
-        <div slot="header">删除确认</div>
-        <p>确定要删除吗？</p>
     </bk-dialog>
 
     <!-- 显示默认内置环境变量弹窗 -->
@@ -103,7 +90,7 @@ const URLRouter = {
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#platform-source-type-spec-list",
+        el: "#builtin-config-var-list",
         delimiters: ['$[', ']'],
         data: function () {
             return {
@@ -191,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.cancelDialog();
                     this.fetchBuiltinEnvList();
                 }
-
             },
             handleCreate: function () {
                 this.dialog.type = "create"
@@ -218,22 +204,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.visible = true
             },
             handleDelete: function (row) {
-                this.deleteConfirm.row = row
-                this.deleteConfirm.visible = true
+                this.$bkInfo({
+                    title: '确认要删除？',
+                    confirmLoading: true,
+                    theme: 'danger',
+                    confirmFn: async () => {
+                        try {
+                            await this.deleteRow(row)
+                            this.$bkMessage({
+                                theme: 'success',
+                                message: '删除成功',
+                            })
+                        } catch (e) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: e.response.data.detail,
+                            })
+                        }
+                    }
+                })
             },
-            deleteRow: async function () {
-                const url = this.fillUrlTemplate(URLRouter.detail, {row: this.deleteConfirm.row});
+            deleteRow: async function (row) {
+                const url = this.fillUrlTemplate(URLRouter.detail, { row });
                 await this.$http.delete(url);
 
-                const index = this.data.findIndex(item => item.key === this.deleteConfirm.row.key);
+                const index = this.data.findIndex(item => item.key === row.key);
                 if (index !== -1) {
                     this.data.splice(index, 1);
                 }
-
-                this.deleteConfirm.visible = false
-            },
-            cancelDelete: function () {
-                this.deleteConfirm.visible = false
             },
             fillUrlTemplate: function (url_template, {row}) {
                 if (!row) {
@@ -258,7 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const res = await this.$http.get(url);
                     this.convertArray(res);
-                    console.log(this.regions);
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -289,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
             changeRegion: function (checked, region) {
                 if(checked) {
                     this.selectedRegion = region;
-                    console.log(this.selectedRegion, checked, region);
                 }
             }
         },

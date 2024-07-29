@@ -60,20 +60,18 @@
         :mask-close="false"
     >
         <template>
-            <div>
-                <bk-radio-group v-model="selectedRegion" @change="changeRegion">
-                    <template v-for="region in regions">
-                        <bk-radio-button :value="region">
-                            $[region]
-                        </bk-radio-button>
-                    </template>
-                </bk-radio-group>
-            </div>
+            <bk-radio-group v-model="selectedRegion" @change="changeRegion">
+                <template v-for="region in regions">
+                    <bk-radio-button :value="region">
+                        $[region]
+                    </bk-radio-button>
+                </template>
+            </bk-radio-group>
         </template>
         <div slot="header">内置环境变量</div>
         <bk-table :data="builtinEnvData" class="mt10">
-                <bk-table-column label="变量" prop="label" width="500" show-overflow-tooltip="true"></bk-table-column>
-                <bk-table-column label="描述" prop="description" width="400" show-overflow-tooltip="true"></bk-table-column>
+            <bk-table-column label="变量" prop="label" width="500" show-overflow-tooltip="true"></bk-table-column>
+            <bk-table-column label="描述" prop="description" width="400" show-overflow-tooltip="true"></bk-table-column>
         </bk-table>
     </bk-dialog>
 </div>
@@ -84,9 +82,9 @@
 const system_prefix = {{ system_prefix | to_json }}
 const regions = {{ regions | to_json }}
 const URLRouter = {
-    create: decodeURI("{% url 'admin.builtin_config_var' %}"),
-    list: decodeURI("{% url 'admin.builtin_config_var' %}"),
-    detail: decodeURI("{% url 'admin.builtin_config_var.detail' '${id}' %}"),
+    create: decodeURI("{% url 'admin.builtin_config_vars' %}"),
+    list: decodeURI("{% url 'admin.builtin_config_vars' %}"),
+    detail: decodeURI("{% url 'admin.builtin_config_vars.detail' '${id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -251,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.builtinEnvDialog.visible = false;
             },
             fetchBuiltinEnvData: async function () {
-                const baseURL = decodeURI("{% url 'admin.builtin_config_var.builtin' %}");
+                const baseURL = decodeURI("{% url 'admin.builtin_config_vars.builtin' %}");
                 const url = `${baseURL}?region=${encodeURIComponent(this.selectedRegion)}`;
                 try {
                     const res = await this.$http.get(url);

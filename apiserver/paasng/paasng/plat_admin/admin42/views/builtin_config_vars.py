@@ -40,7 +40,7 @@ from paasng.platform.engine.models.config_var import BuiltinConfigVar
 class BuiltinConfigVarView(GenericTemplateView):
     name = "环境变量管理"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    template_name = "admin42/platformmgr/builtin_config_var.html"
+    template_name = "admin42/platformmgr/builtin_config_vars.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -72,8 +72,7 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
             description=data["description"],
             updater=request.user.username,
         )
-        output_slz = BuiltinConfigVarCreateOutputSLZ(config_var)
-        return Response(output_slz.data, status=status.HTTP_201_CREATED)
+        return Response(BuiltinConfigVarCreateOutputSLZ(config_var).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk):
         slz = BuiltinConfigVarUpdateInputSLZ(data=request.data)

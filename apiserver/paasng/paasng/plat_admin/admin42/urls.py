@@ -507,24 +507,24 @@ urlpatterns += [
 urlpatterns += [
     # 环境变量管理页
     url(
-        r"platform/builtin_config_var/manage/$",
+        r"platform/builtin_config_vars/manage/$",
         builtin_config_vars.BuiltinConfigVarView.as_view(),
-        name="admin.builtin_config_var.manage",
+        name="admin.builtin_config_vars.manage",
     ),
     # 环境变量管理API
     url(
-        r"platform/builtin_config_var/builtin_env/$",
+        r"platform/builtin_config_vars/builtin_env/$",
         builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "get_default_builtin_config_vars"}),
-        name="admin.builtin_config_var.builtin",
+        name="admin.builtin_config_vars.builtin",
     ),
     url(
-        r"platform/builtin_config_var/$",
+        r"platform/builtin_config_vars/$",
         builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.builtin_config_var",
+        name="admin.builtin_config_vars",
     ),
     url(
-        r"platform/builtin_config_var/(?P<pk>[^/]+)/",
+        r"platform/builtin_config_vars/(?P<pk>[^/]+)/",
         builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="admin.builtin_config_var.detail",
+        name="admin.builtin_config_vars.detail",
     ),
 ]

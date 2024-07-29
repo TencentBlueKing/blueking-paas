@@ -157,5 +157,4 @@ class BuiltinConfigVar(AuditedModel):
     key = models.CharField(verbose_name="环境变量名", max_length=128, null=False, unique=True)
     value = models.TextField(verbose_name="环境变量值", max_length=512, null=False)
     description = models.CharField(verbose_name="描述", max_length=512, null=False)
-
     updater = BkUserField(verbose_name="更新者")

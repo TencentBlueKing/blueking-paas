@@ -126,7 +126,7 @@ def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy
         AppModelDeploy.objects.filter(
             application_id=application.id, module_id=deploy.module_id, environment_name=deploy.environment_name
         )
-        .excloud(id=deploy)
+        .exclude(id=deploy)
         .last()
     )
     last_revision_id = last_deploy.revision.id if last_deploy else None

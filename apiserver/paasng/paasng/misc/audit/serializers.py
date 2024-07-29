@@ -15,9 +15,29 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import django
+from rest_framework import serializers
 
-# A signal work like `post_save` but provide `operator` info additionally
-product_create_or_update_by_operator = django.dispatch.Signal(providing_args=["product", "operator", "created"])
+from paasng.misc.audit.models import AppAuditRecord
+from paasng.platform.applications.serializers import ApplicationSLZ4Record
 
-product_contact_updated = django.dispatch.Signal(providing_args=["product"])
+
+class AppAuditRecordSLZ(serializers.ModelSerializer):
+    at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
+    operate = serializers.ReadOnlyField(source="get_display_text", help_text="操作名称")
+    operator = serializers.ReadOnlyField(source="username", read_only=True)
+
+    class Meta:
+        model = AppAuditRecord
+        fields = "__all__"
+
+
+class QueryRecentOperatedApplications(serializers.Serializer):
+    limit = serializers.IntegerField(default=4, max_value=10, help_text="条目数")
+
+
+class RecordForRencentAppSLZ(AppAuditRecordSLZ):
+    application = ApplicationSLZ4Record(read_only=True)
+
+    class Meta:
+        model = AppAuditRecord
+        fields = "__all__"

@@ -21,10 +21,14 @@ from typing import TYPE_CHECKING, Type
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, TaskPoller
 from django.utils.translation import gettext as _
 
-from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
-from paasng.platform.engine.constants import JobStatus, ReleaseStatus
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.utils import add_app_audit_record, update_app_audit_record
+from paasng.platform.applications.signals import module_environment_offline_success
+from paasng.platform.engine.constants import JobStatus, OperationTypes, ReleaseStatus
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models import Deployment, OfflineOperation
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 
 if TYPE_CHECKING:
@@ -72,10 +76,29 @@ class BaseArchiveManager:
             source_revision=deployment.source_revision,
             source_comment=deployment.source_comment,
         )
+        ModuleEnvironmentOperations.objects.create(
+            operator=operator,
+            app_environment=offline_operation.app_environment,
+            application=offline_operation.app_environment.application,
+            operation_type=OperationTypes.OFFLINE.value,
+            object_uid=offline_operation.pk,
+        )
 
-        # send offline event to create operation record
-        module_environment_offline_event.send(
-            sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
+        # 审计记录
+        add_app_audit_record(
+            app_code=self.env.application.code,
+            user=operator,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.OFFLINE,
+            target=OperationTarget.APP,
+            module_name=self.env.module.name,
+            env=self.env.environment,
+            # 仅下发下架操作，未执行成功
+            result_code=ResultCode.ONGOING,
+            # 仅记录云原生应用操作前 bkapp.yaml 的版本号
+            data_type=DataType.BKAPP_REVERSION,
+            data_before=deployment.bkapp_revision_id,
+            source_object_id=offline_operation.id.hex,
         )
 
         self.perform_implement(offline_operation, result_handler=ArchiveResultHandler)
@@ -106,9 +129,13 @@ class ArchiveResultHandler(CallbackHandler):
         job_status = status.to_job_status()
         if job_status == JobStatus.SUCCESSFUL:
             offline_op.set_successful()
+            result_code = ResultCode.SUCCESS
         else:
             offline_op.set_failed(error_detail)
+            result_code = ResultCode.FAILURE
 
         module_environment_offline_success.send(
             sender=OfflineOperation, offline_instance=offline_op, environment=offline_op.app_environment.environment
         )
+        # 更新审计记录状态
+        update_app_audit_record(offline_op.id.hex, result_code)

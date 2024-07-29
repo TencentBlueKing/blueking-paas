@@ -159,6 +159,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.initialization",
     # Put "scheduler" in the last position so models in other apps can be ready
     "paasng.platform.scheduler",
+    "paasng.misc.audit",
     "revproxy",
     # workloads apps
     "paas_wl.bk_app.applications",
@@ -1342,6 +1343,22 @@ BK_NOTICE = {
     "BK_API_URL_TMPL": BK_API_URL_TMPL,
     "BK_API_APP_CODE": BK_APP_CODE,  # 用于调用 apigw 认证
     "BK_API_SECRET_KEY": BK_APP_SECRET,  # 用于调用 apigw 认证
+}
+
+# ---------------------------------------------
+# 蓝鲸审计中心配置
+# ---------------------------------------------
+# 审计中心-审计配置-接入-数据上报中获取这两项配置信息的值
+BK_AUDIT_DATA_TOKEN = settings.get("BK_AUDIT_DATA_TOKEN", "")
+BK_AUDIT_ENDPOINT = settings.get("BK_AUDIT_ENDPOINT", "")
+
+ENABLE_BK_AUDIT = bool(BK_AUDIT_DATA_TOKEN)
+BK_AUDIT_SETTINGS = {
+    "log_queue_limit": 50000,
+    "exporters": ["bk_audit.contrib.opentelemetry.exporters.OTLogExporter"],
+    "service_name_handler": "bk_audit.contrib.opentelemetry.utils.ServiceNameHandler",
+    "ot_endpoint": BK_AUDIT_ENDPOINT,
+    "bk_data_token": BK_AUDIT_DATA_TOKEN,
 }
 
 # ---------------------------------------------

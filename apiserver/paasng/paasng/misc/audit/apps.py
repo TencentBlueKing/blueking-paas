@@ -14,10 +14,29 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 from django.apps import AppConfig
+from django.conf import settings
 
 
-class OperationsConfig(AppConfig):
-    name = "paasng.misc.operations"
-    verbose_name = "Operations"
+class AuditConfig(AppConfig):
+    name = "paasng.misc.audit"
+    verbose_name = "audit"
+
+    def ready(self):
+        if not settings.BK_AUDIT_DATA_TOKEN or not settings.BK_AUDIT_ENDPOINT:
+            return
+
+        # TODO bk_audit SDK 默认的注册方法中要求必须定一个 APP_CODE\SECRET 这两个变量，
+        # 并代表应用 ID 和 应用密钥，与开发者中心的定义冲突
+        # 故先手动处理，SDK 短期内无法处理这个问题
+        from bk_audit.contrib.bk_audit.settings import bk_audit_settings
+        from bk_audit.contrib.opentelemetry.setup import setup
+
+        from paasng.misc.audit.client import bk_audit_client
+
+        setup(
+            bk_audit_client,
+            bk_data_id=bk_audit_settings.bk_data_id,
+            bk_data_token=bk_audit_settings.bk_data_token,
+            endpoint=bk_audit_settings.ot_endpoint,
+        )

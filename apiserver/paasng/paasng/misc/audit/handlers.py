@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-# 请谨慎使用 signal 来添加审计记录，目前仅保留除操作审计外的其他操作的 signal
+# 请谨慎使用 signal 来添加审计记录，目前仅保留除操作审计外还会同时触发其他操作的 signal
 
 import logging
 

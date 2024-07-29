@@ -119,6 +119,8 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             app_code=self.get_application().code,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
+            module_name=module_env.module.name,
+            env=module_env.environment,
             operation=operate_type,
             target=OperationTarget.PROCESS,
             attribute=process_type,

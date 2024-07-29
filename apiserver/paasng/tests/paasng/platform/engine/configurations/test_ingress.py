@@ -103,6 +103,7 @@ class TestAppDefaultSubpaths:
             default_subpath_key: f"http://example.com{normal_style_sub_path}",
         }
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     @pytest.mark.parametrize(
         ("app", "force_legacy_style", "expected"),
         [

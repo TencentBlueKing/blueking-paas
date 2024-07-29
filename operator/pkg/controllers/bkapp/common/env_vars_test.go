@@ -21,6 +21,7 @@ package common
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -64,5 +65,40 @@ var _ = Describe("Get App Envs", func() {
 		bkapp.Spec.Configuration.Env = []paasv1alpha2.AppEnvVar{}
 		envs := GetAppEnvs(bkapp)
 		Expect(len(envs)).To(Equal(0))
+	})
+})
+
+var _ = Describe("Get App Envs", func() {
+	It("No \"bk-var-*\" vars in the value", func() {
+		envs := []corev1.EnvVar{
+			{Name: "FOO", Value: "some random value foo"},
+			{Name: "BAR", Value: "some random value bar"},
+		}
+		renderedVars := RenderAppVars(envs, VarsRenderContext{ProcessType: "web"})
+
+		By("The rendered vars should be the same as the input vars")
+		Expect(renderedVars).To(Equal(envs))
+	})
+
+	It("Contains supported vars", func() {
+		envs := []corev1.EnvVar{
+			{Name: "BKPAAS_PROCESS_TYPE", Value: "{{bk_var_process_type}}"},
+			{Name: "OTHER_PRE_LOG_NAME_PREFIX", Value: "foo-{{bk_var_process_type}}"},
+			// with valid name but variable does not match
+			{Name: "OTHER_PRE_PROCESS_TYPE", Value: "{{another_var}}"},
+			{Name: "FOO", Value: "some random value foo"},
+			// the variable matches but the name is not in whitelist
+			{Name: "BAR", Value: "{{bk_var_process_type}}"},
+		}
+		renderedVars := RenderAppVars(envs, VarsRenderContext{ProcessType: "web"})
+
+		By("The `process_type` should be rendered properly.")
+		Expect(renderedVars).To(Equal([]corev1.EnvVar{
+			{Name: "BKPAAS_PROCESS_TYPE", Value: "web"},
+			{Name: "OTHER_PRE_LOG_NAME_PREFIX", Value: "foo-web"},
+			{Name: "OTHER_PRE_PROCESS_TYPE", Value: "{{another_var}}"},
+			{Name: "FOO", Value: "some random value foo"},
+			{Name: "BAR", Value: "{{bk_var_process_type}}"},
+		}))
 	})
 })

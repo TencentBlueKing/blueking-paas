@@ -51,14 +51,13 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
             "proc_command": None,
         }
 
-        replicas = process.replicas
         # When the replicas value is None, only update the data if the process appears
         # for the first time in the module.
         if process.replicas is None:
             if not ModuleProcessSpec.objects.filter(module=module, name=process.name).exists():
                 defaults["target_replicas"] = 1
         else:
-            defaults["target_replicas"] = replicas
+            defaults["target_replicas"] = process.replicas
 
         if autoscaling := process.autoscaling:
             defaults["autoscaling"] = True

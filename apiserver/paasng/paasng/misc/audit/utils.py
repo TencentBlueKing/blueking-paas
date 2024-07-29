@@ -166,7 +166,7 @@ def update_app_audit_record(source_object_id: str, result_code: int) -> AppOpera
     record.result_code = result_code
     update_fields = ["result_code"]
     # 如果是终止状态，则同时更新结束时间
-    if result_code not in constants.ResultCode.terminated_result():
+    if result_code in constants.ResultCode.terminated_result():
         record.end_time = timezone.now()
         update_fields.append("end_time")
     record.save(update_fields=update_fields)

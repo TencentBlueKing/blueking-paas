@@ -495,6 +495,14 @@ export default {
     this.fetchServicesShareDetail();
     this.getCredentialsEnabled();
   },
+  beforeRouteLeave(to, from, next) {
+    if (to.name === 'cloudAppDeployForBuild') {
+      this.$emit('show-tab', (that) => {
+        that.active = to.name;
+      });
+    }
+    next();
+  },
   methods: {
     async fetchServicesShareDetail() {
       try {

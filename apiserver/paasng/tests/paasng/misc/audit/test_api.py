@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import pytest
-from django.test.utils import override_settings
 
 from paasng.misc.audit.utils import add_app_audit_record
 
@@ -25,18 +24,17 @@ pytestmark = pytest.mark.django_db
 class TestAuditApi:
     def test_latest_apps(self, api_client, bk_user, bk_app):
         """最近操作的应用列表"""
-        with override_settings(ENABLE_BK_AUDIT=False):
-            add_app_audit_record(
-                app_code=bk_app.code, action_id="", user=bk_user, operation="enable", target="addon", attribute="mysql"
-            )
-            add_app_audit_record(
-                app_code=bk_app.code,
-                action_id="",
-                user=bk_user,
-                operation="disable",
-                target="addon",
-                attribute="mysql",
-            )
+        add_app_audit_record(
+            app_code=bk_app.code, action_id="", user=bk_user, operation="enable", target="addon", attribute="mysql"
+        )
+        add_app_audit_record(
+            app_code=bk_app.code,
+            action_id="",
+            user=bk_user,
+            operation="disable",
+            target="addon",
+            attribute="mysql",
+        )
 
         url = "/api/bkapps/applications/lists/latest/"
         resp = api_client.get(url)

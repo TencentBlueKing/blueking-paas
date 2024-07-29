@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.conf import settings
-from django.db.models import Max
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -24,8 +23,12 @@ from rest_framework.views import APIView
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.models import AppAuditRecord
-from paasng.misc.audit.serializers import AppAuditRecordSLZ, QueryRecentOperatedApplications, RecordForRencentAppSLZ
+from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
+from paasng.misc.audit.serializers import (
+    AppOperationRecordSLZ,
+    QueryRecentOperatedApplications,
+    RecordForRencentAppSLZ,
+)
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 
@@ -39,9 +42,9 @@ class ApplicationAuditRecordViewSet(mixins.ListModelMixin, viewsets.GenericViewS
     - 返回记录条数通过limit设置，默认值5
     """
 
-    serializer_class = AppAuditRecordSLZ
+    serializer_class = AppOperationRecordSLZ
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
-    queryset = AppAuditRecord.objects.all()
+    queryset = AppOperationRecord.objects.all()
 
     def list(self, request, *args, **kwargs):
         application = self.get_application()
@@ -64,17 +67,15 @@ class LatestApplicationsViewSet(APIView):
         # 可设置在应用列表中不展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(is_plugin_app=True)
-        app_code_list = list(applications.values_list("code", flat=True))
+        application_ids = applications.values_list("id", flat=True)
 
-        # 相关应用的所有操作记录
-        user_app_record_queryset = AppAuditRecord.objects.filter(app_code__in=app_code_list)
-        # 获取每个 app_code 的最新记录的 ID
-        latest_ids = (
-            user_app_record_queryset.values("app_code")
-            .annotate(latest_id=Max("id"))
-            .values_list("latest_id", flat=True)
+        latest_operated_objs = (
+            AppLatestOperationRecord.objects.filter(application__id__in=application_ids)
+            .select_related("operation")
+            .order_by("-latest_operated_at")[:limit]
         )
-        latest_records = AppAuditRecord.objects.filter(id__in=latest_ids).order_by("-created")
+        # 每个应用的最近操作记录
+        latest_records = [obj.operation for obj in latest_operated_objs]
         return latest_records
 
     def get(self, request, *args, **kwargs):

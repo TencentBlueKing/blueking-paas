@@ -200,25 +200,26 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.MANAGE_MODULE,
             operation=OperationEnum.DELETE,
             target=OperationTarget.MODULE,
+            attribute=module.name,
             result_code=ResultCode.ONGOING,
         )
-        with transaction.atomic():
-            try:
+        try:
+            with transaction.atomic():
                 module = application.get_module_with_lock(module_name=module_name)
                 ModuleCleaner(module).clean()
-            except Exception as e:
-                logger.exception(
-                    "unable to clean module<%s> of application<%s> related resources", module_name, application.code
-                )
-                # 执行失败
-                op_record.result_code = ResultCode.FAILURE
-                op_record.save(update_fields="result_code")
-                report_event_to_bk_audit(op_record)
-                raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
+        except Exception as e:
+            logger.exception(
+                "unable to clean module<%s> of application<%s> related resources", module_name, application.code
+            )
+            # 执行失败
+            op_record.result_code = ResultCode.FAILURE
+            op_record.save(update_fields=["result_code"])
+            report_event_to_bk_audit(op_record)
+            raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
 
         # 执行成功
         op_record.result_code = ResultCode.SUCCESS
-        op_record.save(update_fields="result_code")
+        op_record.save(update_fields=["result_code"])
         report_event_to_bk_audit(op_record)
         return Response(status=status.HTTP_204_NO_CONTENT)
 

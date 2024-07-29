@@ -23,6 +23,8 @@ class AuditConfig(AppConfig):
     verbose_name = "audit"
 
     def ready(self):
+        from . import handlers  # noqa: F401
+
         if not settings.BK_AUDIT_DATA_TOKEN or not settings.BK_AUDIT_ENDPOINT:
             return
 

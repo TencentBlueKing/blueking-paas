@@ -30,10 +30,18 @@ from paasng.utils.models import AuditedModel, BkUserField
 
 
 class BaseOperation(AuditedModel):
-    # 保留自增的 ID 作为主键，方便通过 Max(id) 获取每个应用最近一条操作记录
-    event_id = models.UUIDField(verbose_name="事件ID", default=uuid.uuid4, help_text="用于上报到审计中心的字段")
+    event_id = models.UUIDField(
+        verbose_name="事件ID",
+        default=uuid.uuid4,
+        primary_key=True,
+        editable=False,
+        auto_created=True,
+        unique=True,
+        help_text="用于上报到审计中心的字段",
+    )
     user = BkUserField()
-    start_time = models.DateTimeField(auto_now_add=True, verbose_name="开始时间")
+    # 时间字段手动加到主键，方便审计记录表过大时做分区优化
+    start_time = models.DateTimeField(auto_now_add=True, verbose_name="开始时间", db_index=True)
     end_time = models.DateTimeField(null=True, help_text="仅需要后台执行的的操作才需要记录结束时间")
     access_type = models.IntegerField(
         verbose_name="访问方式", choices=AccessType.get_choices(), default=AccessType.WEB
@@ -72,7 +80,9 @@ class BaseOperation(AuditedModel):
 
     @property
     def username(self):
-        return get_username_by_bkpaas_user_id(self.user)
+        if self.user:
+            return get_username_by_bkpaas_user_id(self.user)
+        return ""
 
     @property
     def scope_type(self):
@@ -129,8 +139,8 @@ class AdminOperationRecord(BaseOperation):
     app_code = models.CharField(max_length=32, verbose_name="应用ID, 非必填", null=True, blank=True)
 
 
-class AppAuditRecord(BaseOperation):
-    """应用操作审计，用于记录应用开发者的操作，需要同步记录应用的权限数据，并可以选择是否将数据上报到审计中心"""
+class AppOperationRecord(BaseOperation):
+    """应用操作记录，用于记录应用开发者的操作，需要同步记录应用的权限数据，并可以选择是否将数据上报到审计中心"""
 
     # 后续可能会做应用的硬删除，记录应用 ID，方便应用删除后相关记录仍存在
     app_code = models.CharField(max_length=32, verbose_name="应用ID, 必填")
@@ -160,3 +170,15 @@ class AppAuditRecord(BaseOperation):
         except ObjectDoesNotExist:
             return None
         return app
+
+
+class AppLatestOperationRecord(models.Model):
+    """应用最近操作的映射表，可方便快速查询应用的最近操作者，并按最近操作时间进行排序等操作
+    当 `AppOperationRecord` 新增记录时，会通过 signal 同步添加到该表中
+    """
+
+    application = models.OneToOneField(
+        Application, on_delete=models.CASCADE, db_constraint=False, related_name="latest_op_record"
+    )
+    operation = models.OneToOneField(AppOperationRecord, on_delete=models.CASCADE, db_constraint=False)
+    latest_operated_at = models.DateTimeField(db_index=True)

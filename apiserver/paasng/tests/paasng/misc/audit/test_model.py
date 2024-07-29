@@ -16,15 +16,15 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.test.utils import override_settings
 
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.models import AppLatestOperationRecord
 from paasng.misc.audit.utils import add_app_audit_record
 
 pytestmark = pytest.mark.django_db
 
 
-class TestAppAuditRecord:
+class TestAppOperationRecord:
     @pytest.mark.parametrize(
         ("target", "operation", "attribute", "module_name", "env", "result_code", "expected"),
         [
@@ -87,16 +87,29 @@ class TestAppAuditRecord:
     def test_opreation_record_display(
         self, bk_app, bk_user, operation, target, attribute, module_name, env, result_code, expected
     ):
-        with override_settings(ENABLE_BK_AUDIT=False):
-            record = add_app_audit_record(
-                app_code=bk_app.code,
-                user=bk_user,
-                action_id="xxxxx",
-                operation=operation,
-                target=target,
-                attribute=attribute,
-                module_name=module_name,
-                env=env,
-                result_code=result_code,
-            )
+        record = add_app_audit_record(
+            app_code=bk_app.code,
+            user=bk_user,
+            action_id="xxxxx",
+            operation=operation,
+            target=target,
+            attribute=attribute,
+            module_name=module_name,
+            env=env,
+            result_code=result_code,
+        )
         assert record.get_display_text() == expected.format(username=record.username)
+
+
+class TestAppLatestOp:
+    def test_post_save_handler(self, bk_app, bk_user):
+        record = add_app_audit_record(
+            app_code=bk_app.code,
+            user=bk_user,
+            action_id="",
+            operation=OperationEnum.RELEASE_TO_MARKET,
+            target=OperationTarget.APP,
+        )
+        latest_record = AppLatestOperationRecord.objects.get(application=bk_app)
+        assert latest_record.operation_id == record.pk
+        assert latest_record.operation.user == bk_user.bkpaas_user_id

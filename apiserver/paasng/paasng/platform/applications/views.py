@@ -71,7 +71,7 @@ from paasng.infras.iam.helpers import (
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.utils import add_app_audit_record, report_event_to_bk_audit
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
 from paasng.platform.applications.constants import (
@@ -401,19 +401,21 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.APP,
             result_code=ResultCode.ONGOING,
         )
-        with transaction.atomic():
-            try:
+        try:
+            with transaction.atomic():
                 self._delete_all_module(application)
                 self._delete_application(application)
-            except Exception:
-                logger.exception("unable to delete app<%s> related resources", application.code)
-                # 执行失败
-                op_record.result_code = ResultCode.FAILURE
-                op_record.save(update_fields="result_code")
+        except Exception:
+            logger.exception("unable to delete app<%s> related resources", application.code)
+            # 执行失败
+            op_record.result_code = ResultCode.FAILURE
+            op_record.save(update_fields=["result_code"])
+            raise
 
         # 执行成功
         op_record.result_code = ResultCode.SUCCESS
-        op_record.save(update_fields="result_code")
+        op_record.save(update_fields=["result_code"])
+        report_event_to_bk_audit(op_record)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _delete_all_module(self, application: Application):

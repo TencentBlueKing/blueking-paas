@@ -21,7 +21,7 @@ from django.core.management.base import BaseCommand
 
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
-from paasng.misc.audit.models import AppAuditRecord
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.misc.operations.constant import OperationType as OpType
 from paasng.misc.operations.models import Operation
 
@@ -131,7 +131,7 @@ OPRATION_TRANSFER_MAP: Dict[int, Dict[str, Optional[str]]] = {
 
 
 class Command(BaseCommand):
-    help = "Transfer operations from Operation table to AppAuditRecord table"
+    help = "Transfer operations from Operation table to AppOperationRecord table"
 
     def handle(self, *args, **kwargs):
         # 获取所有用于展示应用最近操作的记录
@@ -144,7 +144,7 @@ class Command(BaseCommand):
                 attribute = op.extra_values.get(attribute_name)
             else:
                 attribute = None
-            AppAuditRecord.objects.create(
+            AppOperationRecord.objects.create(
                 app_code=op.application.code,
                 user=op.user,
                 source_object_id=op.source_object_id,

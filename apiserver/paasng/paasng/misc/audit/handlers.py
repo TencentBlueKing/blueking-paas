@@ -21,12 +21,14 @@ import logging
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.shortcuts import get_object_or_404
 
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit import constants
+from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.audit.utils import add_app_audit_record
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
@@ -49,6 +51,26 @@ DEPLOY_STATUS_TO_RESULT_CODE = {
     DeployStatus.ERROR: constants.ResultCode.FAILURE,
     DeployStatus.UNKNOWN: constants.ResultCode.FAILURE,
 }
+
+
+@receiver(post_save)
+def on_app_operation_created(sender, instance, created, raw, using, update_fields, *args, **kwargs):
+    """When an app operation object was created, we should also update the application's
+    corrensponding ApplicationLatestOp object.
+    """
+    if not (isinstance(instance, AppOperationRecord) and created):
+        return
+
+    if instance.application is None:
+        return
+
+    AppLatestOperationRecord.objects.update_or_create(
+        application=instance.application,
+        defaults={
+            "operation_id": instance.pk,
+            "latest_operated_at": instance.created,
+        },
+    )
 
 
 @receiver(post_save)
@@ -78,7 +100,7 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
 
 @receiver(post_appenv_deploy)
 def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwargs):
-    """Create new operation record when a deployment has finished"""
+    """当普通应用部署完成后，记录操作审计记录"""
     application = deployment.app_environment.application
     result_code = JOB_STATUS_TO_RESULT_CODE.get(deployment.status, constants.ResultCode.ONGOING)
     add_app_audit_record(
@@ -97,8 +119,17 @@ def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwar
 @receiver(post_cnative_env_deploy)
 def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy, **kwargs):
     """当云原生应用部署完成后，记录操作审计记录"""
-    application = Application.objects.get(id=deploy.application_id)
+    application = get_object_or_404(Application, id=deploy.application_id)
     result_code = DEPLOY_STATUS_TO_RESULT_CODE.get(deploy.status, constants.ResultCode.ONGOING)
+    # 获取应用上一次的部署操作，用于操作详情的对比
+    last_deploy = (
+        AppModelDeploy.objects.filter(
+            application_id=application.id, module_id=deploy.module_id, environment_name=deploy.environment_name
+        )
+        .excloud(id=deploy)
+        .last()
+    )
+    last_revision_id = last_deploy.revision.id if last_deploy else None
     add_app_audit_record(
         app_code=application.code,
         user=deploy.operator,
@@ -111,4 +142,5 @@ def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy
         result_code=result_code,
         data_type=constants.DataType.BKAPP_REVERSION,
         data_after=deploy.revision.id,
+        data_before=last_revision_id,
     )

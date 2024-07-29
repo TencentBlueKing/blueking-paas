@@ -27,7 +27,7 @@ from iam import Action
 
 from paasng.misc.audit import constants
 from paasng.misc.audit.client import bk_audit_client
-from paasng.misc.audit.models import AppAuditRecord
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class ApplicationInstance(AuditInstance):
         return self.instance.name
 
 
-def report_event_to_bk_audit(record: AppAuditRecord):
+def report_event_to_bk_audit(record: AppOperationRecord):
     """将操作记录中的数据上报到审计中心"""
     # 仅操作为终止状态时才记录到审计中心
     if (
@@ -112,7 +112,7 @@ def add_app_audit_record(
     data_before: Union[str, int, Dict[str, Any], None] = None,
     data_after: Union[str, int, Dict[str, Any], None] = None,
     end_time: Optional[datetime.datetime] = None,
-) -> AppAuditRecord:
+) -> AppOperationRecord:
     """
     创建应用审计记录，并根据配置决定是否上报到审计中心
 
@@ -132,7 +132,7 @@ def add_app_audit_record(
     :param data_type: 数据类型，可选，默认值为 None
     :param end_time: 操作结束时间
     """
-    record = AppAuditRecord.objects.create(
+    record = AppOperationRecord.objects.create(
         app_code=app_code,
         user=user,
         action_id=action_id,
@@ -153,13 +153,13 @@ def add_app_audit_record(
     return record
 
 
-def update_app_audit_record(source_object_id: str, result_code: int) -> AppAuditRecord:
+def update_app_audit_record(source_object_id: str, result_code: int) -> AppOperationRecord:
     """更新审计记录的结果
 
     :param source_object_id: 事件来源对象ID,用于定位要更新的操作记录
     """
     try:
-        record = AppAuditRecord.objects.get(source_object_id=source_object_id)
+        record = AppOperationRecord.objects.get(source_object_id=source_object_id)
     except ObjectDoesNotExist:
         logger.exception("update app audit error, record with source_object_id<%s> not exits", source_object_id)
 

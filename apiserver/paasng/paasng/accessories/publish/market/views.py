@@ -29,7 +29,7 @@ from paasng.accessories.publish.market.models import MarketConfig, Product, Tag,
 from paasng.accessories.publish.market.protections import AppPublishPreparer
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.utils import add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
@@ -195,16 +195,11 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         """设置市场访问地址"""
         application = self.get_application()
         market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
-        # 操作前的访问地址
-        old_market_address = self.serializer_class(market_config).data["market_address"]
-
         slz = serializers.MarketEntranceSLZ(instance=market_config, data=request.data)
         slz.is_valid(raise_exception=True)
         market_config = slz.save()
         serializer = self.serializer_class(market_config)
 
-        # 操作后的访问地址
-        new_market_address = serializer.data["market_address"]
         # 审计记录
         add_app_audit_record(
             app_code=application.code,
@@ -212,9 +207,6 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.MANAGE_APP_MARKET,
             operation=OperationEnum.MODIFY_MARKET_URL,
             target=OperationTarget.APP,
-            data_type=DataType.STRING,
-            data_before=old_market_address,
-            data_after=new_market_address,
         )
         return Response(serializer.data)
 

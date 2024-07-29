@@ -17,17 +17,17 @@
 
 from rest_framework import serializers
 
-from paasng.misc.audit.models import AppAuditRecord
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.serializers import ApplicationSLZ4Record
 
 
-class AppAuditRecordSLZ(serializers.ModelSerializer):
+class AppOperationRecordSLZ(serializers.ModelSerializer):
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
     operate = serializers.ReadOnlyField(source="get_display_text", help_text="操作名称")
     operator = serializers.ReadOnlyField(source="username", read_only=True)
 
     class Meta:
-        model = AppAuditRecord
+        model = AppOperationRecord
         fields = "__all__"
 
 
@@ -35,9 +35,9 @@ class QueryRecentOperatedApplications(serializers.Serializer):
     limit = serializers.IntegerField(default=4, max_value=10, help_text="条目数")
 
 
-class RecordForRencentAppSLZ(AppAuditRecordSLZ):
+class RecordForRencentAppSLZ(AppOperationRecordSLZ):
     application = ApplicationSLZ4Record(read_only=True)
 
     class Meta:
-        model = AppAuditRecord
+        model = AppOperationRecord
         fields = "__all__"

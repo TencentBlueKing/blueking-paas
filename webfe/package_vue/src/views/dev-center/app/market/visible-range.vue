@@ -103,6 +103,7 @@ export default {
       handler(newVal) {
         this.baseInfo = cloneDeep(newVal);
       },
+      deep: true,
       immediate: true,
     },
   },

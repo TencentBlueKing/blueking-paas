@@ -691,7 +691,7 @@ export default {
   申请记录: 'APP Record',
   基本信息: 'Basic Information',
   '基本信息-title': 'Basic information',
-  '应用名称等基本信息请在“app.yaml”文件中配置': 'For basic information such as the APP name, please configure it in the "app.yaml" file',
+  '应用名称等基本信息请在应用描述文件 app_desc.yaml 中配置': 'Please configure basic information such as the application name in the application description file app_desc.yaml',
   '管理员、开发者和运营者可以修改应用名称等基本信息': 'Administrators, developers and operators can modify basic information such as the APP name',
   应用logo: 'APP logo',
   更换图片: 'Change',

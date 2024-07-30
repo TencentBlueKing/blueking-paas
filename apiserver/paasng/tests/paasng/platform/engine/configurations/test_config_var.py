@@ -135,6 +135,7 @@ class TestGetEnvVariables:
         assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" in env_vars
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 class TestBuiltInEnvVars:
     @pytest.mark.parametrize(("provide_env_vars_platform", "contain_bk_envs"), [(True, True), (False, True)])
     def test_bk_platform_envs(self, bk_app, provide_env_vars_platform, contain_bk_envs):

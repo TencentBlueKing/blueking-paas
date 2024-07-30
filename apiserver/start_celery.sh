@@ -22,6 +22,9 @@ CELERY_CONCURRENCY=${CELERY_CONCURRENCY:-6}
 CELERY_LOG_LEVEL=${CELERY_LOG_LEVEL:-info}
 CELERY_TASK_DEFAULT_QUEUE=${CELERY_TASK_DEFAULT_QUEUE:-}
 
+# I18N: compile .po file to .mo files
+python manage.py compilemessages
+
 if [ "${CELERY_TASK_DEFAULT_QUEUE}" = '' ]; then
   command="celery -A paasng worker -l ${CELERY_LOG_LEVEL} --concurrency ${CELERY_CONCURRENCY}"
 else

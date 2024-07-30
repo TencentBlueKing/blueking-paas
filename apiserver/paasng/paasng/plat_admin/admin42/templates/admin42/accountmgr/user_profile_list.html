@@ -4,11 +4,23 @@
 
 {% block main_content %}
 <div id="app-memberships-wrapper">
-    <bk-dialog v-model="form.visible" theme="primary" width="720" :ok-text="'添加用户'" :confirm-fn="bulkCreate">
+    <bk-dialog header-position="left" v-model="form.visible" theme="primary" width="550" :ok-text="'确定'" :confirm-fn="form.type === 'create'? bulkCreate : singleEdit">
+        <div slot="header">$[ form.type === 'create'?'添加':'编辑' ]用户</div>
         <bk-form>
             <bk-form-item label="用户名">
-                <user-selector style="min-width: 400px;" v-model="form.usernameList" v-if="form.provider_type === '2' || form.provider_type === '3'"></user-selector>
-                <bk-tag-input style="min-width: 400px;"  v-model="form.usernameList" allow-create v-else></bk-tag-input>
+                <bk-input v-if="form.type === 'edit'" style="width: 250px;" v-model="form.usernameList" :readonly="true"></bk-input>
+                <user-selector style="width: 250px;" v-model="form.usernameList" v-else-if="form.provider_type === '2' || form.provider_type === '3'"></user-selector>
+                <bk-tag-input style="width: 250px;"  v-model="form.usernameList" allow-create v-else></bk-tag-input>
+            </bk-form-item>
+            <bk-form-item label="用户类型">
+                <bk-input v-if="form.type === 'edit'" style="width: 250px;" :value="getTypeName(form.provider_type)" :readonly="true"></bk-input>
+                <bk-select v-else v-model="form.provider_type" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" searchable>
+                    <bk-option v-for="(value, key) in PROVIDER_TYPE"
+                        :key="key"
+                        :id="key"
+                        :name="value">
+                    </bk-option>
+                </bk-select>
             </bk-form-item>
             <bk-form-item label="角色">
                 <bk-select v-model="form.role" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" searchable>
@@ -19,17 +31,8 @@
                     </bk-option>
                 </bk-select>
             </bk-form-item>
-            <bk-form-item label="用户类型">
-                <bk-select v-model="form.provider_type" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" searchable>
-                    <bk-option v-for="(value, key) in PROVIDER_TYPE"
-                        :key="key"
-                        :id="key"
-                        :name="value">
-                    </bk-option>
-                </bk-select>
-            </bk-form-item>
             <bk-form-item label="已开启的 region" ext-cls="select-custom" ext-popover-cls="select-popover-custom" >
-                <bk-select multiple display-tag v-model="form.enable_regions">
+                <bk-select multiple display-tag style="width: 250px;" v-model="form.enable_regions">
                     <bk-option v-for="region in allRegionList"
                         :key="region"
                         :id="region"
@@ -41,7 +44,7 @@
     </bk-dialog>
 
     <div class="toolbar">
-        <bk-button theme="default" title="添加用户" icon="plus" class="mr10" @click="form.visible = true">添加用户</bk-button>
+        <bk-button theme="primary" title="添加用户" icon="plus" class="mr10" @click="showAddDialog">添加用户</bk-button>
         <div class="toolbar">
             <bk-checkbox v-model="hideRegularUsers" @change="fetchData">隐藏所有普通用户</bk-checkbox>
             <div class="paas-search">
@@ -55,8 +58,7 @@
             </div>
         </div>
     </div>
-    <bk-table style="margin-top: 15px;"
-        :data="userProfileList">
+    <bk-table style="margin-top: 15px;" :data="userProfileList">
         <bk-table-column label="用户类型" prop="user.provider_type" width="100">
             <template slot-scope="props">
                 <span>$[ getTypeName(props.row.user.provider_type) ]</span>
@@ -72,33 +74,22 @@
         </bk-table-column>
         <bk-table-column label="角色">
             <template slot-scope="props">
-                <bk-select v-model="props.row.role" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" @selected="handleChange(props.row)">
-                    <bk-option v-for="(value, key) in SITE_ROLE"
-                        :key="key"
-                        :id="key"
-                        :name="value">
-                    </bk-option>
-                </bk-select>
+                <span>$[ getRoleName(props.row.role) ]</span>
             </template>
         </bk-table-column>
         <bk-table-column label="已开启的 region">
             <template slot-scope="props">
-                <bk-select multiple display-tag v-model="props.row.enable_regions" @selected="handleChange(props.row)">
-                    <bk-option v-for="region in allRegionList"
-                        :key="region"
-                        :id="region"
-                        :name="region">
-                    </bk-option>
-                </bk-select>
+                <bk-tag v-for="region in props.row.enable_regions" :key="region">
+                    $[ region ]
+                </bk-tag>
             </template>
         </bk-table-column>
-        <bk-table-column label="状态">
+        <bk-table-column label="操作">
             <template slot-scope="props">
-                <button v-if="props.row.role === 5 || props.row.banned" class="btn btn-link" @click="handleSwitcher(props.row)">
-                    <span>恢复访问</span>
-                </button>
-                <button v-else class="btn btn-link" @click="handleSwitcher(props.row)">
-                    <span style="color: red;">禁止访问</span>
+                <button class="btn btn-link" @click="showEditDialog(props.row)">修改</button>
+                <button class="btn btn-link" @click="handleSwitcher(props.row)">
+                    <span v-if="props.row.role === 5 || props.row.banned">恢复访问</span>
+                    <span v-else style="color: red;">禁止访问</span>
                 </button>
             </template>
         </bk-table-column>
@@ -161,6 +152,7 @@
                     hideRegularUsers: true,
                     filterKey: '',
                     form: {
+                        type: '',
                         usernameList: undefined,
                         role: 2,
                         provider_type: '2',
@@ -197,28 +189,67 @@
                         this.loading = false
                     })
                 },
-                handleSwitcher: function (row) {
-                    if (row.role === 5 || row.banned) {
-                        if (row.user.provider_type === 9) {
-                            row.role = 50
-                        } else {
-                            row.role = 2
-                        }
-                        this.handleChange(row)
-                    } else {
-                        // 禁止用户访问
-                       this.$http.delete(URLRouter.destroy,
-                            {
-                                params: {
-                                    username: row.user.username,
-                                    provider_type: row.user.provider_type,
-                                }
-                            }
-                        ).then(() => {
-                            this.fetchData()
-                        })
-                    }
+
+                showAddDialog: function () {
+                    this.form.type = 'create'
+                    this.form.visible = true
+                    this.form.usernameList = undefined
+                    this.form.role = 2
+                    this.form.provider_type = '2'
+                    this.form.enable_regions = []
                 },
+
+                showEditDialog: function (row) {
+                    this.form.type = 'edit'
+                    this.form.visible = true
+                    this.form.usernameList = row.user.username
+                    this.form.role = row.role
+                    this.form.provider_type = row.user.provider_type
+                    this.form.enable_regions = row.enable_regions
+                },
+
+                handleSwitcher: function (row) {
+                    const action = (row.role === 5 || row.banned) ? '恢复访问' : '禁止访问'
+                    const confirmAction = () => {
+                        if (row.role === 5 || row.banned) {
+                            if (row.user.provider_type === 9) {
+                                row.role = 50
+                            } else {
+                                row.role = 2
+                            }
+                            this.handleChange(row)
+                        } else {
+                            // 禁止用户访问
+                            this.$http.delete(URLRouter.destroy,
+                                {
+                                    params: {
+                                        username: row.user.username,
+                                        provider_type: row.user.provider_type,
+                                    }
+                                }
+                            ).then(() => {
+                                this.fetchData()
+                            })
+                        }
+                    }
+
+                    this.$bkInfo({
+                        title: `确认要${action}？`,
+                        confirmLoading: true,
+                        theme: 'danger',
+                        confirmFn: async () => {
+                            try {
+                                await confirmAction()
+                            } catch (e) {
+                                this.$bkMessage({
+                                    theme: 'error',
+                                    message: e.response.data.detail,
+                                })
+                            }
+                        }
+                    })
+                },
+
                 bulkCreate: function () {
                     if (this.form.enable_regions.length === 0) {
                         this.$bkMessage({message: "至少设置 1 个 region", limit: 1, theme: 'error'})
@@ -233,6 +264,35 @@
                         }
                     ).then(() => {
                         this.fetchData()
+                    })
+                    this.form.visible = false
+                },
+                singleEdit: function () {
+                    this.$bkInfo({
+                        title: '确定要修改吗？',
+                        confirmLoading: true,
+                        theme: 'danger',
+                        confirmFn: async () => {
+                            try {
+                                if (this.form.enable_regions.length === 0) {
+                                    this.$bkMessage({ message: "至少设置 1 个 region", limit: 1, theme: 'error' })
+                                    return
+                                }
+                                await this.$http.put(URLRouter.update, {
+                                    username: this.form.usernameList,
+                                    provider_type: this.form.provider_type,
+                                    role: this.form.role,
+                                    enable_regions: this.form.enable_regions,
+                                })
+                                this.fetchData()
+                                this.form.visible = false
+                            } catch (e) {
+                                this.$bkMessage({
+                                    theme: 'error',
+                                    message: e.response.data.detail,
+                                })
+                            }
+                        }
                     })
                 },
                 handleChange: function (row) {

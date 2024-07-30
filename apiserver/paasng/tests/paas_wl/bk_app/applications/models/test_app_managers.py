@@ -16,29 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 
-from paas_wl.bk_app.applications.managers import AppConfigVarManager, WlAppMetadata
-from tests.paas_wl.utils.wl_app import create_wl_app
+from paas_wl.bk_app.applications.managers import WlAppMetadata
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])
-
-
-class TestAppConfigVarManager:
-    def test_app_configvar_generate(self):
-        wl_app = create_wl_app(
-            force_app_info={"name": "bkapp-test_me-stag", "region": settings.DEFAULT_REGION_NAME},
-            paas_app_code="test_me",
-            environment="stag",
-        )
-
-        action = AppConfigVarManager(app=wl_app)
-        result = action.get_envs()
-        assert result["BKPAAS_SUB_PATH"] == "/default-bkapp-test_me-stag/"
-
-        result_with_process = action.get_process_envs(process_type="fake")
-        assert result_with_process["BKPAAS_LOG_NAME_PREFIX"] == "default-bkapp-test_me-stag-fake"
-        assert result_with_process["PORT"] == str(settings.CONTAINER_PORT)
 
 
 class TestWlAppMetadata:

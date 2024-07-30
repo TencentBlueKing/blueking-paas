@@ -1,9 +1,17 @@
 <template lang="html">
   <div @click="hideAllFilterPopover">
     <log-filter
-      ref="accessLogFilter" :key="routeChangeIndex" :env-list="envList" :stream-list="streamList"
-      :process-list="processList" :log-count="pagination.count" :loading="isChartLoading" :type="'accessLog'"
-      @change="handleLogSearch" @date-change="handlePickSuccess" @reload="handleLogReload" />
+      ref="accessLogFilter"
+      :key="routeChangeIndex"
+      :stream-list="streamList"
+      :process-list="processList"
+      :log-count="pagination.count"
+      :loading="isChartLoading"
+      :type="'accessLog'"
+      @change="handleLogSearch"
+      @date-change="handlePickSuccess"
+      @reload="handleLogReload"
+    />
 
     <div v-if="tableFormatFilters.length" class="table-filters">
       <ul class="filter-list">
@@ -259,7 +267,6 @@ export default {
       streamLogList: [],
       searchFilterKey: [],
       tableFilters: [],
-      envList: [],
       processList: [],
       filterData: [],
       streamList: [],
@@ -527,7 +534,6 @@ export default {
       this.tableFilters = [];
       this.fieldSelectedList = [];
       this.fieldList = [];
-      this.envList = [];
       this.filterData = [];
       this.streamList = [];
       this.processList = [];
@@ -697,9 +703,7 @@ export default {
               text: option[0],
             });
           });
-          if (condition.name === 'environment') {
-            this.envList = condition.list;
-          } else if (condition.name === 'process_id') {
+          if (condition.name === 'process_id') {
             this.processList = condition.list;
           } else if (condition.name === 'stream') {
             this.streamList = condition.list;
@@ -712,7 +716,6 @@ export default {
         this.fieldList = fieldList;
         this.$refs.accessLogFilter && this.$refs.accessLogFilter.handleSetParams();
       } catch (res) {
-        this.envList = [];
         this.processList = [];
         this.streamList = [];
       }

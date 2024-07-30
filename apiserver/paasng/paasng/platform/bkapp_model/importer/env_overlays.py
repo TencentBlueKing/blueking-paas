@@ -99,10 +99,11 @@ def import_env_overlays(
                 logger.info("Process spec not found, ignore, name: %s", input_p.process)
                 continue
 
-            # Remove duplicates by setdefault
+            # Update the column by handler function and store the created flag
             handle_record.setdefault((input_p.process, input_p.envName), _handlers[type(input_p)](proc_spec, input_p))
             # Move out from the index
             existing_index.pop((input_p.process, input_p.envName), None)
+
     for created in handle_record.values():
         ret.incr_by_created_flag(created)
 

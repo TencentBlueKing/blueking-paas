@@ -172,7 +172,7 @@ class BluekingMonitor:
 
 @define
 class DeploymentDesc:
-    """Resource: Deployment description
+    """Deployment description object, contains spec data related with deployment.
 
     :param language: 应用开发语言
     :param source_dir: 源码目录
@@ -192,15 +192,34 @@ class DeploymentDesc:
         return {proc_type: process.command for proc_type, process in self.get_processes().items()}
 
     def get_processes(self) -> Dict[str, Process]:
-        return cattr.structure(
-            {
-                process.name: {
+        """Get the Process objects. These objects are used to synchronize with the
+        application model and to create processes when a new release is issued.
+        """
+        # TODO/FIXME: 让函数接受当前环境 environment 参数，因为对于一份完整的应用描述来说，
+        # 可能针对不同环境配置了不同的值（通过 envOverlay），这些值包括 replicas, plan 等。
+        # 以此不同的环境可能会又不同的 replicas 设置。
+        #
+        # 而这又带来了其他问题：配置解析阶段，因为 deployment 上下文的存在，这里可以拿到和
+        # 当前环境强相关的进程对象。但是到了后续的将进程数据同步到 ModuleProcessSpec 时，
+        # 由于 Process 并没有环境信息（ModuleProcessSpecManager 也不接受），因此这套同步
+        # 实际上存在缺陷。
+        #
+        # 可能的解决方案：
+        #
+        # - 此处返回的 Process 和环境相关，ModuleProcessSpecManager 也接受带环境的同步
+        # - 同步进程时，不包含除 name 和 command 以外的其他信息，比如可能环境相关的 replicas 等
+        #
+        result = {}
+        for process in self.spec.processes:
+            # TODO: Try read envOverlay to get the "replicas" and "plan" values
+            proc = cattr.structure(
+                {
                     "command": process.get_proc_command(),
                     "replicas": process.replicas,
                     "plan": process.resQuotaPlan,
                     "probes": camel_to_snake_case(process.probes.dict()) if process.probes else None,
-                }
-                for process in self.spec.processes
-            },
-            Dict[str, Process],
-        )
+                },
+                Process,
+            )
+            result[process.name] = proc
+        return result

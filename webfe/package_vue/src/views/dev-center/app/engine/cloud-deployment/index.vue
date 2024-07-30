@@ -50,6 +50,7 @@
               :is-component-btn="!isFooterActionBtn"
               @cancel="handleCancel"
               @hide-tab="isTab = false"
+              @show-tab="handleShowTab"
               @tab-change="handleGoPage"
               @route-back="handleGoBack"
             />
@@ -76,7 +77,8 @@
   </div>
 </template>
 
-<script>import moduleTopBar from '@/components/paas-module-bar';
+<script>
+import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
 import { throttle } from 'lodash';
@@ -221,8 +223,8 @@ export default {
       }
     },
 
-    handleGoBack() {
-      this.handleGoPage('appServices');
+    handleGoBack(routeName) {
+      this.handleGoPage(routeName);
       this.isTab = true;
     },
 
@@ -243,7 +245,12 @@ export default {
     },
 
     handleTabChange() {
+      this.handleGoBack(this.active);
+    },
+
+    handleShowTab(callback) {
       this.isTab = true;
+      callback(this);
     },
   },
 };

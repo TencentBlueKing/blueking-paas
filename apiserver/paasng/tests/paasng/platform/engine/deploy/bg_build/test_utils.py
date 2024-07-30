@@ -23,7 +23,6 @@ import pytest
 import urllib3
 from django.conf import settings
 
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paasng.platform.engine.deploy.bg_build.utils import (
     generate_builder_env_vars,
     generate_slug_path,
@@ -50,9 +49,6 @@ class TestEnvVars:
         if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
             for k, v in get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL).items():
                 assert env_vars.pop(k) == v, f"{k} 与预期不符"
-        app_config_var = AppConfigVarManager(app=wl_app).get_envs()
-        for key in app_config_var.keys() & env_vars.keys():
-            assert env_vars[key] == app_config_var[key], f"{key} 与预期不符"
 
     def test_update_env_vars_with_metadata(self, build_proc):
         env: Dict[str, str] = {}

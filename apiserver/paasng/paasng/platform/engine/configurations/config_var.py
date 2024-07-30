@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Config variables related functions"""
+
 from typing import TYPE_CHECKING, Any, Dict, Iterator, List
 
 from django.conf import settings
@@ -32,12 +33,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import (
-    AppInfoBuiltinEnv,
-    AppRunTimeBuiltinEnv,
-    ConfigVarEnvName,
-    NoPrefixAppRunTimeBuiltinEnv,
-)
+from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
 from paasng.platform.engine.models.config_var import add_prefix_to_key, get_builtin_config_vars, get_config_vars
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -82,6 +78,10 @@ def get_env_variables(
 
     # Part: system-wide env vars
     result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
+
+    # Port: workloads related env vars
+    vars_wl = _flatten_envs(generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, env))
+    result.update(vars_wl)
 
     # Part: insert blobstore env vars
     if env.application.type != ApplicationType.CLOUD_NATIVE:
@@ -357,8 +357,9 @@ def get_default_builtin_config_vars(region: str, environment: str) -> Dict[str, 
         _get_enum_choices_dict(AppRunTimeBuiltinEnv), settings.CONFIGVAR_SYSTEM_PREFIX
     )
     builtin_envs.update(app_runtime_envs)
-    no_prefix_app_run_time_envs = _get_enum_choices_dict(NoPrefixAppRunTimeBuiltinEnv)
-    builtin_envs.update(no_prefix_app_run_time_envs)
+    wl_vars = generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX)
+    for wl_env in wl_vars:
+        builtin_envs.update(wl_env.to_dict())
 
     # 蓝鲸体系内平台地址
     bk_address_envs = generate_env_vars_for_bk_platform(settings.CONFIGVAR_SYSTEM_PREFIX)
@@ -371,6 +372,54 @@ def get_default_builtin_config_vars(region: str, environment: str) -> Dict[str, 
         builtin_envs.update(env)
 
     return builtin_envs
+
+
+# '{bk_var_*}' is a special placeholder and will be replaced by the actual value
+# when the workloads resources are created.
+_bk_var_tmpl_process_type = "{{bk_var_process_type}}"
+
+
+def generate_wl_builtin_env_vars(config_vars_prefix: str, env=None) -> List[BuiltInEnvVarDetail]:
+    """Generate env vars related with workloads.
+
+    :param config_vars_prefix: The prefix of the env vars.
+    :param env: Optional, the env object, if given, will include the env vars related
+        to the environment, such as subpath, process type, etc.
+    """
+    items = [
+        BuiltInEnvVarDetail(
+            key="APP_LOG_PATH",
+            value=settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
+            description=_("应用日志文件存放路径"),
+            prefix=config_vars_prefix,
+        ),
+        BuiltInEnvVarDetail(key="PORT", value=str(settings.CONTAINER_PORT), description=_("目标端口号，值为 5000")),
+    ]
+    # Extend the env vars related to the env when given
+    if env:
+        wl_app = env.wl_app
+        app = env.module.application
+        items += [
+            BuiltInEnvVarDetail(
+                key="LOG_NAME_PREFIX",
+                value=f"{app.region}-bkapp-{app.code}-{env.environment}-{_bk_var_tmpl_process_type}",
+                description=_("日志文件推荐使用的前缀"),
+                prefix=config_vars_prefix,
+            ),
+            BuiltInEnvVarDetail(
+                key="PROCESS_TYPE",
+                value=_bk_var_tmpl_process_type,
+                description=_("[不推荐使用] 当前进程类型"),
+                prefix=config_vars_prefix,
+            ),
+            BuiltInEnvVarDetail(
+                key="SUB_PATH",
+                value=f"/{wl_app.region}-{wl_app.name}/",
+                description=_("[不推荐使用] 基于规则拼接的应用访问子路径，仅适合向前兼容时使用"),
+                prefix=config_vars_prefix,
+            ),
+        ]
+    return items
 
 
 def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:

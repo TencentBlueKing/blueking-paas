@@ -26,7 +26,6 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 from typing_extensions import Literal
 
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
@@ -41,6 +40,7 @@ from paas_wl.infras.resources.kube_res.base import (
 )
 from paas_wl.infras.resources.kube_res.envs import decode_envs, encode_envs
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
+from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.utils.kubestatus import (
     check_pod_health_status,
     get_container_fail_message,
@@ -226,8 +226,8 @@ class Command(AppEntity):
     @classmethod
     def from_db_obj(cls, command: "CommandModel", extra_envs: Optional[Dict] = None) -> "Command":
         envs = command.get_envs()
-        envs.update(AppConfigVarManager(command.app).get_envs())
         envs.update(extra_envs or {})
+        envs = render_vars_dict(envs, context=VarsRenderContext(process_type="sys-cmd"))
 
         return cls(
             app=command.app,

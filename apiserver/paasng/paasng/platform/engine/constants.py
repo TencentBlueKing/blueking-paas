@@ -171,9 +171,3 @@ class AppRunTimeBuiltinEnv(str, StructuredEnum):
         "DEFAULT_PREALLOCATED_URLS",
         label=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
     )
-
-
-class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):
-    """Built-in envs without prefix in the app runtime"""
-
-    PORT = EnumField("PORT", label=_("目标端口号，值为 5000"))

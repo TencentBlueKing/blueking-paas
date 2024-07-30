@@ -33,12 +33,12 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
+    generate_wl_builtin_env_vars,
 )
 from paasng.platform.engine.constants import (
     AppInfoBuiltinEnv,
     AppRunTimeBuiltinEnv,
     ConfigVarEnvName,
-    NoPrefixAppRunTimeBuiltinEnv,
 )
 from paasng.platform.engine.models import ConfigVar
 from paasng.platform.engine.models.config_var import add_prefix_to_key
@@ -164,8 +164,13 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         env_dict = self._get_enum_choices_dict(AppRunTimeBuiltinEnv)
         envs = add_prefix_to_key(env_dict, settings.CONFIGVAR_SYSTEM_PREFIX)
 
-        no_prefix_envs = self._get_enum_choices_dict(NoPrefixAppRunTimeBuiltinEnv)
-        return Response({**envs, **no_prefix_envs})
+        wl_vars = generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX)
+        for env in wl_vars:
+            # Transform the dict structure to remove the value field in order to
+            # keep consistent and be compatible with the frontend.
+            # TODO: Show the value in the future.
+            envs.update({k: v["description"] for k, v in env.to_dict().items()})
+        return Response({**envs})
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

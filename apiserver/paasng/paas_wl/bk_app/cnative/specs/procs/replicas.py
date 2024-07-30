@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Process controller"""
+
 import copy
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -62,7 +63,10 @@ class BkAppProcScaler:
         counts = ReplicasReader(bkapp_res).read_all(AppEnvName(self.env.environment))
         if proc_type not in counts:
             raise ProcNotFoundInRes(proc_type)
-        return counts[proc_type][0]
+
+        cnt = counts[proc_type][0]
+        assert cnt is not None, "Replicas in the live environment can not be None"
+        return cnt
 
     def set_replicas(self, proc_type: str, count: int):
         """Set the replicas to a fixed value by process type.
@@ -214,7 +218,7 @@ class ReplicasReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self, env_name: AppEnvName) -> Dict[str, Tuple[int, bool]]:
+    def read_all(self, env_name: AppEnvName) -> Dict[str, Tuple[Optional[int], bool]]:
         """Read all replicas count defined
 
         :param env_name: Environment name

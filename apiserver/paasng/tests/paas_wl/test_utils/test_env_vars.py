@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,8 +13,25 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 
-from .app_build import mark_as_latest_artifact
-from .app_metadata import WlAppMetadata, get_metadata, update_metadata
 
-__all__ = ["WlAppMetadata", "get_metadata", "update_metadata", "mark_as_latest_artifact"]
+def test_render_vars_dict():
+    d = {
+        "BKPAAS_PROCESS_TYPE": "{{bk_var_process_type}}",
+        "OTHER_PRE_LOG_NAME_PREFIX": "foo-{{bk_var_process_type}}",
+        # with valid name but variable does not match
+        "OTHER_PRE_PROCESS_TYPE": "{{another_var}}",
+        "FOO": "some random value",
+        # the variable matches but the name is not in whitelist
+        "BAR": "{{bk_var_process_type}}",
+        "FOO_BAR": "{{some_var}}",
+    }
+    assert render_vars_dict(d, VarsRenderContext(process_type="web")) == {
+        "BKPAAS_PROCESS_TYPE": "web",
+        "OTHER_PRE_LOG_NAME_PREFIX": "foo-web",
+        "OTHER_PRE_PROCESS_TYPE": "{{another_var}}",
+        "FOO": "some random value",
+        "BAR": "{{bk_var_process_type}}",
+        "FOO_BAR": "{{some_var}}",
+    }

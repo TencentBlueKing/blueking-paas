@@ -31,6 +31,12 @@
         >
           <span
             v-bk-overflow-tips
+            class="star-icon"
+          >
+            <i :class="['paasng-icon', item.marked ? 'paasng-star-cover' : 'paasng-star-line']" />
+          </span>
+          <span
+            v-bk-overflow-tips
             class="app-name"
           >
             {{ item.name }}
@@ -191,11 +197,24 @@ export default {
                 white-space: nowrap;
                 text-overflow: ellipsis;
 
-                .app-name {
+                .paasng-star-cover {
+                  color: #FFB848 !important;
+                }
+
+                .paasng-star-line {
+                  color: #C4C6CC !important;
+                }
+
+                .star-icon {
+                    width: 8%;
                     float: left;
-                    width: 60%;
+                }
+
+                .app-name {
+                    width: 52%;
                     text-overflow: ellipsis;
                     overflow: hidden;
+                    float: left;
                 }
 
                 .app-code {

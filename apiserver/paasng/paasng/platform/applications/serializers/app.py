@@ -312,6 +312,13 @@ class ApplicationMinimalSLZ(serializers.ModelSerializer):
         fields = ["id", "code", "name"]
 
 
+class ApplicationWithMarkMinimalSLZ(serializers.Serializer):
+    """用于显示带收藏标记的应用列表"""
+
+    application = ApplicationMinimalSLZ(read_only=True)
+    marked = serializers.BooleanField(read_only=True)
+
+
 class ApplicationSLZ4Record(serializers.ModelSerializer):
     """用于操作记录"""
 

@@ -21,7 +21,6 @@ from typing import Dict, List, Optional, Union
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paas_wl.bk_app.applications.models import Release
 from paas_wl.bk_app.processes.entities import Probe, Resources, Runtime, Status
 from paas_wl.bk_app.processes.kres_slzs import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
@@ -31,6 +30,7 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import AppEntity, Schedule
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
+from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
 
 
@@ -116,9 +116,9 @@ class Process(AppEntity):
         build = release.build
         config = release.config
         procfile = release.get_procfile()
-        envs = AppConfigVarManager(app=release.app).get_process_envs(type_)
-        envs.update(release.get_envs())
+        envs = release.get_envs()
         envs.update(extra_envs or {})
+        envs = render_vars_dict(envs, VarsRenderContext(process_type=type_))
 
         mapper_version = AppResVerManager(release.app).curr_version
         process = Process(

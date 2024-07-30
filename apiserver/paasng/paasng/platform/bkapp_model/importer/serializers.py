@@ -236,7 +236,7 @@ class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
-    replicas = serializers.IntegerField(min_value=0)
+    replicas = serializers.IntegerField(min_value=0, allow_null=True, default=None)
     resQuotaPlan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
     targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
     command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)

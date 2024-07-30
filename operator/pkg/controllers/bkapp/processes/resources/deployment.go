@@ -62,8 +62,11 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 		deployID = DefaultDeployID
 	}
 
-	// Prepare data
+	// Generate the environment variables and render the "{{bk_var_*}}" var placeholder which
+	// might be used in the values.
 	envVars := common.GetAppEnvs(app)
+	envVars = common.RenderAppVars(envVars, common.VarsRenderContext{ProcessType: procName})
+
 	mounterMap, err := volumes.GetAllVolumeMounterMap(app)
 	if err != nil {
 		return nil, err

@@ -148,7 +148,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 				StartTime: nil,
 				Phase:     paasv1alpha2.HealthUnknown,
 				Reason:    "Failed",
-				Message:   "PreReleaseHook not found",
+				Message:   lo.Ternary(apierrors.IsNotFound(err), "PreReleaseHook not found", err.Error()),
 			},
 		}
 	}

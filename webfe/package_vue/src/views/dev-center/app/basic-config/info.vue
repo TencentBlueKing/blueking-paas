@@ -22,7 +22,7 @@
             v-if="isSmartApp"
             class="info"
           >
-            {{ $t('应用名称等基本信息请在“app.yaml”文件中配置') }}
+            {{ $t('应用名称等基本信息请在应用描述文件 app_desc.yaml 中配置') }}
           </div>
           <div
             v-else
@@ -296,6 +296,7 @@ export default {
       return this.curAppInfo.role.name !== 'operator';
     },
     isBasicInfoEditable() {
+      if (this.isSmartApp) return false;
       return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
     },
     formRemoveValidated() {

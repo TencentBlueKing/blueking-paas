@@ -1507,7 +1507,6 @@ export default {
   查看更多应用: 'View more APP',
   资源使用量: 'Resource usage',
   对象储存: 'Object Storag',
-  了解我们的服务: 'Discover our services',
   我的应用分布: 'My APP distribution',
   '单位（个）': 'Unit (pcs)',
   '访问量 Top 5 (最近 30 天)': 'Top 5 visits (last 30 days)',

@@ -573,6 +573,7 @@ export default {
             status,
           },
         });
+        this.getReleaseDetail();
         this.getReleaseStageDetail();
       } catch (e) {
         this.$bkMessage({

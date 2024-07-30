@@ -23,10 +23,12 @@ from django.conf import settings
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.kres_slzs import extract_type_from_name
 from paas_wl.bk_app.processes.readers import instance_kmodel, process_kmodel
+from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from tests.paas_wl.infras.resources.base.test_kres import construct_foo_pod
 from tests.paas_wl.utils.basic import make_container_status
 from tests.paas_wl.utils.wl_app import create_wl_release
 
@@ -230,3 +232,23 @@ class TestExtractTypeFromName:
     )
     def test_main(self, name, namespace, proc_type):
         assert extract_type_from_name(name, namespace) == proc_type
+
+
+class TestProcessManager:
+    def test_get_previous_logs(self, bk_stag_env, wl_app):
+        """
+        测试获取进程实例上一次运行时重启日志
+
+        测试需要兼容测试流水线的执行环境(无 controller)，因此通过下发 pod 进行日志测试
+        原设计是通过创建 process，再获取 pod 日志
+        """
+        k8s_client = get_client_by_app(wl_app)
+        KPod(k8s_client).create_or_update(
+            wl_app.scheduler_safe_name,
+            namespace=wl_app.namespace,
+            body=construct_foo_pod(wl_app.scheduler_safe_name, restart_policy="Never"),
+        )
+
+        manager = ProcessManager(bk_stag_env)
+        logs = manager.get_previous_logs("", wl_app.scheduler_safe_name, "main")
+        assert logs is not None

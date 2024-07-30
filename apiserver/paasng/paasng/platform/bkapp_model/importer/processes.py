@@ -46,11 +46,19 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
             "command": process.command,
             "args": process.args,
             "port": process.targetPort,
-            "target_replicas": process.replicas,
             "plan_name": process.resQuotaPlan or ResQuotaPlan.P_DEFAULT,
             # 为了兼容普通应用从 app_desc v2 升级到 app_desc v3, 导入时需要清空 proc_command 字段
             "proc_command": None,
         }
+
+        # When the replicas value is None, only update the data if the process appears
+        # for the first time in the module.
+        if process.replicas is None:
+            if not ModuleProcessSpec.objects.filter(module=module, name=process.name).exists():
+                defaults["target_replicas"] = 1
+        else:
+            defaults["target_replicas"] = process.replicas
+
         if autoscaling := process.autoscaling:
             defaults["autoscaling"] = True
             defaults["scaling_config"] = {
@@ -62,6 +70,7 @@ def import_processes(module: Module, processes: List[BkAppProcess]) -> CommonImp
             defaults["probes"] = probes.to_snake_case() if probes else None
 
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
+
         ret.incr_by_created_flag(created)
         # Move out from the index
         existing_index.pop(process.name, None)

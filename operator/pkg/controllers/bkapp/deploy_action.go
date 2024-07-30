@@ -22,6 +22,7 @@ package bkapp
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -53,7 +54,7 @@ type DeployActionReconciler struct {
 func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
 	log := logf.FromContext(ctx)
 	var err error
-	log.V(1).Info("handling deploy action reconciliation.")
+	log.V(1).Info(fmt.Sprintf("handling deploy action reconciliation for bkapp %s/%s", bkapp.Namespace, bkapp.Name))
 
 	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 	if currentDeployID == "" {
@@ -65,7 +66,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	// loop wil be skipped.
 	if bkapp.Status.DeployId == currentDeployID {
 		log.V(1).Info(
-			"No new deploy action found on the BkApp, skip the rest of the process.",
+			"No new deploy action found on the BkApp, skip the rest of the process",
 			"ObservedGeneration",
 			bkapp.Status.ObservedGeneration,
 			"Generation",
@@ -84,7 +85,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 		}
 	}
 
-	log.Info("New deploy action found.", "name", bkapp.Name, "deployID", currentDeployID)
+	log.Info("New deploy action found", "name", bkapp.Name, "deployID", currentDeployID)
 	bkapp.Status.Phase = paasv1alpha2.AppPending
 	bkapp.Status.HookStatuses = nil
 	bkapp.Status.SetDeployID(currentDeployID)
@@ -96,8 +97,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	originalBkapp.Status = paasv1alpha2.AppStatus{}
 	if err = r.Client.Status().Patch(ctx, bkapp, client.MergeFrom(originalBkapp)); err != nil {
 		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
-		log.Error(err, "Unable to update bkapp status when a new deploy action is detected")
-		return r.Result.WithError(err)
+		return r.Result.WithError(errors.Wrapf(err, "update bkapp %s status when a new deploy action is detected", bkapp.Name))
 	}
 	return r.Result
 }

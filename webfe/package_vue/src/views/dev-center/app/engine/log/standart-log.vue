@@ -3,7 +3,6 @@
     <log-filter
       ref="standartLogFilter"
       :key="routeChangeIndex"
-      :env-list="envList"
       :stream-list="streamList"
       :process-list="processList"
       :log-count="streamLogCount"
@@ -171,7 +170,6 @@ export default {
       streamLogList: [],
       searchFilterKey: [],
       streamLogFilters: [],
-      envList: [],
       processList: [],
       streamList: [],
       logParams: {
@@ -383,7 +381,6 @@ export default {
       this.lastScrollId = '';
       this.streamLogList = [];
       this.streamLogFilters = [];
-      this.envList = [];
       this.streamList = [];
       this.processList = [];
       this.streamLogCount = 0;
@@ -517,9 +514,7 @@ export default {
               text: option[0],
             });
           });
-          if (condition.name === 'environment') {
-            this.envList = condition.list;
-          } else if (condition.name === 'process_id') {
+          if (condition.name === 'process_id') {
             this.processList = condition.list;
           } else if (condition.name === 'stream') {
             this.streamList = condition.list;
@@ -527,7 +522,6 @@ export default {
         });
         this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
       } catch (res) {
-        this.envList = [];
         this.processList = [];
         this.streamList = [];
       }

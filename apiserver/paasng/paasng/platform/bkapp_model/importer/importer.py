@@ -40,11 +40,13 @@ def import_manifest_yaml(module: Module, input_yaml_data: str):
     return import_manifest(module, manifest)
 
 
-def import_manifest(module: Module, input_data: Dict):
+def import_manifest(module: Module, input_data: Dict, reset_overlays_when_absent: bool = True):
     """Import a BkApp manifest to the current module, will overwrite existing data.
 
     :param module: The module object.
     :param input_data: The input manifest, only BkApp resource is supported.
+    :param reset_overlays_when_absent: Whether to reset overlay data if the field is
+        not found in the input manifest, default is True.
     :raises ManifestImportError: When unexpected error happened.
     """
     # TODO: Standardize input_data which is using apiVersion other than "v1alpha2".
@@ -85,6 +87,10 @@ def import_manifest(module: Module, input_data: Dict):
         import_svc_discovery(module, svc_discovery)
     if domain_resolution := validated_data.get("domainResolution"):
         import_domain_resolution(module, domain_resolution)
+
+    # Finish the import if no overlay data is found and reset flag is False
+    if not reset_overlays_when_absent and not any((overlay_replicas, overlay_res_quotas, overlay_autoscaling)):
+        return
 
     # NOTE: Must import the processes first to create the ModuleProcessSpec objs
     import_env_overlays(module, overlay_replicas, overlay_res_quotas, overlay_autoscaling)

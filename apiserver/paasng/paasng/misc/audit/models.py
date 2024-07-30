@@ -14,9 +14,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import uuid
-
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -30,15 +27,6 @@ from paasng.utils.models import AuditedModel, BkUserField
 
 
 class BaseOperation(AuditedModel):
-    event_id = models.UUIDField(
-        verbose_name="事件ID",
-        default=uuid.uuid4,
-        primary_key=True,
-        editable=False,
-        auto_created=True,
-        unique=True,
-        help_text="用于上报到审计中心的字段",
-    )
     user = BkUserField()
     # 时间字段手动加到主键，方便审计记录表过大时做分区优化
     start_time = models.DateTimeField(auto_now_add=True, verbose_name="开始时间", db_index=True)
@@ -95,10 +83,23 @@ class BaseOperation(AuditedModel):
         return f"{self.operation}|{self.attribute}|{self.module_name}|{self.env}"
 
     @property
+    def is_terminated(self):
+        return self.result_code in ResultCode.get_terminated_codes()
+
+    @property
     def result_display(self):
-        if self.result_code in ResultCode.terminated_result():
+        if self.is_terminated:
             return self.get_result_code_display()
+        # 不是终止状态，则不再描述的信息中展示
+        # 如 admin 启动 web 进程成功；admin 启动 web 进程
         return ""
+
+    @property
+    def need_to_report_bk_audit(self):
+        # 仅操作为终止状态时才记录到审计中心
+        if self.action_id and self.is_terminated:
+            return True
+        return False
 
     def get_display_text(self):
         """操作记录描述，用于首页、应用概览页面前 5 条部署记录的展示"""
@@ -166,10 +167,9 @@ class AppOperationRecord(BaseOperation):
     @property
     def application(self):
         try:
-            app = Application.default_objects.get(code=self.app_code)
-        except ObjectDoesNotExist:
+            return Application.default_objects.get(code=self.app_code)
+        except Application.DoesNotExist:
             return None
-        return app
 
 
 class AppLatestOperationRecord(models.Model):

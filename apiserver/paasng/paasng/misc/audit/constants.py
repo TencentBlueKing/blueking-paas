@@ -35,7 +35,7 @@ class ResultCode(int, StructuredEnum):
     INTERRUPT = EnumField(-2, label=_("中断"))
 
     @classmethod
-    def terminated_result(cls):
+    def get_terminated_codes(cls):
         return [cls.SUCCESS, cls.FAILURE, cls.INTERRUPT]
 
 

@@ -26,7 +26,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.audit.serializers import (
     AppOperationRecordSLZ,
-    QueryRecentOperatedApplications,
+    QueryRecentOperationsSLZ,
     RecordForRencentAppSLZ,
 )
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -79,7 +79,7 @@ class LatestApplicationsViewSet(APIView):
         return latest_records
 
     def get(self, request, *args, **kwargs):
-        serializer = QueryRecentOperatedApplications(data=request.GET)
+        serializer = QueryRecentOperationsSLZ(data=request.GET)
         serializer.is_valid(raise_exception=True)
 
         records_queryset = self.get_queryset(serializer.data["limit"])

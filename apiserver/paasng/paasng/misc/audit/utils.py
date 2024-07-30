@@ -43,7 +43,7 @@ class ApplicationInstance(AuditInstance):
     def __init__(self, app_code):
         try:
             app = Application.default_objects.get(code=app_code)
-        except ObjectDoesNotExist:
+        except Application.DoesNotExist:
             # 如果应用已经删除，则只记录应用 ID 即可
             self.instance = AppBaseObj(code=app_code, name=app_code)
         self.instance = AppBaseObj(code=app_code, name=app.name)
@@ -59,12 +59,8 @@ class ApplicationInstance(AuditInstance):
 
 def report_event_to_bk_audit(record: AppOperationRecord):
     """将操作记录中的数据上报到审计中心"""
-    # 仅操作为终止状态时才记录到审计中心
-    if (
-        (not settings.ENABLE_BK_AUDIT)
-        or (not record.action_id)
-        or (record.result_code not in constants.ResultCode.terminated_result())
-    ):
+    # 未设置审计中心相关配置则不上报
+    if not settings.ENABLE_BK_AUDIT or not record.need_to_report_bk_audit:
         return
     try:
         audit_context = AuditContext(
@@ -74,6 +70,7 @@ def report_event_to_bk_audit(record: AppOperationRecord):
             scope_id=record.scope_id,
         )
         bk_audit_client.add_event(
+            event_id=record.uuid.hex,
             action=Action(record.action_id),
             resource_type=record.resource_type_id,
             audit_context=audit_context,
@@ -166,7 +163,7 @@ def update_app_audit_record(source_object_id: str, result_code: int) -> AppOpera
     record.result_code = result_code
     update_fields = ["result_code"]
     # 如果是终止状态，则同时更新结束时间
-    if result_code in constants.ResultCode.terminated_result():
+    if result_code in constants.ResultCode.get_terminated_codes():
         record.end_time = timezone.now()
         update_fields.append("end_time")
     record.save(update_fields=update_fields)

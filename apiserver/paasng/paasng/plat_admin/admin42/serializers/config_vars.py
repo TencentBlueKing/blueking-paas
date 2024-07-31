@@ -20,10 +20,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.core.region.models import get_all_regions
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
-from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.engine.configurations.config_var import get_default_builtin_config_vars
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.platform.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
@@ -51,34 +48,13 @@ class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
 
     def validate_key(self, key: str) -> str:
         if BuiltinConfigVar.objects.filter(key=key).exists():
-            raise ValidationError(_("内置环境变量 {key} 已存在").format(key=key))
-
-        # region 和 environment 不影响默认内置环境变量的 key
-        region = list(get_all_regions().keys())[0]
-        environment = AppEnvironment.PRODUCTION.value
-        key_with_prefix = settings.CONFIGVAR_SYSTEM_PREFIX + key
-        if key_with_prefix in get_default_builtin_config_vars(region, environment):
-            raise ValidationError(_("名称 {key} 与系统内置变量名冲突").format(key=key_with_prefix))
-
+            raise ValidationError(_("内置环境变量 {key} 已存在").format(key=settings.CONFIGVAR_SYSTEM_PREFIX + key))
         return key
-
-
-class BuiltinConfigVarCreateOutputSLZ(serializers.Serializer):
-    id = serializers.IntegerField()
 
 
 class BuiltinConfigVarUpdateInputSLZ(serializers.Serializer):
     value = serializers.CharField(max_length=512, required=True)
     description = serializers.CharField(max_length=512, required=True, help_text="变量描述")
-
-
-class BuiltinConfigVarListInputSLZ(serializers.Serializer):
-    region = serializers.ChoiceField(choices=[(region, region) for region in list(get_all_regions().keys())])
-
-    def validate_region(self, region: str) -> str:
-        if region not in list(get_all_regions().keys()):
-            raise ValidationError(_("无法找到指定的 region: {region}").format(region=region))
-        return region
 
 
 class BuiltinConfigVarListOutputSLZ(serializers.Serializer):
@@ -87,4 +63,7 @@ class BuiltinConfigVarListOutputSLZ(serializers.Serializer):
     value = serializers.CharField()
     description = serializers.CharField()
     updated = serializers.DateTimeField()
-    updater = serializers.CharField()
+    operator = serializers.SerializerMethodField()
+
+    def get_operator(self, obj):
+        return obj.operator.username

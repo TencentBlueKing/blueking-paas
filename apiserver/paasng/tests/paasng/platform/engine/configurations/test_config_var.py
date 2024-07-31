@@ -175,9 +175,11 @@ class TestBuiltInEnvVars:
 
     def test_param_include_custom_builtin_config_vars(self, bk_stag_env):
         BuiltinConfigVar.objects.create(key="FOO", value="bar")
+        # test overwrite
+        BuiltinConfigVar.objects.create(key="LOGIN_URL", value="bar")
         env_vars = get_env_variables(bk_stag_env)
-        with does_not_raise("bar") as expected:
-            assert env_vars["BKPAAS_FOO"] == expected
+        assert env_vars["BKPAAS_LOGIN_URL"] == "bar"
+        assert env_vars["BKPAAS_FOO"] == "bar"
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

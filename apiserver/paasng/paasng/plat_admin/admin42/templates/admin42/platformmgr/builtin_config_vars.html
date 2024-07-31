@@ -2,12 +2,10 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="builtin-config-var-list" class="p20">
+    <bk-alert type="warning" title="此处定义的环境变量会覆盖系统内置环境变量。环境变量优先级（由高到低）：平台管理自定义环境变量 > 系统内置环境变量 > 单个应用中自定义环境变量"></bk-alert>
+
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         新建
-    </bk-button>
-
-    <bk-button class="ml10 mb20" @click="handleShowBuiltinEnv">
-    显示内置环境变量
     </bk-button>
 
     <bk-table :data="data">
@@ -15,7 +13,7 @@
         <bk-table-column label="Value" prop="value" width="500" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="描述" prop="description" width="500" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="更新时间" prop="updated" width="250" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="更新者" prop="updater" width="200" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="更新者" prop="operator" width="200" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="操作" width="200">
             <template slot-scope="props">
                 <bk-button class="ml5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
@@ -50,37 +48,12 @@
             </bk-form-item>
         </bk-form>
     </bk-dialog>
-
-    <!-- 显示默认内置环境变量弹窗 -->
-    <bk-dialog
-        v-model="builtinEnvDialog.visible"
-        header-position="left"
-        width="1000"
-        @cancel="cancelBuiltinEnvDialog"
-        :mask-close="false"
-    >
-        <template>
-            <bk-radio-group v-model="selectedRegion" @change="changeRegion">
-                <template v-for="region in regions">
-                    <bk-radio-button :value="region">
-                        $[region]
-                    </bk-radio-button>
-                </template>
-            </bk-radio-group>
-        </template>
-        <div slot="header">内置环境变量</div>
-        <bk-table :data="builtinEnvData" class="mt10">
-            <bk-table-column label="变量" prop="label" width="500" show-overflow-tooltip="true"></bk-table-column>
-            <bk-table-column label="描述" prop="description" width="400" show-overflow-tooltip="true"></bk-table-column>
-        </bk-table>
-    </bk-dialog>
 </div>
 {% endblock %}
 
 {% block main_script %}
 <script>
 const system_prefix = {{ system_prefix | to_json }}
-const regions = {{ regions | to_json }}
 const URLRouter = {
     create: decodeURI("{% url 'admin.builtin_config_vars' %}"),
     list: decodeURI("{% url 'admin.builtin_config_vars' %}"),
@@ -131,18 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     ],
                 },
-                builtinEnvDialog: {
-                    visible: false
-                },
-                builtinEnvData: [],
-                regions: regions,
-                // 默认选择第一个 region
-                selectedRegion: regions && regions.length > 0 ? regions[0] : '',
             }
-        },
-        watch: {
-            // 当 selectedRegion 改变时，调用 fetchBuiltinEnvData 函数
-            selectedRegion: 'fetchBuiltinEnvData'
         },
         methods: {
             fetchBuiltinEnvList: async function () {
@@ -241,48 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
             addPrefix: function(row, column, cellValue, index) {
                 return system_prefix + cellValue
             },
-            handleShowBuiltinEnv: function () {
-                this.builtinEnvDialog.visible = true;
-                this.fetchBuiltinEnvData();
-            },
-            cancelBuiltinEnvDialog: function () {
-                this.builtinEnvDialog.visible = false;
-            },
-            fetchBuiltinEnvData: async function () {
-                const baseURL = decodeURI("{% url 'admin.builtin_config_vars.builtin' %}");
-                const url = `${baseURL}?region=${encodeURIComponent(this.selectedRegion)}`;
-                try {
-                    const res = await this.$http.get(url);
-                    this.convertArray(res);
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.response.data.detail
-                    });
-                }
-            },
-            convertArray: function (data) {
-                const list = Object.keys(data).reduce((p, key) => {
-                    if (typeof data[key] === 'string') {
-                        p.push({
-                            label: key,
-                            description: data[key],
-                        });
-                    } else if (typeof data[key] === 'object' && data[key] !== null) {
-                        p.push({
-                            label: `${key}=${data[key].value}`,
-                            description: data[key].description,
-                        });
-                    }
-                    return p;
-                }, []);
-                this.builtinEnvData = list;
-            },
-            changeRegion: function (region) {
-                if (this.selectedRegion !== region) {
-                    this.selectedRegion = region;
-                }
-            }
         },
         mounted: function () {
             this.fetchBuiltinEnvList()
@@ -290,4 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 })
 </script>
+<style>
+    .bk-alert{
+        margin-bottom: 20px;
+    }
+</style>
 {% endblock %}

@@ -16,7 +16,8 @@
 
 """Config variables related functions"""
 
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List
+import logging
+from typing import TYPE_CHECKING, Dict, Iterator, List
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -42,6 +43,8 @@ from paasng.utils.blobstore import make_blob_store_env
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
     from paasng.platform.engine.models import EngineApp
+
+logger = logging.getLogger(__name__)
 
 
 def get_env_variables(
@@ -76,9 +79,6 @@ def get_env_variables(
     if include_svc_disc:
         result.update(get_svc_disc_as_env_variables(env))
 
-    # Part: system-wide env vars
-    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
-
     # Port: workloads related env vars
     vars_wl = _flatten_envs(generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, env))
     result.update(vars_wl)
@@ -95,6 +95,9 @@ def get_env_variables(
     # application.
     if include_config_vars:
         result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
+
+    # Part: system-wide env vars
+    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
 
     # Part: env vars shared from other modules
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
@@ -330,48 +333,23 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
     # admin42 中自定义的环境变量
     custom_envs = get_builtin_config_vars(config_vars_prefix)
 
-    return {
+    envs = {
         **app_info_envs,
         **runtime_envs,
         **bk_address_envs,
         **envs_by_region_and_env,
-        **custom_envs,
         "BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix(),
     }
 
+    for key, value in custom_envs.items():
+        if key in envs:
+            logger.warning(
+                f"{key}={envs[key]} is already defined in default builtin envs, "
+                f"will be overwritten by {key}={value} defined in custom envs"
+            )
+        envs[key] = value
 
-def _get_enum_choices_dict(enum_obj) -> Dict[str, str]:
-    return {element[0]: element[1] for element in enum_obj.get_choices()}
-
-
-def get_default_builtin_config_vars(region: str, environment: str) -> Dict[str, Any]:
-    """获取所有内置环境变量，包括应用基本信息、应用运行时信息和蓝鲸体系内平台地址，其中和应用相关的环境变量只包括变量名和描述"""
-    builtin_envs = {}
-
-    # 应用基本信息
-    app_info_envs = add_prefix_to_key(_get_enum_choices_dict(AppInfoBuiltinEnv), settings.CONFIGVAR_SYSTEM_PREFIX)
-    builtin_envs.update(app_info_envs)
-
-    # 应用运行时信息
-    app_runtime_envs = add_prefix_to_key(
-        _get_enum_choices_dict(AppRunTimeBuiltinEnv), settings.CONFIGVAR_SYSTEM_PREFIX
-    )
-    builtin_envs.update(app_runtime_envs)
-    wl_vars = generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX)
-    for wl_env in wl_vars:
-        builtin_envs.update(wl_env.to_dict())
-
-    # 蓝鲸体系内平台地址
-    bk_address_envs = generate_env_vars_for_bk_platform(settings.CONFIGVAR_SYSTEM_PREFIX)
-    bk_address_envs_list = [env.to_dict() for env in bk_address_envs]
-
-    envs_by_region_and_env = generate_env_vars_by_region_and_env(region, environment, settings.CONFIGVAR_SYSTEM_PREFIX)
-    envs_by_region_and_env_list = [env.to_dict() for env in envs_by_region_and_env]
-
-    for env in bk_address_envs_list + envs_by_region_and_env_list:
-        builtin_envs.update(env)
-
-    return builtin_envs
+    return envs
 
 
 # '{bk_var_*}' is a special placeholder and will be replaced by the actual value

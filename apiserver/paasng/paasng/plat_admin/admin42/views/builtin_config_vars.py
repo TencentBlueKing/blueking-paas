@@ -26,14 +26,10 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.config_vars import (
     BuiltinConfigVarCreateInputSLZ,
-    BuiltinConfigVarCreateOutputSLZ,
-    BuiltinConfigVarListInputSLZ,
     BuiltinConfigVarListOutputSLZ,
     BuiltinConfigVarUpdateInputSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.engine.configurations.config_var import get_default_builtin_config_vars
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 
 
@@ -66,13 +62,13 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        config_var = BuiltinConfigVar.objects.create(
+        BuiltinConfigVar.objects.create(
             key=data["key"],
             value=data["value"],
             description=data["description"],
-            updater=request.user.username,
+            operator=request.user,
         )
-        return Response(BuiltinConfigVarCreateOutputSLZ(config_var).data, status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, pk):
         slz = BuiltinConfigVarUpdateInputSLZ(data=request.data)
@@ -82,8 +78,8 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
         config_var.value = data["value"]
         config_var.description = data["description"]
-        config_var.updater = request.user.username
-        config_var.save(update_fields=["value", "description", "updater", "updated"])
+        config_var.operator = request.user
+        config_var.save(update_fields=["value", "description", "operator", "updated"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -91,12 +87,3 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
         config_var.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def get_default_builtin_config_vars(self, request):
-        """获取所有内置环境变量，包括应用基本信息、应用运行时信息和蓝鲸体系内平台地址，其中和应用相关的环境变量只显示变量名和描述"""
-        slz = BuiltinConfigVarListInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-        region = slz.validated_data["region"]
-        # 默认展示正式环境的环境变量
-        environment = AppEnvironment.PRODUCTION.value
-        return Response(get_default_builtin_config_vars(region, environment))

@@ -513,11 +513,6 @@ urlpatterns += [
     ),
     # 环境变量管理API
     url(
-        r"platform/builtin_config_vars/builtin_env/$",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "get_default_builtin_config_vars"}),
-        name="admin.builtin_config_vars.builtin",
-    ),
-    url(
         r"platform/builtin_config_vars/$",
         builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
         name="admin.builtin_config_vars",

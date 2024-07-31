@@ -131,7 +131,9 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 ❯ make celery
 ```
 
-## 开发管理端功能
+## 常见开发场景
+
+### 开发管理端功能
 
 本项目管理端（Admin42）使用 Vue 开发, 代码分为两部分:
 
@@ -140,7 +142,7 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 - Template 页面: 基于 Django Template 服务端渲染的 html 页面,
   项目路径位于 `apiserver/paasng/paasng/plat_admin/admin42/`
 
-### Nodejs 组件开发指引
+#### Nodejs 组件开发指引
 
 Nodejs 组件开发模式与常规的 Nodejs 项目无异, 但为了更方便地与 Django Template 集成,
 本项目未使用任何 `JavaScript 模块化技术`, 即所有组件都需要自行往 `window` 对象挂载, 例如:
@@ -153,7 +155,7 @@ window.Vue = Vue
 
 否则, `Django Template` 将无法直接使用 Nodejs 中的组件。
 
-### Template 页面开发指引
+#### Template 页面开发指引
 
 Template 页面开发模式与常规的 Django 项目无异, 但是使用了 [Vuejs](https://cn.vuejs.org/)
 和 [MagicBox Vue组件库](https://magicbox.bk.tencent.com/static_api/v3/components_vue/2.0/example/index.html#/)
@@ -165,6 +167,46 @@ Template 页面开发模式与常规的 Django 项目无异, 但是使用了 [Vu
 2. 首屏数据使用服务端渲染至 HTML, 以简化前后端交互的逻辑
 3. 避免硬编码后端接口, 使用 `url` 标签动态获取接口地址
 4. 监听 `DOMContentLoaded` 事件完成 Vue 对象的初始化
+
+### 开发系统 API
+
+“系统 API”指那些提供给其他后台系统使用，而非给普通用户访问的功能性 API。调用这类 API 时，请求发起方无需提供用户登录态，只要携带有效的蓝鲸应用身份（AppID/AppSecret）即可。
+
+系统 API的工作原理为：
+
+- API 被设定为必须拥有系统级权限才能访问，比如 `SYSAPI_READ_APPLICATIONS` 代表系统级的读取蓝鲸应用信息的权限；
+- 平台预设了一批系统级角色，它们拥有系统级权限，比如 `SYSTEM_API_BASIC_READER`（系统 API 基础可读者）角色拥有 `SYSAPI_READ_SERVICES` 和 `SYSAPI_READ_APPLICATIONS` 权限；
+- 系统系角色无法绑定给普通用户，必须绑定到系统账号上
+
+系统账号是一种特殊账号，目前支持两种管理和认证方式：
+
+1. 基于 `private_token` 认证：由管理员在 PaaS Admin 中手动添加账号并分配 token，使用方携带该 token 完成请求
+2. 基于蓝鲸 API 网关应用认证：使用方首先在蓝鲸 API 网关上申请 PaaS 网关的对应系统 API 权限，之后在请求对应 API 时，平台将自动创建一个对应的系统账号，完成请求
+
+这两种方式各有优缺点。第一种方式，操作略为繁琐，需人工手动维护账号，且 private_token 的引入在一定程度上增加了安全风险。第二种方式操作简便，但对 API 网关的应用认证体系依赖性非常强，假如某个系统 API 在网关上的权限配置不当（如允许任意应用访问），则可能产生滥用风险。
+
+#### 代码示例
+
+代码层面上，系统 API 和普通 API 的主要区别体现在视图层。下面是一份代码示例：
+
+```python
+@ForceAllowAuthedApp.mark_view_set
+class SysBkPluginLogsViewset(viewsets.ViewSet):
+
+    # 该接口已注册到 APIGW
+    # 网关名称 list_bk_plugin_logs
+    # 请勿随意修改该接口协议
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    def list(self, request, code):
+        """查询某个蓝鲸插件的结构化日志"""
+        # 常见逻辑为完成一些和“当前用户”无关的系统级查询或管理能力
+```
+
+要点如下：
+
+1. 使用 `@ForceAllowAuthedApp.mark_view_set` 装饰视图类后，如果请求携带了经认证的有效应用身份（经由 API 网关完成认证与权限校验），平台将自动创建一个角色为 `SYSTEM_API_BASIC_READER` 的系统账号，由它完成请求。
+    - 后续如需要调整该账号的角色，可在 PaaS Admin 中完成。
+2. 使用 `@site_perm_required` 装饰视图函数，以保证请求只允许那些拥有系统级权限的账号访问（**非常重要，因为系统 API 一般都是用户无关，极容易发生越权问题。**）
 
 ## FAQ
 

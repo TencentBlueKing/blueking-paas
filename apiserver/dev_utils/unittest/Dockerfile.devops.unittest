@@ -15,7 +15,7 @@ ADD ./.babelrc .
 ADD ./.bootstraprc .
 ADD ./.eslintrc.js .
 ADD ./postcss.config.js .
-ADD ./paasng ./paasng/
+ADD ./paasng/assets ./paasng/assets
 ADD ./configs ./configs
 
 # 执行编译
@@ -61,7 +61,7 @@ RUN poetry config virtualenvs.create false && poetry config experimental.new-ins
 WORKDIR /app
 ADD ./paasng ./paasng
 RUN mkdir -p ./public
-COPY --from=Admin42 /build/paasng/public ./public
+COPY --from=Admin42 /build/paasng/public ./paasng/public
 
 WORKDIR /app/paasng
 
@@ -75,7 +75,6 @@ ENV PAAS_BKKRILL_ENCRYPT_SECRET_KEY='none'
 ARG EXTRA_INSTALLED_APPS
 ENV PAAS_EXTRA_INSTALLED_APPS=${EXTRA_INSTALLED_APPS}
 
-RUN mkdir -p /app/paasng/public/assets
 RUN poetry run python manage.py collectstatic --noinput
 # "gettext" package is required for running "compilemessages"
 RUN apt-get install -y gettext

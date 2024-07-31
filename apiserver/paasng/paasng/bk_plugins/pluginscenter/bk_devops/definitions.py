@@ -109,8 +109,8 @@ class PipelineBuildStatus(BaseModel):
     status: str
     currentTimestamp: str
     stageStatus: List[BuildStageStatus] = Field(default_factory=list)
-    totalTime: Optional[int]
-    executeTime: int
+    totalTime: Optional[int] = 0
+    executeTime: Optional[int] = 0
 
     class Config:
         allow_population_by_field_name = True

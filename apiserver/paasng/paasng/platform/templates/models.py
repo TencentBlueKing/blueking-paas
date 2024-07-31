@@ -45,7 +45,7 @@ class Template(AuditedModel):
     language = models.CharField(verbose_name=_("开发语言"), max_length=32)
     market_ready = models.BooleanField(verbose_name=_("能否发布到应用集市"), default=False)
     preset_services_config = models.JSONField(verbose_name=_("预设增强服务配置"), blank=True, default=dict)
-    blob_url = models.JSONField(verbose_name=_("不同版本二进制包存储路径"), default={})
+    blob_url = models.JSONField(verbose_name=_("不同版本二进制包存储路径"))
     enabled_regions = models.JSONField(verbose_name=_("允许被使用的版本"), blank=True, default=list)
     required_buildpacks = models.JSONField(verbose_name=_("必须的构建工具"), blank=True, default=list)
     processes = models.JSONField(verbose_name=_("进程配置"), blank=True, default=dict)

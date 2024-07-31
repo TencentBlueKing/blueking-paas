@@ -81,7 +81,7 @@
               </span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('操作')" :width="120">
+          <bk-table-column :label="$t('操作')" :width="localLanguage === 'en' ? 150 : 120">
             <template slot-scope="props">
               <a
                 v-bk-tooltips.light="disabledTooltipsConfig"
@@ -287,7 +287,7 @@
           :disabled="!option.enabled"
         >
           <span>{{ option.bk_app_secret }}</span>
-          ({{ option.enabled ? $t('创建时间:') + smartTime(option.created_at, 'smartShorten') : $t('已禁用') }})
+          ({{ option.enabled ? `${$t('创建时间')}: ` + smartTime(option.created_at, 'smartShorten') : $t('已禁用') }})
         </bk-option>
         <div
           slot="extension"
@@ -422,6 +422,9 @@ export default {
     // 是否可以新增密钥
     isAddNewSecret() {
       return this.appSecretList.length < 2;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   watch: {

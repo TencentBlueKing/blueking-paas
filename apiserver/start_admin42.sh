@@ -33,11 +33,6 @@ fi
 
 python manage.py migrate
 
-mkdir -p ../public/assets
-python manage.py collectstatic --noinput
-# I18N: compile .po file to .mo files
-python manage.py compilemessages
-
 ## Run!
 command="python manage.py runserver 0.0.0.0:"$PORT
 exec bash -c "$command"

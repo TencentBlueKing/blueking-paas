@@ -73,6 +73,11 @@ ADD ./paasng .
 # set it to a non-empty value to pass the check.
 ENV PAAS_BKKRILL_ENCRYPT_SECRET_KEY='none'
 
+# Some edition might need to add extra apps, do it by set the arg during the build process,
+# e.g. docker build . --build-arg EXTRA_INSTALLED_APPS="['foo']" ...
+ARG EXTRA_INSTALLED_APPS
+ENV PAAS_EXTRA_INSTALLED_APPS=${EXTRA_INSTALLED_APPS}
+
 RUN poetry run python manage.py collectstatic --noinput
 # "gettext" package is required for running "compilemessages"
 RUN apt-get install -y gettext

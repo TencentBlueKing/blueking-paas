@@ -15,14 +15,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
-
-# legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
+from attrs import define
 
 
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
+@define
+class CommonSyncResult:
+    """A common type that representing the result of an syncing procedure."""
+
+    created_num: int = 0
+    updated_num: int = 0
+    deleted_num: int = 0
+
+    def incr_by_created_flag(self, created: bool):
+        if created:
+            self.created_num += 1
+        else:
+            self.updated_num += 1

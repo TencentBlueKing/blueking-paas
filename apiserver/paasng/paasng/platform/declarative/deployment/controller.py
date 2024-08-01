@@ -25,7 +25,7 @@ from django.db.transaction import atomic
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.importer import env_vars, import_manifest, svc_discovery
+from paasng.platform.bkapp_model.importer1 import env_vars, import_manifest, svc_discovery
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe

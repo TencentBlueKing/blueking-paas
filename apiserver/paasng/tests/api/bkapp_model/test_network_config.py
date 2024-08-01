@@ -26,7 +26,7 @@ class TestSvcDiscConfigViewSet:
     @pytest.fixture()
     def svc_disc(self, bk_app):
         """创建一个 SvcDiscConfig 对象"""
-        svc_disc = SvcDiscConfig.objects.create(
+        return SvcDiscConfig.objects.create(
             application=bk_app,
             bk_saas=[
                 {
@@ -35,7 +35,6 @@ class TestSvcDiscConfigViewSet:
                 }
             ],
         )
-        return svc_disc
 
     def test_get_normal(self, api_client, bk_app, svc_disc):
         url = f"/api/bkapps/applications/{bk_app.code}/svc_disc/"
@@ -85,7 +84,7 @@ class TestDomainResolutionViewSet:
     @pytest.fixture()
     def domain_resolution(self, bk_app):
         """创建一个 DomainResolution 对象"""
-        domain_resolution = DomainResolution.objects.create(
+        return DomainResolution.objects.create(
             application=bk_app,
             nameservers=["192.168.1.1", "192.168.1.2"],
             host_aliases=[
@@ -98,7 +97,6 @@ class TestDomainResolutionViewSet:
                 }
             ],
         )
-        return domain_resolution
 
     def test_get(self, api_client, bk_app, domain_resolution):
         url = f"/api/bkapps/applications/{bk_app.code}/domain_resolution/"

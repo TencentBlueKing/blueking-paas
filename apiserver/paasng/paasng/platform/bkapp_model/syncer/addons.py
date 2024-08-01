@@ -15,14 +15,23 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+import logging
+from typing import List
 
-# legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
+from paasng.platform.bkapp_model.entities import Addon
+from paasng.platform.modules.models import Module
+
+from .result import CommonSyncResult
+
+logger = logging.getLogger(__name__)
 
 
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
+def sync_addons(module: Module, addons: List[Addon]) -> CommonSyncResult:
+    """Sync addon configs, existing services that is not in the input list may be removed.
+
+    :param addons: The addons.
+    :return: A result object.
+    """
+    # TODO: Implement import for addons
+    logger.warning("Import addons is not implemented, skip.")
+    return CommonSyncResult()

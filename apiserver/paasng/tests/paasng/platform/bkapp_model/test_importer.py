@@ -19,11 +19,10 @@ import copy
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscEntryBkSaaS
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paasng.platform.bkapp_model.entities import AutoscalingConfig
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, SvcDiscEntryBkSaaS
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
-from paasng.platform.bkapp_model.importer1.importer import import_manifest
+from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, SvcDiscConfig
 from paasng.platform.engine.models.config_var import ConfigVar
 
@@ -269,7 +268,7 @@ class TestSvcDiscConfig:
         cfg = SvcDiscConfig.objects.get(application=bk_app)
 
         assert cfg.bk_saas == [
-            SvcDiscEntryBkSaaS(bkAppCode="foo"),
-            SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
-            SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
+            SvcDiscEntryBkSaaS(bk_app_code="foo"),
+            SvcDiscEntryBkSaaS(bk_app_code="bar", module_name="default"),
+            SvcDiscEntryBkSaaS(bk_app_code="bar", module_name="opps"),
         ]

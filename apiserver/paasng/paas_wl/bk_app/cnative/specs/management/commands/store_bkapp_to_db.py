@@ -26,8 +26,8 @@ from rest_framework.serializers import ValidationError
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.management.base import BaseAppModelResourceCommand
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
-from paasng.platform.bkapp_model.importer.importer import import_manifest_yaml
-from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
+from paasng.platform.bkapp_model.importer1.importer import import_manifest_yaml
+from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
 from paasng.platform.modules.models import Module
 
 if TYPE_CHECKING:

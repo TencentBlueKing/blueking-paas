@@ -18,9 +18,9 @@
 import pytest
 from django_dynamic_fixture import G
 
+from paasng.platform.bkapp_model.entities import AutoscalingConfig
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.engine.models.deployment import AutoscalingConfig
 from paasng.platform.modules.models import BuildConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -154,7 +154,7 @@ class TestModuleProcessSpecViewSet:
                         "target_replicas": 1,
                     },
                     "prod": {
-                        "environment_name": "stag",
+                        "environment_name": "prod",
                         "plan_name": "default",
                         "target_replicas": 1,
                         "autoscaling": True,
@@ -175,12 +175,12 @@ class TestModuleProcessSpecViewSet:
         ]
         resp = api_client.post(url, data=request_data)
         data = resp.json()
-        metadata = data["metadata"]
+
         proc_specs = data["proc_specs"]
 
         assert ModuleProcessSpec.objects.filter(module=bk_module).count() == 2
-        assert metadata["allow_multiple_image"] is False
         assert len(proc_specs) == 2
+
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "example.com/foo"
         assert proc_specs[0]["command"] == ["python", "-m"]
@@ -200,10 +200,12 @@ class TestModuleProcessSpecViewSet:
             "policy": "default",
         }
         assert proc_specs[1]["probes"] == {"liveness": None, "readiness": None, "startup": None}
-        assert ModuleProcessSpec.objects.get(module=bk_module, name="beat").get_scaling_config(
-            "prod"
-        ) == AutoscalingConfig(
+
+        spec_obj = ModuleProcessSpec.objects.get(module=bk_module, name="beat")
+        assert spec_obj.get_scaling_config("prod") == AutoscalingConfig(
             min_replicas=1,
             max_replicas=5,
             policy="default",
         )
+        assert spec_obj.probes == {"liveness": None, "readiness": None, "startup": None}
+        assert spec_obj.probes.liveness is None

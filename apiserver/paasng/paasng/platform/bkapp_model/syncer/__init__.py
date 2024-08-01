@@ -15,14 +15,26 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from .addons import sync_addons
+from .build import sync_build
+from .domain_resolution import sync_domain_resolution
+from .env_overlays import sync_env_overlays, sync_proc_env_overlay
+from .env_vars import sync_env_vars, sync_preset_env_vars
+from .hooks import sync_hooks
+from .mounts import sync_mounts
+from .processes import sync_processes
+from .svc_discovery import sync_svc_discovery
 
-# legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
-
-
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
+__all__ = [
+    "sync_addons",
+    "sync_build",
+    "sync_domain_resolution",
+    "sync_env_overlays",
+    "sync_proc_env_overlay",
+    "sync_env_vars",
+    "sync_preset_env_vars",
+    "sync_hooks",
+    "sync_mounts",
+    "sync_processes",
+    "sync_svc_discovery",
+]

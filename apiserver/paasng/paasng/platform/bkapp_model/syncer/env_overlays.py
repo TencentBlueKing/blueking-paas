@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -17,10 +18,11 @@
 import logging
 from typing import Any, Callable, Dict, List, Type, cast
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
-from paasng.platform.bkapp_model.importer.entities import CommonImportResult
+from paasng.platform.bkapp_model.entities import AutoscalingOverlay, ProcEnvOverlay, ReplicasOverlay, ResQuotaOverlay
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.modules.models import Module
+
+from .result import CommonSyncResult
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 def _upsert_replicas(proc_spec: ModuleProcessSpec, input_p: ReplicasOverlay) -> bool:
     """save ReplicasOverlay item"""
     _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-        proc_spec=proc_spec, environment_name=input_p.envName, defaults={"target_replicas": input_p.count}
+        proc_spec=proc_spec, environment_name=input_p.env_name, defaults={"target_replicas": input_p.count}
     )
     return created
 
@@ -36,7 +38,7 @@ def _upsert_replicas(proc_spec: ModuleProcessSpec, input_p: ReplicasOverlay) -> 
 def _upsert_res_quota(proc_spec: ModuleProcessSpec, input_p: ResQuotaOverlay) -> bool:
     """save ResQuotaOverlay item"""
     _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-        proc_spec=proc_spec, environment_name=input_p.envName, defaults={"plan_name": input_p.plan}
+        proc_spec=proc_spec, environment_name=input_p.env_name, defaults={"plan_name": input_p.plan}
     )
     return created
 
@@ -45,12 +47,12 @@ def _upsert_autoscaling(proc_spec: ModuleProcessSpec, input_p: AutoscalingOverla
     """save AutoscalingOverlay item"""
     _, created = ProcessSpecEnvOverlay.objects.update_or_create(
         proc_spec=proc_spec,
-        environment_name=input_p.envName,
+        environment_name=input_p.env_name,
         defaults={
             "autoscaling": True,
             "scaling_config": {
-                "min_replicas": input_p.minReplicas,
-                "max_replicas": input_p.maxReplicas,
+                "min_replicas": input_p.min_replicas,
+                "max_replicas": input_p.max_replicas,
                 "policy": input_p.policy,
             },
         },
@@ -65,20 +67,20 @@ _handlers: Dict[Type, Callable[..., bool]] = {
 }
 
 
-def import_env_overlays(
+def sync_env_overlays(
     module: Module,
     overlay_replicas: List[ReplicasOverlay],
     overlay_res_quotas: List[ResQuotaOverlay],
     overlay_autoscalings: List[AutoscalingOverlay],
-) -> CommonImportResult:
-    """Import resQuota overlay data.
+) -> CommonSyncResult:
+    """Sync overlay data.
 
     :param overlay_replicas: A list of ResQuotaOverlay items.
     :param overlay_res_quotas: A list of ResQuotaOverlay items.
     :param overlay_autoscalings: A list of AutoscalingOverlay items.
-    :return: The import result object.
+    :return: The sync result object.
     """
-    ret = CommonImportResult()
+    ret = CommonSyncResult()
 
     # Build the index of existing data first to remove data later.
     # Data structure: {(process name, environment name): pk}
@@ -100,13 +102,41 @@ def import_env_overlays(
                 continue
 
             # Update the column by handler function and store the created flag
-            handle_record.setdefault((input_p.process, input_p.envName), _handlers[type(input_p)](proc_spec, input_p))
+            handle_record.setdefault((input_p.process, input_p.env_name), _handlers[type(input_p)](proc_spec, input_p))
             # Move out from the index
-            existing_index.pop((input_p.process, input_p.envName), None)
+            existing_index.pop((input_p.process, input_p.env_name), None)
 
     for created in handle_record.values():
         ret.incr_by_created_flag(created)
 
     # Remove existing data that is not touched.
     ret.deleted_num, _ = ProcessSpecEnvOverlay.objects.filter(id__in=existing_index.values()).delete()
+    return ret
+
+
+def sync_proc_env_overlay(module, proc_name: str, proc_env_overlay: ProcEnvOverlay) -> CommonSyncResult:
+    """Sync ProcessSpecEnvOverlay with env_overlay
+
+    :param module: module
+    :param proc_name: process name to set env_overlay
+    :param proc_env_overlay: proc env_overlay data
+    :return: The sync result object.
+    """
+
+    ret = CommonSyncResult()
+
+    proc_spec = ModuleProcessSpec.objects.get(module=module, name=proc_name)
+
+    _, created = ProcessSpecEnvOverlay.objects.update_or_create(
+        proc_spec=proc_spec,
+        environment_name=proc_env_overlay.env_name,
+        defaults={
+            "target_replicas": proc_env_overlay.target_replicas,
+            "plan_name": proc_env_overlay.plan_name,
+            "autoscaling": proc_env_overlay.autoscaling,
+            "scaling_config": proc_env_overlay.scaling_config.dict() if proc_env_overlay.scaling_config else None,
+        },
+    )
+    ret.incr_by_created_flag(created)
+
     return ret

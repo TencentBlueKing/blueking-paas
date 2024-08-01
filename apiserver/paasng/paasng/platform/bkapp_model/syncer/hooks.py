@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,23 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppHooks
-from paasng.platform.bkapp_model.importer.entities import CommonImportResult
+from paasng.platform.bkapp_model.entities import Hooks
 from paasng.platform.bkapp_model.models import DeployHookType, ModuleDeployHook
 from paasng.platform.modules.models import Module
 
-logger = logging.getLogger(__name__)
+from .result import CommonSyncResult
 
 
-def import_hooks(module: Module, hooks: BkAppHooks) -> CommonImportResult:
-    """Import hooks data.
-
-    :param hooks: A BkAppHooks object.
-    :return: The import result object.
-    """
-    ret = CommonImportResult()
+def sync_hooks(module: Module, hooks: Hooks) -> CommonSyncResult:
+    """Sync hooks data to db"""
+    ret = CommonSyncResult()
 
     # Build the index of existing data first to remove data later.
     # Data structure: {hook type: pk}
@@ -39,7 +33,7 @@ def import_hooks(module: Module, hooks: BkAppHooks) -> CommonImportResult:
         existing_index[hook.type] = hook.pk
 
     # Update or create data
-    if pre_release_hook := hooks.preRelease:
+    if pre_release_hook := hooks.pre_release:
         _, created = ModuleDeployHook.objects.update_or_create(
             module=module,
             type=DeployHookType.PRE_RELEASE_HOOK,
@@ -47,6 +41,7 @@ def import_hooks(module: Module, hooks: BkAppHooks) -> CommonImportResult:
                 "command": pre_release_hook.command,
                 "args": pre_release_hook.args,
                 "enabled": True,
+                # FIXME 处理 proc_command 与 command/args 的关系
                 # proc_command 优先级高于 command/args，需要强制刷新掉
                 "proc_command": None,
             },

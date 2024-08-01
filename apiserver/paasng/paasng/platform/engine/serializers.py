@@ -30,14 +30,8 @@ from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
 from paasng.misc.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import (
-    ConfigVarEnvName,
-    DeployConditions,
-    ImagePullPolicy,
-    JobStatus,
-    MetricsType,
-    RuntimeType,
-)
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.engine.constants import ConfigVarEnvName, DeployConditions, JobStatus, MetricsType, RuntimeType
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.deployment import Deployment

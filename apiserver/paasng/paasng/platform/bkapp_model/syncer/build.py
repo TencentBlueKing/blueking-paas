@@ -15,14 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from moby_distribution.registry.utils import parse_image
 
-# legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
+from paasng.platform.bkapp_model.entities import AppBuildConfig
+from paasng.platform.modules.models import BuildConfig, Module
 
 
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
+def sync_build(module: Module, build: AppBuildConfig):
+    """Sync build data to db"""
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    update_fields = ["image_credential_name", "updated"]
+
+    if build.image:
+        parsed = parse_image(build.image, default_registry="index.docker.io")
+        cfg.image_repository = f"{parsed.domain}/{parsed.name}"
+        update_fields.append("image_repository")
+
+    cfg.image_credential_name = build.image_credential_name
+    cfg.save(update_fields=update_fields)

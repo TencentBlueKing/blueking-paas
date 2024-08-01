@@ -17,9 +17,9 @@
 
 import pytest
 
-from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
 from paasng.platform.bkapp_model.importer.svc_discovery import import_svc_discovery
 from paasng.platform.bkapp_model.models import SvcDiscConfig
+from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

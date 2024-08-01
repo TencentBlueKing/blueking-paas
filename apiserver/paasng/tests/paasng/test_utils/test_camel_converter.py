@@ -15,14 +15,24 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+import pytest
 
-# legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
+from paasng.utils.camel_converter import dict_to_camel
 
 
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
+@pytest.mark.parametrize(
+    ("snake_case_dict", "camel_case_dict"),
+    [
+        ({"foo_bar": "cc"}, {"fooBar": "cc"}),
+        (
+            {"liveness": {"initial_delay_seconds": 0, "timeout_seconds": 1}},
+            {"liveness": {"initialDelaySeconds": 0, "timeoutSeconds": 1}},
+        ),
+        (
+            {"clusters": [{"c_name": "BCS-01", "c_ip": "127.0.0.1"}, {"c_name": "BCS-02", "c_ip": "129.0.0.1"}]},
+            {"clusters": [{"cName": "BCS-01", "cIp": "127.0.0.1"}, {"cName": "BCS-02", "cIp": "129.0.0.1"}]},
+        ),
+    ],
+)
+def test_dict_to_camel(snake_case_dict, camel_case_dict):
+    assert dict_to_camel(snake_case_dict) == camel_case_dict

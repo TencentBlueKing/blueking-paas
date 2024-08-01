@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -17,8 +18,23 @@
 from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
-from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paasng.platform.engine.constants import AppEnvName, ImagePullPolicy
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.bkapp_model.entities import (
+    Addon,
+    AppBuildConfig,
+    AutoscalingOverlay,
+    DomainResolution,
+    EnvVar,
+    EnvVarOverlay,
+    Hooks,
+    Mount,
+    MountOverlay,
+    Process,
+    ReplicasOverlay,
+    ResQuotaOverlay,
+    SvcDiscConfig,
+)
+from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
@@ -31,18 +47,17 @@ class BaseEnvVarFields(serializers.Serializer):
 
 
 class EnvVarInputSLZ(BaseEnvVarFields):
-    def to_internal_value(self, data) -> bk_app.EnvVar:
-        # NOTE: Should we define another "EnvVar" type instead of importing from the crd module?
+    def to_internal_value(self, data) -> EnvVar:
         d = super().to_internal_value(data)
-        return bk_app.EnvVar(**d)
+        return EnvVar(**d)
 
 
 class EnvVarOverlayInputSLZ(BaseEnvVarFields):
-    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
 
-    def to_internal_value(self, data) -> bk_app.EnvVarOverlay:
+    def to_internal_value(self, data) -> EnvVarOverlay:
         d = super().to_internal_value(data)
-        return bk_app.EnvVarOverlay(**d)
+        return EnvVarOverlay(**d)
 
 
 class AddonSpecInputSLZ(serializers.Serializer):
@@ -57,7 +72,11 @@ class AddonInputSLZ(serializers.Serializer):
 
     name = serializers.CharField(required=True)
     specs = serializers.ListField(child=AddonSpecInputSLZ(), default=None)
-    sharedFromModule = serializers.CharField(default=None)
+    sharedFromModule = serializers.CharField(default=None, source="shared_from_module")
+
+    def to_internal_value(self, data) -> Addon:
+        d = super().to_internal_value(data)
+        return Addon(**d)
 
 
 class BaseMountFields(serializers.Serializer):
@@ -67,80 +86,80 @@ class BaseMountFields(serializers.Serializer):
         class ConfigMapInputSLZ(serializers.Serializer):
             name = serializers.CharField()
 
-        configMap = ConfigMapInputSLZ()
+        configMap = ConfigMapInputSLZ(source="config_map")
 
     name = serializers.RegexField(regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63)
-    mountPath = serializers.RegexField(regex=r"^/([^/\0]+(/)?)*$")
+    mountPath = serializers.RegexField(regex=r"^/([^/\0]+(/)?)*$", source="mount_path")
     source = SourceInputSLZ()
 
 
 class MountInputSLZ(BaseMountFields):
     """Validate the `mounts` field's item."""
 
-    def to_internal_value(self, data) -> bk_app.Mount:
+    def to_internal_value(self, data) -> Mount:
         d = super().to_internal_value(data)
-        return bk_app.Mount(**d)
+        return Mount(**d)
 
 
 class MountOverlayInputSLZ(BaseMountFields):
     """Validate the `mounts` field in envOverlay."""
 
-    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
 
-    def to_internal_value(self, data) -> bk_app.MountOverlay:
+    def to_internal_value(self, data) -> MountOverlay:
         d = super().to_internal_value(data)
-        return bk_app.MountOverlay(**d)
+        return MountOverlay(**d)
 
 
 class ReplicasOverlayInputSLZ(serializers.Serializer):
     """Validate the `replicas` field in envOverlay."""
 
-    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
     count = serializers.IntegerField()
 
-    def to_internal_value(self, data) -> bk_app.ReplicasOverlay:
+    def to_internal_value(self, data) -> ReplicasOverlay:
         d = super().to_internal_value(data)
-        return bk_app.ReplicasOverlay(**d)
+        return ReplicasOverlay(**d)
 
 
 class ResQuotaOverlayInputSLZ(serializers.Serializer):
     """Validate the `resQuotas` field in envOverlay"""
 
-    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
     plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
 
-    def to_internal_value(self, data) -> bk_app.ResQuotaOverlay:
+    def to_internal_value(self, data) -> ResQuotaOverlay:
         d = super().to_internal_value(data)
-        return bk_app.ResQuotaOverlay(**d)
+        return ResQuotaOverlay(**d)
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
     """Base fields for validating AutoscalingSpec."""
 
-    minReplicas = serializers.IntegerField(required=True, min_value=1)
-    maxReplicas = serializers.IntegerField(required=True, min_value=1)
+    minReplicas = serializers.IntegerField(required=True, min_value=1, source="min_replicas")
+    maxReplicas = serializers.IntegerField(required=True, min_value=1, source="max_replicas")
     policy = serializers.ChoiceField(default=ScalingPolicy.DEFAULT, choices=ScalingPolicy.get_choices())
 
 
 class AutoscalingOverlayInputSLZ(AutoscalingSpecInputSLZ):
     """Validate the `autoscaling` field in envOverlay"""
 
-    envName = serializers.ChoiceField(choices=AppEnvName.get_choices())
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
 
-    def to_internal_value(self, data) -> bk_app.AutoscalingOverlay:
+    def to_internal_value(self, data) -> AutoscalingOverlay:
         d = super().to_internal_value(data)
-        return bk_app.AutoscalingOverlay(**d)
+        return AutoscalingOverlay(**d)
 
 
 class EnvOverlayInputSLZ(serializers.Serializer):
     """Validate the `envOverlay` field."""
 
     replicas = serializers.ListField(child=ReplicasOverlayInputSLZ(), required=False)
-    resQuotas = serializers.ListField(child=ResQuotaOverlayInputSLZ(), required=False)
-    envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), required=False)
+    resQuotas = serializers.ListField(child=ResQuotaOverlayInputSLZ(), required=False, source="res_quotas")
+    envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), required=False, source="env_variables")
     autoscaling = serializers.ListField(child=AutoscalingOverlayInputSLZ(), required=False)
     mounts = serializers.ListField(child=MountOverlayInputSLZ(), required=False)
 
@@ -156,68 +175,54 @@ class BuildInputSLZ(serializers.Serializer):
 
     image = serializers.CharField(allow_null=True, default=None, allow_blank=True)
     imagePullPolicy = serializers.ChoiceField(
-        choices=ImagePullPolicy.get_choices(), default=ImagePullPolicy.IF_NOT_PRESENT
+        choices=ImagePullPolicy.get_choices(), default=ImagePullPolicy.IF_NOT_PRESENT, source="image_pull_policy"
     )
-    imageCredentialsName = serializers.CharField(allow_null=True, default=None, allow_blank=True)
+    imageCredentialsName = serializers.CharField(
+        allow_null=True, default=None, allow_blank=True, source="image_credential_name"
+    )
 
-    def to_internal_value(self, data) -> bk_app.BkAppBuildConfig:
+    def to_internal_value(self, data) -> AppBuildConfig:
         d = super().to_internal_value(data)
-        return bk_app.BkAppBuildConfig(**d)
+        return AppBuildConfig(**d)
 
 
 class ExecActionInputSLZ(serializers.Serializer):
     command = serializers.ListField(help_text="探活命令", child=serializers.CharField(max_length=48), max_length=12)
-
-    def to_internal_value(self, data) -> bk_app.ExecAction:
-        d = super().to_internal_value(data)
-        return bk_app.ExecAction(**d)
 
 
 class TCPSocketActionInputSLZ(serializers.Serializer):
     port = IntegerOrCharField(help_text="探活端口")
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
 
-    def to_internal_value(self, data) -> bk_app.TCPSocketAction:
-        d = super().to_internal_value(data)
-        return bk_app.TCPSocketAction(**d)
-
 
 class HTTPHeaderInputSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="标头名称")
     value = serializers.CharField(help_text="标头值")
-
-    def to_internal_value(self, data) -> bk_app.HTTPHeader:
-        d = super().to_internal_value(data)
-        return bk_app.HTTPHeader(**d)
 
 
 class HTTPGetActionInputSLZ(serializers.Serializer):
     port = IntegerOrCharField(help_text="探活端口")
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
-    httpHeaders = serializers.ListField(help_text="HTTP 请求标头", required=False, child=HTTPHeaderInputSLZ())
+    httpHeaders = serializers.ListField(
+        help_text="HTTP 请求标头", required=False, child=HTTPHeaderInputSLZ(), source="http_headers"
+    )
     scheme = serializers.CharField(help_text="http/https", required=False, default="HTTP")
-
-    def to_internal_value(self, data) -> bk_app.HTTPGetAction:
-        d = super().to_internal_value(data)
-        return bk_app.HTTPGetAction(**d)
 
 
 class ProbeInputSLZ(serializers.Serializer):
     """探针配置"""
 
     exec = ExecActionInputSLZ(help_text="exec 探活配置", required=False, allow_null=True)
-    httpGet = HTTPGetActionInputSLZ(help_text="http get 探活配置", required=False, allow_null=True)
-    tcpSocket = TCPSocketActionInputSLZ(help_text="tcp socket 探活配置", required=False, allow_null=True)
-    initialDelaySeconds = serializers.IntegerField(help_text="初次探测延迟时间")
-    timeoutSeconds = serializers.IntegerField(help_text="探测超时时间")
-    periodSeconds = serializers.IntegerField(help_text="探测周期")
-    successThreshold = serializers.IntegerField(help_text="成功阈值")
-    failureThreshold = serializers.IntegerField(help_text="失败阈值")
-
-    def to_internal_value(self, data) -> bk_app.Probe:
-        d = super().to_internal_value(data)
-        return bk_app.Probe(**d)
+    httpGet = HTTPGetActionInputSLZ(help_text="http get 探活配置", required=False, allow_null=True, source="http_get")
+    tcpSocket = TCPSocketActionInputSLZ(
+        help_text="tcp socket 探活配置", required=False, allow_null=True, source="tcp_socket"
+    )
+    initialDelaySeconds = serializers.IntegerField(help_text="初次探测延迟时间", source="initial_delay_seconds")
+    timeoutSeconds = serializers.IntegerField(help_text="探测超时时间", source="timeout_seconds")
+    periodSeconds = serializers.IntegerField(help_text="探测周期", source="period_seconds")
+    successThreshold = serializers.IntegerField(help_text="成功阈值", source="success_threshold")
+    failureThreshold = serializers.IntegerField(help_text="失败阈值", source="failure_threshold")
 
 
 class ProbeSetInputSLZ(serializers.Serializer):
@@ -227,26 +232,30 @@ class ProbeSetInputSLZ(serializers.Serializer):
     readiness = ProbeInputSLZ(help_text="就绪探针", required=False, allow_null=True)
     startup = ProbeInputSLZ(help_text="启动探针", required=False, allow_null=True)
 
-    def to_internal_value(self, data) -> bk_app.ProbeSet:
-        d = super().to_internal_value(data)
-        return bk_app.ProbeSet(**d)
-
 
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0, allow_null=True, default=None)
-    resQuotaPlan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
-    targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
+    resQuotaPlan = serializers.ChoiceField(
+        choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="plan_name"
+    )
+    targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None, source="port")
     command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
 
-    def to_internal_value(self, data) -> bk_app.BkAppProcess:
+    def to_internal_value(self, data) -> Process:
         d = super().to_internal_value(data)
-        return bk_app.BkAppProcess(**d)
+
+        scaling_config = d.pop("autoscaling", None)
+        if scaling_config:
+            d["scaling_config"] = scaling_config
+            d["autoscaling"] = True
+
+        return Process(**d)
 
 
 class HooksInputSLZ(serializers.Serializer):
@@ -256,28 +265,28 @@ class HooksInputSLZ(serializers.Serializer):
         command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
         args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
 
-    preRelease = HookInputSLZ(allow_null=True, default=None)
+    preRelease = HookInputSLZ(allow_null=True, default=None, source="pre_release")
 
-    def to_internal_value(self, data) -> bk_app.BkAppHooks:
+    def to_internal_value(self, data) -> Hooks:
         d = super().to_internal_value(data)
-        return bk_app.BkAppHooks(**d)
+        return Hooks(**d)
 
 
 class BkSaaSInputSLZ(serializers.Serializer):
     """Validate the `bkSaaS` field."""
 
-    bkAppCode = serializers.CharField()
-    moduleName = serializers.CharField(required=False, allow_null=True)
+    bkAppCode = serializers.CharField(source="bk_app_code")
+    moduleName = serializers.CharField(required=False, allow_null=True, source="module_name")
 
 
 class ServiceDiscoveryInputSLZ(serializers.Serializer):
     """Validate the `serviceDiscovery` field."""
 
-    bkSaaS = serializers.ListField(child=BkSaaSInputSLZ(), required=False, allow_empty=True)
+    bkSaaS = serializers.ListField(child=BkSaaSInputSLZ(), required=False, allow_empty=True, source="bk_saas")
 
-    def to_internal_value(self, data) -> bk_app.SvcDiscConfig:
+    def to_internal_value(self, data) -> SvcDiscConfig:
         d = super().to_internal_value(data)
-        return bk_app.SvcDiscConfig(**d)
+        return SvcDiscConfig(**d)
 
 
 class HostAliasSLZ(serializers.Serializer):
@@ -287,11 +296,11 @@ class HostAliasSLZ(serializers.Serializer):
 
 class DomainResolutionInputSLZ(serializers.Serializer):
     nameservers = serializers.ListField(child=serializers.IPAddressField(), required=False)
-    hostAliases = serializers.ListField(child=HostAliasSLZ(), required=False)
+    hostAliases = serializers.ListField(child=HostAliasSLZ(), required=False, source="host_aliases")
 
-    def to_internal_value(self, data) -> bk_app.DomainResolution:
+    def to_internal_value(self, data) -> DomainResolution:
         d = super().to_internal_value(data)
-        return bk_app.DomainResolution(**d)
+        return DomainResolution(**d)
 
 
 class BkAppSpecInputSLZ(serializers.Serializer):
@@ -303,6 +312,6 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     addons = serializers.ListField(child=AddonInputSLZ(), required=False, allow_empty=True)
     mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)
     hooks = HooksInputSLZ(allow_null=True, default=None)
-    envOverlay = EnvOverlayInputSLZ(required=False)
-    svcDiscovery = ServiceDiscoveryInputSLZ(required=False)
-    domainResolution = DomainResolutionInputSLZ(required=False)
+    envOverlay = EnvOverlayInputSLZ(required=False, source="env_overlay")
+    svcDiscovery = ServiceDiscoveryInputSLZ(required=False, source="svc_discovery")
+    domainResolution = DomainResolutionInputSLZ(required=False, source="domain_resolution")

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -24,6 +25,7 @@ from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.applications.models import Application
+from paasng.platform.bkapp_model.entities import ProcEnvOverlay
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.serializers import IntegerOrCharField
 
@@ -104,9 +106,9 @@ class ProbeSLZ(serializers.Serializer):
         probe_action_count = 0
         if attrs.get("exec"):
             probe_action_count += 1
-        if attrs.get("httpGet"):
+        if attrs.get("http_get"):
             probe_action_count += 1
-        if attrs.get("tcpSocket"):
+        if attrs.get("tcp_socket"):
             probe_action_count += 1
 
         if probe_action_count > 1:
@@ -114,25 +116,6 @@ class ProbeSLZ(serializers.Serializer):
         if probe_action_count == 0:
             raise serializers.ValidationError(_("至少设置一个探活配置"))
 
-        return attrs
-
-    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        attrs = super().to_internal_value(data)
-
-        if attrs.get("http_get"):
-            http_get_action = attrs.pop("http_get")
-            if http_get_action.get("http_headers"):
-                http_get_action["httpHeaders"] = http_get_action.pop("http_headers")
-            attrs["httpGet"] = http_get_action
-
-        if attrs.get("tcp_socket"):
-            attrs["tcpSocket"] = attrs.pop("tcp_socket")
-
-        attrs["initialDelaySeconds"] = attrs.pop("initial_delay_seconds")
-        attrs["timeoutSeconds"] = attrs.pop("timeout_seconds")
-        attrs["periodSeconds"] = attrs.pop("period_seconds")
-        attrs["successThreshold"] = attrs.pop("success_threshold")
-        attrs["failureThreshold"] = attrs.pop("failure_threshold")
         return attrs
 
 
@@ -163,6 +146,35 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
 
+    def validate_env_overlay(self, data):
+        """校验 env_overlay
+
+        env_overlay 结构:
+         {
+           "stag": {"environment_name": "stag", "target_replicas": 1, ...},
+           "prod": {"environment_name": "prod", "target_replicas": 2, ...}
+         }
+        """
+        if not data:
+            return data
+
+        for env_name, env_config in data.items():
+            if env_name != env_config["environment_name"]:
+                raise serializers.ValidationError(
+                    f'environment_name({env_config["environment_name"]}) not match with {env_name}'
+                )
+
+        return data
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+
+        if env_overlay := data.get("env_overlay"):
+            for env_name, proc_env_overlay in env_overlay.items():
+                env_overlay[env_name] = ProcEnvOverlay(**proc_env_overlay)
+
+        return data
+
 
 class ModuleProcessSpecsOutputSLZ(serializers.Serializer):
     proc_specs = ModuleProcessSpecSLZ(many=True, read_only=True)
@@ -187,18 +199,18 @@ class ModuleDeployHookSLZ(serializers.Serializer):
 class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     """A service discovery entry that represents an application and an optional module."""
 
-    bk_app_code = serializers.CharField(help_text="被服务发现的应用 code", max_length=20, source="bkAppCode")
-    module_name = serializers.CharField(help_text="被服务发现的模块", max_length=20, source="moduleName", default=None)
+    bk_app_code = serializers.CharField(help_text="被服务发现的应用 code", max_length=20)
+    module_name = serializers.CharField(help_text="被服务发现的模块", max_length=20, default=None)
 
     def validate(self, attrs):
         """校验应用和模块存在，否则抛出异常"""
         try:
-            application = Application.objects.get(code=attrs["bkAppCode"])
+            application = Application.objects.get(code=attrs["bk_app_code"])
         except Application.DoesNotExist:
-            raise serializers.ValidationError(_("应用{}不存在").format(attrs["bkAppCode"]))
+            raise serializers.ValidationError(_("应用{}不存在").format(attrs["bk_app_code"]))
 
         # Check if module exists when the "module_name" is set
-        if module_name := attrs["moduleName"]:  # noqa: SIM102
+        if module_name := attrs["module_name"]:  # noqa: SIM102
             if not application.modules.filter(name=module_name).exists():
                 raise serializers.ValidationError(_("模块{}不存在").format(module_name))
         return attrs
@@ -213,11 +225,11 @@ class SvcDiscConfigSLZ(serializers.Serializer):
     def validate_bk_saas(self, value: BkSaaSList) -> BkSaaSList:
         seen = set()
         for item in value:
-            pair = (item["bkAppCode"], item["moduleName"] or "")
+            pair = (item["bk_app_code"], item["module_name"] or "")
             if pair in seen:
                 pair_for_display = f"AppID: {pair[0]}"
                 if pair[1]:
-                    pair_for_display += f", ModuleName: {pair[1]}"
+                    pair_for_display += f", module_name: {pair[1]}"
                 raise serializers.ValidationError(_("服务发现列表中存在重复项：{}").format(f"[{pair_for_display}]"))
             seen.add(pair)
         return value

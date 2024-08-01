@@ -28,15 +28,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.bk_app.cnative.specs.models import update_app_resource
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.bkapp_model.importer.importer import import_manifest
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import DomainResolution, ModuleProcessSpec, SvcDiscConfig
 from paasng.platform.bkapp_model.serializers import (
@@ -48,6 +47,7 @@ from paasng.platform.bkapp_model.serializers import (
     ModuleProcessSpecsOutputSLZ,
     SvcDiscConfigSLZ,
 )
+from paasng.platform.bkapp_model.syncer import sync_proc_env_overlay, sync_processes
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.error_codes import error_codes
@@ -173,23 +173,23 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         proc_specs = slz.validated_data
 
         processes = [
-            BkAppProcess(
+            Process(
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
-                targetPort=proc_spec.get("port", None),
+                port=proc_spec.get("port", None),
                 probes=proc_spec.get("probes", None),
             )
             for proc_spec in proc_specs
         ]
 
-        mgr = ModuleProcessSpecManager(module)
-        # 更新进程配置
-        mgr.sync_from_bkapp(processes)
+        sync_processes(module, processes)
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
-                mgr.sync_env_overlay(proc_name=proc_spec["name"], env_overlay=env_overlay)
+                for proc_env_overlay in env_overlay.value():
+                    sync_proc_env_overlay(module, proc_spec["name"], proc_env_overlay)
+
         return self.retrieve(request, code, module_name)
 
 

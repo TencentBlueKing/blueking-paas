@@ -18,8 +18,8 @@
 import pytest
 
 from paasng.platform.bkapp_model.importer.domain_resolution import import_domain_resolution
-from paasng.platform.bkapp_model.importer.serializers import BkAppSpecInputSLZ
 from paasng.platform.bkapp_model.models import DomainResolution
+from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

@@ -19,7 +19,7 @@ from typing import Any, Dict, List
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
-from paasng.platform.bkapp_model.importer.entities import CommonImportResult
+from paasng.platform.bkapp_model.importer1.entities import CommonImportResult
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.models import Module
 

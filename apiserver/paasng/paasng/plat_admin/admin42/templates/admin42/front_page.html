@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: function () {
             return {
                 panelList: [
-                    {% get_user_perm as perm %}
+                    {% get_user_site_perms as perm %}
                     {% if perm.manage_platform %}
                     {
                         name: "平台管理",

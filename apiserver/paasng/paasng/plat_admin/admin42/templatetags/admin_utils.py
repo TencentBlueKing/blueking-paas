@@ -31,10 +31,12 @@ def to_json(value):
 
 
 @register.simple_tag(takes_context=True)
-def get_user_perm(context):
-    perm_dict = {
-        "manage_platform": user_has_site_action_perm(context["request"].user, SiteAction.MANAGE_PLATFORM),
-        "manage_app_templates": user_has_site_action_perm(context["request"].user, SiteAction.MANAGE_APP_TEMPLATES),
-        "operate_platform": user_has_site_action_perm(context["request"].user, SiteAction.OPERATE_PLATFORM),
+def get_user_site_perms(context):
+    return {
+        action.value: user_has_site_action_perm(context["request"].user, action)
+        for action in [
+            SiteAction.MANAGE_PLATFORM,
+            SiteAction.MANAGE_APP_TEMPLATES,
+            SiteAction.OPERATE_PLATFORM,
+        ]
     }
-    return perm_dict

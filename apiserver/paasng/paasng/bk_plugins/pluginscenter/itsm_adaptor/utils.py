@@ -122,7 +122,7 @@ def submit_canary_release_ticket(
 
     # 组装提单数据,包含插件的基本信息和灰度发布信息
     basic_fields = _get_basic_fields(pd, plugin)
-    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
+    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]灰度发布审批"}]
     fields = basic_fields + title_fields + canary_fields
 
     service_id = ApprovalService.objects.get(service_name=release_strategy.get_itsm_service_name()).service_id

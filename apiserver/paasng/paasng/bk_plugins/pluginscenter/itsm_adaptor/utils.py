@@ -136,6 +136,8 @@ def submit_canary_release_ticket(
     # 提交 itsm 申请单据
     client = ItsmClient()
     itsm_detail = client.create_ticket(service_id, operator, callback_url, fields)
+    release_strategy.itsm_detail = itsm_detail
+    release_strategy.save()
     return itsm_detail
 
 

@@ -249,7 +249,6 @@ class PluginReleaseStrategySLZ(serializers.ModelSerializer):
 
     class Meta:
         model = PluginReleaseStrategy
-        fields = "__all__"
         exclude = ["itsm_detail"]
 
 

@@ -109,10 +109,11 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
     def itsm_canary_callback(self, request, pd_id, plugin_id, release_id, release_strategy_id):
         """插件灰度发布策略修改回调"""
+        logging.exception("itsm_canary_callback")
         plugin = self.get_plugin_instance()
         release = plugin.all_versions.get(pk=release_id)
         latest_release_strategy = release.latest_release_strategy
-        if latest_release_strategy.id != release_strategy_id:
+        if str(latest_release_strategy.id) != str(release_strategy_id):
             logging.warning(f"Not the latest release strategy for the current version:{release_id}")
             raise ValidationError("Not the latest release strategy for the current version")
 

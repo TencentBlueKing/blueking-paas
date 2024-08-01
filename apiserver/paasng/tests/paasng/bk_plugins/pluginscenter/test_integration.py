@@ -110,10 +110,10 @@ class TestReleaseStages:
                     "type": "prod",
                     "source_version_type": "tested_version",
                     "source_version_name": "test-xxxxx",
-                    "release_id": test_release.id,
                     "version": new_version,
                     "comment": "...",
                     "semver_type": "patch",
+                    "release_id": test_release.id,
                     "release_strategy": {
                         "strategy": "gray",
                         "bkci_project": ["test1", "test2"],

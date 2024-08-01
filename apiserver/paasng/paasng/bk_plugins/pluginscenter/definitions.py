@@ -170,6 +170,7 @@ class PluginVisibleRangeDefinition(BaseModel):
     description: str = Field(default="", description="可见范围描述")
     scope: List[str] = Field(default_factory=list, description="可见范围授权范围类型")
     topLevel: Optional[PluginVisibleRangeLevel]
+    api: Optional[PluginBackendAPI] = Field(description="可见范围 API")
 
 
 @register

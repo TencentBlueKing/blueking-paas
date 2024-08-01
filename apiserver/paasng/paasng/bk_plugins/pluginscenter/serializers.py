@@ -257,7 +257,7 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
     complete_time = serializers.ReadOnlyField()
     report_url = serializers.SerializerMethodField(read_only=True)
-    latest_release_strategy = ReleaseStrategyCreateSLZ()
+    latest_release_strategy = PluginReleaseStrategySLZ()
 
     def get_report_url(self, instance) -> Optional[str]:
         release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)

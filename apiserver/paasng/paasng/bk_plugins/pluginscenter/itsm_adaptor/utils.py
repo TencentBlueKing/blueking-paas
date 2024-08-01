@@ -99,9 +99,6 @@ def submit_canary_release_ticket(
     pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, operator: str
 ) -> "ItsmDetail":
     """提交灰度发布申请单据"""
-    current_stage = version.current_stage
-    if current_stage.status != PluginReleaseStatus.INITIAL:
-        raise ValueError("itsm stage is not an initialization state and cannot be triggered")
     # 发布策略
     release_strategy = version.latest_release_strategy
     if not release_strategy:

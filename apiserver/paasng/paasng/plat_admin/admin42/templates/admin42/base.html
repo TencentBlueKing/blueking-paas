@@ -1,5 +1,7 @@
 {% load render_bundle from webpack_loader %}
 
+{% load admin_utils %}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -338,15 +340,23 @@
                 <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸 PaaS Admin</a>
             </div>
             <ul class="nav navbar-nav">
-                <!-- TODO 考虑优化下，如果没有对应的管理权限，直接不展示 -->
+                {% get_user_perm as perm %}
                 <li><a href="{% url 'admin.front_page' %}">首页</a></li>
+                {% if perm.manage_platform %}
                 <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
-                <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>
-                {% url 'admin.operation.index' as operation_index %}
-                {% if operation_index %}
-                <li><a href="{% url 'admin.operation.index' %}">运营数据</a></li>
                 {% endif %}
+                {% if perm.manage_app_templates %}
+                <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>
+                {% endif %}
+                {% if perm.operate_platform %}
+                    {% url 'admin.operation.index' as operation_index %}
+                    {% if operation_index %}
+                    <li><a href="{% url 'admin.operation.index' %}">运营数据</a></li>
+                    {% endif %}
+                {% endif %}
+                {% if perm.manage_platform %}
                 <li><a href="{% url 'admin.accountmgr.index' %}">用户管理</a></li>
+                {% endif %}
             </ul>
             <p class="navbar-text">{{ request.user.username }}</a></p>
         </nav>

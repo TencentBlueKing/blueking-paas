@@ -36,4 +36,9 @@ urlpatterns = [
         "open/api/itsm/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/visible_range/",
         views.PluginCallBackApiViewSet.as_view({"post": "itsm_visible_range_callback"}),
     ),
+    # 灰度发布策略修改回调 API
+    path(
+        "open/api/itsm/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/strategy/<int:release_strategy_id>/",
+        views.PluginCallBackApiViewSet.as_view({"post": "itsm_canary_callback"}),
+    ),
 ]

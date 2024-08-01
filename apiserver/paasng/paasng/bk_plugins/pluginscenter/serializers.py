@@ -30,16 +30,18 @@ from rest_framework.exceptions import ValidationError
 from paasng.bk_plugins.pluginscenter.constants import (
     LogTimeChoices,
     PluginReleaseStatus,
-    PluginReleaseStrategy,
     PluginReleaseType,
     PluginReleaseVersionRule,
+    PluginRevisionType,
     PluginRole,
+    ReleaseStrategy,
     SemverAutomaticType,
 )
 from paasng.bk_plugins.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginBasicInfoDefinition,
@@ -48,8 +50,10 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStage,
+    PluginReleaseStrategy,
     PluginVisibleRange,
 )
+from paasng.bk_plugins.pluginscenter.shim import get_source_hash_by_plugin_version
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
@@ -227,11 +231,33 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
         return data
 
 
+class ReleaseStrategyCreateSLZ(serializers.Serializer):
+    strategy = serializers.ChoiceField(choices=ReleaseStrategy.get_choices(), help_text="发布策略")
+    bkci_project = serializers.ListField(required=False, allow_null=True, help_text="蓝盾项目ID")
+    organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
+
+
+class PluginReleaseStrategySLZ(serializers.ModelSerializer):
+    ticket_info = serializers.SerializerMethodField()
+
+    def get_ticket_info(self, obj):
+        if not obj.itsm_detail:
+            return None
+
+        ticket_info = get_ticket_status(obj.itsm_detail.sn)
+        return ticket_info
+
+    class Meta:
+        model = PluginReleaseStrategy
+        fields = "__all__"
+
+
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
     complete_time = serializers.ReadOnlyField()
     report_url = serializers.SerializerMethodField(read_only=True)
+    latest_release_strategy = ReleaseStrategyCreateSLZ()
 
     def get_report_url(self, instance) -> Optional[str]:
         release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
@@ -432,14 +458,12 @@ class StubUpdatePluginSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(help_text="额外字段")
 
 
-class ReleaseStrategySLZ(serializers.Serializer):
-    strategy = serializers.ChoiceField(choices=PluginReleaseStrategy.get_choices(), help_text="发布策略")
-    bkci_project = serializers.ListField(required=False, allow_null=True, help_text="蓝盾项目ID")
-    organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
-
-
 def make_release_validator(  # noqa: C901
-    plugin: PluginInstance, version_rule: PluginReleaseVersionRule, release_type: str, revision_policy: Optional[str]
+    plugin: PluginInstance,
+    version_rule: PluginReleaseVersionRule,
+    release_type: str,
+    revision_policy: str,
+    revision_type: str,
 ):
     """make a validator to validate ReleaseVersion object"""
 
@@ -470,30 +494,42 @@ def make_release_validator(  # noqa: C901
     ):
         """Plugin version release rules, e.g., cannot release already published versions."""
         policy = REVISION_POLICIES.get(revision_policy)
-        if policy:
-            source_version_exists = PluginRelease.objects.filter(
-                plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
-            ).exists()
-            if source_version_exists:
-                raise policy["error"]  # type: ignore[misc]
+        if not policy:
+            return True
+
+        source_version_exists = PluginRelease.objects.filter(
+            plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
+        ).exists()
+        if source_version_exists:
+            raise policy["error"]  # type: ignore[misc]
         return True
 
     def validator(self, attrs: Dict):
+        if revision_type == PluginRevisionType.TESTED_VERSION and (not attrs["release_id"]):
+            raise ValidationError(_("使用测试版本发布时必须传参数: release_id"))
+
         version = attrs["version"]
+        source_version_type = attrs["source_version_type"]
+        source_version_name = attrs["source_version_name"]
+        source_hash = get_source_hash_by_plugin_version(
+            plugin, source_version_type, source_version_name, revision_type, attrs["release_id"]
+        )
+
         if version_rule == PluginReleaseVersionRule.AUTOMATIC:
             validate_semver(version, self.context["previous_version"], SemverAutomaticType(attrs["semver_type"]))
-        elif version_rule == PluginReleaseVersionRule.REVISION:
-            if version != attrs["source_version_name"]:
-                raise ValidationError(_("版本号必须与代码分支一致"))
-        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:  # noqa: SIM102
-            if version != self.context["source_hash"]:
-                raise ValidationError(_("版本号必须与提交哈希一致"))
-        elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP:  # noqa: SIM102
-            if not version.startswith(attrs["source_version_name"]):
-                raise ValidationError(_("版本号必须以代码分支开头"))
+        elif version_rule == PluginReleaseVersionRule.REVISION and version != source_version_name:
+            raise ValidationError(_("版本号必须与代码分支一致"))
+        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH and version != source_hash:  # noqa: SIM102
+            raise ValidationError(_("版本号必须与提交哈希一致"))
+        elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP and (
+            not version.startswith(source_version_name)
+        ):  # noqa: SIM102
+            raise ValidationError(_("版本号必须以代码分支开头"))
 
         if revision_policy:
-            validate_release_policy(plugin, release_type, revision_policy, attrs["source_version_name"])
+            validate_release_policy(plugin, release_type, revision_policy, source_version_name)
+        attrs["source_hash"] = source_hash
+        attrs.pop("release_id")
         return attrs
 
     return validator
@@ -513,10 +549,11 @@ def make_create_release_version_slz_class(plugin: PluginInstance, release_type: 
         ),
         "source_version_type": serializers.CharField(help_text="代码版本类型(branch/tag)"),
         "source_version_name": source_version_field,
+        "release_id": serializers.CharField(required=False, default=""),
         "version": serializers.CharField(help_text="版本号"),
         "comment": serializers.CharField(help_text="版本日志"),
         "extra_fields": make_extra_fields_slz(release_definition.extraFields)(default=dict),
-        "release_strategy": ReleaseStrategySLZ(required=False, allow_null=True, help_text="发布策略"),
+        "release_strategy": ReleaseStrategyCreateSLZ(required=False, allow_null=True, help_text="发布策略"),
     }
     if release_definition.versionNo == PluginReleaseVersionRule.AUTOMATIC:
         fields["semver_type"] = serializers.ChoiceField(
@@ -534,6 +571,7 @@ def make_create_release_version_slz_class(plugin: PluginInstance, release_type: 
                 PluginReleaseVersionRule(release_definition.versionNo),
                 release_type,
                 release_definition.revisionPolicy,
+                release_definition.revisionType,
             ),
         },
     )

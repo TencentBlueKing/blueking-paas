@@ -57,7 +57,12 @@ class PluginCallBackApiViewSet(GenericViewSet):
         stage.save(update_fields=["status", "updated"])
         return Response({"message": "success", "code": 0, "data": None, "result": True})
 
-    def itsm_create_callback(self, request, pd_id, plugin_id):
+    def itsm_create_callback(
+        self,
+        request,
+        pd_id,
+        plugin_id,
+    ):
         """创建插件审批回调，更新插件状态并完成插件创建相关操作"""
         serializer = serializers.ItsmApprovalSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -100,6 +105,53 @@ class PluginCallBackApiViewSet(GenericViewSet):
             visible_range_obj.organization = visible_range_obj.itsm_organization
         visible_range_obj.save()
         return Response({"message": "success", "code": 0, "data": None, "result": True})
+
+    def itsm_canary_callback(self, request, pd_id, plugin_id, release_id, release_strategy_id):
+        """插件灰度发布策略修改回调"""
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        latest_release_strategy = release.latest_release_strategy
+        if latest_release_strategy.id != release_strategy_id:
+            raise ValueError()
+
+        serializer = serializers.ItsmApprovalSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # 根据 itsm 的回调结果更新单据状态
+        ticket_status = serializer.validated_data["current_status"]
+        approve_result = serializer.validated_data["approve_result"]
+
+        # TODO 审批成功后，需要将灰度策略相关的数据同步给插件提供方
+        if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
+            pass
+
+        release.status = self._convert_canary_status(ticket_status, approve_result, latest_release_strategy.strategy)
+        release.save(update_fields=["status", "updated"])
+        return Response({"message": "success", "code": 0, "data": None, "result": True})
+
+    def _convert_canary_status(
+        self, ticket_status: ItsmTicketStatus, approve_result: bool, strategy: str
+    ) -> constants.PluginReleaseStatus:
+        """将ITSM单据状态和结果转换为插件版本的发布状态
+        @param ticket_status: 单据状态，如结束、中断等
+        @param approve_result: 审批结果，如通过、不通过
+        @param strategy: 发布策略，如全量发布、灰度发布
+        """
+        # 审批结果为不通过，则将版本发布状态为失败
+        if ticket_status == ItsmTicketStatus.FINISHED and (not approve_result):
+            return constants.PluginReleaseStatus.FAILED
+
+        # 仅发布策略为全量且审批结果为成功时，版本发布的状态才是成功
+        if (
+            ticket_status == ItsmTicketStatus.FINISHED
+            and approve_result
+            and strategy == constants.ReleaseStrategy.FULL
+        ):
+            return constants.PluginReleaseStatus.SUCCESSFUL
+
+        # 单据被撤销，则审批阶段状态设置为已中断
+        if ticket_status in [ItsmTicketStatus.TERMINATED, ItsmTicketStatus.REVOKED]:
+            return constants.PluginReleaseStatus.INTERRUPTED
+        return constants.PluginReleaseStatus.PENDING
 
     def _convert_release_status(
         self, ticket_status: ItsmTicketStatus, approve_result: bool

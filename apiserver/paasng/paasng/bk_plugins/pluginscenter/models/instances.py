@@ -33,6 +33,7 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
@@ -292,6 +293,12 @@ class PluginRelease(AuditedModel):
         self.status = constants.PluginReleaseStatus.PENDING
         self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
 
+    @property
+    def latest_release_strategy(self):
+        if self.release_strategies.exists():
+            return self.release_strategies.latest("created")
+        return None
+
 
 class PluginReleaseStage(AuditedModel):
     """插件发布阶段"""
@@ -350,10 +357,10 @@ class PluginReleaseStrategy(AuditedModel):
     """插件版本的发布策略"""
 
     release = models.ForeignKey(
-        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategy"
+        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategies"
     )
     strategy = models.CharField(
-        verbose_name="发布策略", max_length=32, choices=constants.PluginReleaseStrategy.get_choices()
+        verbose_name="发布策略", max_length=32, choices=constants.ReleaseStrategy.get_choices()
     )
     bkci_project = models.JSONField(
         verbose_name="蓝盾项目ID", blank=True, null=True, help_text="格式：['1111', '222222']"
@@ -374,6 +381,16 @@ class PluginReleaseStrategy(AuditedModel):
     #     }
     # ]
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+
+    def get_itsm_service_name(self):
+        """根据发布策略的设置获取对应的 ITSM 审批流程"""
+        if self.strategy == constants.ReleaseStrategy.FULL:
+            return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
+
+        if self.organization:
+            return ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL
+        return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
 
 
 class ApprovalService(UuidAuditedModel):

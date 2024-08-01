@@ -27,12 +27,11 @@ from paasng.bk_plugins.pluginscenter.models import (
     ApprovalService,
     PluginDefinition,
     PluginInstance,
-    PluginMarketInfo,
     PluginRelease,
+    PluginVisibleRange,
 )
 
 if typing.TYPE_CHECKING:
-    from paasng.bk_plugins.pluginscenter.models import PluginVisibleRange
     from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
 
 
@@ -71,14 +70,9 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     if current_stage.status != PluginReleaseStatus.INITIAL:
         raise ValueError("itsm stage is not an initialization state and cannot be triggered")
 
-    # 查询插件的市场信息，用户填充申请单据
-    market_info = None
-    if hasattr(plugin, "pluginmarketinfo"):
-        market_info = plugin.pluginmarketinfo
-
     # 组装提单数据,包含插件的基本信息和版本信息
     basic_fields = _get_basic_fields(pd, plugin)
-    advanced_fields = _get_advanced_fields(pd, plugin, version, market_info)
+    advanced_fields = _get_advanced_fields(pd, plugin, version)
     title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
     fields = basic_fields + advanced_fields + title_fields
 
@@ -99,6 +93,55 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     current_stage.status = PluginReleaseStatus.PENDING
     current_stage.itsm_detail = itsm_detail
     current_stage.save(update_fields=["status", "itsm_detail"])
+
+
+def submit_canary_release_ticket(
+    pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, operator: str
+) -> "ItsmDetail":
+    """提交灰度发布申请单据"""
+    current_stage = version.current_stage
+    if current_stage.status != PluginReleaseStatus.INITIAL:
+        raise ValueError("itsm stage is not an initialization state and cannot be triggered")
+    # 发布策略
+    release_strategy = version.latest_release_strategy
+    if not release_strategy:
+        raise ValueError(
+            "The current version does not have a release strategy set, so the gray approval process cannot be initiated."
+        )
+
+    # 可见范围
+    visible_range_obj, _c = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+    # 灰度发布在 ITSM 中展示的字段
+    canary_fields = [
+        # 发布策略的字段
+        {"key": "strategy_id", "value": release_strategy.id},
+        {"key": "strategy", "value": release_strategy.get_strategy_display()},
+        {"key": "strategy_bkci_project", "value": _get_bkci_project_display_name(release_strategy.bkci_project)},
+        {"key": "strategy_organization", "value": _get_organization_display_name(release_strategy.organization)},
+        # 可见范围的字段
+        {"key": "range_bkci_project", "value": _get_bkci_project_display_name(visible_range_obj.bkci_project)},
+        {"key": "range_organization", "value": _get_organization_display_name(visible_range_obj.organization)},
+    ]
+
+    # 组装提单数据,包含插件的基本信息和灰度发布信息
+    basic_fields = _get_basic_fields(pd, plugin)
+    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
+    fields = basic_fields + title_fields + canary_fields
+
+    # 查询上线审批服务ID
+    service_id = ApprovalService.objects.get(service_name=release_strategy.get_itsm_service_name()).service_id
+
+    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
+    paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
+    callback_url = (
+        f"{paas_url}/open/api/itsm/bkplugins/"
+        + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/strategy/{release_strategy.id}/"
+    )
+
+    # 提交 itsm 申请单据
+    client = ItsmClient()
+    itsm_detail = client.create_ticket(service_id, operator, callback_url, fields)
+    return itsm_detail
 
 
 def submit_visible_range_ticket(
@@ -170,6 +213,19 @@ def get_ticket_status(sn: str):
     }
 
 
+def is_itsm_ticket_closed(sn: str) -> bool:
+    """
+    ITSM 审批单据流程是否已经结束
+
+    :param sn: 审批单据 ID
+    """
+    client = ItsmClient()
+    ticket_status = client.get_ticket_status(sn)["current_status"]
+    if ticket_status in ItsmTicketStatus.completed_status():
+        return True
+    return False
+
+
 def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict]:
     """获取插件的基本字段信息，可用于创建申请提单 和 上线申请提单"""
     fields = [
@@ -203,7 +259,9 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
 
 
 def _get_advanced_fields(
-    pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease, market_info: Optional[PluginMarketInfo]
+    pd: PluginDefinition,
+    plugin: PluginInstance,
+    version: PluginRelease,
 ) -> List[dict]:
     """获取插件的版本、市场相关字段信息，可用于上线申请提单"""
     fields = [

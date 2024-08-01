@@ -151,6 +151,56 @@ class TestPluginApi:
         if status_code == 200:
             assert resp.json()["is_in_approval"] is True
 
+    @pytest.mark.parametrize(
+        (
+            "itsm_ticket_status",
+            "status_code",
+        ),
+        [
+            ("RUNNING", 400),
+            ("FINISHED", 200),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_upadate_release_strategy(
+        self,
+        api_client,
+        pd,
+        plugin,
+        release_strategy,
+        itsm_ticket_status,
+        status_code,
+        iam_policy_client,
+        gray_release_approval_service,
+    ):
+        release_strategy.itsm_detail = ItsmDetail(fields=[], sn="222", ticket_url="http://222")
+        release_strategy.save()
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release_strategy.release.id}/strategy/"
+        with mock.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.create_ticket",
+            return_value=ItsmDetail(fields=[], sn="1111", ticket_url="http://1111"),
+        ), mock.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.get_ticket_status",
+            return_value={"ticket_url": "https://xxxx", "current_status": itsm_ticket_status},
+        ):
+            resp = api_client.post(
+                url,
+                data={
+                    "strategy": "gray",
+                    "bkci_project": ["1111", "22222"],
+                    "organization": [
+                        {"id": 1, "type": "user", "name": "admin", "display_name": "admin"},
+                        {
+                            "id": 3,
+                            "type": "department",
+                            "name": "xxxx部门",
+                            "display_name": "xxxx部门",
+                        },
+                    ],
+                },
+            )
+        assert resp.status_code == status_code
+
 
 class TestSysApis:
     @pytest.mark.parametrize(

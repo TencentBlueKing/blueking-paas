@@ -160,6 +160,7 @@ class SubjectTypes(str, StructuredEnum):
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))
     PUBLISHER = EnumField("publisher", label=_("发布者"))
+    RELEASE_STRATEGY = EnumField("publisher", label=_("发布策略"))
 
 
 class PluginReleaseType(str, StructuredEnum):
@@ -169,7 +170,7 @@ class PluginReleaseType(str, StructuredEnum):
     TEST = EnumField("test", label=_("测试发布"))
 
 
-class PluginReleaseStrategy(str, StructuredEnum):
+class ReleaseStrategy(str, StructuredEnum):
     """插件发布策略"""
 
     GRAY = EnumField("gray", label=_("灰度发布"))
@@ -181,3 +182,12 @@ class StatusPollingMethod(str, StructuredEnum):
 
     API = EnumField("api", label=_("后台 API 轮询"))
     FRONTEND = EnumField("frontend", label=_("前端轮询，如通过 Iframe message 通信等"))
+
+
+class PluginRevisionType(str, StructuredEnum):
+    """代码版本类型"""
+
+    ALL = EnumField("all", label=_("不限制"))
+    MASTER = EnumField("master", label=_("仅可选择主分支发布"))
+    TAG = EnumField("tag", label=_("Tag 发布"))
+    TESTED_VERSION = EnumField("tested_version", label=_("已经测试通过的版本"))

@@ -160,7 +160,7 @@ class SubjectTypes(str, StructuredEnum):
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))
     PUBLISHER = EnumField("publisher", label=_("发布者"))
-    RELEASE_STRATEGY = EnumField("publisher", label=_("发布策略"))
+    RELEASE_STRATEGY = EnumField("release_strategy", label=_("发布策略"))
 
 
 class PluginReleaseType(str, StructuredEnum):

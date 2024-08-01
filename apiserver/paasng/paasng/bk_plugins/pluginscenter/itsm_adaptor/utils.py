@@ -128,9 +128,7 @@ def submit_canary_release_ticket(
     title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
     fields = basic_fields + title_fields + canary_fields
 
-    # 查询上线审批服务ID
     service_id = ApprovalService.objects.get(service_name=release_strategy.get_itsm_service_name()).service_id
-
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
     paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
     callback_url = (

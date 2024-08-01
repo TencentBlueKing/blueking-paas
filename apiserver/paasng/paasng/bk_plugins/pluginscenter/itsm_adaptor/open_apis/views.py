@@ -19,6 +19,7 @@ import logging
 from typing import List
 
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -112,13 +113,16 @@ class PluginCallBackApiViewSet(GenericViewSet):
         release = plugin.all_versions.get(pk=release_id)
         latest_release_strategy = release.latest_release_strategy
         if latest_release_strategy.id != release_strategy_id:
-            raise ValueError()
+            logging.warning(f"Not the latest release strategy for the current version:{release_id}")
+            raise ValidationError("Not the latest release strategy for the current version")
 
         serializer = serializers.ItsmApprovalSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         # 根据 itsm 的回调结果更新单据状态
         ticket_status = serializer.validated_data["current_status"]
         approve_result = serializer.validated_data["approve_result"]
+
+        logging.exception("itsm_canary_callback")
 
         # TODO 审批成功后，需要将灰度策略相关的数据同步给插件提供方
         if ticket_status == ItsmTicketStatus.FINISHED and approve_result:

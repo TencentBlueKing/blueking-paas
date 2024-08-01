@@ -23,7 +23,11 @@ from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, Plugi
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.views import PluginCallBackApiViewSet
-from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail, PluginVisibleRange
+from paasng.bk_plugins.pluginscenter.models.instances import (
+    ItsmDetail,
+    PluginRelease,
+    PluginVisibleRange,
+)
 
 pytestmark = pytest.mark.django_db
 PluginCallBackApiViewSet.authentication_classes = []  # type: ignore
@@ -308,3 +312,37 @@ class TestSysApis:
         else:
             assert visible_range_obj.bkci_project != new_bkci_project
             assert visible_range_obj.organization != new_organization
+
+    @pytest.mark.parametrize(
+        ("strategy", "current_status", "approve_result", "release_status"),
+        [
+            # 全量发布： 单据结束、审批结果为不同意， 则版本发布失败
+            ("full", ItsmTicketStatus.FINISHED.value, False, "failed"),
+            # 全量发布： 单据结束、审批结果为不同意， 则版本发布成功
+            ("full", ItsmTicketStatus.FINISHED.value, True, "successful"),
+            # 灰度发布： 单据结束、审批结果为不同意， 版本状态为发布中
+            ("gray", ItsmTicketStatus.FINISHED.value, False, "failed"),
+            # 灰度发布： 单据结束、审批结果为不同意， 版本状态为发布中
+            ("gray", ItsmTicketStatus.FINISHED.value, True, "pending"),
+        ],
+    )
+    def test_itsm_canry_release_callback(
+        self, api_client, pd, plugin, release_strategy, current_status, approve_result, strategy, release_status
+    ):
+        release_strategy.strategy = strategy
+        release_strategy.save()
+        callback_url = (
+            "/open/api/itsm/bkplugins/"
+            + f"{pd.identifier}/plugins/{plugin.id}/releases/{release_strategy.release.id}/strategy/{release_strategy.id}/"
+        )
+
+        callback_data = CALLBACK_DATA
+        callback_data["current_status"] = current_status
+        callback_data["approve_result"] = approve_result
+        resp_data = api_client.post(callback_url, callback_data).json()
+
+        assert resp_data["code"] == 0
+        assert resp_data["result"] is True
+
+        release = PluginRelease.objects.get(id=release_strategy.release.id)
+        assert release.status == release_status

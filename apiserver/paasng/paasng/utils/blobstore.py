@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""BlobStore client
-"""
+"""BlobStore client"""
+
 import json
 import logging
 import urllib.parse
@@ -119,8 +119,8 @@ def get_storage_by_bucket(bucket: str, store_type: Optional[str] = None):
             error_code = int(e.response["Error"]["Code"])
             if error_code == 404:
                 s3.create_bucket(Bucket=bucket)
-            else:
-                raise
+        except Exception as e:
+            logger.warning("Error getting bucket %s, error: %s, further actions on it might fail.", bucket, e)
 
         return RGWBoto3Storage(
             bucket=bucket,

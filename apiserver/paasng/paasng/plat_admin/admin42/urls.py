@@ -410,9 +410,7 @@ urlpatterns = [
     # 用户管理-用户列表 API
     url(
         r"^api/accountmgr/userprofiles/$",
-        accountmgr.UserProfilesManageViewSet.as_view(
-            {"get": "list", "post": "bulk_create", "put": "update", "delete": "destroy"}
-        ),
+        accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
         name="admin.accountmgr.userprofile.api",
     ),
     # 用户管理-用户特性管理

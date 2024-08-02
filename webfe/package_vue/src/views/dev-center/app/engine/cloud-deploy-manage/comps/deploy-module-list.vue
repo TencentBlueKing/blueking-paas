@@ -288,10 +288,6 @@ export default {
     disableModuleTitle() {
       return this.$t('是否下架 {n} 模块', { n: this.curModuleId });
     },
-    // 普通应用app
-    isDefaultApp() {
-      return this.curAppInfo.application.type === 'default';
-    },
   },
 
   watch: {
@@ -406,8 +402,8 @@ export default {
 
     // 获取部署版本信息
     async getModuleReleaseInfo(listLoading = true) {
-      // 避免切换切换应用时，普通应用请求当前list接口
-      if (this.isDefaultApp) return;
+      // 非云原生应用，不能请求当前list接口
+      if (!this.isCloudNativeApp) return;
       // 如果已经有了timer则return 打开了侧边栏也不需要watch
       if (this.intervalTimer || this.isShowSideslider || this.isDialogShowSideslider) return;
       try {

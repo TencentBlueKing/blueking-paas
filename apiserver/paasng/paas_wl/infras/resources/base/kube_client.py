@@ -21,7 +21,7 @@ from typing import Any, Dict
 from kubernetes.dynamic import DynamicClient, Resource
 from kubernetes.dynamic.discovery import LazyDiscoverer as _LazyDiscoverer
 from kubernetes.dynamic.discovery import ResourceGroup
-from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError, ResourceNotUniqueError
+from kubernetes.dynamic.exceptions import DynamicApiError, NotFoundError, ResourceNotFoundError, ResourceNotUniqueError
 
 logger = logging.getLogger(__name__)
 
@@ -124,8 +124,11 @@ class CoreDynamicClient(DynamicClient):
         )
 
     def request(self, method, path, body=None, **params):
-        # TODO: 包装转换请求异常
-        return super().request(method, path, body=body, **params)
+        try:
+            return super().request(method, path, body=body, **params)
+        except DynamicApiError as e:
+            # 去除原始异常中的 tb 信息, 这些信息不适合直接抛出
+            raise type(e)(e, tb=None)
 
 
 def patch_resource_field_cls():

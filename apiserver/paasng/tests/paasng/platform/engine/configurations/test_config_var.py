@@ -33,7 +33,7 @@ from paasng.platform.engine.configurations.config_var import (
     get_env_variables,
 )
 from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
-from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
 from paasng.platform.modules.models.module import Module
 from tests.utils.helpers import override_region_configs
 
@@ -146,6 +146,7 @@ class TestGetEnvVariables:
         assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" in env_vars
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 class TestBuiltInEnvVars:
     @pytest.mark.parametrize(("provide_env_vars_platform", "contain_bk_envs"), [(True, True), (False, True)])
     def test_bk_platform_envs(self, bk_app, provide_env_vars_platform, contain_bk_envs):
@@ -182,6 +183,14 @@ class TestBuiltInEnvVars:
             if key != AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value
         ]
         assert set(runtime_env_keys).issubset(config_vars.keys())
+
+    def test_param_include_custom_builtin_config_vars(self, bk_stag_env):
+        BuiltinConfigVar.objects.create(key="FOO", value="bar")
+        # test overwrite
+        BuiltinConfigVar.objects.create(key="LOGIN_URL", value="bar")
+        env_vars = get_env_variables(bk_stag_env)
+        assert env_vars["BKPAAS_LOGIN_URL"] == "bar"
+        assert env_vars["BKPAAS_FOO"] == "bar"
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

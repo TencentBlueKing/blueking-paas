@@ -120,7 +120,9 @@ class TestAppDeclarativeControllerCreation:
             user_profile.save()
 
             app_json = builder.make_app_desc(
-                random_name, decorator.with_module("default", True), decorator.with_region(region)
+                random_name,
+                decorator.with_module("default", True),
+                decorator.with_region(region),
             )
             controller = AppDeclarativeController(bk_user)
             if not is_success:
@@ -322,7 +324,7 @@ class TestServicesField:
             decorator.with_module(
                 module_name=random_name,
                 is_default=True,
-                module_spec={"addons": [{"name": "mysql"}]},
+                module_spec={"addons": [{"name": "mysql"}], "processes": []},
             ),
         )
 
@@ -361,7 +363,7 @@ class TestServicesField:
         decorator.with_module(
             random_name + "1",
             is_default=False,
-            module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name}]},
+            module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name}], "processes": []},
         )(app_desc)
 
         controller = AppDeclarativeController(bk_user)
@@ -380,7 +382,7 @@ class TestServicesField:
         decorator.with_module(
             random_name + "1",
             is_default=False,
-            module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name + "2"}]},
+            module_spec={"addons": [{"name": "mysql", "sharedFromModule": random_name + "2"}], "processes": []},
         )(app_desc)
         with pytest.raises(DescriptionValidationError):
             get_app_description(app_desc)

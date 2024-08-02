@@ -31,5 +31,5 @@ def sync_build(module: Module, build: AppBuildConfig):
         cfg.image_repository = f"{parsed.domain}/{parsed.name}"
         update_fields.append("image_repository")
 
-    cfg.image_credential_name = build.image_credential_name
+    cfg.image_credential_name = build.image_credentials_name
     cfg.save(update_fields=update_fields)

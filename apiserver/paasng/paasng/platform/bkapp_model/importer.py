@@ -20,7 +20,8 @@ from typing import Dict
 import yaml
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.bkapp_model.serializers import v1alpha2
+from paasng.platform.bkapp_model.entities import v1alpha2 as v1alpha2_entity
+from paasng.platform.bkapp_model.serializers import v1alpha2 as v1alpha2_slz
 from paasng.platform.bkapp_model.syncer import (
     sync_addons,
     sync_build,
@@ -52,42 +53,54 @@ def import_manifest(module: Module, input_data: Dict, reset_overlays_when_absent
         not found in the input manifest, default is True.
     :raises ManifestImportError: When unexpected error happened.
     """
-    spec_slz = v1alpha2.BkAppSpecInputSLZ(data=input_data["spec"])
+    spec_slz = v1alpha2_slz.BkAppSpecInputSLZ(data=input_data["spec"])
     try:
         spec_slz.is_valid(raise_exception=True)
     except ValidationError as e:
         raise ManifestImportError.from_validation_error(e)
 
-    validated_data = spec_slz.validated_data
+    spec_entity: v1alpha2_entity.BkAppSpec = spec_slz.validated_data
+    import_bkapp_spec_entity(module, spec_entity, reset_overlays_when_absent)
 
+
+def import_bkapp_spec_entity(
+    module: Module, spec_entity: v1alpha2_entity.BkAppSpec, reset_overlays_when_absent: bool = True
+):
+    """Import a BkApp spec entity to the current module, will overwrite existing data.
+
+    :param module: The module object.
+    :param spec_entity: BkApp spec entity.
+    :param reset_overlays_when_absent: Whether to reset overlay data if the field is
+        not found in the input manifest, default is True.
+    """
     env_vars, overlay_env_vars = [], []
-    mounts = validated_data.get("mounts", [])
-    if configuration := validated_data.get("configuration", {}):
-        env_vars = configuration.get("env", [])
+    mounts = spec_entity.mounts or []
+    if configuration := spec_entity.configuration:
+        env_vars = configuration.env or []
 
     overlay_replicas, overlay_res_quotas, overlay_autoscaling, overlay_mounts = [], [], [], []
-    if env_overlay := validated_data.get("env_overlay", {}):
-        overlay_replicas = env_overlay.get("replicas", [])
-        overlay_res_quotas = env_overlay.get("res_quotas", [])
-        overlay_env_vars = env_overlay.get("env_variables", [])
-        overlay_autoscaling = env_overlay.get("autoscaling", [])
-        overlay_mounts = env_overlay.get("mounts", [])
+    if env_overlay := spec_entity.env_overlay:
+        overlay_replicas = env_overlay.replicas or []
+        overlay_res_quotas = env_overlay.res_quotas or []
+        overlay_env_vars = env_overlay.env_variables or []
+        overlay_autoscaling = env_overlay.autoscaling or []
+        overlay_mounts = env_overlay.mounts or []
 
     # Run sync functions
-    sync_processes(module, processes=validated_data["processes"])
-    if build := validated_data.get("build"):
+    sync_processes(module, processes=spec_entity.processes)
+    if build := spec_entity.build:
         sync_build(module, build)
-    if hooks := validated_data.get("hooks"):
+    if hooks := spec_entity.hooks:
         sync_hooks(module, hooks)
     if env_vars or overlay_env_vars:
         sync_env_vars(module, env_vars, overlay_env_vars)
-    if addons := validated_data.get("addons"):
+    if addons := spec_entity.addons:
         sync_addons(module, addons)
     if mounts or overlay_mounts:
         sync_mounts(module, mounts, overlay_mounts)
-    if svc_discovery := validated_data.get("svc_discovery"):
+    if svc_discovery := spec_entity.svc_discovery:
         sync_svc_discovery(module, svc_discovery)
-    if domain_resolution := validated_data.get("domain_resolution"):
+    if domain_resolution := spec_entity.domain_resolution:
         sync_domain_resolution(module, domain_resolution)
 
     # Finish the import if no overlay data is found and reset flag is False

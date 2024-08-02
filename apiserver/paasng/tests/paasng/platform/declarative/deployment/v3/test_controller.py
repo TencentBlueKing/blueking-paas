@@ -20,10 +20,7 @@ import pytest
 
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
-from paasng.platform.declarative.deployment.resources import SvcDiscovery
-from paasng.platform.declarative.deployment.svc_disc import (
-    BkSaaSEnvVariableFactory,
-)
+from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.declarative.deployment.validations.v3 import DeploymentDescSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
@@ -92,30 +89,12 @@ class TestEnvVariablesField:
                         {"name": "BAZ", "value": "prod", "envName": "prod"},
                     ]
                 },
+                "processes": [],
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
-        with pytest.raises(DescriptionValidationError, match="spec: configuration -> env"):
+        with pytest.raises(DescriptionValidationError, match="spec.configuration.env"):
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-
-    def test_spec(self, bk_deployment):
-        json_data = builder.make_module(
-            module_name="test",
-            module_spec={
-                "configuration": {"env": [{"name": "FOO", "value": "1"}, {"name": "BAR", "value": "2"}]},
-                "envOverlay": {
-                    "envVariables": [
-                        {"name": "BAZ", "value": "stag", "envName": "stag"},
-                        {"name": "BAZ", "value": "prod", "envName": "prod"},
-                    ]
-                },
-            },
-        )
-        controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert len(desc_obj.get_env_variables()) == 3
 
     def test_preset_environ_vars(self, bk_module, bk_deployment):
         json_data = builder.make_module(
@@ -128,6 +107,7 @@ class TestEnvVariablesField:
                         {"name": "BAZ", "value": "prod", "envName": "prod"},
                     ]
                 },
+                "processes": [],
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
@@ -153,25 +133,12 @@ class TestSvcDiscoveryField:
         json_data = builder.make_module(
             module_name="test",
             module_spec={
-                "svcDiscovery": {"bkSaaS": [{"bkAppCode": "foo-app"}, {"bkAppCode": "bar-app", "moduleName": "api"}]}
+                "svcDiscovery": {"bkSaaS": [{"bkAppCode": "foo-app"}, {"bkAppCode": "bar-app", "moduleName": "api"}]},
+                "processes": [],
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-
-    def test_store(self, bk_deployment):
-        self.apply_config(bk_deployment)
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-
-        assert desc_obj.get_svc_discovery() == cattr.structure(
-            {
-                "bk_saas": [
-                    {"bk_app_code": "foo-app", "module_name": None},
-                    {"bk_app_code": "bar-app", "module_name": "api"},
-                ]
-            },
-            SvcDiscovery,
-        )
 
     def test_as_env_vars_domain(self, bk_deployment):
         with cluster_ingress_config(replaced_config={"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}):
@@ -220,7 +187,7 @@ class TestHookField:
             (
                 builder.make_module(
                     module_name="test",
-                    module_spec={"hooks": {"preRelease": {"command": [], "args": ["echo", "1"]}}},
+                    module_spec={"hooks": {"preRelease": {"command": [], "args": ["echo", "1"]}}, "processes": []},
                 ),
                 HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "1"]}, Hook)]),
             ),
@@ -244,7 +211,7 @@ class TestHookField:
             (
                 builder.make_module(
                     module_name="test",
-                    module_spec={"hooks": {"preRelease": {"command": [], "args": ["echo", "2"]}}},
+                    module_spec={"hooks": {"preRelease": {"command": [], "args": ["echo", "2"]}}, "processes": []},
                 ),
                 HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "2"]}, Hook)]),
             ),
@@ -269,7 +236,7 @@ class TestHookField:
             (
                 builder.make_module(
                     module_name="test",
-                    module_spec={"hooks": {"preRelease": {"command": [], "args": ["echo", "2"]}}},
+                    module_spec={"hooks": {"preRelease": {"command": [], "args": ["echo", "2"]}}, "processes": []},
                 ),
                 HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "2"]}, Hook)]),
             ),

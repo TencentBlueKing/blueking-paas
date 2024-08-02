@@ -20,7 +20,8 @@ from typing import Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.bkapp_model.constants import ImagePullPolicy, ResQuotaPlan
+from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
 
 
@@ -56,11 +57,9 @@ class SvcDiscEntryBkSaaS(BaseModel):
 
     bk_app_code: str
     module_name: Optional[str] = None
-    # camel case 为了兼容 db 旧数据
-    bkAppCode: Optional[str] = None
-    moduleName: Optional[str] = None
 
     def __init__(self, **data):
+        # db 旧数据使用了 camel case
         if bk_app_code := data.get("bkAppCode"):
             data["bk_app_code"] = bk_app_code
 
@@ -168,7 +167,7 @@ class EnvVarOverlay(BaseModel):
 class AppBuildConfig(BaseModel):
     image: Optional[str] = None
     image_pull_policy: str = ImagePullPolicy.IF_NOT_PRESENT.value
-    image_credential_name: Optional[str] = None
+    image_credentials_name: Optional[str] = None
     dockerfile: Optional[str] = None
     build_target: Optional[str] = None
     args: Optional[Dict[str, str]] = None
@@ -189,6 +188,13 @@ class HookCmd(BaseModel):
 class Hooks(BaseModel):
     pre_release: Optional[HookCmd] = None
 
+    def __init__(self, **data):
+        # db 旧数据使用了 camel case
+        if pre_release := data.get("preRelease"):
+            data["pre_release"] = pre_release
+
+        super().__init__(**data)
+
 
 class AddonSpec(BaseModel):
     name: str
@@ -204,7 +210,7 @@ class Addon(BaseModel):
     """
 
     name: str
-    specs: List[AddonSpec] = Field(default_factory=list)
+    specs: Optional[List[AddonSpec]] = Field(default_factory=list)
     shared_from_module: Optional[str] = None
 
 
@@ -230,6 +236,7 @@ class TCPSocketAction(BaseModel):
     host: Optional[str] = None
 
 
+@register
 class ProbeHandler(BaseModel):
     exec: Optional[ExecAction] = None
     http_get: Optional[HTTPGetAction] = None
@@ -261,17 +268,17 @@ class ProbeSet(BaseModel):
 class Process(BaseModel):
     name: str
 
-    command: Optional[List[str]] = None
-    args: Optional[List[str]] = None
+    command: Optional[List[str]] = Field(default_factory=list)
+    args: Optional[List[str]] = Field(default_factory=list)
     # proc_command 表示单行 shell 命令, 与 command/args 二选一, 用于设置 Procfile 文件中进程的 command
     proc_command: Optional[str] = None
-    port: Optional[int] = None
+
+    target_port: Optional[int] = None
 
     # `None` value means the replicas is not specified.
     replicas: Optional[int] = None
-    plan_name: Optional[str] = None
-    autoscaling: bool = False
-    scaling_config: Optional[AutoscalingConfig] = None
+    res_quota_plan: Optional[ResQuotaPlan] = None
+    autoscaling: Optional[AutoscalingConfig] = None
 
     probes: Optional[ProbeSet] = None
 
@@ -284,3 +291,9 @@ class Process(BaseModel):
             data["args"] = shlex.split(proc_command)
 
         super().__init__(**data)
+
+    def get_proc_command(self) -> str:
+        """get_proc_command: 生成 Procfile 文件中对应的命令行"""
+        if self.proc_command:
+            return self.proc_command
+        return generate_bash_command_with_tokens(self.command or [], self.args or [])

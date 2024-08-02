@@ -96,11 +96,11 @@ class ProbeSLZ(serializers.Serializer):
     exec = ExecProbeActionSLZ(help_text="exec 探活配置", required=False, allow_null=True)
     http_get = HTTPGetProbeActionSLZ(help_text="http get 探活配置", required=False, allow_null=True)
     tcp_socket = TCPSocketProbeActionSLZ(help_text="tcp socket 探活配置", required=False, allow_null=True)
-    initial_delay_seconds = serializers.IntegerField(help_text="初次探测延迟时间")
-    timeout_seconds = serializers.IntegerField(help_text="探测超时时间")
-    period_seconds = serializers.IntegerField(help_text="探测周期")
-    success_threshold = serializers.IntegerField(help_text="成功阈值")
-    failure_threshold = serializers.IntegerField(help_text="失败阈值")
+    initial_delay_seconds = serializers.IntegerField(help_text="初次探测延迟时间", default=0)
+    timeout_seconds = serializers.IntegerField(help_text="探测超时时间", default=1)
+    period_seconds = serializers.IntegerField(help_text="探测周期", default=10)
+    success_threshold = serializers.IntegerField(help_text="成功阈值", default=1)
+    failure_threshold = serializers.IntegerField(help_text="失败阈值", default=3)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         probe_action_count = 0
@@ -133,7 +133,6 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="进程名称")
 
     image = serializers.CharField(help_text="镜像仓库/镜像地址", allow_null=True, required=False)
-    image_credential_name = serializers.CharField(help_text="镜像凭证", allow_null=True, required=False)
     command = serializers.ListSerializer(
         child=serializers.CharField(), help_text="启动命令", default=list, allow_null=True
     )

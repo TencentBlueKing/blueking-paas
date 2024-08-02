@@ -21,36 +21,16 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.cnative.specs.constants import (
-    ApiVersion,
-    MountEnvName,
-    ResQuotaPlan,
-    VolumeSourceType,
-)
-from paas_wl.bk_app.cnative.specs.crd.bk_app import (
-    BkAppAddon,
-    BkAppHooks,
-    BkAppResource,
-    BkAppSpec,
-    EnvOverlay,
-    EnvVar,
-    EnvVarOverlay,
-    HostAlias,
-    MountOverlay,
-    ObjectMetadata,
-    SvcDiscEntryBkSaaS,
-    VolumeSource,
-)
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
+from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.manifest import (
     DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
@@ -83,10 +63,10 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
-def blank_resource() -> BkAppResource:
+def blank_resource() -> crd.BkAppResource:
     """A blank resource object."""
-    return BkAppResource(
-        apiVersion=ApiVersion.V1ALPHA2, metadata=ObjectMetadata(name="a-blank-resource"), spec=BkAppSpec()
+    return crd.BkAppResource(
+        apiVersion=ApiVersion.V1ALPHA2, metadata=ObjectMetadata(name="a-blank-resource"), spec=crd.BkAppSpec()
     )
 
 
@@ -133,7 +113,7 @@ class TestAddonsManifestConstructor:
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
         assert len(blank_resource.spec.addons) == 1
-        assert blank_resource.spec.addons[0] == BkAppAddon(name="mysql")
+        assert blank_resource.spec.addons[0] == crd.BkAppAddon(name="mysql")
 
     def test_with_shared_addons(self, bk_module, bk_module_2, blank_resource, local_service):
         # Let bk_module share a service with bk_module_2
@@ -143,7 +123,7 @@ class TestAddonsManifestConstructor:
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
         assert len(blank_resource.spec.addons) == 1
-        assert blank_resource.spec.addons[0] == BkAppAddon(name="mysql", sharedFromModule=bk_module_2.name)
+        assert blank_resource.spec.addons[0] == crd.BkAppAddon(name="mysql", sharedFromModule=bk_module_2.name)
 
 
 class TestEnvVarsManifestConstructor:
@@ -159,10 +139,10 @@ class TestEnvVarsManifestConstructor:
         )
 
         EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.configuration.env == [EnvVar(name="BAR", value="2")]
+        assert blank_resource.spec.configuration.env == [crd.EnvVar(name="BAR", value="2")]
         assert blank_resource.spec.envOverlay.envVariables == [
-            EnvVarOverlay(envName="stag", name="BAR", value="1"),
-            EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="BAR", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
         ]
 
     def test_preset(self, bk_module, bk_stag_env, blank_resource):
@@ -171,10 +151,10 @@ class TestEnvVarsManifestConstructor:
         G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
 
         EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="1")]
+        assert blank_resource.spec.configuration.env == [crd.EnvVar(name="GLOBAL", value="1")]
         assert blank_resource.spec.envOverlay.envVariables == [
-            EnvVarOverlay(envName="prod", name="PROD", value="1"),
-            EnvVarOverlay(envName="stag", name="STAG", value="1"),
+            crd.EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="STAG", value="1"),
         ]
 
     def test_override_preset(self, bk_module, bk_stag_env, blank_resource):
@@ -193,11 +173,11 @@ class TestEnvVarsManifestConstructor:
         )
 
         EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="2")]
+        assert blank_resource.spec.configuration.env == [crd.EnvVar(name="GLOBAL", value="2")]
         assert blank_resource.spec.envOverlay.envVariables == [
-            EnvVarOverlay(envName="prod", name="PROD", value="1"),
-            EnvVarOverlay(envName="stag", name="STAG", value="2"),
-            EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
+            crd.EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="STAG", value="2"),
+            crd.EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
         ]
 
 
@@ -328,7 +308,7 @@ class TestMountsManifestConstructor:
             module_id=bk_module.id,
             name="nginx",
             source_type=VolumeSourceType.ConfigMap,
-            source_config=VolumeSource(configMap=ConfigMapSourceSpec(name="nginx-configmap")),
+            source_config=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
         )
         # Create 2 mount objects
         create_mount(mount_path="/etc/conf", environment_name=MountEnvName.GLOBAL.value)
@@ -336,18 +316,18 @@ class TestMountsManifestConstructor:
 
         MountsManifestConstructor().apply_to(blank_resource, bk_module)
         assert blank_resource.spec.mounts == [
-            MountSpec(
+            crd.Mount(
                 mountPath="/etc/conf",
                 name="nginx",
-                source=VolumeSource(configMap=ConfigMapSourceSpec(name="nginx-configmap")),
+                source=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
             )
         ]
         assert blank_resource.spec.envOverlay.mounts == [
-            MountOverlay(
+            crd.MountOverlay(
                 envName="stag",
                 mountPath="/etc/conf_stag",
                 name="nginx",
-                source=VolumeSource(configMap=ConfigMapSourceSpec(name="nginx-configmap")),
+                source=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
             )
         ]
 
@@ -356,7 +336,7 @@ class TestHooksManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, command=["python"], args=["hook.py"])
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks(
+        assert blank_resource.spec.hooks == crd.BkAppHooks(
             preRelease={
                 "command": ["python"],
                 "args": ["hook.py"],
@@ -366,7 +346,7 @@ class TestHooksManifestConstructor:
     def test_proc_command(self, bk_module, blank_resource):
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="python hook.py")
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks(
+        assert blank_resource.spec.hooks == crd.BkAppHooks(
             preRelease={
                 "command": ["python"],
                 "args": ["hook.py"],
@@ -375,12 +355,12 @@ class TestHooksManifestConstructor:
 
     def test_not_found(self, bk_module, blank_resource):
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks()
+        assert blank_resource.spec.hooks == crd.BkAppHooks()
 
     def test_empty_command(self, bk_module, blank_resource):
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, args=["hook.py"])
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks(preRelease={"args": ["hook.py"]})
+        assert blank_resource.spec.hooks == crd.BkAppHooks(preRelease={"args": ["hook.py"]})
 
 
 class TestSvcDiscoveryManifestConstructor:
@@ -396,11 +376,11 @@ class TestSvcDiscoveryManifestConstructor:
         )
 
         SvcDiscoveryManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.svcDiscovery == SvcDiscConfigSpec(
+        assert blank_resource.spec.svcDiscovery == crd.SvcDiscConfig(
             bkSaaS=[
-                SvcDiscEntryBkSaaS(bkAppCode="foo"),
-                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
-                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
+                crd.SvcDiscEntryBkSaaS(bkAppCode="foo"),
+                crd.SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
+                crd.SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
             ],
         )
 
@@ -424,10 +404,10 @@ class TestDomainResolutionManifestConstructor:
         )
 
         DomainResolutionManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.domainResolution == DomainResolutionSpec(
+        assert blank_resource.spec.domainResolution == crd.DomainResolution(
             nameservers=["192.168.1.3", "192.168.1.4"],
             hostAliases=[
-                HostAlias(
+                crd.HostAlias(
                     ip="1.1.1.1",
                     hostnames=[
                         "bk_app_code_test",
@@ -500,9 +480,9 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
 def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
     custom_login_url = generate_random_string()
 
-    blank_resource.spec.envOverlay = EnvOverlay()
+    blank_resource.spec.envOverlay = crd.EnvOverlay()
     blank_resource.spec.envOverlay.envVariables = [
-        EnvVarOverlay(name="BK_LOGIN_URL", value=custom_login_url, envName="stag")
+        crd.EnvVarOverlay(name="BK_LOGIN_URL", value=custom_login_url, envName="stag")
     ]
 
     apply_builtin_env_vars(blank_resource, bk_stag_env)

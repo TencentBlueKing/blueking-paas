@@ -17,7 +17,7 @@
 
 from typing import Any, Dict, List
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
+from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.models import Module
@@ -41,8 +41,9 @@ def sync_processes(module: Module, processes: List[Process]) -> CommonSyncResult
             "command": process.command,
             "args": process.args,
             "proc_command": process.proc_command,
-            "port": process.port,
-            "plan_name": process.plan_name or ResQuotaPlan.P_DEFAULT,
+            "port": process.target_port,
+            "plan_name": process.res_quota_plan or ResQuotaPlan.P_DEFAULT,
+            "probes": process.probes,
         }
 
         # When the replicas value is None, only update the data if the process appears
@@ -53,9 +54,8 @@ def sync_processes(module: Module, processes: List[Process]) -> CommonSyncResult
         else:
             defaults["target_replicas"] = process.replicas
 
-        defaults.update(
-            {"autoscaling": process.autoscaling, "scaling_config": process.scaling_config, "probes": process.probes}
-        )
+        if process.autoscaling:
+            defaults.update({"autoscaling": True, "scaling_config": process.autoscaling})
 
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
 

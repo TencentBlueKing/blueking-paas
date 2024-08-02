@@ -18,8 +18,8 @@ import copy
 
 import pytest
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
 from paas_wl.bk_app.cnative.specs.models import Mount
+from paasng.platform.bkapp_model.constants import ResQuotaPlan, ScalingPolicy
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, SvcDiscEntryBkSaaS
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer import import_manifest

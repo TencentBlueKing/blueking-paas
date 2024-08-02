@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,23 +15,4 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from typing import List
-
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppAddon
-from paasng.platform.modules.models import Module
-
-from .entities import CommonImportResult
-
-logger = logging.getLogger(__name__)
-
-
-def import_addons(module: Module, addons: List[BkAppAddon]) -> CommonImportResult:
-    """Import addon configs, existing services that is not in the input list may be removed.
-
-    :param addons: The addons.
-    :return: A result object.
-    """
-    # TODO: Implement import for addons
-    logger.warning("Import addons is not implemented, skip.")
-    return CommonImportResult()
+from .entities import *  # noqa: F401

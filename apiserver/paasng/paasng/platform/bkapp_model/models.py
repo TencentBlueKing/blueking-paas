@@ -25,7 +25,6 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, HostAlias, ProbeSet, SvcDiscEntryBkSaaS
-from paasng.platform.declarative.deployment.resources import BkSaaSItem
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import DeployHookType
@@ -266,5 +265,5 @@ def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     if not svc_disc.bk_saas:
         return {}
     return BkSaaSEnvVariableFactory(
-        [BkSaaSItem(bk_app_code=item.bkAppCode, module_name=item.moduleName) for item in svc_disc.bk_saas]
+        [SvcDiscEntryBkSaaS(bk_app_code=item.bk_app_code, module_name=item.module_name) for item in svc_disc.bk_saas]
     ).make()

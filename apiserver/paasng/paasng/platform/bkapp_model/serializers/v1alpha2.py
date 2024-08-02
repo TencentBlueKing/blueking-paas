@@ -17,8 +17,7 @@
 
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
-from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.bkapp_model.constants import ImagePullPolicy, ResQuotaPlan, ScalingPolicy
 from paasng.platform.bkapp_model.entities import (
     Addon,
     AppBuildConfig,
@@ -33,6 +32,7 @@ from paasng.platform.bkapp_model.entities import (
     ReplicasOverlay,
     ResQuotaOverlay,
     SvcDiscConfig,
+    v1alpha2,
 )
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
@@ -178,7 +178,7 @@ class BuildInputSLZ(serializers.Serializer):
         choices=ImagePullPolicy.get_choices(), default=ImagePullPolicy.IF_NOT_PRESENT, source="image_pull_policy"
     )
     imageCredentialsName = serializers.CharField(
-        allow_null=True, default=None, allow_blank=True, source="image_credential_name"
+        allow_null=True, default=None, allow_blank=True, source="image_credentials_name"
     )
 
     def to_internal_value(self, data) -> AppBuildConfig:
@@ -218,11 +218,13 @@ class ProbeInputSLZ(serializers.Serializer):
     tcpSocket = TCPSocketActionInputSLZ(
         help_text="tcp socket 探活配置", required=False, allow_null=True, source="tcp_socket"
     )
-    initialDelaySeconds = serializers.IntegerField(help_text="初次探测延迟时间", source="initial_delay_seconds")
-    timeoutSeconds = serializers.IntegerField(help_text="探测超时时间", source="timeout_seconds")
-    periodSeconds = serializers.IntegerField(help_text="探测周期", source="period_seconds")
-    successThreshold = serializers.IntegerField(help_text="成功阈值", source="success_threshold")
-    failureThreshold = serializers.IntegerField(help_text="失败阈值", source="failure_threshold")
+    initialDelaySeconds = serializers.IntegerField(
+        help_text="初次探测延迟时间", source="initial_delay_seconds", default=0
+    )
+    timeoutSeconds = serializers.IntegerField(help_text="探测超时时间", source="timeout_seconds", default=1)
+    periodSeconds = serializers.IntegerField(help_text="探测周期", source="period_seconds", default=10)
+    successThreshold = serializers.IntegerField(help_text="成功阈值", source="success_threshold", default=1)
+    failureThreshold = serializers.IntegerField(help_text="失败阈值", source="failure_threshold", default=3)
 
 
 class ProbeSetInputSLZ(serializers.Serializer):
@@ -239,22 +241,19 @@ class ProcessInputSLZ(serializers.Serializer):
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0, allow_null=True, default=None)
     resQuotaPlan = serializers.ChoiceField(
-        choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="plan_name"
+        choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
     )
-    targetPort = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None, source="port")
+    targetPort = serializers.IntegerField(
+        min_value=1, max_value=65535, allow_null=True, default=None, source="target_port"
+    )
     command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
+    procCommand = serializers.CharField(allow_null=True, required=False, source="proc_command")
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
 
     def to_internal_value(self, data) -> Process:
         d = super().to_internal_value(data)
-
-        scaling_config = d.pop("autoscaling", None)
-        if scaling_config:
-            d["scaling_config"] = scaling_config
-            d["autoscaling"] = True
-
         return Process(**d)
 
 
@@ -264,6 +263,7 @@ class HooksInputSLZ(serializers.Serializer):
     class HookInputSLZ(serializers.Serializer):
         command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
         args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
+        procCommand = serializers.CharField(allow_null=True, required=False, source="proc_command")
 
     preRelease = HookInputSLZ(allow_null=True, default=None, source="pre_release")
 
@@ -315,3 +315,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     envOverlay = EnvOverlayInputSLZ(required=False, source="env_overlay")
     svcDiscovery = ServiceDiscoveryInputSLZ(required=False, source="svc_discovery")
     domainResolution = DomainResolutionInputSLZ(required=False, source="domain_resolution")
+
+    def to_internal_value(self, data) -> v1alpha2.BkAppSpec:
+        d = super().to_internal_value(data)
+        return v1alpha2.BkAppSpec(**d)

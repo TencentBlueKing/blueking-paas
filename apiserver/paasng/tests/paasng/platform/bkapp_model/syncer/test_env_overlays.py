@@ -18,7 +18,7 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
+from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     AutoscalingOverlay,
@@ -149,7 +149,7 @@ class Test__sync_proc_env_overlay:
             bk_module,
             proc_web.name,
             ProcEnvOverlay(
-                env_nam="prod",
+                env_name="prod",
                 target_replicas=2,
                 autoscaling=True,
                 scaling_config={"min_replicas": 1, "max_replicas": 10, "policy": "default"},

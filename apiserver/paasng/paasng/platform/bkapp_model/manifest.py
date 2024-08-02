@@ -40,35 +40,9 @@ from paas_wl.bk_app.cnative.specs.constants import (
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
     MountEnvName,
-    ResQuotaPlan,
 )
-from paas_wl.bk_app.cnative.specs.crd.bk_app import (
-    AutoscalingOverlay,
-    AutoscalingSpec,
-    BkAppAddon,
-    BkAppBuildConfig,
-    BkAppHooks,
-    BkAppProcess,
-    BkAppResource,
-    BkAppSpec,
-    EnvOverlay,
-    EnvVar,
-    EnvVarOverlay,
-    ExecAction,
-    Hook,
-    HTTPGetAction,
-    HTTPHeader,
-    MountOverlay,
-    ObjectMetadata,
-    Probe,
-    ProbeSet,
-    ReplicasOverlay,
-    ResQuotaOverlay,
-    TCPSocketAction,
-)
-from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
+from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
+from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
@@ -77,8 +51,8 @@ from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
-from paasng.platform.bkapp_model.entities import Probe as ProbeConfig
+from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, ResQuotaPlan
+from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
@@ -99,6 +73,7 @@ from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
+from paasng.utils.camel_converter import dict_to_camel
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +82,7 @@ class ManifestConstructor(ABC):
     """Construct the manifest for bk_app model, it is usually only responsible for a small part of the manifest."""
 
     @abstractmethod
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         """Apply current constructor to the model resource object.
 
         :param model_res: The bkapp model resource object.
@@ -120,25 +95,25 @@ class ManifestConstructor(ABC):
 class AddonsManifestConstructor(ManifestConstructor):
     """Construct the "addons" part."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         annot_names = []
 
         # TODO: Add specs support
         # Process bound services
         for svc in mixed_service_mgr.list_binded(module):
             annot_names.append(svc.name)
-            model_res.spec.addons.append(BkAppAddon(name=svc.name))
+            model_res.spec.addons.append(crd.BkAppAddon(name=svc.name))
 
         # Process shared services
         for info in ServiceSharingManager(module).list_all_shared_info():
             annot_names.append(info.service.name)
-            model_res.spec.addons.append(BkAppAddon(name=info.service.name, sharedFromModule=info.ref_module.name))
+            model_res.spec.addons.append(crd.BkAppAddon(name=info.service.name, sharedFromModule=info.ref_module.name))
 
 
 class AccessControlManifestConstructor(ManifestConstructor):
     """Construct the access-control part."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         try:
             from paasng.security.access_control.models import ApplicationAccessControlSwitch
         except ImportError:
@@ -152,7 +127,7 @@ class AccessControlManifestConstructor(ManifestConstructor):
 class BuiltinAnnotsManifestConstructor(ManifestConstructor):
     """Construct the built-in annotations."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         # Application basic info
         application = module.application
         model_res.metadata.annotations.update(
@@ -173,11 +148,11 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
 class BuildConfigManifestConstructor(ManifestConstructor):
     """Construct the build config."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         cfg = BuildConfig.objects.get_or_create_by_module(module)
         build = model_res.spec.build
         if not build:
-            build = BkAppBuildConfig()
+            build = crd.BkAppBuildConfig()
         if cfg.build_method == RuntimeType.CUSTOM_IMAGE:
             build.imageCredentialsName = cfg.image_credential_name
         model_res.spec.build = build
@@ -188,7 +163,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
 
     PORT_PLACEHOLDER = "${PORT}"
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         process_specs = list(ModuleProcessSpec.objects.filter(module=module).order_by("created"))
         if not process_specs:
             logger.warning("模块<%s> 未定义任何进程", module)
@@ -202,40 +177,26 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 logger.warning("模块<%s>的 %s 进程 未定义启动命令, 将使用镜像默认命令运行", module, process_spec.name)
                 command, args = [], []
 
-            autoscaling_spec = None
-            if process_spec.autoscaling and (_c := process_spec.scaling_config):
-                autoscaling_spec = AutoscalingSpec(
-                    minReplicas=_c.min_replicas, maxReplicas=_c.max_replicas, policy=_c.policy
-                )
-
-            probes_spec = None
-            if probes := process_spec.probes:
-                probes_spec = ProbeSet(
-                    liveness=self._build_probe_from_config(probes.liveness) if probes.liveness else None,
-                    readiness=self._build_probe_from_config(probes.readiness) if probes.readiness else None,
-                    startup=self._build_probe_from_config(probes.startup) if probes.startup else None,
-                )
-
-            processes.append(
-                BkAppProcess(
-                    name=process_spec.name,
-                    replicas=process_spec.target_replicas,
-                    command=command,
-                    args=args,
-                    targetPort=process_spec.port,
-                    # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
-                    resQuotaPlan=self.get_quota_plan(process_spec.plan_name),
-                    autoscaling=autoscaling_spec,
-                    probes=probes_spec,
-                )
+            process_entity = Process(
+                name=process_spec.name,
+                command=command,
+                args=args,
+                replicas=process_spec.target_replicas,
+                target_port=process_spec.port,
+                # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
+                res_quota_plan=self.get_quota_plan(process_spec.plan_name),
+                autoscaling=process_spec.scaling_config,
+                probes=process_spec.probes,
             )
+
+            processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 
         model_res.spec.processes = processes
 
         # Apply other env-overlay related changes.
         self.apply_to_proc_overlay(model_res, module)
 
-    def apply_to_proc_overlay(self, model_res: BkAppResource, module: Module):
+    def apply_to_proc_overlay(self, model_res: crd.BkAppResource, module: Module):
         """Apply changes to the sub-fields in the 'envOverlay' field which is related
         with process, fields list:
 
@@ -245,7 +206,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         """
         overlay = model_res.spec.envOverlay
         if not overlay:
-            overlay = EnvOverlay()
+            overlay = crd.EnvOverlay()
 
         for proc_spec in ModuleProcessSpec.objects.filter(module=module).order_by("created"):
             for item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
@@ -253,14 +214,14 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 if item.target_replicas is not None and item.target_replicas != proc_spec.target_replicas:
                     overlay.append_item(
                         "replicas",
-                        ReplicasOverlay(
+                        crd.ReplicasOverlay(
                             envName=item.environment_name, process=proc_spec.name, count=item.target_replicas
                         ),
                     )
                 if item.scaling_config and item.autoscaling and item.scaling_config != proc_spec.scaling_config:
                     overlay.append_item(
                         "autoscaling",
-                        AutoscalingOverlay(
+                        crd.AutoscalingOverlay(
                             envName=item.environment_name,
                             process=proc_spec.name,
                             minReplicas=item.scaling_config.min_replicas,
@@ -271,7 +232,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 if item.plan_name and item.plan_name != proc_spec.plan_name:
                     overlay.append_item(
                         "resQuotas",
-                        ResQuotaOverlay(
+                        crd.ResQuotaOverlay(
                             envName=item.environment_name,
                             process=proc_spec.name,
                             plan=self.get_quota_plan(item.plan_name),
@@ -304,8 +265,8 @@ class ProcessesManifestConstructor(ManifestConstructor):
         )
         for limit_memory, quota_plan in quota_plan_memory:
             if limit_memory >= expected_limit_memory:
-                return quota_plan
-        return quota_plan_memory[-1][1]
+                return ResQuotaPlan(quota_plan)
+        return ResQuotaPlan(quota_plan_memory[-1][1])
 
     def get_command_and_args(self, module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get the command and args from the process_spec object.
@@ -337,52 +298,19 @@ class ProcessesManifestConstructor(ManifestConstructor):
         # in the spec directly, replace it with normal env var expression.
         return [s.replace("${PORT:-5000}", self.PORT_PLACEHOLDER) for s in input]
 
-    def _build_probe_from_config(self, cfg: ProbeConfig) -> Probe:
-        return Probe(
-            exec=ExecAction(command=cfg.exec.command) if cfg.exec else None,
-            httpGet=(
-                HTTPGetAction(
-                    port=settings.CONTAINER_PORT if cfg.http_get.port == self.PORT_PLACEHOLDER else cfg.http_get.port,
-                    host=cfg.http_get.host,
-                    path=cfg.http_get.path,
-                    httpHeaders=[HTTPHeader(name=h.name, value=h.value) for h in cfg.http_get.http_headers],
-                    scheme=cfg.http_get.scheme,
-                )
-                if cfg.http_get
-                else None
-            ),
-            tcpSocket=(
-                TCPSocketAction(
-                    port=(
-                        settings.CONTAINER_PORT
-                        if cfg.tcp_socket.port == self.PORT_PLACEHOLDER
-                        else cfg.tcp_socket.port
-                    ),
-                    host=cfg.tcp_socket.host,
-                )
-                if cfg.tcp_socket
-                else None
-            ),
-            initialDelaySeconds=cfg.initial_delay_seconds,
-            periodSeconds=cfg.period_seconds,
-            timeoutSeconds=cfg.timeout_seconds,
-            successThreshold=cfg.success_threshold,
-            failureThreshold=cfg.failure_threshold,
-        )
-
 
 class EnvVarsManifestConstructor(ManifestConstructor):
     """Construct the env variables part."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         g_preset_vars = [
-            EnvVar(name=var.key, value=var.value, environment_name=ConfigVarEnvName.GLOBAL)
+            crd.EnvVar(name=var.key, value=var.value, environment_name=ConfigVarEnvName.GLOBAL)
             for var in PresetEnvVariable.objects.filter(
                 module=module, environment_name=ConfigVarEnvName.GLOBAL
             ).order_by("key")
         ]
         g_user_vars = [
-            EnvVar(name=var.key, value=var.value)
+            crd.EnvVar(name=var.key, value=var.value)
             for var in ConfigVar.objects.filter(module=module, environment_id=ENVIRONMENT_ID_FOR_GLOBAL).order_by(
                 "key"
             )
@@ -392,15 +320,15 @@ class EnvVarsManifestConstructor(ManifestConstructor):
         # The environment specific variables
         overlay = model_res.spec.envOverlay
         if not overlay:
-            overlay = model_res.spec.envOverlay = EnvOverlay()
+            overlay = model_res.spec.envOverlay = crd.EnvOverlay()
         scoped_preset_vars = [
-            EnvVarOverlay(envName=var.environment_name, name=var.key, value=var.value)
+            crd.EnvVarOverlay(envName=var.environment_name, name=var.key, value=var.value)
             for var in PresetEnvVariable.objects.filter(module=module)
             .exclude(environment_name=ConfigVarEnvName.GLOBAL)
             .order_by("key")
         ]
         scoped_user_vars = [
-            EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.value)
+            crd.EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.value)
             for var in ConfigVar.objects.filter(module=module)
             .exclude(is_global=True)
             .order_by("environment__environment", "key")
@@ -413,13 +341,13 @@ class EnvVarsManifestConstructor(ManifestConstructor):
 class HooksManifestConstructor(ManifestConstructor):
     """Construct the hooks part."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         hooks = model_res.spec.hooks
         if not hooks:
-            hooks = BkAppHooks()
+            hooks = crd.BkAppHooks()
         pre_release_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
         if pre_release_hook and pre_release_hook.enabled:
-            hooks.preRelease = Hook(
+            hooks.preRelease = crd.Hook(
                 command=pre_release_hook.get_command(),
                 args=pre_release_hook.get_args(),
             )
@@ -429,23 +357,23 @@ class HooksManifestConstructor(ManifestConstructor):
 class MountsManifestConstructor(ManifestConstructor):
     """Construct the mounts part."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         model_res.spec.mounts = model_res.spec.mounts or []
         # The global mounts
         for config in Mount.objects.filter(module_id=module.pk, environment_name=MountEnvName.GLOBAL.value):
             model_res.spec.mounts.append(
-                MountSpec(name=config.name, mountPath=config.mount_path, source=config.source_config)
+                crd.Mount(name=config.name, mountPath=config.mount_path, source=config.source_config)
             )
 
         # The environment specific mounts
         overlay = model_res.spec.envOverlay
         if not overlay:
-            overlay = EnvOverlay()
+            overlay = crd.EnvOverlay()
         for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
             for config in Mount.objects.filter(module_id=module.pk, environment_name=env):
                 overlay.append_item(
                     "mounts",
-                    MountOverlay(
+                    crd.MountOverlay(
                         envName=env, name=config.name, mountPath=config.mount_path, source=config.source_config
                     ),
                 )
@@ -456,25 +384,26 @@ class MountsManifestConstructor(ManifestConstructor):
 class SvcDiscoveryManifestConstructor(ManifestConstructor):
     """Construct the svc discovery part."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         try:
             svc_disc_config = SvcDiscConfig.objects.get(application=module.application)
         except SvcDiscConfig.DoesNotExist:
             return
 
-        model_res.spec.svcDiscovery = SvcDiscConfigSpec(bkSaaS=svc_disc_config.bk_saas)
+        bk_saas = [crd.SvcDiscEntryBkSaaS(**dict_to_camel(item.dict())) for item in svc_disc_config.bk_saas]
+        model_res.spec.svcDiscovery = crd.SvcDiscConfig(bkSaaS=bk_saas)
 
 
 class DomainResolutionManifestConstructor(ManifestConstructor):
     """Construct the domain resolution part."""
 
-    def apply_to(self, model_res: BkAppResource, module: Module):
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
         try:
             domain_res = DomainResolution.objects.get(application=module.application)
         except DomainResolution.DoesNotExist:
             return
 
-        model_res.spec.domainResolution = DomainResolutionSpec(
+        model_res.spec.domainResolution = crd.DomainResolution(
             nameservers=domain_res.nameservers, hostAliases=domain_res.host_aliases
         )
 
@@ -486,7 +415,7 @@ def get_manifest(module: Module) -> List[Dict]:
     ]
 
 
-def get_bkapp_resource(module: Module) -> BkAppResource:
+def get_bkapp_resource(module: Module) -> crd.BkAppResource:
     """Get the manifest of current module.
 
     :param module: The module object.
@@ -504,10 +433,10 @@ def get_bkapp_resource(module: Module) -> BkAppResource:
         SvcDiscoveryManifestConstructor(),
         DomainResolutionManifestConstructor(),
     ]
-    obj = BkAppResource(
+    obj = crd.BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2,
         metadata=ObjectMetadata(name=generate_bkapp_name(module)),
-        spec=BkAppSpec(),
+        spec=crd.BkAppSpec(),
     )
     for builder in builders:
         builder.apply_to(obj, module)
@@ -521,7 +450,7 @@ def get_bkapp_resource_for_deploy(
     image_pull_policy: Optional[str] = None,
     use_cnb: bool = False,
     deployment: Optional[Deployment] = None,
-) -> BkAppResource:
+) -> crd.BkAppResource:
     """Get the BkApp manifest for deploy.
 
     :param env: The environment object.
@@ -536,12 +465,12 @@ def get_bkapp_resource_for_deploy(
 
     if force_image:
         if not model_res.spec.build:
-            model_res.spec.build = BkAppBuildConfig()
+            model_res.spec.build = crd.BkAppBuildConfig()
         model_res.spec.build.image = force_image
 
     if image_pull_policy:
         if not model_res.spec.build:
-            model_res.spec.build = BkAppBuildConfig()
+            model_res.spec.build = crd.BkAppBuildConfig()
         model_res.spec.build.imagePullPolicy = image_pull_policy
 
     # 采用 CNB 的应用在启动进程时，entrypoint 为 `process_type`, command 是空列表，
@@ -561,7 +490,7 @@ def get_bkapp_resource_for_deploy(
     return model_res
 
 
-def apply_env_annots(model_res: BkAppResource, env: ModuleEnvironment, deploy_id: Optional[str] = None):
+def apply_env_annots(model_res: crd.BkAppResource, env: ModuleEnvironment, deploy_id: Optional[str] = None):
     """Apply environment-specified annotations to the resource object.
 
     :param model_res: The model resource object, it will be modified in-place.
@@ -580,25 +509,27 @@ def apply_env_annots(model_res: BkAppResource, env: ModuleEnvironment, deploy_id
         model_res.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
 
-def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
+def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment):
     """Apply the builtin environment vars to the resource object. These vars are hidden from
     the default manifest view and should only be used in the deploying procedure.
 
     :param model_res: The model resource object, it will be modified in-place.
     :param env: The environment object.
     """
-    env_vars = [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
+    env_vars = [crd.EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
 
     environment = env.environment
-    builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
+    builtin_env_vars_overlay = [
+        crd.EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))
+    ]
 
     # deployment=None 意味着云原生应用不通过 get_env_variables 注入描述文件产生的环境变量
     # include_config_vars=False 是因为 EnvVarsManifestConstructor 已处理了 config vars
     for name, value in get_env_variables(
         env, include_config_vars=False, include_preset_env_vars=False, include_svc_disc=False
     ).items():
-        env_vars.append(EnvVar(name=name, value=value))
-        builtin_env_vars_overlay.append(EnvVarOverlay(envName=environment, name=name, value=value))
+        env_vars.append(crd.EnvVar(name=name, value=value))
+        builtin_env_vars_overlay.append(crd.EnvVarOverlay(envName=environment, name=name, value=value))
 
     # Merge the variables, the builtin env vars will override the existed ones
     model_res.spec.configuration.env = merge_env_vars(model_res.spec.configuration.env, env_vars)
@@ -606,5 +537,5 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     if builtin_env_vars_overlay:
         overlay = model_res.spec.envOverlay
         if not overlay:
-            overlay = model_res.spec.envOverlay = EnvOverlay(envVariables=[])
+            overlay = model_res.spec.envOverlay = crd.EnvOverlay(envVariables=[])
         overlay.envVariables = override_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay)

@@ -187,7 +187,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
-                for proc_env_overlay in env_overlay.value():
+                for proc_env_overlay in env_overlay.values():
                     sync_proc_env_overlay(module, proc_spec["name"], proc_env_overlay)
 
         return self.retrieve(request, code, module_name)

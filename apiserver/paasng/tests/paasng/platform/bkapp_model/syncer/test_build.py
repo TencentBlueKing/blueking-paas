@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db
 
 class Test__sync_build:
     def test(self, bk_module):
-        sync_build(bk_module, AppBuildConfig(image="example.com/foo", image_credential_name="foo"))
+        sync_build(bk_module, AppBuildConfig(image="example.com/foo", image_credentials_name="foo"))
         cfg = BuildConfig.objects.get(module=bk_module)
         assert cfg.image_repository == "example.com/foo"
         assert cfg.image_credential_name == "foo"

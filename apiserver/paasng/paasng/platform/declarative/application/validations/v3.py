@@ -91,12 +91,12 @@ class ModuleDescriptionSLZ(serializers.Serializer):
         # spec.addons -> services
         services = []
 
-        for addon in attrs["spec"].get("addons") or []:
+        for addon in attrs["spec"].addons or []:
             services.append(
                 {
-                    "name": addon["name"],
-                    "specs": {spec.name: spec.value for spec in addon["specs"]},
-                    "shared_from": addon["shared_from_module"],
+                    "name": addon.name,
+                    "specs": {spec.name: spec.value for spec in addon.specs or []},
+                    "shared_from": addon.shared_from_module,
                 }
             )
 

@@ -190,6 +190,11 @@ class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             operator = user_id_encoder.encode(settings.USER_TYPE, operator)
             operations = operations.filter(operator=operator)
 
+        # Filter by environment if provided
+        environment = params.get("environment")
+        if environment:
+            operations = operations.filter(app_environment__environment=environment)
+
         # Paginator
         page = self.paginator.paginate_queryset(operations, self.request, view=self)
         serializer = OperationSLZ(page, many=True)

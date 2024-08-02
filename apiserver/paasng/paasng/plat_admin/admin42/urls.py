@@ -20,7 +20,17 @@ from __future__ import absolute_import
 from django.conf.urls import url
 
 from . import runtime_views, views
-from .views import accountmgr, applications, bk_plugins, runtimes, services, smart_advisor, sourcectl, templates
+from .views import (
+    accountmgr,
+    applications,
+    bk_plugins,
+    builtin_config_vars,
+    runtimes,
+    services,
+    smart_advisor,
+    sourcectl,
+    templates,
+)
 from .views.engine import (
     certs,
     clusters,
@@ -488,5 +498,26 @@ urlpatterns += [
         r"configuration/bk_plugins/distributors/(?P<pk>[^/]+)/",
         bk_plugins.BKPluginDistributorsView.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.bk_plugins.distributors.detail",
+    ),
+]
+
+# 平台管理-环境变量管理
+urlpatterns += [
+    # 环境变量管理页
+    url(
+        r"platform/builtin_config_vars/manage/$",
+        builtin_config_vars.BuiltinConfigVarView.as_view(),
+        name="admin.builtin_config_vars.manage",
+    ),
+    # 环境变量管理API
+    url(
+        r"platform/builtin_config_vars/$",
+        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
+        name="admin.builtin_config_vars",
+    ),
+    url(
+        r"platform/builtin_config_vars/(?P<pk>[^/]+)/",
+        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
+        name="admin.builtin_config_vars.detail",
     ),
 ]

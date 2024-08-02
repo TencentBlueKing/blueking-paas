@@ -173,7 +173,9 @@ var _ = Describe("Test HookReconciler", func() {
 			)
 
 			Expect(finished).To(BeFalse())
-			Expect(err.Error()).To(Equal("pre-release-hook not found"))
+			Expect(
+				err.Error(),
+			).To(Equal("hook failed with: PreReleaseHook not found: pod ends unsuccessfully"))
 		})
 
 		It("Pod Execute Failed", func() {

@@ -19,9 +19,24 @@ from django import template
 from django.utils.safestring import mark_safe
 from rest_framework.renderers import JSONRenderer
 
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import user_has_site_action_perm
+
 register = template.Library()
 
 
 @register.filter(is_safe=True)
 def to_json(value):
     return mark_safe(JSONRenderer().render(value).decode("utf-8"))
+
+
+@register.simple_tag(takes_context=True)
+def get_user_site_perms(context):
+    return {
+        action.value: user_has_site_action_perm(context["request"].user, action)
+        for action in [
+            SiteAction.MANAGE_PLATFORM,
+            SiteAction.MANAGE_APP_TEMPLATES,
+            SiteAction.OPERATE_PLATFORM,
+        ]
+    }

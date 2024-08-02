@@ -35,7 +35,7 @@ from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
-from paasng.platform.engine.models.config_var import add_prefix_to_key, get_builtin_config_vars, get_config_vars
+from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars, get_custom_builtin_config_vars
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.utils.blobstore import make_blob_store_env
@@ -79,6 +79,9 @@ def get_env_variables(
     if include_svc_disc:
         result.update(get_svc_disc_as_env_variables(env))
 
+    # Part: system-wide env vars
+    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
+
     # Port: workloads related env vars
     vars_wl = _flatten_envs(generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, env))
     result.update(vars_wl)
@@ -95,9 +98,6 @@ def get_env_variables(
     # application.
     if include_config_vars:
         result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
-
-    # Part: system-wide env vars
-    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
 
     # Part: env vars shared from other modules
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
@@ -331,7 +331,7 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
     )
 
     # admin42 中自定义的环境变量
-    custom_envs = get_builtin_config_vars(config_vars_prefix)
+    custom_envs = get_custom_builtin_config_vars(config_vars_prefix)
 
     envs = {
         **app_info_envs,
@@ -345,7 +345,7 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
         if key in envs:
             logger.warning(
                 f"{key}={envs[key]} is already defined in default builtin envs, "
-                f"will be overwritten by {key}={value} defined in custom envs"
+                f"will be overwritten by {key}={value} defined in custom builtin envs"
             )
         envs[key] = value
 

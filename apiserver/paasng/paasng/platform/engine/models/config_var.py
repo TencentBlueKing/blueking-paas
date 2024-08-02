@@ -49,7 +49,7 @@ def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
     return {obj.key: obj.value for obj in config_vars}
 
 
-def get_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
+def get_custom_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
     """Get default config vars as dict, with prefix"""
     builtin_config_vars = dict(BuiltinConfigVar.objects.values_list("key", "value"))
     return add_prefix_to_key(builtin_config_vars, config_vars_prefix)

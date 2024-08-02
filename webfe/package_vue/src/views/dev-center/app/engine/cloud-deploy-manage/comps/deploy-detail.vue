@@ -67,7 +67,7 @@
                 <div class="text-ellipsis" v-bk-overflow-tips>{{ instance.display_name }}</div>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div v-else class="instance-item-cls-empty cell-container pl30">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">

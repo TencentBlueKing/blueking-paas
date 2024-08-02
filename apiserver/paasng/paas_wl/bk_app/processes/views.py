@@ -56,6 +56,8 @@ from paas_wl.bk_app.processes.serializers import (
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByModuleEnvListWatcher, WatchEvent
 from paas_wl.core.signals import new_operation_happened
+from paas_wl.infras.resources.base.kres import KDeployment, KPod
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
@@ -418,12 +420,12 @@ class InstanceEventsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(EventSerializer(events, many=True).data)
 
 
-class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
-    """适用于所有类型应用，应用进程上一次运行时日志相关视图"""
+class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """适用于所有类型应用，应用进程操作相关视图"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    def retrieve(self, request, code, module_name, environment, process_type, process_instance_name):
+    def retrieve_previous_logs(self, request, code, module_name, environment, process_type, process_instance_name):
         """获取进程实例上一次运行时的日志（400行）"""
         env = self.get_env_via_path()
 
@@ -435,7 +437,7 @@ class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         return Response(status=status.HTTP_200_OK, data=logs.splitlines())
 
-    def download(self, request, code, module_name, environment, process_type, process_instance_name):
+    def download_previous_logs(self, request, code, module_name, environment, process_type, process_instance_name):
         """下载进程实例上一次运行时的日志"""
         env = self.get_env_via_path()
 
@@ -448,3 +450,25 @@ class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         response = HttpResponse(logs, content_type="text/plain")
         response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'
         return response
+
+    def restart(self, request, code, module_name, environment, process_instance_name):
+        """重启进程实例"""
+        env = self.get_env_via_path()
+        wl_app = env.wl_app
+        with get_client_by_app(wl_app) as client:
+            KPod(client).restart(name=process_instance_name, namespace=wl_app.namespace)
+        return Response(status=status.HTTP_200_OK)
+
+
+class ProcessManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """适用于所有类型应用，应用进程操作相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def restart(self, request, code, module_name, environment, process_name):
+        """滚动重启进程"""
+        env = self.get_env_via_path()
+        wl_app = env.wl_app
+        with get_client_by_app(wl_app) as client:
+            KDeployment(client).restart(name=process_name, namespace=wl_app.namespace)
+        return Response(status=status.HTTP_200_OK)

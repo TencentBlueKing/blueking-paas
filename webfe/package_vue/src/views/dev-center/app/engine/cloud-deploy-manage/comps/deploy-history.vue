@@ -264,11 +264,6 @@ export default {
         { text: this.$t('预发布环境'), value: 'stag' },
       ];
     },
-    moduleFilters() {
-      return this.curAppModuleList.map(item => {
-        return { text: item.name, value: item.name };
-      });
-    },
     localLanguage() {
       return this.$store.state.localLanguage;
     },

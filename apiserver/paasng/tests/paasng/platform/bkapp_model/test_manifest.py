@@ -262,7 +262,6 @@ class TestProcessesManifestConstructor:
                     "resQuotaPlan": "default",
                     "autoscaling": None,
                     "probes": None,
-                    "proc_command": None,
                 }
             ],
             "envOverlay": {

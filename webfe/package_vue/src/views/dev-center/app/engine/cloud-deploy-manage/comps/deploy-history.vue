@@ -20,7 +20,7 @@
               @change="getDeployHistory(1)"
             >
               <bk-option
-                v-for="option in allModules"
+                v-for="option in moduleList"
                 :key="option.key"
                 :id="option.key"
                 :name="option.name">
@@ -253,7 +253,7 @@ export default {
       height: window.innerHeight - 60,
       yamlData: {},
       isYamlLoading: false,
-      allModules: [],
+      moduleList: [],
     };
   },
 
@@ -288,9 +288,9 @@ export default {
     init() {
       this.moduleValue = '';
       this.getDeployHistory();
-      this.allModules = this.curAppModuleList.map(item => ({ key: item.name, name: item.name }));
+      this.moduleList = this.curAppModuleList.map(item => ({ key: item.name, name: item.name }));
        // 在列表头新增一项
-      this.allModules.unshift({ key: '', name: '全部' });
+      this.moduleList.unshift({ key: '', name: '全部' });
     },
 
     /**

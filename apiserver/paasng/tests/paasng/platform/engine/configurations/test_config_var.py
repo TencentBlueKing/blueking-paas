@@ -21,7 +21,9 @@ from textwrap import dedent
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 from django.conf import settings
+from django_dynamic_fixture import G
 
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import AppDescriptionHandler
 from paasng.platform.engine.configurations.config_var import (
@@ -32,6 +34,7 @@ from paasng.platform.engine.configurations.config_var import (
 )
 from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
 from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.modules.models.module import Module
 from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -39,6 +42,13 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.usefixtures("_with_wl_apps")
 class TestGetEnvVariables:
+    @pytest.fixture()
+    def _create_for_test_svc_discovery(self):
+        # 为了检验 BKPAAS_SERVICE_ADDRESSES_BKSAAS 通过
+        G(Application, code="foo-app")
+        app = G(Application, code="bar-app")
+        G(Module, name="api", application=app)
+
     @pytest.mark.parametrize(
         ("include_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
     )
@@ -116,6 +126,7 @@ class TestGetEnvVariables:
                 assert key in env_vars
                 assert env_vars[key] == value
 
+    @pytest.mark.usefixtures("_create_for_test_svc_discovery")
     def test_part_saas_services(self, bk_stag_env, bk_deployment):
         yaml_content = dedent(
             """

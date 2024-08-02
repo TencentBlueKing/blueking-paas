@@ -21,14 +21,12 @@ Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 
 import datetime
-import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
-from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
 
 from .metadata import ObjectMetadata
@@ -126,37 +124,12 @@ class BkAppProcess(BaseModel):
     autoscaling: Optional[AutoscalingSpec] = None
     probes: Optional[ProbeSet] = None
 
-    # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
-    proc_command: Optional[str] = Field(None)
-
-    def __init__(self, **data):
-        # 处理 specVersion: 3 中驼峰传递 procCommand
-        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
-        if proc_command := data.get("procCommand"):
-            data["proc_command"] = proc_command
-            data["command"] = None
-            data["args"] = shlex.split(proc_command)
-        super().__init__(**data)
-
-    def get_proc_command(self) -> str:
-        """get_proc_command: 生成 Procfile 文件中对应的命令行"""
-        if self.proc_command:
-            return self.proc_command
-        return generate_bash_command_with_tokens(self.command or [], self.args or [])
-
 
 class Hook(BaseModel):
     """A hook object"""
 
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
-
-    def __init__(self, **data):
-        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
-        if proc_command := data.get("procCommand"):
-            data["command"] = None
-            data["args"] = shlex.split(proc_command)
-        super().__init__(**data)
 
 
 class BkAppHooks(BaseModel):

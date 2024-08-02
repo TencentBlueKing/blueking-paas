@@ -187,6 +187,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                 "name": "web",
                 "args": shlex.split(constants.WEB_PROCESS),
                 "res_quota_plan": package_plan,
+                "replicas": 1,
                 "proc_command": constants.WEB_PROCESS,
             }
         ]
@@ -199,6 +200,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                     "name": "celery",
                     "args": shlex.split(constants.CELERY_PROCESS),
                     "res_quota_plan": package_plan,
+                    "replicas": 1,
                     "proc_command": constants.CELERY_PROCESS,
                 }
             )
@@ -210,6 +212,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                     "name": "celery",
                     "args": shlex.split(constants.CELERY_PROCESS_WITH_GEVENT),
                     "res_quota_plan": package_plan,
+                    "replicas": 1,
                     "proc_command": constants.CELERY_PROCESS_WITH_GEVENT,
                 }
             )
@@ -222,6 +225,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                     "name": "beat",
                     "args": shlex.split(constants.CELERY_BEAT_PROCESS),
                     "res_quota_plan": package_plan,
+                    "replicas": 1,
                     "proc_command": constants.CELERY_BEAT_PROCESS,
                 }
             )

@@ -19,3 +19,6 @@
 BKAPP_CATEGORY = "bkapp"
 
 QUERY_LOG_DEFAULT_TIMEOUT = 300
+
+# kubectl 滚动重启资源时的标记
+KUBECTL_RESTART_RESOURCE_KEY = "kubectl.kubernetes.io/restartedAt"

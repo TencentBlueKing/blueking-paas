@@ -35,7 +35,7 @@ from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from kubernetes.dynamic.resource import Resource, ResourceInstance
 
-from paas_wl.infras.resources.base.constants import QUERY_LOG_DEFAULT_TIMEOUT
+from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY, QUERY_LOG_DEFAULT_TIMEOUT
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     ReadTargetStatusTimeout,
@@ -668,27 +668,16 @@ class KPod(BaseKresource):
             name=name, namespace=namespace, _preload_content=False, _request_timeout=timeout, **kwargs
         )
 
-    def restart(self, name: str, namespace: Namespace):
-        """rollout restart the pod by patching its annotations"""
-        body = {
-            "spec": {
-                "template": {
-                    "metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": f"{datetime.now().isoformat()}"}}
-                }
-            }
-        }
-        return self.patch(name=name, namespace=namespace, body=body)
-
 
 class KDeployment(BaseKresource):
     kind = "Deployment"
 
     def restart(self, name: str, namespace: Namespace):
-        """rollout restart the deployment by patching its annotations"""
+        """rollout restart the deployment by patching annotations"""
         body = {
             "spec": {
                 "template": {
-                    "metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": f"{datetime.now().isoformat()}"}}
+                    "metadata": {"annotations": {KUBECTL_RESTART_RESOURCE_KEY: f"{datetime.now().isoformat()}"}}
                 }
             }
         }
@@ -701,17 +690,6 @@ class KStatefulSet(BaseKresource):
 
 class KDaemonSet(BaseKresource):
     kind = "DaemonSet"
-
-    def restart(self, name: str, namespace: Namespace):
-        """rollout restart the deployment by patching its annotations"""
-        body = {
-            "spec": {
-                "template": {
-                    "metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": f"{datetime.now().isoformat()}"}}
-                }
-            }
-        }
-        return client_mod.CoreV1Api(self.client).patch_namespaced_pod(name=name, namespace=namespace, body=body)
 
 
 class KService(BaseKresource):

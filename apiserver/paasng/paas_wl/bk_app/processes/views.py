@@ -456,7 +456,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         env = self.get_env_via_path()
         wl_app = env.wl_app
         with get_client_by_app(wl_app) as client:
-            KPod(client).restart(name=process_instance_name, namespace=wl_app.namespace)
+            KPod(client).delete(name=process_instance_name, namespace=wl_app.namespace)
         return Response(status=status.HTTP_200_OK)
 
 

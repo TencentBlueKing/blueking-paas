@@ -345,7 +345,7 @@
       >
         <div class="wrapper default-box">
           <div class="fl mr25">
-            {{ $t('当前版本：') }} {{ deploymentInfo.repo.version }}
+            {{ $t('当前版本') }}： {{ deploymentInfo.repo.version }}
           </div>
           <div
             v-if="!isLesscodeApp"

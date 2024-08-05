@@ -68,7 +68,7 @@ def yaml_v2_normal() -> str:
             language: python
             svc_discovery:
                 bk_saas:
-                - bk_app_code: foo-app
+                - foo-app
                 - bk_app_code: bar-app
                   module_name: api
             bkmonitor:

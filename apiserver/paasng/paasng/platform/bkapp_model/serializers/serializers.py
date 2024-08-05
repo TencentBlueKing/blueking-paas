@@ -201,6 +201,12 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
     bk_app_code = serializers.CharField(help_text="被服务发现的应用 code", max_length=20)
     module_name = serializers.CharField(help_text="被服务发现的模块", max_length=20, default=None)
 
+    def to_internal_value(self, data):
+        # Note: 兼容只传递 app-code 的格式(app_desc.yaml spec_version:2)
+        if isinstance(data, str):
+            data = {"bk_app_code": data}
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         """校验应用和模块存在，否则抛出异常"""
         try:

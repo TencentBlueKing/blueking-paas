@@ -49,7 +49,7 @@
             <bk-checkbox v-model="displayRegularUsers" @change="refreshPage">显示所有普通用户</bk-checkbox>
             <div class="paas-search">
                 <bk-input
-                    placeholder="输入用户名，按Enter搜索"
+                    placeholder="输入用户名，按 Enter 搜索"
                     :clearable="true"
                     :right-icon="'bk-icon icon-search'"
                     v-model="filterKey"
@@ -231,7 +231,7 @@
                     this.$bkInfo({
                         title: `确认要${action}？`,
                         confirmLoading: true,
-                        theme: 'danger',
+                        theme: action === '恢复访问' ? 'primary' : 'danger',
                         confirmFn: async () => {
                             try {
                                 await confirmAction()
@@ -266,7 +266,7 @@
                     this.$bkInfo({
                         title: '确定要修改吗？',
                         confirmLoading: true,
-                        theme: 'danger',
+                        theme: 'primary',
                         confirmFn: async () => {
                             try {
                                 if (this.form.enable_regions.length === 0) {

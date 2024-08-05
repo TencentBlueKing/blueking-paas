@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             handleDelete: function (row) {
                 this.$bkInfo({
-                    title: `确定要删除 BKPAAS_${row.key}？`,
+                    title: `确定要删除 ${system_prefix}${row.key}？`,
                     confirmLoading: true,
                     theme: 'danger',
                     confirmFn: async () => {

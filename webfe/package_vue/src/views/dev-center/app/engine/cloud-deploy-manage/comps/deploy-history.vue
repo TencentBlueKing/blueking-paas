@@ -444,7 +444,7 @@ export default {
     },
 
     handleFilterChange(filter) {
-      this.filterEnv = filter.env || this.filterEnv;
+      this.filterEnv = filter.env || [];
     },
 
     getTimeConsuming(payload) {

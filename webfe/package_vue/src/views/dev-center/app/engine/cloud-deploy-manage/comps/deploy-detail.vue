@@ -111,7 +111,11 @@
                 v-for="instance in row.instances"
                 :key="instance.process_name"
               >
-                {{ instance.restart_count }}
+                <span
+                  v-bk-tooltips="{ content: instance.terminated_info?.reason, placement: 'bottom', offset: '0, -10' }"
+                  :class="{ tip: instance.terminated_info?.reason }">
+                  {{ instance.restart_count }}
+                </span>
               </div>
             </div>
             <div v-else class="instance-item-cls-empty cell-container">--</div>
@@ -1679,6 +1683,18 @@ export default {
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
+          }
+
+          span.tip {
+            position: relative;
+            &::before {
+              content: '';
+              position: absolute;
+              width: 100%;
+              height: 1px;
+              bottom: 15px;
+              border-bottom: 1px dashed;
+            }
           }
 
           &:last-child {

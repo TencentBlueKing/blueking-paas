@@ -673,7 +673,13 @@ class KDeployment(BaseKresource):
     kind = "Deployment"
 
     def restart(self, name: str, namespace: Namespace):
-        """rollout restart the deployment by patching annotations"""
+        """
+        Rollout restart the deployment by patching annotations
+        This method triggers a rolling restart of a Kubernetes deployment by updating
+
+        For more details on how updating a deployment works, refer to:
+        https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment
+        """
         body = {
             "spec": {
                 "template": {

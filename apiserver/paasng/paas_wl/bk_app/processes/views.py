@@ -171,6 +171,14 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except AutoscalingUnsupported as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
 
+    def restart(self, request, code, module_name, environment, process_name):
+        """滚动重启进程"""
+        env = self.get_env_via_path()
+        wl_app = env.wl_app
+        with get_client_by_app(wl_app) as client:
+            KDeployment(client).restart(name=process_name, namespace=wl_app.namespace)
+        return Response(status=status.HTTP_200_OK)
+
 
 class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """适用于云原生应用，按环境查看应用进程实例相关信息。支持一次查看多个模块。"""
@@ -457,18 +465,4 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         wl_app = env.wl_app
         with get_client_by_app(wl_app) as client:
             KPod(client).delete(name=process_instance_name, namespace=wl_app.namespace)
-        return Response(status=status.HTTP_200_OK)
-
-
-class ProcessManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
-    """适用于所有类型应用，应用进程操作相关视图"""
-
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
-    def restart(self, request, code, module_name, environment, process_name):
-        """滚动重启进程"""
-        env = self.get_env_via_path()
-        wl_app = env.wl_app
-        with get_client_by_app(wl_app) as client:
-            KDeployment(client).restart(name=process_name, namespace=wl_app.namespace)
         return Response(status=status.HTTP_200_OK)

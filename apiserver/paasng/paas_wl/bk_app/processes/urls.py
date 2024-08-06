@@ -77,7 +77,7 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(r"/processes/(?P<process_name>[\w-]+)/restart/$"),
-        views.ProcessManageViewSet.as_view({"put": "restart"}),
+        views.ProcessesViewSet.as_view({"put": "restart"}),
         name="api.process.restart",
     ),
 ]

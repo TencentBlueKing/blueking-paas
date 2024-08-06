@@ -201,15 +201,20 @@ export default {
                   color: #FFB848 !important;
                 }
 
+                .paasng-star-line {
+                  color: #C4C6CC !important;
+                }
+
                 .star-icon {
+                    width: 8%;
                     float: left;
-                    margin-right: 10px;
                 }
 
                 .app-name {
-                    width: 60%;
+                    width: 52%;
                     text-overflow: ellipsis;
                     overflow: hidden;
+                    float: left;
                 }
 
                 .app-code {

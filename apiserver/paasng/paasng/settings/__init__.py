@@ -498,10 +498,15 @@ NOTIFICATION_PLUGIN_CLASSES = settings.get(
 # Django 基础配置（自定义）
 # ------------------------
 
-DATABASES = {
-    "default": get_database_conf(settings),
-    "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
-}
+DATABASES = {}
+
+# When running "collectstatic" command, the database config is not available, so we
+# make it optional.
+if default_db_conf := get_database_conf(settings):
+    DATABASES["default"] = default_db_conf
+if wl_db_conf := get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"):
+    DATABASES["workloads"] = wl_db_conf
+
 DATABASE_ROUTERS = ["paasng.core.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存

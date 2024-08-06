@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 class UserProfilesManageView(GenericTemplateView):
     name = "用户列表"
-    queryset = UserProfile.objects.exclude(role=SiteRole.USER.value).order_by("role", "-created")
+    queryset = UserProfile.objects.order_by("role", "-created")
     serializer_class = accountmgr.UserProfileSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     template_name = "admin42/accountmgr/user_profile_list.html"
@@ -91,11 +91,6 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             obj.refresh_from_db(fields=["role", "enable_regions"])
             results.append(obj)
         return Response(self.get_serializer(results, many=True).data)
-
-    def list(self, request):
-        queryset = UserProfile.objects.order_by("role", "-created")
-        queryset = UserProfileFilterBackend().filter_queryset(request, queryset, self)
-        return Response(self.get_serializer(self.paginate_queryset(queryset), many=True).data)
 
     def update(self, request):
         slz = accountmgr.UserProfileUpdateFormSLZ(

@@ -24,6 +24,7 @@ from django.utils.translation import override
 from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
+from paasng.accessories.publish.sync_market.handlers import register_application_with_default
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
@@ -163,7 +164,10 @@ class TestAppDeclarativeControllerUpdate:
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_json))
-        return Application.objects.get(code=random_name)
+        app = Application.objects.get(code=random_name)
+        # 创建应用后，将应用注册到桌面，用于测试应用信息修改后是否能正常同步到桌面
+        register_application_with_default(app.region, app.code, app.name)
+        return app
 
     def test_without_permission(self, bk_user, existed_app):
         another_user = create_user(username="another_user")
@@ -196,16 +200,21 @@ class TestAppDeclarativeControllerUpdate:
 
     def test_name_modified(self, bk_user, existed_app):
         # Use new name
+        new_name = existed_app.name + "2"
+        new_name_en = existed_app.name + "en"
+
         app_json = builder.make_app_desc(
             existed_app.code,
             decorator.with_module("default", True),
         )
-        app_json["bk_app_name"] = existed_app.name + "2"
+        app_json["bk_app_name"] = new_name
+        app_json["bk_app_name_en"] = new_name_en
 
         controller = AppDeclarativeController(bk_user)
-        with pytest.raises(DescriptionValidationError) as exc_info:
-            controller.perform_action(get_app_description(app_json))
-        assert "bk_app_name" in exc_info.value.detail
+        controller.perform_action(get_app_description(app_json))
+        product = Product.objects.get(code=existed_app.code)
+        assert product.name == new_name
+        assert product.name_en == new_name_en
 
     def test_normal(self, bk_user, existed_app):
         app_json = builder.make_app_desc(

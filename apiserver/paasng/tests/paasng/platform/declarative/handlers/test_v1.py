@@ -21,6 +21,10 @@ from typing import Dict
 import pytest
 
 from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.sync_market.handlers import (
+    on_change_application_name,
+    prepare_change_application_name,
+)
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ServiceSpec
@@ -59,6 +63,7 @@ class TestSMartDescriptionHandler:
         assert logo_content[23] == 144
 
     def test_app_update_existed(self, bk_app, bk_user, app_desc):
+        prepare_change_application_name.disconnect(on_change_application_name)
         app_desc.update(
             {
                 "app_code": bk_app.code,

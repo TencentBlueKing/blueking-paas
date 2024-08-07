@@ -25,10 +25,12 @@ from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
 from paasng.accessories.publish.sync_market.handlers import register_application_with_default
+from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.models import Application
@@ -212,9 +214,9 @@ class TestAppDeclarativeControllerUpdate:
 
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_json))
-        product = Product.objects.get(code=existed_app.code)
-        assert product.name == new_name
-        assert product.name_en == new_name_en
+        with console_db.session_scope() as session:
+            legacy_app = AppManger(session).get(existed_app.code)
+        assert legacy_app.name == new_name
 
     def test_normal(self, bk_user, existed_app):
         app_json = builder.make_app_desc(

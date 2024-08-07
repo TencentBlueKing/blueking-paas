@@ -42,7 +42,7 @@ class AppNameField(AppField):
 
         if self.application.name != desc.name_zh_cn:
             # 修改中文名
-            logger.warning("应用<%s> 的英文名将从 '%s' 修改成 '%s'", app_code, self.application.name, desc.name_zh_cn)
+            logger.warning("应用<%s> 的中文名将从 '%s' 修改成 '%s'", app_code, self.application.name, desc.name_zh_cn)
             update_field_dict["name"] = desc.name_zh_cn
             self.application.name = desc.name_zh_cn
             self.application.save(update_fields=["name", "updated"])

@@ -52,7 +52,7 @@ module:
 
 除此之外，文件中的原始 Spec 内容也会被存放到本次部署所对应的 DeploymentDescription 模型中。其中的部分字段，在应用部署进行到后期时，仍可能被独立读取并使用，比如 [spec.svsDiscovery 会被用来合并环境读取](https://github.com/TencentBlueKing/blueking-paas/blob/main/apiserver/paasng/paasng/platform/declarative/models.py#L74)（*该行为未来可能需要优化，比如使用 SvcDiscConfig 模型？*）。
 
-> 疑问：DeploymentDescription 可能需要更清晰的职责和定位，比如导致是仅仅用作归档 Spec 数据，还是具备一些实际的业务功能（如前面提到的 spec.svcDiscovery）。
+> 疑问：DeploymentDescription 可能需要更清晰的职责和定位，比如是仅仅用作归档 Spec 数据，还是具备一些实际的业务功能（如前面提到的 spec.svcDiscovery）。
 
 ### 描述文件：解析、分解和再还原
 
@@ -71,4 +71,4 @@ module:
 
 预设环境变量是一类特殊的环境变量，所使用的模型名为 `PresetEnvVariable`。虽然定位与普通环境变量类似，但 `PresetEnvVariable` 只被用来存放那些经由应用描述文件（`app_desc.yaml`）定义的变量，开发者无法通过环境变量 web 页面管理它们。
 
-在应用部署时，预设环境变量会被合并到最终的 BkApp 模型 YAML 中。
+在应用部署时，预设环境变量会被合并到最终的 BkApp 资源 YAML 中。

@@ -29,7 +29,7 @@ const pluginVersionRelease = () => import(/* webpackChunkName: 'plugin-version' 
   window.showDeployTip(error);
 });
 
-const pluginVersionEditor = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/editor-version').then(module => module).catch((error) => {
+const pluginVersionEditor = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/create-version').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 

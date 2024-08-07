@@ -163,8 +163,7 @@ class TestAppDeclarativeControllerUpdate:
         )
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_json))
-        app = Application.objects.get(code=random_name)
-        return app
+        return Application.objects.get(code=random_name)
 
     def test_without_permission(self, bk_user, existed_app):
         another_user = create_user(username="another_user")

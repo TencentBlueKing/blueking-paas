@@ -55,7 +55,7 @@ class AppNameField(AppField):
             self.application.save(update_fields=["name_en", "updated"])
 
         # 应用名称修改后需要同步给桌面
-        prepare_change_application_name.send(sender="", code=app_code, **update_field_dict)
+        prepare_change_application_name.send(sender=self.application, code=app_code, **update_field_dict)
 
 
 class AppRegionField(AppField):

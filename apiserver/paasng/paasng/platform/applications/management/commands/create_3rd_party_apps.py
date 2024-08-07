@@ -158,7 +158,9 @@ class Command(BaseCommand):
                 logger.exception("app initialize members failed, skip create: %s", e.message)
                 return
 
-        # 新建的应用需要通过到桌面（PaaS2.0），已经存在则不需要再同步
+        # 新建的应用需要同步在桌面上创建（PaaS2.0），已经存在则不需要再创建
+        # 添加 already_in_paas2 判断说明：
+        # bk_job、bk_cc 这些提前在桌面上创建过的应用就不会因为 应用ID 冲突回滚，导致无法在开发者中心上创建
         if created and (not already_in_paas2):
             try:
                 before_finishing_application_creation.send("FakeSender", application=application)

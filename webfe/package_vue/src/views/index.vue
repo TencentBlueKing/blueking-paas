@@ -393,65 +393,6 @@
           </div>
         </div>
         <!-- 新手入门&使用指南 end -->
-        <!-- 了解我们的服务 start -->
-        <div
-          class="paas-content-boxpanel bk-fade-animate"
-          data-test-id="developer_list_service"
-        >
-          <h2 class="paas-modular-title center">
-            {{ $t('了解我们的服务') }}
-          </h2>
-          <div class="paas-service">
-            <ul class="paas-service-list">
-              <li
-                v-for="(item, index) in serviceInfo"
-                :key="index"
-                :class="{ 'active': index === curServiceIndex }"
-                @click="changeService(index)"
-              >
-                <i :class="['paas-service-icon', 'icon' + (index + 1)]" />
-                <span class="paas-service-text">{{ item.title }}</span>
-              </li>
-            </ul>
-            <div
-              class="paas-service-main"
-              data-test-id="developer_list_main"
-            >
-              <div :class="['paas-service-content', 'showCon' + curServiceIndex]">
-                <!-- 开发 -->
-                <div
-                  v-for="(service, index) in serviceInfo"
-                  :key="index"
-                  class="content-panel"
-                >
-                  <dl
-                    v-for="(item, serviceIndex) in service.items"
-                    :key="serviceIndex"
-                  >
-                    <dt>
-                      <a
-                        v-if="item.url === 'javascript:;'"
-                        target="_blank"
-                        :href="GLOBAL.DOC.API_HELP"
-                      >
-                        {{ item.text }}
-                      </a>
-                      <router-link
-                        v-else
-                        target="_blank"
-                        :to="'/developer-center/service/' + item.url"
-                      >
-                        {{ item.text }}
-                      </router-link>
-                    </dt>
-                    <dd>{{ item.explain }}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- 了解我们的服务 end -->
       </div>
     </div>
   </div>
@@ -474,8 +415,6 @@ export default {
     return {
       userHasApp: false,
       isNewUser: global.isUser,
-      serviceInfo: [], // 服务列表
-      curServiceIndex: 0,
       flag: false,
       activeVisit: -1,
       appCount: 0,
@@ -537,17 +476,6 @@ export default {
     });
   },
   created() {
-    // 了解我们的服务和头部导航同步
-    const results = [];
-    this.headerStaticInfo.list.subnav_service.forEach((item) => {
-      if (!item.title) {
-        results.push(...item.items);
-      } else {
-        results.push(item);
-      }
-    });
-    this.serviceInfo = results;
-
     // 获取最近四次操作记录
     this.$http.get(`${BACKEND_URL}/api/bkapps/applications/lists/latest/`).then((response) => {
       const resData = response;
@@ -790,10 +718,6 @@ export default {
       if (!value) {
         bus.$emit('page-header-be-transparent');
       }
-    },
-    // 服务列表切换
-    changeService(index) {
-      this.curServiceIndex = index;
     },
     // 访问按钮展开
     visitOpen(event, index) {

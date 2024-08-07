@@ -149,7 +149,7 @@
             ext-cls="top-bar-popover"
             placement="bottom"
             :arrow="false"
-            offset="0, 10"
+            offset="0, 5"
             trigger="mouseenter"
             :tippy-options="{ 'hideOnClick': false }"
           >
@@ -159,16 +159,12 @@
             <template #content>
               <ul class="monitor-navigation-admin">
                 <li
-                  class="nav-item"
-                  @click="switchLanguage('zh-cn')"
+                  v-for="item in languageList"
+                  :class="['nav-item', { active: item.id === localLanguage }]"
+                  @click="switchLanguage(item.id)"
+                  :key="item.id"
                 >
-                  <i class="bk-icon icon-chinese lang-icon" />{{ $t('中文') }}
-                </li>
-                <li
-                  class="nav-item"
-                  @click="switchLanguage('en')"
-                >
-                  <i class="bk-icon icon-english lang-icon" />{{ $t('英文') }}
+                  <i :class="['bk-icon', 'lang-icon', item.icon]" />{{ item.text }}
                 </li>
               </ul>
             </template>
@@ -177,7 +173,7 @@
             theme="light navigation-message"
             ext-cls="top-bar-popover"
             :arrow="false"
-            offset="-20, 10"
+            offset="-20, 5"
             placement="bottom-start"
             :tippy-options="{ 'hideOnClick': false }"
           >
@@ -230,7 +226,7 @@
           theme="light navigation-message"
           ext-cls="top-bar-popover"
           :arrow="false"
-          offset="30, 18"
+          offset="30, 13"
           placement="bottom-start"
           :tippy-options="{ 'hideOnClick': false }"
         >
@@ -417,6 +413,10 @@ export default {
       // eslint-disable-next-line comma-dangle
       link: this.GLOBAL.LINK.APIGW_INDEX,
       navText: '',
+      languageList: [
+        { icon: 'icon-chinese', id: 'zh-cn', text: this.$t('中文') },
+        { icon: 'icon-english', id: 'en', text: this.$t('英文') },
+      ],
     };
   },
   computed: {
@@ -1344,13 +1344,15 @@ export default {
     }
 </style>
 <style lang="scss">
-.top-bar-popover .tippy-backdrop {
-    background: transparent !important;
-}
-.top-bar-popover .tippy-content {
-    box-shadow:0 2px 6px 0 rgba(0,0,0,0.10) !important;
-    border: 1px solid #DCDEE5;
+.top-bar-popover {
+  .tippy-tooltip.light-theme {
+    box-shadow: 0 0 6px 0 #dcdee5 !important;
+    padding:0;
+  }
+  .tippy-content {
+    box-shadow: 0 2px 6px 0 rgba(0,0,0,0.10) !important;
     border-radius: 2px;
+  }
 }
 .top-bar-wrapper .header-mind{
     color:#768197;
@@ -1489,6 +1491,13 @@ border-color:#F0F1F5;
     a {
         color: #63656E;
     }
+    &.active {
+      background-color: #eaf3ff;
+      color: #3a84ff;
+      a {
+        color: #3a84ff;
+      }
+    }
 }
 .monitor-navigation-admin .nav-item .lang-icon{
     font-size:18px;
@@ -1496,12 +1505,10 @@ border-color:#F0F1F5;
 }
 .monitor-navigation-admin .nav-item:hover{
     cursor:pointer;
-    background: #F5F7FA;
-}
-.tippy-popper .tippy-tooltip.navigation-message-theme{
-    padding:0;
-    border-radius:0;
-    -webkit-box-shadow:none;
-    box-shadow:none;
+    background-color: #eaf3ff;
+    color: #3a84ff;
+    a {
+      color: #3a84ff;
+    }
 }
 </style>

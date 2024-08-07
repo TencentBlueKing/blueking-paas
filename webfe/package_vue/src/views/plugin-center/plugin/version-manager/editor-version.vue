@@ -12,7 +12,7 @@
           class="summary-box status"
         >
           <div class="wrapper default-box">
-            <div class="fl mr25">{{ $t('当前版本：') }} {{ curVersion.current_release.version || '--' }}</div>
+            <div class="fl mr25">{{ $t('当前版本') }}： {{ curVersion.current_release.version || '--' }}</div>
             <div class="fl mr25">
               {{ $t('代码分支：') }} {{ curVersion.current_release.source_version_name || '--' }}
             </div>

@@ -24,13 +24,10 @@ from django.utils.translation import override
 from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
-from paasng.accessories.publish.sync_market.handlers import register_application_with_default
-from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
-from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.models import Application
@@ -167,8 +164,6 @@ class TestAppDeclarativeControllerUpdate:
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_json))
         app = Application.objects.get(code=random_name)
-        # 创建应用后，将应用注册到桌面，用于测试应用信息修改后是否能正常同步到桌面
-        register_application_with_default(app.region, app.code, app.name)
         return app
 
     def test_without_permission(self, bk_user, existed_app):
@@ -209,14 +204,15 @@ class TestAppDeclarativeControllerUpdate:
             existed_app.code,
             decorator.with_module("default", True),
         )
-        app_json["bk_app_name"] = new_name
-        app_json["bk_app_name_en"] = new_name_en
+        app_json["bkAppName"] = new_name
+        app_json["bkAppNameEn"] = new_name_en
 
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_json))
-        with console_db.session_scope() as session:
-            legacy_app = AppManger(session).get(existed_app.code)
-        assert legacy_app.name == new_name
+        application = controller.perform_action(get_app_description(app_json))
+        application.refresh_from_db()
+        assert application.name == new_name
+        assert application.name_en == new_name_en
 
     def test_normal(self, bk_user, existed_app):
         app_json = builder.make_app_desc(

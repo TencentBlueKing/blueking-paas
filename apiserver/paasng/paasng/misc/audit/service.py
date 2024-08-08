@@ -17,7 +17,7 @@
 import logging
 from typing import Optional, Union
 
-from attrs import define
+from attrs import asdict, define
 from bk_audit.log.models import AuditContext, AuditInstance
 from django.conf import settings
 from iam import Action
@@ -139,8 +139,8 @@ def add_app_audit_record(
         environment=environment,
         access_type=access_type,
         result_code=result_code,
-        data_before=data_before,
-        data_after=data_after,
+        data_before=asdict(data_before) if data_before else None,
+        data_after=asdict(data_after) if data_after else None,
     )
     report_event_to_bk_audit(record)
     return record

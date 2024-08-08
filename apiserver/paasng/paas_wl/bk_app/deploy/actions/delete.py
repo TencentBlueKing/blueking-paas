@@ -24,6 +24,7 @@ from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.workloads.networking.ingress.models import Domain
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 
@@ -33,6 +34,10 @@ logger = logging.getLogger(__name__)
 def delete_env_resources(env: "ModuleEnvironment"):
     """Delete app's resources in cluster"""
     wl_app = env.wl_app
+
+    # FIXME 云原生应用不能依赖该逻辑进行资源回收，原因是多模块共用命名空间
+    if env.application.type == ApplicationType.CLOUD_NATIVE:
+        return
 
     # 如果应用有部署过（不论失败/成功）都需要进行资源回收
     if not Release.objects.filter(app=wl_app).exists():

@@ -164,9 +164,9 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
         )
 
         # Set the annotation to inform operator what the image pull secret name is
-        model_res.metadata.annotations[
-            IMAGE_CREDENTIALS_REF_ANNO_KEY
-        ] = f"{generate_bkapp_name(module)}--dockerconfigjson"
+        model_res.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = (
+            f"{generate_bkapp_name(module)}--dockerconfigjson"
+        )
 
 
 class BuildConfigManifestConstructor(ManifestConstructor):
@@ -591,8 +591,8 @@ def apply_builtin_env_vars(model_res: BkAppResource, env: ModuleEnvironment):
     environment = env.environment
     builtin_env_vars_overlay = [EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))]
 
-    # deployment=None 意味着云原生应用不通过 get_env_variables 注入描述文件产生的环境变量
-    # include_config_vars=False 是因为 EnvVarsManifestConstructor 已处理了 config vars
+    # 此处，云原生应用忽略这些类型的环境变量：用户手动定义、描述文件定义、服务发现，
+    # 忽略用户手动定义（include_config_vars）是因为 EnvVarsManifestConstructor 已处理过。
     for name, value in get_env_variables(
         env, include_config_vars=False, include_preset_env_vars=False, include_svc_disc=False
     ).items():

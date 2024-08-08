@@ -34,8 +34,8 @@ def delete_env_resources(env: "ModuleEnvironment"):
     """Delete app's resources in cluster"""
     wl_app = env.wl_app
 
-    # 如果应用成功部署过，则需要进行资源回收
-    if not Release.objects.any_successful(wl_app):
+    # 如果应用有部署过（不论失败/成功）都需要进行资源回收
+    if not Release.objects.filter(app=wl_app).exists():
         return
 
     NamespacesHandler.new_by_app(wl_app).delete(namespace=wl_app.namespace)

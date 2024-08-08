@@ -23,7 +23,7 @@ class AccessType(int, StructuredEnum):
     """访问方式"""
 
     WEB = EnumField(0, label=_("网页"))
-    API = EnumField(1, label="api")
+    API = EnumField(1, label="API")
 
 
 class ResultCode(int, StructuredEnum):
@@ -44,9 +44,7 @@ class DataType(str, StructuredEnum):
     前端不需要展示相关的 label, 故不用做国际化标记
     """
 
-    NO_DATA = EnumField("no_data", label=("不展示操作前后的数据"))
-    STRING = EnumField("str", label="以字符串的形式展示")
-    JSON = EnumField("json", label="以 JSON 的形式展示")
+    RAW_DATA = EnumField("raw_data", label="原始数据，前端直接渲染即可")
     BKAPP_REVERSION = EnumField("bkapp_revision", label="bkapp.yaml 的版本号，需要通过版本号查询具体的 yaml 内容展示")
     CLOUD_API_RECORD = EnumField(
         "cloud_api_record", label="云 API 权限申请记录 ID, 需要通过 ID 查询具体的申请单据详情展示"

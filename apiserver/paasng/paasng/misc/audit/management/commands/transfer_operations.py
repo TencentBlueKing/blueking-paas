@@ -131,11 +131,11 @@ OPRATION_TRANSFER_MAP: Dict[int, Dict[str, Optional[str]]] = {
 
 
 class Command(BaseCommand):
-    help = "Transfer operations from Operation table to AppOperationRecord table"
+    help = "Transfer operations from Operation table to AppOperationRecord table, only executed when bk-audit is launched for the first time"
 
     def handle(self, *args, **kwargs):
         # 获取所有用于展示应用最近操作的记录
-        operations = Operation.objects.filter(is_hidden=False)
+        operations = Operation.objects.filter(is_hidden=False).iterator()
         self.stdout.write(f"Transferring {operations.count()} operations...")
         for op in operations:
             # 申请网关权限、启停进程等操作对象的具体属性记录在 extra_values 的相应字段中

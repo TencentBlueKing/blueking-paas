@@ -20,7 +20,7 @@ import logging
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.manager import ModuleCleaner
 

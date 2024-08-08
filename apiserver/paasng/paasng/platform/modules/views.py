@@ -42,7 +42,7 @@ from paasng.infras.accounts.permissions.application import (
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.utils import add_app_audit_record, report_event_to_bk_audit
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch
@@ -193,16 +193,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if protection_status.activated:
             raise error_codes.CANNOT_DELETE_MODULE.f(protection_status.reason)
 
-        # 审计记录在事务外创建, 避免由于数据库回滚而丢失
-        op_record = add_app_audit_record(
-            app_code=application.code,
-            user=request.user.pk,
-            action_id=AppAction.MANAGE_MODULE,
-            operation=OperationEnum.DELETE,
-            target=OperationTarget.MODULE,
-            attribute=module.name,
-            result_code=ResultCode.ONGOING,
-        )
         try:
             with transaction.atomic():
                 module = application.get_module_with_lock(module_name=module_name)
@@ -212,15 +202,27 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "unable to clean module<%s> of application<%s> related resources", module_name, application.code
             )
             # 执行失败
-            op_record.result_code = ResultCode.FAILURE
-            op_record.save(update_fields=["result_code"])
-            report_event_to_bk_audit(op_record)
+            add_app_audit_record(
+                app_code=application.code,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_MODULE,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.MODULE,
+                attribute=module.name,
+                result_code=ResultCode.FAILURE,
+            )
             raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
 
         # 执行成功
-        op_record.result_code = ResultCode.SUCCESS
-        op_record.save(update_fields=["result_code"])
-        report_event_to_bk_audit(op_record)
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_MODULE,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.MODULE,
+            attribute=module.name,
+            result_code=ResultCode.SUCCESS,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # [deprecated] use `api.applications.entrances.set_default_entrance` instead

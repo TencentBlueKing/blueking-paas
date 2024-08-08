@@ -60,7 +60,7 @@ from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationTarget
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
@@ -120,19 +120,21 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             module_name=module_env.module.name,
-            env=module_env.environment,
+            environment=module_env.environment,
             operation=operate_type,
             target=OperationTarget.PROCESS,
             attribute=process_type,
-            data_type=DataType.JSON,
-            data_before={
-                "process_type": proc_spec.name,
-                "operate_type": operate_type,
-                "autoscaling": proc_spec.autoscaling,
-                "target_replicas": proc_spec.target_replicas,
-                "scaling_config": proc_spec.scaling_config,
-            },
-            data_after=data,
+            data_before=DataDetail(
+                type=DataType.RAW_DATA,
+                data={
+                    "process_type": proc_spec.name,
+                    "operate_type": operate_type,
+                    "autoscaling": proc_spec.autoscaling,
+                    "target_replicas": proc_spec.target_replicas,
+                    "scaling_config": proc_spec.scaling_config,
+                },
+            ),
+            data_after=DataDetail(type=DataType.BKAPP_REVERSION, data=data),
         )
         return Response(
             status=status.HTTP_200_OK,

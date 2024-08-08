@@ -71,7 +71,7 @@ from paasng.infras.iam.helpers import (
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.utils import add_app_audit_record, report_event_to_bk_audit
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
 from paasng.platform.applications.constants import (
@@ -392,15 +392,6 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     delete_bkapp(env)
                     delete_networking(env)
 
-        # 审计记录在事务外创建, 避免由于数据库回滚而丢失
-        op_record = add_app_audit_record(
-            app_code=application.code,
-            user=request.user.pk,
-            action_id=AppAction.DELETE_APPLICATION,
-            operation=OperationEnum.DELETE,
-            target=OperationTarget.APP,
-            result_code=ResultCode.ONGOING,
-        )
         try:
             with transaction.atomic():
                 self._delete_all_module(application)
@@ -408,14 +399,25 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except Exception:
             logger.exception("unable to delete app<%s> related resources", application.code)
             # 执行失败
-            op_record.result_code = ResultCode.FAILURE
-            op_record.save(update_fields=["result_code"])
+            add_app_audit_record(
+                app_code=application.code,
+                user=request.user.pk,
+                action_id=AppAction.DELETE_APPLICATION,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.APP,
+                result_code=ResultCode.FAILURE,
+            )
             raise
 
         # 执行成功
-        op_record.result_code = ResultCode.SUCCESS
-        op_record.save(update_fields=["result_code"])
-        report_event_to_bk_audit(op_record)
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.DELETE_APPLICATION,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.APP,
+            result_code=ResultCode.SUCCESS,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _delete_all_module(self, application: Application):

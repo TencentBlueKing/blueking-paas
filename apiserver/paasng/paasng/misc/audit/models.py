@@ -14,12 +14,14 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import Optional
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import AccessType, DataType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget, ResultCode
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.basic import get_username_by_bkpaas_user_id
@@ -28,7 +30,7 @@ from paasng.utils.models import AuditedModel, BkUserField
 
 class BaseOperation(AuditedModel):
     user = BkUserField()
-    # 时间字段手动加到主键，方便审计记录表过大时做分区优化
+    # 时间字段手添加索引，方便审计记录表过大时做分区优化
     start_time = models.DateTimeField(auto_now_add=True, verbose_name="开始时间", db_index=True)
     end_time = models.DateTimeField(null=True, help_text="仅需要后台执行的的操作才需要记录结束时间")
     access_type = models.IntegerField(
@@ -37,15 +39,8 @@ class BaseOperation(AuditedModel):
     result_code = models.IntegerField(
         verbose_name="操作结果", choices=ResultCode.get_choices(), default=ResultCode.SUCCESS
     )
-    data_type = models.CharField(
-        max_length=32,
-        verbose_name="操作的数据类型",
-        choices=DataType.get_choices(),
-        default=DataType.NO_DATA,
-        help_text="该字段决定了 data_before、data_after 记录的数据类型，以及前端展示的样式",
-    )
-    data_before = models.TextField(verbose_name="操作前的数据", null=True, blank=True)
-    data_after = models.TextField(verbose_name="操作后的数据", null=True, blank=True)
+    data_before = models.JSONField(verbose_name="操作前的数据", null=True, blank=True)
+    data_after = models.JSONField(verbose_name="操作后的数据", null=True, blank=True)
 
     operation = models.CharField(max_length=32, verbose_name="操作类型", choices=OperationEnum.get_choices())
     target = models.CharField(max_length=32, verbose_name="操作对象", choices=OperationTarget.get_choices())
@@ -59,7 +54,7 @@ class BaseOperation(AuditedModel):
 
     # 只记录 module_name，保证 module 删除时相关记录仍旧存在
     module_name = models.CharField(max_length=32, verbose_name="模块名，非必填", null=True, blank=True)
-    env = models.CharField(
+    environment = models.CharField(
         max_length=16, verbose_name="环境，非必填", choices=AppEnvName.get_choices(), null=True, blank=True
     )
 
@@ -67,27 +62,27 @@ class BaseOperation(AuditedModel):
         abstract = True
 
     @property
-    def username(self):
+    def username(self) -> str:
         if self.user:
             return get_username_by_bkpaas_user_id(self.user)
         return ""
 
     @property
-    def scope_type(self):
+    def scope_type(self) -> str:
         """审计中心的冗余字段，用于细化接入权限中心的 action"""
         return self.target
 
     @property
-    def scope_id(self):
+    def scope_id(self) -> str:
         """审计中心的冗余字段，用于细化接入权限中心的 action"""
         return f"{self.operation}|{self.attribute}|{self.module_name}|{self.env}"
 
     @property
-    def is_terminated(self):
+    def is_terminated(self) -> bool:
         return self.result_code in ResultCode.get_terminated_codes()
 
     @property
-    def result_display(self):
+    def result_display(self) -> str:
         if self.is_terminated:
             return self.get_result_code_display()
         # 不是终止状态，则不再描述的信息中展示
@@ -95,20 +90,20 @@ class BaseOperation(AuditedModel):
         return ""
 
     @property
-    def need_to_report_bk_audit(self):
+    def need_to_report_bk_audit(self) -> bool:
         # 仅操作为终止状态时才记录到审计中心
         if self.action_id and self.is_terminated:
             return True
         return False
 
-    def get_display_text(self):
+    def get_display_text(self) -> str:
         """操作记录描述，用于首页、应用概览页面前 5 条部署记录的展示"""
-        env = self.get_env_display()
-        if self.module_name and env:
+        env = self.get_environment_display()
+        if self.module_name and self.environment:
             module_env_info = _(f" {self.module_name} 模块{env}")
         elif self.module_name:
             module_env_info = _(f" {self.module_name} 模块")
-        elif self.env:
+        elif self.environment:
             module_env_info = _(f"{env}")
         else:
             module_env_info = ""
@@ -122,8 +117,10 @@ class BaseOperation(AuditedModel):
             "result": self.result_display,
         }
         if self.attribute:
+            if self.target == OperationTarget.CLOUD_API:
+                # admin 申请 bklog 网关云API权限
+                return _("{user} {operation}{module_env_info} {attribute} 网关 API 权限").format(**ctx)
             # admin 启用 default 模块预发布环境 mysql 增强服务成功
-            # admin 申请 bklog 网关云API权限
             return _("{user} {operation}{module_env_info} {attribute} {target}{result}").format(**ctx)
 
         if self.target == OperationTarget.APP:
@@ -145,9 +142,6 @@ class AppOperationRecord(BaseOperation):
 
     # 后续可能会做应用的硬删除，记录应用 ID，方便应用删除后相关记录仍存在
     app_code = models.CharField(max_length=32, verbose_name="应用ID, 必填")
-    source_object_id = models.CharField(
-        default="", null=True, blank=True, max_length=32, help_text="事件来源对象ID,用于异步事件更新操作记录状态"
-    )
 
     # 注册到权限中心的字段，字段的值需要跟注册到权限中心的值保持一致
     action_id = models.CharField(
@@ -165,11 +159,8 @@ class AppOperationRecord(BaseOperation):
     )
 
     @property
-    def application(self):
-        try:
-            return Application.default_objects.get(code=self.app_code)
-        except Application.DoesNotExist:
-            return None
+    def application(self) -> Optional[Application]:
+        return Application.default_objects.filter(code=self.app_code).first()
 
 
 class AppLatestOperationRecord(models.Model):

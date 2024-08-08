@@ -16,12 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 import pytest
 
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.service import add_app_audit_record
 
 pytestmark = pytest.mark.django_db
 
 
-class TestAuditApi:
+class TestAuditAPI:
     def test_latest_apps(self, api_client, bk_user, bk_app):
         """最近操作的应用列表"""
         add_app_audit_record(

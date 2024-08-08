@@ -19,7 +19,7 @@ import pytest
 
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppLatestOperationRecord
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.service import add_app_audit_record
 
 pytestmark = pytest.mark.django_db
 
@@ -76,11 +76,11 @@ class TestAppOperationRecord:
             (
                 OperationTarget.CLOUD_API,
                 OperationEnum.APPLY,
-                "bkdata 网关",
+                "bkdata",
                 None,
                 None,
                 ResultCode.ONGOING,
-                "{username} 申请 bkdata 网关 云 API 权限",
+                "{username} 申请 bkdata 网关 API 权限",
             ),
         ],
     )
@@ -95,7 +95,7 @@ class TestAppOperationRecord:
             target=target,
             attribute=attribute,
             module_name=module_name,
-            env=env,
+            environment=env,
             result_code=result_code,
         )
         assert record.get_display_text() == expected.format(username=record.username)

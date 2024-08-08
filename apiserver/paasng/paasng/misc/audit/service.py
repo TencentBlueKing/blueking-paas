@@ -14,15 +14,12 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import datetime
 import logging
-from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import Optional, Union
 
+from attrs import define
 from bk_audit.log.models import AuditContext, AuditInstance
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
-from django.utils import timezone
 from iam import Action
 
 from paasng.misc.audit import constants
@@ -33,10 +30,16 @@ from paasng.platform.applications.models import Application
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@define
 class AppBaseObj:
     code: str
     name: str
+
+
+@define
+class DataDetail:
+    type: constants.DataType
+    data: Optional[Union[str, dict, list]]
 
 
 class ApplicationInstance(AuditInstance):
@@ -45,7 +48,7 @@ class ApplicationInstance(AuditInstance):
             app = Application.default_objects.get(code=app_code)
         except Application.DoesNotExist:
             # 如果应用已经删除，则只记录应用 ID 即可
-            self.instance = AppBaseObj(code=app_code, name=app_code)
+            self.instance = AppBaseObj(code=app_code, name=f"{app_code}__DELETE__")
         self.instance = AppBaseObj(code=app_code, name=app.name)
 
     @property
@@ -91,6 +94,7 @@ def report_event_to_bk_audit(record: AppOperationRecord):
         record.action_id,
         record.app_code,
     )
+    return
 
 
 def add_app_audit_record(
@@ -99,35 +103,30 @@ def add_app_audit_record(
     action_id: str,
     operation: str,
     target: str,
-    source_object_id: Optional[str] = None,
     attribute: Optional[str] = None,
     module_name: Optional[str] = None,
-    env: Optional[str] = None,
+    environment: Optional[str] = None,
     access_type: int = constants.AccessType.WEB,
     result_code: int = constants.ResultCode.SUCCESS,
-    data_type: str = constants.DataType.NO_DATA,
-    data_before: Union[str, int, Dict[str, Any], None] = None,
-    data_after: Union[str, int, Dict[str, Any], None] = None,
-    end_time: Optional[datetime.datetime] = None,
+    data_before: Optional[DataDetail] = None,
+    data_after: Optional[DataDetail] = None,
 ) -> AppOperationRecord:
     """
-    创建应用审计记录，并根据配置决定是否上报到审计中心
+    创建应用审计记录，并根据配置决定是否上报到审计中心。
+    说明：已讨论确认在操作过程结束的时候记录操作记录即可，比如部署成功、失败时，所以不需要记录 end_time, 也不需要提供更新操作记录的方法
 
     :param app_code: 应用 ID
-    :param user: encode 后的用户名
-    :param action_id: 注册到权限中心的操作ID
-    :param operation: 操作类型
-    :param target: 操作对象
-    :param source_object_id: 事件来源对象ID
-    :param attribute: 对象属性
+    :param user: encode 后的用户名，形如 0335cce79c92
+    :param action_id: 注册到权限中心的操作ID, 如：基础开发、模块管理
+    :param operation: 操作类型，如：新建、部署、扩容等
+    :param target: 操作对象，如：模块、进程、增强服务等
+    :param attribute: 对象属性，如 【web】进程、【mysql】增强服务
     :param module_name: 模块名
-    :param env: 环境
-    :param access_type: 访问方式
-    :param result_code: 操作结果
-    :param data_before: 操作前的数据，可以是字符串、整数或字典
-    :param data_after: 操作后的数据，可以是字符串、整数或字典
-    :param data_type: 数据类型，可选，默认值为 None
-    :param end_time: 操作结束时间
+    :param environment: 环境，如: stag、prod
+    :param access_type: 访问方式，默认为网页访问
+    :param result_code: 操作结果，默认为成功
+    :param data_before: 操作前的数据，包含数据类型的对应的数据
+    :param data_after: 操作后的数据，包含数据类型的对应的数据
     """
     record = AppOperationRecord.objects.create(
         app_code=app_code,
@@ -135,38 +134,13 @@ def add_app_audit_record(
         action_id=action_id,
         operation=operation,
         target=target,
-        source_object_id=source_object_id,
         attribute=attribute,
         module_name=module_name,
-        env=env,
+        environment=environment,
         access_type=access_type,
         result_code=result_code,
-        data_type=data_type,
         data_before=data_before,
         data_after=data_after,
-        end_time=end_time,
     )
-    report_event_to_bk_audit(record)
-    return record
-
-
-def update_app_audit_record(source_object_id: str, result_code: int) -> AppOperationRecord:
-    """更新审计记录的结果
-
-    :param source_object_id: 事件来源对象ID,用于定位要更新的操作记录
-    """
-    try:
-        record = AppOperationRecord.objects.get(source_object_id=source_object_id)
-    except ObjectDoesNotExist:
-        logger.exception("update app audit error, record with source_object_id<%s> not exits", source_object_id)
-
-    record.result_code = result_code
-    update_fields = ["result_code"]
-    # 如果是终止状态，则同时更新结束时间
-    if result_code in constants.ResultCode.get_terminated_codes():
-        record.end_time = timezone.now()
-        update_fields.append("end_time")
-    record.save(update_fields=update_fields)
-
     report_event_to_bk_audit(record)
     return record

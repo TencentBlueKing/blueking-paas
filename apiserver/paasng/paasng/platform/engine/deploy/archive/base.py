@@ -22,8 +22,8 @@ from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, Ta
 from django.utils.translation import gettext as _
 
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.utils import add_app_audit_record, update_app_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.signals import module_environment_offline_success
 from paasng.platform.engine.constants import JobStatus, OperationTypes, ReleaseStatus
 from paasng.platform.engine.exceptions import OfflineOperationExistError
@@ -83,24 +83,6 @@ class BaseArchiveManager:
             operation_type=OperationTypes.OFFLINE.value,
             object_uid=offline_operation.pk,
         )
-
-        # 审计记录
-        add_app_audit_record(
-            app_code=self.env.application.code,
-            user=operator,
-            action_id=AppAction.BASIC_DEVELOP,
-            operation=OperationEnum.OFFLINE,
-            target=OperationTarget.APP,
-            module_name=self.env.module.name,
-            env=self.env.environment,
-            # 仅下发下架操作，未执行成功
-            result_code=ResultCode.ONGOING,
-            # 仅记录云原生应用操作前 bkapp.yaml 的版本号
-            data_type=DataType.BKAPP_REVERSION,
-            data_before=deployment.bkapp_revision_id,
-            source_object_id=offline_operation.id.hex,
-        )
-
         self.perform_implement(offline_operation, result_handler=ArchiveResultHandler)
         return offline_operation
 
@@ -137,5 +119,15 @@ class ArchiveResultHandler(CallbackHandler):
         module_environment_offline_success.send(
             sender=OfflineOperation, offline_instance=offline_op, environment=offline_op.app_environment.environment
         )
-        # 更新审计记录状态
-        update_app_audit_record(offline_op.id.hex, result_code)
+
+        # 审计记录
+        add_app_audit_record(
+            app_code=offline_op.app_environment.application.code,
+            user=offline_op.operator,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.OFFLINE,
+            target=OperationTarget.APP,
+            module_name=offline_op.app_environmenv.module.name,
+            environment=offline_op.app_environment.environment,
+            result_code=result_code,
+        )

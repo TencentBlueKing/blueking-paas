@@ -30,7 +30,7 @@ from paasng.accessories.publish.market.protections import AppPublishPreparer
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes

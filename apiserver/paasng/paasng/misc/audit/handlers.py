@@ -29,7 +29,7 @@ from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit import constants
 from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models import Deployment
@@ -80,7 +80,7 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
     if isinstance(instance, Application) and created:
         add_app_audit_record(
             app_code=instance.code,
-            # 创建应用未在权限中心注册，因此操作也不能上报到设计中心
+            # 创建应用未在权限中心注册，因此操作也不能上报到审计中心
             action_id="",
             user=instance.owner,
             operation=constants.OperationEnum.CREATE_APP,
@@ -109,9 +109,8 @@ def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwar
         action_id=AppAction.BASIC_DEVELOP,
         operation=constants.OperationEnum.DEPLOY,
         target=constants.OperationTarget.APP,
-        source_object_id=deployment.id.hex,
         module_name=deployment.app_environment.module.name,
-        env=deployment.app_environment.environment,
+        environment=deployment.app_environment.environment,
         result_code=result_code,
     )
 
@@ -136,11 +135,9 @@ def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy
         action_id=AppAction.BASIC_DEVELOP,
         operation=constants.OperationEnum.DEPLOY,
         target=constants.OperationTarget.APP,
-        source_object_id=deploy.pk,
         module_name=deploy.module.name,
-        env=deploy.environment_name,
+        environment=deploy.environment_name,
         result_code=result_code,
-        data_type=constants.DataType.BKAPP_REVERSION,
-        data_after=deploy.revision.id,
-        data_before=last_revision_id,
+        data_after=DataDetail(type=constants.DataType.BKAPP_REVERSION, data=deploy.revision.id),
+        data_before=DataDetail(type=constants.DataType.BKAPP_REVERSION, data=last_revision_id),
     )

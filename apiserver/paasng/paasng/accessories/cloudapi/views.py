@@ -19,7 +19,6 @@ import copy
 import logging
 
 from django.conf import settings
-from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -31,7 +30,7 @@ from paasng.accessories.cloudapi.utils import get_user_auth_type
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.utils import add_app_audit_record
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -230,11 +229,10 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.MANAGE_CLOUD_API,
             operation=operation_type,
             target=OperationTarget.CLOUD_API,
-            attribute=_(f"{gateway_name} 网关"),
+            attribute=gateway_name,
             # 仅提交了申请记录，需要审批后才算操作成功
             result_code=ResultCode.ONGOING,
-            data_type=DataType.CLOUD_API_RECORD,
-            data_after=record_id,
+            data_after=DataDetail(type=DataType.CLOUD_API_RECORD, data=record_id),
         )
         return Response(result)
 

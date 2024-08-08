@@ -16,28 +16,24 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-import cattr
 from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.platform.applications.models import Application
+from paasng.platform.bkapp_model.entities import v1alpha2
 from paasng.platform.declarative.constants import AppDescPluginType
-from paasng.platform.declarative.deployment.resources import SvcDiscovery
-from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import HookList
 from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_json_field
-from paasng.utils.structure import register
 
 logger = logging.getLogger(__name__)
 
 
-BkAppSpecField = make_json_field("BkAppSpecField", register(bk_app.BkAppSpec))
+BkAppSpecField = make_json_field("BkAppSpecField", v1alpha2.BkAppSpec)
 
 
 class ApplicationDescription(OwnerTimestampedModel):
@@ -88,7 +84,7 @@ class DeploymentDescription(TimestampedModel):
     environments = JSONField(verbose_name="environment specified configs", blank=True, default={})
     plugins = JSONField(verbose_name="extra plugins", blank=True, default=[])
 
-    spec: bk_app.BkAppSpec = BkAppSpecField(verbose_name="bkapp.spec", null=True, default=None)
+    spec: v1alpha2.BkAppSpec = BkAppSpecField(verbose_name="bkapp.spec", null=True, default=None)
 
     def get_procfile(self) -> Dict[str, str]:
         """[Deprecated] get Procfile, should only be used to generate Procfile for buildpack
@@ -108,7 +104,7 @@ class DeploymentDescription(TimestampedModel):
         """
         hooks = HookList()
         if self.spec is not None:
-            if (_hooks := self.spec.hooks) and (pre_release_hook := _hooks.preRelease):
+            if (_hooks := self.spec.hooks) and (pre_release_hook := _hooks.pre_release):
                 hooks.upsert(
                     type_=DeployHookType.PRE_RELEASE_HOOK,
                     command=pre_release_hook.command or [],
@@ -124,62 +120,6 @@ class DeploymentDescription(TimestampedModel):
             if value:
                 hooks.upsert(type_, command=value)
         return hooks
-
-    def get_svc_discovery(self) -> Optional[SvcDiscovery]:
-        """从 spec 提取服务发现配置, 用于普通应用部署流程.
-
-        > 存量的旧版本数据使用 `runtime`.`svc_discovery` 字段
-        """
-        if self.spec is not None:
-            if svc_discovery := self.spec.svcDiscovery:
-                return cattr.structure(
-                    {
-                        "bk_saas": [
-                            {"bk_app_code": item.bkAppCode, "module_name": item.moduleName}
-                            for item in svc_discovery.bkSaaS
-                        ]
-                    },
-                    SvcDiscovery,
-                )
-            return None
-
-        try:
-            return cattr.structure(self.runtime["svc_discovery"], SvcDiscovery)
-        except KeyError:
-            return None
-        except TypeError:
-            logging.exception("Failed to parse SvcDiscovery, return None as fallback")
-            return None
-
-    def get_env_variables(self) -> List[Dict]:
-        """从 spec 提供 dict 格式的环境变量给 EnvVariablesReader, 用于普通应用部署流程.
-
-        [deprecated] should use PresetEnvVariable directly
-        > 存量的旧版本数据使用 `env_variables` 字段
-        """
-        if self.spec is not None:
-            env_name = self.deployment.app_environment.environment
-            env_variables = []
-            for global_var in self.spec.configuration.env:
-                env_variables.append(
-                    {
-                        "key": global_var.name,
-                        "value": global_var.value,
-                        "environment_name": ConfigVarEnvName.GLOBAL,
-                    }
-                )
-            if (env_overlay := self.spec.envOverlay) and (overlays := env_overlay.envVariables):
-                for overlay in overlays:
-                    if overlay.envName == env_name:
-                        env_variables.append(
-                            {
-                                "key": overlay.name,
-                                "value": overlay.value,
-                                "environment_name": env_name,
-                            }
-                        )
-            return env_variables
-        return self.env_variables
 
     @property
     def source_dir(self) -> str:

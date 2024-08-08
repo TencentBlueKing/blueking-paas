@@ -90,7 +90,7 @@ class TestValidateBadCase:
             decorator.with_module(
                 module_name="foo",
                 is_default=True,
-                module_spec={"addons": [{"name": "openai", "sharedFromModule": "bar"}]},
+                module_spec={"addons": [{"name": "openai", "sharedFromModule": "bar"}], "processes": []},
             ),
         )
         with pytest.raises(

@@ -98,7 +98,7 @@ class TestSMartDescriptionHandler:
         SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert desc_obj.spec.processes[0].resQuotaPlan == expected_plan_name
+        assert desc_obj.spec.processes[0].res_quota_plan == expected_plan_name
 
     @pytest.mark.parametrize(
         ("is_use_celery", "expected_services"),

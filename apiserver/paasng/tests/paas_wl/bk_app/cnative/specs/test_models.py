@@ -54,7 +54,6 @@ class TestCreateAppResource:
                         "resQuotaPlan": None,
                         "autoscaling": None,
                         "probes": None,
-                        "proc_command": None,
                     }
                 ],
                 "hooks": None,

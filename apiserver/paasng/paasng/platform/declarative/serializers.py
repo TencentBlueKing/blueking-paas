@@ -24,16 +24,12 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
+from paasng.platform.bkapp_model.entities import Addon, v1alpha2
 from paasng.platform.declarative import constants
-from paasng.platform.declarative.application.resources import (
-    ApplicationDesc,
-    DisplayOptions,
-    MarketDesc,
-)
+from paasng.platform.declarative.application.resources import ApplicationDesc, DisplayOptions, MarketDesc
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.utils import get_quota_plan
@@ -185,35 +181,38 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
             market_desc.tag_id = attrs["tag"].id
 
         package_plan = get_quota_plan(attrs.get("package_plan")) if attrs.get("package_plan") else None
-        addons = [bk_app.BkAppAddon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
+        addons = [Addon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
         processes = [
             {
                 "name": "web",
                 "args": shlex.split(constants.WEB_PROCESS),
-                "resQuotaPlan": package_plan,
+                "res_quota_plan": package_plan,
+                "replicas": 1,
                 "proc_command": constants.WEB_PROCESS,
             }
         ]
         is_use_celery = False
         if attrs["is_use_celery"]:
             is_use_celery = True
-            addons.append(bk_app.BkAppAddon(name="rabbitmq"))
+            addons.append(Addon(name="rabbitmq"))
             processes.append(
                 {
                     "name": "celery",
                     "args": shlex.split(constants.CELERY_PROCESS),
-                    "resQuotaPlan": package_plan,
+                    "res_quota_plan": package_plan,
+                    "replicas": 1,
                     "proc_command": constants.CELERY_PROCESS,
                 }
             )
         elif attrs["is_use_celery_with_gevent"]:
             is_use_celery = True
-            addons.append(bk_app.BkAppAddon(name="rabbitmq"))
+            addons.append(Addon(name="rabbitmq"))
             processes.append(
                 {
                     "name": "celery",
                     "args": shlex.split(constants.CELERY_PROCESS_WITH_GEVENT),
-                    "resQuotaPlan": package_plan,
+                    "res_quota_plan": package_plan,
+                    "replicas": 1,
                     "proc_command": constants.CELERY_PROCESS_WITH_GEVENT,
                 }
             )
@@ -225,7 +224,8 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                 {
                     "name": "beat",
                     "args": shlex.split(constants.CELERY_BEAT_PROCESS),
-                    "resQuotaPlan": package_plan,
+                    "res_quota_plan": package_plan,
+                    "replicas": 1,
                     "proc_command": constants.CELERY_BEAT_PROCESS,
                 }
             )
@@ -235,7 +235,7 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
             dict(type=constants.AppDescPluginType.APP_LIBRARIES, data=attrs["libraries"]),
         ]
 
-        spec = bk_app.BkAppSpec(
+        spec = v1alpha2.BkAppSpec(
             processes=processes,
             configuration={"env": [{"name": item["key"], "value": item["value"]} for item in attrs.get("env", [])]},
             addons=addons,

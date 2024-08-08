@@ -16,11 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import cattr
-from pydantic import ValidationError as PDValidationError
-from rest_framework import exceptions, serializers
+from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paas_wl.utils.basic import to_error_string
+from paasng.platform.bkapp_model.serializers import v1alpha2
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.serializers import validate_language
@@ -29,25 +27,10 @@ from paasng.platform.modules.serializers import ModuleNameField
 module_name_field = ModuleNameField()
 
 
-class ModuleSpecField(serializers.DictField):
-    def to_internal_value(self, data):
-        attrs = super().to_internal_value(data)
-        try:
-            obj = bk_app.BkAppSpec(**attrs)
-        except PDValidationError as e:
-            raise exceptions.ValidationError(to_error_string(e))
-        return obj
-
-    def to_representation(self, value):
-        if isinstance(value, bk_app.BkAppSpec):
-            return value.dict(exclude_none=True, exclude_unset=True)
-        return super().to_representation(value)
-
-
 class DeploymentDescSLZ(serializers.Serializer):
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
     sourceDir = serializers.CharField(help_text="源码目录", default="", source="source_dir")
-    spec = ModuleSpecField(required=True)
+    spec = v1alpha2.BkAppSpecInputSLZ(required=True)
 
     def to_internal_value(self, data) -> DeploymentDesc:
         attrs = super().to_internal_value(data)

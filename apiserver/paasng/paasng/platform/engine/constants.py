@@ -147,12 +147,6 @@ class RuntimeType(str, StructuredEnum):
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image(云原生和旧镜像应用)")
 
 
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
-
-
 class AppInfoBuiltinEnv(str, StructuredEnum):
     """应用基本信息的内置环境变量built-in"""
 

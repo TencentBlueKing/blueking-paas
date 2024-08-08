@@ -23,7 +23,9 @@ from unittest import mock
 import cattr
 import pytest
 import yaml
+from django_dynamic_fixture import G
 
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import (
@@ -33,6 +35,7 @@ from paasng.platform.declarative.handlers import (
     get_desc_handler,
 )
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
+from paasng.platform.modules.models.module import Module
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -110,8 +113,17 @@ class Test__get_desc_handler:
 
 
 class TestAppDescriptionHandler:
+    @pytest.fixture()
+    def _create_for_test_svc_discovery(self):
+        # 为了检验 BKPAAS_SERVICE_ADDRESSES_BKSAAS 通过
+        G(Application, code="foo-app")
+        app = G(Application, code="bar-app")
+        G(Module, name="api", application=app)
+
+    @pytest.mark.usefixtures("_create_for_test_svc_discovery")
     def test_normal(self, bk_deployment, yaml_v2_normal):
         """Handle a normal YAML content."""
+
         with mock.patch(
             "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
         ) as update_bkmonitor:

@@ -17,13 +17,12 @@
 
 import cattr
 import pytest
+from django_dynamic_fixture import G
 
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
-from paasng.platform.declarative.deployment.resources import SvcDiscovery
-from paasng.platform.declarative.deployment.svc_disc import (
-    BkSaaSEnvVariableFactory,
-)
+from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.declarative.deployment.validations.v2 import DeploymentDescSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
@@ -32,6 +31,7 @@ from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
+from paasng.platform.modules.models.module import Module
 from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -103,8 +103,6 @@ class TestEnvVariablesField:
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert len(desc_obj.get_env_variables()) == 2
         assert PresetEnvVariable.objects.filter(module=bk_module).count() == 2
 
     def test_preset_environ_vars(self, bk_module, bk_deployment):
@@ -126,6 +124,10 @@ class TestEnvVariablesField:
 class TestSvcDiscoveryField:
     @staticmethod
     def apply_config(bk_deployment):
+        G(Application, code="foo-app")
+        app = G(Application, code="bar-app")
+        G(Module, name="api", application=app)
+
         json_data = {
             "svc_discovery": {
                 "bk_saas": [
@@ -137,20 +139,6 @@ class TestSvcDiscoveryField:
         }
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-
-    def test_store(self, bk_deployment):
-        self.apply_config(bk_deployment)
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-
-        assert desc_obj.get_svc_discovery() == cattr.structure(
-            {
-                "bk_saas": [
-                    {"bk_app_code": "foo-app", "module_name": None},
-                    {"bk_app_code": "bar-app", "module_name": "api"},
-                ]
-            },
-            SvcDiscovery,
-        )
 
     def test_as_env_vars_domain(self, bk_deployment):
         with cluster_ingress_config(replaced_config={"app_root_domains": [{"name": "foo.com"}, {"name": "bar.com"}]}):

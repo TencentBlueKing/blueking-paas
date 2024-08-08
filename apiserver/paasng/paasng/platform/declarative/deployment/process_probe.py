@@ -15,11 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import cattr
-
 from paas_wl.bk_app.processes.models import ProcessProbe
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.declarative.deployment.resources import Probe
+from paasng.platform.bkapp_model.entities import Probe
 
 
 def upsert_process_probe(
@@ -31,7 +29,7 @@ def upsert_process_probe(
     """更新或创建应用探针的配置"""
     instance, _ = ProcessProbe.objects.update_or_create(
         defaults={
-            "probe_handler": cattr.unstructure(probe.get_probe_handler()),
+            "probe_handler": probe.get_probe_handler(),
             "initial_delay_seconds": probe.initial_delay_seconds,
             "timeout_seconds": probe.timeout_seconds,
             "period_seconds": probe.period_seconds,

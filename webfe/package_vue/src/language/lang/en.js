@@ -1966,7 +1966,7 @@ export default {
   请输入成员姓名搜索: 'Please enter member name to search',
   已有发布任务进行中: 'There are already publishing tasks in progress',
   版本号类型: 'Version No. Type',
-  版本日志: 'Release Log',
+  版本日志: 'Release Notes',
   '版本日志-label': 'Release log',
   正式: 'Official',
   已上线: 'Published',

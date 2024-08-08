@@ -58,6 +58,10 @@ class ErrorCodes:
     # 可见范围修改失败
     VISIBLE_RANGE_UPDATE_FAIELD = ErrorCode(_("可见范围修改失败"))
 
+    # 灰度发布相关
+    RELEASE_COMPLETED = ErrorCode(_("版本发布已结束"))
+    LAST_GRAY_RELEASE_NOT_APPROVED = ErrorCode(_("上一次灰度发布还未审批完成"))
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

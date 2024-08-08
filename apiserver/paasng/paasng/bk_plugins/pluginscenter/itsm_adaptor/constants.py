@@ -25,6 +25,14 @@ class ApprovalServiceName(str, StructuredEnum):
     CREATE_APPROVAL = EnumField("create_approval", label=_("插件上线审批"))
     ONLINE_APPROVAL = EnumField("online_approval", label=_("插件创建审批流程"))
     VISIBLE_RANGE_APPROVAL = EnumField("visible_range_approval", label=_("插件可见范围修改审批流程"))
+    # 全量发布：平台管理员审批
+    CODECC_FULL_RELEASE_APPROVAL = EnumField("codecc_full_release_approval", label=_("Codecc 全量发布审批流程"))
+    # 灰度审批：插件管理员审批
+    CODECC_GRAY_RELEASE_APPROVAL = EnumField("codecc_gray_release_approval", label=_("Codecc 灰度发布审批流程"))
+    # 按组织灰度审批：发布者 leader 审批
+    CODECC_ORG_GRAY_RELEASE_APPROVAL = EnumField(
+        "codecc_org_gray_release_approval", label=_("Codecc 按组织灰度发布审批流程")
+    )
 
 
 class ItsmTicketStatus(str, StructuredEnum):

@@ -46,6 +46,8 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissi
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    is_itsm_ticket_closed,
+    submit_canary_release_ticket,
     submit_create_approval_ticket,
     submit_visible_range_ticket,
 )
@@ -572,14 +574,9 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         if type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
-        version_type = request.data["source_version_type"]
-        version_name = request.data["source_version_name"]
-        source_hash = get_plugin_repo_accessor(plugin).extract_smart_revision(f"{version_type}:{version_name}")
-
         slz = serializers.make_create_release_version_slz_class(plugin, type)(
             data=request.data,
             context={
-                "source_hash": source_hash,
                 "previous_version": getattr(plugin.all_versions.get_latest_succeeded(type=type), "version", None),
             },
         )
@@ -588,9 +585,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         release_strategy = data.pop("release_strategy", None)
         release = PluginRelease.objects.create(
-            plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
+            plugin=plugin, source_location=plugin.repository, creator=request.user.pk, **data
         )
-        if release_strategy:
+
+        release_definition = plugin.pd.get_release_revision_by_type(type)
+        if release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
             PluginReleaseStrategy.objects.create(release=release, **release_strategy)
         PluginReleaseExecutor(release).initial(operator=request.user.username)
 
@@ -691,12 +690,14 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance()
         release_definition = pd.get_release_revision_by_type(type)
-        if release_definition.revisionType == "master":
+        if release_definition.revisionType == constants.PluginRevisionType.MASTER:
             versions = [build_master_placeholder()]
-        elif release_definition.revisionType == "tag":
+        elif release_definition.revisionType == constants.PluginRevisionType.TAG:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=False, include_tag=True
             )
+        elif release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
+            versions = shim.get_testd_versions(plugin)
         else:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=True, include_tag=True
@@ -1232,3 +1233,46 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
             subject=constants.SubjectTypes.VISIBLE_RANGE,
         )
         return Response(data=self.get_serializer(visible_range_obj).data)
+
+
+class PluginReleaseStrategyViewSet(PluginInstanceMixin, GenericViewSet):
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
+
+    def list(self, request, pd_id, plugin_id, release_id):
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        # 获取所有的灰度发布策略
+        release_strategy_list = release.release_strategies.all()
+        return Response(serializers.PluginReleaseStrategySLZ(release_strategy_list).data, many=True)
+
+    def update(self, request, pd_id, plugin_id, release_id):
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        # 版本发布流程已经结束，则不允许在添加发布策略
+        if release.status in constants.PluginReleaseStatus.terminated_status():
+            raise error_codes.RELEASE_COMPLETED
+
+        latest_release_strategy = plugin.all_versions.get(pk=release_id).latest_release_strategy
+        # 版本最近一条发布策略的审批流程未结束时，不允许添加发布策略
+        if latest_release_strategy.itsm_detail and not is_itsm_ticket_closed(latest_release_strategy.itsm_detail.sn):
+            raise error_codes.LAST_GRAY_RELEASE_NOT_APPROVED
+
+        slz = serializers.ReleaseStrategyCreateSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+        # 更新灰度策略，同时发起审批流程
+        release_strategy = PluginReleaseStrategy.objects.create(release=release, **validated_data)
+        submit_canary_release_ticket(plugin.pd, plugin, release, request.user.username)
+
+        # 操作记录: 修改发布策略
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.RELEASE_STRATEGY,
+        )
+        return Response(serializers.PluginReleaseStrategySLZ(release_strategy).data)

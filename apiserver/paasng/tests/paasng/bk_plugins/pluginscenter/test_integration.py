@@ -20,7 +20,12 @@ from unittest import mock
 import pytest
 from django.utils.translation import gettext_lazy as _
 
-from paasng.bk_plugins.pluginscenter.constants import ActionTypes, PluginReleaseStatus, SubjectTypes
+from paasng.bk_plugins.pluginscenter.constants import (
+    ActionTypes,
+    PluginReleaseStatus,
+    PluginRevisionType,
+    SubjectTypes,
+)
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.models import OperationRecord, PluginRelease
 from tests.paasng.bk_plugins.pluginscenter.conftest import make_api_resource
@@ -66,6 +71,65 @@ class TestReleaseStages:
         pd.refresh_from_db()
 
     @pytest.mark.parametrize(
+        ("new_version", "pre_release_status", "status_code", "resp_code"),
+        [
+            # ("0.0.2", "pending", 400, "CANNOT_RELEASE_ONGOING_EXISTS"),
+            # 上一个版本已经发布完成，则可以新建灰度发布版本
+            ("0.0.2", "successful", 201, ""),
+            # 上一个版本发布失败，则还是用上一个版本号发布
+            ("0.0.1", "failed", 201, ""),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    def test_create_canry_release_version(
+        self,
+        test_release,
+        release,
+        pd,
+        plugin,
+        api_client,
+        thirdparty_client,
+        iam_policy_client,
+        new_version,
+        pre_release_status,
+        status_code,
+        resp_code,
+    ):
+        """使用已经测试通过的版本进行灰度发布"""
+        # 设置上一个发布版本的状态
+        release.status = pre_release_status
+        release.save()
+        # 将插件的发布流程设置为发布测试版本的灰度发布
+        pd.release_revision.revisionType = PluginRevisionType.TESTED_VERSION
+        pd.save()
+        with mock.patch("paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+            get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
+            resp = api_client.post(
+                f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/",
+                data={
+                    "type": "prod",
+                    "source_version_type": "tested_version",
+                    "source_version_name": "test-xxxxx",
+                    "version": new_version,
+                    "comment": "...",
+                    "semver_type": "patch",
+                    "release_id": test_release.id,
+                    "release_strategy": {
+                        "strategy": "gray",
+                        "bkci_project": ["test1", "test2"],
+                        "organization": [{"display_name": "admin", "type": "user", "id": 1, "name": "admin"}],
+                    },
+                },
+            )
+        assert resp.status_code == status_code
+        if status_code != 201:
+            assert resp.json()["code"] == resp_code
+        else:
+            release_strategy = resp.json()["latest_release_strategy"]
+            assert release_strategy["strategy"] == "gray"
+            assert release_strategy["bkci_project"] == ["test1", "test2"]
+
+    @pytest.mark.parametrize(
         ("release_type", "source_version_name", "version", "status_code", "resp_code"),
         [  # 当前插件有未完成的测试版本,仍可创建新分支测试版本
             ("test", "testbranch1", "testbranch1-2501191602", 201, ""),
@@ -97,7 +161,7 @@ class TestReleaseStages:
             ).count()
             == 1
         )
-        with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+        with mock.patch("paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
             # 创建测试版本发布
             resp = api_client.post(
@@ -124,7 +188,7 @@ class TestReleaseStages:
             ).count()
             == 0
         )
-        with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+        with mock.patch("paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
             # 创建正式版本发布
             resp = api_client.post(

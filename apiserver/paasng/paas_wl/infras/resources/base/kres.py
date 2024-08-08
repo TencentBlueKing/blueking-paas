@@ -35,7 +35,7 @@ from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from kubernetes.dynamic.resource import Resource, ResourceInstance
 
-from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY, QUERY_LOG_DEFAULT_TIMEOUT
+from paas_wl.infras.resources.base.constants import BKAPP_RESTART_RESOURCE_KEY, QUERY_LOG_DEFAULT_TIMEOUT
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     ReadTargetStatusTimeout,
@@ -683,7 +683,7 @@ class KDeployment(BaseKresource):
         body = {
             "spec": {
                 "template": {
-                    "metadata": {"annotations": {KUBECTL_RESTART_RESOURCE_KEY: f"{datetime.now().isoformat()}"}}
+                    "metadata": {"annotations": {BKAPP_RESTART_RESOURCE_KEY: f"{datetime.now().isoformat()}"}}
                 }
             }
         }

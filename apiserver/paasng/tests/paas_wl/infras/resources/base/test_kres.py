@@ -28,7 +28,7 @@ import yaml
 from kubernetes.client.rest import ApiException
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY
+from paas_wl.infras.resources.base.constants import BKAPP_RESTART_RESOURCE_KEY
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     ReadTargetStatusTimeout,
@@ -300,7 +300,7 @@ class TestKDeployment:
         KDeployment(k8s_client).create_or_update(resource_name, namespace=namespace, body=deployment_body)
 
         restart_deployment = KDeployment(k8s_client).restart(name=resource_name, namespace=namespace)
-        assert restart_deployment.spec.template.metadata.annotations[KUBECTL_RESTART_RESOURCE_KEY] is not None
+        assert restart_deployment.spec.template.metadata.annotations[BKAPP_RESTART_RESOURCE_KEY] is not None
 
 
 #########

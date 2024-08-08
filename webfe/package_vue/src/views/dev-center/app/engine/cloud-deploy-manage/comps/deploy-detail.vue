@@ -112,7 +112,11 @@
                 :key="instance.process_name"
               >
                 <span
-                  v-bk-tooltips="{ content: instance.terminated_info?.reason, placement: 'bottom', offset: '0, -10' }"
+                  v-bk-tooltips="{
+                    content: instance.terminated_info?.reason,
+                    placement: 'bottom', offset: '0, -10',
+                    disabled: !instance.terminated_info?.reason
+                  }"
                   :class="{ tip: instance.terminated_info?.reason }">
                   {{ instance.restart_count }}
                 </span>

@@ -35,11 +35,12 @@ def delete_env_resources(env: "ModuleEnvironment"):
     """Delete app's resources in cluster"""
     wl_app = env.wl_app
 
-    # FIXME 云原生应用不能依赖该逻辑进行资源回收，原因是多模块共用命名空间
+    # 重要：由于云原生应用 1. 多模块共享命名空间 2. 下架时会删除 bkapp & domaingroupmapping，
+    # 可通过 operator 进行资源回收，因此不需要在这里通过 删除命名空间 清理集群中的资源
     if env.application.type == ApplicationType.CLOUD_NATIVE:
         return
 
-    # 如果应用有部署过（不论失败/成功）都需要进行资源回收
+    # 如果应用有部署过（不论失败/成功）都需要进行资源回收（注：云原生应用不会创建 Release 对象）
     if not Release.objects.filter(app=wl_app).exists():
         return
 

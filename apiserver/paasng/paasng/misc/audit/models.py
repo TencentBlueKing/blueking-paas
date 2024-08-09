@@ -25,10 +25,10 @@ from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarg
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.basic import get_username_by_bkpaas_user_id
-from paasng.utils.models import AuditedModel, BkUserField
+from paasng.utils.models import BkUserField, UuidAuditedModel
 
 
-class BaseOperation(AuditedModel):
+class BaseOperation(UuidAuditedModel):
     user = BkUserField()
     # 时间字段手添加索引，方便审计记录表过大时做分区优化
     start_time = models.DateTimeField(auto_now_add=True, verbose_name="开始时间", db_index=True)

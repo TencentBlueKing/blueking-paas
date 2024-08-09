@@ -37,6 +37,14 @@ class QueryRecentOperationsSLZ(serializers.Serializer):
 
 class RecordForRencentAppSLZ(AppOperationRecordSLZ):
     application = ApplicationSLZ4Record(read_only=True)
+    module_name = serializers.SerializerMethodField()
+
+    def get_module_name(self, obj) -> str:
+        if obj.module_name:
+            return obj.module_name
+        if obj.application:
+            return obj.application.get_default_module().name
+        return ""
 
     class Meta:
         model = AppOperationRecord

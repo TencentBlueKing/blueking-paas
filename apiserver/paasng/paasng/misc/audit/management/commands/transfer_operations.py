@@ -20,12 +20,19 @@ from typing import Dict, Optional
 from django.core.management.base import BaseCommand
 
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import OperationEnum, OperationTarget
-from paasng.misc.audit.models import AppOperationRecord
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.handlers import on_app_operation_created, post_save
+from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.operations.constant import OperationType as OpType
 from paasng.misc.operations.models import Operation
 
 OPRATION_TRANSFER_MAP: Dict[int, Dict[str, Optional[str]]] = {
+    OpType.CREATE_APPLICATION.value: {
+        "action_id": "",
+        "target": OperationTarget.APP,
+        "operation": OperationEnum.CREATE_APP,
+        "attribute_name": None,
+    },
     OpType.REGISTER_PRODUCT.value: {
         "action_id": AppAction.MANAGE_APP_MARKET,
         "target": OperationTarget.APP,
@@ -135,25 +142,44 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         # 获取所有用于展示应用最近操作的记录
-        operations = Operation.objects.filter(is_hidden=False).iterator()
+        operations = Operation.objects.filter(is_hidden=False)
         self.stdout.write(f"Transferring {operations.count()} operations...")
-        for op in operations:
+        for op in operations.iterator():
             # 申请网关权限、启停进程等操作对象的具体属性记录在 extra_values 的相应字段中
             attribute_name = OPRATION_TRANSFER_MAP.get(op.type, {}).get("attribute_name")
             if attribute_name:
                 attribute = op.extra_values.get(attribute_name)
             else:
                 attribute = None
-            AppOperationRecord.objects.create(
+            # 如果原来的操作记录中保存了操作结果，则也需要同步
+            if not op.extra_values.get("has_succeeded"):
+                result_code = ResultCode.FAILURE
+            else:
+                result_code = ResultCode.SUCCESS
+
+            post_save.disconnect(on_app_operation_created)
+            new_record = AppOperationRecord.objects.create(
                 app_code=op.application.code,
                 user=op.user,
-                source_object_id=op.source_object_id,
                 module_name=op.module_name,
-                env=op.extra_values.env_name,
+                environment=op.extra_values.get("env_name"),
                 action_id=OPRATION_TRANSFER_MAP.get(op.type, {}).get("action_id"),
                 operation=OPRATION_TRANSFER_MAP.get(op.type, {}).get("operation"),
                 target=OPRATION_TRANSFER_MAP.get(op.type, {}).get("target"),
                 attribute=attribute,
+                result_code=result_code,
             )
 
+            # 时间字段都是自动添加的，只能通过 update 方法来自定义
+            AppOperationRecord.objects.filter(id=new_record.id).update(
+                start_time=op.created,
+                created=op.created,
+            )
+            AppLatestOperationRecord.objects.update_or_create(
+                application=new_record.application,
+                defaults={
+                    "operation_id": new_record.pk,
+                    "latest_operated_at": op.created,
+                },
+            )
         self.stdout.write("Transfer complete.")

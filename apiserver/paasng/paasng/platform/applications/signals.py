@@ -25,13 +25,7 @@ before_finishing_application_creation = django.dispatch.Signal(providing_args=["
 prepare_change_application_name = django.dispatch.Signal(providing_args=["region", "code", "name", "name_en"])
 
 
-online_market_success = django.dispatch.Signal(providing_args=["deployment_instance"])
-
-pre_delete_application = django.dispatch.Signal(providing_args=["application", "operator"])
-pre_delete_module = django.dispatch.Signal(providing_args=["module", "operator"])
-
 module_environment_offline_success = django.dispatch.Signal(providing_args=["offline_instance", "environment"])
-module_environment_offline_event = django.dispatch.Signal(providing_args=["offline_instance", "environment"])
 application_member_updated = django.dispatch.Signal(providing_args=["application"])
 
 application_default_module_switch = django.dispatch.Signal(providing_args=["application", "new_module", "old_module"])

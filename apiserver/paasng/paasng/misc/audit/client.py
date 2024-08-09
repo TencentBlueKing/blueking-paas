@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -13,8 +14,21 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 
-from django.dispatch import Signal
+from bk_audit.client import BkAudit
+from bk_audit.contrib.bk_audit.settings import bk_audit_settings
+from django.conf import settings
 
-# Triggered when a new operation happened
-new_operation_happened = Signal(providing_args=["env", "operate_type", "operator", "extra_values"])
+logger = logging.getLogger(__name__)
+
+bk_audit_client = BkAudit(
+    bk_app_code=settings.BK_APP_CODE,
+    bk_app_secret=settings.BK_APP_SECRET,
+    settings={
+        "log_queue_limit": bk_audit_settings.log_queue_limit,
+        "formatter": bk_audit_settings.formatter,
+        "exporters": bk_audit_settings.exporters,
+        "service_name_handler": bk_audit_settings.service_name_handler,
+    },
+)

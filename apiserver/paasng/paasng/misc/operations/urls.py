@@ -19,11 +19,12 @@ from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
 
+# Deprecated 新版 API 上线并确认后再删除原来的 API
 urlpatterns = [
     re_path(
-        r"^api/bkapps/applications/lists/latest/",
+        r"^api/bkapps/applications/lists/latest/deprecated/",
         views.LatestApplicationsViewSet.as_view(),
-        name="api.applications.latest",
+        name="api.applications.latest.deprecated",
     ),
     re_path(
         make_app_pattern(r"/operations/", include_envs=False),

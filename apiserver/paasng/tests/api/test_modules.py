@@ -21,8 +21,8 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
-from paasng.misc.operations.constant import OperationType
-from paasng.misc.operations.models import Operation
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.bkapp_model.models import ModuleDeployHook, ModuleProcessSpec
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import BuildConfig
@@ -304,11 +304,15 @@ class TestModuleDeletion:
             yield
 
     def test_delete_main_module(self, api_client, bk_app, bk_module, bk_user):
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE
+        ).exists()
         response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/")
         assert response.status_code == 400
         assert "主模块不允许被删除" in response.json()["detail"]
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE
+        ).exists()
 
     def test_delete_module(
         self,
@@ -317,21 +321,34 @@ class TestModuleDeletion:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
+        module = Module.objects.create(
+            application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
+        )
         initialize_module(module)
 
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
             response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 204
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE, attribute=module.name
+        ).exists()
 
     def test_delete_rollback(self, api_client, bk_app, bk_user):
-        module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
+        module = Module.objects.create(
+            application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
+        )
         initialize_module(module)
 
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE, attribute=module.name
+        ).exists()
         with mock.patch("paasng.platform.modules.views.ModuleCleaner.clean", side_effect=Exception):
             response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 400
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code,
+            target=OperationTarget.MODULE,
+            operation=OperationEnum.DELETE,
+            attribute=module.name,
+            result_code=ResultCode.FAILURE,
+        ).exists()

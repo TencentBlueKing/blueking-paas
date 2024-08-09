@@ -26,8 +26,8 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
 from paasng.infras.accounts.models import UserProfile
-from paasng.misc.operations.constant import OperationType
-from paasng.misc.operations.models import Operation
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
@@ -393,11 +393,15 @@ class TestApplicationDeletion:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.APP, operation=OperationEnum.DELETE
+        ).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
             response = api_client.delete("/api/bkapps/applications/{}/".format(bk_app.code))
         assert response.status_code == 204
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.APP, operation=OperationEnum.DELETE
+        ).exists()
 
     @pytest.mark.usefixtures("_with_empty_live_addrs")
     def test_rollback(
@@ -407,14 +411,21 @@ class TestApplicationDeletion:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.APP, operation=OperationEnum.DELETE
+        ).exists()
         with mock.patch(
             "paasng.platform.applications.views.ApplicationViewSet._delete_all_module",
             side_effect=error_codes.CANNOT_DELETE_APP,
         ):
             response = api_client.delete("/api/bkapps/applications/{}/".format(bk_app.code))
         assert response.status_code == 400
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code,
+            target=OperationTarget.APP,
+            operation=OperationEnum.DELETE,
+            result_code=ResultCode.FAILURE,
+        ).exists()
 
 
 class TestCreateBkPlugin:

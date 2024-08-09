@@ -46,6 +46,7 @@ urlpatterns = [
     url(r"^", include("paasng.accessories.log.urls")),
     url(r"^", include("paasng.platform.modules.urls")),
     url(r"^", include("paasng.core.region.urls")),
+    url(r"^", include("paasng.misc.audit.urls")),
     url(r"^", include("paasng.misc.operations.urls")),
     url(r"^", include("paasng.platform.environments.urls")),
     url(r"^", include("paasng.platform.engine.urls")),

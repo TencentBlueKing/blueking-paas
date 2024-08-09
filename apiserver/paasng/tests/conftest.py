@@ -198,6 +198,12 @@ def _skip_iam_migrations():
 
 
 @pytest.fixture(autouse=True)
+def _skip_bk_audit_add_event():
+    with override_settings(ENABLE_BK_AUDIT=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _sqlalchemy_transaction(request):
     """为使用了 sqlalchemy 操作 legacy db 的单元测试提供自动回滚，保证单元测试前后的状态一致"""
     session = None

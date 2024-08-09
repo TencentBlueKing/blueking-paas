@@ -258,6 +258,27 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "bk-audit"
+version = "1.2.3b0"
+description = "Bk Audit SDK"
+category = "main"
+optional = false
+python-versions = ">=3.8, <4"
+files = [
+    {file = "bk_audit-1.2.3b0-py3-none-any.whl", hash = "sha256:d2dfb941cd0f6dd8703ad184a731c092a0bda3cc9b6fc815896dfe71029e4e4d"},
+    {file = "bk_audit-1.2.3b0.tar.gz", hash = "sha256:c3d4d4d245def2967123d84b410d27c243c828ce77c7d0d48e369480eed31fce"},
+]
+
+[package.extras]
+bk-resource = ["bk-resource (>=0.4.0)"]
+opentelemetry = ["opentelemetry-api (>=1.20.0)", "opentelemetry-exporter-otlp (>=1.20.0)", "opentelemetry-sdk (>=1.20.0)", "protobuf (>=3.19.5)"]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "bk-crypto-python-sdk"
 version = "1.1.1"
 description = "bk-crypto-python-sdk is a lightweight cryptography toolkit for Python applications based on Cryptodome / tongsuopy and other encryption libraries."

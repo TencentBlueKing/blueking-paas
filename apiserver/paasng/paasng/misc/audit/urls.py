@@ -15,9 +15,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import django
+from paasng.utils.basic import make_app_pattern, re_path
 
-# A signal work like `post_save` but provide `operator` info additionally
-product_create_or_update_by_operator = django.dispatch.Signal(providing_args=["product", "operator", "created"])
+from . import views
 
-product_contact_updated = django.dispatch.Signal(providing_args=["product"])
+urlpatterns = [
+    re_path(
+        r"^api/bkapps/applications/lists/latest/",
+        views.LatestApplicationsViewSet.as_view(),
+        name="api.applications.latest",
+    ),
+    re_path(
+        make_app_pattern(r"/audit/records/", include_envs=False),
+        views.ApplicationAuditRecordViewSet.as_view({"get": "list"}),
+        name="api.bkapps.application.audit.records",
+    ),
+]

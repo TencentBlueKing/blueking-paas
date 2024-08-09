@@ -45,7 +45,9 @@ def get_contact_info_by_appids(ids: List[str], days_range: int = 31) -> Dict[str
 
     # 获取所有应用的最新操作用户
     latest_operators = {
-        app.code: app.latest_op.operation.user if hasattr(app, "latest_op") and app.latest_op else None
+        app.code: app.latest_op_record.operation.user
+        if hasattr(app, "latest_op_record") and app.latest_op_record
+        else None
         for app in applications
     }
 
@@ -78,7 +80,7 @@ def get_contact_info_by_appids(ids: List[str], days_range: int = 31) -> Dict[str
 def get_contact_info(application: Application) -> AppContactInfo:
     """Retrieve app's contact info; each app performs 4 SQL operations."""
     try:
-        latest_operator = application.latest_op.operation.user
+        latest_operator = application.latest_op_record.operation.user
     except ObjectDoesNotExist:
         latest_operator = None
 

@@ -70,6 +70,8 @@ from paasng.infras.iam.helpers import (
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
 from paasng.platform.applications.constants import (
@@ -93,7 +95,6 @@ from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySL
 from paasng.platform.applications.signals import (
     application_member_updated,
     post_create_application,
-    pre_delete_application,
 )
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import (
@@ -399,12 +400,32 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     delete_bkapp(env)
                     delete_networking(env)
 
-        # 审计记录在事务外创建, 避免由于数据库回滚而丢失
-        pre_delete_application.send(sender=Application, application=application, operator=self.request.user.pk)
-        with transaction.atomic():
-            self._delete_all_module(application)
-            self._delete_application(application)
+        try:
+            with transaction.atomic():
+                self._delete_all_module(application)
+                self._delete_application(application)
+        except Exception:
+            logger.exception("unable to delete app<%s> related resources", application.code)
+            # 执行失败
+            add_app_audit_record(
+                app_code=application.code,
+                user=request.user.pk,
+                action_id=AppAction.DELETE_APPLICATION,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.APP,
+                result_code=ResultCode.FAILURE,
+            )
+            raise
 
+        # 执行成功
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.DELETE_APPLICATION,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.APP,
+            result_code=ResultCode.SUCCESS,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _delete_all_module(self, application: Application):
@@ -455,6 +476,14 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except Exception:
             logger.exception("Failed to update app space on BK Monitor")
 
+        # 审计记录
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.EDIT_BASIC_INFO,
+            operation=OperationEnum.MODIFY_BASIC_INFO,
+            target=OperationTarget.APP,
+        )
         return Response(serializer.data)
 
     @app_action_required(AppAction.VIEW_BASIC_INFO)

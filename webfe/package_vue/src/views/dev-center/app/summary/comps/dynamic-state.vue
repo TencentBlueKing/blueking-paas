@@ -18,7 +18,7 @@
             >{{ item.at_friendly }}</span>
           </p>
           <p class="dynamic-content">
-            {{ $t('由') }}<span class="gruy">{{ item.operator ? item.operator : '—' }}</span>{{ item.operate }}
+            {{ item.operate }}
           </p>
         </li>
         <li />

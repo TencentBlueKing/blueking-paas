@@ -29,8 +29,8 @@ from paasng.accessories.cloudapi.components.bk_apigateway_inner import bk_apigat
 from paasng.accessories.cloudapi.utils import get_user_auth_type
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.operations.constant import OperationType
-from paasng.misc.operations.models import Operation
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -68,7 +68,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
 
         app = self.get_application()
-        operation_type = OperationType.APPLY_PERM_FOR_CLOUD_API.value
+        operation_type = OperationEnum.APPLY
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._post(request, apigw_url, operation_type, app)
 
@@ -81,7 +81,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
 
         app = self.get_application()
-        operation_type = OperationType.RENEW_PERM_FOR_CLOUD_API.value
+        operation_type = OperationEnum.RENEW
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._post(request, apigw_url, operation_type, app)
 
@@ -149,7 +149,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
 
         app = self.get_application()
-        operation_type = OperationType.APPLY_PERM_FOR_CLOUD_API.value
+        operation_type = OperationEnum.APPLY
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._post(request, apigw_url, operation_type, app)
 
@@ -162,7 +162,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
 
         app = self.get_application()
-        operation_type = OperationType.RENEW_PERM_FOR_CLOUD_API.value
+        operation_type = OperationEnum.RENEW
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._post(request, apigw_url, operation_type, app)
 
@@ -207,7 +207,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         result = bk_apigateway_inner_component.get(apigw_url, params=params, bk_username=request.user.username)
         return Response(result)
 
-    def _post(self, request, apigw_url: str, operation_type: int, app: Application):
+    def _post(self, request, apigw_url: str, operation_type: str, app: Application):
         logger.debug("[cloudapi] posting %s", apigw_url)
         data = copy.copy(request.data)
         data.update(
@@ -219,21 +219,21 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         result = bk_apigateway_inner_component.post(apigw_url, json=data, bk_username=request.user.username)
 
+        # 云 API 申请记录 ID，用于操作详情的展示
+        record_id = result.get("data", {}).get("record_id", "")
         # 记录操作记录
-        try:
-            # 部分 API 没有带上网关名，则不记录到操作记录中
-            gateway_name = data.get("gateway_name")
-            if gateway_name:
-                Operation.objects.create(
-                    region=app.region,
-                    application=app,
-                    type=operation_type,
-                    user=request.user,
-                    extra_values={"gateway_name": gateway_name},
-                )
-        except Exception:
-            logger.exception("An exception occurred in the operation record of adding cloud API permissions")
-
+        gateway_name = data.get("gateway_name", "")
+        add_app_audit_record(
+            app_code=app.code,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_CLOUD_API,
+            operation=operation_type,
+            target=OperationTarget.CLOUD_API,
+            attribute=gateway_name,
+            # 仅提交了申请记录，需要审批后才算操作成功
+            result_code=ResultCode.ONGOING,
+            data_after=DataDetail(type=DataType.CLOUD_API_RECORD, data=record_id),
+        )
         return Response(result)
 
     @staticmethod

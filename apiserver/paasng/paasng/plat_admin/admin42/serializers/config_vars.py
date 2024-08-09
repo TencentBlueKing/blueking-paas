@@ -15,10 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
+from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.platform.engine.serializers import ConfigVarSLZ as BaseConfigVarSLZ
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
@@ -31,3 +34,36 @@ class ConfigVarSLZ(BaseConfigVarSLZ):
         required=True,
         error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
     )
+
+
+class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
+    key = serializers.RegexField(
+        RE_CONFIG_VAR_KEY,
+        max_length=128,
+        required=True,
+        error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
+    )
+    value = serializers.CharField(max_length=512, required=True)
+    description = serializers.CharField(max_length=512, required=True, help_text="变量描述")
+
+    def validate_key(self, key: str) -> str:
+        if BuiltinConfigVar.objects.filter(key=key).exists():
+            raise ValidationError(_("内置环境变量 {key} 已存在").format(key=settings.CONFIGVAR_SYSTEM_PREFIX + key))
+        return key
+
+
+class BuiltinConfigVarUpdateInputSLZ(serializers.Serializer):
+    value = serializers.CharField(max_length=512, required=True)
+    description = serializers.CharField(max_length=512, required=True, help_text="变量描述")
+
+
+class BuiltinConfigVarListOutputSLZ(serializers.Serializer):
+    id = serializers.IntegerField()
+    key = serializers.CharField()
+    value = serializers.CharField()
+    description = serializers.CharField()
+    updated = serializers.DateTimeField()
+    operator = serializers.SerializerMethodField()
+
+    def get_operator(self, obj):
+        return obj.operator.username

@@ -21,7 +21,7 @@ import logging
 from operator import attrgetter
 from typing import Dict, Optional
 
-from django.http import StreamingHttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -34,7 +34,12 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
-from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
+from paas_wl.bk_app.processes.exceptions import (
+    PreviousInstanceNotFound,
+    ProcessNotFound,
+    ProcessOperationTooOften,
+    ScaleProcessError,
+)
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
@@ -414,3 +419,35 @@ class InstanceEventsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         events = event_kmodel.list_by_app_instance_name(wl_app, instance_name).items
         return Response(EventSerializer(events, many=True).data)
+
+
+class InstancePreviousLogsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """适用于所有类型应用，应用进程上一次运行时日志相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def retrieve(self, request, code, module_name, environment, process_type, process_instance_name):
+        """获取进程实例上一次运行时的日志（400行）"""
+        env = self.get_env_via_path()
+
+        manager = ProcessManager(env)
+        try:
+            logs = manager.get_previous_logs(process_type, process_instance_name, tail_lines=400)
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        return Response(status=status.HTTP_200_OK, data=logs.splitlines())
+
+    def download(self, request, code, module_name, environment, process_type, process_instance_name):
+        """下载进程实例上一次运行时的日志"""
+        env = self.get_env_via_path()
+
+        manager = ProcessManager(env)
+        try:
+            logs = manager.get_previous_logs(process_type, process_instance_name)
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        response = HttpResponse(logs, content_type="text/plain")
+        response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'
+        return response

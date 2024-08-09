@@ -24,11 +24,10 @@ from typing import TYPE_CHECKING, Dict, Optional
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
-
 # NOTE: Import kube resource related modules from paas_wl
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
+from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
@@ -117,8 +116,6 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             PILOT_BUILDER_TIMEOUT=f"{settings.BUILD_PROCESS_TIMEOUT // 60}m",
         )
 
-    env_vars.update(AppConfigVarManager(app=app).get_envs())
-
     # Inject extra env vars in settings for development purpose
     if settings.BUILD_EXTRA_ENV_VARS:
         env_vars.update(settings.BUILD_EXTRA_ENV_VARS)
@@ -128,6 +125,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
 
     if metadata:
         update_env_vars_with_metadata(env_vars, metadata)
+
     return env_vars
 
 
@@ -154,6 +152,7 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
     :param metadata: metadata dict
     :return:
     """
+    # All system built-in vars were injected by this step
     if "extra_envs" in metadata:
         env_vars.update(metadata["extra_envs"])
 
@@ -176,6 +175,8 @@ def prepare_slugbuilder_template(
     # Builder image name
     image = builder_image or settings.DEFAULT_SLUGBUILDER_IMAGE
     logger.info(f"build wl_app<{app.name}> with slugbuilder<{image}>")
+
+    env_vars = render_vars_dict(env_vars, VarsRenderContext(process_type="sys-builder"))
 
     return SlugBuilderTemplate(
         name=generate_builder_name(app),

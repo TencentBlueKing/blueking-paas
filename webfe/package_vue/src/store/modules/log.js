@@ -189,6 +189,24 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/config/builtin/json/`;
     return http.get(url);
   },
+
+  /**
+   * 获取最近一次重启日志
+   * @param {Object} params 请求参数：appCode, moduleId, env, instanceName, processType
+   */
+  getPreviousLogs({}, { appCode, moduleId, env, processType, instanceName }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/previous_logs/`;
+    return http.get(url);
+  },
+
+  /**
+   * 下载重启日志
+   *  @param {Object} params 请求参数：appCode, moduleId, env, instanceName, processType
+   */
+  downloadPreviousLogs({}, { appCode, moduleId, env, processType, instanceName }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/previous_logs/download/`;
+    return http.get(url, { responseType: 'blob' });
+  },
 };
 
 export default {

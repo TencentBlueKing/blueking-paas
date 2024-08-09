@@ -3,7 +3,6 @@
     <log-filter
       ref="accessLogFilter"
       :key="routeChangeIndex"
-      :env-list="envList"
       :stream-list="streamList"
       :process-list="processList"
       :log-count="pagination.count"
@@ -183,7 +182,7 @@
 <script>import moment from 'moment';
 import xss from 'xss';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-import logFilter from './comps/log-filter.vue';
+import logFilter from '@/views/dev-center/app/engine/log/comps/log-filter.vue';
 import { formatDate } from '@/common/tools';
 
 const xssOptions = {
@@ -232,7 +231,6 @@ export default {
       searchFilterKey: [],
       tableFilters: [],
       streamLogFilters: [],
-      envList: [],
       processList: [],
       filterData: [],
       streamList: [],
@@ -490,7 +488,6 @@ export default {
       this.tableFilters = [];
       this.fieldSelectedList = [];
       this.fieldList = [];
-      this.envList = [];
       this.filterData = [];
       this.streamList = [];
       this.processList = [];

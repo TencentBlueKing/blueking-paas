@@ -177,13 +177,16 @@ INSTALLED_APPS = [
     "paas_wl.infras.resources.generation",
     # 蓝鲸通知中心
     "bk_notice_sdk",
-    # This app helps us to make sure the permission was configured correctly
-    "paasng.infras.perm_insure",
 ]
 
 # Allow extending installed apps
 EXTRA_INSTALLED_APPS = settings.get("EXTRA_INSTALLED_APPS", [])
 INSTALLED_APPS += EXTRA_INSTALLED_APPS
+
+# The "perm_insure" module helps us to make sure that the permission is configured
+# correctly, put it at the end of the list to make sure that all URL confs have been
+# added to the root url before the perm checking starts.
+INSTALLED_APPS.append("paasng.infras.perm_insure")
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
@@ -496,10 +499,15 @@ NOTIFICATION_PLUGIN_CLASSES = settings.get(
 # Django 基础配置（自定义）
 # ------------------------
 
-DATABASES = {
-    "default": get_database_conf(settings),
-    "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
-}
+DATABASES = {}
+
+# When running "collectstatic" command, the database config is not available, so we
+# make it optional.
+if default_db_conf := get_database_conf(settings):
+    DATABASES["default"] = default_db_conf
+if wl_db_conf := get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"):
+    DATABASES["workloads"] = wl_db_conf
+
 DATABASE_ROUTERS = ["paasng.core.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存

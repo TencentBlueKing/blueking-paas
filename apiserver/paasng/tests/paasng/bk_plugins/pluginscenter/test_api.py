@@ -232,8 +232,8 @@ class TestSysApis:
             defaults={
                 "itsm_detail": ItsmDetail(
                     fields=[
-                        {"key": "bkci_project", "value": new_bkci_project},
-                        {"key": "organization", "value": new_organization},
+                        {"key": "origin_bkci_project", "value": new_bkci_project},
+                        {"key": "origin_organization", "value": new_organization},
                     ],
                     sn="1111",
                     ticket_url="http://1111",

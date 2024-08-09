@@ -30,8 +30,9 @@ const actions = {
     return Vue.http.get(`${BACKEND_URL}/api/bkapps/applications/lists/search?keyword=${filterKey}`, {
       params,
     }).then(res => res.results.map(data => ({
-      code: data.code,
-      name: data.name,
+      code: data.application.code,
+      name: data.application.name,
+      marked: data.marked,
       moduleId: data.default_module_name,
     })), (err) => {
       console.error('fetchSearchApp Error', err);

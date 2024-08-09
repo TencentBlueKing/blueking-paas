@@ -33,6 +33,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -81,6 +82,7 @@ func main() {
 		// false: zap.InfoLevel, enable sampling logging. V(0) corresponds to InfoLevel, bigger than 0 will be silent
 		// true: zap.DebugLevel. V(0) corresponds to InfoLevel, V(1) corresponds to DebugLevel, bigger than 1 will be silent
 		Development: false,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 	// can use zap-devel and zap-log-level args to reset Development and the log level
 	opts.BindFlags(flag.CommandLine)
@@ -97,7 +99,7 @@ func main() {
 	if cfgFile != "" {
 		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(cfgFile).OfKind(projConf))
 		if err != nil {
-			setupLog.Error(err, "unable to load the config file")
+			setupLog.Error(err, "unable to load the config file", "config file", cfgFile)
 			os.Exit(1)
 		}
 	}

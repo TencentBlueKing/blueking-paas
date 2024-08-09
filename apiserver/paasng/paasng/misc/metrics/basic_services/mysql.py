@@ -15,7 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.monitoring.probe.base import ProbeSet
+from typing import List, Type
+
+from blue_krill.monitoring.probe.base import ProbeSet, VirtualProbe
 
 from paasng.misc.monitoring.healthz.probes import PlatformMysqlProbe, WorkloadsMysqlProbe
 
@@ -28,5 +30,12 @@ class MySQLAvailableMetric(GaugeMetric):
 
     @classmethod
     def calc_value(cls) -> bool:
-        probe_set = ProbeSet([PlatformMysqlProbe, WorkloadsMysqlProbe])
+        probe_types: List[Type[VirtualProbe]] = []
+        # These probe might use an empty config object if the database config is absent
+        if PlatformMysqlProbe.config.host:
+            probe_types.append(PlatformMysqlProbe)
+        if WorkloadsMysqlProbe.config.host:
+            probe_types.append(WorkloadsMysqlProbe)
+
+        probe_set = ProbeSet(probe_types)
         return not probe_set.examination().is_death

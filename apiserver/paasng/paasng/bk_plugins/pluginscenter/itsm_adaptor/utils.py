@@ -36,6 +36,10 @@ if typing.TYPE_CHECKING:
     from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
 
 
+# ITSM 提单字段中必填字段的占位符
+ITSM_FIELD_PLACEHOLDER = "--"
+
+
 def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, operator: str):
     """提交创建申请单据"""
     basic_fields = _get_basic_fields(pd, plugin)
@@ -113,9 +117,12 @@ def submit_visible_range_ticket(
     callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
 
     visible_range_fields = [
-        {"key": "bkci_project", "value": bkci_project},
+        # 需要单独存储原始数据，用户审批成功后回调后用于更新 DB 的可见范围
+        {"key": "origin_bkci_project", "value": bkci_project},
+        {"key": "origin_organization", "value": organization},
+        {"key": "bkci_project", "value": _get_bkci_project_display_name(bkci_project)},
         {"key": "organization", "value": _get_organization_display_name(organization)},
-        {"key": "current_bkci_project", "value": visible_range_obj.bkci_project},
+        {"key": "current_bkci_project", "value": _get_bkci_project_display_name(visible_range_obj.bkci_project)},
         {"key": "current_organization", "value": _get_organization_display_name(visible_range_obj.organization)},
     ]
 
@@ -171,6 +178,10 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
             "value": pd.name,
         },
         {
+            "key": "plugin_id",
+            "value": plugin.id,
+        },
+        {
             "key": "plugin_name",
             "value": plugin.name,
         },
@@ -216,9 +227,24 @@ def _get_advanced_fields(
     return fields
 
 
-def _get_organization_display_name(organization) -> str:
+def _get_organization_display_name(organization: Optional[List[dict]]) -> str:
+    """
+    Display only the organization names, separated by semicolons if there are multiple.
+    Show a placeholder if empty (ITSM does not allow empty data).
+    """
     if not organization:
-        return ""
+        return ITSM_FIELD_PLACEHOLDER
 
     organization_names = [r["name"] for r in organization]
     return ";".join(organization_names)
+
+
+def _get_bkci_project_display_name(bkci_project: Optional[List[str]]) -> str:
+    """
+    Multiple projects separated by semicolons.
+    Show a placeholder if empty (ITSM does not allow passing empty data).
+    """
+    if not bkci_project:
+        return ITSM_FIELD_PLACEHOLDER
+
+    return ";".join(bkci_project)

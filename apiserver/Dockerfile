@@ -67,6 +67,19 @@ RUN mkdir -p ./public
 COPY --from=admin42 /build/paasng/public ./public
 ADD ./paasng .
 
+
+# Add extra files: static assets & I18N .mo translation file. 
+
+# "gettext" package is required for running "compilemessages"
+RUN apt-get install -y gettext
+
+# the "BKKRILL_ENCRYPT_SECRET_KEY" settings is required for starting the project,
+# set it to a non-empty value to run the manage.py command.
+RUN export PAAS_BKKRILL_ENCRYPT_SECRET_KEY='none' && \
+    poetry run python manage.py collectstatic --noinput && \
+    poetry run python manage.py compilemessages
+
+
 COPY ./start.sh .
 COPY ./start_celery.sh .
 COPY ./init.sh .

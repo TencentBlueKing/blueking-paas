@@ -32,8 +32,6 @@ export default {
   切换语言: '简体中文',
   系统提示: 'System hint',
   '静态文件加载失败，请刷新页面重试': 'Static files failed to load, please refresh the page and try again',
-  '开发者中心 | 腾讯蓝鲸智云': 'Developer Center | Tencent BlueKing',
-  '开发者中心 | 蓝鲸': 'Developer Center | Tencent BlueKing',
   服务异常: 'Service exception',
   '无法连接到后端服务，请稍候再试。': 'Unable to connect to backend service, please try again later.',
   无权限访问: 'No access',

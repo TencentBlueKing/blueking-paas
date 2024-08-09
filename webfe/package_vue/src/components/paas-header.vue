@@ -437,7 +437,7 @@ export default {
       return this.$store.state.platformConfig;
     },
     appName() {
-      return this.platformConfig.i18n?.name || this.$t('蓝鲸开发者中心');
+      return this.platformConfig.i18n?.productName || this.$t('蓝鲸开发者中心');
     },
     appLogo() {
       return this.platformConfig.appLogo ?? logoSvg;

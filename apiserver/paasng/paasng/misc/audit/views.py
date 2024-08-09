@@ -27,7 +27,7 @@ from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecor
 from paasng.misc.audit.serializers import (
     AppOperationRecordSLZ,
     QueryRecentOperationsSLZ,
-    RecordForRencentAppSLZ,
+    RecordForRecentAppSLZ,
 )
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
@@ -83,5 +83,5 @@ class LatestApplicationsViewSet(APIView):
         serializer.is_valid(raise_exception=True)
 
         records_queryset = self.get_queryset(serializer.data["limit"])
-        data = {"results": RecordForRencentAppSLZ(records_queryset, many=True).data}
+        data = {"results": RecordForRecentAppSLZ(records_queryset, many=True).data}
         return Response(data)

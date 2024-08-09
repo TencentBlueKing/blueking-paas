@@ -35,7 +35,7 @@ class QueryRecentOperationsSLZ(serializers.Serializer):
     limit = serializers.IntegerField(default=4, max_value=10, help_text="条目数")
 
 
-class RecordForRencentAppSLZ(AppOperationRecordSLZ):
+class RecordForRecentAppSLZ(AppOperationRecordSLZ):
     application = ApplicationSLZ4Record(read_only=True)
     module_name = serializers.SerializerMethodField()
 

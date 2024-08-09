@@ -175,7 +175,7 @@ class Command(BaseCommand):
             )
 
             # 时间字段都是自动添加的，只能通过 update 方法来自定义
-            AppOperationRecord.objects.filter(id=new_record.id).update(
+            AppOperationRecord.objects.filter(uuid=new_record.uuid).update(
                 start_time=op.created,
                 created=op.created,
             )

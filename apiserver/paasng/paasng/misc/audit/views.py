@@ -67,7 +67,7 @@ class LatestApplicationsViewSet(APIView):
         # 可设置在应用列表中不展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(is_plugin_app=True)
-        application_ids = applications.values_list("id", flat=True)
+        application_ids = list(applications.values_list("id", flat=True))
 
         latest_operated_objs = (
             AppLatestOperationRecord.objects.filter(application__id__in=application_ids)

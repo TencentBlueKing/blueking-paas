@@ -140,43 +140,6 @@
                   >{{ recordItem.type }}</span>
                 </div>
 
-                <div
-                  v-if="!recordItem.stag.deployed && !recordItem.prod.deployed"
-                  class="paas-operation-section section3"
-                >
-                  <button
-                    v-if="recordItem.represent_info.props.provide_links"
-                    v-bk-tooltips="$t('无可用地址')"
-                    class="ps-btn ps-btn-disabled-new"
-                  >
-                    {{ $t('访问模块') }} <i class="paasng-icon paasng-ps-arrow-down" />
-                  </button>
-                </div>
-
-                <div
-                  class="paas-operation-section section3 access-module-wrapper"
-                  v-if="recordItem.represent_info.props.provide_links && (recordItem.stag.deployed || recordItem.prod.deployed)"
-                >
-                  <bk-select
-                    :disabled="false"
-                    :value="curSelectValue"
-                    :clearable="false"
-                    style="width: 100px"
-                    ext-cls="access-module-custom"
-                    ext-popover-cls="access-module-popover-custom"
-                    @change="handleSelectChange($event, recordItem)">
-                    <bk-option
-                      v-for="option in envList"
-                      :class="{ 'hide': option.id === 'default' }"
-                      :key="option.id"
-                      :id="option.id"
-                      :title="option.name"
-                      :name="option.showName">
-                      {{ option.name }}
-                    </bk-option>
-                  </bk-select>
-                </div>
-
                 <div class="paas-operation-section fright">
                   <template v-if="recordItem.represent_info.props.provide_actions">
                     <bk-button

@@ -69,8 +69,7 @@ def application_perm_class(action: AppAction) -> Type[BasePermission]:
             elif isinstance(obj, Module):
                 return user_has_app_action_perm(request.user, obj.application, action)
             else:
-                logger.error("Application permission checked on incorrect object, type: %s", type(obj))
-                return False
+                raise TypeError(f"Permission check on incorrect type: {type(obj)}")
 
     return AppModulePermission
 
@@ -101,8 +100,7 @@ def app_view_actions_perm(
             elif isinstance(obj, Module):
                 return user_has_app_action_perm(request.user, obj.application, action)
             else:
-                logger.error("Application permission checked on incorrect object, type: %s", type(obj))
-                return False
+                raise TypeError(f"Permission check on incorrect type: {type(obj)}")
 
     return AppViewActionsPermission
 

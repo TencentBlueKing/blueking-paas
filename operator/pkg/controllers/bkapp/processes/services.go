@@ -89,7 +89,7 @@ func (r *ServiceReconciler) listCurrentServices(
 		client.InNamespace(bkapp.GetNamespace()),
 		client.MatchingLabels{paasv1alpha2.BkAppNameKey: bkapp.GetName()},
 	); err != nil {
-		return nil, errors.Wrap(err, "failed to list app's Service")
+		return nil, errors.Wrap(err, "list app's Service")
 	}
 	return lo.ToSlicePtr(current.Items), nil
 }
@@ -121,7 +121,7 @@ func (r *ServiceReconciler) handleUpdate(
 		if err != nil {
 			return errors.Wrapf(
 				err,
-				"failed to patch update Service(%s/%s) while marshal patching data",
+				"patch update Service(%s/%s) while marshal patching data",
 				want.GetNamespace(),
 				want.GetName(),
 			)
@@ -129,7 +129,7 @@ func (r *ServiceReconciler) handleUpdate(
 		if err = cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patch)); err != nil {
 			return errors.Wrapf(
 				err,
-				"failed to patch update Service(%s/%s)",
+				"patch update Service(%s/%s)",
 				want.GetNamespace(),
 				want.GetName(),
 			)

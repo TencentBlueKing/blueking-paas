@@ -14,6 +14,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import copy
+
 import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, ScalingPolicy
@@ -40,6 +42,38 @@ def base_manifest(bk_app):
             "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
         },
     }
+
+
+@pytest.fixture()
+def base_manifest_no_replicas(bk_app):
+    """A very basic manifest that can pass the validation, contains no `replicas` field."""
+    return {
+        "kind": "BkApp",
+        "apiVersion": "paas.bk.tencent.com/v1alpha2",
+        "metadata": {"name": bk_app.code},
+        "spec": {
+            "build": {"image": "nginx:latest"},
+            "processes": [{"name": "web", "resQuotaPlan": "default"}],
+        },
+    }
+
+
+class TestNoReplicas:
+    def test_initialization(self, bk_module, base_manifest_no_replicas):
+        import_manifest(bk_module, base_manifest_no_replicas)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.target_replicas == 1
+
+    def test_dont_overwrite_existed_value(self, bk_module, base_manifest_no_replicas):
+        base_manifest_replicas_3 = copy.deepcopy(base_manifest_no_replicas)
+        base_manifest_replicas_3["spec"]["processes"][0]["replicas"] = 3
+
+        import_manifest(bk_module, base_manifest_replicas_3)
+        import_manifest(bk_module, base_manifest_no_replicas)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.target_replicas == 3, "The replicas should remain as it is"
 
 
 def test_import_with_enum_type(bk_module, base_manifest):
@@ -131,6 +165,20 @@ class TestMounts:
 
 
 class TestReplicasOverlay:
+    @pytest.fixture()
+    def base_manifest_with_overlay(self, base_manifest):
+        d = copy.deepcopy(base_manifest)
+        d["spec"]["envOverlay"] = {
+            "replicas": [
+                {
+                    "envName": "stag",
+                    "process": "web",
+                    "count": "3",
+                }
+            ]
+        }
+        return d
+
     def test_invalid_replicas_input(self, bk_module, base_manifest):
         base_manifest["spec"]["envOverlay"] = {
             "replicas": [
@@ -146,19 +194,24 @@ class TestReplicasOverlay:
 
         assert "envOverlay.replicas.0.count" in str(e)
 
-    def test_str(self, bk_module, base_manifest):
-        base_manifest["spec"]["envOverlay"] = {
-            "replicas": [
-                {
-                    "envName": "stag",
-                    "process": "web",
-                    "count": "3",
-                }
-            ]
-        }
-        import_manifest(bk_module, base_manifest)
+    def test_str(self, bk_module, base_manifest_with_overlay):
+        import_manifest(bk_module, base_manifest_with_overlay)
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_target_replicas("stag") == 3
+
+    def test_reset_when_absent_on(self, bk_module, base_manifest, base_manifest_with_overlay):
+        import_manifest(bk_module, base_manifest_with_overlay)
+        import_manifest(bk_module, base_manifest)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.get_target_replicas("stag") == 1, "The overlay data should be reset"
+
+    def test_reset_when_absent_off(self, bk_module, base_manifest, base_manifest_with_overlay):
+        import_manifest(bk_module, base_manifest_with_overlay)
+        import_manifest(bk_module, base_manifest, reset_overlays_when_absent=False)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.get_target_replicas("stag") == 3, "The overlay data should remain as it is"
 
 
 class TestAutoscaling:

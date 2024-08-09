@@ -84,7 +84,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha
 	}
 	// The statuses of the deployments is not ready yet, reconcile later.
 	if bkapp.Status.Phase == paasv1alpha2.AppPending {
-		log.V(1).Info("bkapp is still pending, reconcile later.", "bkapp", bkapp.Name)
+		log.V(1).Info("bkapp is still pending, reconcile later", "bkapp", bkapp.Name)
 		return r.Result.Requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	return r.Result
@@ -133,11 +133,11 @@ func (r *DeploymentReconciler) getNewDeployments(
 		}
 		// Apply service discovery related changes
 		if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployment(ctx, deployment); ok {
-			log.V(1).Info("Applied svc-discovery related changes to deployments.")
+			log.V(1).Info("Applied svc-discovery related changes to deployments", "bkapp", bkapp.Name, "proc", proc.Name)
 		}
 
 		if err = kubeutil.UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {
-			return nil, errors.Wrapf(err, "get new deployment error, upsert failed for %s:%s.", bkapp.Name, proc.Name)
+			return nil, errors.Wrap(err, "get new deployment error")
 		}
 		results[proc.Name] = deployment
 	}
@@ -158,7 +158,7 @@ func (r *DeploymentReconciler) findNewDeployments(
 		// created by legacy controller.
 		serializedBkApp, exists := d.Annotations[paasv1alpha2.LastSyncedSerializedBkAppAnnoKey]
 		if !exists {
-			log.V(1).Info("Deployment does not contain the serialized bkapp in annots.", "name", d.Name)
+			log.V(1).Info("Deployment does not contain the serialized bkapp in annots", "name", d.Name)
 			continue
 		}
 		// Decode the serialized BkApp into object
@@ -166,13 +166,13 @@ func (r *DeploymentReconciler) findNewDeployments(
 		// In that case, the "converter" might be needed.
 		var syncedBkApp paasv1alpha2.BkApp
 		if err := kuberuntime.DecodeInto(clientsetscheme.Codecs.UniversalDecoder(), []byte(serializedBkApp), &syncedBkApp); err != nil {
-			log.Error(err, "Unmarshal serialized bkapp failed.", "name", d.Name)
+			log.Error(err, "Unmarshal serialized bkapp failed", "name", d.Name)
 			continue
 		}
 
 		// If the deployment ID has been changed, always treat current deployment as outdated.
 		if bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey] != syncedBkApp.Annotations[paasv1alpha2.DeployIDAnnoKey] {
-			log.V(1).Info("Deploy ID changed, current deployment is outdated.", "name", d.Name)
+			log.V(1).Info("Deploy ID changed, current deployment is outdated", "name", d.Name)
 			continue
 		}
 		if BkAppSemanticEqual(bkapp, &syncedBkApp) {
@@ -198,7 +198,7 @@ func (r *DeploymentReconciler) cleanUpDeployments(ctx context.Context,
 		}
 		if err := r.Client.Delete(ctx, d); err != nil {
 			metrics.IncDeleteOutdatedDeployFailures(bkapp, d.Name)
-			return errors.Wrapf(err, "error cleaning up deployments")
+			return errors.Wrapf(err, "cleaning up deployments")
 		}
 	}
 	return nil
@@ -323,7 +323,7 @@ func (r *DeploymentReconciler) updateHandler(
 	// Perform the resource update
 	if err := cli.Update(ctx, want); err != nil {
 		return errors.Wrapf(
-			err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
+			err, "update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
 		)
 	}
 	return nil

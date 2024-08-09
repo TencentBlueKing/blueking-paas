@@ -460,6 +460,7 @@ def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env):
     assert blank_resource.metadata.annotations["bkapp.paas.bk.tencent.com/bkpaas-deploy-id"] == "foo-id"
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
     G(
         DeploymentDescription,
@@ -495,6 +496,7 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
     assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" not in var_names
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
     custom_login_url = generate_random_string()
 

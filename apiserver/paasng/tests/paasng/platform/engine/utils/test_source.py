@@ -147,6 +147,10 @@ class TestGetProcesses:
         [
             (
                 {"web": {"command": "start web"}},
+                cast_to_processes({"web": {"name": "web", "command": "start web", "replicas": None}}),
+            ),
+            (
+                {"web": {"command": "start web", "replicas": 1}},
                 cast_to_processes({"web": {"name": "web", "command": "start web", "replicas": 1}}),
             ),
             (

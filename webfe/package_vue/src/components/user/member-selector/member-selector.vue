@@ -148,9 +148,12 @@
         },
         methods: {
             handleClick () {
-                this.$refs.tagInput.focusInputer();
-                if (!this.needsLogin || this.disabled) return;
-                this.popupLogin();
+                // 解决 focus 直接覆盖了清空事件
+                setTimeout(() => {
+                    this.$refs.tagInput.focusInputer();
+                    if (!this.needsLogin || this.disabled) return;
+                    this.popupLogin();
+                }, 0);
             },
             /**
              * 过滤数据的回调函数

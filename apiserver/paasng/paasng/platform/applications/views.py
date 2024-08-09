@@ -259,14 +259,22 @@ class ApplicationListViewSet(viewsets.ViewSet):
             include_inactive=params["include_inactive"], order_by=["name"], search_term=keyword
         )
 
+        # get marked application ids
+        marked_applications = UserMarkedApplication.objects.filter(owner=request.user.pk)
+        marked_application_ids = set(marked_applications.values_list("application__id", flat=True))
+
         if params.get("prefer_marked"):
-            # get marked application ids
-            marked_applications = UserMarkedApplication.objects.filter(owner=request.user.pk)
-            marked_application_ids = set(marked_applications.values_list("application__id", flat=True))
             # then sort it
             applications = sorted(applications, key=lambda app: app.id in marked_application_ids, reverse=True)
 
-        serializer = slzs.ApplicationMinimalSLZ(applications, many=True)
+        data = [
+            {
+                "application": application,
+                "marked": application.id in marked_application_ids,
+            }
+            for application in applications
+        ]
+        serializer = slzs.ApplicationWithMarkMinimalSLZ(data, many=True)
         return Response({"count": len(applications), "results": serializer.data})
 
     @swagger_auto_schema(

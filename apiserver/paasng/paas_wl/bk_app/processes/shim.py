@@ -14,19 +14,24 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+import json
 from typing import Dict, List, Optional
 
 from django.utils.functional import cached_property
+from kubernetes.client.exceptions import ApiException
+from six import ensure_text
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.controllers import Process, list_processes
+from paas_wl.bk_app.processes.exceptions import PreviousInstanceNotFound
 from paas_wl.bk_app.processes.models import ProcessProbeManager, ProcessSpecManager
 from paas_wl.bk_app.processes.processes import PlainProcess, condense_processes
 from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs_client import BCSClient
+from paas_wl.infras.resources.base.kres import KPod
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.models.deployment import ProcessTmpl
 
@@ -123,3 +128,41 @@ class ProcessManager:
                 "version": "v4",
             },
         )
+
+    def get_previous_logs(
+        self,
+        process_type: str,
+        instance_name: str,
+        container_name=None,
+        tail_lines: Optional[int] = None,
+    ):
+        """获取进程实例上一次运行时日志
+
+        :param process_type: 进程类型
+        :param instance_name: 进程实例名称
+        :param container_name: 容器名称
+        :param tail_lines: 获取日志末尾的行数
+        :return: str
+        :raise: PreviousInstanceNotFound when previous instance not found
+        """
+        if not container_name:
+            container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
+
+        k8s_client = get_client_by_app(self.wl_app)
+
+        try:
+            response = KPod(k8s_client).get_log(
+                name=instance_name,
+                namespace=self.wl_app.namespace,
+                container=container_name,
+                previous=True,
+                tail_lines=tail_lines,
+            )
+        except ApiException as e:
+            # k8s 没有找到上一个终止的容器
+            if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
+                raise PreviousInstanceNotFound
+            else:
+                raise
+
+        return ensure_text(response.data)

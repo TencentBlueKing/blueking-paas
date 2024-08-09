@@ -1,5 +1,7 @@
 {% load render_bundle from webpack_loader %}
 
+{% load admin_utils %}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -18,7 +20,6 @@
         }
         html,
         body {
-            width: 100%;
             height: 100%;
             display: flex;
             background: #f5f7fa;
@@ -71,7 +72,6 @@
             border-radius: 2px;
             border: 1px solid #dcdee5;
             display: flex;
-            overflow: visible;
         }
         .footer {
             text-align: center;
@@ -100,125 +100,7 @@
             padding-left: 25px;
             color: #526e8e;
         }
-        .paas-sub-menu .menu-item {
-            width: 100%;
-            color: rgb(99, 101, 110);
-            font-size: 14px;
-            height: 38px;
-            line-height: 38px;
-            margin: 4px 0;
-            padding-right: 12px;
-            padding-left: 22px;
-            overflow: hidden;
-            white-space: nowrap;
-            display: block;
-            border-bottom: 1px solid #F0F1F4;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .paas-sub-menu .menu-item:hover {
-            color: #3a84ff;
-        }
 
-        .paas-app-nav>li {
-            width: 100%;
-            border-bottom: solid 1px #eee;
-            position: relative;
-        }
-        .paas-app-nav>li.on .overview-text {
-            color: #313238 !important;
-        }
-        .paas-app-nav>li.on .app-nav-icon {
-            color: #313238 !important;
-        }
-        .paas-app-nav>li.no-child-actived .overview-text,
-        .paas-app-nav>li.has-child-selected .overview-text {
-            color: #3A84FF !important;
-            background: #E1ECFF;
-        }
-        .paas-app-nav>li.no-child-actived .app-nav-icon,
-        .paas-app-nav>li.has-child-selected .app-nav-icon {
-            color: #3A84FF !important;
-        }
-        .paas-app-nav>li:hover .overview-text {
-            color: #3A84FF;
-        }
-        .paas-app-nav>li:hover .app-nav-icon {
-            color: #3A84FF;
-        }
-        .overview-text {
-            color: #63656E;
-            padding-left: 50px;
-            z-index: 1;
-            line-height: 42px;
-            font-size: 14px;
-            display: block;
-        }
-        .overview-text:hover {
-            color: #63656E;
-        }
-        .overview-text-slide {
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-        }
-        .overview-text-slide>a {
-            display: block;
-            line-height: 42px;
-            height: 42px;
-            display: block;
-            color: #63656E;
-            padding-left: 50px;
-            cursor: pointer;
-            position: relative;
-        }
-        .overview-text-slide>a:hover,
-        .overview-text-slide>a.on {
-            color: #3A84FF;
-            background: #E1ECFF;
-        }
-        .overview-text-slide>a:hover:after,
-        .overview-text-slide>a.on:after {
-            background-color: #3A84FF;
-        }
-        .overview-text-slide>a:after {
-            content: "";
-            width: 4px;
-            height: 4px;
-            position: absolute;
-            left: 28px;
-            top: 50%;
-            margin-top: -2px;
-            background-color: #DCDEE5;
-            border-radius: 50%;
-        }
-        .app-nav-icon {
-            position: absolute;
-            top: 12px;
-            left: 20px;
-            z-index: 2;
-            font-size: 18px;
-        }
-        .paas-app-nav .bk-icon {
-            font-size: 12px;
-            font-weight: bold;
-            position: absolute;
-            top: 16px;
-            right: 14px;
-            color: #979BA5;
-            display: inline-block;
-            transition: all ease 0.3s;
-        }
-        .paas-app-nav .bk-icon.down {
-            transform: rotate(90deg);
-        }
-        .paas-app-nav li.active i.bk-icon {
-            color: #313238;
-        }
-        .navigation-menu-item {
-            margin: 0 !important;
-            height: 46px;
-        }
         .monitor-navigation-header .header-title {
             line-height: 40px;
         }
@@ -283,7 +165,6 @@
             display: inline-block;
         }
 
-
         .paas-breadcrumb {
             list-style: none;
             border-radius: 4px;
@@ -332,23 +213,31 @@
             <div class="bk-loading-title">加载中...</div>
         </div>
     </div>
-    <div style="width: 100%; height: 100%; display: flex;flex-direction: column;">
+    <div style="display: flex; flex-direction: column;">
         <nav id="top-nav" class="navbar navbar-inverse" style="border-radius: 0px;">
             <div class="navbar-header">
                 <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸 PaaS Admin</a>
             </div>
             <ul class="nav navbar-nav">
-                <!-- TODO 考虑优化下，如果没有对应的管理权限，直接不展示 -->
+                {% get_user_site_perms as perm %}
                 <li><a href="{% url 'admin.front_page' %}">首页</a></li>
+                {% if perm.manage_platform %}
                 <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
-                <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>
-                {% url 'admin.operation.index' as operation_index %}
-                {% if operation_index %}
-                <li><a href="{% url 'admin.operation.index' %}">运营数据</a></li>
                 {% endif %}
+                {% if perm.manage_app_templates %}
+                <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>
+                {% endif %}
+                {% if perm.operate_platform %}
+                    {% url 'admin.operation.index' as operation_index %}
+                    {% if operation_index %}
+                    <li><a href="{% url 'admin.operation.index' %}">运营数据</a></li>
+                    {% endif %}
+                {% endif %}
+                {% if perm.manage_platform %}
                 <li><a href="{% url 'admin.accountmgr.index' %}">用户管理</a></li>
+                {% endif %}
             </ul>
-            <p class="navbar-text">{{ request.user.username }}</a></p>
+            <p class="navbar-text">{{ request.user.username }}</p>
         </nav>
 
         <div class="container-content">

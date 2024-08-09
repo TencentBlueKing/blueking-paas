@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .app_build import mark_as_latest_artifact
-from .app_configvar import AppConfigVarManager
 from .app_metadata import WlAppMetadata, get_metadata, update_metadata
 
-__all__ = ["AppConfigVarManager", "WlAppMetadata", "get_metadata", "update_metadata", "mark_as_latest_artifact"]
+__all__ = ["WlAppMetadata", "get_metadata", "update_metadata", "mark_as_latest_artifact"]

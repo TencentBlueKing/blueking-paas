@@ -1661,6 +1661,8 @@ section.app-filter-module {
   .tippy-tooltip.light-theme {
     height: 100%;
     transform: translateY(0px) !important;
+    padding: 0px;
+    box-shadow: none;
   }
   .filter-navigation-list {
     .nav-item {

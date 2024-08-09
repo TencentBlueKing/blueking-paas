@@ -12,6 +12,7 @@
             <template slot-scope="props">
                 <span v-if="props.row.type === 'normal'">普通应用</span>
                 <span v-if="props.row.type === 'scene'">场景模板</span>
+                <span v-if="props.row.type === 'plugin'">插件模板</span>
             </template>
         </bk-table-column>
         <bk-table-column label="展示用名称">

@@ -66,7 +66,7 @@
                 <div class="text-ellipsis" v-bk-overflow-tips>{{ instance.display_name }}</div>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div v-else class="instance-item-cls-empty cell-container pl30">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
@@ -110,7 +110,15 @@
                 v-for="instance in row.instances"
                 :key="instance.process_name"
               >
-                {{ instance.restart_count }}
+                <span
+                  v-bk-tooltips="{
+                    content: instance.terminated_info?.reason,
+                    placement: 'bottom', offset: '0, -10',
+                    disabled: !instance.terminated_info?.reason
+                  }"
+                  :class="{ tip: instance.terminated_info?.reason }">
+                  {{ instance.restart_count }}
+                </span>
               </div>
             </div>
             <div v-else class="instance-item-cls-empty cell-container">--</div>
@@ -1620,6 +1628,18 @@ export default {
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
+          }
+
+          span.tip {
+            position: relative;
+            &::before {
+              content: '';
+              position: absolute;
+              width: 100%;
+              height: 1px;
+              bottom: 15px;
+              border-bottom: 1px dashed;
+            }
           }
 
           &:last-child {

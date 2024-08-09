@@ -64,7 +64,7 @@ def report_event_to_bk_audit(record: AppOperationRecord):
     """将操作记录中的数据上报到审计中心"""
     # 未设置审计中心相关配置则不上报
     if not settings.ENABLE_BK_AUDIT or not record.need_to_report_bk_audit:
-        logger.info(f"skip report to bk_audit, record:{record.id}")
+        logger.info(f"skip report to bk_audit, record:{record.uuid}")
         return
     try:
         audit_context = AuditContext(

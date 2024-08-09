@@ -39,7 +39,7 @@ class AppBaseObj:
 @define
 class DataDetail:
     type: constants.DataType
-    data: Optional[Union[str, dict, list]]
+    data: Optional[Union[str, int, dict, list]]
 
 
 class ApplicationInstance(AuditInstance):

@@ -145,6 +145,10 @@ class Command(BaseCommand):
         operations = Operation.objects.filter(is_hidden=False)
         self.stdout.write(f"Transferring {operations.count()} operations...")
         for op in operations.iterator():
+            operation_type = OPRATION_TRANSFER_MAP.get(op.type, {}).get("operation")
+            if not operation_type:
+                continue
+
             # 申请网关权限、启停进程等操作对象的具体属性记录在 extra_values 的相应字段中
             attribute_name = OPRATION_TRANSFER_MAP.get(op.type, {}).get("attribute_name")
             if attribute_name:

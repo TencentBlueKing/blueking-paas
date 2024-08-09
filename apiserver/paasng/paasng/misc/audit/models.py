@@ -75,7 +75,7 @@ class BaseOperation(AuditedModel):
     @property
     def scope_id(self) -> str:
         """审计中心的冗余字段，用于细化接入权限中心的 action"""
-        return f"{self.operation}|{self.attribute}|{self.module_name}|{self.env}"
+        return f"{self.operation}|{self.attribute}|{self.module_name}|{self.environment}"
 
     @property
     def is_terminated(self) -> bool:
@@ -116,16 +116,17 @@ class BaseOperation(AuditedModel):
             "module_env_info": module_env_info,
             "result": self.result_display,
         }
+
+        if self.target == OperationTarget.APP:
+            # target 为应用时不展示，如：admin 部署 default 模块预发布环境成功
+            return _("{user} {operation}{module_env_info}{result}").format(**ctx)
+
         if self.attribute:
             if self.target == OperationTarget.CLOUD_API:
                 # admin 申请 bklog 网关云API权限
                 return _("{user} {operation}{module_env_info} {attribute} 网关 API 权限").format(**ctx)
             # admin 启用 default 模块预发布环境 mysql 增强服务成功
             return _("{user} {operation}{module_env_info} {attribute} {target}{result}").format(**ctx)
-
-        if self.target == OperationTarget.APP:
-            # target 为应用时不展示，如：admin 部署 default 模块预发布环境成功
-            return _("{user} {operation}{module_env_info}{result}").format(**ctx)
 
         # admin 修改 default 模块环境变量成功
         return _("{user} {operation}{module_env_info}{target}{result}").format(**ctx)

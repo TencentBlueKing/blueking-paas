@@ -18,7 +18,6 @@
 import datetime
 import json
 import logging
-from dataclasses import asdict
 from operator import attrgetter
 from typing import Dict, Optional
 
@@ -137,7 +136,6 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                     "operate_type": operate_type,
                     "autoscaling": proc_spec.autoscaling,
                     "target_replicas": proc_spec.target_replicas,
-                    "scaling_config": asdict(proc_spec.scaling_config) if proc_spec.scaling_config else "",
                 },
             ),
             data_after=DataDetail(type=DataType.BKAPP_REVERSION, data=data),

@@ -178,6 +178,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("audit", "0001_initial"),
+        ("operations", "0001_initial"),
     ]
 
     operations = [

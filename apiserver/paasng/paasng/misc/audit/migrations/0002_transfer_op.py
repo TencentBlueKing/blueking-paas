@@ -147,6 +147,7 @@ def transfer_operations_to_audit(apps, schema_editor):
         else:
             result_code = ResultCode.SUCCESS
 
+        # 禁用自动同步，否则 AppLatestOperationRecord 中的 latest_operated_at 会更新为最新的操作时间
         post_save.disconnect(on_app_operation_created)
         new_record = AppOperationRecord.objects.create(
             app_code=op.application.code,

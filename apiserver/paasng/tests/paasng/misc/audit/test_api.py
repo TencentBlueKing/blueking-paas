@@ -39,7 +39,7 @@ class TestAuditAPI:
         url = "/api/bkapps/applications/lists/latest/"
         resp = api_client.get(url)
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["results"]
         # 仅返回应用最新一条操作记录
         assert len(data) == 1
         assert data[0]["operation"] == "disable"

@@ -49,7 +49,7 @@ DEPLOY_STATUS_TO_RESULT_CODE = {
     DeployStatus.PROGRESSING: constants.ResultCode.ONGOING,
     DeployStatus.READY: constants.ResultCode.SUCCESS,
     DeployStatus.ERROR: constants.ResultCode.FAILURE,
-    DeployStatus.UNKNOWN: constants.ResultCode.FAILURE,
+    DeployStatus.UNKNOWN: constants.ResultCode.ONGOING,
 }
 
 

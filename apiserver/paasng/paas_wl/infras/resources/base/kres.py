@@ -22,6 +22,7 @@ import json
 import logging
 import time
 from contextlib import contextmanager
+from datetime import datetime
 from enum import Enum
 from types import ModuleType
 from typing import Any, Callable, Collection, Dict, Iterator, List, Optional, Tuple, Type, Union, overload
@@ -34,7 +35,7 @@ from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from kubernetes.dynamic.resource import Resource, ResourceInstance
 
-from paas_wl.infras.resources.base.constants import QUERY_LOG_DEFAULT_TIMEOUT
+from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY, QUERY_LOG_DEFAULT_TIMEOUT
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     ReadTargetStatusTimeout,
@@ -670,6 +671,23 @@ class KPod(BaseKresource):
 
 class KDeployment(BaseKresource):
     kind = "Deployment"
+
+    def restart(self, name: str, namespace: Namespace):
+        """
+        Rollout restart the deployment by patching annotations
+        This method triggers a rolling restart of a Kubernetes deployment by updating
+
+        For more details on how updating a deployment works, refer to:
+        https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment
+        """
+        body = {
+            "spec": {
+                "template": {
+                    "metadata": {"annotations": {KUBECTL_RESTART_RESOURCE_KEY: f"{datetime.now().isoformat()}"}}
+                }
+            }
+        }
+        return self.patch(name=name, namespace=namespace, body=body)
 
 
 class KStatefulSet(BaseKresource):

@@ -16,6 +16,7 @@
 
 """Config variables related functions"""
 
+import logging
 from typing import TYPE_CHECKING, Dict, Iterator, List
 
 from django.conf import settings
@@ -34,7 +35,7 @@ from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
-from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars
+from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars, get_custom_builtin_config_vars
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.utils.blobstore import make_blob_store_env
@@ -42,6 +43,8 @@ from paasng.utils.blobstore import make_blob_store_env
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
     from paasng.platform.engine.models import EngineApp
+
+logger = logging.getLogger(__name__)
 
 
 def get_env_variables(
@@ -327,13 +330,26 @@ def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) 
         generate_env_vars_by_region_and_env(region, environment, config_vars_prefix)
     )
 
-    return {
+    # admin42 中自定义的环境变量
+    custom_envs = get_custom_builtin_config_vars(config_vars_prefix)
+
+    envs = {
         **app_info_envs,
         **runtime_envs,
         **bk_address_envs,
         **envs_by_region_and_env,
         "BK_DOCS_URL_PREFIX": get_bk_doc_url_prefix(),
     }
+
+    for key, value in custom_envs.items():
+        if key in envs:
+            logger.warning(
+                f"{key}={envs[key]} is already defined in default builtin envs, "
+                f"will be overwritten by {key}={value} defined in custom builtin envs"
+            )
+        envs[key] = value
+
+    return envs
 
 
 # '{bk_var_*}' is a special placeholder and will be replaced by the actual value

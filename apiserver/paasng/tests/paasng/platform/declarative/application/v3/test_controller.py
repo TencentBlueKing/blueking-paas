@@ -196,16 +196,22 @@ class TestAppDeclarativeControllerUpdate:
 
     def test_name_modified(self, bk_user, existed_app):
         # Use new name
+        new_name = existed_app.name + "2"
+        new_name_en = existed_app.name + "en"
+
         app_json = builder.make_app_desc(
             existed_app.code,
             decorator.with_module("default", True),
         )
-        app_json["bkAppName"] = existed_app.name + "2"
+        app_json["bkAppName"] = new_name
+        app_json["bkAppNameEn"] = new_name_en
 
         controller = AppDeclarativeController(bk_user)
-        with pytest.raises(DescriptionValidationError) as exc_info:
-            controller.perform_action(get_app_description(app_json))
-        assert "bk_app_name" in exc_info.value.detail
+        controller.perform_action(get_app_description(app_json))
+        application = controller.perform_action(get_app_description(app_json))
+        application.refresh_from_db()
+        assert application.name == new_name
+        assert application.name_en == new_name_en
 
     def test_normal(self, bk_user, existed_app):
         app_json = builder.make_app_desc(

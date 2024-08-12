@@ -21,7 +21,7 @@ import pytest
 from blue_krill.web.std_error import APIError
 
 from paasng.accessories.cloudapi import views
-from paasng.misc.operations.constant import OperationType
+from paasng.misc.audit.constants import OperationEnum
 from paasng.platform.applications.models import Application
 from tests.utils.testing import get_response_json
 
@@ -70,7 +70,7 @@ class TestCloudAPIViewSet:
         [
             (
                 "test",
-                OperationType.APPLY_PERM_FOR_CLOUD_API.value,
+                OperationEnum.APPLY,
                 "/api/cloudapi/apps/test/apis/",
                 {"code": 0},
             ),

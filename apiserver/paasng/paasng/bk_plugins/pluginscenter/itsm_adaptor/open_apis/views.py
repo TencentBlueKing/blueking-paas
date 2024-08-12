@@ -109,7 +109,6 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
     def itsm_canary_callback(self, request, pd_id, plugin_id, release_id, release_strategy_id):
         """插件灰度发布策略修改回调"""
-        logging.exception("itsm_canary_callback")
         plugin = self.get_plugin_instance()
         release = plugin.all_versions.get(pk=release_id)
         latest_release_strategy = release.latest_release_strategy
@@ -122,8 +121,6 @@ class PluginCallBackApiViewSet(GenericViewSet):
         # 根据 itsm 的回调结果更新单据状态
         ticket_status = serializer.validated_data["current_status"]
         approve_result = serializer.validated_data["approve_result"]
-
-        logging.exception("itsm_canary_callback")
 
         # TODO 审批成功后，需要将灰度策略相关的数据同步给插件提供方
         if ticket_status == ItsmTicketStatus.FINISHED and approve_result:

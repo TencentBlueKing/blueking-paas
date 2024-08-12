@@ -69,7 +69,6 @@ def pd():
                 "create": make_api_resource("create-release"),
                 "update": make_api_resource("update-release-{ version_id }"),
             },
-            "gradualReleaseStrategy": ["bkciProject", "organization"],
         },
         release_stages=[
             {"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"},

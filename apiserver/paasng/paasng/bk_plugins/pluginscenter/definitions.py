@@ -219,8 +219,6 @@ class ReleaseRevisionDefinition(BaseModel):
     api: Optional[PluginBackendAPI] = Field(
         description="发布版本-操作接口集, 如需要回调至第三方系统, 则需要提供 create 接口"
     )
-    gradualReleaseEnabled: bool = Field(default=False, description="是否灰度发布")
-    gradualReleaseStrategy: List[str] = Field(default_factory=list, description="灰度发布发布策略")
 
 
 @register

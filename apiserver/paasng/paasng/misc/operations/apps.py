@@ -21,6 +21,3 @@ from django.apps import AppConfig
 class OperationsConfig(AppConfig):
     name = "paasng.misc.operations"
     verbose_name = "Operations"
-
-    def ready(self):
-        from . import handlers  # noqa: F401

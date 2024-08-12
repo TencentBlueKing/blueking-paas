@@ -21,7 +21,3 @@ import django
 product_create_or_update_by_operator = django.dispatch.Signal(providing_args=["product", "operator", "created"])
 
 product_contact_updated = django.dispatch.Signal(providing_args=["product"])
-
-offline_market = django.dispatch.Signal(providing_args=["application", "operator"])
-
-release_to_market = django.dispatch.Signal(providing_args=["application", "operator"])

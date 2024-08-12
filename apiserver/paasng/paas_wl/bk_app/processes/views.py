@@ -55,7 +55,6 @@ from paas_wl.bk_app.processes.serializers import (
 )
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByModuleEnvListWatcher, WatchEvent
-from paas_wl.core.signals import new_operation_happened
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
@@ -65,7 +64,8 @@ from paas_wl.workloads.networking.entrance.shim import get_builtin_addr_preferre
 from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.operations.constant import OperationType
+from paasng.misc.audit.constants import OperationTarget
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
@@ -114,34 +114,26 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         self._perform_update(module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config)
 
-        # Create application operation log
-        op_type = self.get_logging_operate_type(operate_type)
-        if op_type:
-            try:
-                new_operation_happened.send(
-                    sender=module_env,
-                    env=module_env,
-                    operate_type=op_type,
-                    operator=request.user.pk,
-                    extra_values={"process_type": process_type, "env_name": module_env.environment},
-                )
-            except Exception:
-                logger.exception("Error creating app operation log")
-
         try:
             proc_spec = ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type)
         except ProcessSpec.DoesNotExist:
             raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
-        else:
-            return Response(
-                status=status.HTTP_200_OK,
-                data={"target_replicas": proc_spec.target_replicas, "target_status": proc_spec.target_status},
-            )
 
-    @staticmethod
-    def get_logging_operate_type(type_: str) -> Optional[int]:
-        """Get the type of application operation"""
-        return {"start": OperationType.PROCESS_START.value, "stop": OperationType.PROCESS_STOP.value}.get(type_)
+        # 审计记录
+        add_app_audit_record(
+            app_code=self.get_application().code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            module_name=module_env.module.name,
+            environment=module_env.environment,
+            operation=operate_type,
+            target=OperationTarget.PROCESS,
+            attribute=process_type,
+        )
+        return Response(
+            status=status.HTTP_200_OK,
+            data={"target_replicas": proc_spec.target_replicas, "target_status": proc_spec.target_status},
+        )
 
     def _perform_update(
         self,

@@ -41,9 +41,11 @@ from paasng.infras.accounts.permissions.application import (
     check_application_perm,
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.signals import application_default_module_switch, pre_delete_module
+from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
@@ -191,17 +193,36 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if protection_status.activated:
             raise error_codes.CANNOT_DELETE_MODULE.f(protection_status.reason)
 
-        # 审计记录在事务外创建, 避免由于数据库回滚而丢失
-        pre_delete_module.send(sender=Module, module=module, operator=request.user.pk)
-        with transaction.atomic():
-            try:
+        try:
+            with transaction.atomic():
                 module = application.get_module_with_lock(module_name=module_name)
                 ModuleCleaner(module).clean()
-            except Exception as e:
-                logger.exception(
-                    "unable to clean module<%s> of application<%s> related resources", module_name, application.code
-                )
-                raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
+        except Exception as e:
+            logger.exception(
+                "unable to clean module<%s> of application<%s> related resources", module_name, application.code
+            )
+            # 执行失败
+            add_app_audit_record(
+                app_code=application.code,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_MODULE,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.MODULE,
+                attribute=module.name,
+                result_code=ResultCode.FAILURE,
+            )
+            raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
+
+        # 执行成功
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_MODULE,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.MODULE,
+            attribute=module.name,
+            result_code=ResultCode.SUCCESS,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # [deprecated] use `api.applications.entrances.set_default_entrance` instead

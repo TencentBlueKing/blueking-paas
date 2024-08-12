@@ -69,6 +69,7 @@ class OperationEnum(str, StructuredEnum):
 
     CREATE = EnumField("create", label=_("新建"))
     DELETE = EnumField("delete", label=_("删除"))
+    MODIFY = EnumField("modify", label=_("修改"))
     # 直接操作应用相关的类型，展示的文案包括完整的动宾短语
     CREATE_APP = EnumField("create_app", label=_("创建应用"))
     RELEASE_TO_MARKET = EnumField("online_to_market", label=_("发布到应用市场"))
@@ -86,3 +87,5 @@ class OperationEnum(str, StructuredEnum):
     RENEW = EnumField("renew", label=_("续期"))
     DEPLOY = EnumField("deploy", label=_("部署"))
     OFFLINE = EnumField("offline", label=_("下架"))
+    # admin42相关操作
+    MODIFY_FEATURE_FLAG = EnumField("modify_feature_flag", label=_("修改特性标记"))

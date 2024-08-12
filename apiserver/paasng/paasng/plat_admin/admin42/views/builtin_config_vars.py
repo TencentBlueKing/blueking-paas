@@ -24,6 +24,8 @@ from rest_framework.response import Response
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.config_vars import (
     BuiltinConfigVarCreateInputSLZ,
     BuiltinConfigVarListOutputSLZ,
@@ -68,6 +70,15 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
             description=data["description"],
             operator=request.user,
         )
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.CREATE,
+            target=constants.OperationTarget.ENV_VAR,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA,
+                data={"key": data["key"], "value": data["value"], "description": data["description"]},
+            ),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, pk):
@@ -76,14 +87,38 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
+        )
+
         config_var.value = data["value"]
         config_var.description = data["description"]
         config_var.operator = request.user
         config_var.save(update_fields=["value", "description", "operator", "updated"])
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.ENV_VAR,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA,
+                data={"key": config_var.key, "value": data["value"], "description": data["description"]},
+            ),
+            data_before=data_before,
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, pk):
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.DELETE,
+            target=constants.OperationTarget.ENV_VAR,
+            data_before=DataDetail(
+                type=constants.DataType.RAW_DATA,
+                data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
+            ),
+        )
         config_var.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

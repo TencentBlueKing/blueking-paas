@@ -28,6 +28,7 @@ import yaml
 from kubernetes.client.rest import ApiException
 from kubernetes.dynamic.resource import ResourceInstance
 
+from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     ReadTargetStatusTimeout,
@@ -288,6 +289,18 @@ class TestKPod:
         )
         logs = KPod(k8s_client).get_log(wl_app.scheduler_safe_name, namespace=wl_app.namespace, timeout=0.1)
         assert logs is not None
+
+
+class TestKDeployment:
+    def test_restart(self, k8s_client, namespace_maker, resource_name):
+        namespace = resource_name
+        namespace_maker.make(namespace)
+
+        deployment_body = construct_foo_deployment(resource_name, KDeployment(k8s_client).get_preferred_version())
+        KDeployment(k8s_client).create_or_update(resource_name, namespace=namespace, body=deployment_body)
+
+        restart_deployment = KDeployment(k8s_client).restart(name=resource_name, namespace=namespace)
+        assert restart_deployment.spec.template.metadata.annotations[KUBECTL_RESTART_RESOURCE_KEY] is not None
 
 
 #########

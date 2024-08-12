@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-09 20:07+0800\n"
+"POT-Creation-Date: 2024-08-12 17:13+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -285,7 +285,7 @@ msgstr ""
 msgid "scaling_config 配置格式有误：{}"
 msgstr "Incorrect format for scaling_config: {}"
 
-#: paas_wl/bk_app/processes/views.py:102
+#: paas_wl/bk_app/processes/views.py:103
 msgid "环境未就绪或已下架, 请尝试重新部署"
 msgstr ""
 
@@ -799,6 +799,7 @@ msgid "终止发布"
 msgstr "Unpublish"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:145
+#: paasng/misc/audit/constants.py:72
 msgid "修改"
 msgstr "Modify"
 
@@ -808,7 +809,7 @@ msgid "删除"
 msgstr "Delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
-#: paasng/misc/audit/constants.py:88
+#: paasng/misc/audit/constants.py:89
 #, fuzzy
 #| msgid "已下架"
 msgid "下架"
@@ -1658,65 +1659,69 @@ msgstr "secret"
 msgid "环境变量"
 msgstr "environment variables"
 
-#: paasng/misc/audit/constants.py:64"
+#: paasng/misc/audit/constants.py:64
 msgid "增强服务"
 msgstr "Add-ons"
 
-#: paasng/misc/audit/constants.py:73 paasng/misc/operations/constant.py:57
+#: paasng/misc/audit/constants.py:74 paasng/misc/operations/constant.py:57
 msgid "创建应用"
 msgstr "create APP"
 
-#: paasng/misc/audit/constants.py:74
+#: paasng/misc/audit/constants.py:75
 msgid "发布到应用市场"
 msgstr " publish to APP market"
 
-#: paasng/misc/audit/constants.py:75 paasng/misc/operations/constant.py:64
+#: paasng/misc/audit/constants.py:76 paasng/misc/operations/constant.py:64
 msgid "从应用市场下架"
 msgstr "remove from the APP market"
 
-#: paasng/misc/audit/constants.py:76 paasng/misc/operations/constant.py:61
+#: paasng/misc/audit/constants.py:77 paasng/misc/operations/constant.py:61
 msgid "完善应用市场配置"
 msgstr "improve market configuration"
 
-#: paasng/misc/audit/constants.py:77
+#: paasng/misc/audit/constants.py:78
 msgid "修改应用市场访问地址"
 msgstr "modify market url"
 
-#: paasng/misc/audit/constants.py:78
+#: paasng/misc/audit/constants.py:79
 msgid "修改基本信息"
 msgstr "modify basic information"
 
-#: paasng/misc/audit/constants.py:80
+#: paasng/misc/audit/constants.py:81
 msgid "启动"
 msgstr "start"
 
-#: paasng/misc/audit/constants.py:81
+#: paasng/misc/audit/constants.py:82
 msgid "停止"
 msgstr "stop"
 
-#: paasng/misc/audit/constants.py:82
+#: paasng/misc/audit/constants.py:83
 msgid "扩缩容"
 msgstr "scale"
 
-#: paasng/misc/audit/constants.py:83
+#: paasng/misc/audit/constants.py:84
 msgid "启用"
 msgstr "enable"
 
-#: paasng/misc/audit/constants.py:84
+#: paasng/misc/audit/constants.py:85
 msgid "停用"
 msgstr "disable"
 
-#: paasng/misc/audit/constants.py:85
+#: paasng/misc/audit/constants.py:86
 msgid "申请"
 msgstr "apply"
 
-#: paasng/misc/audit/constants.py:86
+#: paasng/misc/audit/constants.py:87
 msgid "续期"
 msgstr "renew"
 
-#: paasng/misc/audit/constants.py:87
+#: paasng/misc/audit/constants.py:88
 msgid "部署"
 msgstr "Deploy"
+
+#: paasng/misc/audit/constants.py:91
+msgid "修改特性标记"
+msgstr "Modify Feature Flag"
 
 #: paasng/misc/audit/models.py:103
 #, python-brace-format

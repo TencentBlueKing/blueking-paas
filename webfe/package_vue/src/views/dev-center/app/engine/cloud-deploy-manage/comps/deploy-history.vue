@@ -285,7 +285,7 @@ export default {
       this.getDeployHistory();
       this.moduleList = this.curAppModuleList.map(item => ({ key: item.name, name: item.name }));
        // 在列表头新增一项
-      this.moduleList.unshift({ key: '', name: '全部' });
+      this.moduleList.unshift({ key: '', name: `${this.$t('全部')}` });
     },
 
     /**

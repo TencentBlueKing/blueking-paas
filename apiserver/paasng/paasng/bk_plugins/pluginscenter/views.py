@@ -1188,7 +1188,7 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
     permission_classes = [
         IsAuthenticated,
         PluginCenterFeaturePermission,
-        plugin_action_permission_class([Actions.EDIT_PLUGIN]),
+        plugin_action_permission_class([Actions.MANAGE_VISIBILITY]),
     ]
 
     def retrieve(self, request, pd_id, plugin_id):

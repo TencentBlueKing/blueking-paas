@@ -47,10 +47,10 @@ class PluginPermissionActions(str, StructuredEnum):
     BASIC_DEVELOPMENT = EnumField("basic_development", label=_("基础开发"))
     RELEASE_VERSION = EnumField("release_version", label=_("版本发布"))
     EDIT_PLUGIN = EnumField("edit_plugin", label=_("编辑插件信息"))
-    DELETE_PLUGIN = EnumField("delete_plugin", label=_("删除插件"))
-    MANAGE_MEMBERS = EnumField("manage_members", label=_("成员管理"))
     MANAGE_VISIBILITY = EnumField("manage_visibility", label=_("可见范围管理"))
     MANAGE_CONFIGURATION = EnumField("manage_configuration", label=_("插件配置管理"))
+    MANAGE_MEMBERS = EnumField("manage_members", label=_("成员管理"))
+    DELETE_PLUGIN = EnumField("delete_plugin", label=_("删除插件"))
 
     @classmethod
     def get_choices_by_role(cls, role: PluginRole) -> List["PluginPermissionActions"]:
@@ -69,6 +69,8 @@ class PluginPermissionActions(str, StructuredEnum):
                 PluginPermissionActions.BASIC_DEVELOPMENT,
                 PluginPermissionActions.RELEASE_VERSION,
                 PluginPermissionActions.MANAGE_CONFIGURATION,
+                PluginPermissionActions.EDIT_PLUGIN,
+                PluginPermissionActions.MANAGE_VISIBILITY,
             ]
         raise NotImplementedError
 

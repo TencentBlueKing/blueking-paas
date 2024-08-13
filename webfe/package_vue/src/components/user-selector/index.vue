@@ -193,6 +193,13 @@ export default {
       type: String,
       default: 'all',
     },
+    departmentsType: {
+      type: String,
+      default: 'all',
+    },
+    departmentsFn: {
+      type: Function,
+    },
   },
   data() {
     return {
@@ -264,6 +271,9 @@ export default {
     },
     isUsingDefaultRule() {
       return this.range === 'all';
+    },
+    isForAllDepartments() {
+      return this.departmentsType === 'all';
     },
   },
   watch: {
@@ -342,7 +352,8 @@ export default {
       };
       try {
         const res = await this.fetchDepartment(params);
-        const categories = [...res];
+        // 默认为所有部门，特殊情况为指定部门
+        const categories = this.isForAllDepartments ? [...res] : this.departmentsFn(res);
         categories.forEach((item) => {
           item.visiable = true;
           item.showRadio = true;
@@ -471,8 +482,10 @@ export default {
           fetchList.push(this.fetchSearchUser(requestUserParams));
         }
         const res = await Promise.all(fetchList);
-        const departments = unique(res[0], 'id');
-        const users = unique(res[1], 'id');
+        // 默认搜索所有部门，特殊情况过滤其他部门
+        const filterResult = this.isForAllDepartments ? res : this.departmentsFn(res[0], 'search');
+        const departments = unique(filterResult[0], 'id');
+        const users = unique(filterResult[1], 'id');
         departments.forEach((depart) => {
           depart.showRadio = true;
           depart.type = 'department';

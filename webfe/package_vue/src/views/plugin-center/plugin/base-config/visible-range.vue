@@ -7,6 +7,25 @@
       placeholder="visible-range-loading"
       :is-transform="false"
     >
+      <bk-alert
+        v-if="visibleRangeData.is_in_approval"
+        class="warning-alert-cls mb16"
+        type="warning"
+        :show-icon="false"
+      >
+        <div slot="title">
+          <i class="paasng-icon paasng-remind"></i>
+          {{ $t('修改的可见范围已提交审批，尚未生效') }}
+          <bk-button
+            size="small"
+            text
+            class="ml10"
+            @click="viewApprovalDetails"
+          >
+            {{ $t('查看审批详情') }}
+          </bk-button>
+        </div>
+      </bk-alert>
       <!-- 无数据状态 -->
       <section class="exception-wrapper" v-if="!isEdit">
         <bk-exception class="exception-wrap-item exception-part" type="empty" scene="part">
@@ -27,7 +46,6 @@
           <bk-form style="width: 800px" :label-width="150" :model="formData" ref="visibleRangeForm">
             <bk-form-item
               :label="$t('蓝盾项目')"
-              :required="true"
               :property="'projectIds'"
               :error-display-type="'normal'"
               :rules="rules.projectIds">
@@ -68,6 +86,8 @@
       :api-host="apiHost"
       :custom-close="true"
       :range="'departments'"
+      :departments-fn="handleDepartments"
+      departments-type="tc"
       @sumbit="handleSubmit"
     />
   </div>
@@ -101,13 +121,8 @@ export default {
       rules: {
         projectIds: [
           {
-            required: true,
-            message: this.$t('必填项'),
-            trigger: 'blur',
-          },
-          {
-            regex: /^([a-z][a-z0-9-]{0,31})(;[a-z][a-z0-9-]{0,31})*;?$/,
-            message: this.$t('请用英文分号分隔'),
+            regex: /^([a-z][a-zA-Z0-9-]+)(,[a-z][a-zA-Z0-9-]+)*$/,
+            message: this.$t('Project ID是字符+数字组成，并以小写字母开头，Project ID之间用英文分号分隔'),
             trigger: 'blur',
           },
         ],
@@ -217,6 +232,23 @@ export default {
         });
       }
     },
+    // 过滤出指定部门
+    handleDepartments(data, type) {
+      const TCID = 2874;
+      const prefix = '腾讯公司/';
+
+      if (type === 'search') {
+        // 搜索过滤出指定部门数据
+        return [data.filter(v => v.full_name.startsWith(prefix))];
+      }
+      const tc = data.find(v => v.id === TCID);
+      return tc ? [tc] : [];
+    },
+    // 查看申请详情
+    viewApprovalDetails() {
+      const url = this.visibleRangeData.itsm_detail?.ticket_url;
+      window.open(url, '_blank');
+    },
   },
 };
 </script>
@@ -251,6 +283,25 @@ export default {
   }
   .text-btn {
     margin-bottom: 8px;
+  }
+  .mb16  {
+    margin-bottom: 16px;
+  }
+  .warning-alert-cls {
+    i {
+      font-size: 14px;
+      color: #ff9c01;
+      transform: translateY(0px);
+    }
+    /deep/ .bk-alert-wraper {
+      height: 32px;
+      align-items: center;
+      font-size: 12px;
+      color: #63656e;
+    }
+    /deep/ .bk-button-text.bk-button-small {
+      padding: 0;
+    }
   }
 }
 </style>

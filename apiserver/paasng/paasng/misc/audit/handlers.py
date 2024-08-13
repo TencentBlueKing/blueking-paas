@@ -30,6 +30,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit import constants
 from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models import Deployment
@@ -102,17 +103,18 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
 def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwargs):
     """当普通应用部署完成后，记录操作审计记录"""
     application = deployment.app_environment.application
-    result_code = JOB_STATUS_TO_RESULT_CODE.get(deployment.status, constants.ResultCode.ONGOING)
-    add_app_audit_record(
-        app_code=application.code,
-        user=deployment.operator,
-        action_id=AppAction.BASIC_DEVELOP,
-        operation=constants.OperationEnum.DEPLOY,
-        target=constants.OperationTarget.APP,
-        module_name=deployment.app_environment.module.name,
-        environment=deployment.app_environment.environment,
-        result_code=result_code,
-    )
+    if application.type == ApplicationType.DEFAULT:
+        result_code = JOB_STATUS_TO_RESULT_CODE.get(deployment.status, constants.ResultCode.ONGOING)
+        add_app_audit_record(
+            app_code=application.code,
+            user=deployment.operator,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=constants.OperationEnum.DEPLOY,
+            target=constants.OperationTarget.APP,
+            module_name=deployment.app_environment.module.name,
+            environment=deployment.app_environment.environment,
+            result_code=result_code,
+        )
 
 
 @receiver(post_cnative_env_deploy)

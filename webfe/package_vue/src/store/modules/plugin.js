@@ -603,5 +603,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/visible_range/`;
       return http.post(url, data, config);
     },
+
+    /**
+     * 扩大灰度范围
+     * @param {Object} params 请求参数：pdId, pluginId, id, data
+     */
+    expandGrayScope({}, { pdId, pluginId, id, data }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${id}/strategy/`;
+      return http.post(url, data, config);
+    },
   },
 };

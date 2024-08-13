@@ -29,6 +29,7 @@ export default {
     min-height: 32px;
     line-height: 32px;
     margin-bottom: 6px;
+    font-size: 12px;
     &:last-child {
       margin-bottom: 0px;
     }
@@ -38,6 +39,7 @@ export default {
     }
     .value {
       margin-left: 8px;
+      color: #313238;
     }
   }
 }

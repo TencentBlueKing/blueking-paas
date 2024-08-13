@@ -77,6 +77,7 @@ export default {
       allowedRouterName: [
         'pluginVersionRelease',
         'pluginVersionEditor',
+        'pluginReleaseDetails',
         'pluginTestReport',
         'marketInfoEdit',
         'moreInfoEdit',
@@ -183,6 +184,7 @@ export default {
       this.allowedRouterName = [
         'pluginVersionRelease',
         'pluginVersionEditor',
+        'pluginReleaseDetails',
         'pluginTestReport',
         'marketInfoEdit',
         'moreInfoEdit',

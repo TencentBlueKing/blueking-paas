@@ -54,8 +54,8 @@
           <bk-form-item
             :label="curVersionData.version_type === 'tag' ? $t('代码 Tag') : $t('代码分支')"
             :required="true"
-            :icon-offset="118"
             :property="'source_versions'"
+            :error-display-type="'normal'"
           >
             <div class="source-versions-wrapper">
               <bk-select
@@ -146,6 +146,7 @@
             :label="isOfficialVersion ? $t('版本号') : $t('测试号')"
             :required="true"
             :property="'version'"
+            :error-display-type="'normal'"
           >
             <bk-input
               v-model="curVersion.version"
@@ -160,6 +161,7 @@
             :label="$t('版本日志-label')"
             :required="true"
             :property="'comment'"
+            :error-display-type="'normal'"
           >
             <bk-input
               v-model="curVersion.comment"

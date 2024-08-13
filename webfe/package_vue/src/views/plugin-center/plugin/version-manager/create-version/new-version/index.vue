@@ -2,16 +2,24 @@
   <div class="plugin-new-version">
     <div class="new-version-container">
       <!-- 发布内容 -->
-      <release-content ref="releaseContent" :scheme="scheme" />
+      <release-content
+        v-bind="$attrs"
+        ref="releaseContent"
+      />
+      <!-- 可见范围 -->
+      <visible-range :data="visibleRangeData" />
       <!-- 发布策略 -->
-      <release-strategy ref="releaseStrategy" :scheme="scheme" />
+      <release-strategy
+        v-bind="$attrs"
+        ref="releaseStrategy"
+      />
     </div>
     <section class="version-tools">
       <div class="button-warpper">
         <bk-button
           :theme="'primary'"
           class="mr8"
-          :lodaing="isSubmitLoading"
+          :loading="isSubmitLoading"
           @click="handleSubmit"
         >
           {{ $t('申请灰度发布') }}
@@ -24,27 +32,28 @@
           {{ $t('取消') }}
         </bk-button>
       </div>
-      <p class="release-tips" v-html="releaseTips"></p>
+      <p
+        class="release-tips"
+        v-html="releaseTips"
+      ></p>
     </section>
   </div>
 </template>
 <script>
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import releaseContent from './release-content.vue';
+import visibleRange from './visible-range.vue';
 import releaseStrategy from './release-strategy.vue';
 
 export default {
   name: 'PluginNewVersion',
   components: {
     releaseContent,
+    visibleRange,
     releaseStrategy,
   },
   mixins: [pluginBaseMixin],
   props: {
-    scheme: {
-      type: Object,
-      default: () => {},
-    },
     loading: {
       type: Boolean,
       default: false,
@@ -55,6 +64,10 @@ export default {
       // 灰度 - 灰度发布审批中 - 灰度中 (审批通过) - 灰度中 (发布完成)
       releaseStep: '',
       isSubmitLoading: false,
+      visibleRangeData: {
+        bkci_project: [],
+        organization: [],
+      },
     };
   },
   computed: {
@@ -63,7 +76,7 @@ export default {
     },
   },
   created() {
-    console.log('scheme', this.scheme);
+    this.getVisibleRange();
   },
   methods: {
     // 新建正式版本
@@ -90,7 +103,7 @@ export default {
     async createVersion(data) {
       this.isSubmitLoading = true;
       try {
-        await this.$store.dispatch('plugin/createVersion', {
+        const res = await this.$store.dispatch('plugin/createVersion', {
           pdId: this.pdId,
           pluginId: this.pluginId,
           data,
@@ -99,11 +112,15 @@ export default {
           theme: 'success',
           message: this.$t('新建成功!'),
         });
-        // 版本管理
+        // 版本详情
         this.$router.push({
-          name: 'pluginVersionManager',
+          name: 'pluginReleaseDetails',
+          params: {
+            pluginTypeId: this.pdId,
+            id: this.pluginId,
+          },
           query: {
-            type: 'prod',
+            versionId: res.id,
           },
         });
       } catch (e) {
@@ -113,6 +130,25 @@ export default {
         });
       } finally {
         this.isSubmitLoading = false;
+      }
+    },
+    // 获取可见范围数据
+    async getVisibleRange() {
+      try {
+        const res = await this.$store.dispatch('plugin/getVisibleRange', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+        });
+        this.visibleRangeData = res;
+      } catch (e) {
+        // 404 就说明没有数据
+        if (e.status === 404) {
+          return;
+        }
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
       }
     },
     handleBack(type) {
@@ -148,5 +184,5 @@ export default {
       font-weight: 700;
     }
   }
-  }
+}
 </style>

@@ -28,7 +28,7 @@
               v-else
               :class="['dot', versionData.status]"
             />
-            <span class="pl5">{{ PLUGIN_TEST_VERSION_STATUS[versionData.status] }}</span>
+            <span class="pl5">{{ statusMap[versionData.status] }}</span>
           </div>
         </template>
         <a
@@ -47,7 +47,6 @@
 </template>
 <script>
 import { bus } from '@/common/bus';
-import { PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
 
 export default {
   props: {
@@ -79,11 +78,13 @@ export default {
       type: String,
       default: '',
     },
+    statusMap: {
+      type: Object,
+    },
   },
   data() {
     return {
       showBackIcon: false,
-      PLUGIN_TEST_VERSION_STATUS,
     };
   },
   watch: {

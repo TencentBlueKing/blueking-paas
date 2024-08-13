@@ -30,10 +30,11 @@
               :name="option.name">
             </bk-option>
           </bk-select>
-          <p slot="tip">
+          <p slot="tip" class="tips">
             <bk-button
               :text="true"
               title="primary"
+              size="small"
             >
               <i class="paasng-icon paasng-jump-link icon-cls-link" />
               {{ $t('查看测试数据') }}
@@ -92,29 +93,29 @@
             <li class="item">
               <div class="label">{{ $t('已测试版本') }}：</div>
               <div class="value">
-                <p>--</p>
+                <p>{{ data.source_version_name }}</p>
                 <p>
                   <bk-button
                     :text="true"
                     title="primary"
                   >
-                    <i class="paasng-icon paasng-jump-link icon-cls-link" />
-                    {{ $t('查看测试数据') }}
+                    <i class="paasng-icon paasng-jump-link icon-cls-link mr5" />
+                    <span class="f12">{{ $t('查看测试数据') }}</span>
                   </bk-button>
                 </p>
               </div>
             </li>
             <li class="item">
               <div class="label">{{ $t('版本类型') }}：</div>
-              <div class="value">--</div>
+              <div class="value">{{ versionTypes.find(v => v.key === data.semver_type)?.name }}</div>
             </li>
             <li class="item">
               <div class="label">{{ $t('版本号') }}：</div>
-              <div class="value">--</div>
+              <div class="value">{{ data.version }}</div>
             </li>
             <li class="item">
               <div class="label">{{ $t('版本日志') }}：</div>
-              <div class="value">--</div>
+              <div class="value">{{ data.comment }}</div>
             </li>
           </ul>
         </view-mode>
@@ -142,6 +143,14 @@ export default {
       type: Object,
       default: () => {},
     },
+    data: {
+      type: Object,
+      default: () => {},
+    },
+    versionData: {
+      type: Object,
+      default: () => {},
+    },
   },
   data() {
     return {
@@ -156,17 +165,6 @@ export default {
         version: '',
         comment: '',
         versionDisplay: '',
-      },
-      // 接口数据字段
-      interface: {
-        type: 'prod',
-        source_version_type: 'tested_version',
-        source_version_name: 'test-xxxxx',
-        release_id: 'test_release.id',
-        version: 'new_version',
-        comment: '...',
-        // 版本类型
-        semver_type: 'patch',
       },
       sourceVersions: [],
       versionTypes: [
@@ -199,11 +197,16 @@ export default {
     curVersionData() {
       return this.sourceVersions.find(item => item.name === this.releaseContent.source_versions) || {};
     },
+    versionId() {
+      return this.$route.query.versionId;
+    },
   },
   watch: {
     scheme: {
       handler(newValue) {
-        this.formatData(newValue);
+        if (this.isEdit) {
+          this.formatData(newValue);
+        }
       },
       immediate: true,
       deep: true,
@@ -223,7 +226,7 @@ export default {
     changeVersionType(value) {
       this.releaseContent.semver_type = this.versionTypes.find(v => v.value === value).key;
       // 版本类型切换重新校验，解决依赖性错误提示问题
-      this.$refs.releaseContentForm.validate().catch((e) => {
+      this.$refs.releaseContentForm && this.$refs.releaseContentForm.validate().catch((e) => {
         console.error(e);
       });
     },
@@ -248,6 +251,24 @@ export default {
         'self-fill': '',
       };
       this.releaseContent.version = versionMapping[data.version_no] || '';
+      // 重新申请默认值
+      if (this.versionId) {
+        this.setVersionDefaultValue(data);
+      }
+    },
+    // 重新申请设置默认值
+    setVersionDefaultValue() {
+      const { source_version_name, semver_type, comment } = this.versionData;
+      const version = this.versionTypes.find(v => v.key === semver_type).value;
+      const versionDisplay = `${version} (主版本号、次版本号、修正版本号)`;
+      this.releaseContent = {
+        ...this.releaseContent,
+        source_versions: source_version_name,
+        version,
+        versionDisplay,
+        comment,
+        semver_type,
+      };
     },
     // 表单校验
     validate() {
@@ -270,3 +291,16 @@ export default {
   },
 };
 </script>
+
+<style lang="scss" scoped>
+.release-content-container {
+  .tips {
+    .bk-button-text.bk-button-small {
+      padding: 0;
+      i {
+        font-size: 14px;
+      }
+    }
+  }
+}
+</style>

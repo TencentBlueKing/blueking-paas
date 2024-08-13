@@ -1,23 +1,25 @@
 <template>
   <div>
-    <paas-plugin-title :name="isVersionRelease ? $t('新建版本') : $t('新建测试')" />
+    <paas-plugin-title :name="isVersionRelease ? $t('新建版本发布') : $t('新建测试')" />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="plugin-new-version-loading"
       class="app-container middle"
     >
       <!-- 防止高度塌陷 -->
-      <div class="version-loading-placeholder" v-if="!scheme"></div>
+      <div class="version-loading-placeholder" v-if="!Object.keys(scheme).length"></div>
       <template v-else>
         <!-- 新版ui -->
         <new-version
           v-if="scheme.version_type === 'tested_version' && isVersionRelease"
           :scheme="scheme"
+          :version-data="versionData"
         />
         <!-- 新建版本 -->
         <editor-version
           v-else
           :scheme="scheme"
+          :version-data="versionData"
           :loading="schemeLoading"
           @refresh="getNewVersionFormat"
         />
@@ -42,16 +44,23 @@ export default {
   data() {
     return {
       isLoading: true,
-      scheme: null,
+      scheme: {},
       schemeLoading: false,
+      versionData: {},
     };
   },
   computed: {
     isVersionRelease() {
       return this.$route.query.type === 'prod';
     },
+    versionId() {
+      return this.$route.query.versionId;
+    },
   },
-  created() {
+  async created() {
+    if (this.versionId) {
+      await this.getReleaseDetail();
+    }
     this.getNewVersionFormat();
   },
   methods: {
@@ -77,6 +86,22 @@ export default {
           this.isLoading = false;
           this.schemeLoading = false;
         }, 200);
+      }
+    },
+    // 获取版本详情
+    async getReleaseDetail() {
+      try {
+        const res = await this.$store.dispatch('plugin/getReleaseDetail', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: this.versionId,
+        });
+        this.versionData = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
       }
     },
   },

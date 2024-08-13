@@ -275,3 +275,13 @@ export const CIRCLED_NUMBERS = [
   '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
   '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳',
 ];
+
+/**
+ * Codecc 版本发布状态
+ */
+export const CODECC_RELEASE_STATUS = {
+  pending: '灰度中',
+  successful: '已全量发布',
+  interrupted: '发布异常',
+  failed: '发布异常',
+};

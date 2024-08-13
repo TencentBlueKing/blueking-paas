@@ -75,7 +75,25 @@
         </section>
       </div>
 
+      <section v-if="isCodeccEmpty">
+        <bk-exception class="exception-wrap-cls" type="empty" scene="part">
+          <div class="exception-wrapper">
+            <p class="title">{{ $t('暂无版本发布') }}</p>
+            <p class="tips">{{ $t('请先完成对默认分支的测试') }}</p>
+            <bk-button
+              :text="true"
+              title="primary"
+              size="small"
+              @click="handlerChangeRouter('test')"
+            >
+              {{ $t('前往测试') }}
+            </bk-button>
+          </div>
+        </bk-exception>
+      </section>
+
       <bk-table
+        v-else
         ref="versionTable"
         v-bkloading="{ isLoading: isTableLoading }"
         class="pugin-version-list"
@@ -158,7 +176,7 @@
               v-else
               :class="['dot', row.status]"
             />
-            <span>{{ $t(curVersionStatus[row.status]) || '--' }}</span>
+            <span class="status-text">{{ $t(curVersionStatus[row.status]) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -166,50 +184,63 @@
           :width="localLanguage === 'en' ? 320 : 240"
         >
           <template slot-scope="{ row }">
-            <template v-if="isOfficialVersion">
+            <!-- Codecc 灰度审批详情 -->
+            <template v-if="row.source_version_type === 'tested_version' && isOfficialVersion">
               <bk-button
                 theme="primary"
                 text
                 class="mr10"
-                @click="handleDetail(row)"
+                @click="handleCodeccReleaseDetails(row)"
               >
-                {{ $t('详情') }}
+                {{ $t('版本详情') }}
               </bk-button>
+            </template>
+            <div v-else>
+              <template v-if="isOfficialVersion">
+                <bk-button
+                  theme="primary"
+                  text
+                  class="mr10"
+                  @click="handleDetail(row)"
+                >
+                  {{ $t('详情') }}
+                </bk-button>
+                <bk-button
+                  theme="primary"
+                  text
+                  class="mr10"
+                  @click="handleRelease(row)"
+                >
+                  {{ $t('发布进度') }}
+                </bk-button>
+              </template>
               <bk-button
+                v-else
                 theme="primary"
                 text
                 class="mr10"
                 @click="handleRelease(row)"
               >
-                {{ $t('发布进度') }}
+                {{ $t('详情') }}
               </bk-button>
-            </template>
-            <bk-button
-              v-else
-              theme="primary"
-              text
-              class="mr10"
-              @click="handleRelease(row)"
-            >
-              {{ $t('详情') }}
-            </bk-button>
-            <bk-button
-              v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
-              theme="primary"
-              class="mr10"
-              text
-              @click="handleRelease(row, 'reset')"
-            >
-              {{ isOfficialVersion ? $t('重新发布') : $t('重新测试') }}
-            </bk-button>
-            <bk-button
-              v-if="row.report_url"
-              theme="primary"
-              text
-              @click="toTestReportPage(row)"
-            >
-              {{ $t('测试报告') }}
-            </bk-button>
+              <bk-button
+                v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
+                theme="primary"
+                class="mr10"
+                text
+                @click="handleRelease(row, 'reset')"
+              >
+                {{ isOfficialVersion ? $t('重新发布') : $t('重新测试') }}
+              </bk-button>
+              <bk-button
+                v-if="row.report_url"
+                theme="primary"
+                text
+                @click="toTestReportPage(row)"
+              >
+                {{ $t('测试报告') }}
+              </bk-button>
+            </div>
           </template>
         </bk-table-column>
       </bk-table>
@@ -321,7 +352,8 @@
   </div>
 </template>
 
-<script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+<script>
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import versionManageTitle from './comps/version-manage-title.vue';
 import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE, PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
 import { formatDate } from '@/common/tools';
@@ -396,6 +428,11 @@ export default {
     // 当前版本状态
     curVersionStatus() {
       return this.isOfficialVersion ? PLUGIN_VERSION_STATUS : PLUGIN_TEST_VERSION_STATUS;
+    },
+    // Codecc 空状态
+    isCodeccEmpty() {
+      if (!this.versionList.length && this.curPluginInfo.has_test_version && this.isOfficialVersion) return true;
+      return false;
     },
   },
   watch: {
@@ -704,6 +741,20 @@ export default {
         },
       });
     },
+
+    // Codecc 版本发布详情
+    handleCodeccReleaseDetails(row) {
+      this.$router.push({
+        name: 'pluginReleaseDetails',
+        params: {
+          pluginTypeId: this.pdId,
+          id: this.pluginId,
+        },
+        query: {
+          versionId: row.id,
+        },
+      });
+    },
   },
 };
 </script>
@@ -739,6 +790,9 @@ export default {
   .version-num {
     color: #3a84ff;
     font-weight: 700;
+  }
+  .status-text {
+    margin-left: 5px;
   }
 }
 
@@ -879,6 +933,25 @@ export default {
     margin: 0 auto !important;
     padding-top: 16px !important;
   }
+  .exception-wrap-cls {
+    margin-top: 100px;
+    /deep/ .bk-exception-img.part-img .exception-image {
+      height: 180px;
+    }
+    .exception-wrapper {
+      .title {
+        font-size: 24px;
+        color: #63656E;
+        margin-bottom: 16px;
+      }
+      .tips {
+        font-size: 14px;
+        color: #979BA5;
+        margin-bottom: 8px;
+      }
+    }
+  }
+
 }
 </style>
 

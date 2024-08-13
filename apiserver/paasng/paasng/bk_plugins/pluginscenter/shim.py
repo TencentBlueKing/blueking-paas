@@ -14,7 +14,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 import logging
 from functools import wraps
 from typing import List
@@ -31,7 +30,12 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import (
     setup_builtin_grade_manager,
     setup_builtin_user_groups,
 )
-from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance, PluginMarketInfo
+from paasng.bk_plugins.pluginscenter.models import (
+    PluginDefinition,
+    PluginInstance,
+    PluginMarketInfo,
+    PluginVisibleRange,
+)
 from paasng.bk_plugins.pluginscenter.sourcectl import (
     add_repo_member,
     get_plugin_repo_accessor,
@@ -85,6 +89,10 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     if plugin.pd.basic_info_definition.release_method == constants.PluginReleaseMethod.CODE:
         init_plugin_repository(plugin, operator)
 
+    # 初始化可见范围
+    if hasattr(plugin.pd, "visible_range_definition"):
+        PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
+
     # 调用第三方系统API时, 必须保证 plugin.repository 不为空
     if plugin.pd.basic_info_definition.api.create:
         try:
@@ -107,6 +115,11 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     setup_builtin_user_groups(plugin)
     # 添加默认管理员
     add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=[operator])
+
+
+def update_visible_range_and_callback(plugin: PluginInstance, visible_range_obj: PluginVisibleRange):
+    """更新可见范围，需要同步回调第三方 API"""
+    # TODO
 
 
 def init_plugin_repository(plugin: PluginInstance, operator: str):

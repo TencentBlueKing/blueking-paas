@@ -414,7 +414,9 @@ class PluginConfig(AuditedModel):
 class PluginVisibleRange(AuditedModel):
     """插件可见范围"""
 
-    plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
+    plugin = models.OneToOneField(
+        PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="visible_range"
+    )
     bkci_project = models.JSONField(verbose_name="蓝盾项目ID", default=list)
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
     is_in_approval = models.BooleanField(verbose_name="是否在审批中", default=False)
@@ -437,6 +439,18 @@ class PluginVisibleRange(AuditedModel):
         if self.itsm_detail_fields:
             return self.itsm_detail_fields.get("origin_organization")
         return None
+
+    @classmethod
+    def get_or_initialize_with_default(cls, plugin: "PluginInstance") -> "PluginVisibleRange":
+        try:
+            return PluginVisibleRange.objects.get(plugin=plugin)
+        except PluginVisibleRange.DoesNotExist:
+            if hasattr(plugin.pd, "visible_range_definition"):
+                defaults = {"organization": cattr.unstructure(plugin.pd.visible_range_definition.initial)}
+            else:
+                defaults = {}
+        visible_range_obj, _c = PluginVisibleRange.objects.get_or_create(plugin=plugin, defaults=defaults)
+        return visible_range_obj
 
 
 class OperationRecord(AuditedModel):

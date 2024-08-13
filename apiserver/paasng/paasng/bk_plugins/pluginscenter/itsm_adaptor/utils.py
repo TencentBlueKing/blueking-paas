@@ -107,7 +107,7 @@ def submit_canary_release_ticket(
         )
 
     # 可见范围
-    visible_range_obj, _c = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+    visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
     # 灰度发布在 ITSM 中展示的字段
     canary_fields = [
         # 发布策略的字段

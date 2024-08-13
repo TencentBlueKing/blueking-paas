@@ -20,13 +20,17 @@ import logging
 from paasng.bk_plugins.pluginscenter.constants import PluginStatus
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.bk_plugins.pluginscenter.thirdparty import utils
-from paasng.bk_plugins.pluginscenter.thirdparty.api_serializers import PluginRequestSLZ
+from paasng.bk_plugins.pluginscenter.thirdparty.api_serializers import (
+    PluginRequestCreateSLZ,
+    PluginRequestSLZ,
+    PluginVisibleRangeAPIRequestSLZ,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def create_instance(pd: PluginDefinition, instance: PluginInstance, operator: str) -> bool:
-    slz = PluginRequestSLZ(instance, context={"operator": operator})
+    slz = PluginRequestCreateSLZ(instance, context={"operator": operator})
     data = slz.data
     resp = utils.make_client(pd.basic_info_definition.api.create).call(data=data)
     if not (result := resp.get("result", True)):
@@ -72,3 +76,33 @@ def reactivate_instance(pd: PluginDefinition, instance: PluginInstance, operator
     instance.status = PluginStatus.DEVELOPING
     instance.save(update_fields=["status", "updated"])
     return True
+
+
+def visible_range_callback(pd: PluginDefinition, instance: PluginInstance, operator: str) -> bool:
+    """可见范围修改审批成功时 - 回调第三系统
+
+    - 仅插件管理员声明了回调 API 时才会触发回调
+    """
+    if not pd.visible_range_definition.api.update:
+        logger.info("Visible range update callback API not configured, skipping callback")
+        return True
+
+    if not hasattr(instance, "visible_range"):
+        logger.info(f"The plugin (id: {instance.id}) has not set the visible range, skipping callback")
+        return True
+
+    slz = PluginVisibleRangeAPIRequestSLZ(
+        {
+            "plugin_id": instance.id,
+            "operator": operator,
+            "bkci_project": instance.visible_range.bkci_project,
+            "organization": instance.visible_range.organization,
+        }
+    )
+    data = slz.data
+    resp = utils.make_client(pd.visible_range_definition.api.update).call(
+        data=data, path_params={"plugin_id": instance.id}
+    )
+    if not (result := resp.get("result", True)):
+        logger.error(f"create release error: {resp}")
+    return result

@@ -156,7 +156,7 @@ class PluginBasicInfoDefinition(BaseModel):
 
 @register
 class PluginVisibleRangeLevel(BaseModel):
-    """插件可见范围级别"""
+    """插件可见范围填写的字段"""
 
     name: str
     id: str
@@ -168,8 +168,7 @@ class PluginVisibleRangeDefinition(BaseModel):
     """插件可见范围"""
 
     description: str = Field(default="", description="可见范围描述")
-    scope: List[str] = Field(default_factory=list, description="可见范围授权范围类型")
-    topLevel: Optional[PluginVisibleRangeLevel]
+    initial: Optional[PluginVisibleRangeLevel] = Field(description="创建插件时给的初始值")
     api: Optional[PluginBackendAPI] = Field(description="可见范围 API")
 
 

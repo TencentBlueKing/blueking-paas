@@ -16,6 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Serializer for third-party api"""
+from typing import Optional
+
 from rest_framework import serializers
 
 from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, PluginRole
@@ -30,6 +32,13 @@ class PluginTemplateSLZ(serializers.Serializer):
     language = serializers.CharField()
     applicable_language = serializers.CharField(allow_null=True)
     repository = serializers.CharField()
+
+
+class PluginVVisibleRangeAPIRequestSLZ(serializers.Serializer):
+    plugin_id = serializers.CharField(help_text="插件id")
+    operator = serializers.CharField(help_text="操作人")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目 ID")
+    organization = serializers.JSONField(help_text="组织架构")
 
 
 @i18n
@@ -47,6 +56,21 @@ class PluginRequestSLZ(serializers.Serializer):
 
     def get_operator(self, obj) -> str:
         return self.context["operator"]
+
+
+@i18n
+class PluginRequestCreateSLZ(PluginRequestSLZ):
+    """创建插件的时候需要初始化可见范围，所以需要将可见范围一起同步"""
+
+    visible_range = serializers.SerializerMethodField()
+
+    def get_visible_range(self, obj) -> Optional[dict]:
+        if not hasattr(obj, "visible_range"):
+            return None
+        return {
+            "bkci_project": obj.visible_range.bkci_project,
+            "organization": obj.visible_range.organization,
+        }
 
 
 @i18n
@@ -156,3 +180,10 @@ class PluginBuildInfoSLZ(serializers.Serializer):
     version = serializers.CharField(help_text="版本号")
     version_with_underscores = serializers.CharField(help_text="将版本号中点(.)替换为下划线(_)")
     bk_username = serializers.CharField(help_text="操作人")
+
+
+class PluginVisibleRangeAPIRequestSLZ(serializers.Serializer):
+    plugin_id = serializers.CharField(help_text="插件id")
+    operator = serializers.CharField(help_text="操作人")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目 ID")
+    organization = serializers.JSONField(help_text="组织架构")

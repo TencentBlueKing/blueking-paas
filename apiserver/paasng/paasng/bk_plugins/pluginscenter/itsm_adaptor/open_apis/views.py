@@ -93,7 +93,9 @@ class PluginCallBackApiViewSet(GenericViewSet):
         ticket_status = serializer.validated_data["current_status"]
         approve_result = serializer.validated_data["approve_result"]
 
-        visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+        visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
+
+        # 更新可见范围并回调第三方
 
         if ticket_status in ItsmTicketStatus.completed_status():
             visible_range_obj.is_in_approval = False

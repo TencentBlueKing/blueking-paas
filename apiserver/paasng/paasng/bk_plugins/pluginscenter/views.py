@@ -1202,7 +1202,7 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
         plugin = self.get_plugin_instance()
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
 
-        visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+        visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
         if visible_range_obj.is_in_approval:
             raise error_codes.VISIBLE_RANGE_UPDATE_FAIELD.f(_("可见范围修改失败：正在审批中"))
 

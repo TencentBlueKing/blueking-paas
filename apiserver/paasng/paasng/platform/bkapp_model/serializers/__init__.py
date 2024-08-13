@@ -15,4 +15,24 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .serializers import *  # noqa: F401
+from .serializers import (
+    BkAppModelSLZ,
+    DomainResolutionSLZ,
+    GetManifestInputSLZ,
+    ModuleDeployHookSLZ,
+    ModuleProcessSpecSLZ,
+    ModuleProcessSpecsOutputSLZ,
+    ProbeSetSLZ,
+    SvcDiscConfigSLZ,
+)
+
+__all__ = [
+    "BkAppModelSLZ",
+    "DomainResolutionSLZ",
+    "GetManifestInputSLZ",
+    "ModuleDeployHookSLZ",
+    "ModuleProcessSpecSLZ",
+    "ModuleProcessSpecsOutputSLZ",
+    "ProbeSetSLZ",
+    "SvcDiscConfigSLZ",
+]

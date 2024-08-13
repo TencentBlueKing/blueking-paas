@@ -19,8 +19,8 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.entities import HookCmd, Hooks
+from paasng.platform.bkapp_model.entities_syncer import sync_hooks
 from paasng.platform.bkapp_model.models import DeployHookType, ModuleDeployHook
-from paasng.platform.bkapp_model.syncer import sync_hooks
 
 pytestmark = pytest.mark.django_db
 

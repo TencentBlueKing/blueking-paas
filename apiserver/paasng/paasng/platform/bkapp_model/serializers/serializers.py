@@ -25,7 +25,6 @@ from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.entities import ProcEnvOverlay
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.serializers import IntegerOrCharField
 
@@ -52,9 +51,7 @@ class ScalingConfigSLZ(serializers.Serializer):
 
 
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
-    """进程配置-环境相关配置"""
-
-    environment_name = serializers.CharField(help_text="环境名称")
+    """进程配置-单一环境相关配置"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", required=False)
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
@@ -144,35 +141,6 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     )
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
-
-    def validate_env_overlay(self, data):
-        """校验 env_overlay
-
-        env_overlay 结构:
-         {
-           "stag": {"environment_name": "stag", "target_replicas": 1, ...},
-           "prod": {"environment_name": "prod", "target_replicas": 2, ...}
-         }
-        """
-        if not data:
-            return data
-
-        for env_name, env_config in data.items():
-            if env_name != env_config["environment_name"]:
-                raise serializers.ValidationError(
-                    f'environment_name({env_config["environment_name"]}) not match with {env_name}'
-                )
-
-        return data
-
-    def to_internal_value(self, data):
-        data = super().to_internal_value(data)
-
-        if env_overlay := data.get("env_overlay"):
-            for env_name, proc_env_overlay in env_overlay.items():
-                env_overlay[env_name] = ProcEnvOverlay(**proc_env_overlay)
-
-        return data
 
 
 class ModuleProcessSpecsOutputSLZ(serializers.Serializer):

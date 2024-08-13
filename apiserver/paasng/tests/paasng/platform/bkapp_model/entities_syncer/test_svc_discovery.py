@@ -18,10 +18,9 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.entities import SvcDiscConfig as SvcDiscConfigSpec
-from paasng.platform.bkapp_model.entities import SvcDiscEntryBkSaaS
-from paasng.platform.bkapp_model.models import SvcDiscConfig
-from paasng.platform.bkapp_model.syncer import sync_svc_discovery
+from paasng.platform.bkapp_model.entities import SvcDiscConfig, SvcDiscEntryBkSaaS
+from paasng.platform.bkapp_model.entities_syncer import sync_svc_discovery
+from paasng.platform.bkapp_model.models import SvcDiscConfig as SvcDiscConfigDB
 
 pytestmark = pytest.mark.django_db
 
@@ -30,20 +29,20 @@ class Test__sync_svc_discoverys:
     def test_create(self, bk_module):
         ret = sync_svc_discovery(
             bk_module,
-            SvcDiscConfigSpec(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api")]),
+            SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api")]),
         )
 
-        svc_disc = SvcDiscConfig.objects.get(application=bk_module.application)
+        svc_disc = SvcDiscConfigDB.objects.get(application=bk_module.application)
 
         assert svc_disc.bk_saas == [SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api")]
         assert ret.created_num == 1
 
     def test_update(self, bk_module):
-        G(SvcDiscConfig, application=bk_module.application, bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam")])
+        G(SvcDiscConfigDB, application=bk_module.application, bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam")])
 
         ret = sync_svc_discovery(
             bk_module,
-            SvcDiscConfigSpec(
+            SvcDiscConfig(
                 bk_saas=[
                     SvcDiscEntryBkSaaS(bk_app_code="bk-iam"),
                     SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api2"),
@@ -52,16 +51,16 @@ class Test__sync_svc_discoverys:
             ),
         )
 
-        assert len(SvcDiscConfig.objects.get(application=bk_module.application).bk_saas) == 3
+        assert len(SvcDiscConfigDB.objects.get(application=bk_module.application).bk_saas) == 3
 
         assert ret.created_num == 0
         assert ret.updated_num == 1
         assert ret.deleted_num == 0
 
     def test_delete(self, bk_module):
-        G(SvcDiscConfig, application=bk_module.application, bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam")])
+        G(SvcDiscConfigDB, application=bk_module.application, bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam")])
 
-        ret = sync_svc_discovery(bk_module, SvcDiscConfigSpec(bk_saas=[]))
+        ret = sync_svc_discovery(bk_module, SvcDiscConfig(bk_saas=[]))
 
         assert ret.deleted_num == 1
-        assert SvcDiscConfig.objects.filter(application=bk_module.application).exists() is False
+        assert SvcDiscConfigDB.objects.filter(application=bk_module.application).exists() is False

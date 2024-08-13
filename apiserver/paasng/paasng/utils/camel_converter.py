@@ -14,7 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 from typing import Any, Dict
+
+from blue_krill.cubing_case import CommonCaseConvertor, CommonCaseRegexPatterns
 
 
 def dict_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -22,6 +25,9 @@ def dict_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
     Converts dict keys from snake case to camel case.
 
     :param data: dict which keys are snake case string.
+
+    Note: 如果遇到特殊的缩写词, 需要单独额外处理
+    ref: https://gocn.github.io/styleguide/docs/03-decisions/#%e7%bc%a9%e5%86%99%e8%af%8dinitialisms
     """
     converted: Dict[str, Any] = {}
     for k, v in data.items():
@@ -48,6 +54,5 @@ def snake_to_camel(snake_string: str) -> str:
     :param snake_string: String in snake case format. For example my_variable.
     :return: The string in camel case format. For example myVariable.
     """
-    words = snake_string.split("_")
-
-    return words[0] + "".join(word.title() for word in words[1:])
+    convertor = CommonCaseConvertor([CommonCaseRegexPatterns.SNAKECASE])
+    return convertor.to_lower_camel_case(snake_string)

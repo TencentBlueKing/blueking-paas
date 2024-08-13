@@ -23,7 +23,9 @@ DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
 
 class ImagePullPolicy(str, StructuredEnum):
-    """duplicated from paas_wl.workloads.release_controller.constants.ImagePullPolicy to decouple dependencies"""
+    """duplicated from paas_wl.workloads.release_controller.constants.ImagePullPolicy to decouple dependencies
+    TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
+    """
 
     ALWAYS = EnumField("Always")
     IF_NOT_PRESENT = EnumField("IfNotPresent")
@@ -31,7 +33,9 @@ class ImagePullPolicy(str, StructuredEnum):
 
 
 class ResQuotaPlan(str, StructuredEnum):
-    """duplicated from paas_wl.bk_app.cnative.specs.constants.ResQuotaPlan to decouple dependencies"""
+    """duplicated from paas_wl.bk_app.cnative.specs.constants.ResQuotaPlan to decouple dependencies
+    TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
+    """
 
     P_DEFAULT = EnumField("default", label="default")
     P_4C1G = EnumField("4C1G", label="4C1G")
@@ -46,7 +50,9 @@ class ResQuotaPlan(str, StructuredEnum):
 
 
 class ScalingPolicy(str, StructuredEnum):
-    """duplicated from paas_wl.bk_app.cnative.specs.constants.ScalingPolicy to decouple dependencies"""
+    """duplicated from paas_wl.bk_app.cnative.specs.constants.ScalingPolicy to decouple dependencies
+    TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
+    """
 
     # the default autoscaling policy (cpu utilization 85%)
     DEFAULT = EnumField("default")

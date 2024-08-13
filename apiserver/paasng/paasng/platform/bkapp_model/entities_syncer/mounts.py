@@ -19,29 +19,28 @@ from typing import List
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName
 from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paas_wl.bk_app.cnative.specs.models import Mount
-from paasng.platform.bkapp_model.entities import Mount as MountSpec
-from paasng.platform.bkapp_model.entities import MountOverlay
+from paas_wl.bk_app.cnative.specs.models import Mount as MountDB
+from paasng.platform.bkapp_model.entities import Mount, MountOverlay
 from paasng.platform.modules.models import Module
 from paasng.utils.camel_converter import dict_to_camel
 
 from .result import CommonSyncResult
 
 
-def sync_mounts(module: Module, mounts: List[MountSpec], overlay_mounts: List[MountOverlay]) -> CommonSyncResult:
-    """Sync mount relations, existing data that is not in the input list may be removed.
+def sync_mounts(module: Module, mounts: List[Mount], overlay_mounts: List[MountOverlay]) -> CommonSyncResult:
+    """Sync mount relations to db model, existing data that is not in the input list may be removed.
 
     :param mounts: The mount relations that available for all environments.
     :param overlay_mounts: The environment-specified mount relations.
-    :return: A result object.
+    :return: sync result.
     """
-    existing_mounts = Mount.objects.filter(module_id=module.id)
+    existing_mounts = MountDB.objects.filter(module_id=module.id)
     existing_index = {(m.mount_path, m.environment_name): m.id for m in existing_mounts}
 
     ret = CommonSyncResult()
     for mount in mounts:
         source_config = bk_app.VolumeSource(**dict_to_camel(mount.source.dict()))
-        _, created = Mount.objects.update_or_create(
+        _, created = MountDB.objects.update_or_create(
             module_id=module.id,
             mount_path=mount.mount_path,
             environment_name=MountEnvName.GLOBAL.value,
@@ -53,7 +52,7 @@ def sync_mounts(module: Module, mounts: List[MountSpec], overlay_mounts: List[Mo
 
     for overlay_mount in overlay_mounts:
         source_config = bk_app.VolumeSource(**dict_to_camel(overlay_mount.source.dict()))
-        _, created = Mount.objects.update_or_create(
+        _, created = MountDB.objects.update_or_create(
             module_id=module.id,
             mount_path=overlay_mount.mount_path,
             environment_name=overlay_mount.env_name,
@@ -64,5 +63,5 @@ def sync_mounts(module: Module, mounts: List[MountSpec], overlay_mounts: List[Mo
         existing_index.pop((overlay_mount.mount_path, overlay_mount.env_name), None)
 
     # Remove existing relations that is not touched.
-    ret.deleted_num, _ = Mount.objects.filter(id__in=existing_index.values()).delete()
+    ret.deleted_num, _ = MountDB.objects.filter(id__in=existing_index.values()).delete()
     return ret

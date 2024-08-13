@@ -18,7 +18,7 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay
-from paasng.platform.bkapp_model.syncer import sync_env_vars, sync_preset_env_vars
+from paasng.platform.bkapp_model.entities_syncer import sync_env_vars, sync_preset_env_vars
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable

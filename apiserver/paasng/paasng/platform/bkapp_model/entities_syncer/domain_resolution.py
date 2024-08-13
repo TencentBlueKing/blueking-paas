@@ -15,34 +15,36 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionSpec
-from paasng.platform.bkapp_model.models import DomainResolution
+from paasng.platform.bkapp_model.entities import DomainResolution
+from paasng.platform.bkapp_model.models import DomainResolution as DomainResolutionDB
 from paasng.platform.modules.models import Module
 
 from .result import CommonSyncResult
 
 
-def sync_domain_resolution(module: Module, domain_res: DomainResolutionSpec) -> CommonSyncResult:
-    """Sync domain resolution relations, existing data that is not in the input list may be removed.
+def sync_domain_resolution(module: Module, domain_res: DomainResolution) -> CommonSyncResult:
+    """Sync domain resolution relations to db model, existing data that is not in the input list may be removed.
 
-    :param domain_res: DomainResolution Object
-    :return: A result object.
+    :param module: app module
+    :param domain_res: DomainResolution entity
+    :return: sync result
     """
+
     ret = CommonSyncResult()
 
     if not domain_res.nameservers and not domain_res.host_aliases:
-        ret.deleted_num, _ = DomainResolution.objects.filter(application=module.application).delete()
+        ret.deleted_num, _ = DomainResolutionDB.objects.filter(application=module.application).delete()
         return ret
 
     try:
-        domain_config = DomainResolution.objects.get(application=module.application)
+        domain_config = DomainResolutionDB.objects.get(application=module.application)
         nameservers = list(set(domain_config.nameservers) | set(domain_res.nameservers))
         host_aliases = list(set(domain_config.host_aliases) | set(domain_res.host_aliases))
-    except DomainResolution.DoesNotExist:
+    except DomainResolutionDB.DoesNotExist:
         nameservers = domain_res.nameservers
         host_aliases = domain_res.host_aliases
 
-    _, created = DomainResolution.objects.update_or_create(
+    _, created = DomainResolutionDB.objects.update_or_create(
         application=module.application,
         defaults={
             "nameservers": nameservers,

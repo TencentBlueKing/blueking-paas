@@ -29,8 +29,18 @@ from paasng.utils.camel_converter import dict_to_camel
             {"liveness": {"initialDelaySeconds": 0, "timeoutSeconds": 1}},
         ),
         (
-            {"clusters": [{"c_name": "BCS-01", "c_ip": "127.0.0.1"}, {"c_name": "BCS-02", "c_ip": "129.0.0.1"}]},
-            {"clusters": [{"cName": "BCS-01", "cIp": "127.0.0.1"}, {"cName": "BCS-02", "cIp": "129.0.0.1"}]},
+            {
+                "clusters": [
+                    {"c_name": "BCS-01", "server_port": "443"},
+                    {"c_name": "BCS-02", "server_port": "80"},
+                ]
+            },
+            {
+                "clusters": [
+                    {"cName": "BCS-01", "serverPort": "443"},
+                    {"cName": "BCS-02", "serverPort": "80"},
+                ]
+            },
         ),
     ],
 )

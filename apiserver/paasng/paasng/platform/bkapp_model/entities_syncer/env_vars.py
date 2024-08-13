@@ -29,12 +29,14 @@ from .result import CommonSyncResult
 
 
 def sync_env_vars(module: Module, env_vars: List[EnvVar], overlay_env_vars: List[EnvVarOverlay]) -> CommonSyncResult:
-    """Sync environment variables, existing data that is not in the input list may be removed.
+    """Sync environment variables to db model, existing data that is not in the input list may be removed
 
-    :param env_vars: The default variables.
-    :param overlay_env_vars: The environment-specified variables.
-    :return: A result object.
+    :param module: app module
+    :param env_vars: The default variables
+    :param overlay_env_vars: The environment-specified variables
+    :return: sync result
     """
+
     config_vars: List[ConfigVar] = []
     for var in env_vars:
         config_vars.append(
@@ -71,12 +73,17 @@ def sync_env_vars(module: Module, env_vars: List[EnvVar], overlay_env_vars: List
 def sync_preset_env_vars(
     module: Module, global_env_vars: List[EnvVar], overlay_env_vars: List[EnvVarOverlay]
 ) -> CommonSyncResult:
-    """Sync environment variables from app_desc.yaml, existing data that is not in the input list may be removed.
+    """Sync environment variables from app_desc.yaml to PresetEnvVariable(db model), existing data that is not in the
+    input list may be removed. PresetEnvVariable 只被用来存放那些经由应用描述文件（`app_desc.yaml`）定义的变量，开发者无法通过
+    环境变量 web 页面管理它们
 
-    :param global_env_vars: The default variables.
-    :param overlay_env_vars: The environment-specified variables.
-    :return: A result object.
+    :param module: app module
+    :param global_env_vars: The default variables
+    :param overlay_env_vars: The environment-specified variables
+    :return: sync result
+
     """
+
     config_vars: Dict[str, Dict[str, PresetEnvVariable]] = defaultdict(dict)
     for var in global_env_vars:
         config_vars[ConfigVarEnvName.GLOBAL][var.name] = PresetEnvVariable(

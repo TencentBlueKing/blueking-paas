@@ -15,4 +15,46 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .entities import *  # noqa: F401
+from .addons import Addon, AddonSpec
+from .build import AppBuildConfig
+from .domain_resolution import DomainResolution, HostAlias
+from .env_vars import EnvVar, EnvVarOverlay
+from .hooks import HookCmd, Hooks
+from .mounts import ConfigMapSource, Mount, MountOverlay, PersistentStorage, VolumeSource
+from .probes import ExecAction, HTTPGetAction, HTTPHeader, Probe, ProbeHandler, ProbeSet, TCPSocketAction
+from .proc_env_overlays import AutoscalingOverlay, ProcEnvOverlay, ReplicasOverlay, ResQuotaOverlay
+from .processes import Process
+from .scaling_config import AutoscalingConfig
+from .svc_discovery import SvcDiscConfig, SvcDiscEntryBkSaaS
+
+__all__ = [
+    "Process",
+    "AutoscalingConfig",
+    "ProbeSet",
+    "ProbeHandler",
+    "Probe",
+    "ExecAction",
+    "HTTPGetAction",
+    "HTTPHeader",
+    "TCPSocketAction",
+    "HookCmd",
+    "Hooks",
+    "AppBuildConfig",
+    "AddonSpec",
+    "Addon",
+    "DomainResolution",
+    "HostAlias",
+    "SvcDiscConfig",
+    "SvcDiscEntryBkSaaS",
+    "ConfigMapSource",
+    "PersistentStorage",
+    "VolumeSource",
+    "Mount",
+    "EnvVar",
+    "EnvVarOverlay",
+    "AutoscalingOverlay",
+    "ReplicasOverlay",
+    "ResQuotaOverlay",
+    "ProcEnvOverlay",
+    "MountOverlay",
+]

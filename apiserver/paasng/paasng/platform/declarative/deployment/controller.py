@@ -26,9 +26,9 @@ from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay, ProbeSet, Process, SvcDiscConfig, v1alpha2
+from paasng.platform.bkapp_model.entities_syncer import sync_preset_env_vars, sync_svc_discovery
 from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
-from paasng.platform.bkapp_model.syncer import sync_preset_env_vars, sync_svc_discovery
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
 from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
@@ -219,15 +219,15 @@ class DeploymentDeclarativeController:
         if not probes:
             return
 
-        for p, p_type in [
+        for probe, p_type in [
             (probes.liveness, ProbeType.LIVENESS),
             (probes.readiness, ProbeType.READINESS),
             (probes.startup, ProbeType.STARTUP),
         ]:
-            if p:
+            if probe:
                 upsert_process_probe(
                     env=self.deployment.app_environment,
                     process_type=process_type,
                     probe_type=p_type,
-                    probe=p,
+                    probe=probe,
                 )

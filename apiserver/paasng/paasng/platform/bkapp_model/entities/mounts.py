@@ -15,23 +15,43 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from typing import List
+from typing import Optional
 
-from paasng.platform.bkapp_model.entities import Addon
-from paasng.platform.modules.models import Module
-
-from .result import CommonSyncResult
-
-logger = logging.getLogger(__name__)
+from pydantic import BaseModel
 
 
-def sync_addons(module: Module, addons: List[Addon]) -> CommonSyncResult:
-    """Sync addon configs, existing services that is not in the input list may be removed.
+class ConfigMapSource(BaseModel):
+    name: str
 
-    :param addons: The addons.
-    :return: A result object.
+
+class PersistentStorage(BaseModel):
+    name: str
+
+
+class VolumeSource(BaseModel):
+    config_map: Optional[ConfigMapSource] = None
+    persistent_storage: Optional[PersistentStorage] = None
+
+
+class Mount(BaseModel):
     """
-    # TODO: Implement import for addons
-    logger.warning("Import addons is not implemented, skip.")
-    return CommonSyncResult()
+    Mount
+
+    :param mount_path: 挂载路径
+    :param name: 挂载名称
+    :param source: 挂载源
+    """
+
+    mount_path: str
+    name: str
+    source: VolumeSource
+
+
+class MountOverlay(Mount):
+    """
+    Mount Overlay
+
+    :param env_name: 生效环境名
+    """
+
+    env_name: str

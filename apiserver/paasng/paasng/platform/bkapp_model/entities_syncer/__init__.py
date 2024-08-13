@@ -15,25 +15,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from functools import partial
-from typing import Optional, Type
+"""将各类资源 entities 同步到数据库 model 中"""
 
-import cattr
-from pydantic import BaseModel
+from .addons import sync_addons
+from .build import sync_build
+from .domain_resolution import sync_domain_resolution
+from .env_vars import sync_env_vars, sync_preset_env_vars
+from .hooks import sync_hooks
+from .mounts import sync_mounts
+from .proc_env_overlays import sync_env_overlay_by_proc, sync_proc_env_overlays
+from .processes import sync_processes
+from .svc_discovery import sync_svc_discovery
 
-
-def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool = True, exclude_none: bool = False):
-    def register_core(pydantic_model: Type[BaseModel]):
-        cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-        cattr.register_unstructure_hook(
-            pydantic_model, partial(pydantic_model.dict, by_alias=by_alias, exclude_none=exclude_none)
-        )
-        return pydantic_model
-
-    if pydantic_model is not None:
-        return register_core(pydantic_model)
-    return register_core
-
-
-# paasng.utils.models.make_json_field 需要 pydantic_model 注册到 cattr
-prepare_json_field = register
+__all__ = [
+    "sync_addons",
+    "sync_build",
+    "sync_domain_resolution",
+    "sync_proc_env_overlays",
+    "sync_env_vars",
+    "sync_preset_env_vars",
+    "sync_env_overlay_by_proc",
+    "sync_hooks",
+    "sync_mounts",
+    "sync_processes",
+    "sync_svc_discovery",
+]

@@ -15,21 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from moby_distribution.registry.utils import parse_image
+import pytest
 
 from paasng.platform.bkapp_model.entities import AppBuildConfig
-from paasng.platform.modules.models import BuildConfig, Module
+from paasng.platform.bkapp_model.entities_syncer import sync_build
+from paasng.platform.modules.models import BuildConfig
+
+pytestmark = pytest.mark.django_db
 
 
-def sync_build(module: Module, build: AppBuildConfig):
-    """Sync build data to db"""
-    cfg = BuildConfig.objects.get_or_create_by_module(module)
-    update_fields = ["image_credential_name", "updated"]
-
-    if build.image:
-        parsed = parse_image(build.image, default_registry="index.docker.io")
-        cfg.image_repository = f"{parsed.domain}/{parsed.name}"
-        update_fields.append("image_repository")
-
-    cfg.image_credential_name = build.image_credentials_name
-    cfg.save(update_fields=update_fields)
+class Test__sync_build:
+    def test(self, bk_module):
+        sync_build(bk_module, AppBuildConfig(image="example.com/foo", image_credentials_name="foo"))
+        cfg = BuildConfig.objects.get(module=bk_module)
+        assert cfg.image_repository == "example.com/foo"
+        assert cfg.image_credential_name == "foo"

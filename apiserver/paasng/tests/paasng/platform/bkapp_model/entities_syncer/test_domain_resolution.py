@@ -17,10 +17,9 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionSpec
-from paasng.platform.bkapp_model.entities import HostAlias
-from paasng.platform.bkapp_model.models import DomainResolution
-from paasng.platform.bkapp_model.syncer import sync_domain_resolution
+from paasng.platform.bkapp_model.entities import DomainResolution, HostAlias
+from paasng.platform.bkapp_model.entities_syncer import sync_domain_resolution
+from paasng.platform.bkapp_model.models import DomainResolution as DomainResolutionDB
 
 pytestmark = pytest.mark.django_db
 
@@ -29,22 +28,20 @@ class Test__sync_domain_resolution:
     def test_create(self, bk_module):
         ret = sync_domain_resolution(
             bk_module,
-            DomainResolutionSpec(
-                nameservers=["127.0.0.1"], host_aliases=[HostAlias(ip="1.1.1.1", hostnames=["foo.com"])]
-            ),
+            DomainResolution(nameservers=["127.0.0.1"], host_aliases=[HostAlias(ip="1.1.1.1", hostnames=["foo.com"])]),
         )
 
         assert ret.created_num == 1
         assert ret.updated_num == 0
         assert ret.deleted_num == 0
 
-        obj = DomainResolution.objects.get(application=bk_module.application)
+        obj = DomainResolutionDB.objects.get(application=bk_module.application)
         assert obj.nameservers == ["127.0.0.1"]
         assert obj.host_aliases == [HostAlias(ip="1.1.1.1", hostnames=["foo.com"])]
 
     def test_update(self, bk_module):
         G(
-            DomainResolution,
+            DomainResolutionDB,
             application=bk_module.application,
             nameservers=["127.0.0.1"],
             host_aliases=[HostAlias(ip="1.1.1.1", hostnames=["foo.com"])],
@@ -52,7 +49,7 @@ class Test__sync_domain_resolution:
 
         ret = sync_domain_resolution(
             bk_module,
-            DomainResolutionSpec(
+            DomainResolution(
                 nameservers=["localhost"], host_aliases=[HostAlias(ip="192.168.1.1", hostnames=["bar.com"])]
             ),
         )
@@ -61,7 +58,7 @@ class Test__sync_domain_resolution:
         assert ret.updated_num == 1
         assert ret.deleted_num == 0
 
-        obj = DomainResolution.objects.get(application=bk_module.application)
+        obj = DomainResolutionDB.objects.get(application=bk_module.application)
         assert set(obj.nameservers) == {"localhost", "127.0.0.1"}
         assert set(obj.host_aliases) == {
             HostAlias(ip="1.1.1.1", hostnames=["foo.com"]),
@@ -70,7 +67,7 @@ class Test__sync_domain_resolution:
 
     def test_delete(self, bk_module):
         G(
-            DomainResolution,
+            DomainResolutionDB,
             application=bk_module.application,
             nameservers=["127.0.0.1"],
             host_aliases=[HostAlias(ip="1.1.1.1", hostnames=["foo.com"])],
@@ -78,8 +75,8 @@ class Test__sync_domain_resolution:
 
         ret = sync_domain_resolution(
             bk_module,
-            DomainResolutionSpec(nameservers=[], host_aliases=[]),
+            DomainResolution(nameservers=[], host_aliases=[]),
         )
 
         assert ret.deleted_num == 1
-        assert DomainResolution.objects.filter(application=bk_module.application).exists() is False
+        assert DomainResolutionDB.objects.filter(application=bk_module.application).exists() is False

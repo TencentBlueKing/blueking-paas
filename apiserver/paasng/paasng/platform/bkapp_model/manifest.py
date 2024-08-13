@@ -188,7 +188,6 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes,
             )
-
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 
         model_res.spec.processes = processes
@@ -266,6 +265,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         for limit_memory, quota_plan in quota_plan_memory:
             if limit_memory >= expected_limit_memory:
                 return ResQuotaPlan(quota_plan)
+        # quota_plan_memory[-1][1] 是内存最大 plan
         return ResQuotaPlan(quota_plan_memory[-1][1])
 
     def get_command_and_args(self, module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:

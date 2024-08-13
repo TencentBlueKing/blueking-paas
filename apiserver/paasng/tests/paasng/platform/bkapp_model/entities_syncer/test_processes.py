@@ -25,8 +25,8 @@ from paasng.platform.bkapp_model.entities import (
     Process,
     TCPSocketAction,
 )
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.bkapp_model.syncer import sync_processes
 
 pytestmark = pytest.mark.django_db
 

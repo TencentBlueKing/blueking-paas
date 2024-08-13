@@ -21,18 +21,18 @@ import yaml
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.bkapp_model.entities import v1alpha2 as v1alpha2_entity
-from paasng.platform.bkapp_model.serializers import v1alpha2 as v1alpha2_slz
-from paasng.platform.bkapp_model.syncer import (
+from paasng.platform.bkapp_model.entities_syncer import (
     sync_addons,
     sync_build,
     sync_domain_resolution,
-    sync_env_overlays,
     sync_env_vars,
     sync_hooks,
     sync_mounts,
+    sync_proc_env_overlays,
     sync_processes,
     sync_svc_discovery,
 )
+from paasng.platform.bkapp_model.serializers import v1alpha2 as v1alpha2_slz
 from paasng.platform.modules.models import Module
 
 from .exceptions import ManifestImportError
@@ -108,4 +108,4 @@ def import_bkapp_spec_entity(
         return
 
     # NOTE: Must import the processes first to create the ModuleProcessSpec objs
-    sync_env_overlays(module, overlay_replicas, overlay_res_quotas, overlay_autoscaling)
+    sync_proc_env_overlays(module, overlay_replicas, overlay_res_quotas, overlay_autoscaling)

@@ -14,27 +14,22 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from paasng.utils.structure import register
+from paasng.utils.structure import prepare_json_field
 
-from .entities import (
-    Addon,
-    AppBuildConfig,
-    AutoscalingOverlay,
-    DomainResolution,
-    EnvVar,
-    EnvVarOverlay,
-    Hooks,
-    Mount,
-    MountOverlay,
-    Process,
-    ReplicasOverlay,
-    ResQuotaOverlay,
-    SvcDiscConfig,
-)
+from .addons import Addon
+from .build import AppBuildConfig
+from .domain_resolution import DomainResolution
+from .env_vars import EnvVar, EnvVarOverlay
+from .hooks import Hooks
+from .mounts import Mount, MountOverlay
+from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
+from .processes import Process
+from .svc_discovery import SvcDiscConfig
 
 
 class BkAppConfiguration(BaseModel):
@@ -53,8 +48,21 @@ class BkAppEnvOverlay(BaseModel):
     mounts: Optional[List[MountOverlay]] = None
 
 
-@register
+@prepare_json_field
 class BkAppSpec(BaseModel):
+    """BkAppSpec(snake-case format)
+
+    :param build: 构建配置
+    :param processes: 进程配置
+    :param hooks: 钩子配置
+    :param addons: 增强服务配置
+    :param mounts: 挂载配置
+    :param configuration: 环境变量配置
+    :param domain_resolution: 域名解析
+    :param svc_discovery: 服务发现
+    :param env_overlay: 分环境重写配置
+    """
+
     build: Optional[AppBuildConfig] = None
     processes: List[Process] = Field(default_factory=list)
     hooks: Optional[Hooks] = None

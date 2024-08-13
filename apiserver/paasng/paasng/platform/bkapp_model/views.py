@@ -34,7 +34,8 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities import ProcEnvOverlay, Process
+from paasng.platform.bkapp_model.entities_syncer import sync_env_overlay_by_proc, sync_processes
 from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import DomainResolution, ModuleProcessSpec, SvcDiscConfig
@@ -47,7 +48,6 @@ from paasng.platform.bkapp_model.serializers import (
     ModuleProcessSpecsOutputSLZ,
     SvcDiscConfigSLZ,
 )
-from paasng.platform.bkapp_model.syncer import sync_proc_env_overlay, sync_processes
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.error_codes import error_codes
@@ -187,8 +187,10 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 更新环境覆盖
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
-                for proc_env_overlay in env_overlay.values():
-                    sync_proc_env_overlay(module, proc_spec["name"], proc_env_overlay)
+                for env_name, proc_env_overlay in env_overlay.items():
+                    sync_env_overlay_by_proc(
+                        module, proc_spec["name"], ProcEnvOverlay(**{"env_name": env_name, **proc_env_overlay})
+                    )
 
         return self.retrieve(request, code, module_name)
 

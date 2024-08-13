@@ -26,13 +26,13 @@ from paasng.platform.bkapp_model.entities import (
     ReplicasOverlay,
     ResQuotaOverlay,
 )
+from paasng.platform.bkapp_model.entities_syncer import sync_env_overlay_by_proc, sync_proc_env_overlays
 from paasng.platform.bkapp_model.models import ProcessSpecEnvOverlay
-from paasng.platform.bkapp_model.syncer import sync_env_overlays, sync_proc_env_overlay
 
 pytestmark = pytest.mark.django_db
 
 
-class Test__sync_env_overlays:
+class Test__sync_proc_env_overlays:
     @pytest.fixture(autouse=True)
     def _setup(self, bk_module, proc_web, proc_celery):
         G(
@@ -56,7 +56,7 @@ class Test__sync_env_overlays:
     def test_only_replicas(self, bk_module, proc_web, proc_celery):
         assert ProcessSpecEnvOverlay.objects.count() == 2
 
-        ret = sync_env_overlays(
+        ret = sync_proc_env_overlays(
             bk_module,
             [
                 ReplicasOverlay(env_name="prod", process="web", count="2"),
@@ -76,7 +76,7 @@ class Test__sync_env_overlays:
     def test_only_res_quota(self, bk_module, proc_web, proc_celery):
         assert ProcessSpecEnvOverlay.objects.count() == 2
 
-        ret = sync_env_overlays(
+        ret = sync_proc_env_overlays(
             bk_module,
             [],
             [
@@ -102,7 +102,7 @@ class Test__sync_env_overlays:
     def test_only_autoscaling(self, bk_module, proc_web, proc_celery):
         assert ProcessSpecEnvOverlay.objects.count() == 2
 
-        ret = sync_env_overlays(
+        ret = sync_proc_env_overlays(
             bk_module,
             [],
             [],
@@ -131,7 +131,7 @@ class Test__sync_env_overlays:
     def test_integrated(self, bk_module, proc_web, proc_celery):
         assert ProcessSpecEnvOverlay.objects.count() == 2
 
-        ret = sync_env_overlays(
+        ret = sync_proc_env_overlays(
             bk_module,
             [ReplicasOverlay(env_name="prod", process="web", count="5")],
             [ResQuotaOverlay(env_name="prod", process="web", plan=ResQuotaPlan.P_4C4G)],
@@ -145,7 +145,7 @@ class Test__sync_env_overlays:
 
 class Test__sync_proc_env_overlay:
     def test_create(self, bk_module, proc_web):
-        ret = sync_proc_env_overlay(
+        ret = sync_env_overlay_by_proc(
             bk_module,
             proc_web.name,
             ProcEnvOverlay(
@@ -174,7 +174,7 @@ class Test__sync_proc_env_overlay:
             scaling_config={"min_replicas": 1, "max_replicas": 1, "policy": "default"},
         )
 
-        ret = sync_proc_env_overlay(
+        ret = sync_env_overlay_by_proc(
             bk_module,
             proc_web.name,
             ProcEnvOverlay(

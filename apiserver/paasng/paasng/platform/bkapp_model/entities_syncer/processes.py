@@ -26,7 +26,12 @@ from .result import CommonSyncResult
 
 
 def sync_processes(module: Module, processes: List[Process]) -> CommonSyncResult:
-    """sync processes data to ModuleProcessSpec(db)"""
+    """sync processes data to ModuleProcessSpec(db model)
+
+    :param module: app module
+    :param processes: processes list
+    :return: sync result
+    """
     ret = CommonSyncResult()
 
     # Build the index of existing data first to remove data later.

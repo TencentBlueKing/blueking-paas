@@ -15,25 +15,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from functools import partial
-from typing import Optional, Type
+from typing import Dict, Optional
 
-import cattr
 from pydantic import BaseModel
 
-
-def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool = True, exclude_none: bool = False):
-    def register_core(pydantic_model: Type[BaseModel]):
-        cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-        cattr.register_unstructure_hook(
-            pydantic_model, partial(pydantic_model.dict, by_alias=by_alias, exclude_none=exclude_none)
-        )
-        return pydantic_model
-
-    if pydantic_model is not None:
-        return register_core(pydantic_model)
-    return register_core
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
 
 
-# paasng.utils.models.make_json_field 需要 pydantic_model 注册到 cattr
-prepare_json_field = register
+class AppBuildConfig(BaseModel):
+    """
+    构建配置
+
+    :param image: 镜像名称
+    :param image_pull_policy: 镜像拉取策略
+    :param image_credentials_name: 镜像凭证名称
+    :param dockerfile: Dockerfile 路径
+    :param build_target: 当 Dockerfile 中启用了"多阶段构建"时，可用本字段指定阶段名
+    :param args: 执行构建命令时所需要传入的额外参数
+    """
+
+    image: Optional[str] = None
+    image_pull_policy: str = ImagePullPolicy.IF_NOT_PRESENT.value
+    image_credentials_name: Optional[str] = None
+    dockerfile: Optional[str] = None
+    build_target: Optional[str] = None
+    args: Optional[Dict[str, str]] = None

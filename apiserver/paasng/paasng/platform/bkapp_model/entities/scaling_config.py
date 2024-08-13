@@ -15,25 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from functools import partial
-from typing import Optional, Type
+from pydantic import BaseModel, Field
 
-import cattr
-from pydantic import BaseModel
+from paasng.utils.structure import prepare_json_field
 
 
-def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool = True, exclude_none: bool = False):
-    def register_core(pydantic_model: Type[BaseModel]):
-        cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-        cattr.register_unstructure_hook(
-            pydantic_model, partial(pydantic_model.dict, by_alias=by_alias, exclude_none=exclude_none)
-        )
-        return pydantic_model
+@prepare_json_field
+class AutoscalingConfig(BaseModel):
+    """
+    自动扩缩容配置
 
-    if pydantic_model is not None:
-        return register_core(pydantic_model)
-    return register_core
+    :param min_replicas: 最小副本数量
+    :param max_replicas: 最大副本数量
+    :param policy: 扩缩容策略
+    """
 
-
-# paasng.utils.models.make_json_field 需要 pydantic_model 注册到 cattr
-prepare_json_field = register
+    min_replicas: int
+    max_replicas: int
+    policy: str = Field(..., min_length=1)

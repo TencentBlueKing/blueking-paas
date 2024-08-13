@@ -40,8 +40,8 @@ from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.entities import Process
-from paasng.platform.bkapp_model.syncer import sync_proc_env_overlay, sync_processes
+from paasng.platform.bkapp_model.entities import ProcEnvOverlay, Process
+from paasng.platform.bkapp_model.entities_syncer import sync_env_overlay_by_proc, sync_processes
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -293,8 +293,10 @@ class ModuleInitializer:
         # 更新环境覆盖
         for proc_spec in bkapp_spec["processes"]:
             if env_overlay := proc_spec.get("env_overlay"):
-                for proc_env_overlay in env_overlay.values():
-                    sync_proc_env_overlay(self.module, proc_spec["name"], proc_env_overlay)
+                for env_name, proc_env_overlay in env_overlay.items():
+                    sync_env_overlay_by_proc(
+                        self.module, proc_spec["name"], ProcEnvOverlay(**{"env_name": env_name, **proc_env_overlay})
+                    )
 
         # 导入 hook 配置
         if hook := bkapp_spec.get("hook"):

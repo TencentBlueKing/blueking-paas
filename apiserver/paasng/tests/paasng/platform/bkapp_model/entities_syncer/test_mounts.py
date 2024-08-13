@@ -21,10 +21,9 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.crd import bk_app
-from paas_wl.bk_app.cnative.specs.models import Mount
-from paasng.platform.bkapp_model.entities import ConfigMapSource, MountOverlay, VolumeSource
-from paasng.platform.bkapp_model.entities import Mount as MountSpec
-from paasng.platform.bkapp_model.syncer import sync_mounts
+from paas_wl.bk_app.cnative.specs.models import Mount as MountDB
+from paasng.platform.bkapp_model.entities import ConfigMapSource, Mount, MountOverlay, VolumeSource
+from paasng.platform.bkapp_model.entities_syncer import sync_mounts
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -32,7 +31,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class Test__sync_mounts:
     def test_integrated(self, bk_module):
         create_mount = functools.partial(
-            Mount.objects.create,
+            MountDB.objects.create,
             module_id=bk_module.id,
             name="nginx",
             source_type=VolumeSourceType.ConfigMap,
@@ -42,12 +41,12 @@ class Test__sync_mounts:
         create_mount(mount_path="/etc/conf_stag", environment_name=MountEnvName.STAG.value)
         create_mount(mount_path="/etc/conf_stag_2", environment_name=MountEnvName.STAG.value)
         create_mount(mount_path="/etc/conf_prod", environment_name=MountEnvName.PROD.value)
-        assert Mount.objects.count() == 4
+        assert MountDB.objects.count() == 4
 
         ret = sync_mounts(
             bk_module,
             [
-                MountSpec(
+                Mount(
                     mount_path="/etc/conf_another",
                     name="nginx_another",
                     source=VolumeSource(config_map=ConfigMapSource(name="nginx-configmap-test")),
@@ -62,15 +61,15 @@ class Test__sync_mounts:
                 )
             ],
         )
-        assert Mount.objects.count() == 2
+        assert MountDB.objects.count() == 2
         assert ret.created_num == 1
         assert ret.updated_num == 1
         assert ret.deleted_num == 3
 
-        stag_mount = Mount.objects.get(module_id=bk_module.id, environment_name="stag", mount_path="/etc/conf_stag")
+        stag_mount = MountDB.objects.get(module_id=bk_module.id, environment_name="stag", mount_path="/etc/conf_stag")
         assert stag_mount.source_config.configMap.name == "nginx-foobar"
 
-        global_mount = Mount.objects.get(
+        global_mount = MountDB.objects.get(
             module_id=bk_module.id, environment_name="_global_", mount_path="/etc/conf_another"
         )
         assert global_mount.source_config.configMap.name == "nginx-configmap-test"

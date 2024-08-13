@@ -15,25 +15,30 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from functools import partial
-from typing import Optional, Type
+import shlex
+from typing import List, Optional
 
-import cattr
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-
-def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool = True, exclude_none: bool = False):
-    def register_core(pydantic_model: Type[BaseModel]):
-        cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-        cattr.register_unstructure_hook(
-            pydantic_model, partial(pydantic_model.dict, by_alias=by_alias, exclude_none=exclude_none)
-        )
-        return pydantic_model
-
-    if pydantic_model is not None:
-        return register_core(pydantic_model)
-    return register_core
+from .utils import set_alias_field
 
 
-# paasng.utils.models.make_json_field 需要 pydantic_model 注册到 cattr
-prepare_json_field = register
+class HookCmd(BaseModel):
+    command: Optional[List[str]] = Field(default_factory=list)
+    args: Optional[List[str]] = Field(default_factory=list)
+
+    def __init__(self, **data):
+        # FIXME 处理 proc_command 与 command/args 的关系
+        if proc_command := data.get("proc_command"):
+            data["command"] = None
+            data["args"] = shlex.split(proc_command)
+        super().__init__(**data)
+
+
+class Hooks(BaseModel):
+    pre_release: Optional[HookCmd] = None
+
+    def __init__(self, **data):
+        # db 旧数据使用了 camel case
+        data = set_alias_field(data, "preRelease", to="pre_release")
+        super().__init__(**data)

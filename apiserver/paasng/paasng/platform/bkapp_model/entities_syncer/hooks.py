@@ -23,7 +23,12 @@ from .result import CommonSyncResult
 
 
 def sync_hooks(module: Module, hooks: Hooks) -> CommonSyncResult:
-    """Sync hooks data to db"""
+    """Sync hooks data to db model
+
+    :param module: app module
+    :param hooks: hooks config
+    :return: sync result
+    """
     ret = CommonSyncResult()
 
     # Build the index of existing data first to remove data later.

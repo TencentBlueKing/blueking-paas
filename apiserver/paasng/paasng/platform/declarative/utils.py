@@ -53,6 +53,7 @@ def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:
     for limit_memory, quota_plan in quota_plan_memory:
         if limit_memory >= expected_limit_memory:
             return ResQuotaPlan(quota_plan)
+    # quota_plan_memory[-1][1] 是内存最大 plan
     return ResQuotaPlan(quota_plan_memory[-1][1])
 
 

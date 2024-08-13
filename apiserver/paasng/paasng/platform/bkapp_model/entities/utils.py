@@ -15,26 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .addons import sync_addons
-from .build import sync_build
-from .domain_resolution import sync_domain_resolution
-from .env_overlays import sync_env_overlays, sync_proc_env_overlay
-from .env_vars import sync_env_vars, sync_preset_env_vars
-from .hooks import sync_hooks
-from .mounts import sync_mounts
-from .processes import sync_processes
-from .svc_discovery import sync_svc_discovery
+from typing import Dict
 
-__all__ = [
-    "sync_addons",
-    "sync_build",
-    "sync_domain_resolution",
-    "sync_env_overlays",
-    "sync_proc_env_overlay",
-    "sync_env_vars",
-    "sync_preset_env_vars",
-    "sync_hooks",
-    "sync_mounts",
-    "sync_processes",
-    "sync_svc_discovery",
-]
+
+def set_alias_field(data: Dict, origin: str, to: str):
+    if not isinstance(data, dict):
+        return data
+
+    if origin in data:
+        data[to] = data.pop(origin)
+
+    return data

@@ -67,18 +67,18 @@ _handlers: Dict[Type, Callable[..., bool]] = {
 }
 
 
-def sync_env_overlays(
+def sync_proc_env_overlays(
     module: Module,
     overlay_replicas: List[ReplicasOverlay],
     overlay_res_quotas: List[ResQuotaOverlay],
     overlay_autoscalings: List[AutoscalingOverlay],
 ) -> CommonSyncResult:
-    """Sync overlay data.
+    """Sync multiple processes overlay data to db model
 
     :param overlay_replicas: A list of ResQuotaOverlay items.
     :param overlay_res_quotas: A list of ResQuotaOverlay items.
     :param overlay_autoscalings: A list of AutoscalingOverlay items.
-    :return: The sync result object.
+    :return: sync result.
     """
     ret = CommonSyncResult()
 
@@ -114,13 +114,14 @@ def sync_env_overlays(
     return ret
 
 
-def sync_proc_env_overlay(module, proc_name: str, proc_env_overlay: ProcEnvOverlay) -> CommonSyncResult:
-    """Sync ProcessSpecEnvOverlay with env_overlay
+def sync_env_overlay_by_proc(module, proc_name: str, proc_env_overlay: ProcEnvOverlay) -> CommonSyncResult:
+    """Sync proc_env_overlay to ProcessSpecEnvOverlay(db model) by one process. It will update or create
+    ProcessSpecEnvOverlay by one process, not delete.
 
     :param module: module
     :param proc_name: process name to set env_overlay
     :param proc_env_overlay: proc env_overlay data
-    :return: The sync result object.
+    :return: sync result
     """
 
     ret = CommonSyncResult()

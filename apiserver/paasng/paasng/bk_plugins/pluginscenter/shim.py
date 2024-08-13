@@ -19,6 +19,7 @@ from functools import wraps
 from typing import List
 
 from blue_krill.web.std_error import APIError as StdAPIError
+from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from paasng.bk_plugins.pluginscenter import constants
@@ -44,7 +45,7 @@ from paasng.bk_plugins.pluginscenter.sourcectl import (
 from paasng.bk_plugins.pluginscenter.sourcectl.base import AlternativeVersion
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import APIError as SourceAPIError
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import PluginRepoNameConflict
-from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance
+from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance, visible_range_update_approved_callback
 from paasng.platform.sourcectl.git.client import GitCommandExecutionError
 
 logger = logging.getLogger(__name__)
@@ -117,9 +118,18 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=[operator])
 
 
-def update_visible_range_and_callback(plugin: PluginInstance, visible_range_obj: PluginVisibleRange):
+@atomic
+def update_visible_range_and_callback(plugin: PluginInstance):
     """更新可见范围，需要同步回调第三方 API"""
-    # TODO
+    visible_range_obj = plugin.visible_range
+    # 将 ITSM 单据中的可见范围信息更新到 DB 中
+    visible_range_obj.bkci_project = visible_range_obj.itsm_bkci_project
+    visible_range_obj.organization = visible_range_obj.itsm_organization
+    visible_range_obj.save()
+
+    callback_result = visible_range_update_approved_callback(plugin.pd, plugin)
+    if not callback_result:
+        logger.error("The callback to the third API fails when updating the visible range")
 
 
 def init_plugin_repository(plugin: PluginInstance, operator: str):

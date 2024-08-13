@@ -94,19 +94,15 @@ class PluginCallBackApiViewSet(GenericViewSet):
         approve_result = serializer.validated_data["approve_result"]
 
         visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
-
-        # 更新可见范围并回调第三方
-
         if ticket_status in ItsmTicketStatus.completed_status():
             visible_range_obj.is_in_approval = False
         else:
             visible_range_obj.is_in_approval = True
-
-        # 单据结束且结果为审批成功, 则更新 DB 中的可见范围
-        if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
-            visible_range_obj.bkci_project = visible_range_obj.itsm_bkci_project
-            visible_range_obj.organization = visible_range_obj.itsm_organization
         visible_range_obj.save()
+
+        # 单据结束且结果为审批成功, 则更新 DB 中的可见范围并回调第三方
+        if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
+            shim.update_visible_range_and_callback(plugin)
         return Response({"message": "success", "code": 0, "data": None, "result": True})
 
     def itsm_canary_callback(self, request, pd_id, plugin_id, release_id, release_strategy_id):

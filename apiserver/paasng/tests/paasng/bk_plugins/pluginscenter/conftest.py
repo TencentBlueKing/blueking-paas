@@ -149,8 +149,7 @@ def pd():
     pd.visible_range_definition = G(
         PluginVisibleRangeDefinition,
         pd=pd,
-        description_zh_cn="仅可见范围内的组织、用户可在研发商店查看并使用该插件",
-        scope=["organization", "bkciProject"],
+        initial=[{"name": "总公司", "id": "1", "type": "department"}],
     )
 
     pd.config_definition = G(

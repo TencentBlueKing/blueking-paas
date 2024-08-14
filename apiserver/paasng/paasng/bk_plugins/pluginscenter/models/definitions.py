@@ -51,7 +51,7 @@ PluginConfigColumnDefinitionField = make_json_field(
 )
 PluginFeaturesField = make_json_field("PluginFeaturesField", List[PluginFeature])
 PluginoverviewPageField = make_json_field("PluginoverviewPageField", PluginoverviewPage)
-PluginVisibleRangeLevelField = make_json_field("PluginVisibleRangeLevelField", PluginVisibleRangeLevel)
+PluginVisibleRangeLevelField = make_json_field("PluginVisibleRangeLevelField", List[PluginVisibleRangeLevel])
 
 
 class PluginDefinition(UuidAuditedModel):

@@ -83,7 +83,7 @@ def visible_range_update_approved_callback(pd: PluginDefinition, instance: Plugi
 
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
-    if not pd.visible_range_definition.api.update:
+    if not pd.visible_range_definition.api or not pd.visible_range_definition.api.update:
         logger.info("Visible range update callback API not configured, skip callback")
         return True
 

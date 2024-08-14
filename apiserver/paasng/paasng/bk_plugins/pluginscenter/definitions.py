@@ -168,7 +168,7 @@ class PluginVisibleRangeDefinition(BaseModel):
     """插件可见范围"""
 
     description: str = Field(default="", description="可见范围描述")
-    initial: Optional[PluginVisibleRangeLevel] = Field(description="创建插件时给的初始值")
+    initial: Optional[List[PluginVisibleRangeLevel]] = Field(description="创建插件时给的初始值")
     api: Optional[PluginBackendAPI] = Field(description="可见范围 API")
 
 

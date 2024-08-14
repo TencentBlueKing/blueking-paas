@@ -259,7 +259,6 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     complete_time = serializers.ReadOnlyField()
     report_url = serializers.SerializerMethodField(read_only=True)
     latest_release_strategy = PluginReleaseStrategySLZ()
-    pd_id = serializers.SerializerMethodField(read_only=True)
     display_status = serializers.SerializerMethodField(read_only=True)
 
     def get_report_url(self, instance) -> Optional[str]:

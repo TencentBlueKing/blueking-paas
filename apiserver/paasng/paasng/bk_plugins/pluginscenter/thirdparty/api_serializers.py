@@ -118,6 +118,12 @@ class PluginReleaseStageSLZ(serializers.Serializer):
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="阶段状态")
 
 
+class PluginStrategySLZ(serializers.Serializer):
+    strategy = serializers.CharField(help_text="灰度策略")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目ID")
+    organization = serializers.JSONField(help_txt="组织")
+
+
 class PluginReleaseAPIRequestSLZ(serializers.Serializer):
     """插件版本创建回调的请求体格式"""
 
@@ -127,6 +133,7 @@ class PluginReleaseAPIRequestSLZ(serializers.Serializer):
     current_stage = PluginReleaseStageSLZ()
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="插件版本状态")
     is_rolled_back = serializers.BooleanField(help_text="是否回滚")
+    latest_release_strategy = PluginStrategySLZ(allow_null=True, required=False)
 
 
 class DeployPluginRequestSLZ(serializers.Serializer):

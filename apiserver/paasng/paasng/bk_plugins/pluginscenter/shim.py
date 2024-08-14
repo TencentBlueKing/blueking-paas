@@ -119,7 +119,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
 
 
 @atomic
-def update_visible_range_and_callback(plugin: PluginInstance):
+def update_visible_range_and_callback(plugin: PluginInstance, operator: str):
     """更新可见范围，需要同步回调第三方 API"""
     visible_range_obj = plugin.visible_range
     # 将 ITSM 单据中的可见范围信息更新到 DB 中
@@ -127,7 +127,7 @@ def update_visible_range_and_callback(plugin: PluginInstance):
     visible_range_obj.organization = visible_range_obj.itsm_organization
     visible_range_obj.save()
 
-    callback_result = visible_range_update_approved_callback(plugin.pd, plugin)
+    callback_result = visible_range_update_approved_callback(plugin.pd, plugin, operator)
     if not callback_result:
         logger.error("The callback to the third API fails when updating the visible range")
 

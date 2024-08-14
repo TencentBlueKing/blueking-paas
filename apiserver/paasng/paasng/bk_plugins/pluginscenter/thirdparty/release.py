@@ -16,12 +16,42 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from typing import Optional
 
+from paasng.bk_plugins.pluginscenter.definitions import PluginBackendAPIResource
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance, PluginRelease
 from paasng.bk_plugins.pluginscenter.thirdparty import utils
 from paasng.bk_plugins.pluginscenter.thirdparty.api_serializers import PluginReleaseAPIRequestSLZ
 
 logger = logging.getLogger(__name__)
+
+
+def callback_to_third_party(
+    api_endpoint: Optional[PluginBackendAPIResource], instance: PluginInstance, version: PluginRelease, operator: str
+) -> bool:
+    """通用的回调第三方系统的函数，回调 API 未设置时，直接返回 True"""
+    if not api_endpoint:
+        logger.info("Callback API endpoint is not set, skip callback")
+        return True
+
+    slz = PluginReleaseAPIRequestSLZ(
+        {
+            "plugin_id": instance.id,
+            "version": version,
+            "operator": operator,
+            "current_stage": version.current_stage,
+            "status": version.status,
+            "is_rolled_back": version.is_rolled_back,
+            "latest_release_strategy": version.latest_release_strategy,
+        }
+    )
+    data = slz.data
+    resp = utils.make_client(api_endpoint).call(
+        data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
+    )
+    if not (result := resp.get("result", True)):
+        logger.error(f"Callback to {api_endpoint.apiName} failed: {resp}")
+    return result
 
 
 def create_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str) -> bool:
@@ -30,24 +60,7 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
     release_definition = pd.get_release_revision_by_type(version.type)
-    if not release_definition.api or not release_definition.api.create:
-        return True
-
-    slz = PluginReleaseAPIRequestSLZ(
-        {
-            "plugin_id": instance.id,
-            "version": version,
-            "operator": operator,
-            "current_stage": version.current_stage,
-            "status": version.status,
-            "is_rolled_back": version.is_rolled_back,
-        }
-    )
-    data = slz.data
-    resp = utils.make_client(release_definition.api.create).call(data=data, path_params={"plugin_id": instance.id})
-    if not (result := resp.get("result", True)):
-        logger.error(f"create release error: {resp}")
-    return result
+    return callback_to_third_party(release_definition.api.create, instance, version, operator)
 
 
 def update_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str) -> bool:
@@ -56,50 +69,10 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
     release_definition = pd.get_release_revision_by_type(version.type)
-    if not release_definition.api or not release_definition.api.update:
-        return True
-
-    slz = PluginReleaseAPIRequestSLZ(
-        {
-            "plugin_id": instance.id,
-            "version": version,
-            "operator": operator,
-            "current_stage": version.current_stage,
-            "status": version.status,
-            "is_stable": version.is_stable,
-            "is_rolled_back": version.is_rolled_back,
-        }
-    )
-    data = slz.data
-    resp = utils.make_client(release_definition.api.update).call(
-        data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
-    )
-    if not (result := resp.get("result", True)):
-        logger.error(f"update release error: {resp}")
-    return result
+    return callback_to_third_party(release_definition.api.update, instance, version, operator)
 
 
 def rollback_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str) -> bool:
     """回滚版本时，回调第三方系统"""
     release_definition = pd.get_release_revision_by_type(version.type)
-    if not release_definition.api or not release_definition.api.rollback:
-        logger.info("Callback API set to rollback version is not set, skip callback")
-        return True
-
-    slz = PluginReleaseAPIRequestSLZ(
-        {
-            "plugin_id": instance.id,
-            "version": version,
-            "operator": operator,
-            "current_stage": version.current_stage,
-            "status": version.status,
-            "is_rolled_back": version.is_rolled_back,
-        }
-    )
-    data = slz.data
-    resp = utils.make_client(release_definition.api.rollback).call(
-        data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
-    )
-    if not (result := resp.get("result", True)):
-        logger.error(f"rollback release error: {resp}")
-    return result
+    return callback_to_third_party(release_definition.api.rollback, instance, version, operator)

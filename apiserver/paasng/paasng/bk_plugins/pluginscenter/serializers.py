@@ -742,6 +742,7 @@ class ItsmApprovalSLZ(serializers.Serializer):
     current_status = serializers.ChoiceField(label="单据当前状态", choices=ItsmTicketStatus.get_choices())
     approve_result = serializers.BooleanField(label="审批结果")
     token = serializers.CharField(label="回调token", help_text="可用于验证请求是否来自于 ITSM")
+    updated_by = serializers.CharField(label="申请更新人")
 
 
 class PluginConfigColumnSLZ(serializers.Serializer):

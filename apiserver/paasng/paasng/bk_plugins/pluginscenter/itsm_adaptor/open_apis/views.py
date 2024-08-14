@@ -27,6 +27,7 @@ from paasng.bk_plugins.pluginscenter import constants, serializers, shim
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.authentication import ItsmBasicAuthentication
 from paasng.bk_plugins.pluginscenter.models import PluginInstance, PluginVisibleRange
+from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,7 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
         ticket_status = serializer.validated_data["current_status"]
         approve_result = serializer.validated_data["approve_result"]
+        operator = serializer.validated_data["updated_by"]
 
         visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
         if ticket_status in ItsmTicketStatus.completed_status():
@@ -102,7 +104,7 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
         # 单据结束且结果为审批成功, 则更新 DB 中的可见范围并回调第三方
         if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
-            shim.update_visible_range_and_callback(plugin)
+            shim.update_visible_range_and_callback(plugin, operator=operator)
         return Response({"message": "success", "code": 0, "data": None, "result": True})
 
     def itsm_canary_callback(self, request, pd_id, plugin_id, release_id, release_strategy_id):
@@ -116,16 +118,17 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
         serializer = serializers.ItsmApprovalSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # 根据 itsm 的回调结果更新单据状态
         ticket_status = serializer.validated_data["current_status"]
         approve_result = serializer.validated_data["approve_result"]
+        operator = serializer.validated_data["updated_by"]
 
-        # TODO 审批成功后，需要将灰度策略相关的数据同步给插件提供方
-        if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
-            pass
-
+        # 根据 itsm 的回调结果更新单据状态
         release.status = self._convert_canary_status(ticket_status, approve_result, latest_release_strategy.strategy)
         release.save(update_fields=["status", "updated"])
+
+        # 审批结束后，将插件状态和版本信息（包含灰度策略）同步给第三方
+        if ticket_status in ItsmTicketStatus.completed_status():
+            release_api.update_release(pd=plugin.pd, instance=plugin, version=release, operator=operator)
         return Response({"message": "success", "code": 0, "data": None, "result": True})
 
     def _convert_canary_status(

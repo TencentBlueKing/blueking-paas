@@ -78,7 +78,7 @@ def reactivate_instance(pd: PluginDefinition, instance: PluginInstance, operator
     return True
 
 
-def visible_range_update_approved_callback(pd: PluginDefinition, instance: PluginInstance) -> bool:
+def visible_range_update_approved_callback(pd: PluginDefinition, instance: PluginInstance, operator: str) -> bool:
     """可见范围修改审批成功时 - 回调第三系统
 
     - 仅插件管理员声明了回调 API 时才会触发回调
@@ -94,6 +94,7 @@ def visible_range_update_approved_callback(pd: PluginDefinition, instance: Plugi
     slz = PluginVisibleRangeAPIRequestSLZ(
         {
             "plugin_id": instance.id,
+            "operator": operator,
             "bkci_project": instance.visible_range.bkci_project,
             "organization": instance.visible_range.organization,
         }

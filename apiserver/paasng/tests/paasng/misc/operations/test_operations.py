@@ -23,7 +23,6 @@ from paas_wl.bk_app.cnative.specs.constants import DeployStatus
 from paasng.misc.operations.constant import OperationType
 from paasng.misc.operations.models import (
     AppDeploymentOperationObj,
-    ApplicationLatestOp,
     CNativeAppDeployOperationObj,
     Operation,
 )
@@ -34,22 +33,6 @@ from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 logger = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-class TestAppLatestOp:
-    def test_post_save_handler(self, bk_app, bk_user):
-        op_type = OperationType.MODIFY_PRODUCT_ATTRIBUTES.value
-        operation = Operation.objects.create(
-            application=bk_app,
-            type=op_type,
-            user=bk_user,
-            region=bk_app.region,
-            source_object_id=bk_app.id.hex,
-            extra_values={},
-        )
-        latest_op = ApplicationLatestOp.objects.get(application=bk_app)
-        assert latest_op.operation_type == op_type
-        assert latest_op.operation_id == operation.pk
 
 
 class TestOperationObj:

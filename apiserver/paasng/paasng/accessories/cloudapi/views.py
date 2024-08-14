@@ -219,23 +219,26 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         result = bk_apigateway_inner_component.post(apigw_url, json=data, bk_username=request.user.username)
 
-        # 云 API 申请记录 ID，用于操作详情的展示
-        # 说明：当前申请组件时返回的 data 为 None，没有提供 record_id 信息
-        data = result.get("data", {}) or {}
-        record_id = data.get("record_id", "")
-        # 记录操作记录
-        gateway_name = data.get("gateway_name", "")
-        add_app_audit_record(
-            app_code=app.code,
-            user=request.user.pk,
-            action_id=AppAction.MANAGE_CLOUD_API,
-            operation=operation_type,
-            target=OperationTarget.CLOUD_API,
-            attribute=gateway_name,
-            # 仅提交了申请记录，需要审批后才算操作成功
-            result_code=ResultCode.ONGOING,
-            data_after=DataDetail(type=DataType.CLOUD_API_RECORD, data=record_id),
-        )
+        try:
+            # 云 API 申请记录 ID，用于操作详情的展示
+            # 说明：兼容申请组件时返回的 data 为 None，没有提供 record_id 信息的情况
+            data = result.get("data", {}) or {}
+            record_id = data.get("record_id", "")
+            # 部分 API 没有带上网关名，则不记录到操作记录中
+            gateway_name = data.get("gateway_name", "")
+            add_app_audit_record(
+                app_code=app.code,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=operation_type,
+                target=OperationTarget.CLOUD_API,
+                attribute=gateway_name,
+                # 仅提交了申请记录，需要审批后才算操作成功
+                result_code=ResultCode.ONGOING,
+                data_after=DataDetail(type=DataType.CLOUD_API_RECORD, data=record_id),
+            )
+        except Exception:
+            logger.exception("An exception occurred in the operation record of adding cloud API permissions")
         return Response(result)
 
     @staticmethod

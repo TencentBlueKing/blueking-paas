@@ -222,7 +222,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         @param: apigw_url: 请求 API 路径
         @param: operation_type: 操作的类型，如申请、续期
         @param: app: 应用
-        @param: data_type: 操作前后数据中记录数据的类型，如网关、组件。通过 record_id 获取申请的详情需要根据这个类型来调用不同的 API 获取申请单据详情
+        @param: data_type: 操作前后数据中记录数据的类型，如网关、组件。通过 record_id 获取申请详情时，需要结合 data_type 来调用不同的 API，以获取单据详情
         """
         logger.debug("[cloudapi] posting %s", apigw_url)
         data = copy.copy(request.data)

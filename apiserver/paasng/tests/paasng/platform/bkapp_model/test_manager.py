@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -18,9 +19,9 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
+from paasng.platform.bkapp_model.entities import AutoscalingConfig as _AutoscalingConfig
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
-from paasng.platform.engine.models.deployment import AutoscalingConfig as _AutoscalingConfig
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

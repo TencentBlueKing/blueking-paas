@@ -18,7 +18,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from paasng.platform.engine.constants import ImagePullPolicy
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
 @dataclass

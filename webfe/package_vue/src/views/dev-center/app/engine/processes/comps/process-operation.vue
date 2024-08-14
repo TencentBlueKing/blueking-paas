@@ -254,91 +254,6 @@
           </div>
         </div>
       </div>
-
-      <bk-sideslider
-        :width="computedWidth"
-        :is-show.sync="processSlider.isShow"
-        :title="processSlider.title"
-        :quick-close="true"
-      >
-        <div
-          id="log-container"
-          slot="content"
-          class="p0 instance-log-wrapper paas-log-box"
-        >
-          <div class="action-box">
-            <bk-button
-              :key="isLogsLoading"
-              class="fr p0 f12 refresh-btn"
-              style="width: 32px; min-width: 32px;"
-              :disabled="isLogsLoading"
-              @click="loadInstanceLog"
-            >
-              <span class="bk-icon icon-refresh f18" />
-            </bk-button>
-
-            <bk-form
-              form-type="inline"
-              class="fr mr5"
-            >
-              <bk-form-item :label="$t('时间段：')">
-                <bk-select
-                  v-model="curLogTimeRange"
-                  style="width: 250px;"
-                  :clearable="false"
-                  :disabled="isLogsLoading"
-                >
-                  <bk-option
-                    v-for="(option, index) in chartRangeList"
-                    :id="option.id"
-                    :key="index"
-                    :name="option.name"
-                  />
-                </bk-select>
-              </bk-form-item>
-            </bk-form>
-          </div>
-          <div class="instance-textarea">
-            <div
-              class="textarea"
-              style="height: 100%;"
-            >
-              <template v-if="!isLogsLoading && instanceLogs.length">
-                <ul>
-                  <li
-                    v-for="(log, index) of instanceLogs"
-                    :key="index"
-                    class="stream-log"
-                  >
-                    <span
-                      class="mr10"
-                      style="min-width: 140px;"
-                    >{{ log.timestamp }}</span>
-                    <span class="pod-name">{{ log.podShortName }}</span>
-                    <pre
-                      class="message"
-                      v-html="log.message || '--'"
-                    />
-                  </li>
-                </ul>
-              </template>
-              <template v-else-if="isLogsLoading">
-                <div class="log-loading-container">
-                  <div class="log-loading">
-                    {{ $t('日志获取中...') }}
-                  </div>
-                </div>
-              </template>
-              <template v-else>
-                <p>
-                  {{ $t('暂时没有日志记录') }}
-                </p>
-              </template>
-            </div>
-          </div>
-        </div>
-      </bk-sideslider>
-
       <bk-sideslider
         :width="750"
         :is-show.sync="chartSlider.isShow"
@@ -648,10 +563,22 @@
       </div>
     </bk-dialog>
     <!-- 无法使用控制台 end -->
+
+    <!-- 日志弹窗 -->
+    <process-log
+      v-model="logConfig.visiable"
+      :title="logConfig.title"
+      :logs="logConfig.logs"
+      :loading="logConfig.isLoading"
+      :time-selection="chartRangeList"
+      :params="logConfig.params"
+      @refresh="refreshLogs">
+    </process-log>
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>
+import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
@@ -662,6 +589,7 @@ import $ from 'jquery';
 import i18n from '@/language/i18n.js';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
+import processLog from '@/components/process-log-dialog/log.vue';
 
 let maxReplicasNum = 0;
 
@@ -683,6 +611,7 @@ export default {
     tooltipConfirm,
     chart: ECharts,
     eventDetail,
+    processLog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -794,14 +723,12 @@ export default {
       curInstance: {
         name: '',
       },
-      instanceLogs: [],
       // 进程操作相关变量
       loading: true,
       isAppOfflined: false,
       deploymentReady: false,
       pendingProcessList: [],
       processInterval: undefined,
-      isLogsLoading: false,
       timer: 0,
       processPlan: {
         processType: 'unkonwn',
@@ -841,10 +768,6 @@ export default {
       logInterval: undefined,
       filterKeys: '',
       logIds: {},
-      processSlider: {
-        isShow: false,
-        title: '',
-      },
       chartSlider: {
         isShow: false,
         title: '',
@@ -933,6 +856,12 @@ export default {
         processName: '',
         instanceName: '',
       },
+      logConfig: {
+        visiable: false,
+        isLoading: false,
+        title: '',
+        logs: [],
+      },
     };
   },
   computed: {
@@ -962,9 +891,6 @@ export default {
     },
   },
   watch: {
-    curLogTimeRange() {
-      this.loadInstanceLog();
-    },
     '$route'() {
       this.init();
       this.getAutoScalFlag();  // 切换路由也需要获取featureflag
@@ -1171,11 +1097,17 @@ export default {
              */
     showInstanceLog(instance, process) {
       this.curInstance = instance;
-      this.instanceLogs = [];
-      this.processSlider.isShow = true;
-      this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
+      this.logConfig.visiable = true;
+      this.logConfig.isLoading = true;
+      this.logConfig.params = {
+        appCode: this.appCode,
+        moduleId: this.curModuleId,
+        env: this.environment,
+        processType: process.name,
+        instanceName: instance.name,
+      };
+      this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
       this.loadInstanceLog();
-      this.initSidebarFormData(this.curLogTimeRange);
     },
 
     getParams() {
@@ -1188,8 +1120,8 @@ export default {
     },
 
     /**
-             * 构建过滤参数
-             */
+     * 构建过滤参数
+     */
     getFilterParams() {
       const params = {
         query: {
@@ -1204,14 +1136,9 @@ export default {
     },
 
     /**
-             * 加载实例日志
-             */
+     * 加载实例日志
+     */
     async loadInstanceLog() {
-      if (this.isLogsLoading) {
-        return false;
-      }
-
-      this.isLogsLoading = true;
       try {
         const { appCode } = this;
         const moduleId = this.curModuleId;
@@ -1228,29 +1155,21 @@ export default {
         data.forEach((item) => {
           item.podShortName = item.pod_name.split('-').reverse()[0];
         });
-        this.instanceLogs = data;
-        // 滚动到底部
-        setTimeout(() => {
-          const container = document.getElementById('log-container');
-          container.scrollTo({
-            top: container?.scrollHeight || 0,
-            behavior: 'smooth',
-          });
-        }, 500);
+        this.logConfig.logs = data;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
-        this.isLogsLoading = false;
+        this.logConfig.isLoading = false;
       }
     },
 
     /**
-             * 显示进程实例列表
-             * @param {Object} data 进程
-             */
+     * 显示进程实例列表
+     * @param {Object} data 进程
+     */
     showProcessDetail(data) {
       // 当前项折叠
       if (data.name === this.curProcessKey) {
@@ -2236,6 +2155,41 @@ export default {
       this.instanceEventConfig.processName = process.name;
       this.instanceEventConfig.instanceName = instance.name;
     },
+
+    preOperation() {
+      this.logConfig.isLoading = true;
+      this.logConfig.logs = [];
+    },
+
+    // 刷新日志
+    refreshLogs(data) {
+      this.preOperation();
+      if (data.type === 'realtime') {
+        this.curLogTimeRange = data.time;
+        this.loadInstanceLog();
+      } else {
+        this.getPreviousLogs();
+      }
+    },
+
+    // 重启日志
+    async getPreviousLogs() {
+      try {
+        const logs = await this.$store.dispatch('log/getPreviousLogs', this.logConfig.params);
+        this.logConfig.logs = logs;
+      } catch (e) {
+        if (e.status === 404) {
+          this.logConfig.logs = [];
+          return;
+        }
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.logConfig.isLoading = false;
+      }
+    },
   },
 };
 </script>
@@ -2847,15 +2801,6 @@ export default {
         filter: blur(1px);
     }
 
-    .instance-log-wrapper {
-        height: 100%;
-        overflow: auto;
-
-        .instance-textarea {
-            border: none;
-        }
-    }
-
     .chart-wrapper {
         height: 100%;
         overflow: auto;
@@ -2913,13 +2858,6 @@ export default {
         padding: 10px;
         border-top: 1px solid #ddd;
         overflow: hidden;
-    }
-
-    .refresh-btn {
-        font-size: 12px;
-        /deep/ .bk-icon {
-            font-size: 16px;
-        }
     }
 
     .radio-cls{

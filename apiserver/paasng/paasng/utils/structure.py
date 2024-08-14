@@ -33,3 +33,7 @@ def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool
     if pydantic_model is not None:
         return register_core(pydantic_model)
     return register_core
+
+
+# paasng.utils.models.make_json_field 需要 pydantic_model 注册到 cattr
+prepare_json_field = register

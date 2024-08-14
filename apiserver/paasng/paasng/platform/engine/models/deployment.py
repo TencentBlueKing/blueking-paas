@@ -16,9 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Optional
 
 import cattr
 from attrs import define
@@ -27,7 +27,9 @@ from jsonfield import JSONField
 
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet
+from paasng.platform.engine.constants import BuildStatus, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
@@ -68,77 +70,6 @@ class AdvancedOptions:
     build_id: Optional[str] = None
     # 触发消息
     invoke_message: Optional[str] = None
-
-
-@dataclass
-class AutoscalingConfig:
-    """This class is a duplication of paas_wl.workloads.autoscaling.entities.AutoscalingConfig, it
-    avoids a circular import problem.
-    """
-
-    # 最小副本数量
-    min_replicas: int
-    # 最大副本数量
-    max_replicas: int
-    # 扩缩容策略
-    policy: str
-
-
-@dataclass
-class ExecAction:
-    command: List[str]
-
-
-@dataclass
-class HTTPHeader:
-    name: str
-    value: str
-
-
-@dataclass
-class HTTPGetAction:
-    port: Union[int, str]
-    host: Optional[str] = None
-    path: Optional[str] = None
-    http_headers: List[HTTPHeader] = field(default_factory=list)
-    scheme: Optional[Literal["HTTP", "HTTPS"]] = None
-
-
-@dataclass
-class TCPSocketAction:
-    port: Union[int, str]
-    host: Optional[str] = None
-
-
-@dataclass
-class ProbeHandler:
-    exec: Optional[ExecAction] = None
-    http_get: Optional[HTTPGetAction] = None
-    tcp_socket: Optional[TCPSocketAction] = None
-
-
-@dataclass
-class Probe:
-    exec: Optional[ExecAction] = None
-    http_get: Optional[HTTPGetAction] = None
-    tcp_socket: Optional[TCPSocketAction] = None
-
-    initial_delay_seconds: Optional[int] = 0
-    timeout_seconds: Optional[int] = 1
-    period_seconds: Optional[int] = 10
-    success_threshold: Optional[int] = 1
-    failure_threshold: Optional[int] = 3
-
-    def get_probe_handler(self) -> ProbeHandler:
-        """返回 ProbeHandler 对象"""
-        return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
-
-
-@dataclass
-class ProbeSet:
-    liveness: Optional[Probe] = None
-    readiness: Optional[Probe] = None
-    startup: Optional[Probe] = None
 
 
 @dataclass

@@ -220,7 +220,9 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         result = bk_apigateway_inner_component.post(apigw_url, json=data, bk_username=request.user.username)
 
         # 云 API 申请记录 ID，用于操作详情的展示
-        record_id = result.get("data", {}).get("record_id", "")
+        # 说明：当前申请组件时返回的 data 为 None，没有提供 record_id 信息
+        data = result.get("data", {}) or {}
+        record_id = data.get("record_id", "")
         # 记录操作记录
         gateway_name = data.get("gateway_name", "")
         add_app_audit_record(

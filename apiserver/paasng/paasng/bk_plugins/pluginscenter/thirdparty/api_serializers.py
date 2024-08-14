@@ -121,7 +121,7 @@ class PluginReleaseStageSLZ(serializers.Serializer):
 class PluginStrategySLZ(serializers.Serializer):
     strategy = serializers.CharField(help_text="灰度策略")
     bkci_project = serializers.JSONField(help_text="蓝盾项目ID")
-    organization = serializers.JSONField(help_txt="组织")
+    organization = serializers.JSONField(help_text="组织")
 
 
 class PluginReleaseAPIRequestSLZ(serializers.Serializer):

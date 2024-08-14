@@ -64,7 +64,7 @@ export default {
     this.getNewVersionFormat();
   },
   methods: {
-    // 获取新建版本表单格式 - 是否需要请求
+    // 获取新建版本表单格式
     async getNewVersionFormat() {
       this.schemeLoading = true;
       const params = {
@@ -73,7 +73,6 @@ export default {
         type: 'prod',
       };
       try {
-        // 多次请求？
         const res = await this.$store.dispatch('plugin/getNewVersionFormat', params);
         this.scheme = res;
       } catch (e) {

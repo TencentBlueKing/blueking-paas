@@ -34,6 +34,7 @@
       </div>
       <p
         class="release-tips"
+        v-bk-overflow-tips
         v-html="releaseTips"
       ></p>
     </section>
@@ -168,18 +169,27 @@ export default {
     padding-left: 264px;
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     left: 0;
     right: 0;
     bottom: 0;
     height: 48px;
+    z-index: 9;
     background: #fafbfd;
     box-shadow: 0 -1px 0 0 #dcdee5;
+    .button-warpper {
+      display: flex;
+      flex-grow: 0;
+    }
   }
 
   .release-tips {
     color: #979ba5;
     font-size: 12px;
     margin-left: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     /deep/ em {
       font-weight: 700;
     }

@@ -16,6 +16,7 @@
 <script>
 export default {
   name: 'PaasCard',
+  inheritAttrs: false,
   props: {
     icons: {
       type: Array,

@@ -43,15 +43,26 @@
       <!-- 编辑态 -->
       <template v-else>
         <section class="visible-range-form card-style">
-          <bk-form style="width: 800px" :label-width="150" :model="formData" ref="visibleRangeForm">
+          <bk-form
+            style="width: 800px"
+            :label-width="150"
+            :model="formData"
+            ext-cls="visible-range-form-cls"
+            ref="visibleRangeForm">
             <bk-form-item
               :label="$t('蓝盾项目')"
               :property="'projectIds'"
               :error-display-type="'normal'"
-              :rules="rules.projectIds">
+              :rules="rules.projectIds"
+            >
               <bk-input v-model="formData.projectIds" :placeholder="$t('请输入蓝盾项目 Project ID，并用英文分号分隔')"></bk-input>
             </bk-form-item>
-            <bk-form-item :label="$t('组织')">
+            <bk-form-item
+              :label="$t('组织')"
+              :required="true"
+              :error-display-type="'normal'"
+              :rules="rules.organization"
+            >
               <bk-button :theme="'default'" @click="handleSelectOrganization">{{ $t('选择组织') }}</bk-button>
               <div class="render-member-wrapper" v-if="departments.length > 0">
                 <render-member-list
@@ -121,8 +132,15 @@ export default {
       rules: {
         projectIds: [
           {
-            regex: /^([a-z][a-zA-Z0-9-]+)(,[a-z][a-zA-Z0-9-]+)*$/,
+            regex: /^([a-z][a-zA-Z0-9-]+)(;[a-z][a-zA-Z0-9-]+)*;?$/,
             message: this.$t('Project ID是字符+数字组成，并以小写字母开头，Project ID之间用英文分号分隔'),
+            trigger: 'blur',
+          },
+        ],
+        organization: [
+          {
+            validator: () => this.departments.length,
+            message: '必填项',
             trigger: 'blur',
           },
         ],
@@ -157,6 +175,9 @@ export default {
         this.isEditingFormData = this.initStatus === JSON.stringify(newValue);
       },
       deep: true,
+    },
+    'departments.length'() {
+      this.triggerValidate();
     },
   },
   created() {
@@ -249,6 +270,12 @@ export default {
       const url = this.visibleRangeData.itsm_detail?.ticket_url;
       window.open(url, '_blank');
     },
+    // 手动触发校验
+    triggerValidate() {
+      this.$refs.visibleRangeForm?.validate().then(() => {}, (validator) => {
+        console.warn(validator);
+      });;
+    },
   },
 };
 </script>
@@ -259,6 +286,12 @@ export default {
   }
   .visible-range-form {
     padding: 24px 0;
+    .visible-range-form-cls {
+      /deep/ .bk-form-item.is-error .bk-button {
+        border-color: #ea3636;
+        color: #ea3636;
+      }
+    }
     .render-member-wrapper {
       margin-top: 12px;
       padding: 12px 12px 12px 36px;

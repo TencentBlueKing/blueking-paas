@@ -53,16 +53,17 @@
             size="small"
             text
             class="ml10"
+            @click="viewApprovalDetails"
           >
             {{ $t('撤销提单') }}
           </bk-button>
         </div>
       </bk-alert>
-      <!-- 防止高度塌陷 -->
       <release-content
         ref="releaseContent"
         :mode="'view'"
         :data="versionData"
+        :version-info="curVersionData"
       />
       <!-- 可见范围 -->
       <visible-range :data="visibleRangeData" />
@@ -72,8 +73,14 @@
         :data="versionData"
         step="release"
       />
-      <section class="version-tools" v-if="!isFullReleaseSuccessful">
-        <div class="button-warpper" v-if="!isRequestGrayRelease">
+      <section
+        class="version-tools"
+        v-if="!isFullReleaseSuccessful"
+      >
+        <div
+          class="button-warpper"
+          v-if="!isRequestGrayRelease"
+        >
           <!-- 审批失败，拒绝 -->
           <bk-button
             v-if="isApprovalFailed"
@@ -129,7 +136,11 @@
               {{ $t('取消') }}
             </bk-button>
           </div>
-          <p class="release-tips" v-html="releaseTips"></p>
+          <p
+            class="release-tips"
+            v-bk-overflow-tips
+            v-html="releaseTips"
+          ></p>
         </template>
       </section>
     </paas-content-loader>
@@ -167,6 +178,9 @@ export default {
         bkci_project: [],
         organization: [],
       },
+      scheme: {
+        source_versions: [],
+      },
     };
   },
   computed: {
@@ -198,13 +212,16 @@ export default {
     isFullReleaseSuccessful() {
       return this.releaseStatus === 'successful' && this.approvalStatus === 'FINISHED';
     },
+    curVersionData() {
+      return this.scheme.source_versions.find(v => v.name === this.versionData.source_version_name);
+    },
   },
   created() {
     this.init();
   },
   methods: {
     init() {
-      Promise.all([this.getReleaseDetail(), this.getVisibleRange()]).finally(() => {
+      Promise.all([this.getReleaseDetail(), this.getVisibleRange(), this.getNewVersionFormat()]).finally(() => {
         this.isLoading = false;
       });
     },
@@ -241,9 +258,11 @@ export default {
       // 只允许扩大灰度范围
       this.releaseStrategyMode = 'edit';
       this.isRequestGrayRelease = true;
-      if (type === 'full') { // 全量
+      if (type === 'full') {
+        // 全量
         this.versionData.latest_release_strategy.strategy = 'full';
-      } else { // 扩大灰度范围
+      } else {
+        // 扩大灰度范围
         this.versionData.latest_release_strategy.strategy = 'gray';
       }
     },
@@ -262,10 +281,11 @@ export default {
         const formData = this.$refs.releaseStrategy.getFormData();
         const params = {
           strategy: formData.strategy,
-          ...formData.strategy === 'gray' && { // 仅在灰度
+          ...(formData.strategy === 'gray' && {
+            // 仅在灰度
             bkci_project: formData.bkci_project,
             organization: formData.organization,
-          },
+          }),
         };
         // 提交
         this.applyGrayRelease(params);
@@ -317,6 +337,23 @@ export default {
       }
     },
 
+    // 获取schema
+    async getNewVersionFormat() {
+      try {
+        const res = await this.$store.dispatch('plugin/getNewVersionFormat', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          type: 'prod',
+        });
+        this.scheme = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
     // 重新申请
     handleReapply() {
       this.$router.push({
@@ -342,17 +379,26 @@ export default {
     padding-left: 264px;
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     left: 0;
     right: 0;
     bottom: 0;
     height: 48px;
+    z-index: 9;
     background: #fafbfd;
     box-shadow: 0 -1px 0 0 #dcdee5;
+    .button-warpper {
+      display: flex;
+      flex-shrink: 0;
+    }
   }
   .release-tips {
     color: #979ba5;
     font-size: 12px;
     margin-left: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     /deep/ em {
       font-weight: 700;
     }

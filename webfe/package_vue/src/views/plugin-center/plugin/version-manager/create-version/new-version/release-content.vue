@@ -35,6 +35,7 @@
               :text="true"
               title="primary"
               size="small"
+              @click="toTestDetails"
             >
               <i class="paasng-icon paasng-jump-link icon-cls-link" />
               {{ $t('查看测试数据') }}
@@ -98,6 +99,7 @@
                   <bk-button
                     :text="true"
                     title="primary"
+                    @click="toTestDetails"
                   >
                     <i class="paasng-icon paasng-jump-link icon-cls-link mr5" />
                     <span class="f12">{{ $t('查看测试数据') }}</span>
@@ -148,6 +150,10 @@ export default {
       default: () => {},
     },
     versionData: {
+      type: Object,
+      default: () => {},
+    },
+    versionInfo: {
       type: Object,
       default: () => {},
     },
@@ -287,6 +293,18 @@ export default {
         semver_type,
       };
       return params;
+    },
+    // 测试详情
+    toTestDetails() {
+      const url = this.isEdit ? this.curVersionData.url : this.versionInfo.url;
+      const id = url.split('=')[1];
+      this.$router.push({
+        name: 'pluginVersionRelease',
+        query: {
+          release_id: id,
+          type: 'test',
+        },
+      });
     },
   },
 };

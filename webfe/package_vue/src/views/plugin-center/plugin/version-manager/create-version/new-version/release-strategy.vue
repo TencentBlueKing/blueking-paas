@@ -10,6 +10,7 @@
         :label-width="120"
         :model="releaseStrategy"
         ref="releaseStrategyForm"
+        ext-cls="release-strategy-form-cls"
       >
         <bk-form-item
           label="发布策略"
@@ -32,23 +33,17 @@
           v-if="!isFullRelease"
           label="灰度范围"
           :required="true"
-          :property="'project'"
+          ref="grayscaleRangeForm"
           :error-display-type="'normal'"
+          :rules="rules.grayscaleRange"
         >
           <div class="gray-range">
             <bk-form
               :model="releaseStrategy"
-              ref="childForm"
               form-type="vertical"
               ext-cls="gray-range-form-cls"
             >
-              <bk-form-item
-                :label="$t('蓝盾项目 ID')"
-                :required="true"
-                :property="'bkci_project'"
-                :error-display-type="'normal'"
-                :rules="rules.bkci_project"
-              >
+              <bk-form-item :label="$t('蓝盾项目 ID')">
                 <bk-tag-input
                   v-model="releaseStrategy.bkci_project"
                   :placeholder="$t('请输入蓝盾项目 ID，多个 ID 以英文分号分隔，最多可输入 10 个 ID')"
@@ -57,13 +52,7 @@
                   ext-cls="projec-id-tag-cls"
                 ></bk-tag-input>
               </bk-form-item>
-              <bk-form-item
-                :label="$t('组织')"
-                :required="true"
-                :property="'organization'"
-                :error-display-type="'normal'"
-                :rules="rules.organization"
-              >
+              <bk-form-item :label="$t('组织')">
                 <bk-button
                   :theme="'default'"
                   @click="handleSelectOrganization"
@@ -190,17 +179,10 @@ export default {
             trigger: 'blur',
           },
         ],
-        bkci_project: [
+        grayscaleRange: [
           {
-            required: true,
-            message: '必填项',
-            trigger: 'blur',
-          },
-        ],
-        organization: [
-          {
-            required: true,
-            message: '必填项',
+            validator: () => this.releaseStrategy.bkci_project?.length || this.departments.length,
+            message: this.$t('蓝盾项目 ID 和 组织至少填写一个'),
             trigger: 'blur',
           },
         ],
@@ -233,6 +215,12 @@ export default {
       immediate: true,
       deep: true,
     },
+    'releaseStrategy.bkci_project.length'() {
+      this.triggerValidate();
+    },
+    'departments.length'() {
+      this.triggerValidate();
+    },
   },
   methods: {
     // 重新申请设置默认值
@@ -250,9 +238,13 @@ export default {
     validate() {
       const validateForm = [this.$refs.releaseStrategyForm.validate()];
       if (!this.isFullRelease) {
-        validateForm.push(this.$refs.childForm.validate());
+        validateForm.push(this.$refs.grayscaleRangeForm.validate());
       }
       return Promise.all(validateForm);
+    },
+    // 手动触发校验
+    triggerValidate() {
+      this.$refs.grayscaleRangeForm?.validate();
     },
     // 向外抛出当前表单数据
     getFormData() {
@@ -288,6 +280,14 @@ export default {
   .mt16 {
     margin-top: 16px;
   }
+  .release-strategy-form-cls {
+    /deep/ .bk-form-item.is-error {
+      .gray-range .bk-button {
+        border-color: #ea3636;
+        color: #ea3636;
+      }
+    }
+  }
   .release-strategy-cls {
     .range {
       min-width: 323px;
@@ -322,6 +322,9 @@ export default {
         &::before,
         &::after {
           display: unset;
+        }
+        .bk-label::after {
+          display: none;
         }
       }
       .from-tip {

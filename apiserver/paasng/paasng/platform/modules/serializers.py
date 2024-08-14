@@ -77,6 +77,8 @@ class ModuleSLZ(serializers.ModelSerializer):
         help_text="模块源码来源，例如 1 表示 Git 等代码仓库", source="get_source_origin"
     )
     clusters = serializers.SerializerMethodField(help_text="模块下属各环境部署的集群信息")
+    creator = UserNameField()
+    owner = UserNameField()
 
     def get_repo_auth_info(self, instance):
         if not isinstance(instance.get_source_obj(), (SvnRepository, GitRepository)):

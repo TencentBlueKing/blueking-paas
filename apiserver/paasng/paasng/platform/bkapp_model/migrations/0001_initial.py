@@ -18,7 +18,6 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import paasng.platform.engine.constants
 
 
 class Migration(migrations.Migration):
@@ -43,7 +42,7 @@ class Migration(migrations.Migration):
                 ('args', models.JSONField(default=None, help_text='命令参数', null=True)),
                 ('port', models.IntegerField(help_text='容器端口', null=True)),
                 ('image', models.CharField(help_text='容器镜像, 仅用于 v1alpha1 的云原生应用', max_length=255, null=True)),
-                ('image_pull_policy', models.CharField(choices=[('Always', 'Always'), ('IfNotPresent', 'If not present'), ('Never', 'Never')], default=paasng.platform.engine.constants.ImagePullPolicy['IF_NOT_PRESENT'], help_text='镜像拉取策略(仅用于 v1alpha1 的云原生应用)', max_length=20)),
+                ('image_pull_policy', models.CharField(choices=[('Always', 'Always'), ('IfNotPresent', 'If not present'), ('Never', 'Never')], default="IfNotPresent", help_text='镜像拉取策略(仅用于 v1alpha1 的云原生应用)', max_length=20)),
                 ('image_credential_name', models.CharField(help_text='镜像拉取凭证名(仅用于 v1alpha1 的云原生应用)', max_length=64, null=True)),
                 ('target_replicas', models.IntegerField(default=1, verbose_name='期望副本数')),
                 ('target_status', models.CharField(default='start', max_length=32, verbose_name='期望状态')),

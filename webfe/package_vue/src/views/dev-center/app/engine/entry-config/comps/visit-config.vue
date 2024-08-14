@@ -478,9 +478,9 @@ export default {
       return this.$store.state.platformFeature;
     },
     configIpTip() {
-      let display_ip = this.defaultIp;
+      let displayIp = this.defaultIp;
       if(!this.isIpConsistent) {
-        display_ip = this.ipConfigInfo.frontend_ingress_ip;
+        displayIp = this.ipConfigInfo.frontend_ingress_ip;
       }
       return {
         theme: 'light',
@@ -491,7 +491,7 @@ export default {
           <div
             class="mt10 ip-view-wrapper"
             style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px;">
-            ${display_ip}
+            ${displayIp}
             <i class="paasng-icon paasng-general-copy ip-icon-customize-cls"></i>
           </div>
           <div class="mt10 mb10" style="color: #979BA5;">${this.$t('推荐操作流程: ')}</div>

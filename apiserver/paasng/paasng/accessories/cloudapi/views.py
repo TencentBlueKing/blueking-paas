@@ -33,6 +33,7 @@ from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.utils.dictx import get_items
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -151,7 +152,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         app = self.get_application()
         operation_type = OperationEnum.APPLY
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
-        return self._post(request, apigw_url, operation_type, app)
+        return self._post(request, apigw_url, operation_type, app, DataType.ESB_API_RECORD)
 
     @swagger_auto_schema(
         request_body=serializers.ESBPermissionRenewSLZ,
@@ -164,7 +165,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         app = self.get_application()
         operation_type = OperationEnum.RENEW
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
-        return self._post(request, apigw_url, operation_type, app)
+        return self._post(request, apigw_url, operation_type, app, DataType.ESB_API_RECORD)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
@@ -207,7 +208,22 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         result = bk_apigateway_inner_component.get(apigw_url, params=params, bk_username=request.user.username)
         return Response(result)
 
-    def _post(self, request, apigw_url: str, operation_type: str, app: Application):
+    def _post(
+        self,
+        request,
+        apigw_url: str,
+        operation_type: str,
+        app: Application,
+        data_type: DataType = DataType.CLOUD_API_RECORD,
+    ):
+        """
+        申请/续期网关/组件 API 权限
+
+        @param: apigw_url: 请求 API 路径
+        @param: operation_type: 操作的类型，如申请、续期
+        @param: app: 应用
+        @param: data_type: 操作前后数据中记录数据的类型，如网关、组件。通过 record_id 获取申请的详情需要根据这个类型来调用不同的 API 获取申请单据详情
+        """
         logger.debug("[cloudapi] posting %s", apigw_url)
         data = copy.copy(request.data)
         data.update(
@@ -221,10 +237,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         try:
             # 云 API 申请记录 ID，用于操作详情的展示
-            # 说明：兼容申请组件时返回的 data 为 None，没有提供 record_id 信息的情况
-            data = result.get("data", {}) or {}
-            record_id = data.get("record_id", "")
-            # 部分 API 没有带上网关名，则不记录到操作记录中
+            record_id = get_items(result, ["data", "record_id"], "")
             gateway_name = data.get("gateway_name", "")
             add_app_audit_record(
                 app_code=app.code,
@@ -235,7 +248,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 attribute=gateway_name,
                 # 仅提交了申请记录，需要审批后才算操作成功
                 result_code=ResultCode.ONGOING,
-                data_after=DataDetail(type=DataType.CLOUD_API_RECORD, data=record_id),
+                data_after=DataDetail(type=data_type, data=record_id),
             )
         except Exception:
             logger.exception("An exception occurred in the operation record of adding cloud API permissions")

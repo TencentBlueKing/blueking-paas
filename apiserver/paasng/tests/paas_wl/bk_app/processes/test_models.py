@@ -19,15 +19,15 @@ import pytest
 
 from paas_wl.bk_app.processes.constants import ProbeType
 from paas_wl.bk_app.processes.models import ProcessProbe, ProcessProbeManager, ProcessSpec, ProcessSpecManager
-from paasng.platform.engine.models.deployment import (
+from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     ExecAction,
     HTTPGetAction,
     Probe,
     ProbeSet,
-    ProcessTmpl,
     TCPSocketAction,
 )
+from paasng.platform.engine.models.deployment import ProcessTmpl
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

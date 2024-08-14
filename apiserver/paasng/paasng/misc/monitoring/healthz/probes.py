@@ -105,7 +105,8 @@ class _BkRepoProbe(HttpProbe):
     bkrepo_endpoint = ""
     if isinstance(settings.BLOBSTORE_BKREPO_CONFIG, dict):
         bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG.get("ENDPOINT", "")
-    url = f"{bkrepo_endpoint}/generic/actuator/info"
+    # bkrepo_endpoint 如果配置了 '/' 结尾, 需要去掉
+    url = f"{bkrepo_endpoint.rstrip('/')}/generic/actuator/info"
 
 
 class BKIAMProbe(HttpProbe):

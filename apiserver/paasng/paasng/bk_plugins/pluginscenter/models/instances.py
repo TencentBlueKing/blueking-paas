@@ -251,6 +251,7 @@ class PluginRelease(AuditedModel):
     status = models.CharField(default=constants.PluginReleaseStatus.INITIAL, max_length=16)
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
     retryable = models.BooleanField(default=True, help_text="失败后是否可重试")
+    is_rolled_back = models.BooleanField(default=False, help_text="是否已回滚")
 
     creator = BkUserField()
 
@@ -443,13 +444,13 @@ class PluginVisibleRange(AuditedModel):
     @classmethod
     def get_or_initialize_with_default(cls, plugin: "PluginInstance") -> "PluginVisibleRange":
         try:
-            return PluginVisibleRange.objects.get(plugin=plugin)
+            return cls.objects.get(plugin=plugin)
         except PluginVisibleRange.DoesNotExist:
             if hasattr(plugin.pd, "visible_range_definition"):
                 defaults = {"organization": cattr.unstructure(plugin.pd.visible_range_definition.initial)}
             else:
                 defaults = {}
-        visible_range_obj, _c = PluginVisibleRange.objects.get_or_create(plugin=plugin, defaults=defaults)
+        visible_range_obj, _c = cls.objects.get_or_create(plugin=plugin, defaults=defaults)
         return visible_range_obj
 
 

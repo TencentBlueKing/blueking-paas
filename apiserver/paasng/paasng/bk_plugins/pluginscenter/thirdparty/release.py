@@ -40,6 +40,7 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
             "operator": operator,
             "current_stage": version.current_stage,
             "status": version.status,
+            "is_rolled_back": version.is_rolled_back,
         }
     )
     data = slz.data
@@ -65,6 +66,8 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
             "operator": operator,
             "current_stage": version.current_stage,
             "status": version.status,
+            "is_stable": version.is_stable,
+            "is_rolled_back": version.is_rolled_back,
         }
     )
     data = slz.data
@@ -72,5 +75,31 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
         data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
     )
     if not (result := resp.get("result", True)):
-        logger.error(f"create release error: {resp}")
+        logger.error(f"update release error: {resp}")
+    return result
+
+
+def rollback_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str) -> bool:
+    """回滚版本时，回调第三方系统"""
+    release_definition = pd.get_release_revision_by_type(version.type)
+    if not release_definition.api or not release_definition.api.rollback:
+        logger.info("Callback API set to rollback version is not set, skip callback")
+        return True
+
+    slz = PluginReleaseAPIRequestSLZ(
+        {
+            "plugin_id": instance.id,
+            "version": version,
+            "operator": operator,
+            "current_stage": version.current_stage,
+            "status": version.status,
+            "is_rolled_back": version.is_rolled_back,
+        }
+    )
+    data = slz.data
+    resp = utils.make_client(release_definition.api.rollback).call(
+        data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
+    )
+    if not (result := resp.get("result", True)):
+        logger.error(f"rollback release error: {resp}")
     return result

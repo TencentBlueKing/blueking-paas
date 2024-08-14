@@ -126,6 +126,7 @@ class PluginReleaseAPIRequestSLZ(serializers.Serializer):
     operator = serializers.CharField(help_text="操作人")
     current_stage = PluginReleaseStageSLZ()
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="插件版本状态")
+    is_rolled_back = serializers.BooleanField(help_text="是否回滚")
 
 
 class DeployPluginRequestSLZ(serializers.Serializer):

@@ -187,8 +187,8 @@ class BaseApplicationFilter:
             # If order_by field is "latest_operated_at", replace it with original field which has
             # related_name prefix.
             if f.name == "latest_operated_at":
-                f.name = "latest_op__latest_operated_at"
-                queryset = queryset.select_related("latest_op")
+                f.name = "latest_op_record__latest_operated_at"
+                queryset = queryset.select_related("latest_op_record")
                 fields.append(str(f))
                 continue
 

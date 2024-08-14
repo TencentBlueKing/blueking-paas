@@ -580,3 +580,22 @@ export function parentClsContains(cls, el) {
   }
   return false;
 }
+
+/**
+ * 将指定内容以.txt下载
+ * @param {String} cls 类名
+ * @param {Element} el 元素
+ */
+export function downloadTxt(content, fileName) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName; // 指定下载文件的名称
+
+  // 触发点击事件下载文件
+  document.body.appendChild(link);
+  link.click();
+
+  URL.revokeObjectURL(link.href);
+  document.body.removeChild(link);
+}

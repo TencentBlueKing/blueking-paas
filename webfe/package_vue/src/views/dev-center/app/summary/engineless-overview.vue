@@ -278,7 +278,7 @@ export default {
     },
     // 获取最新动态
     getModuleOperations() {
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/operations/?limit=6`).then((response) => {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/audit/records/?limit=6`).then((response) => {
         this.operationsList = [];
         for (const item of response.results) {
           item.at_friendly = moment(item.at).startOf('minute')

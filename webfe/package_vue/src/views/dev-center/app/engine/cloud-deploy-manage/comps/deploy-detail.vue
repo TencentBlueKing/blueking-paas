@@ -17,7 +17,6 @@
 
     <section class="process-table-wrapper">
       <bk-table
-        v-bkloading="{ isLoading: isTableLoading }"
         :data="allProcesses"
         class="process-detail-table"
         border
@@ -67,7 +66,7 @@
                 <div class="text-ellipsis" v-bk-overflow-tips>{{ instance.display_name }}</div>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div v-else class="instance-item-cls-empty cell-container pl30">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
@@ -111,7 +110,15 @@
                 v-for="instance in row.instances"
                 :key="instance.process_name"
               >
-                {{ instance.restart_count }}
+                <span
+                  v-bk-tooltips="{
+                    content: instance.terminated_info?.reason,
+                    placement: 'bottom', offset: '0, -10',
+                    disabled: !instance.terminated_info?.reason
+                  }"
+                  :class="{ tip: instance.terminated_info?.reason }">
+                  {{ instance.restart_count }}
+                </span>
               </div>
             </div>
             <div v-else class="instance-item-cls-empty cell-container">--</div>
@@ -159,7 +166,7 @@
                 class="mr10"
                 :text="true"
                 title="primary"
-                @click="showInstanceLog(instance)">
+                @click="showInstanceLog(instance, row)">
                 {{$t('查看日志')}}
               </bk-button>
               <bk-button
@@ -349,89 +356,6 @@
         </div>
       </div>
     </bk-sideslider>
-    <!-- 日志侧栏 -->
-    <bk-sideslider
-      :width="computedWidth"
-      :is-show.sync="processSlider.isShow"
-      :title="processSlider.title"
-      :quick-close="true"
-    >
-      <div
-        id="log-container"
-        slot="content"
-        class="p0 instance-log-wrapper paas-log-box"
-      >
-        <div class="action-box">
-          <bk-button
-            :key="isLogsLoading"
-            class="fr p0 f12 refresh-btn"
-            style="width: 32px; min-width: 32px;"
-            :disabled="isLogsLoading"
-            @click="loadInstanceLog"
-          >
-            <span class="bk-icon icon-refresh f18" />
-          </bk-button>
-
-          <bk-form
-            form-type="inline"
-            class="fr mr5"
-          >
-            <bk-form-item :label="$t('时间段：')">
-              <bk-select
-                v-model="curLogTimeRange"
-                style="width: 250px;"
-                :clearable="false"
-                :disabled="isLogsLoading"
-              >
-                <bk-option
-                  v-for="(option, i) in chartRangeList"
-                  :id="option.id"
-                  :key="i"
-                  :name="option.name"
-                />
-              </bk-select>
-            </bk-form-item>
-          </bk-form>
-        </div>
-        <div class="instance-textarea">
-          <div
-            class="textarea"
-            style="height: 100%;"
-          >
-            <template v-if="!isLogsLoading && instanceLogs.length">
-              <ul>
-                <li
-                  v-for="(log, idx) of instanceLogs"
-                  :key="idx"
-                  class="stream-log"
-                >
-                  <span
-                    class="mr10"
-                    style="min-width: 140px;"
-                  >{{ log.timestamp }}</span>
-                  <span class="pod-name">{{ log.podShortName }}</span>
-                  <!-- eslint-disable-next-line vue/no-v-html -->
-                  <pre class="message" v-html="log.message || '--'"
-                  />
-                </li>
-              </ul>
-            </template>
-            <template v-else-if="isLogsLoading">
-              <div class="log-loading-container">
-                <div class="log-loading">
-                  {{ $t('日志获取中...') }}
-                </div>
-              </div>
-            </template>
-            <template v-else>
-              <p>
-                {{ $t('暂时没有日志记录') }}
-              </p>
-            </template>
-          </div>
-        </div>
-      </div>
-    </bk-sideslider>
 
     <!-- 查看事件 -->
     <eventDetail
@@ -470,10 +394,22 @@
       @updateStatus="handleProcessStatus"
     >
     </scale-dialog>
+
+    <!-- 日志弹窗 -->
+    <process-log
+      v-model="logConfig.visiable"
+      :title="logConfig.title"
+      :logs="logConfig.logs"
+      :loading="logConfig.isLoading"
+      :time-selection="chartRangeList"
+      :params="logConfig.params"
+      @refresh="refreshLogs">
+    </process-log>
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
@@ -482,6 +418,8 @@ import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 import eventDetail from './event-detail.vue';
+import dayjs from 'dayjs';
+import processLog from '@/components/process-log-dialog/log.vue';
 
 moment.locale('zh-cn');
 // let maxReplicasNum = 0;
@@ -496,6 +434,7 @@ export default {
     chart: ECharts,
     scaleDialog,
     eventDetail,
+    processLog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -593,15 +532,12 @@ export default {
       },
     ];
     return {
-      isTableLoading: false,
-      isColumnExpand: true,
       deployData: {},
       allProcesses: [],
       chartSlider: {
         isShow: false,
         title: '',
       },
-      curChartTimeRange: '1h',
       curLogTimeRange: '1h',
       chartRangeList: [
         {
@@ -628,8 +564,6 @@ export default {
       prevProcessVersion: 0,
       prevInstanceVersion: 0,
       serverTimeout: 30,
-      cloudServerEvent: null,
-
       timerDisplay: this.$t('最近1小时'),
       datePickerOption: {
         // 小于今天的都不能选
@@ -653,12 +587,6 @@ export default {
       },
       watchServerTimer: null,
       curUpdateProcess: {},
-      processSlider: {
-        isShow: false,
-        title: '',
-      },
-      isLogsLoading: false,
-      instanceLogs: [],
       processRefuseDialog: {
         isLoading: false,
         visiable: false,
@@ -674,15 +602,19 @@ export default {
         name: '',
         instanceName: '',
       },
+      logConfig: {
+        visiable: false,
+        isLoading: false,
+        title: '',
+        logs: [],
+        parmas: {},
+      },
     };
   },
   computed: {
     curModuleId() {
       // 当前模块的名称
       return this.deploymentInfo.module_name;
-    },
-    isWatchProcess() {
-      return this.$route.params.id;
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -714,15 +646,6 @@ export default {
       immediate: true,
       // deep: true,
     },
-    // isDialogShowSideslider: {
-    //   handler(value) {
-    //     // 在没有侧栏的情况下
-    //     if (!value
-    //     && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
-    //       this.watchServerPush();
-    //     }
-    //   },
-    // },
     rvData: {
       handler(newVal, oldVal) {
         if (this.isDialogShowSideslider || !oldVal) return;
@@ -866,7 +789,6 @@ export default {
         });
       });
       this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
-      console.log('this.allProcesses', this.allProcesses);
     },
 
     // 进程详情
@@ -1219,8 +1141,6 @@ export default {
           data: patchForm,
         });
 
-        console.log('process', process, res);
-
         if (res.target_status === 'start') {
           process.available_instance_count = res.target_replicas;
         } else {
@@ -1251,7 +1171,6 @@ export default {
 
     // 监听进程事件流
     watchServerPush() {
-      console.log('监听');
       // 停止轮询的标志
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
@@ -1398,28 +1317,29 @@ export default {
 
 
     /**
-     * 展示实例日志侧栏
-     * @param {Object} instance 实例对象
+     * 展示实例/重启日志弹窗
+     * @param {Object} instance  实例对象
+     * @param {Object} row
     */
-    showInstanceLog(instance) {
+    showInstanceLog(instance, row) {
       this.curInstance = instance;
-      this.instanceLogs = [];
-      this.processSlider.isShow = true;
-      this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
+      this.logConfig.visiable = true;
+      this.logConfig.isLoading = true;
+      this.logConfig.params = {
+        appCode: this.appCode,
+        moduleId: this.curModuleId,
+        env: this.environment,
+        processType: row.name,
+        instanceName: instance.name,
+      };
+      this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name} ${this.$t('控制台输出日志')}`;
       this.loadInstanceLog();
-      // 收集初始状态
-      this.initSidebarFormData(this.curLogTimeRange);
     },
 
     /**
      * 加载实例日志
      */
     async loadInstanceLog() {
-      if (this.isLogsLoading) {
-        return false;
-      }
-
-      this.isLogsLoading = true;
       try {
         const { appCode } = this;
         const moduleId = this.curModuleId;
@@ -1434,24 +1354,17 @@ export default {
         });
         const data = res.logs.reverse();
         data.forEach((item) => {
+          item.timestamp = dayjs.unix(item.timestamp).format('YYYY-MM-DD HH:mm:ss');
           item.podShortName = item.pod_name.split('-').reverse()[0];
         });
-        this.instanceLogs = data;
-        // 滚动到底部
-        setTimeout(() => {
-          const container = document.getElementById('log-container');
-          container.scrollTo({
-            top: container?.scrollHeight || 0,
-            behavior: 'smooth',
-          });
-        }, 500);
+        this.logConfig.logs = data;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
-        this.isLogsLoading = false;
+        this.logConfig.isLoading = false;
       }
     },
 
@@ -1545,6 +1458,42 @@ export default {
       this.instanceEventConfig.name = data.display_name;
       this.instanceEventConfig.processName = processName;
       this.instanceEventConfig.instanceName = data.name;
+    },
+
+    preOperation() {
+      this.logConfig.isLoading = true;
+      this.logConfig.logs = [];
+    },
+
+
+    // 刷新日志
+    refreshLogs(data) {
+      this.preOperation();
+      if (data.type === 'realtime') {
+        this.curLogTimeRange = data.time;
+        this.loadInstanceLog();
+      } else {
+        this.getPreviousLogs();
+      }
+    },
+
+    // 重启日志
+    async getPreviousLogs() {
+      try {
+        const logs = await this.$store.dispatch('log/getPreviousLogs', this.logConfig.params);
+        this.logConfig.logs = logs;
+      } catch (e) {
+        if (e.status === 404) {
+          this.logConfig.logs = [];
+          return;
+        }
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.logConfig.isLoading = false;
+      }
     },
   },
 };
@@ -1679,6 +1628,18 @@ export default {
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
+          }
+
+          span.tip {
+            position: relative;
+            &::before {
+              content: '';
+              position: absolute;
+              width: 100%;
+              height: 1px;
+              bottom: 15px;
+              border-bottom: 1px dashed;
+            }
           }
 
           &:last-child {
@@ -1900,25 +1861,6 @@ export default {
           width: 28px;
       }
   }
-  .instance-log-wrapper {
-      height: 100%;
-      overflow: auto;
-
-      .instance-textarea {
-          border: none;
-      }
-  }
-  .instance-textarea {
-      border-radius: 2px;
-      line-height: 19px;
-      font-size: 12px;
-      padding: 50px 20px 10px 20px;
-
-      p {
-          padding: 0px 0;
-          padding-bottom: 5px;
-      }
-    }
   .action-box {
     position: absolute;
     top: 12px;

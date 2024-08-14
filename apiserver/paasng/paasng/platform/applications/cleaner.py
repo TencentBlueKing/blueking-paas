@@ -18,10 +18,11 @@
 import logging
 
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.signals import pre_delete_module
 from paasng.platform.modules.manager import ModuleCleaner
-from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -59,5 +60,12 @@ def delete_all_modules(application: Application, operator: str):
     """删除应用下的所有 Module"""
     modules = application.modules.all()
     for module in modules:
-        pre_delete_module.send(sender=Module, module=module, operator=operator)
         ModuleCleaner(module).clean()
+        # 审计记录
+        add_app_audit_record(
+            app_code=application.code,
+            user=operator,
+            action_id=AppAction.MANAGE_MODULE,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.MODULE,
+        )

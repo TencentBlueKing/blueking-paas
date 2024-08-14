@@ -64,7 +64,7 @@ class UserProfileUpdateFormSLZ(serializers.Serializer):
 
 
 class UserProfileQueryParamSLZ(serializers.Serializer):
-    hide_regular_users = serializers.BooleanField(default=False, required=False)
+    display_regular_users = serializers.BooleanField(default=False, required=False)
     filter_key = serializers.CharField(default=None, required=False, allow_null=True)
 
 

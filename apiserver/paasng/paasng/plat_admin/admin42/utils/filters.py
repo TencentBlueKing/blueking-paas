@@ -54,7 +54,7 @@ class UserProfileFilterBackend(BaseFilterBackend):
         slz = UserProfileQueryParamSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
-        if slz.validated_data["hide_regular_users"]:
+        if not slz.validated_data["display_regular_users"]:
             queryset = queryset.exclude(role=SiteRole.USER.value)
 
         if slz.validated_data["filter_key"]:

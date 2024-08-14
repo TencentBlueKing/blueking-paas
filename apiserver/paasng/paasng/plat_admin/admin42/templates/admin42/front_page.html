@@ -1,5 +1,7 @@
 {% extends "admin42/base.html" %}
 
+{% load admin_utils %}
+
 {% block container %}
 <div class="flex-panel-container" id="flex-panel-container">
     <div v-for="(panel, idx) in panelList "class="flex-item">
@@ -23,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
         data: function () {
             return {
                 panelList: [
+                    {% get_user_site_perms as perm %}
+                    {% if perm.manage_platform %}
                     {
                         name: "平台管理",
                         url: "{% url 'admin.platform.index' %}",
@@ -63,8 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 name: "代码库配置",
                                 url: "{% url 'admin.sourcectl.source_type_spec.manage' %}"
                             },
+                            {
+                                name: "环境变量管理",
+                                url: "{% url 'admin.builtin_config_vars.manage' %}"
+                            },
                         ]
                     },
+                    {% endif %}
+                    {% if perm.manage_app_templates %}
                     {
                         name: "应用配置管理",
                         url: "{% url 'admin.configuration.tmpl.manage' %}",
@@ -83,27 +93,31 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         ]
                     },
-                    {% url 'admin.operation.index' as operation_index_view %}
-                    {% if operation_index_view %}
-                    {
-                        name: "运营数据",
-                        url: "{% url 'admin.operation.index' %}",
-                        children: [
-                            {
-                                name: "应用迁移进展",
-                                url: "{% url 'admin.operation.mgrlegacy.progress' %}"
-                            },
-                            {
-                                name: "应用部署统计",
-                                url: "{% url 'admin.operation.statistics.deploy.apps' %}"
-                            },
-                            {
-                                name: "开发者部署统计",
-                                url: "{% url 'admin.operation.statistics.deploy.developers' %}"
-                            },
-                        ]
-                    },
                     {% endif %}
+                    {% if perm.operate_platform %}
+                        {% url 'admin.operation.index' as operation_index_view %}
+                        {% if operation_index_view %}
+                        {
+                            name: "运营数据",
+                            url: "{% url 'admin.operation.index' %}",
+                            children: [
+                                {
+                                    name: "应用迁移进展",
+                                    url: "{% url 'admin.operation.mgrlegacy.progress' %}"
+                                },
+                                {
+                                    name: "应用部署统计",
+                                    url: "{% url 'admin.operation.statistics.deploy.apps' %}"
+                                },
+                                {
+                                    name: "开发者部署统计",
+                                    url: "{% url 'admin.operation.statistics.deploy.developers' %}"
+                                },
+                            ]
+                        },
+                        {% endif %}
+                    {% endif %}
+                    {% if perm.manage_platform %}
                     {
                         name: "用户管理",
                         url: "{% url 'admin.accountmgr.index' %}",
@@ -118,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             },
                         ]
                     }
+                    {% endif %}
                 ]
             }
         },

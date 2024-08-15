@@ -625,7 +625,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def get_success_release(self, request, pd_id, plugin_id):
         """获取所有成功发布的正式版本"""
         plugin = self.get_plugin_instance()
-        success_release = plugin.prod_releasing_versions.filter(
+        success_release = plugin.prod_versions.filter(
             status=constants.PluginReleaseStatus.SUCCESSFUL, is_rolled_back=False
         ).order_by("-created")
         return Response(data=self.get_serializer(success_release, many=True).data)

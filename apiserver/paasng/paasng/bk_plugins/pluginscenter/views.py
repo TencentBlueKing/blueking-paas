@@ -498,6 +498,14 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         return Response(data=serializers.MetricsSummarySLZ(summary).data)
 
+    def get_basic_info(self, request, pd_id, plugin_id):
+        """插件的基本信息"""
+        plugin = self.get_plugin_instance()
+        stage = plugin.pd.basic_info_definition.api.create.stage
+        client = BkDevopsClient(request.user.username, stage=stage)
+        data = client.get_codecc_plugin_basic_info(plugin_id)
+        return Response(data=data)
+
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     queryset = OperationRecord.objects.all().order_by("-created")

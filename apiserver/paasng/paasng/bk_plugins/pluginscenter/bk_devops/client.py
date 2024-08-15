@@ -96,7 +96,9 @@ class BkDevopsClient(BaseBkDevopsClient):
             )
             raise BkDevopsApiError(resp["message"])
         data = resp["data"]
-        return cattrs.structure(data, definitions.CodeccPluginbasicInfo)
+        return data
+        # TODO Codecc 还未确定数据的返回格式
+        # return cattrs.structure(data, definitions.CodeccPluginbasicInfo)
 
 
 class PipelineController(BaseBkDevopsClient):

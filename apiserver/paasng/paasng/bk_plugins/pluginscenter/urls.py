@@ -33,6 +33,10 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/basic_info/",
+        views.PluginInstanceViewSet.as_view({"get": "get_basic_info"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/extra_fields/",
         views.PluginInstanceViewSet.as_view({"post": "update_extra_fields"}),
     ),

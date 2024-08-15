@@ -543,6 +543,8 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             queryset = queryset.filter(status__in=status_list)
         if creator := query_params.get("creator"):
             queryset = queryset.filter(creator=creator)
+        if is_rolled_back := query_params.get("is_rolled_back"):
+            queryset = queryset.filter(is_rolled_back=is_rolled_back)
         return queryset
 
     def retrieve(self, request, pd_id, plugin_id, release_id):

@@ -43,6 +43,7 @@ class Test__sync_processes:
                     replicas=1,
                     command=["./start.sh"],
                     res_quota_plan="4C1G",
+                    target_port=30000,
                     probes=ProbeSet(
                         liveness=Probe(
                             http_get=HTTPGetAction(port="${PORT}", path="/healthz"),
@@ -52,7 +53,7 @@ class Test__sync_processes:
                             success_threshold=1,
                             failure_threshold=3,
                         ),
-                        readiness=Probe(tcp_socket=TCPSocketAction(port=5000)),
+                        readiness=Probe(tcp_socket=TCPSocketAction(port=30000)),
                     ),
                 ),
                 Process(
@@ -76,10 +77,11 @@ class Test__sync_processes:
         assert specs.count() == 1
 
         spec = specs.first()
+        assert spec.port == 30000
         assert spec.probes.liveness.http_get.port == "${PORT}"
         assert spec.probes.liveness.initial_delay_seconds == 30
         assert spec.probes.liveness.period_seconds == 5
-        assert spec.probes.readiness.tcp_socket.port == 5000
+        assert spec.probes.readiness.tcp_socket.port == 30000
         assert spec.plan_name == "4C1G"
 
         spec = ModuleProcessSpec.objects.get(module=bk_module, name="sleep")

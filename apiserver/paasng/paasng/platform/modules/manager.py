@@ -283,7 +283,7 @@ class ModuleInitializer:
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
-                port=proc_spec.get("port", None),
+                target_port=proc_spec.get("port", None),
                 probes=proc_spec.get("probes", None),
             )
             for proc_spec in bkapp_spec["processes"]

@@ -128,6 +128,7 @@ class TestCreateCloudNativeModule:
                                 "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
                                 "prod": {"environment_name": "prod", "target_replicas": 2, "plan_name": "2C1G"},
                             },
+                            "port": 30000,
                         }
                     ],
                     "hook": {
@@ -150,6 +151,7 @@ class TestCreateCloudNativeModule:
 
         process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
         assert process_spec.command == ["bash", "/app/start_web.sh"]
+        assert process_spec.port == 30000
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2
 

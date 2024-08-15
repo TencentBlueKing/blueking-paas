@@ -42,12 +42,7 @@ class Test__sync_env_vars:
 
 class Test__sync_preset_env_vars:
     def test_integrated(self, bk_module):
-        G(
-            PresetEnvVariable,
-            module=bk_module,
-            environment_name=ConfigVarEnvName.GLOBAL,
-            key="KEY_EXISTING",
-        )
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="KEY_EXISTING")
         global_env_vars = [EnvVar(name="KEY1", value="foo"), EnvVar(name="KEY2", value="foo")]
         overlay_env_vars = [EnvVarOverlay(env_name="stag", name="KEY3", value="foo")]
         ret = sync_preset_env_vars(bk_module, global_env_vars, overlay_env_vars)
@@ -57,3 +52,9 @@ class Test__sync_preset_env_vars:
         assert ret.updated_num == 0
         assert ret.created_num == 3
         assert ret.deleted_num == 1
+
+    def test_delete(self, bk_module):
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="FOO", value="foo")
+        G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="BAR", value="bar")
+        ret = sync_preset_env_vars(bk_module, [], [])
+        assert ret.deleted_num == 2

@@ -62,6 +62,7 @@ class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
 class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
     """特性开关"""
 
+    # TODO allow_multiple_image has been deprecated, remove it in the future
     allow_multiple_image = serializers.BooleanField(default=False, help_text="是否允许使用多个不同镜像")
 
 

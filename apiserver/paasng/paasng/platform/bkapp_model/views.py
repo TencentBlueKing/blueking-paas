@@ -145,7 +145,6 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "port": proc_spec.port,
                 "env_overlay": {
                     environment_name.value: {
-                        "environment_name": environment_name.value,
                         "plan_name": proc_spec.get_plan_name(environment_name),
                         "target_replicas": proc_spec.get_target_replicas(environment_name),
                         "autoscaling": bool(proc_spec.get_autoscaling(environment_name)),
@@ -177,7 +176,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
-                port=proc_spec.get("port", None),
+                target_port=proc_spec.get("port", None),
                 probes=proc_spec.get("probes", None),
             )
             for proc_spec in proc_specs

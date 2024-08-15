@@ -14,22 +14,16 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import Optional
+from rest_framework.response import Response
+from rest_framework.viewsets import ViewSet
 
-from pydantic import BaseModel
-
-from paasng.utils.structure import register
+from paasng.bk_plugins.pluginscenter.bk_user.client import BkUserManageClient
 
 
-@register
-class DepartmentDetail(BaseModel):
-    """组织架构的详情
+class UserManageView(ViewSet):
+    """View for querying user organizational structure information"""
 
-    :param id : 部门 ID
-    :param name: 部门名称
-    :param parent: 该部门的父部门，为 None 时 则代表是顶级组织
-    """
-
-    id: int
-    name: str
-    parent: Optional[int]
+    def get_department(self, request, dept_id):
+        client = BkUserManageClient()
+        data = client.get_all_parent_departments(dept_id)
+        return Response(data)

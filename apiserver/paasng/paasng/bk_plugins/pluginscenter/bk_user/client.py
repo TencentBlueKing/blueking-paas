@@ -13,6 +13,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import List
+
 import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError
 
@@ -27,6 +29,10 @@ class BkUserManageClient:
         self.client = get_client_by_username("admin").api
 
     def retrieve_department(self, department_id: int) -> DepartmentDetail:
+        """获取部门详情
+
+        :param department_id: 部门 ID
+        """
         try:
             resp = self.client.retrieve_department(params={"id": department_id})
         except APIGatewayResponseError:
@@ -37,3 +43,19 @@ class BkUserManageClient:
 
         data = resp["data"]
         return cattrs.structure(data, DepartmentDetail)
+
+    def get_all_parent_departments(self, department_id: int) -> List[DepartmentDetail]:
+        """递归获取所有父级部门
+
+        :param department_id: 部门 ID
+        """
+
+        def _get_parents(dept_id: int, collected: List[DepartmentDetail]) -> List[DepartmentDetail]:
+            cur_department = self.retrieve_department(dept_id)
+            collected.append(cur_department)
+            # 当前组织的父级部门不为空时，则递归轮询获取
+            if cur_department.parent:
+                return _get_parents(cur_department.parent, collected)
+            return collected
+
+        return _get_parents(department_id, [])

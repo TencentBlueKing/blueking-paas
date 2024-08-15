@@ -135,7 +135,6 @@ class TestModuleProcessSpecViewSet:
                 "port": 5000,
                 "env_overlay": {
                     "stag": {
-                        "environment_name": "stag",
                         "plan_name": "default",
                         "target_replicas": 2,
                         "autoscaling": False,
@@ -149,12 +148,10 @@ class TestModuleProcessSpecViewSet:
                 "args": ["celery", "beat"],
                 "env_overlay": {
                     "stag": {
-                        "environment_name": "stag",
                         "plan_name": "default",
                         "target_replicas": 1,
                     },
                     "prod": {
-                        "environment_name": "prod",
                         "plan_name": "default",
                         "target_replicas": 1,
                         "autoscaling": True,
@@ -185,6 +182,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["image"] == "example.com/foo"
         assert proc_specs[0]["command"] == ["python", "-m"]
         assert proc_specs[0]["args"] == ["http.server"]
+        assert proc_specs[0]["port"] == 5000
         assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
         assert not proc_specs[0]["env_overlay"]["stag"]["autoscaling"]
         assert proc_specs[0]["probes"] == probes_cfg

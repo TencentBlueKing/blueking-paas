@@ -81,8 +81,12 @@ def sync_preset_env_vars(
     :param global_env_vars: The default variables
     :param overlay_env_vars: The environment-specified variables
     :return: sync result
-
     """
+    ret = CommonSyncResult()
+
+    if not global_env_vars and not overlay_env_vars:
+        ret.deleted_num, _ = PresetEnvVariable.objects.filter(module=module).delete()
+        return ret
 
     config_vars: Dict[str, Dict[str, PresetEnvVariable]] = defaultdict(dict)
     for var in global_env_vars:
@@ -101,7 +105,6 @@ def sync_preset_env_vars(
             value=overlay_var.value,
         )
 
-    ret = CommonSyncResult()
     for env_name, env_config_vars in config_vars.items():
         for var in env_config_vars.values():
             _, created = PresetEnvVariable.objects.update_or_create(

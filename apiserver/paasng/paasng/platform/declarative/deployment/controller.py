@@ -184,19 +184,19 @@ class DeploymentDeclarativeController:
             if svc_disc := get_svc_discovery(spec=desc.spec):
                 sync_svc_discovery(module=module, svc_disc=svc_disc)
 
+            # 为了保证 probe 对象不遗留，对 probe 进行全量删除和全量更新
+            # 对该环境下的 probe 进行全量删除
+            self.delete_probes()
+
+            # 根据配置，对 probe 进行全量更新
+            for process_type, process in processes.items():
+                self.update_probes(process_type=process_type, probes=process.probes)
+
         # 导入预定义环境变量
         sync_preset_env_vars(module, *get_preset_env_vars(desc.spec))
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
-
-        # 为了保证 probe 对象不遗留，对 probe 进行全量删除和全量更新
-        # 对该环境下的 probe 进行全量删除
-        self.delete_probes()
-
-        # 根据配置，对 probe 进行全量更新
-        for process_type, process in processes.items():
-            self.update_probes(process_type=process_type, probes=process.probes)
 
         return result
 

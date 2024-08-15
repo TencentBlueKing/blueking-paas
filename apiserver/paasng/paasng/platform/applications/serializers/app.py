@@ -34,6 +34,7 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.serializers import UserNameField
 from paasng.utils.validators import RE_APP_SEARCH
 
 from .fields import ApplicationField, AppNameField
@@ -195,6 +196,8 @@ class ApplicationSLZ(serializers.ModelSerializer):
     logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的 Logo 地址")
     config_info = serializers.DictField(read_only=True, help_text="应用的额外状态信息")
     modules = serializers.SerializerMethodField(help_text="应用各模块信息列表")
+    creator = UserNameField()
+    owner = UserNameField()
 
     def get_modules(self, application: Application):
         # 将 default_module 排在第一位

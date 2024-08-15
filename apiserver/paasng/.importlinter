@@ -26,7 +26,7 @@ ignore_imports =
     ** -> paasng.platform.sourcectl.**
     ** -> paasng.platform.templates.**
     # Other ignores
-    paas_wl.bk_app.processes.models -> paasng.platform.declarative.deployment.resources
+    paas_wl.bk_app.processes.models -> paasng.platform.bkapp_model.entities
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
     # legacydb
     paasng.infras.legacydb.adaptors -> paasng.accessories.publish.sync_market.*

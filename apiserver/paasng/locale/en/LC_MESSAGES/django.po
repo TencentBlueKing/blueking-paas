@@ -809,10 +809,8 @@ msgstr "Delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
 #: paasng/misc/audit/constants.py:88
-#, fuzzy
-#| msgid "已下架"
 msgid "下架"
-msgstr "Archived"
+msgstr "archive"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:148
 msgid "重新上架"
@@ -1718,15 +1716,15 @@ msgstr "renew"
 msgid "部署"
 msgstr "Deploy"
 
-#: paasng/misc/audit/models.py:103
-#, python-brace-format
-msgid " {self.module_name} 模块{env}"
-msgstr " {self.module_name} module {env}"
-
 #: paasng/misc/audit/models.py:105
 #, python-brace-format
 msgid " {self.module_name} 模块"
 msgstr " {self.module_name} module"
+
+#: paasng/misc/audit/models.py:103
+#, python-brace-format
+msgid " {self.module_name} 模块{env}"
+msgstr " {self.module_name} module {env}"
 
 #: paasng/misc/audit/models.py:107
 #, python-brace-format
@@ -1736,7 +1734,7 @@ msgstr "{env}"
 #: paasng/misc/audit/models.py:122
 #, python-brace-format
 msgid "{user} {operation}{module_env_info}{result}"
-msgstr "{user} {operation}{module_env_info}{result}"
+msgstr "{user} {operation}{module_env_info} {result}"
 
 #: paasng/misc/audit/models.py:127
 #, python-brace-format

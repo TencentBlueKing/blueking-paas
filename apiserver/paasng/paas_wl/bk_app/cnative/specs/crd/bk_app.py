@@ -21,14 +21,12 @@ Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 
 import datetime
-import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
-from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
 
 from .metadata import ObjectMetadata
@@ -106,46 +104,11 @@ class Probe(BaseModel):
     successThreshold: Optional[int] = 1
     failureThreshold: Optional[int] = 3
 
-    def to_snake_case(self) -> Dict[str, Any]:
-        """将探针字段转换成下划线格式"""
-        exec_handler, http_get_handler, tcp_socket_handler = None, None, None
-        if self.exec:
-            exec_handler = {"command": self.exec.command}
-        elif self.httpGet:
-            http_get_handler = {
-                "path": self.httpGet.path,
-                "port": self.httpGet.port,
-                "http_headers": [{"name": h.name, "value": h.value} for h in self.httpGet.httpHeaders],
-                "host": self.httpGet.host,
-                "scheme": self.httpGet.scheme,
-            }
-        elif self.tcpSocket:
-            tcp_socket_handler = {"port": self.tcpSocket.port, "host": self.tcpSocket.host}
-
-        return {
-            "exec": exec_handler,
-            "http_get": http_get_handler,
-            "tcp_socket": tcp_socket_handler,
-            "initial_delay_seconds": self.initialDelaySeconds,
-            "timeout_seconds": self.timeoutSeconds,
-            "period_seconds": self.periodSeconds,
-            "success_threshold": self.successThreshold,
-            "failure_threshold": self.failureThreshold,
-        }
-
 
 class ProbeSet(BaseModel):
     liveness: Optional[Probe] = None
     readiness: Optional[Probe] = None
     startup: Optional[Probe] = None
-
-    def to_snake_case(self) -> Dict[str, Any]:
-        """将探针字段转换成下划线格式"""
-        return {
-            "liveness": self.liveness.to_snake_case() if self.liveness else None,
-            "readiness": self.readiness.to_snake_case() if self.readiness else None,
-            "startup": self.startup.to_snake_case() if self.startup else None,
-        }
 
 
 class BkAppProcess(BaseModel):
@@ -161,37 +124,12 @@ class BkAppProcess(BaseModel):
     autoscaling: Optional[AutoscalingSpec] = None
     probes: Optional[ProbeSet] = None
 
-    # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
-    proc_command: Optional[str] = Field(None)
-
-    def __init__(self, **data):
-        # 处理 specVersion: 3 中驼峰传递 procCommand
-        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
-        if proc_command := data.get("procCommand"):
-            data["proc_command"] = proc_command
-            data["command"] = None
-            data["args"] = shlex.split(proc_command)
-        super().__init__(**data)
-
-    def get_proc_command(self) -> str:
-        """get_proc_command: 生成 Procfile 文件中对应的命令行"""
-        if self.proc_command:
-            return self.proc_command
-        return generate_bash_command_with_tokens(self.command or [], self.args or [])
-
 
 class Hook(BaseModel):
     """A hook object"""
 
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
-
-    def __init__(self, **data):
-        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
-        if proc_command := data.get("procCommand"):
-            data["command"] = None
-            data["args"] = shlex.split(proc_command)
-        super().__init__(**data)
 
 
 class BkAppHooks(BaseModel):
@@ -328,27 +266,17 @@ class BkAppAddon(BaseModel):
     """
 
     name: str
-    specs: List[BkAppAddonSpec] = Field(default_factory=list)
+    specs: Optional[List[BkAppAddonSpec]] = Field(default_factory=list)
     sharedFromModule: Optional[str] = None
 
 
-@register
 class HostAlias(BaseModel):
     """A host alias entry"""
 
     ip: str
     hostnames: List[str]
 
-    def __hash__(self):
-        return hash((self.ip, tuple(sorted(self.hostnames))))
 
-    def __eq__(self, other):
-        if isinstance(other, HostAlias):
-            return self.ip == other.ip and sorted(self.hostnames) == sorted(other.hostnames)
-        return False
-
-
-@register
 class DomainResolution(BaseModel):
     """Domain resolution config"""
 
@@ -356,20 +284,11 @@ class DomainResolution(BaseModel):
     hostAliases: List[HostAlias] = Field(default_factory=list)
 
 
-@register
 class SvcDiscEntryBkSaaS(BaseModel):
     """A service discovery entry that represents an application and an optional module."""
 
     bkAppCode: str
     moduleName: Optional[str] = None
-
-    def __hash__(self):
-        return hash((self.bkAppCode, self.moduleName))
-
-    def __eq__(self, other):
-        if isinstance(other, SvcDiscEntryBkSaaS):
-            return self.bkAppCode == other.bkAppCode and self.moduleName == other.moduleName
-        return False
 
 
 class SvcDiscConfig(BaseModel):

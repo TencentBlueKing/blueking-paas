@@ -27,7 +27,7 @@ from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
+from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError

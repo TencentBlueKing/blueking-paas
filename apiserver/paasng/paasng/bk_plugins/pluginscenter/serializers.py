@@ -289,9 +289,10 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
             )
 
         # 如果 ITSM 的审批单据已经是结束状态，则转态为灰度中
-        ticket_info = get_ticket_status(instance.latest_release_strategy.itsm_detail.sn)
-        if ticket_info.current_status in ItsmTicketStatus.completed_status():
-            return CodeccDisplayStatus.IN_GRAY
+        if instance.latest_release_strategy.itsm_detail:
+            ticket_info = get_ticket_status(instance.latest_release_strategy.itsm_detail.sn)
+            if ticket_info.current_status in ItsmTicketStatus.completed_status():
+                return CodeccDisplayStatus.IN_GRAY
 
         return (
             CodeccDisplayStatus.FULL_APPROVAL_IN_PROGRESS

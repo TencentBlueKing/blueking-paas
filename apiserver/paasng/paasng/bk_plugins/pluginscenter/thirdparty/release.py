@@ -60,6 +60,9 @@ def create_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
     release_definition = pd.get_release_revision_by_type(version.type)
+    if not release_definition.api:
+        logger.info("Callback API is not set, skip callback")
+        return True
     return callback_to_third_party(release_definition.api.create, instance, version, operator)
 
 
@@ -69,10 +72,16 @@ def update_release(pd: PluginDefinition, instance: PluginInstance, version: Plug
     - 仅插件管理员声明了回调 API 时才会触发回调
     """
     release_definition = pd.get_release_revision_by_type(version.type)
+    if not release_definition.api:
+        logger.info("Callback API is not set, skip callback")
+        return True
     return callback_to_third_party(release_definition.api.update, instance, version, operator)
 
 
 def rollback_release(pd: PluginDefinition, instance: PluginInstance, version: PluginRelease, operator: str) -> bool:
     """回滚版本时，回调第三方系统"""
     release_definition = pd.get_release_revision_by_type(version.type)
+    if not release_definition.api:
+        logger.info("Callback API is not set, skip callback")
+        return True
     return callback_to_third_party(release_definition.api.rollback, instance, version, operator)

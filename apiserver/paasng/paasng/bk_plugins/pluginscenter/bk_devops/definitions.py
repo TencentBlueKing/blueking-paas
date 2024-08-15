@@ -297,3 +297,24 @@ class PipelineLogModel(BaseModel):
     hasMore: Optional[bool]
     logs: List[PipelineLogLine]
     timeUsed: Optional[int]
+
+
+@register
+class CodeccPluginbasicInfo(BaseModel):
+    """Codecc 工具插件基本信息
+
+    :param devLanguage: 工具开发语言
+    :param toolCnTypes: 工具类别中文版（列表）
+    :param langList: 适用语言列表
+    :param needBuildScript: 是否需要提供编译脚本
+    :param checkerNum: 规则数
+    :param briefIntroduction: 工具简介，一句话介绍语
+    """
+
+    devLanguage: str
+    toolCnTypes: List[str]
+    langList: List[str]
+    needBuildScript: bool
+    checkerNum: int
+    briefIntroduction: str
+    description: str

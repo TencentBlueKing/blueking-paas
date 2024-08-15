@@ -101,6 +101,10 @@ urlpatterns = [
         views.PluginReleaseViewSet.as_view({"post": "re_release"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/success/",
+        views.PluginReleaseViewSet.as_view({"get": "get_success_release"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/rollback/",
         views.PluginReleaseViewSet.as_view({"post": "rollback_release"}),
     ),

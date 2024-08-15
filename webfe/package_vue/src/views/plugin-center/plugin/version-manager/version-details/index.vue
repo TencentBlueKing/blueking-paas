@@ -4,6 +4,7 @@
       :name="$t('版本发布')"
       :version-data="versionData"
       :status-map="CODECC_RELEASE_STATUS"
+      :is-codecc="true"
     />
     <!-- 版本发布 -->
     <paas-content-loader
@@ -96,6 +97,7 @@
             :theme="'default'"
             type="submit"
             :disabled="!versionData.latest_release_strategy?.ticket_info?.can_withdraw"
+            @click="viewApprovalDetails"
           >
             {{ $t('撤销提单') }}
           </bk-button>

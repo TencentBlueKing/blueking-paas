@@ -95,6 +95,7 @@
       <bk-table
         v-else
         ref="versionTable"
+        :key="curVersionType"
         v-bkloading="{ isLoading: isTableLoading }"
         class="pugin-version-list"
         :data="versionList"
@@ -163,7 +164,22 @@
             <span>{{ row.created || '--' }}</span>
           </template>
         </bk-table-column>
+        <!-- Codecc -->
         <bk-table-column
+          v-if="isCodecc"
+          :label="$t('发布状态')"
+          prop="status"
+          column-key="status"
+          :filters="codeccFilters"
+          :filter-multiple="true"
+        >
+          <template slot-scope="{ row }">
+            <div :class="['dot', row.display_status]" />
+            <span class="status-text">{{ $t(CODECC_RELEASE_STATUS[row.display_status]) || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          v-else
           :label="$t('状态')"
           prop="status"
           column-key="status"
@@ -355,7 +371,7 @@
 <script>
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import versionManageTitle from './comps/version-manage-title.vue';
-import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE, PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
+import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE, PLUGIN_TEST_VERSION_STATUS, CODECC_RELEASE_STATUS } from '@/common/constants';
 import { formatDate } from '@/common/tools';
 import { clearFilter } from '@/common/utils';
 import auth from '@/auth';
@@ -399,18 +415,13 @@ export default {
       accessDisabledTips: '',
       curVersionType: 'test',
       user: {},
+      codeccFilters: this.formatStatusFilters(CODECC_RELEASE_STATUS),
+      CODECC_RELEASE_STATUS,
     };
   },
   computed: {
     statusFilters() {
-      const statusList = [];
-      for (const key in this.curVersionStatus) {
-        statusList.push({
-          value: key,
-          text: this.$t(this.curVersionStatus[key]),
-        });
-      }
-      return statusList;
+      return this.formatStatusFilters(this.curVersionStatus);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -431,8 +442,12 @@ export default {
     },
     // Codecc 空状态
     isCodeccEmpty() {
+      if (this.filterStatus.length) return false;
       if (!this.versionList.length && this.curPluginInfo.has_test_version && this.isOfficialVersion) return true;
       return false;
+    },
+    isCodecc() {
+      return this.curPluginInfo.has_test_version && this.isOfficialVersion;
     },
   },
   watch: {
@@ -488,6 +503,18 @@ export default {
       this.getVersionList(newPage);
     },
 
+    // 格式化当前插件状态
+    formatStatusFilters(data) {
+      const statusList = [];
+      for (const key in data) {
+        statusList.push({
+          value: key,
+          text: this.$t(data[key]),
+        });
+      }
+      return statusList;
+    },
+
     formatPageParams(page) {
       const curPage = page || this.pagination.current;
       const params = {
@@ -504,17 +531,18 @@ export default {
       return params;
     },
 
+    // 格式化状态
     formatStatusParams() {
-      // 状态
       let statusParams = '';
       if (this.filterStatus.length) {
+        const key = this.isCodecc ? 'display_status' : 'status';
         let paramsText = '';
         this.filterStatus.forEach((item) => {
           // 选择发布中直接传递 status=pending&status=inital
           if (item === 'pending') {
-            paramsText += 'status=pending&status=initial&';
+            paramsText += `${key}=pending&${key}=initial&`;
           } else {
-            paramsText += `status=${item}&`;
+            paramsText += `${key}=${item}&`;
           }
         });
         statusParams = paramsText.substring(0, paramsText.length - 1);
@@ -802,21 +830,33 @@ export default {
   border-radius: 50%;
   display: inline-block;
   margin-right: 3px;
-}
-// .successful {
-//     background: #E5F6EA;
-//     border: 1px solid #3FC06D;
-// }
 
-.successful {
+  &.successful,
+  &.fully_released {
   background: #e5f6ea;
   border: 1px solid #3fc06d;
-}
+  }
 
-.failed,
-.interrupted {
-  background: #ffe6e6;
-  border: 1px solid #ea3636;
+  &.failed,
+  &.interrupted,
+  &.full_approval_failed,
+  &.gray_approval_failed {
+    background: #ffe6e6;
+    border: 1px solid #ea3636;
+  }
+  &.full_approval_in_progress,
+  &.gray_approval_in_progress {
+    background: #FFE8C3;
+    border: 1px solid #FF9C01;
+  }
+  &.in_gray {
+    background: #E1ECFF;
+    border: 1px solid #699DF4;
+  }
+  &.rolled_back {
+    background: #F0F1F5;
+    border: 1px solid #DCDEE5;
+  }
 }
 
 .tag {

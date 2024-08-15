@@ -82,25 +82,48 @@
       </bk-form>
 
       <view-mode v-else>
-        <ul class="release-strategy-cls" v-if="data?.latest_release_strategy">
+        <ul
+          class="release-strategy-cls"
+          v-if="data?.latest_release_strategy"
+        >
           <li class="item">
             <div class="label">{{ $t('发布策略') }}：</div>
             <div class="value">
               {{ releaseStrategyMap.find(v => v.value === data.latest_release_strategy.strategy)?.name }}
             </div>
           </li>
-          <li class="item" v-if="data.latest_release_strategy.strategy === 'gray'">
+          <li
+            class="item"
+            v-if="data.latest_release_strategy.strategy === 'gray'"
+          >
             <div class="label">{{ $t('灰度范围') }}：</div>
             <div class="value range">
               <div class="c-item">
                 <p class="c-title">{{ $t('蓝盾项目') }}：</p>
-                <p class="c-value">{{ data.latest_release_strategy.bkci_project.join() }}</p>
+                <p
+                  class="c-value"
+                >
+                  {{
+                    data.latest_release_strategy.bkci_project?.length
+                      ? data.latest_release_strategy.bkci_project.join()
+                      : '--'
+                  }}
+                </p>
               </div>
               <div class="c-item">
                 <p class="c-title">{{ $t('组织') }}：</p>
-                <ul class="c-value">
-                  <li v-for="item in data.latest_release_strategy.organization" :key="item.id">{{ item.name }}</li>
+                <ul
+                  class="c-value"
+                  v-if="data.latest_release_strategy.organization?.length"
+                >
+                  <li
+                    v-for="item in data.latest_release_strategy.organization"
+                    :key="item.id"
+                  >
+                    {{ item.name }}
+                  </li>
                 </ul>
+                <p v-else class="c-value">--</p>
               </div>
             </div>
           </li>
@@ -226,7 +249,9 @@ export default {
     // 重新申请设置默认值
     setVersionDefaultValue() {
       if (!this.versionData) return;
-      const { latest_release_strategy: { strategy, bkci_project, organization } } = this.versionData;
+      const {
+        latest_release_strategy: { strategy, bkci_project, organization },
+      } = this.versionData;
       this.releaseStrategy = {
         strategy,
         bkci_project,
@@ -292,10 +317,10 @@ export default {
     .range {
       min-width: 323px;
       padding: 12px 16px;
-      background: #F5F7FA;
+      background: #f5f7fa;
       border-radius: 2px;
       font-size: 12px;
-      color: #979BA5;
+      color: #979ba5;
 
       .c-item {
         margin-bottom: 16px;

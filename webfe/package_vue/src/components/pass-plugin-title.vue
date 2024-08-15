@@ -23,12 +23,12 @@
             </div>
           </div>
           <div class="status-wrapper">
-            <round-loading v-if="versionData.status === 'pending' || versionData.status === 'initial'" />
+            <round-loading v-if="!isCodecc && ['pending', 'initial'].includes(versionData.status)" />
             <div
               v-else
-              :class="['dot', versionData.status]"
+              :class="['dot', versionData[statusKey]]"
             />
-            <span class="pl5">{{ statusMap[versionData.status] }}</span>
+            <span class="pl5">{{ statusMap[versionData[statusKey]] }}</span>
           </div>
         </template>
         <a
@@ -81,11 +81,20 @@ export default {
     statusMap: {
       type: Object,
     },
+    isCodecc: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
       showBackIcon: false,
     };
+  },
+  computed: {
+    statusKey() {
+      return this.isCodecc ? 'display_status' : 'status';
+    },
   },
   watch: {
     $route: {
@@ -194,14 +203,30 @@ export default {
         display: inline-block;
         margin-right: 3px;
       }
-      .successful {
+      .successful,
+      .fully_released {
         background: #e5f6ea;
         border: 1px solid #3fc06d;
       }
       .failed,
-      .interrupted {
+      .interrupted,
+      .full_approval_failed,
+      .gray_approval_failed {
         background: #ffe6e6;
         border: 1px solid #ea3636;
+      }
+      .full_approval_in_progress,
+      .gray_approval_in_progress {
+        background: #FFE8C3;
+        border: 1px solid #FF9C01;
+      }
+      .in_gray {
+        background: #E1ECFF;
+        border: 1px solid #699DF4;
+      }
+      .rolled_back {
+        background: #F0F1F5;
+        border: 1px solid #DCDEE5;
       }
     }
     .icon-cls-back {

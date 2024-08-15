@@ -132,7 +132,7 @@ export default {
       rules: {
         projectIds: [
           {
-            regex: /^([a-z][a-zA-Z0-9-]+)(;[a-z][a-zA-Z0-9-]+)*;?$/,
+            regex: /^([a-z][a-zA-Z0-9-]+)(;[a-z][a-zA-Z0-9-]+)*;?$|^$/,
             message: this.$t('Project ID是字符+数字组成，并以小写字母开头，Project ID之间用英文分号分隔'),
             trigger: 'blur',
           },

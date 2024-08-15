@@ -13,3 +13,27 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import cattrs
+from bkapi_client_core.exceptions import APIGatewayResponseError
+
+from paasng.bk_plugins.pluginscenter.bk_user.backend.esb import get_client_by_username
+from paasng.bk_plugins.pluginscenter.bk_user.definitions import DepartmentDetail
+from paasng.bk_plugins.pluginscenter.bk_user.exceptions import BkUserManageApiError, BkUserManageGatewayServiceError
+
+
+class BkUserManageClient:
+    def __init__(self):
+        # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
+        self.client = get_client_by_username("admin").api
+
+    def retrieve_department(self, department_id: int) -> DepartmentDetail:
+        try:
+            resp = self.client.retrieve_department(params={"id": department_id})
+        except APIGatewayResponseError:
+            raise BkUserManageGatewayServiceError("Failed to list custom collector config")
+
+        if not resp["result"]:
+            raise BkUserManageApiError(resp["message"])
+
+        data = resp["data"]
+        return cattrs.structure(data, DepartmentDetail)

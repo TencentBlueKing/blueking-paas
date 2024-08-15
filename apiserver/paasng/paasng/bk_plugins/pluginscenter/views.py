@@ -625,10 +625,17 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def get_success_release(self, request, pd_id, plugin_id):
         """获取所有成功发布的正式版本"""
         plugin = self.get_plugin_instance()
-        success_release = plugin.prod_versions.filter(
+        success_queryset = plugin.prod_versions.filter(
             status=constants.PluginReleaseStatus.SUCCESSFUL, is_rolled_back=False
         ).order_by("-created")
-        return Response(data=self.get_serializer(success_release, many=True).data)
+
+        page = self.paginate_queryset(success_queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(success_queryset, many=True)
+        return Response(serializer.data)
 
     @atomic
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})

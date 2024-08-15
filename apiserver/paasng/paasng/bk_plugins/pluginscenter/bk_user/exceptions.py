@@ -15,25 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from bkapi_client_core.esb import ESBClient, Operation, OperationGroup, bind_property
-from bkapi_client_core.esb import generic_type_partial as _partial
-from bkapi_client_core.esb.django_helper import get_client_by_username as _get_client_by_username
+
+class BkUserManageGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bk_uer's
+    API Gateway resource. It's a wrapper class of API SDK's original exceptions
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
 
 
-class Group(OperationGroup):
-    # 查询单个部门信息
-    retrieve_department = bind_property(
-        Operation,
-        name="retrieve_department",
-        method="GET",
-        path="/api/c/compapi/v2/usermanage/retrieve_department/",
-    )
-
-
-class Client(ESBClient):
-    """ESB Components"""
-
-    api = bind_property(Group, name="api")
-
-
-get_client_by_username = _partial(Client, _get_client_by_username)
+class BkUserManageApiError(BkUserManageGatewayServiceError):
+    """When calling the bk_user api, bk_log returns an error message,
+    which needs to be captured and displayed to the user on the page
+    """

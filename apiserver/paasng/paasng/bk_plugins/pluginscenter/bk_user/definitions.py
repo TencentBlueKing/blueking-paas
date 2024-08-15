@@ -14,26 +14,22 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import Optional
 
-from bkapi_client_core.esb import ESBClient, Operation, OperationGroup, bind_property
-from bkapi_client_core.esb import generic_type_partial as _partial
-from bkapi_client_core.esb.django_helper import get_client_by_username as _get_client_by_username
+from pydantic import BaseModel
 
-
-class Group(OperationGroup):
-    # 查询单个部门信息
-    retrieve_department = bind_property(
-        Operation,
-        name="retrieve_department",
-        method="GET",
-        path="/api/c/compapi/v2/usermanage/retrieve_department/",
-    )
+from paasng.utils.structure import register
 
 
-class Client(ESBClient):
-    """ESB Components"""
+@register
+class DepartmentDetail(BaseModel):
+    """组织架构的详情
 
-    api = bind_property(Group, name="api")
+    :param id : 部门 ID
+    :param name: 部门名称
+    :param parent: 该部门的父部门，为 None 时 则代表是顶级组织
+    """
 
-
-get_client_by_username = _partial(Client, _get_client_by_username)
+    id: int
+    name: str
+    parent: Optional[str]

@@ -192,11 +192,11 @@ class DeploymentDeclarativeController:
             for process_type, process in processes.items():
                 self.update_probes(process_type=process_type, probes=process.probes)
 
-            if desc.bk_monitor:
-                self.update_bkmonitor(desc.bk_monitor)
-
         # 导入预定义环境变量
         sync_preset_env_vars(module, *get_preset_env_vars(desc.spec))
+
+        if desc.bk_monitor:
+            self.update_bkmonitor(desc.bk_monitor)
 
         return result
 

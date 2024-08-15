@@ -178,7 +178,7 @@ def submit_visible_range_ticket(
     return itsm_detail
 
 
-def get_ticket_status(sn: str):
+def get_ticket_status(sn: str) -> dict:
     """查询 itsm 单据状态
 
     itsm 返回数据格式：{

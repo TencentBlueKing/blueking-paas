@@ -146,6 +146,7 @@ class ActionTypes(str, StructuredEnum):
     DELETE = EnumField("delete", label=_("删除"))
     ARCHIVE = EnumField("archive", label=_("下架"))
     REACTIVATE = EnumField("reactivate", label=_("重新上架"))
+    ROLLBACK = EnumField("rollback", label=_("回滚"))
 
 
 class SubjectTypes(str, StructuredEnum):

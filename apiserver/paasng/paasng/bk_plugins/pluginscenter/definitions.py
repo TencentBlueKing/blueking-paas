@@ -81,6 +81,7 @@ class PluginBackendAPI(BaseModel):
     update: Optional[PluginBackendAPIResource]
     delete: Optional[PluginBackendAPIResource]
     reactivate: Optional[PluginBackendAPIResource]
+    rollback: Optional[PluginBackendAPIResource]
 
 
 @register

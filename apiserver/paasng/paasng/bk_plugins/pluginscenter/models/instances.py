@@ -295,10 +295,22 @@ class PluginRelease(AuditedModel):
         self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
 
     @property
-    def latest_release_strategy(self):
+    def latest_release_strategy(self) -> Optional["PluginReleaseStrategy"]:
         if self.release_strategies.exists():
             return self.release_strategies.latest("created")
         return None
+
+    @property
+    def is_latest(self) -> bool:
+        """判断版本是否为当前最新发布成功的版本"""
+        latest_release = (
+            PluginRelease.objects.filter(
+                plugin=self.plugin, type=self.type, status=constants.PluginReleaseStatus.SUCCESSFUL
+            )
+            .order_by("-created")
+            .first()
+        )
+        return self == latest_release
 
 
 class PluginReleaseStage(AuditedModel):

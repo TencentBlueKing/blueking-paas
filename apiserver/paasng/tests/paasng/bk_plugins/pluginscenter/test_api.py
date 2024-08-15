@@ -205,6 +205,37 @@ class TestPluginApi:
             )
         assert resp.status_code == status_code
 
+    @pytest.mark.parametrize(
+        (
+            "release_status",
+            "status_code",
+        ),
+        [
+            (PluginReleaseStatus.SUCCESSFUL.value, 200),
+            (PluginReleaseStatus.FAILED.value, 400),
+            (PluginReleaseStatus.PENDING.value, 400),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_rollback_release(
+        self,
+        api_client,
+        pd,
+        plugin,
+        release,
+        release_status,
+        status_code,
+        iam_policy_client,
+    ):
+        # 更新版本的状态，只有发布成功的版本才能回滚
+        release.status = release_status
+        release.save()
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/rollback/"
+        resp = api_client.post(url)
+        assert resp.status_code == status_code
+        if status_code == 200:
+            assert resp.json()["is_rolled_back"] is True
+
 
 class TestSysApis:
     @pytest.mark.parametrize(

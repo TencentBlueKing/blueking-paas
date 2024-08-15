@@ -71,6 +71,7 @@ from paasng.bk_plugins.pluginscenter.sourcectl import (
 )
 from paasng.bk_plugins.pluginscenter.thirdparty import instance as instance_api
 from paasng.bk_plugins.pluginscenter.thirdparty import market as market_api
+from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 from paasng.bk_plugins.pluginscenter.thirdparty.configuration import sync_config
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import update_instance
 from paasng.bk_plugins.pluginscenter.thirdparty.members import sync_members
@@ -678,6 +679,34 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             subject=constants.SubjectTypes.VERSION,
         )
         release.refresh_from_db()
+        return Response(data=self.get_serializer(release).data)
+
+    @atomic
+    def rollback_release(self, request, pd_id, plugin_id, release_id):
+        """回滚发布"""
+        plugin = self.get_plugin_instance()
+        release = self.get_queryset().get(pk=release_id)
+        # 如果版本已经回滚过，则不允许再回滚
+        if release.is_rolled_back:
+            raise error_codes.CANNOT_ROLLBACK_RELEASE.f(_("当前版本已回滚，不可再次回滚"))
+        if not release.is_latest:
+            raise error_codes.CANNOT_ROLLBACK_RELEASE.f(_("只允许最新版本回滚"))
+
+        release.is_rolled_back = True
+        release.save()
+
+        api_call_success = release_api.rollback_release(plugin.pd, plugin, release, operator=request.user.username)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 回滚版本
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.ROLLBACK,
+            subject=constants.SubjectTypes.VERSION,
+            specific=release.version,
+        )
         return Response(data=self.get_serializer(release).data)
 
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})

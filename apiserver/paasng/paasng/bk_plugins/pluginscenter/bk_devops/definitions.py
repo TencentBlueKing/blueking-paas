@@ -303,18 +303,21 @@ class PipelineLogModel(BaseModel):
 class CodeccPluginbasicInfo(BaseModel):
     """Codecc 工具插件基本信息
 
-    :param devLanguage: 工具开发语言
-    :param toolCnTypes: 工具类别中文版（列表）
-    :param langList: 适用语言列表
-    :param needBuildScript: 是否需要提供编译脚本
+    :param name: 插件标识
+    :param displayName: 插件名称
+    :param devLanguage: 开发语言
+    :param toolCnTypes: 工具类别
+    :param langList: 适用语言
+    :param needBuildScript: 业务编译脚本, True: 需要业务提供, False: 不需要业务提供
     :param checkerNum: 规则数
-    :param briefIntroduction: 工具简介，一句话介绍语
+    :param description: 工具描述
     """
 
-    devLanguage: str
-    toolCnTypes: List[str]
-    langList: List[str]
-    needBuildScript: bool
+    name: str
+    displayName: str
+    devLanguage: Optional[str] = None
+    toolCnTypes: Optional[List[str]] = []
+    langList: Optional[List[str]] = []
+    needBuildScript: Optional[bool] = False
     checkerNum: int
-    briefIntroduction: str
-    description: str
+    description: Optional[str] = ""

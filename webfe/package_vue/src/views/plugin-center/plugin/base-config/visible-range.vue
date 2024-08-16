@@ -67,7 +67,7 @@
               <div class="render-member-wrapper" v-if="departments.length > 0">
                 <render-member-list
                   type="department"
-                  :data="departments"
+                  :data="organizationLevel"
                 />
               </div>
             </bk-form-item>
@@ -107,6 +107,7 @@
 import paasPluginTitle from '@/components/pass-plugin-title';
 import userSelectorDialog from '@/components/user-selector';
 import renderMemberList from '@/views/dev-center/app/market/render-member-list';
+import { buildPath } from '@/common/tools';
 
 export default {
   components: {
@@ -129,6 +130,9 @@ export default {
       visibleRangeData: {},
       isEditingFormData: true,
       submitBtnTips: '',
+      // 用于缓存上一次请求的结果
+      cachePool: new Map(),
+      organizationLevel: [],
       rules: {
         projectIds: [
           {
@@ -188,7 +192,7 @@ export default {
     submitReview() {
       this.$refs.visibleRangeForm.validate().then(() => {
         const params = {
-          bkci_project: this.formData.projectIds.split(';'),
+          bkci_project: this.formData.projectIds.length ? this.formData.projectIds.split(';') : [],
           organization: this.formData.organization,
         };
         this.updateVisibleRange(params);
@@ -207,6 +211,7 @@ export default {
     async handleSubmit(payload) {
       this.formData.organization = payload;
       this.departments = payload;
+      await this.requestAllOrganization(payload);
       this.isShow = false;
     },
     // 获取可见范围数据
@@ -221,8 +226,8 @@ export default {
         this.formData.projectIds = res.bkci_project.join(';');
         this.formData.organization = res.organization || [];
         this.departments = this.formData.organization;
-
         this.isEdit = true;
+        await this.requestAllOrganization(res.organization);
       } catch (e) {
         // 404 就说明没有数据
         if (e.status === 404) {
@@ -252,6 +257,26 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+    // 请求组织的层级结构
+    async requestAllOrganization(data) {
+      if (!data.length) return;
+
+      // 过滤出需要请求的新数据
+      const newData = data.filter(item => !this.cachePool.has(item.id));
+
+      // 对新数据发送请求
+      const requests = newData.map(item => this.$store.dispatch('plugin/getOrganizationLevel', { id: item.id }));
+      const res = await Promise.all(requests);
+
+      // 处理返回的数据
+      res.forEach((item, index) => {
+        const name = buildPath(item);
+        const { id } = newData[index];  // 对应的 id
+        this.cachePool.set(id, { name, id });  // 缓存处理后的结果
+      });
+
+      this.organizationLevel = data.map(item => this.cachePool.get(item.id));
     },
     // 过滤出指定部门
     handleDepartments(data, type) {

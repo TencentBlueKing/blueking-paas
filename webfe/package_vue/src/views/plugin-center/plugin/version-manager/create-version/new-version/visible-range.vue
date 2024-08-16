@@ -14,8 +14,8 @@
           </li>
           <li class="item">
             <div class="label">{{ $t('组织') }}：</div>
-            <div class="value organization" v-if="data.organization.length">
-              <p v-for="item in data.organization" :key="item.id">
+            <div class="value organization" v-if="organizationLevel.length">
+              <p v-for="item in organizationLevel" :key="item.id">
                 {{ item.name }}
               </p>
             </div>
@@ -30,6 +30,7 @@
 <script>
 import card from '@/components/card/card.vue';
 import viewMode from './view-mode.vue';
+import { buildPath } from '@/common/tools';
 
 export default {
   name: 'ReleaseVisibleRange',
@@ -41,6 +42,40 @@ export default {
     data: {
       type: Object,
       default: () => {},
+    },
+  },
+  data() {
+    return {
+      // 缓存池
+      cachePool: new Map(),
+      organizationLevel: [],
+    };
+  },
+  watch: {
+    'data.organization'(newValue) {
+      this.requestAllOrganization(newValue);
+    },
+  },
+  methods: {
+    // 请求组织的层级结构
+    async requestAllOrganization(data) {
+      if (!data.length) return;
+
+      // 过滤出需要请求的新数据
+      const newData = data.filter(item => !this.cachePool.has(item.id));
+
+      // 对新数据发送请求
+      const requests = newData.map(item => this.$store.dispatch('plugin/getOrganizationLevel', { id: item.id }));
+      const res = await Promise.all(requests);
+
+      // 处理返回的数据
+      res.forEach((item, index) => {
+        const name = buildPath(item);
+        const { id } = newData[index];  // 对应的 id
+        this.cachePool.set(id, { name, id });  // 缓存处理后的结果
+      });
+
+      this.organizationLevel = data.map(item => this.cachePool.get(item.id));
     },
   },
 };

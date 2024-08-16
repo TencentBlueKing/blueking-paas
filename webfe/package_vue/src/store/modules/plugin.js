@@ -621,5 +621,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/rollback/`;
       return http.post(url, {}, config);
     },
+
+    /**
+     * 获取组织层级
+     * @param {Object} params 请求参数：id
+     */
+    getOrganizationLevel({}, { id }, config) {
+      const url = `${BACKEND_URL}/api/usermanage/departments/${id}/`;
+      return http.get(url, {}, config);
+    },
   },
 };

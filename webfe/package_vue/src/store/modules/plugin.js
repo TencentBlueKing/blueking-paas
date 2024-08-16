@@ -630,5 +630,14 @@ export default {
       const url = `${BACKEND_URL}/api/usermanage/departments/${id}/`;
       return http.get(url, {}, config);
     },
+
+    /**
+     * 获取Codecc基本信息
+     * @param {Object} params 请求参数：id
+     */
+    getCodeccBasicInfo({}, { pdId, pluginId }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/basic_info/`;
+      return http.get(url, {}, config);
+    },
   },
 };

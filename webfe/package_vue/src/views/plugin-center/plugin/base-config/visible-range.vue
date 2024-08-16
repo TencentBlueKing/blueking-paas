@@ -317,13 +317,6 @@ export default {
         color: #ea3636;
       }
     }
-    .render-member-wrapper {
-      margin-top: 12px;
-      padding: 12px 12px 12px 36px;
-      width: 320px;
-      background: #f5f7fa;
-      border-radius: 2px;
-    }
   }
   .footer-btn {
     margin-top: 24px;

@@ -7,8 +7,12 @@
       placeholder="plugin-base-info-loading"
     >
       <section class="basic-info-container">
+        <!-- Codecc 基本信息 -->
+        <codecc-base-info v-if="isCodecc" />
+
         <!-- 基本信息 -->
         <plugin-base-info
+          v-else
           :plugin-info="pluginInfo"
           @get-base-info="getPluginBaseInfo"
           @updata-log="handleUpdataLog"
@@ -211,6 +215,7 @@ import MoreInfo from './comps/more-info.vue';
 import pluginBaseInfo from './comps/base-info-item.vue';
 import pluginMarketInfo from './comps/market-info-item.vue';
 import publisherInfo from './comps/publisher-info.vue';
+import codeccBaseInfo from './comps/codecc-base-info.vue';
 // import 'BKSelectMinCss';
 export default {
   components: {
@@ -220,6 +225,7 @@ export default {
     pluginBaseInfo,
     pluginMarketInfo,
     publisherInfo,
+    codeccBaseInfo,
   },
   mixins: [pluginBaseMixin],
   data() {
@@ -279,6 +285,9 @@ export default {
     offlineStatus() {
       return this.curPluginInfo.can_reactivate;
     },
+    isCodecc() {
+      return this.curPluginInfo.has_test_version;
+    },
   },
   async created() {
     await this.init();
@@ -286,7 +295,11 @@ export default {
   },
   methods: {
     async init() {
-      await Promise.all([this.getPluginBaseInfo(), this.getMarketInfo()]);
+      const ininRequest = [this.getMarketInfo()];
+      if (!this.isCodecc) {
+        ininRequest.push(this.getPluginBaseInfo());
+      }
+      await Promise.all(ininRequest);
       if (this.pluginFeatureFlags.PLUGIN_DISTRIBUTER) {
         this.getPluginAll();
         this.getAuthorizedUse();
@@ -295,6 +308,7 @@ export default {
       if (this.pluginFeatureFlags.APP_SECRETS) {
         await this.$store.dispatch('plugin/getPluginAppInfo', { pluginId: this.pluginId, pdId: this.pdId });
       }
+      this.isLoading = false;
     },
 
     formattParams() {
@@ -318,10 +332,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 200);
       }
     },
 
@@ -338,10 +348,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
-      } finally {
-        setTimeout(() => {
-          this.isLoading = false;
-        }, 200);
       }
     },
 

@@ -82,10 +82,6 @@ urlpatterns = [
         views.PluginReleaseViewSet.as_view({"get": "list", "post": "create"}),
     ),
     path(
-        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/success/",
-        views.PluginReleaseViewSet.as_view({"get": "get_success_release"}),
-    ),
-    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/schema/",
         views.PluginReleaseViewSet.as_view({"get": "get_release_schema"}),
     ),

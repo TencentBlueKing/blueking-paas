@@ -145,7 +145,7 @@
           :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
-            <span>{{ row.source_hash || '--' }}</span>
+            <span>{{ row.source_hash.slice(0, 8) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -170,8 +170,6 @@
           :label="$t('发布状态')"
           prop="status"
           column-key="status"
-          :filters="codeccFilters"
-          :filter-multiple="true"
         >
           <template slot-scope="{ row }">
             <div :class="['dot', row.display_status]" />
@@ -210,9 +208,23 @@
               >
                 {{ $t('版本详情') }}
               </bk-button>
+              <!-- is_rolled_back = true 表示已回滚 -->
+              <span
+                v-if="row.id === rollbacks[0]?.id"
+                v-bk-tooltips="{ content: $t('当前版本已回滚，不可再次回滚'), disabled: !row.is_rolled_back }"
+              >
+                <bk-button
+                  theme="primary"
+                  text
+                  :disabled="row.is_rolled_back"
+                  @click="showRollbackPopup(row)"
+                >
+                  {{ $t('回滚版本') }}
+                </bk-button>
+              </span>
             </template>
-            <div v-else>
-              <template v-if="isOfficialVersion">
+            <template v-else>
+              <div v-if="isOfficialVersion">
                 <bk-button
                   theme="primary"
                   text
@@ -229,7 +241,7 @@
                 >
                   {{ $t('发布进度') }}
                 </bk-button>
-              </template>
+              </div>
               <bk-button
                 v-else
                 theme="primary"
@@ -256,7 +268,7 @@
               >
                 {{ $t('测试报告') }}
               </bk-button>
-            </div>
+            </template>
           </template>
         </bk-table-column>
       </bk-table>
@@ -415,8 +427,8 @@ export default {
       accessDisabledTips: '',
       curVersionType: 'test',
       user: {},
-      codeccFilters: this.formatStatusFilters(CODECC_RELEASE_STATUS),
       CODECC_RELEASE_STATUS,
+      rollbacks: [],
     };
   },
   computed: {
@@ -481,6 +493,9 @@ export default {
         this.curVersionType = this.$route.query.type || 'test';
       }
       this.getVersionList();
+      if (this.isCodecc) {
+        this.getRollbackVersion();
+      }
       // 获取当前用户信息
       if (this.curVersionType === 'test' && !this.curUserInfo.username) {
         this.getCurrentUser();
@@ -585,6 +600,35 @@ export default {
       }
     },
 
+    // 获取回滚版本
+    async getRollbackVersion() {
+      try {
+        const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
+          data: {
+            pdId: this.pdId,
+            pluginId: this.pluginId,
+          },
+          pageParams: {
+            order_by: '-created',
+            limit: 2,
+            offset: 0,
+            status: 'successful',
+            is_rolled_back: false,
+            type: this.curVersionType,
+          },
+        });
+        const { results } = res;
+        // 不符合回滚条件
+        if (results.length < 2) return;
+        this.rollbacks = results;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
     // 获取当前用户信息
     getCurrentUser() {
       auth.requestCurrentUser().then((user) => {
@@ -634,7 +678,7 @@ export default {
           id: this.pluginId,
         },
         query: {
-          isPending: this.curIsPending,
+          isPending: !!this.curIsPending,
           type,
         },
       });
@@ -782,6 +826,77 @@ export default {
           versionId: row.id,
         },
       });
+    },
+
+    // 回滚
+    showRollbackPopup(row) {
+      if (!this.rollbacks.length) return;
+      const h = this.$createElement;
+      const rollback = this.rollbacks[1];
+      const location = row.source_location.replace(/\.git$/, '');
+
+      this.$bkInfo({
+        type: 'warning',
+        title: this.$t('确认回滚至上一版本？'),
+        subHeader: h('div', [
+          this.createVersionInfo(
+            this.$t('当前版本'),
+            row.version,
+            row.source_hash.slice(0, 8),
+            `${location}/commit/${row.source_hash}`,
+          ),
+          this.createVersionInfo(
+            this.$t('回滚至版本'),
+            rollback.version,
+            rollback.source_hash.slice(0, 8),
+            `${location}/commit/${rollback.source_hash}`,
+          ),
+        ]),
+        okText: this.$t('回滚'),
+        confirmFn: () => {
+          this.handleRollbackVersion(row.id);
+        },
+      });
+    },
+
+    createVersionInfo(label, version, hash, url) {
+      const h = this.$createElement;
+      const fn = () => {
+        window.open(url, '_blank');
+      };
+      return h('p', [
+        h('span', `${label}：`),
+        h('span', [
+          h('span', { style: { color: '#313238' } }, version),
+          h(
+            'span', {
+              class: ['ml8'],
+              style: { color: '#3A84FF', cursor: 'pointer' },
+              on: {
+                click: fn,
+              },
+            },
+            hash,
+          ),
+        ]),
+      ]);
+    },
+
+    // 回滚版本
+    async handleRollbackVersion(id) {
+      try {
+        await this.$store.dispatch('plugin/versionRollback', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: id,
+        });
+        this.getVersionList();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };

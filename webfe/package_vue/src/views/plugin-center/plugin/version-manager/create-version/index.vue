@@ -56,6 +56,9 @@ export default {
     versionId() {
       return this.$route.query.versionId;
     },
+    schemeType() {
+      return this.$route.query.type;
+    },
   },
   async created() {
     if (this.versionId) {
@@ -67,13 +70,12 @@ export default {
     // 获取新建版本表单格式
     async getNewVersionFormat() {
       this.schemeLoading = true;
-      const params = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-        type: 'prod',
-      };
       try {
-        const res = await this.$store.dispatch('plugin/getNewVersionFormat', params);
+        const res = await this.$store.dispatch('plugin/getNewVersionFormat', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          type: this.schemeType,
+        });
         this.scheme = res;
       } catch (e) {
         this.$bkMessage({

@@ -2765,4 +2765,8 @@ export default {
   暂未设置可见范围: 'Visibility range not yet set',
   '请输入蓝盾项目 Project ID，并用英文分号分隔': 'Please enter the Blue Shield Project ID and separate them with English semicolons',
   '修改可见范围需由<i class="bold">平台管理员</i>进行审批': 'Changes to the visibility range require approval from the <i class="bold">platform administrator</i>',
+  回滚版本: 'Rollback Version',
+  回滚至版本: 'Rollback to Version',
+  '当前版本已回滚，不可再次回滚': 'The current version has already been rolled back and cannot be rolled back again',
+  '确认回滚至上一版本？': 'Confirm rollback to the previous version?',
 };

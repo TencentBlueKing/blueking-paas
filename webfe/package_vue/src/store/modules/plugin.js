@@ -612,5 +612,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${id}/strategy/`;
       return http.post(url, data, config);
     },
+
+    /**
+     * 版本回滚
+     * @param {Object} params 请求参数：pdId, pluginId, releaseId
+     */
+    versionRollback({}, { pdId, pluginId, releaseId }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/rollback/`;
+      return http.post(url, {}, config);
+    },
   },
 };

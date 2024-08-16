@@ -129,7 +129,7 @@ def update_visible_range_and_callback(plugin: PluginInstance, operator: str):
 
     callback_result = visible_range_update_approved_callback(plugin.pd, plugin, operator)
     if not callback_result:
-        logger.error("The callback to the third API fails when updating the visible range")
+        logger.exception("The callback to the third API fails when updating the visible range")
 
 
 def init_plugin_repository(plugin: PluginInstance, operator: str):

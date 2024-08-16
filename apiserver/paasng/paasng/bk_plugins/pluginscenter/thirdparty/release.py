@@ -50,7 +50,7 @@ def callback_to_third_party(
         data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
     )
     if not (result := resp.get("result", True)):
-        logger.error(f"Callback to {api_endpoint.apiName} failed: {resp}")
+        logger.exception(f"Callback to {api_endpoint.apiName} failed: {resp}")
     return result
 
 

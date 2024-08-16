@@ -34,7 +34,7 @@ def create_instance(pd: PluginDefinition, instance: PluginInstance, operator: st
     data = slz.data
     resp = utils.make_client(pd.basic_info_definition.api.create).call(data=data)
     if not (result := resp.get("result", True)):
-        logger.error(f"create instance error [operator: {operator}, data:{data}], error: {resp}")
+        logger.exception(f"create instance error [operator: {operator}, data:{data}], error: {resp}")
     return result
 
 
@@ -45,7 +45,7 @@ def update_instance(pd: PluginDefinition, instance: PluginInstance, operator: st
         data=data, path_params={"plugin_id": instance.id}
     )
     if not (result := resp.get("result", True)):
-        logger.error(f"upadte instance error [plugin_id: {instance.id}, data:{data}], error: {resp}")
+        logger.exception(f"upadte instance error [plugin_id: {instance.id}, data:{data}], error: {resp}")
     return result
 
 
@@ -54,7 +54,7 @@ def archive_instance(pd: PluginDefinition, instance: PluginInstance, operator: s
         path_params={"plugin_id": instance.id}, data={"operator": operator}
     )
     if not resp.get("result", True):
-        logger.error(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
+        logger.exception(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
         return False
 
     instance.status = PluginStatus.ARCHIVED
@@ -70,7 +70,7 @@ def reactivate_instance(pd: PluginDefinition, instance: PluginInstance, operator
         path_params={"plugin_id": instance.id}, data={"operator": operator}
     )
     if not resp.get("result", True):
-        logger.error(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
+        logger.exception(f"archive instance error [plugin_id: {instance.id}], error: {resp}")
         return False
 
     instance.status = PluginStatus.DEVELOPING
@@ -104,5 +104,5 @@ def visible_range_update_approved_callback(pd: PluginDefinition, instance: Plugi
         data=data, path_params={"plugin_id": instance.id}
     )
     if not (result := resp.get("result", True)):
-        logger.error(f"create release error: {resp}")
+        logger.exception(f"create release error: {resp}")
     return result

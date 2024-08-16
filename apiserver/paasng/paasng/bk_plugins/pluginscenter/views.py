@@ -504,7 +504,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         stage = plugin.pd.basic_info_definition.api.create.stage
         client = BkDevopsClient(request.user.username, stage=stage)
         data = client.get_codecc_plugin_basic_info(plugin_id)
-        return Response(data=data.json())
+        return Response(data=data.dict())
 
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):

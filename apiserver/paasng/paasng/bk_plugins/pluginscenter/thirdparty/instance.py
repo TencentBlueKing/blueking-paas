@@ -104,5 +104,5 @@ def visible_range_update_approved_callback(pd: PluginDefinition, instance: Plugi
         data=data, path_params={"plugin_id": instance.id}
     )
     if not (result := resp.get("result", True)):
-        logger.exception(f"create release error: {resp}")
+        logger.exception(f"update visible range error: {resp}")
     return result

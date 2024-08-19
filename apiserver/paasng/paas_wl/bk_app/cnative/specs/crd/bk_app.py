@@ -345,31 +345,6 @@ class BkAppSpec(BaseModel):
     svcDiscovery: Optional[SvcDiscConfig] = None
     envOverlay: Optional[EnvOverlay] = None
 
-    @validator("processes")
-    def validate_processes(cls, processes):  # noqa: N805
-        """validate processes.
-        - check whether exposed types are duplicated. 一个 BkApp 只能有一个 bk/http 类型的暴露服务作为主入口
-        """
-        if not processes:
-            return processes
-
-        exposed_types = set()
-
-        for proc in processes:
-            if not proc.services:
-                continue
-
-            for svc in proc.services:
-                if not svc.exposedType:
-                    continue
-
-                if svc.exposedType.name in exposed_types:
-                    raise ValueError(f"exposed type {svc.exposedType.name} is duplicated in one app module")
-
-                exposed_types.add(svc.exposedType.name)
-
-        return processes
-
 
 class BkAppStatus(BaseModel):
     """BkAppStatus defines the observed state of BkApp"""

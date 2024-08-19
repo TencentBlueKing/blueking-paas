@@ -28,7 +28,7 @@
               v-else
               :class="['dot', versionData[statusKey]]"
             />
-            <span class="pl5">{{ statusMap[versionData[statusKey]] }}</span>
+            <span class="pl5">{{ $t(statusMap[versionData[statusKey]]) }}</span>
           </div>
         </template>
         <a

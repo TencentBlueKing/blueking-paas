@@ -13,7 +13,7 @@
         ext-cls="release-strategy-form-cls"
       >
         <bk-form-item
-          label="发布策略"
+          :label="$t('发布策略')"
           :required="true"
           :property="'strategy'"
           :error-display-type="'normal'"
@@ -31,7 +31,7 @@
         </bk-form-item>
         <bk-form-item
           v-if="!isFullRelease"
-          label="灰度范围"
+          :label="$t('灰度范围')"
           :required="true"
           ref="grayscaleRangeForm"
           :error-display-type="'normal'"

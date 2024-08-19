@@ -39,6 +39,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量比 YAML 配置的优先级更高
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
+
 import copy
 import os
 import sys
@@ -48,6 +49,7 @@ from typing import Any, Dict, List, Optional
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
 from django.utils.encoding import force_bytes, force_str
+from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
 from environ import Env
 
@@ -157,6 +159,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.initialization",
     # Put "scheduler" in the last position so models in other apps can be ready
     "paasng.platform.scheduler",
+    "paasng.misc.audit",
     "revproxy",
     # workloads apps
     "paas_wl.bk_app.applications",
@@ -179,6 +182,11 @@ INSTALLED_APPS = [
 # Allow extending installed apps
 EXTRA_INSTALLED_APPS = settings.get("EXTRA_INSTALLED_APPS", [])
 INSTALLED_APPS += EXTRA_INSTALLED_APPS
+
+# The "perm_insure" module helps us to make sure that the permission is configured
+# correctly, put it at the end of the list to make sure that all URL confs have been
+# added to the root url before the perm checking starts.
+INSTALLED_APPS.append("paasng.infras.perm_insure")
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
@@ -491,10 +499,15 @@ NOTIFICATION_PLUGIN_CLASSES = settings.get(
 # Django 基础配置（自定义）
 # ------------------------
 
-DATABASES = {
-    "default": get_database_conf(settings),
-    "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
-}
+DATABASES = {}
+
+# When running "collectstatic" command, the database config is not available, so we
+# make it optional.
+if default_db_conf := get_database_conf(settings):
+    DATABASES["default"] = default_db_conf
+if wl_db_conf := get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"):
+    DATABASES["workloads"] = wl_db_conf
+
 DATABASE_ROUTERS = ["paasng.core.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存
@@ -615,6 +628,12 @@ BK_IAM_MIGRATION_APP_NAME = "bkpaas_iam_migration"
 
 # 跳过初始化已有应用数据到权限中心（注意：仅跳过初始化数据，所有权限相关的操作还是依赖权限中心）
 BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
+
+# IAM 权限生效时间（单位：秒）
+# 权限中心的用户组授权是异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
+# 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
+# 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
+IAM_PERM_EFFECTIVE_TIMEDELTA = 5 * 60
 
 BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
 
@@ -806,15 +825,24 @@ BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
 # 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
 BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 
-BK_PLATFORM_URLS = settings.get(
-    "BK_PLATFORM_URLS",
+# 兼容 PaaS 2.0 注入的内置环境变量，确保应用迁移到 PaaS 3.0 后内置系统环境变量仍然有效
+BK_PAAS2_PLATFORM_ENVS = settings.get(
+    "BK_PAAS2_PLATFORM_ENVS",
     {
-        # 旧版 IAM 地址，目前已废弃
-        "BK_IAM_INNER_HOST": settings.get("BK_IAM_INNER_URL", "http://:"),
-        "BK_IAM_V3_APP_CODE": settings.get("BK_IAM_V3_APP_CODE", "bk_iam"),
-        "BK_IAM_V3_INNER_HOST": BK_IAM_V3_INNER_URL,
-        "BK_CC_HOST": BK_CC_URL,
-        "BK_JOB_HOST": BK_JOB_URL,
+        "BK_IAM_INNER_HOST": {
+            "value": settings.get("BK_IAM_INNER_URL", "http://:"),
+            "description": _("蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"),
+        },
+        "BK_IAM_V3_APP_CODE": {
+            "value": settings.get("BK_IAM_V3_APP_CODE", "bk_iam"),
+            "description": _("蓝鲸权限中心的应用ID"),
+        },
+        "BK_IAM_V3_INNER_HOST": {
+            "value": BK_IAM_V3_INNER_URL,
+            "description": _("蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"),
+        },
+        "BK_CC_HOST": {"value": BK_CC_URL, "description": _("蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL")},
+        "BK_JOB_HOST": {"value": BK_JOB_URL, "description": _("蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL")},
     },
 )
 
@@ -1323,6 +1351,22 @@ BK_NOTICE = {
     "BK_API_URL_TMPL": BK_API_URL_TMPL,
     "BK_API_APP_CODE": BK_APP_CODE,  # 用于调用 apigw 认证
     "BK_API_SECRET_KEY": BK_APP_SECRET,  # 用于调用 apigw 认证
+}
+
+# ---------------------------------------------
+# 蓝鲸审计中心配置
+# ---------------------------------------------
+# 审计中心-审计配置-接入-数据上报中获取这两项配置信息的值
+BK_AUDIT_DATA_TOKEN = settings.get("BK_AUDIT_DATA_TOKEN", "")
+BK_AUDIT_ENDPOINT = settings.get("BK_AUDIT_ENDPOINT", "")
+
+ENABLE_BK_AUDIT = bool(BK_AUDIT_DATA_TOKEN)
+BK_AUDIT_SETTINGS = {
+    "log_queue_limit": 50000,
+    "exporters": ["bk_audit.contrib.opentelemetry.exporters.OTLogExporter"],
+    "service_name_handler": "bk_audit.contrib.opentelemetry.utils.ServiceNameHandler",
+    "ot_endpoint": BK_AUDIT_ENDPOINT,
+    "bk_data_token": BK_AUDIT_DATA_TOKEN,
 }
 
 # ---------------------------------------------

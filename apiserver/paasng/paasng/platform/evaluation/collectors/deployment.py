@@ -71,5 +71,5 @@ class AppDeploymentCollector:
         latest_deployment = Deployment.objects.filter(app_environment=env).order_by("-created").first()
         return EnvSummary(
             latest_deployer=get_username_by_bkpaas_user_id(latest_deployment.operator) if latest_deployment else None,
-            latest_deployed_at=latest_deployment.created.strftime("%Y-%m-%d %H:%M:%S") if latest_deployment else None,
+            latest_deployed_at=latest_deployment.created.isoformat() if latest_deployment else None,
         )

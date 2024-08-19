@@ -19,7 +19,7 @@ import logging
 import os
 import time
 import uuid
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
 
 from bkstorages.backends.bkrepo import RequestError
 from django.conf import settings
@@ -29,6 +29,7 @@ from django.db.models import Q, QuerySet
 from pilkit.processors import ResizeToFill
 
 from paasng.core.core.storages.object_storage import app_logo_storage
+from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
 from paasng.infras.iam.helpers import fetch_role_members
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
@@ -186,13 +187,46 @@ class BaseApplicationFilter:
             # If order_by field is "latest_operated_at", replace it with original field which has
             # related_name prefix.
             if f.name == "latest_operated_at":
-                f.name = "latest_op__latest_operated_at"
-                queryset = queryset.select_related("latest_op")
+                f.name = "latest_op_record__latest_operated_at"
+                queryset = queryset.select_related("latest_op_record")
                 fields.append(str(f))
                 continue
 
             fields.append(field)
         return queryset.order_by(*fields)
+
+
+class JustLeaveAppManager:
+    """
+    刚退出的应用管理器
+
+    Q：为什么需要有这个管理器
+    A：开发者中心接入权限中心后，由于接入的是 RBAC 模型，导致有这么一个链路
+         用户退出权限中心用户组  ----异步任务----> 回收用户权限
+      这样会出现一个问题：用户退出应用后，短时间（30s）内还有这个应用的权限，体验不佳
+      这里的思路是：利用 Redis，缓存用户退出的应用 Code（5min），这段时间内，把这个应用 exclude 掉
+
+    Q：为什么所有方法都加 try-except
+    A：这个 manager 只是优化体验，如果 redis 挂了（虽然概率不大），也不该阻塞主流程
+    """
+
+    def __init__(self, username: str):
+        self.redis_db = get_default_redis()
+        self.username = username
+        self.cache_key = f"bkpaas_just_leave_app_codes:{username}"
+
+    def add(self, app_code: str) -> None:
+        try:
+            self.redis_db.rpush(self.cache_key, app_code)
+            self.redis_db.expire(self.cache_key, settings.IAM_PERM_EFFECTIVE_TIMEDELTA)
+        except Exception:
+            pass
+
+    def list(self) -> Set[str]:
+        try:
+            return {x.decode() for x in self.redis_db.lrange(self.cache_key, 0, -1)}
+        except Exception:
+            return set()
 
 
 class UserApplicationFilter:
@@ -216,6 +250,12 @@ class UserApplicationFilter:
         if order_by is None:
             order_by = []
         applications = Application.objects.filter_by_user(self.user.pk, exclude_collaborated=exclude_collaborated)
+
+        # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况
+        mgr = JustLeaveAppManager(get_username_by_bkpaas_user_id(self.user.pk))
+        if just_leave_app_codes := mgr.list():
+            applications = applications.exclude(code__in=just_leave_app_codes)
+
         return BaseApplicationFilter.filter_queryset(
             applications,
             include_inactive=include_inactive,
@@ -257,6 +297,10 @@ class Application(OwnerTimestampedModel):
         verbose_name="是否为插件应用",
         default=False,
         help_text="蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑",
+    )
+    is_ai_agent_app = models.BooleanField(
+        verbose_name="是否为 AI Agent 插件应用",
+        default=False,
     )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 
@@ -305,7 +349,7 @@ class Application(OwnerTimestampedModel):
         """获取 Application 对应的源码 Repo 对象"""
         return self.get_default_module().get_source_obj()
 
-    def get_engine_app(self, environment, module_name=None):
+    def get_engine_app(self, environment: str, module_name=None):
         """Get the engine app of current application"""
         module = self.get_module(module_name=module_name)
         engine_app = module.get_envs(environment=environment).engine_app

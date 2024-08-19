@@ -41,6 +41,32 @@ type BkApp struct {
 // Hub marks this type as a conversion hub.
 func (*BkApp) Hub() {}
 
+// EnableProcServicesFeature enable proc services feature
+func (bkapp *BkApp) EnableProcServicesFeature() {
+	if bkapp.Annotations == nil {
+		bkapp.Annotations = make(map[string]string)
+	}
+	bkapp.Annotations[ProcServicesFeatureEnabledAnnoKey] = "true"
+}
+
+// IsProcServicesFeatureEnabled check if bkapp use proc services feature
+func (bkapp *BkApp) IsProcServicesFeatureEnabled() bool {
+	if val, ok := bkapp.Annotations[ProcServicesFeatureEnabledAnnoKey]; ok && val == "true" {
+		return true
+	}
+	return false
+}
+
+// HasProcServices check if bkapp has proc services config
+func (bkapp *BkApp) HasProcServices() bool {
+	for _, proc := range bkapp.Spec.Processes {
+		if len(proc.Services) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 //+kubebuilder:object:root=true
 
 // BkAppList contains a list of BkApp

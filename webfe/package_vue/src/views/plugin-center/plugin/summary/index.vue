@@ -1,6 +1,9 @@
 <template>
   <div class="visible-range">
-    <paas-plugin-title />
+    <paas-plugin-title
+      :is-plugin-doc="true"
+      :doc-url="curSchemas.plugin_type?.docs"
+    />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="summary-plugin-loading"
@@ -11,52 +14,49 @@
         <div class="overview-main">
           <div class="visual-display card-style">
             <div :class="['nav-list', { 'is-iframe': curPluginInfo.overview_page?.bottom_url }]">
-              <div
-                class="nav-list-item"
-              >
+              <div class="nav-list-item">
                 <span class="item-icon">
                   <i class="paasng-icon paasng-version" />
                 </span>
                 <div class="item-info">
-                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.repoCodeccAvgScore || '--' }}</h3>
+                  <h3>{{ (viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.repoCodeccAvgScore) || '--' }}</h3>
                   <span class="text">{{ $t('代码质量') }}</span>
                   <i
                     v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。')"
-                    style="color: #C4C6CC;margin-top:1px;"
+                    style="color: #c4c6cc;"
                     class="paasng-icon paasng-info-line ml5"
                   />
                 </div>
               </div>
-              <div
-                class="nav-list-item"
-              >
+              <div class="nav-list-item">
                 <span class="item-icon">
                   <i class="paasng-icon paasng-alert2" />
                 </span>
                 <div class="item-info">
-                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.resolvedDefectNum || '--' }}</h3>
+                  <h3>{{ (viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.resolvedDefectNum) || '--' }}</h3>
                   <span class="text">{{ $t('已解决缺陷数') }}</span>
                 </div>
               </div>
-              <div
-                class="nav-list-item"
-              >
+              <div class="nav-list-item">
                 <span class="item-icon">
                   <i class="paasng-icon paasng-alert" />
                 </span>
                 <div class="item-info">
-                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.qualityInfo.qualityInterceptionRate || '--' }}</h3>
+                  <h3>{{ (viewInfo.codeCheckInfo && viewInfo.qualityInfo.qualityInterceptionRate) || '--' }}</h3>
                   <span class="text">{{ $t('质量红线拦截率') }}</span>
                   <i
                     v-bk-tooltips="`${$t('拦截次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.interceptionCount || '--'} / ${$t('运行总次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.totalExecuteCount || '--'}`"
-                    style="color: #C4C6CC;margin-top:1px;"
+                    style="color: #c4c6cc;"
                     class="paasng-icon paasng-info-line ml5"
                   />
                 </div>
               </div>
             </div>
             <div class="iframe-margin"></div>
-            <section class="iframe-container" v-if="curPluginInfo.overview_page?.bottom_url">
+            <section
+              v-if="curPluginInfo.overview_page?.bottom_url"
+              class="iframe-container"
+            >
               <!-- 嵌入 iframe -->
               <iframe
                 id="iframe-embed"
@@ -85,16 +85,18 @@
                 <div class="chart-action">
                   <ul class="dimension fl">
                     <li
-                      :class="{ 'active': chartFilterType.pv }"
+                      :class="{ active: chartFilterType.pv }"
                       @click="handleChartFilte('pv')"
                     >
-                      <span class="dot warning" /> {{ $t('提交数') }}
+                      <span class="dot warning" />
+                      {{ $t('提交数') }}
                     </li>
                     <li
-                      :class="{ 'active': chartFilterType.uv }"
+                      :class="{ active: chartFilterType.uv }"
                       @click="handleChartFilte('uv')"
                     >
-                      <span class="dot primary" /> {{ $t('贡献者') }}
+                      <span class="dot primary" />
+                      {{ $t('贡献者') }}
                     </li>
                   </ul>
                 </div>
@@ -103,7 +105,7 @@
                   ref="chart"
                   :options="chartOption"
                   auto-resize
-                  style="width: 100%; height: 440px; background: #1e1e21;"
+                  style="width: 100%; height: 440px; background: #1e1e21"
                 />
               </div>
             </template>
@@ -117,13 +119,15 @@
                   v-bk-overflow-tips
                   class="text-ellipsis"
                 >
-                  {{ $t('插件类型：') }} <span>{{ curPluginInfo.pd_name }}</span>
+                  {{ $t('插件类型：') }}
+                  <span>{{ curPluginInfo.pd_name }}</span>
                 </p>
                 <p
                   v-bk-overflow-tips
                   class="text-ellipsis"
                 >
-                  {{ $t('开发语言：') }} <span>{{ curPluginInfo.language }}</span>
+                  {{ $t('开发语言：') }}
+                  <span>{{ curPluginInfo.language }}</span>
                 </p>
                 <p class="repos">
                   <span>{{ $t('代码仓库：') }}</span>
@@ -140,8 +144,10 @@
                     <a
                       :href="curPluginInfo.repository"
                       target="_blank"
-                      style="color: #979BA5;"
-                    ><i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" /></a>
+                      style="color: #979ba5"
+                    >
+                      <i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" />
+                    </a>
                   </span>
                 </p>
               </div>
@@ -152,26 +158,26 @@
                 class="fright-middle fright-last"
                 data-test-id="summary_content_noSource"
               >
-                <h3> {{ $t('最新动态') }} </h3>
+                <h3>{{ $t('最新动态') }}</h3>
                 <ul class="dynamic-list">
                   <template v-if="operationsList.length">
                     <li
                       v-for="(item, itemIndex) in operationsList"
                       :key="itemIndex"
                     >
+                      <p
+                        v-bk-overflow-tips
+                        class="dynamic-content"
+                      >
+                        {{ $t('由') }} {{ item.display_text }}
+                      </p>
                       <p class="dynamic-time">
                         <span
                           v-bk-tooltips="item.updated"
                           class="tooltip-time"
-                        >{{ item.created_format }}</span>
-                      </p>
-                      <p
-                        v-bk-overflow-tips
-                        class="dynamic-content"
-                        style="-webkit-line-clamp: 2;-webkit-box-orient: vertical"
-                      >
-                        {{ $t('由') }} {{ item.display_text }}
-                      <!-- <span class="gruy">{{ item.display_text }}</span> -->
+                        >
+                          {{ item.created_format }}
+                        </span>
                       </p>
                     </li>
                     <li />
@@ -217,6 +223,9 @@ export default {
         uv: true,
       },
       initDateTimeRange: [],
+      curSchemas: {
+        plugin_type: {},
+      },
       dateRange: {
         startTime: '',
         endTime: '',
@@ -263,6 +272,9 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    curPluginInfo() {
+      return this.$store.state.plugin.curPluginInfo;
+    },
   },
   watch: {
     dateRange: {
@@ -271,7 +283,7 @@ export default {
         this.refresh();
       },
     },
-    '$route'() {
+    $route() {
       this.refresh();
     },
   },
@@ -293,6 +305,7 @@ export default {
       moment.locale(this.localLanguage);
       this.getPluginOperations();
       this.getStoreOverview();
+      this.fetchPluginTypeList();
     },
 
     // 获取动态
@@ -340,6 +353,19 @@ export default {
           }
         }
         this.viewInfo = res;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 获取插件类型数据
+    async fetchPluginTypeList() {
+      try {
+        const typeList = await this.$store.dispatch('plugin/getPluginsTypeList');
+        this.curSchemas = typeList.find(t => t.plugin_type.id === this.curPluginInfo.pd_id);
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -396,11 +422,11 @@ export default {
     },
 
     /**
-             * 图表初始化
-             * @param  {Object} chartData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 图表初始化
+     * @param  {Object} chartData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderChart() {
       const series = [];
       const xAxisData = [];
@@ -472,8 +498,8 @@ export default {
     },
 
     /**
-             * 清空图表数据
-             */
+     * 清空图表数据
+     */
     clearChart() {
       const chartRef = this.$refs.chart;
 
@@ -522,467 +548,378 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-    @import '~@/assets/css/mixins/ellipsis.scss';
+@import '~@/assets/css/mixins/ellipsis.scss';
 
-    .visible-range{
-        .desc{
-            font-size: 12px;
-            color: #979BA5;
-        }
-    }
-    .chart-info {
-        margin: 80px 0 20px;
-        .title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #313238;
-            line-height: 1;
-        }
-    }
-    .chart-box {
-        width: 100%;
-        min-height: 150px;
+.visible-range {
+  .desc {
+    font-size: 12px;
+    color: #979ba5;
+  }
+}
+.chart-info {
+  margin: 80px 0 20px;
+  .title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #313238;
+    line-height: 1;
+  }
+}
+.chart-box {
+  width: 100%;
+  min-height: 150px;
 
-        .chart-action {
-            height: 20px;
-            margin-top: 15px;
-            padding: 0 30px;
-        }
+  .chart-action {
+    height: 20px;
+    margin-top: 15px;
+    padding: 0 30px;
+  }
 
-        .dimension {
-            li {
-                display: inline-block;
-                font-size: 12px;
-                color: #63656E;
-                margin-right: 30px;
-                cursor: pointer;
-                opacity: 0.4;
-                line-height: 12px;
+  .dimension {
+    li {
+      display: inline-block;
+      font-size: 12px;
+      color: #63656e;
+      margin-right: 30px;
+      cursor: pointer;
+      opacity: 0.4;
+      line-height: 12px;
 
-                &.active {
-                    opacity: 1;
-                }
-
-                &:last-child {
-                    margin-right: 0;
-                }
-            }
-
-            .dot {
-                width: 10px;
-                height: 10px;
-                display: inline-block;
-                border: 1px solid #3A84FF;
-                background: #A3C5FD;
-                border-radius: 50%;
-                vertical-align: middle;
-                float: left;
-                margin-right: 5px;
-
-                &.warning {
-                    border: 1px solid #FF9C01;
-                    background: #FFD695;
-                }
-            }
-        }
-
-        .time {
-            li {
-                display: inline-block;
-                font-size: 12px;
-                color: #63656E;
-                margin-right: 20px;
-                font-weight: bold;
-                cursor: pointer;
-                padding: 0 2px;
-                border-bottom: 2px solid #fff;
-
-                &:last-child {
-                    margin-right: 0;
-                }
-
-                &.active {
-                    border-bottom: 2px solid #3a84ff;
-                }
-
-                &.disabled {
-                    color: #ccc;
-                    cursor: not-allowed;
-                    border-bottom: 2px solid #fff;
-                }
-            }
-        }
-    }
-    .app-container {
-        .overview-main {
-            display: flex;
-        }
-        .visual-display {
-            padding: 24px;
-            width: 100%;
-            background: #fff;
-        }
-        .nav-list {
-            position: relative;
-            z-index: 99;
-            display: flex;
-            height: 64px;
-            background: #FFFFFF;
-            border: 1px solid #EAEBF0;
-            border-radius: 2px;
-            &.is-iframe {
-                border-radius: 2px 2px 0 0;
-            }
-            .nav-list-item {
-                display: flex;
-                align-items: center;
-                position: relative;
-                flex: 1;
-                &::after {
-                    content: '';
-                    position: absolute;
-                    right: 0;
-                    width: 1px;
-                    height: 48px;
-                    background: #EAEBF0;
-                }
-                &:last-child::after {
-                    background: transparent;
-                }
-                .item-icon {
-                    padding: 0 20px;
-                    font-size: 32px;
-                    color: #C4C6CC;
-                }
-                .item-info {
-                    h3 {
-                        font-size: 16px;
-                        font-weight: 700;
-                        line-height: 24px;
-                        color: #313238;
-                    }
-                    .text {
-                        font-size: 12px;
-                        color: #63656E;
-                        line-height: 20px;
-                    }
-                    i {
-                        transform: translateY(0px);
-                    }
-                }
-            }
-        }
-      .information-container {
-          width: 280px;
-          max-height: calc(100vh - 143px);
-          min-height: 827px;
-          padding-left: 20px;
-          margin-left: 24px;
-          font-size: 12px;
-          border-radius: 2px;
-          color: #63656E;
-          h3 {
-              color: #63656E;
-          }
-          .base-info {
-              margin-right: 15px;
-              p {
-                  line-height: 30px;
-                  white-space: nowrap;
-                  text-overflow: ellipsis;
-                  overflow: hidden;
-                  .copy-text {
-                      position: absolute;
-                      top: 5px;
-                      right: 6px;
-                      color: #3A84FF;
-                      cursor: pointer;
-                  }
-              }
-              .repos {
-                  position: relative;
-                  padding-right: 30px;
-                  .repository-tooltips {
-                      position: absolute;
-                      width: 140px;
-                      height: 100%;
-                  }
-              }
-          }
-          .copy-url {
-              color: #3A84FF;
-              cursor: pointer;
-          }
+      &.active {
+        opacity: 1;
       }
-      .chart-container {
-          display: flex;
-          margin-top: 150px;
-            h2 {
-                font-size: 18px;
-                font-weight: 700;
-            }
+
+      &:last-child {
+        margin-right: 0;
       }
     }
-    .dynamic-wrapper {
-        height: 100%;
-    }
-    .dynamic-list {
-        height: 100%;
-        max-height: calc(100vh - 360px);
-        min-height: 610px;
-        padding-right: 15px;
-        overflow-y: auto;
-        font-size: 12px;
-        color: #63656E;
-    }
-    .dynamic-list::-webkit-scrollbar {
-        width: 4px;
-        background-color: hsla(0,0%,80%,0);
-    }
 
-    .dynamic-list::-webkit-scrollbar-thumb {
-        height: 5px;
-        border-radius: 2px;
-        background-color: #e6e9ea;
-    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border: 1px solid #3a84ff;
+      background: #a3c5fd;
+      border-radius: 50%;
+      vertical-align: middle;
+      float: left;
+      margin-right: 5px;
 
-    .dynamic-list li {
-        padding-bottom: 15px;
-        padding-left: 20px;
-        position: relative;
+      &.warning {
+        border: 1px solid #ff9c01;
+        background: #ffd695;
+      }
     }
+  }
 
-    .dynamic-list li:before {
+  .time {
+    li {
+      display: inline-block;
+      font-size: 12px;
+      color: #63656e;
+      margin-right: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0 2px;
+      border-bottom: 2px solid #fff;
+
+      &:last-child {
+        margin-right: 0;
+      }
+
+      &.active {
+        border-bottom: 2px solid #3a84ff;
+      }
+
+      &.disabled {
+        color: #ccc;
+        cursor: not-allowed;
+        border-bottom: 2px solid #fff;
+      }
+    }
+  }
+}
+.app-container {
+  .overview-main {
+    display: flex;
+  }
+  .visual-display {
+    padding: 24px;
+    width: 100%;
+    background: #fff;
+  }
+  .nav-list {
+    position: relative;
+    z-index: 99;
+    display: flex;
+    height: 64px;
+    background: #ffffff;
+    border: 1px solid #eaebf0;
+    border-radius: 2px;
+    &.is-iframe {
+      border-radius: 2px 2px 0 0;
+    }
+    .nav-list-item {
+      display: flex;
+      align-items: center;
+      position: relative;
+      flex: 1;
+      &::after {
+        content: '';
         position: absolute;
-        content: "";
-        width: 10px;
-        height: 10px;
-        top: 3px;
-        left: 1px;
-        border: solid 1px rgba(87, 163, 241, 1);
-        border-radius: 50%;
-    }
-
-    .dynamic-list li:after {
-        position: absolute;
-        content: "";
+        right: 0;
         width: 1px;
-        height: 70px;
-        top: 15px;
-        left: 6px;
-        background: rgba(87, 163, 241, 1);
-    }
-
-    .dynamic-list li:nth-child(1):before {
-        border: solid 1px rgba(87, 163, 241, 1);
-    }
-
-    .dynamic-list li:nth-child(1):after {
-        background: rgba(87, 163, 241, 1);
-    }
-
-    .dynamic-list li:nth-child(2):before {
-        border: solid 1px rgba(87, 163, 241, 0.9);
-    }
-
-    .dynamic-list li:nth-child(2):after {
-        background: rgba(87, 163, 241, 0.9);
-    }
-
-    .dynamic-list li:nth-child(3):before {
-        border: solid 1px rgba(87, 163, 241, 0.8);
-    }
-
-    .dynamic-list li:nth-child(3):after {
-        background: rgba(87, 163, 241, 0.8);
-    }
-
-    .dynamic-list li:nth-child(4):before {
-        border: solid 1px rgba(87, 163, 241, 0.7);
-    }
-
-    .dynamic-list li:nth-child(4):after {
-        background: rgba(87, 163, 241, 0.7);
-    }
-
-    .dynamic-list li:nth-child(5):before {
-        border: solid 1px rgba(87, 163, 241, 0.6);
-    }
-
-    .dynamic-list li:nth-child(5):after {
-        background: rgba(87, 163, 241, 0.6);
-    }
-
-    .dynamic-list li:nth-child(6):before {
-        border: solid 1px rgba(87, 163, 241, 0.5);
-    }
-
-    .dynamic-list li:nth-child(6):after {
-        background: rgba(87, 163, 241, 0.5);
-    }
-
-    .dynamic-list li:nth-child(7):before {
-        border: solid 1px rgba(87, 163, 241, 0.4);
-    }
-
-    .dynamic-list li:nth-child(7):after {
-        background: rgba(87, 163, 241, 0.4);
-    }
-
-    .dynamic-list li:nth-child(8):before {
-        border: solid 1px rgba(87, 163, 241, 0.3);
-    }
-
-    .dynamic-list li:nth-child(8):after {
-        background: rgba(87, 163, 241, 0.3);
-    }
-
-    .dynamic-list li:nth-child(9):before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(9):after {
-        background: rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(10):before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(10):after {
-        background: rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:last-child:before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:last-child:after {
-        background: rgba(87, 163, 241, 0);
-    }
-
-    .dynamic-time {
-        line-height: 18px;
-        font-size: 12px;
-        color: #c0c9d3;
-        cursor: default;
-    }
-
-    .dynamic-content {
-        line-height: 24px;
         height: 48px;
-        overflow: hidden;
-        color: #666;
-        text-overflow: ellipsis;
-        white-space: normal;
-        word-break: break-all;
-        display: -webkit-box;
-    }
-
-    .summary-content {
-        flex: 1;
-    }
-
-    .http-list-fleft {
-        display: inline-block;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        width: 400px;
-    }
-
-    .http-list-fright {
-        width: 234px;
-        text-align: right;
-    }
-
-    .middle-http-list li {
-        overflow: hidden;
-        height: 42px;
-        line-height: 42px;
-        background: #fff;
-        color: #666;
-        font-size: 12px;
-        padding: 0 10px;
-    }
-
-    .middle-http-list li:nth-child(2n-1) {
-        background: #fafafa;
-    }
-
-    .fright-middle {
-        padding: 0 0 24px 0;
-        line-height: 30px;
-        color: #666;
-        border-bottom: solid 1px #e6e9ea;
-    }
-
-    .fright-middle h3 {
-        padding-bottom: 8px;
-    }
-
-    .svn-a {
-        line-height: 20px;
-        padding: 10px 0;
-    }
-
-    .overview-sub-fright {
-        width: 260px;
-        min-height: 741px;
-        padding: 0 0 0 20px;
-        border-left: solid 1px #e6e9ea;
-    }
-
-    .fright-last {
-        border-bottom: none;
-        padding-top: 0;
-        height: 100%;
-    }
-    .summary_text {
-        display: inline-block;
-        margin-left: 10px;
-    }
-    .bk-tooltip .bk-tooltip-ref p {
-        width: 193px !important;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-    .address-zh-cn {
-        min-width: 46px;
-    }
-    .address-en {
-        min-width: 66px;
-    }
-
-    .iframe-margin {
-        height: 20px;
-        background: #ffff;
-        position: relative;
-        z-index: 99;
-    }
-
-    .iframe-container {
-        transform: translateY(2px);
-        margin-top: -55px;
-        // margin-top: -52px;
-        /* resize and min-height are optional, allows user to resize viewable area */
-        -webkit-resize: vertical;
-        -moz-resize: vertical;
-        resize: vertical;
-        min-height: 795px;
-
-        iframe#iframe-embed {
-            width: 100%;
-            min-height: 795px;
-            height: calc(100vh - 175px);
-
-            /* resize seems to inherit in at least Firefox */
-            -webkit-resize: none;
-            -moz-resize: none;
-            resize: none;
+        background: #eaebf0;
+      }
+      &:last-child::after {
+        background: transparent;
+      }
+      .item-icon {
+        padding: 0 20px;
+        font-size: 32px;
+        color: #c4c6cc;
+      }
+      .item-info {
+        h3 {
+          font-size: 16px;
+          font-weight: 700;
+          line-height: 24px;
+          color: #313238;
         }
+        .text {
+          font-size: 12px;
+          color: #63656e;
+          line-height: 20px;
+        }
+        i {
+          transform: translateY(0px);
+        }
+      }
     }
+  }
+  .information-container {
+    width: 280px;
+    max-height: calc(100vh - 143px);
+    min-height: 827px;
+    padding-left: 20px;
+    margin-left: 24px;
+    font-size: 12px;
+    border-radius: 2px;
+    color: #63656e;
+    h3 {
+      color: #63656e;
+    }
+    .base-info {
+      margin-right: 15px;
+      p {
+        line-height: 30px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        .copy-text {
+          position: absolute;
+          top: 5px;
+          right: 6px;
+          color: #3a84ff;
+          cursor: pointer;
+        }
+      }
+      .repos {
+        position: relative;
+        padding-right: 30px;
+        .repository-tooltips {
+          position: absolute;
+          width: 140px;
+          height: 100%;
+        }
+      }
+    }
+    .copy-url {
+      color: #3a84ff;
+      cursor: pointer;
+    }
+  }
+  .chart-container {
+    display: flex;
+    margin-top: 150px;
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+  }
+}
+.dynamic-wrapper {
+  height: 100%;
+}
+.dynamic-list {
+  height: 100%;
+  max-height: calc(100vh - 360px);
+  min-height: 610px;
+  padding-right: 15px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: #63656e;
+  .dynamic-time {
+    margin-top: 5px;
+    line-height: 20px;
+    height: 36px;
+    font-size: 12px;
+    color: #979BA5;
+    cursor: default;
+  }
+  .dynamic-content {
+    font-size: 14px;
+    line-height: 22px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #63656E;
+  }
+  li {
+    padding-bottom: 15px;
+    padding-left: 20px;
+    position: relative;
+  }
+}
+.dynamic-list::-webkit-scrollbar {
+  width: 4px;
+  background-color: hsla(0, 0%, 80%, 0);
+}
 
+.dynamic-list::-webkit-scrollbar-thumb {
+  height: 5px;
+  border-radius: 2px;
+  background-color: #e6e9ea;
+}
+
+.dynamic-list li:before {
+  position: absolute;
+  content: '';
+  width: 9px;
+  height: 9px;
+  top: 3px;
+  left: 1px;
+  border: 2px solid #D8D8D8;
+  border-radius: 50%;
+}
+
+.dynamic-list li:after {
+  position: absolute;
+  content: '';
+  width: 1px;
+  height: 62px;
+  top: 13px;
+  left: 5px;
+  background: #D8D8D8;
+}
+
+.dynamic-list li:last-child:after {
+  background: transparent;
+}
+
+.summary-content {
+  flex: 1;
+}
+
+.http-list-fleft {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 400px;
+}
+
+.http-list-fright {
+  width: 234px;
+  text-align: right;
+}
+
+.middle-http-list li {
+  overflow: hidden;
+  height: 42px;
+  line-height: 42px;
+  background: #fff;
+  color: #666;
+  font-size: 12px;
+  padding: 0 10px;
+}
+
+.middle-http-list li:nth-child(2n-1) {
+  background: #fafafa;
+}
+
+.fright-middle {
+  padding: 0 0 24px 0;
+  line-height: 30px;
+  color: #666;
+  border-bottom: solid 1px #e6e9ea;
+}
+
+.fright-middle h3 {
+  padding-bottom: 8px;
+}
+
+.svn-a {
+  line-height: 20px;
+  padding: 10px 0;
+}
+
+.overview-sub-fright {
+  width: 260px;
+  min-height: 741px;
+  padding: 0 0 0 20px;
+  border-left: solid 1px #e6e9ea;
+}
+
+.fright-last {
+  border-bottom: none;
+  padding-top: 0;
+  height: 100%;
+}
+.summary_text {
+  display: inline-block;
+  margin-left: 10px;
+}
+.bk-tooltip .bk-tooltip-ref p {
+  width: 193px !important;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.address-zh-cn {
+  min-width: 46px;
+}
+.address-en {
+  min-width: 66px;
+}
+
+.iframe-margin {
+  height: 20px;
+  background: #ffff;
+  position: relative;
+  z-index: 99;
+}
+
+.iframe-container {
+  transform: translateY(2px);
+  margin-top: -55px;
+  /* resize and min-height are optional, allows user to resize viewable area */
+  -webkit-resize: vertical;
+  -moz-resize: vertical;
+  resize: vertical;
+  min-height: 795px;
+
+  iframe#iframe-embed {
+    width: 100%;
+    min-height: 795px;
+    height: calc(100vh - 175px);
+
+    /* resize seems to inherit in at least Firefox */
+    -webkit-resize: none;
+    -moz-resize: none;
+    resize: none;
+  }
+}
 </style>

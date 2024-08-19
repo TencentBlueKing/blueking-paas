@@ -33,12 +33,12 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
+    generate_wl_builtin_env_vars,
 )
 from paasng.platform.engine.constants import (
     AppInfoBuiltinEnv,
     AppRunTimeBuiltinEnv,
     ConfigVarEnvName,
-    NoPrefixAppRunTimeBuiltinEnv,
 )
 from paasng.platform.engine.models import ConfigVar
 from paasng.platform.engine.models.config_var import add_prefix_to_key
@@ -133,6 +133,8 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """View the built-in environment variables of the app"""
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def _get_enum_choices_dict(self, enum_obj) -> Dict[str, str]:
         return {field[0]: field[1] for field in enum_obj.get_choices()}
 
@@ -142,6 +144,7 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def get_builtin_envs_bk_platform(self, request, code):
         bk_address_envs = generate_env_vars_for_bk_platform(settings.CONFIGVAR_SYSTEM_PREFIX)
+        bk_address_envs_list = [env.to_dict() for env in bk_address_envs]
 
         application = self.get_application()
         region = application.region
@@ -150,15 +153,24 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         envs_by_region_and_env = generate_env_vars_by_region_and_env(
             region, environment, settings.CONFIGVAR_SYSTEM_PREFIX
         )
+        envs_by_region_and_env_list = [env.to_dict() for env in envs_by_region_and_env]
 
-        return Response({**bk_address_envs, **envs_by_region_and_env})
+        builtin_envs_bk_platform = {}
+        for env_dict in bk_address_envs_list + envs_by_region_and_env_list:
+            builtin_envs_bk_platform.update(env_dict)
+        return Response(builtin_envs_bk_platform)
 
     def get_runtime_envs(self, request, code):
         env_dict = self._get_enum_choices_dict(AppRunTimeBuiltinEnv)
         envs = add_prefix_to_key(env_dict, settings.CONFIGVAR_SYSTEM_PREFIX)
 
-        no_prefix_envs = self._get_enum_choices_dict(NoPrefixAppRunTimeBuiltinEnv)
-        return Response({**envs, **no_prefix_envs})
+        wl_vars = generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX)
+        for env in wl_vars:
+            # Transform the dict structure to remove the value field in order to
+            # keep consistent and be compatible with the frontend.
+            # TODO: Show the value in the future.
+            envs.update({k: v["description"] for k, v in env.to_dict().items()})
+        return Response({**envs})
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

@@ -35,13 +35,17 @@ from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.core.region.models import get_region
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
+from paasng.infras.accounts.permissions.application import (
+    app_action_required,
+    application_perm_class,
+    check_application_perm,
+)
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.signals import application_default_module_switch, pre_delete_module
+from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
@@ -80,7 +84,6 @@ from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
-from paasng.utils.views import permission_classes as perm_classes
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +91,7 @@ logger = logging.getLogger(__name__)
 class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @transaction.atomic
     @swagger_auto_schema(request_body=CreateModuleSLZ, tags=["创建模块"])
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
+    @app_action_required(AppAction.MANAGE_MODULE)
     def create(self, request, *args, **kwargs):
         """创建一个新模块, 创建 lesscode 模块时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供"""
         application = self.get_application()
@@ -103,7 +106,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # Permission check for non-default source origin
         source_origin = SourceOrigin(data["source_origin"])
-        self._ensure_source_origin_available(request.user, source_origin)
 
         # lesscode app needs to create an application on the bk_lesscode platform first
         if source_origin == SourceOrigin.BK_LESS_CODE:
@@ -145,7 +147,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             status=status.HTTP_201_CREATED,
         )
 
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list(self, request, code):
         """查看所有应用模块"""
         slz = ListModulesSLZ(data=request.query_params)
@@ -160,7 +162,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data=MinimalModuleSLZ(modules, many=True).data)
 
     @swagger_auto_schema(tags=["应用模块"], response_serializer=ModuleSLZ)
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def retrieve(self, request, code, module_name):
         """查看应用模块信息
 
@@ -172,7 +174,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = application.get_module(module_name)
         return Response(data=ModuleSLZ(module).data, status=status.HTTP_200_OK)
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
+    @app_action_required(AppAction.MANAGE_MODULE)
     def destroy(self, request, code, module_name):
         """
         删除蓝鲸应用模块
@@ -191,22 +193,41 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if protection_status.activated:
             raise error_codes.CANNOT_DELETE_MODULE.f(protection_status.reason)
 
-        # 审计记录在事务外创建, 避免由于数据库回滚而丢失
-        pre_delete_module.send(sender=Module, module=module, operator=request.user.pk)
-        with transaction.atomic():
-            try:
+        try:
+            with transaction.atomic():
                 module = application.get_module_with_lock(module_name=module_name)
                 ModuleCleaner(module).clean()
-            except Exception as e:
-                logger.exception(
-                    "unable to clean module<%s> of application<%s> related resources", module_name, application.code
-                )
-                raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
+        except Exception as e:
+            logger.exception(
+                "unable to clean module<%s> of application<%s> related resources", module_name, application.code
+            )
+            # 执行失败
+            add_app_audit_record(
+                app_code=application.code,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_MODULE,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.MODULE,
+                attribute=module.name,
+                result_code=ResultCode.FAILURE,
+            )
+            raise error_codes.CANNOT_DELETE_MODULE.f(str(e))
+
+        # 执行成功
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_MODULE,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.MODULE,
+            attribute=module.name,
+            result_code=ResultCode.SUCCESS,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # [deprecated] use `api.applications.entrances.set_default_entrance` instead
     @transaction.atomic
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
+    @app_action_required(AppAction.MANAGE_MODULE)
     def set_as_default(self, request, code, module_name):
         """设置某个模块为主模块"""
         application = self.get_application()
@@ -247,7 +268,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_200_OK)
 
     @transaction.atomic
-    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy="merge")
+    @app_action_required(AppAction.MANAGE_MODULE)
     @swagger_auto_schema(request_body=CreateCNativeModuleSLZ, tags=["创建模块"])
     def create_cloud_native_module(self, request, code):
         """创建云原生应用模块（非默认）"""
@@ -260,9 +281,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         module_src_cfg: Dict[str, Any] = {}
         source_config = data["source_config"]
-        # 检查当前用户能否使用指定的 source_origin
         source_origin = SourceOrigin(source_config["source_origin"])
-        self._ensure_source_origin_available(request.user, source_origin)
 
         module_src_cfg["source_origin"] = source_origin
         # 如果指定模板信息，则需要提取并保存
@@ -308,13 +327,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CREATE_MODULE_QUOTA_EXCEEDED.f(
                 _("单个应用下最多能创建 {num} 个模块").format(num=settings.MAX_MODULES_COUNT_PER_APPLICATION)
             )
-
-    def _ensure_source_origin_available(self, user, source_origin: SourceOrigin):
-        """对使用非默认源码来源的，需要检查是否有权限"""
-        if source_origin in SourceOrigin.get_default_origins():
-            return
-        if not AccountFeatureFlag.objects.has_feature(user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN):
-            raise ValidationError(_("你无法使用非默认的源码来源"))
 
     def _init_image_credential(self, application: Application, image_credential: Dict):
         try:

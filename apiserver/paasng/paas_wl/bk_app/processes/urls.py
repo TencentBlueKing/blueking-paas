@@ -56,4 +56,28 @@ urlpatterns = [
         views.InstanceEventsViewSet.as_view({"get": "list"}),
         name="api.list_instance_events",
     ),
+    re_path(
+        make_app_pattern(
+            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/previous_logs/$"
+        ),
+        views.InstanceManageViewSet.as_view({"get": "retrieve_previous_logs"}),
+        name="api.instances.previous_logs",
+    ),
+    re_path(
+        make_app_pattern(
+            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/previous_logs/download/$"
+        ),
+        views.InstanceManageViewSet.as_view({"get": "download_previous_logs"}),
+        name="api.instances.previous_logs_download",
+    ),
+    re_path(
+        make_app_pattern(r"/instances/(?P<process_instance_name>[.\w-]+)/restart/$"),
+        views.InstanceManageViewSet.as_view({"put": "restart"}),
+        name="api.instances.restart",
+    ),
+    re_path(
+        make_app_pattern(r"/processes/(?P<process_name>[\w-]+)/restart/$"),
+        views.ProcessesViewSet.as_view({"put": "restart"}),
+        name="api.process.restart",
+    ),
 ]

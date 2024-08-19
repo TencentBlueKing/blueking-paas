@@ -236,20 +236,21 @@ class TestCustomCollectorConfigViewSet:
                 },
             ],
         }
+        with mock.patch("paasng.accessories.log.views.config.get_application_cluster") as fake_cluster:
+            fake_cluster.has_feature_flag.return_value = True
+            resp = api_client.get(url, data={"all": True})
+            assert "url" in resp.data
+            options = resp.data["options"]
+            assert len(options) == 3
+            assert options[0]["is_builtin"]
+            assert options[1]["is_builtin"]
+            assert not options[2]["is_builtin"]
 
-        resp = api_client.get(url, data={"all": True})
-        assert "url" in resp.data
-        options = resp.data["options"]
-        assert len(options) == 3
-        assert options[0]["is_builtin"]
-        assert options[1]["is_builtin"]
-        assert not options[2]["is_builtin"]
-
-        resp = api_client.get(url, data={"all": False})
-        assert "url" in resp.data
-        filtered_options = resp.data["options"]
-        assert len(filtered_options) == 1
-        assert options[2] == filtered_options[0]
+            resp = api_client.get(url, data={"all": False})
+            assert "url" in resp.data
+            filtered_options = resp.data["options"]
+            assert len(filtered_options) == 1
+            assert options[2] == filtered_options[0]
 
     def test_insert_success(self, api_client, bk_app, bk_module, apigw_client, bkmonitor_space):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/custom-collector/"

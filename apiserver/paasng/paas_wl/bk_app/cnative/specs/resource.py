@@ -26,7 +26,6 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.addresses import AddrResourceManager, save_addresses
 from paas_wl.bk_app.cnative.specs.constants import (
-    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
     ApiVersion,
     ConditionStatus,
     DeployStatus,
@@ -115,7 +114,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
 def sync_networking(env: ModuleEnvironment, res: BkAppResource) -> None:
     """Sync the networking related resources for env, such as Ingress etc."""
 
-    if _need_deploy_networking(res):
+    if _need_exposed_services(res):
         deploy_networking(env)
     else:
         delete_networking(env)
@@ -209,16 +208,16 @@ class MresConditionParser:
         return None
 
 
-def _need_deploy_networking(res: BkAppResource) -> bool:
+def _need_exposed_services(res: BkAppResource) -> bool:
     """
-    _need_deploy_networking checks if networking needs to be deployed based on the given BkAppResource.
+    _need_exposed_services checks if the bkapp needs to expose services outside the cluster
     """
-    val = res.metadata.annotations.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY)
-    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: false 时, 表示版本低于 specVersion: 3, 因此向后兼容, 需要部署网络
-    if val == "false":
+    enabled = res.get_proc_services_annotation()
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: false 时, 表示版本低于 specVersion: 3, 因此向后兼容, 需要向集群外暴露服务
+    if enabled == "false":
         return True
 
-    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要部署网络
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要向集群外暴露服务
     for proc in res.spec.processes:
         for svc in proc.services or []:
             if svc.exposedType and svc.exposedType.name == ExposedTypeName.BK_HTTP:

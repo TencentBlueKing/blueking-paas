@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from functools import wraps
 from typing import Dict
 
 from rest_framework.exceptions import PermissionDenied
@@ -148,7 +149,7 @@ global_site_resource = _init_global_site_resource()
 
 
 def site_perm_class(action: SiteAction):
-    """构建 DRF 可用的权限类"""
+    """构建 DRF 可用的权限类，管理站点访问相关权限。"""
 
     class Permission(BasePermission):
         def has_permission(self, request, *args, **kwargs):
@@ -171,6 +172,11 @@ def site_perm_required(action: SiteAction):
         raise ValueError(f'"{action}" is not a valid permission name for Site')
 
     def decorated(func):
+        # Set an attribute to mark the function as protected so that the `perm_insure`
+        # module knows.
+        func._protected_by_site_perm_required = True
+
+        @wraps(func)
         def view_func(self, request, *args, **kwargs):
             role = global_site_resource.get_role_of_user(request.user, "site")
             if not role.has_perm(action):

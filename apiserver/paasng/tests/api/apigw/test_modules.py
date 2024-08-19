@@ -18,8 +18,6 @@
 import pytest
 from django.conf import settings
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from tests.utils.helpers import generate_random_string
@@ -67,7 +65,6 @@ class TestApiInAPIGW:
         bk_app.type = app_type
         bk_app.save()
 
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, True)
         create_module_params["name"] = module_name
         create_module_params["source_config"]["source_init_template"] = template_name
         response = api_client.post(

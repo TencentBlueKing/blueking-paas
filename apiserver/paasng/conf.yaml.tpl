@@ -308,8 +308,8 @@
 # BK_TURBO_URL: ''
 ## 蓝盾流水线服务地址
 # BK_PIPELINE_URL: ''
-## 其他蓝鲸服务地址，格式如：{"BK_SOPS_URL": "http://localhost:8080"}
-# BK_PLATFORM_URLS: {}
+## 为兼容 PaaS 2.0 而注入的内置环境变量，格式如：{"BK_SOPS_URL": "http://localhost:8080"}
+# BK_PAAS2_PLATFORM_ENVS: {}
 
 ## 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 # BKPAAS_WEIXIN_URL_MAP:
@@ -676,6 +676,17 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # BK_LOG_APIGW_SERVICE_STAGE: stag
 # 蓝鲸日志平台相关的配置项
 # BKLOG_CONFIG = {}
+
+## ------------------------------------ 蓝鲸通知中心配置 ------------------------------------
+# 通知中心的功能可通过配置开启
+ENABLE_BK_NOTICE = False
+# 对接通知中心的环境，默认为生产环境
+BK_NOTICE_ENV = "prod"
+
+## ------------------------------------ 蓝鲸审计中心配置置 ------------------------------------
+# 审计中心-审计配置-接入-数据上报中获取这两项配置信息的值
+BK_AUDIT_DATA_TOKEN = ""
+BK_AUDIT_ENDPOINT = ""
 
 ## ---------------------------------------- 运行时默认配置 ----------------------------------------
 

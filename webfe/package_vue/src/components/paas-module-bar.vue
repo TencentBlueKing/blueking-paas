@@ -6,6 +6,7 @@
     <div class="flex-row align-items-center pr40">
       <bk-tab
         :active.sync="active"
+        :scroll-step="100"
         ext-cls="module-tab-cls"
         type="unborder-card"
         @tab-change="handleTabChange"
@@ -335,11 +336,16 @@ export default defineComponent({
   }
 }
 .module-tab-cls {
+  min-width: 0;
   /deep/ .bk-tab-section {
     padding: 0 !important;
   }
   /deep/ .bk-tab-header {
     background-image: none !important;
+    .bk-tab-scroll-controller {
+      height: 50px !important;
+      border-bottom: none;
+    }
   }
 }
 .module-manager {

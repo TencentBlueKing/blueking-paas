@@ -24,13 +24,12 @@ import pytest
 import yaml
 
 from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
+from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
-from paasng.platform.engine.constants import ExposedTypeName
-from paasng.platform.engine.models.deployment import ExposedType, ProcService
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -122,7 +121,7 @@ class TestCnativeAppDescriptionHandler:
                     name="web",
                     target_port=8000,
                     protocol="TCP",
-                    exposed_type=ExposedType(name=ExposedTypeName.BK_HTTP),
+                    exposed_type={"name": "bk/http"},
                     port=80,
                 ),
                 ProcService(name="backend", target_port=8001, protocol="TCP", exposed_type=None, port=8001),

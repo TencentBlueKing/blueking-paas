@@ -38,6 +38,7 @@ from paasng.utils.views import EventStreamRender
 from .serializers import HistoryEventsQuerySLZ, StreamEventSLZ
 
 
+# TODO: Remove this view because it does not have any usage
 class StreamViewSet(ViewSet):
     renderer_classes = [JSONRenderer, EventStreamRender]
 

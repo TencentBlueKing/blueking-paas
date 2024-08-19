@@ -25,6 +25,7 @@ from bkpaas_auth.core.encoder import user_id_encoder
 from blue_krill.redis_tools.messaging import StreamChannelSubscriber
 from django.conf import settings
 from django.db.transaction import atomic
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -48,7 +49,7 @@ from paasng.infras.iam.helpers import (
 )
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
@@ -69,7 +70,7 @@ from paasng.utils.error_codes import error_codes
 API_PERMISSION_CLASSES = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
 
 
-class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginInstanceViewSet(viewsets.ViewSet):
     """插件开发中心-插件实例相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -140,7 +141,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     @atomic
     def update_plugin(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginSyncRequestSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
@@ -157,7 +158,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def archive_plugin(self, request, code):
         """下架插件 = 停用网关(切断流量入口) + 回收进程资源(异步)"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginArchiveRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -172,7 +173,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data={})
 
 
-class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginDeployViewSet(viewsets.ViewSet):
     """插件开发中心-插件部署相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -184,7 +185,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def deploy_plugin(self, request, code):
         """部署插件"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         module = application.get_default_module()
 
         slz = api_serializers.DeployPluginRequestSLZ(data=request.data)
@@ -244,7 +245,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         responses={200: api_serializers.PluginDeployResponseSLZ},
     )
     def check_deploy_status(self, request, code, deploy_id):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         try:
             deployment = Deployment.objects.get(pk=deploy_id, app_environment__module=application.get_default_module())
         except Deployment.DoesNotExist:
@@ -274,7 +275,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["plugin-center"], responses={200: api_serializers.PluginReleaseLogsResponseSLZ})
     def get_deploy_logs(self, request, code, deploy_id):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         try:
             deployment = Deployment.objects.get(pk=deploy_id, app_environment__module=application.get_default_module())
         except Deployment.DoesNotExist:
@@ -305,14 +306,14 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data=api_serializers.PluginReleaseLogsResponseSLZ({"finished": finished, "logs": logs}).data)
 
 
-class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginMarketViewSet(viewsets.ViewSet):
     """插件开发中心-插件市场信息相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMarketRequestSLZ)
     def upsert_market_info(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         profile = make_bk_plugin(application).get_profile()
         slz = api_serializers.PluginMarketRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -353,7 +354,7 @@ class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
 
-class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginMembersViewSet(viewsets.ViewSet):
     """插件开发中心-成员管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -361,7 +362,7 @@ class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
     def sync_members(self, request, code):
         """同步插件成员"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
@@ -394,7 +395,7 @@ class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data={})
 
 
-class PluginConfigurationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginConfigurationViewSet(viewsets.ViewSet):
     """插件开发中心-配置管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -403,7 +404,7 @@ class PluginConfigurationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @atomic
     def sync_configurations(self, request, code):
         """同步插件配置(环境变量)"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         module = application.get_default_module()
         prod_env = module.get_envs(AppEnvName.PROD)
 

@@ -258,6 +258,27 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "bk-audit"
+version = "1.2.3b0"
+description = "Bk Audit SDK"
+category = "main"
+optional = false
+python-versions = ">=3.8, <4"
+files = [
+    {file = "bk_audit-1.2.3b0-py3-none-any.whl", hash = "sha256:d2dfb941cd0f6dd8703ad184a731c092a0bda3cc9b6fc815896dfe71029e4e4d"},
+    {file = "bk_audit-1.2.3b0.tar.gz", hash = "sha256:c3d4d4d245def2967123d84b410d27c243c828ce77c7d0d48e369480eed31fce"},
+]
+
+[package.extras]
+bk-resource = ["bk-resource (>=0.4.0)"]
+opentelemetry = ["opentelemetry-api (>=1.20.0)", "opentelemetry-exporter-otlp (>=1.20.0)", "opentelemetry-sdk (>=1.20.0)", "protobuf (>=3.19.5)"]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "bk-crypto-python-sdk"
 version = "1.1.1"
 description = "bk-crypto-python-sdk is a lightweight cryptography toolkit for Python applications based on Cryptodome / tongsuopy and other encryption libraries."
@@ -2055,6 +2076,26 @@ eventlet = ["eventlet (>=0.24.1)"]
 gevent = ["gevent (>=1.4.0)"]
 setproctitle = ["setproctitle"]
 tornado = ["tornado (>=0.2)"]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
+name = "humanize"
+version = "4.9.0"
+description = "Python humanize utilities"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "humanize-4.9.0-py3-none-any.whl", hash = "sha256:ce284a76d5b1377fd8836733b983bfb0b76f1aa1c090de2566fcf008d7f6ab16"},
+    {file = "humanize-4.9.0.tar.gz", hash = "sha256:582a265c931c683a7e9b8ed9559089dea7edcf6cc95be39a3cbc2c5d5ac2bcfa"},
+]
+
+[package.extras]
+tests = ["freezegun", "pytest", "pytest-cov"]
 
 [package.source]
 type = "legacy"
@@ -5143,4 +5184,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "bccc93d489b7919f22aa504bb57fdf2e7db1a98487c41cb2bf32e1013e2c6192"
+content-hash = "8085fe4cc1a333eaa88def638618c4a5db7f5ceeb2e6cf27d6b3498e8509eb32"

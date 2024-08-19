@@ -82,6 +82,7 @@ class ErrorCodes:
     QUERY_REQUEST_ERROR = ErrorCode(_("查询日志失败，请检查查询条件"))
     CUSTOM_COLLECTOR_NOT_EXISTED = ErrorCode(_("日志平台-「自定义上报」配置不存在"))
     CANNOT_DELETE_CUSTOM_COLLECTOR = ErrorCode(_("删除日志采集规则失败"))
+    CUSTOM_COLLECTOR_UNSUPPORTED = ErrorCode(_("暂不支持自定义日志采集"))
     # 权限管理
     CANNOT_MODIFY_ITEM = ErrorCode(_("当前项不允许变更"))
     # 迁移

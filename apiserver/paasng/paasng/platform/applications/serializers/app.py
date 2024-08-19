@@ -15,13 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
-from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -32,12 +31,10 @@ from paasng.platform.applications.models import Application, UserMarkedApplicati
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.models import AppOperationReport
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
-from paasng.utils import dictx
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.serializers import UserNameField
 from paasng.utils.validators import RE_APP_SEARCH
 
 from .fields import ApplicationField, AppNameField
@@ -52,6 +49,7 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
     engine_params = ModuleSourceConfigSLZ(required=False)
     advanced_options = AdvancedCreationParamsMixin(required=False)
     is_plugin_app = serializers.BooleanField(default=False)
+    is_ai_agent_app = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -72,6 +70,18 @@ class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):
     def to_internal_value(self, data: Dict):
         data = super().to_internal_value(data)
         data["type"] = ApplicationType.CLOUD_NATIVE.value
+        return data
+
+
+class CreateAIAgentAppSLZ(AppBasicInfoMixin):
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        # 以下参数使用默认值，不需要传入
+        data["is_ai_agent_app"] = True
+        # AI Agent 应用也是一个插件，也需要自动注册网关
+        data["is_plugin_app"] = True
+        data["type"] = ApplicationType.CLOUD_NATIVE.value
+        data["engine_enabled"] = True
         return data
 
 
@@ -159,40 +169,15 @@ class IdleModuleEnvSLZ(serializers.Serializer):
 
 
 class IdleApplicationSLZ(serializers.Serializer):
-    code = serializers.CharField(help_text="应用 Code", source="app.code")
-    name = serializers.CharField(help_text="应用名称", source="app.name")
-    type = serializers.CharField(help_text="应用类型", source="app.type")
-    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用", source="app.is_plugin_app")
-    logo_url = serializers.CharField(help_text="应用 Logo 访问地址", source="app.get_logo_url")
+    code = serializers.CharField(help_text="应用 Code")
+    name = serializers.CharField(help_text="应用名称")
+    type = serializers.CharField(help_text="应用类型")
+    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用")
+    logo_url = serializers.CharField(help_text="应用 Logo 访问地址")
 
     administrators = serializers.JSONField(help_text="应用管理员列表")
     developers = serializers.JSONField(help_text="应用开发者列表")
-    module_envs = serializers.SerializerMethodField(help_text="闲置模块 & 环境列表")
-
-    @swagger_serializer_method(serializer_or_field=IdleModuleEnvSLZ(many=True))
-    def get_module_envs(self, obj: AppOperationReport) -> List[Dict[str, Any]]:
-        idle_module_envs = []
-
-        for module_name, mod_evaluate_result in obj.evaluate_result["modules"].items():
-            for env_name, env_evaluate_result in mod_evaluate_result["envs"].items():
-                if env_evaluate_result["issue_type"] != OperationIssueType.IDLE:
-                    continue
-
-                path = f"modules.{module_name}.envs.{env_name}"
-                env_res_summary = dictx.get_items(obj.res_summary, path)
-                env_deploy_summary = dictx.get_items(obj.deploy_summary, path)
-                idle_module_envs.append(
-                    {
-                        "module_name": module_name,
-                        "env_name": env_name,
-                        "cpu_quota": env_res_summary["cpu_limits"],
-                        "memory_quota": env_res_summary["mem_limits"],
-                        "cpu_usage_avg": env_res_summary["cpu_usage_avg"],
-                        "latest_deployed_at": env_deploy_summary["latest_deployed_at"],
-                    }
-                )
-
-        return IdleModuleEnvSLZ(idle_module_envs, many=True).data
+    module_envs = serializers.ListField(help_text="闲置模块 & 环境列表", child=IdleModuleEnvSLZ())
 
 
 class IdleApplicationListOutputSLZ(serializers.Serializer):
@@ -211,6 +196,8 @@ class ApplicationSLZ(serializers.ModelSerializer):
     logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的 Logo 地址")
     config_info = serializers.DictField(read_only=True, help_text="应用的额外状态信息")
     modules = serializers.SerializerMethodField(help_text="应用各模块信息列表")
+    creator = UserNameField()
+    owner = UserNameField()
 
     def get_modules(self, application: Application):
         # 将 default_module 排在第一位
@@ -326,6 +313,13 @@ class ApplicationMinimalSLZ(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = ["id", "code", "name"]
+
+
+class ApplicationWithMarkMinimalSLZ(serializers.Serializer):
+    """用于显示带收藏标记的应用列表"""
+
+    application = ApplicationMinimalSLZ(read_only=True)
+    marked = serializers.BooleanField(read_only=True)
 
 
 class ApplicationSLZ4Record(serializers.ModelSerializer):

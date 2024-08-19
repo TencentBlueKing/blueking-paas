@@ -114,8 +114,7 @@ var _ = Describe("Test ingresses.go", func() {
 		})
 
 		It("test if bkapp has one process service with exposed type bk/http", func() {
-			bkapp.Annotations = make(map[string]string)
-			bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey] = "true"
+			bkapp.EnableProcServicesFeature()
 			bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
 				{
 					Name:        "foo",

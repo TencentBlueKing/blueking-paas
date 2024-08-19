@@ -149,6 +149,7 @@ export default {
   padding-top: 0px;
   margin: 16px auto 30px;
   width: calc(100% - 48px);
+  box-shadow: 0 2px 4px 0 #1919290d;
   .log-container {
     margin-bottom: 0;
   }

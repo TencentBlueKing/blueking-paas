@@ -103,6 +103,8 @@ bk-notice-sdk = ">=1.2.0"
 urllib3 = "1.26.18"
 python-json-logger = "^2.0.7"
 concurrent-log-handler = "^0.9.25"
+humanize = "4.9.0"
+bk-audit = "1.2.3b0"
 
 [tool.poetry.dev-dependencies]
 filelock = "*"

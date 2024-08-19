@@ -34,6 +34,8 @@ from paasng.platform.modules.models.build_cfg import BuildConfig
 
 
 class AppUserCredentialViewSet(ApplicationCodeInPathMixin, GenericViewSet):
+    """应用凭证管理相关视图函数。"""
+
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: UsernamePasswordPairSLZ(many=True)})

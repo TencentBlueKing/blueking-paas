@@ -19,18 +19,20 @@ import logging
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 import cattr
-from attrs import asdict, define, fields
+from attrs import define
 from django.db.transaction import atomic
 
 from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
-from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
+from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.importer import env_vars, import_manifest, svc_discovery
+from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay, ProbeSet, Process, SvcDiscConfig, v1alpha2
+from paasng.platform.bkapp_model.entities_syncer import sync_preset_env_vars, sync_svc_discovery
+from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
-from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet, Process
+from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
@@ -51,14 +53,17 @@ class PerformResult:
     loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
 
     def set_processes(self, processes: Dict[str, Process]):
+        """Set the "loaded_processes" property, basically it do a type conversion
+        from Process to ProcessTmpl.
+        """
         self.loaded_processes = cattr.structure(
             {
                 proc_name: {
                     "name": proc_name,
-                    "command": process.command,
+                    "command": process.get_proc_command(),
                     "replicas": process.replicas,
-                    "plan": process.plan,
-                    "probes": asdict(process.probes) if process.probes else None,
+                    "plan": process.res_quota_plan,
+                    "probes": process.probes,
                 }
                 for proc_name, process in processes.items()
             },
@@ -69,34 +74,31 @@ class PerformResult:
         return self.spec_version == AppSpecVersion.VER_3
 
 
-def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
+def sanitize_bkapp_spec_to_dict(spec: v1alpha2.BkAppSpec) -> Dict:
     """将应用描述文件中的 BkAppSpec 转换成适合直接导入到模型的格式"""
     # 应用描述文件中的环境变量不展示到产品页面
     exclude: Mapping[Union[str, int], Any] = {
         "configuration": ...,
-        "envOverlay": {"envVariables"},
+        "env_overlay": {"env_variables"},
     }
-    return {
-        "metadata": {},
-        "spec": spec.dict(exclude_none=True, exclude=exclude),
-    }
+    return spec.dict(exclude_none=True, exclude=exclude)
 
 
-def get_preset_env_vars(spec: bk_app.BkAppSpec) -> Tuple[List[bk_app.EnvVar], List[bk_app.EnvVarOverlay]]:
+def get_preset_env_vars(spec: v1alpha2.BkAppSpec) -> Tuple[List[EnvVar], List[EnvVarOverlay]]:
     """从应用描述文件中提取预定义环境变量, 存储到 PresetEnvVariable 表中"""
-    overlay_env_vars: List[bk_app.EnvVarOverlay] = []
-    if spec.envOverlay:
-        overlay_env_vars = spec.envOverlay.envVariables or []
+    overlay_env_vars: List[EnvVarOverlay] = []
+    if spec.env_overlay:
+        overlay_env_vars = spec.env_overlay.env_variables or []
     return spec.configuration.env, overlay_env_vars
 
 
-def get_svc_discovery(spec: bk_app.BkAppSpec) -> Optional[bk_app.SvcDiscConfig]:
+def get_svc_discovery(spec: v1alpha2.BkAppSpec) -> Optional[SvcDiscConfig]:
     """从应用描述文件中提取服务发现配置, 存储到 SvcDiscConfig 表中
 
     NOTE: 仅用于普通应用, 让普通应用也可以通过 SvcDiscConfig 模型拿到服务发现配置的环境变量
     (云原生应用在 import_manifest 已导入服务发现配置)
     """
-    return spec.svcDiscovery
+    return spec.svc_discovery
 
 
 class DeploymentDeclarativeController:
@@ -120,7 +122,7 @@ class DeploymentDeclarativeController:
         runtime = {
             "source_dir": desc.source_dir,
         }
-        # specVersion: 3 ，默认开启 proc services 特性
+        # specVersion: 3 ，默认开启 proc services 特性; 旧版本不启用
         if desc.spec_version == AppSpecVersion.VER_3:
             runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "true"
         else:
@@ -134,21 +136,49 @@ class DeploymentDeclarativeController:
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
-        # apply desc to bkapp_model
         result.set_processes(processes=processes)
+        # apply desc to bkapp_model
         if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:
-            # 云原生应用
+            # == 云原生应用 或者 使用了 version 3 版本的应用描述文件
+            #
             # TODO: 优化 import 方式, 例如直接接受 desc.spec
             # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
-            # Warning: import_manifest 时, proc_command 会被置为 None, 仅 command/args 会保留
-            import_manifest(
+            # ---
+            #
+            # NOTE: 对于云原生应用， import_bkapp_spec_entity() 的默认行为是将 spec 中的数据导入
+            # 到平台中，所有数据以它为准，是类似 PUT 请求的全量更新行为。然后这会导致一个问题：
+            #
+            # - 用户只在描述文件中定义了进程，未通过 envOverlay 定义区分环境的 replicas 数据
+            # - 用户通过产品页面，对进程进行了扩缩容，数据记录在 ProcessSpecEnvOverlay 中（体现为
+            #   模型中的 envOverlay）
+            # - 用户重新部署，import_bkapp_spec_entity() 将描述文件中的数据导入，其判断没有 envOverlay
+            #   数据，已有的 ProcessSpecEnvOverlay 数据被删除，用户设置的副本数丢失
+            #
+            # 为了解决这个问题，我们在 import_bkapp_spec_entity() 中增加了 reset_overlays_when_absent 参数，
+            # 比在这里调用时，将其设置为 False，避免已有的 envOverlay 数据被删除。
+            #
+            # 然而，这也算不上是万全之策。因为用户仍然可能会在描述文件中定义 envOverlay 数据，
+            # 或删除已有的 envOverlay 数据，这些操作仍然可能会导致预期之外的后果。更彻底的解决
+            # 方法，可能包括以下方面：
+            #
+            # - 在 ProcessSpecEnvOverlay 等数据模型中增加字段（或增加新模型），以区分由
+            #   用户手动设置的数据和由描述文件导入的数据，并依据一定优先级来处理
+            # - 模仿和参考 kubectl apply 的行为，开发新方法 apply_manifest()，对于通过
+            #   由配置文件定义的内容（比如 ProcessSpecEnvOverlay），打上特定的 manage-by
+            #   标签，这样，当配置文件中没有定义时，仅在旧数据原本是由配置文件定义时才删除，
+            #   否则跳过。
+            #
+            import_bkapp_spec_entity(
                 module,
-                input_data=convert_bkapp_spec_to_manifest(deploy_desc.spec),
+                spec_entity=v1alpha2.BkAppSpec(**sanitize_bkapp_spec_to_dict(deploy_desc.spec)),
+                # Don't remove existed overlays data when no overlays data in input_data
+                reset_overlays_when_absent=False,
             )
             if hooks := deploy_desc.get_deploy_hooks():
                 self.deployment.update_fields(hooks=hooks)
         else:
-            # 普通应用
+            # == 普通应用
+            #
             # Note: 由于普通应用可能在 Procfile 定义进程, 因此在应用构建时仍然存在其他位点会更新 ModuleProcessSpecManager
             # TODO: 优化如上所述的情况
             if result.loaded_processes:
@@ -161,20 +191,21 @@ class DeploymentDeclarativeController:
             # 导入服务发现配置
             # Warning: SvcDiscConfig 是 Application 全局的, 多模块配置不一样时会互相覆盖(这与普通应用原来的行为不一致, 但目前暂无更好的解决方案)
             if svc_disc := get_svc_discovery(spec=desc.spec):
-                svc_discovery.import_svc_discovery(module=module, svc_disc=svc_disc)
+                sync_svc_discovery(module=module, svc_disc=svc_disc)
+
+            # 为了保证 probe 对象不遗留，对 probe 进行全量删除和全量更新
+            # 对该环境下的 probe 进行全量删除
+            self.delete_probes()
+
+            # 根据配置，对 probe 进行全量更新
+            for process_type, process in processes.items():
+                self.update_probes(process_type=process_type, probes=process.probes)
+
         # 导入预定义环境变量
-        env_vars.import_preset_env_vars(module, *get_preset_env_vars(desc.spec))
+        sync_preset_env_vars(module, *get_preset_env_vars(desc.spec))
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
-
-        # 为了保证 probe 对象不遗留，对 probe 进行全量删除和全量更新
-        # 对该环境下的 probe 进行全量删除
-        self.delete_probes()
-
-        # 根据配置，对 probe 进行全量更新
-        for process_type, process in processes.items():
-            self.update_probes(process_type=process_type, probes=process.probes)
 
         return result
 
@@ -197,12 +228,15 @@ class DeploymentDeclarativeController:
         if not probes:
             return
 
-        for probe_field in fields(ProbeSet):
-            probe = getattr(probes, probe_field.name)
+        for probe, p_type in [
+            (probes.liveness, ProbeType.LIVENESS),
+            (probes.readiness, ProbeType.READINESS),
+            (probes.startup, ProbeType.STARTUP),
+        ]:
             if probe:
                 upsert_process_probe(
                     env=self.deployment.app_environment,
                     process_type=process_type,
-                    probe_type=probe_field.name,
+                    probe_type=p_type,
                     probe=probe,
                 )

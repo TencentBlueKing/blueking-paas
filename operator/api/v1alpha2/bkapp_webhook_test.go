@@ -81,7 +81,7 @@ var _ = Describe("test webhook.Defaulter", func() {
 		bkapp.Default()
 
 		// 功能注解设置为 true，表示启用该特性
-		Expect(bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey]).To(Equal("true"))
+		Expect(bkapp.IsProcServicesFeatureEnabled()).To(BeTrue())
 
 		procServices := bkapp.Spec.Processes[0].Services
 		// 测试 Protocol 默认赋值为 TCP

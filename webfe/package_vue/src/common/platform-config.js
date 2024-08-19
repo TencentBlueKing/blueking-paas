@@ -32,9 +32,11 @@ export default async function (vm) {
 
   // 默认配置
   const defaults = {
-    name: '蓝鲸开发者中心',
-    nameEn: 'BK Developer Center',
-    brandName: window.GLOBAL_CONFIG.APP_VERSION === 'te' ? '蓝鲸' : '腾讯蓝鲸智云',
+    name: '开发者中心',
+    nameEn: 'Developer Center',
+    productName: '蓝鲸开发者中心',
+    productNameEn: 'BK Developer Center',
+    brandName: window.GLOBAL_CONFIG.APP_VERSION === 'te' ? '蓝鲸' : '蓝鲸智云',
     brandNameEn: 'Tencent BlueKing',
     appLogo: '/static/images/logo.svg',
     favicon: '/static/images/logo.svg',

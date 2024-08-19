@@ -147,12 +147,6 @@ class RuntimeType(str, StructuredEnum):
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image(云原生和旧镜像应用)")
 
 
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
-
-
 class AppInfoBuiltinEnv(str, StructuredEnum):
     """应用基本信息的内置环境变量built-in"""
 
@@ -167,17 +161,7 @@ class AppRunTimeBuiltinEnv(str, StructuredEnum):
     ENVIRONMENT = EnumField("ENVIRONMENT", label=_("应用当前环境，预发布环境为 stag、生产环境为 prod"))
     MAJOR_VERSION = EnumField("MAJOR_VERSION", label=_("应用当前运行的开发者中心版本，值为 3"))
     ENGINE_REGION = EnumField("ENGINE_REGION", label=_("应用版本，默认版本为 default"))
-
-
-class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):
-    """Built-in envs without prefix in the app runtime"""
-
-    PORT = EnumField("PORT", label=_("目标端口号，值为 5000"))
-
-
-class ExposedTypeName(str, StructuredEnum):
-    """与 paas_wl.workloads.networking.constants.ExposedTypeName 重复定义
-    # TODO 将 paasng 和 paas_wl 中重复定义的一些常量, 合并放到更底层的模块中, 避免破坏当前 importlinter 的依赖规则?
-    """
-
-    BK_HTTP = "bk/http"
+    DEFAULT_PREALLOCATED_URLS = EnumField(
+        "DEFAULT_PREALLOCATED_URLS",
+        label=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
+    )

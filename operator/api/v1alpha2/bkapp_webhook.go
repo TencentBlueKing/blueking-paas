@@ -78,14 +78,10 @@ func (r *BkApp) Default() {
 		r.Spec.Build.ImagePullPolicy = corev1.PullIfNotPresent
 	}
 
-	if HasProcServices(r) {
-		if r.Annotations == nil {
-			r.Annotations = make(map[string]string)
-		}
-		if _, ok := r.Annotations[ProcServicesFeatureEnabledAnnoKey]; !ok {
-			r.Annotations[ProcServicesFeatureEnabledAnnoKey] = "true"
-		}
-		r.defaultProcServices()
+	if r.HasProcServices() {
+		// 配置了 process services, 默认启用该特性
+		r.EnableProcServicesFeature()
+		r.setDefaultProcServices()
 	}
 
 	// 为进程的端口号、资源配额方案等设置默认值
@@ -100,8 +96,8 @@ func (r *BkApp) Default() {
 	}
 }
 
-// defaultProcServices 为 ProcServices 配置默认值
-func (r *BkApp) defaultProcServices() {
+// setDefaultProcServices 为 ProcServices 配置默认值
+func (r *BkApp) setDefaultProcServices() {
 	for pIdx, proc := range r.Spec.Processes {
 		for sIdx, procSvc := range proc.Services {
 			if procSvc.Protocol == "" {
@@ -281,7 +277,7 @@ func (r *BkApp) validateAppSpec() *field.Error {
 		}
 	}
 
-	if HasProcServices(r) {
+	if r.HasProcServices() {
 		if err := r.validateExposedTypes(); err != nil {
 			return err
 		}

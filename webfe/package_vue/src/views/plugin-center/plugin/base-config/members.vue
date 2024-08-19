@@ -10,11 +10,11 @@
     >
       <section>
         <div class="header header-flex">
-          <span v-bk-tooltips.top="{ content: $t('仅管理员可添加成员'), disabled: canManageMembers }">
+          <span v-bk-tooltips.top="{ content: $t('仅管理员可添加成员'), disabled: isPluginAdmin }">
             <bk-button
               theme="primary"
               icon="plus"
-              :disabled="!canManageMembers"
+              :disabled="!isPluginAdmin"
               @click="createMember"
             >
               {{ $t('新增成员') }}
@@ -89,11 +89,11 @@
             <bk-table-column :label="$t('操作')">
               <template slot-scope="props">
                 <template v-if="isCurrentUser(props.row)">
-                  <span v-bk-tooltips.top="{ content: $t('插件至少有一个管理员'), disabled: !signoutDisabled }">
+                  <span v-bk-tooltips.top="{ content: $t('插件至少有一个管理员'), disabled: !isExitDisabled }">
                     <bk-button
                       text
-                      class="mr5"
-                      :disabled="signoutDisabled"
+                      class="mr8"
+                      :disabled="isExitDisabled"
                       @click="showLeavePluginDialog(props.row.role.id, props.row.username)"
                     >
                       {{ $t('退出插件') }}
@@ -101,15 +101,15 @@
                   </span>
                 </template>
                 <bk-button
-                  v-if="canManageMembers"
+                  v-if="isPluginAdmin"
                   text
-                  class="mr5"
+                  class="mr8"
                   @click="updateMember(props.row.role.id, props.row.username, props.row.role.roleName)"
                 >
                   {{ $t('更换角色') }}
                 </bk-button>
                 <bk-button
-                  v-if="canManageMembers && !isCurrentUser(props.row)"
+                  v-if="isPluginAdmin && !isCurrentUser(props.row)"
                   text
                   class="mr5"
                   @click="delMember(props.row.username, props.row.role.id)"
@@ -305,12 +305,16 @@ export default {
     };
   },
   computed: {
-    // 当前用户是否为当前插件的管理员
-    canManageMembers() {
-      const curUserData = this.memberListShow.find(item => item.username === this.currentUser) || {};
-      return curUserData.role && curUserData.role.id === ROLE_BACKEND_IDS.administrator;
+    curUserInfo() {
+      return this.memberListShow.find(item => item.username === this.currentUser) || {};
     },
-    signoutDisabled() {
+    // 当前用户是否为当前插件的管理员
+    isPluginAdmin() {
+      return this.curUserInfo.role && this.curUserInfo.role.id === ROLE_BACKEND_IDS.administrator;
+    },
+    isExitDisabled() {
+      if (this.curUserInfo.role.roleName === 'developer') return false; // 开发者允许退出
+      // 当前插件如果只剩下一个管理员，不允许退出
       const adminUsers = this.memberListShow.filter(user => user.role.roleName === 'administrator');
       return adminUsers.length <= 1;
     },
@@ -346,22 +350,13 @@ export default {
         return;
       }
       this.pagination.current = page;
-
       this.handleSearch();
-      // const start = this.pagination.limit * (this.pagination.current - 1)
-      // const end = start + this.pagination.limit
-      // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
     },
 
     limitChange(currentLimit, prevLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
-
       this.handleSearch();
-
-      // const start = this.pagination.limit * (this.pagination.current - 1)
-      // const end = start + this.pagination.limit
-      // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
     },
 
     updateValue(curVal) {
@@ -369,7 +364,7 @@ export default {
     },
 
     init() {
-      this.enableToAddRole =        this.curPluginInfo && this.curPluginInfo.role && this.curPluginInfo.role.id === ROLE_BACKEND_IDS.administrator;
+      this.enableToAddRole = this.curPluginInfo && this.curPluginInfo.role && this.curPluginInfo.role.id === ROLE_BACKEND_IDS.administrator;
       this.fetchMemberList();
     },
 
@@ -472,8 +467,15 @@ export default {
         title: this.$t('确认退出并放弃此插件的权限？'),
         width: 480,
         maskClose: true,
-        confirmFn: () => {
-          this.doLeavePlugin();
+        confirmLoading: true,
+        confirmFn: async () => {
+          try {
+            await this.doLeavePlugin();
+            return true;
+          } catch (e) {
+            console.warn(e);
+            return false;
+          }
         },
       });
     },
@@ -482,6 +484,10 @@ export default {
     async doLeavePlugin() {
       try {
         await this.$store.dispatch('pluginMembers/leavePlugin', { pdId: this.pdId, pluginId: this.pluginId });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('退出插件成功'),
+        });
         // 退出插件跳转
         this.$router.push({
           path: '/',

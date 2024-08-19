@@ -7,7 +7,13 @@
       :cur-module="curAppModule"
     />
 
-    <section :class="['instance-detail', { 'default-instance-detail-cls': !isCloudNativeApp }]">
+    <section
+      :class="[
+        'instance-detail',
+        { 'default-instance-detail-cls': !isCloudNativeApp },
+        { 'collapsed': isCollapsed }
+      ]"
+    >
       <bk-resize-layout
         ref="resizeLayoutRef"
         :placement="'right'"
@@ -201,7 +207,7 @@
                       >
                         <i
                           class="paasng-icon paasng-general-copy"
-                          @click="handleCopy(row)"
+                          v-copy="handleCopy(row)"
                         />
                       </div>
                     </template>
@@ -383,10 +389,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      categoryId: 0,
       instanceList: [],
-      instanceCount: 0,
-      isGuardLoading: true,
       service: this.$route.params.service,
       hFieldstoggleStatus: [],
       hFieldstoggleText: {
@@ -415,7 +418,6 @@ export default {
       values: [],
       saveLoading: false,
       requestQueue: ['init', 'enabled', 'shareModule'],
-      copyContent: '',
       instanceDialogConfig: {
         visiable: false,
         isLoading: false,
@@ -424,6 +426,8 @@ export default {
       credentialsDisabled: false,
       isExpand: true,
       isEnhancedFeatureEnabled: true,
+      isEnabled: false,
+      isCollapsed: false,
     };
   },
   computed: {
@@ -488,6 +492,14 @@ export default {
     this.fetchServicesShareDetail();
     this.getCredentialsEnabled();
   },
+  beforeRouteLeave(to, from, next) {
+    if (to.name === 'cloudAppDeployForBuild') {
+      this.$emit('show-tab', (that) => {
+        that.active = to.name;
+      });
+    }
+    next();
+  },
   methods: {
     async fetchServicesShareDetail() {
       try {
@@ -507,13 +519,20 @@ export default {
         this.requestQueue.shift();
       }
     },
-    init() {
-      this.isGuardLoading = true;
-      this.isTableLoading = true;
 
-      this.$http.get(`${BACKEND_URL}/api/services/${this.service}/`).then((response) => {
-        this.servicePaths = [];
-        const resData = response.result;
+    async init() {
+      this.isTableLoading = true;
+      await this.getServiceDetail();
+      await this.getServiceInstances();
+    },
+
+    // 获取服务详情
+    async getServiceDetail() {
+      try {
+        const res = await this.$store.dispatch('service/getServiceDetail', {
+          service: this.service,
+        });
+        const resData = res.result;
         if (resData.instance_tutorial && resData.instance_tutorial.length > 0) {
           this.serviceMarkdown = resData.instance_tutorial;
         }
@@ -527,40 +546,49 @@ export default {
         this.servicePaths.push({
           title: resData.display_name,
         });
-        this.categoryId = resData.category.id;
-        this.isEnhancedFeatureEnabled = resData.is_ready || false;
-      })
-        .finally(() => {
-          this.isGuardLoading = false;
+        this.isEnabled = resData.is_ready || false;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
         });
+      }
+    },
 
-      const relatedInformationUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/services/${this.service}/`;
-      this.$http.get(relatedInformationUrl).then((response) => {
-        const resData = response;
-        this.instanceList = resData.results;
-        this.instanceCount = resData.count;
-        this.canEditConfig = resData.count === 0;
+    // 获取服务详情列表
+    async getServiceInstances() {
+      try {
+        const res = await this.$store.dispatch('service/getServiceInstances', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
+        });
+        const { results, count } = res;
+        this.instanceList = results;
+        this.canEditConfig = count === 0;
         // eslint-disable-next-line no-restricted-syntax
-        for (const instanceIndex in resData.results) {
+        for (const instanceIndex in results) {
           this.hFieldstoggleStatus.push({});
           // eslint-disable-next-line max-len
           this.instanceList[instanceIndex].service_instance.credentials = JSON.parse(this.instanceList[instanceIndex].service_instance.credentials);
           this.instanceList[instanceIndex].usage = JSON.parse(this.instanceList[instanceIndex].usage);
         }
-      })
-        .catch(() => {
-          this.$router.push({
-            name: 'appService',
-            params: {
-              id: this.appCode,
-              moduleId: this.curModuleId,
-            },
-          });
-        })
-        .finally(() => {
-          this.requestQueue.shift();
-          this.isTableLoading = false;
+      } catch (e) {
+        this.$router.push({
+          name: 'appService',
+          params: {
+            id: this.appCode,
+            moduleId: this.curModuleId,
+          },
         });
+      } finally {
+        this.requestQueue.shift();
+        // 延时关闭loading防止页面闪动
+        setTimeout(() => {
+          this.isTableLoading = false;
+          this.isEnhancedFeatureEnabled = this.isEnabled;
+        }, 1000);
+      }
     },
 
     async fetchEnableSpecs() {
@@ -663,32 +691,19 @@ export default {
         this.instanceDialogConfig.isLoading = false;
       }
     },
+
+    // 处理复制内容
     handleCopy(payload) {
       const { credentials } = payload.service_instance;
       const hiddenFields = payload.service_instance.hidden_fields;
-
+      let copyContent = '';
       for (const key in credentials) {
-        this.copyContent += `${key}:${credentials[key]}\n`;
+        copyContent += `${key}:${credentials[key]}\n`;
       }
       for (const key in hiddenFields) {
-        this.copyContent += `${key}:${hiddenFields[key]}\n`;
+        copyContent += `${key}:${hiddenFields[key]}\n`;
       }
-
-      const el = document.createElement('textarea');
-      el.value = this.copyContent;
-      el.setAttribute('readonly', '');
-      el.style.position = 'absolute';
-      el.style.left = '-9999px';
-      document.body.appendChild(el);
-      const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      if (selected) {
-        document.getSelection().removeAllRanges();
-        document.getSelection().addRange(selected);
-      }
-      this.$bkMessage({ theme: 'success', message: this.$t('复制成功'), delay: 2000, dismissable: false });
+      return copyContent;
     },
 
     // 编辑实例弹窗
@@ -767,7 +782,7 @@ export default {
     },
 
     handleSetCollapse() {
-      this.$refs.resizeLayoutRef?.setCollapse();
+      this.isCollapsed = !this.isCollapsed;
     },
 
     handleCollapseChange(data) {
@@ -1329,6 +1344,12 @@ export default {
       font-size: 12px;
     }
   }
+}
+.collapsed .instance-resize-layout-cls aside.bk-resize-layout-aside {
+  .bk-resize-trigger {
+    display: none;
+  }
+  width: 0px !important;
 }
 .instance-resize-layout-cls {
   .bk-resize-layout-aside .bk-resize-layout-aside-content {

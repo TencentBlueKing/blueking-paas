@@ -16,15 +16,35 @@
 # to the current version of the project delivered to anyone in the future.
 
 """这里放由于接口已注册到 APIGW, 不能即时下线的接口"""
-from typing import List
+
+from typing import List, Union
 
 from rest_framework.response import Response
 
 from paasng.accessories.log.serializers import LogQueryParamsSLZ
 from paasng.accessories.log.views.logs import ModuleStdoutLogAPIView, ModuleStructuredLogAPIView
+from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
+from paasng.platform.applications.models import Application
+from paasng.platform.modules.models import Module
 from paasng.utils.datetime import convert_timestamp_to_str
+
+
+class AllowAnyActionsOnAllApps(BaseAppPermission):
+    """This class pass all permission checks.
+
+    Why we need this class:
+
+    - Legacy system log API reuse the user log API View which use ApplicationCodeInPathMixin
+      to get the application and module instances.
+    - ApplicationCodeInPathMixin requires at least one application permission class
+      or it won't work.
+    - The system log API doesn't need any permission check
+    """
+
+    def has_object_permission(self, request, view, obj: Union[Application, Module]):
+        return True
 
 
 class V1StdoutLogAPIView(ModuleStdoutLogAPIView):
@@ -64,7 +84,7 @@ class V1StdoutLogAPIView(ModuleStdoutLogAPIView):
 
 
 class V1SysStructuredLogAPIView(ModuleStructuredLogAPIView):
-    permission_classes: List = []
+    permission_classes: List = [AllowAnyActionsOnAllApps]
 
     # 该接口已注册到 APIGW
     # 网关名称 search_structured_log

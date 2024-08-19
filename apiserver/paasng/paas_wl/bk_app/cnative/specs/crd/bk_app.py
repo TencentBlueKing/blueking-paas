@@ -19,16 +19,20 @@
 
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
+
 import datetime
-import shlex
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.constants import (
+    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
+    ApiVersion,
+    MResPhaseType,
+    ResQuotaPlan,
+)
 from paas_wl.workloads.networking.constants import ExposedTypeName
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
-from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import register
 
 from .metadata import ObjectMetadata
@@ -106,46 +110,11 @@ class Probe(BaseModel):
     successThreshold: Optional[int] = 1
     failureThreshold: Optional[int] = 3
 
-    def to_snake_case(self) -> Dict[str, Any]:
-        """将探针字段转换成下划线格式"""
-        exec_handler, http_get_handler, tcp_socket_handler = None, None, None
-        if self.exec:
-            exec_handler = {"command": self.exec.command}
-        elif self.httpGet:
-            http_get_handler = {
-                "path": self.httpGet.path,
-                "port": self.httpGet.port,
-                "http_headers": [{"name": h.name, "value": h.value} for h in self.httpGet.httpHeaders],
-                "host": self.httpGet.host,
-                "scheme": self.httpGet.scheme,
-            }
-        elif self.tcpSocket:
-            tcp_socket_handler = {"port": self.tcpSocket.port, "host": self.tcpSocket.host}
-
-        return {
-            "exec": exec_handler,
-            "http_get": http_get_handler,
-            "tcp_socket": tcp_socket_handler,
-            "initial_delay_seconds": self.initialDelaySeconds,
-            "timeout_seconds": self.timeoutSeconds,
-            "period_seconds": self.periodSeconds,
-            "success_threshold": self.successThreshold,
-            "failure_threshold": self.failureThreshold,
-        }
-
 
 class ProbeSet(BaseModel):
     liveness: Optional[Probe] = None
     readiness: Optional[Probe] = None
     startup: Optional[Probe] = None
-
-    def to_snake_case(self) -> Dict[str, Any]:
-        """将探针字段转换成下划线格式"""
-        return {
-            "liveness": self.liveness.to_snake_case() if self.liveness else None,
-            "readiness": self.readiness.to_snake_case() if self.readiness else None,
-            "startup": self.startup.to_snake_case() if self.startup else None,
-        }
 
 
 class ExposedType(BaseModel):
@@ -175,30 +144,13 @@ class ProcService(BaseModel):
     exposedType: Optional[ExposedType] = None
     port: Optional[int] = None
 
-    def __init__(self, **data):
-        if not data.get("port"):
-            data["port"] = data["targetPort"]
-        super().__init__(**data)
-
-    def to_snake_case(self) -> Dict[str, Any]:
-        exposed_type = None
-        if self.exposedType:
-            exposed_type = {"name": self.exposedType.name}
-
-        return {
-            "name": self.name,
-            "target_port": self.targetPort,
-            "protocol": self.protocol,
-            "exposed_type": exposed_type,
-            "port": self.port,
-        }
-
 
 class BkAppProcess(BaseModel):
     """Process resource"""
 
     name: str
-    replicas: int = 1
+    # `None` value means the replicas is not specified.
+    replicas: Optional[int] = 1
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
     targetPort: Optional[int] = None
@@ -207,62 +159,12 @@ class BkAppProcess(BaseModel):
     probes: Optional[ProbeSet] = None
     services: Optional[List[ProcService]] = None
 
-    # proc_command 用于向后兼容普通应用部署场景(shlex.split + shlex.join 难以保证正确性)
-    proc_command: Optional[str] = Field(None)
-
-    def __init__(self, **data):
-        # 处理 specVersion: 3 中驼峰传递 procCommand
-        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
-        if proc_command := data.get("procCommand"):
-            data["proc_command"] = proc_command
-            data["command"] = None
-            data["args"] = shlex.split(proc_command)
-        super().__init__(**data)
-
-    def get_proc_command(self) -> str:
-        """get_proc_command: 生成 Procfile 文件中对应的命令行"""
-        if self.proc_command:
-            return self.proc_command
-        return generate_bash_command_with_tokens(self.command or [], self.args or [])
-
-    @validator("services")
-    def validate_services(cls, services):  # noqa: N805
-        """validate services. it checks whether names, targetPort and ports are duplicated"""
-        if not services:
-            return services
-
-        names = set()
-        target_ports = set()
-        ports = set()
-
-        for svc in services:
-            if svc.name in names:
-                raise ValueError(f"duplicate service name: {svc.name}")
-            names.add(svc.name)
-
-            if svc.targetPort in target_ports:
-                raise ValueError(f"duplicate target port: {svc.targetPort}")
-            target_ports.add(svc.targetPort)
-
-            if svc.port and svc.port in ports:
-                raise ValueError(f"duplicate port: {svc.port}")
-            ports.add(svc.port)
-
-        return services
-
 
 class Hook(BaseModel):
     """A hook object"""
 
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
-
-    def __init__(self, **data):
-        # TODO 先采用 paasng.platform.declarative.deployment.validations.v2.DeploymentDescSLZ 中的做法, 后续统一优化
-        if proc_command := data.get("procCommand"):
-            data["command"] = None
-            data["args"] = shlex.split(proc_command)
-        super().__init__(**data)
 
 
 class BkAppHooks(BaseModel):
@@ -399,27 +301,17 @@ class BkAppAddon(BaseModel):
     """
 
     name: str
-    specs: List[BkAppAddonSpec] = Field(default_factory=list)
+    specs: Optional[List[BkAppAddonSpec]] = Field(default_factory=list)
     sharedFromModule: Optional[str] = None
 
 
-@register
 class HostAlias(BaseModel):
     """A host alias entry"""
 
     ip: str
     hostnames: List[str]
 
-    def __hash__(self):
-        return hash((self.ip, tuple(sorted(self.hostnames))))
 
-    def __eq__(self, other):
-        if isinstance(other, HostAlias):
-            return self.ip == other.ip and sorted(self.hostnames) == sorted(other.hostnames)
-        return False
-
-
-@register
 class DomainResolution(BaseModel):
     """Domain resolution config"""
 
@@ -427,20 +319,11 @@ class DomainResolution(BaseModel):
     hostAliases: List[HostAlias] = Field(default_factory=list)
 
 
-@register
 class SvcDiscEntryBkSaaS(BaseModel):
     """A service discovery entry that represents an application and an optional module."""
 
     bkAppCode: str
     moduleName: Optional[str] = None
-
-    def __hash__(self):
-        return hash((self.bkAppCode, self.moduleName))
-
-    def __eq__(self, other):
-        if isinstance(other, SvcDiscEntryBkSaaS):
-            return self.bkAppCode == other.bkAppCode and self.moduleName == other.moduleName
-        return False
 
 
 class SvcDiscConfig(BaseModel):
@@ -523,3 +406,14 @@ class BkAppResource(BaseModel):
         result = self.dict(exclude_none=True, exclude={"status"})
         result["metadata"].pop("generation", None)
         return result
+
+    def set_proc_services_annotation(self, enabled: str):
+        """set proc services feature annotation
+
+        :param enabled: "true" or "false". true 表示启用, false 表示不启用
+        """
+        self.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = enabled
+
+    def get_proc_services_annotation(self) -> Optional[str]:
+        """get proc services feature annotation"""
+        return self.metadata.annotations.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY)

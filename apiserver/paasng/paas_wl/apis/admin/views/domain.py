@@ -27,12 +27,11 @@ from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.api_docs import openapi_empty_response
 
 
-class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class AppDomainsViewSet(GenericViewSet):
     """管理应用独立域名的 ViewSet"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -48,7 +47,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         结果默认按（“模块名”、“环境”）排序
         """
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
 
         # Get results and sort
         domains = self.get_queryset(application)
@@ -71,7 +70,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         - 【客户端】模块与环境建议使用下拉框
         - 【客户端】`https_enabled` 暂不暴露给给用户
         """
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
 
         data = validate_domain_payload(request.data, application, serializer_cls=DomainSLZ)
         env = application.get_module(data["module"]["name"]).get_envs(data["environment"]["environment"])
@@ -91,7 +90,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     )
     def update(self, request, **kwargs):
         """更新一个独立域名的域名与路径信息"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
         instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
 
         data = validate_domain_payload(request.data, application, instance=instance, serializer_cls=DomainForUpdateSLZ)
@@ -103,7 +102,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=["Domains"])
     def destroy(self, request, *args, **kwargs):
         """通过 ID 删除一个独立域名"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
         instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
 
         get_custom_domain_mgr(application).delete(instance)

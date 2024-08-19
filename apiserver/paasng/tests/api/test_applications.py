@@ -25,10 +25,9 @@ from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
-from paasng.misc.operations.constant import OperationType
-from paasng.misc.operations.models import Operation
+from paasng.infras.accounts.models import UserProfile
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
@@ -254,24 +253,15 @@ class TestApplicationCreateWithEngine:
 
     @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
-        ("source_origin", "source_repo_url", "source_control_type", "with_feature_flag", "is_success"),
+        ("source_origin", "source_repo_url", "source_control_type", "is_success"),
         [
             (
                 SourceOrigin.BK_LESS_CODE,
                 "http://dummy.git",
                 "",
                 True,
-                True,
             ),
-            (
-                SourceOrigin.BK_LESS_CODE,
-                "http://dummy.git",
-                "",
-                False,
-                False,
-            ),
-            (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", True, True),
-            (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", False, True),
+            (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", True),
         ],
     )
     def test_create_non_default_origin(
@@ -282,12 +272,8 @@ class TestApplicationCreateWithEngine:
         source_origin,
         source_repo_url,
         source_control_type,
-        with_feature_flag,
         is_success,
     ):
-        # Set user feature flag
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
-
         random_suffix = generate_random_string(length=6)
         response = api_client.post(
             "/api/bkapps/applications/v2/",
@@ -407,11 +393,15 @@ class TestApplicationDeletion:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.APP, operation=OperationEnum.DELETE
+        ).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
             response = api_client.delete("/api/bkapps/applications/{}/".format(bk_app.code))
         assert response.status_code == 204
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.APP, operation=OperationEnum.DELETE
+        ).exists()
 
     @pytest.mark.usefixtures("_with_empty_live_addrs")
     def test_rollback(
@@ -421,14 +411,21 @@ class TestApplicationDeletion:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.APP, operation=OperationEnum.DELETE
+        ).exists()
         with mock.patch(
             "paasng.platform.applications.views.ApplicationViewSet._delete_all_module",
             side_effect=error_codes.CANNOT_DELETE_APP,
         ):
             response = api_client.delete("/api/bkapps/applications/{}/".format(bk_app.code))
         assert response.status_code == 400
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code,
+            target=OperationTarget.APP,
+            operation=OperationEnum.DELETE,
+            result_code=ResultCode.FAILURE,
+        ).exists()
 
 
 class TestCreateBkPlugin:
@@ -444,7 +441,6 @@ class TestCreateBkPlugin:
     )
     def test_normal(self, api_client, mock_wl_services_in_creation, settings, bk_user, source_init_template, language):
         settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = True
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
         response = self._send_creation_request(api_client, source_init_template)
 
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
@@ -486,7 +482,7 @@ class TestCreateCloudNativeApp:
 
     @pytest.fixture(autouse=True)
     def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
+        pass
 
     def test_create_with_image(self, api_client):
         """托管方式：仅镜像"""

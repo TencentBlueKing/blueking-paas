@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.http.response import HttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
@@ -25,7 +26,7 @@ from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.serializers.packages import SourcePackageSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_package
@@ -49,7 +50,7 @@ class SourcePackageManageView(ApplicationDetailBaseView):
         return kwargs
 
 
-class SourcePackageManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathMixin):
+class SourcePackageManageViewSet(ListModelMixin, GenericViewSet):
     """包版本管理API"""
 
     schema = None
@@ -58,12 +59,13 @@ class SourcePackageManageViewSet(ListModelMixin, GenericViewSet, ApplicationCode
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_queryset(self):
-        application = self.get_application()
-        try:
-            module = self.get_module_via_path()
-        except ValueError:
+        application = get_object_or_404(Application, code=self.kwargs["code"])
+        # The "module_name" is optional in the path kwargs
+        if module_name := self.kwargs.get("module_name"):
+            module = application.get_module(module_name)
+            return super().get_queryset().filter(module=module)
+        else:
             return super().get_queryset().filter(module__application=application)
-        return super().get_queryset().filter(module=module)
 
     def download(self, request, **kwargs):
         """下载已有源码包"""

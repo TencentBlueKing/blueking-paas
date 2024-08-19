@@ -89,7 +89,7 @@ func (r *ServiceReconciler) listCurrentServices(
 		client.InNamespace(bkapp.GetNamespace()),
 		client.MatchingLabels{paasv1alpha2.BkAppNameKey: bkapp.GetName()},
 	); err != nil {
-		return nil, errors.Wrap(err, "failed to list app's Service")
+		return nil, errors.Wrap(err, "list app's Service")
 	}
 	return lo.ToSlicePtr(current.Items), nil
 }
@@ -123,7 +123,7 @@ func (r *ServiceReconciler) handleUpdate(
 		if err != nil {
 			return errors.Wrapf(
 				err,
-				"failed to patch update Service(%s/%s) while marshal patching data",
+				"patch update Service(%s/%s) while marshal patching data",
 				want.GetNamespace(),
 				want.GetName(),
 			)
@@ -131,7 +131,7 @@ func (r *ServiceReconciler) handleUpdate(
 		if err = cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patch)); err != nil {
 			return errors.Wrapf(
 				err,
-				"failed to patch update Service(%s/%s)",
+				"patch update Service(%s/%s)",
 				want.GetNamespace(),
 				want.GetName(),
 			)
@@ -146,37 +146,11 @@ func BuildService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *cor
 		return nil
 	}
 
-	if bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey] == "true" {
+	if bkapp.IsProcServicesFeatureEnabled() {
 		return buildServiceByProcServices(bkapp, process)
 	}
 
-	name := names.Service(bkapp, process.Name)
-	svcLabels := labels.Deployment(bkapp, process.Name)
-	selector := labels.PodSelector(bkapp, process.Name)
-
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   bkapp.Namespace,
-			Labels:      svcLabels,
-			Annotations: map[string]string{},
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.FromInt(int(process.TargetPort)),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-			Selector: selector,
-		},
-	}
+	return buildDefaultService(bkapp, process)
 }
 
 // buildServiceByProcServices build service by proc services config
@@ -214,6 +188,37 @@ func buildServiceByProcServices(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2
 		},
 		Spec: corev1.ServiceSpec{
 			Ports:    ports,
+			Selector: selector,
+		},
+	}
+}
+
+// buildDefaultService build default service for bkapp which not enable proc services feature
+func buildDefaultService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *corev1.Service {
+	name := names.Service(bkapp, process.Name)
+	svcLabels := labels.Deployment(bkapp, process.Name)
+	selector := labels.PodSelector(bkapp, process.Name)
+
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   bkapp.Namespace,
+			Labels:      svcLabels,
+			Annotations: map[string]string{},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(int(process.TargetPort)),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
 			Selector: selector,
 		},
 	}

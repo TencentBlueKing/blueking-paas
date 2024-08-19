@@ -62,8 +62,11 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 		deployID = DefaultDeployID
 	}
 
-	// Prepare data
+	// Generate the environment variables and render the "{{bk_var_*}}" var placeholder which
+	// might be used in the values.
 	envVars := common.GetAppEnvs(app)
+	envVars = common.RenderAppVars(envVars, common.VarsRenderContext{ProcessType: procName})
+
 	mounterMap, err := volumes.GetAllVolumeMounterMap(app)
 	if err != nil {
 		return nil, err
@@ -104,7 +107,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 	}
 	annotations := map[string]string{
 		paasv1alpha2.DeployIDAnnoKey:                  deployID,
-		paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: string(bkAppJson),
+		paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: bkAppJson,
 	}
 
 	deployment := &appsv1.Deployment{
@@ -196,10 +199,8 @@ func buildContainers(
 		for _, svc := range proc.Services {
 			container.Ports = append(container.Ports, corev1.ContainerPort{ContainerPort: svc.TargetPort})
 		}
-	} else {
-		if proc.TargetPort != 0 {
-			container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
-		}
+	} else if proc.TargetPort != 0 {
+		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
 	}
 
 	// 容器探针

@@ -24,8 +24,6 @@ import yaml
 from django.conf import settings
 from django.test.utils import override_settings
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
@@ -73,7 +71,6 @@ class TestApiInAPIGW:
         is_lesscode_app_cloud_native,
         app_type,
     ):
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, True)
         lesscode_public_params.update(
             {
                 "region": settings.DEFAULT_REGION_NAME,

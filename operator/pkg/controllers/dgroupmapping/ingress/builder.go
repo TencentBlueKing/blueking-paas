@@ -298,7 +298,7 @@ func makePaths(bkapp *paasv1alpha2.BkApp, pathPrefixes []string) []networkingv1.
 		path := networkingv1.HTTPIngressPath{
 			Path:     makeLocationPath(prefix),
 			PathType: lo.ToPtr(networkingv1.PathTypeImplementationSpecific),
-			Backend:  makeIngressServiceBackend(bkapp),
+			Backend:  *makeIngressServiceBackend(bkapp),
 		}
 		results = append(results, path)
 	}
@@ -306,26 +306,40 @@ func makePaths(bkapp *paasv1alpha2.BkApp, pathPrefixes []string) []networkingv1.
 }
 
 // makeIngressServiceBackend return the ingress backend related to the process service with exposed type bk/http,
-// otherwise returns the default one.
-func makeIngressServiceBackend(bkapp *paasv1alpha2.BkApp) networkingv1.IngressBackend {
-	if bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey] == "true" {
-		for _, proc := range bkapp.Spec.Processes {
-			for _, procSvc := range proc.Services {
-				if procSvc.ExposedType != nil && procSvc.ExposedType.Name == paasv1alpha2.ExposedTypeNameBkHttp {
-					return networkingv1.IngressBackend{
-						Service: &networkingv1.IngressServiceBackend{
-							Name: names.Service(bkapp, proc.Name),
-							Port: networkingv1.ServiceBackendPort{
-								Name: procSvc.Name,
-							},
+// otherwise return the default one.
+func makeIngressServiceBackend(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressBackend {
+	if bkapp.HasProcServices() {
+		if backend := makeIngressBackendByProcService(bkapp); backend != nil {
+			return backend
+		}
+	}
+
+	return makeDefaultIngressBackend(bkapp)
+}
+
+// makeIngressBackendByProcService return the ingress backend by the process service with exposed type bk/http,
+// otherwise return nil.
+func makeIngressBackendByProcService(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressBackend {
+	for _, proc := range bkapp.Spec.Processes {
+		for _, procSvc := range proc.Services {
+			if procSvc.ExposedType != nil && procSvc.ExposedType.Name == paasv1alpha2.ExposedTypeNameBkHttp {
+				return &networkingv1.IngressBackend{
+					Service: &networkingv1.IngressServiceBackend{
+						Name: names.Service(bkapp, proc.Name),
+						Port: networkingv1.ServiceBackendPort{
+							Name: procSvc.Name,
 						},
-					}
+					},
 				}
 			}
 		}
 	}
+	return nil
+}
 
-	return networkingv1.IngressBackend{
+// makeDefaultIngressBackend return the default ingress backend for the bkapp which not enable proc services feature
+func makeDefaultIngressBackend(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressBackend {
+	return &networkingv1.IngressBackend{
 		Service: &networkingv1.IngressServiceBackend{
 			Name: names.Service(bkapp, DefaultServiceProcName),
 			Port: networkingv1.ServiceBackendPort{

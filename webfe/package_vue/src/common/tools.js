@@ -563,3 +563,39 @@ export function copy(value, ctx) {
   }
   ctx.$bkMessage({ theme: 'primary', message: ctx.$t('复制成功'), delay: 2000, dismissable: false });
 }
+
+/**
+ * 检查当前元素（el）是否包含指定类名
+ * @param {String} cls 类名
+ * @param {Element} el 元素
+ */
+export function parentClsContains(cls, el) {
+  if (el.classList.contains(cls)) {
+    return true;
+  }
+  let node = el.parentNode;
+  while (node) {
+    if (node.classList && node.classList.contains(cls)) return true;
+    node = node.parentNode;
+  }
+  return false;
+}
+
+/**
+ * 将指定内容以.txt下载
+ * @param {String} cls 类名
+ * @param {Element} el 元素
+ */
+export function downloadTxt(content, fileName) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName; // 指定下载文件的名称
+
+  // 触发点击事件下载文件
+  document.body.appendChild(link);
+  link.click();
+
+  URL.revokeObjectURL(link.href);
+  document.body.removeChild(link);
+}

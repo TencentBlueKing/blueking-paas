@@ -19,7 +19,7 @@ from typing import List, Type, Union
 
 from blue_krill.monitoring.probe.base import Issue, VirtualProbe
 from blue_krill.monitoring.probe.http import BKHttpProbe, HttpProbe
-from blue_krill.monitoring.probe.mysql import MySQLProbe, transfer_django_db_settings
+from blue_krill.monitoring.probe.mysql import MySQLConfig, MySQLProbe, transfer_django_db_settings
 from blue_krill.monitoring.probe.redis import RedisProbe, RedisSentinelProbe
 from django.conf import settings
 from django.utils.module_loading import import_string
@@ -50,14 +50,29 @@ class BKConsoleProbe(MySQLProbe):
         self.config = transfer_django_db_settings(settings.BK_CONSOLE_DBCONF)
 
 
+# The database config might be absent when running "collectstatic" command in the
+# docker building process, skip the probe config initialization in this case or it
+# will raise an exception.
+_empty_probe_config = MySQLConfig("", 0, "", "", "")
+
+_default_mysql_probe_config = _empty_probe_config
+if (_default_db := settings.DATABASES.get("default")) and _default_db["ENGINE"] != "django.db.backends.dummy":
+    _default_mysql_probe_config = transfer_django_db_settings(_default_db)
+
+
 class PlatformMysqlProbe(MySQLProbe):
     name = "platform-mysql-ng"
-    config = transfer_django_db_settings(settings.DATABASES["default"])
+    config = _default_mysql_probe_config
+
+
+_wl_mysql_probe_config = _empty_probe_config
+if (_wl_db := settings.DATABASES.get("workloads")) and _wl_db["ENGINE"] != "django.db.backends.dummy":
+    _wl_mysql_probe_config = transfer_django_db_settings(_wl_db)
 
 
 class WorkloadsMysqlProbe(MySQLProbe):
     name = "platform-mysql-wl"
-    config = transfer_django_db_settings(settings.DATABASES["workloads"])
+    config = _wl_mysql_probe_config
 
 
 class ESBProbe(BKHttpProbe):
@@ -90,7 +105,8 @@ class _BkRepoProbe(HttpProbe):
     bkrepo_endpoint = ""
     if isinstance(settings.BLOBSTORE_BKREPO_CONFIG, dict):
         bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG.get("ENDPOINT", "")
-    url = f"{bkrepo_endpoint}/generic/actuator/info"
+    # bkrepo_endpoint 如果配置了 '/' 结尾, 需要去掉
+    url = f"{bkrepo_endpoint.rstrip('/')}/generic/actuator/info"
 
 
 class BKIAMProbe(HttpProbe):

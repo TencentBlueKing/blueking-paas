@@ -26,7 +26,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -36,7 +36,6 @@ from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manage
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
-from paasng.utils.views import permission_classes as perm_classes
 
 from .exceptions import BKMonitorNotSupportedError
 from .models import AppAlertRule
@@ -185,8 +184,10 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
     serializer_class = AlertRuleSLZ
     pagination_class = None
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(query_serializer=ListAlertRulesSLZ)
-    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy="merge")
+    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list(self, request, code, module_name):
         """查询告警规则列表"""
         serializer = ListAlertRulesSLZ(data=self.request.query_params)
@@ -210,7 +211,7 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy="merge")
+    @app_action_required(AppAction.EDIT_ALERT_POLICY)
     def update(self, request, code, id):
         """更新告警规则"""
         filter_kwargs = {"id": id, "application": self.get_application()}
@@ -233,7 +234,7 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         serializer = SupportedAlertSLZ(supported_alerts, many=True)
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy="merge")
+    @app_action_required(AppAction.EDIT_ALERT_POLICY)
     def init_alert_rules(self, request, code):
         """初始化告警规则"""
         application = self.get_application()

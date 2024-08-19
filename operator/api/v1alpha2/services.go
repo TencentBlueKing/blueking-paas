@@ -67,16 +67,6 @@ type ExposedType struct {
 	Name ExposedTypeName `json:"name"`
 }
 
-// HasProcServices check if bkapp has proc services config
-func HasProcServices(bkapp *BkApp) bool {
-	for _, proc := range bkapp.Spec.Processes {
-		if len(proc.Services) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 func validateExposedType(t *ExposedType) error {
 	if t != nil && t.Name != ExposedTypeNameBkHttp {
 		return errors.New("unsupported exposed type")

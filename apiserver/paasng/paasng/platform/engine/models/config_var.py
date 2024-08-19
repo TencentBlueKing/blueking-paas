@@ -14,14 +14,14 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from typing import TYPE_CHECKING, Dict
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.utils.models import TimestampedModel
+from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models.module import Module
@@ -47,6 +47,12 @@ def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
         module=module, environment_id__in=(ENVIRONMENT_ID_FOR_GLOBAL, env_id)
     ).order_by("environment_id")
     return {obj.key: obj.value for obj in config_vars}
+
+
+def get_custom_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
+    """Get default config vars as dict, with prefix"""
+    builtin_config_vars = dict(BuiltinConfigVar.objects.values_list("key", "value"))
+    return add_prefix_to_key(builtin_config_vars, config_vars_prefix)
 
 
 class ConfigVarQuerySet(models.QuerySet):
@@ -126,5 +132,29 @@ class ConfigVar(TimestampedModel):
         )
 
 
-def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, str]:
+def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, Any]:
     return {f"{prefix}{key}": value for key, value in items.items()}
+
+
+@dataclass
+class BuiltInEnvVarDetail:
+    key: str
+    value: str
+    description: Optional[str]
+    prefix: str = field(default="")
+
+    def __post_init__(self):
+        if self.prefix:
+            self.key = f"{self.prefix}{self.key}"
+
+    def to_dict(self):
+        return {self.key: {"value": self.value, "description": self.description}}
+
+
+class BuiltinConfigVar(AuditedModel):
+    """Default config vars for global, can be added or edited in admin42."""
+
+    key = models.CharField(verbose_name="环境变量名", max_length=128, null=False, unique=True)
+    value = models.TextField(verbose_name="环境变量值", max_length=512, null=False)
+    description = models.CharField(verbose_name="描述", max_length=512, null=False)
+    operator = BkUserField(verbose_name="更新者")

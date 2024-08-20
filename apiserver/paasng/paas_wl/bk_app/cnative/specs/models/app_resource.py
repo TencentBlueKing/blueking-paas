@@ -241,8 +241,11 @@ def update_app_resource(app: Application, module: Module, payload: Dict):
     :raise: `ValidationError` when payload is invalid
     :raise: `ValueError` if model resource has not been initialized for given application
     """
-    # force replace metadata.name with app_code to avoid user modify
-    payload["metadata"]["name"] = generate_bkapp_name(module)
+    try:
+        # force replace metadata.name with app_code to avoid user modify
+        payload["metadata"]["name"] = generate_bkapp_name(module)
+    except KeyError as e:
+        raise ValidationError(f"Missing field in payload: {e}")
 
     try:
         obj = BkAppResource(**payload)

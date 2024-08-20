@@ -366,7 +366,7 @@ export default {
     },
     isDisabled() {
       // 在发布状态开启的情况下可以关闭
-      if(this.appMarketConfig.enabled && !this.confirmRequiredWhenPublish && !this.isSureRisk) {
+      if(this.appMarketConfig.enabled) {
         return false;
       }
       return !this.appPreparations.all_conditions_matched

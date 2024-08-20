@@ -16,10 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from dataclasses import asdict
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
-import cattr
 from cattr import unstructure
 from django.conf import settings
 from django.db import models
@@ -33,7 +31,7 @@ from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, Pro
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paasng.platform.declarative.deployment.resources import ProbeHandler
+from paasng.platform.bkapp_model.entities import ProbeHandler
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.utils.models import make_json_field
 
@@ -171,7 +169,7 @@ class ProcessSpecManager:
                 plan=plan,
                 proc_command=process.command,
                 autoscaling=process.autoscaling,
-                scaling_config=asdict(process.scaling_config) if process.scaling_config else None,
+                scaling_config=process.scaling_config.dict() if process.scaling_config else None,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -194,8 +192,8 @@ class ProcessSpecManager:
                 recorder.setattr("plan", plan)
             if process.autoscaling != process_spec.autoscaling:
                 recorder.setattr("autoscaling", process.autoscaling)
-            if (scaling_config := process.scaling_config) and asdict(scaling_config) != process_spec.scaling_config:
-                recorder.setattr("scaling_config", asdict(scaling_config))
+            if (scaling_config := process.scaling_config) and scaling_config.dict() != process_spec.scaling_config:
+                recorder.setattr("scaling_config", scaling_config.dict())
             if (replicas := process.replicas) and replicas != process_spec.target_replicas:
                 recorder.setattr("target_replicas", replicas)
             return recorder.changed, process_spec
@@ -313,7 +311,7 @@ class ProcessProbeManager:
                     app=self.wl_app,
                     process_type=proc.name,
                     probe_type=probe_type,
-                    probe_handler=cattr.unstructure(probe.get_probe_handler()),
+                    probe_handler=probe.get_probe_handler(),
                     initial_delay_seconds=probe.initial_delay_seconds,
                     timeout_seconds=probe.timeout_seconds,
                     period_seconds=probe.period_seconds,

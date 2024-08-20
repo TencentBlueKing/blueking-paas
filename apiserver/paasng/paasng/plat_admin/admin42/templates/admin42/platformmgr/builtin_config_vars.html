@@ -2,7 +2,7 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="builtin-config-var-list" class="p20">
-    <bk-alert type="warning" title="此处定义的环境变量会覆盖系统内置环境变量。环境变量优先级（由高到低）：平台管理自定义环境变量 > 系统内置环境变量 > 单个应用中自定义环境变量"></bk-alert>
+    <bk-alert type="warning" title="此处定义的环境变量会覆盖系统内置环境变量。云原生应用环境变量优先级（由高到低）：平台管理自定义环境变量 > 系统内置环境变量 > 单个应用中自定义环境变量"></bk-alert>
 
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         新建
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             handleDelete: function (row) {
                 this.$bkInfo({
-                    title: '确认要删除？',
+                    title: `确定要删除 ${system_prefix}${row.key}？`,
                     confirmLoading: true,
                     theme: 'danger',
                     confirmFn: async () => {

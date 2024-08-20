@@ -32,7 +32,6 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
@@ -41,7 +40,8 @@ from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.entities import ProcEnvOverlay, Process
+from paasng.platform.bkapp_model.entities_syncer import sync_env_overlay_by_proc, sync_processes
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -278,22 +278,25 @@ class ModuleInitializer:
             build_params["image_credential_name"] = image_credential["name"]
         update_build_config_with_method(config_obj, build_method=build_config.build_method, data=build_params)
 
-        # 导入进程配置
         processes = [
-            BkAppProcess(
-                name=proc["name"],
-                command=proc["command"],
-                args=proc["args"],
-                targetPort=proc.get("port", None),
+            Process(
+                name=proc_spec["name"],
+                command=proc_spec["command"],
+                args=proc_spec["args"],
+                target_port=proc_spec.get("port", None),
+                probes=proc_spec.get("probes", None),
             )
-            for proc in bkapp_spec["processes"]
+            for proc_spec in bkapp_spec["processes"]
         ]
 
-        mgr = ModuleProcessSpecManager(self.module)
-        mgr.sync_from_bkapp(processes)
-        for proc in bkapp_spec["processes"]:
-            if env_overlay := proc.get("env_overlay"):
-                mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)
+        sync_processes(self.module, processes)
+        # 更新环境覆盖
+        for proc_spec in bkapp_spec["processes"]:
+            if env_overlay := proc_spec.get("env_overlay"):
+                for env_name, proc_env_overlay in env_overlay.items():
+                    sync_env_overlay_by_proc(
+                        self.module, proc_spec["name"], ProcEnvOverlay(**{"env_name": env_name, **proc_env_overlay})
+                    )
 
         # 导入 hook 配置
         if hook := bkapp_spec.get("hook"):

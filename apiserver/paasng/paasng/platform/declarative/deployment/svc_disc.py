@@ -28,7 +28,7 @@ from django.utils.encoding import force_bytes, force_str
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.entrance.preallocated import get_exposed_url_type, get_preallocated_address
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.bkapp_model.entities import SvcDiscEntryBkSaaS
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
@@ -41,7 +41,7 @@ class BkSaaSEnvVariableFactory:
 
     variable_name = settings.CONFIGVAR_SYSTEM_PREFIX + "SERVICE_ADDRESSES_BKSAAS"
 
-    def __init__(self, saas_items: List[BkSaaSItem]):
+    def __init__(self, saas_items: List[SvcDiscEntryBkSaaS]):
         self.saas_items = saas_items
 
     def make(self) -> Dict[str, str]:
@@ -71,7 +71,7 @@ class BkSaaSEnvVariableFactory:
 class BkSaaSAddrDiscoverer:
     """Get the service addresses of the given SaaS items"""
 
-    def get(self, items: List[BkSaaSItem]) -> List[Dict]:
+    def get(self, items: List[SvcDiscEntryBkSaaS]) -> List[Dict]:
         """Get preallocated addresses by a list of `BkSaaSItem` objects
 
         :return: A list of addresses dict which includes both environments.
@@ -96,8 +96,8 @@ class BkSaaSAddrDiscoverer:
 
     @staticmethod
     def extend_with_clusters(
-        items: Sequence[BkSaaSItem],
-    ) -> Iterable[Tuple[BkSaaSItem, Optional[Dict[AppEnvName, Cluster]]]]:
+        items: Sequence[SvcDiscEntryBkSaaS],
+    ) -> Iterable[Tuple[SvcDiscEntryBkSaaS, Optional[Dict[AppEnvName, Cluster]]]]:
         """Extends given `BkSaaSItem` objects with their clusters, if the SaaS has
         not been deployed yet, the cluster value will be `None`, otherwise the
         real cluster object will be returned.
@@ -115,7 +115,7 @@ class BkSaaSAddrDiscoverer:
                 yield item, None
 
 
-def query_module(item: BkSaaSItem) -> Optional[Module]:
+def query_module(item: SvcDiscEntryBkSaaS) -> Optional[Module]:
     """Try to get the Module object in database by given `BkSaaSItem` info"""
     try:
         app = Application.objects.get(code=item.bk_app_code)

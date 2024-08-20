@@ -146,24 +146,31 @@
                   ext-cls="dropdown-menu-cls"
                 >
                   <template slot="dropdown-trigger">
-                    <i
-                      class="paasng-icon paasng-icon-more"
-                      v-bk-tooltips="{ content: $t('启动进程后才能进行扩缩容'),
-                                       disabled: process.available_instance_count || process.desired_replicas }" />
+                    <i class="paasng-icon paasng-icon-more" />
                   </template>
                   <ul class="bk-dropdown-list" slot="dropdown-content">
-                    <!-- <li>
-                        <a
-                          text
-                          href="javascript:void(0);"
-                          class="blue"
-                          @click="showProcessConfigDialog(process, index)"
-                        > {{ $t('扩缩容') }} </a>
-                      </li> -->
-                    <bk-button
-                      text size="small" @click="showProcessConfigDialog(process, index)"
-                      :disabled="!process.available_instance_count
-                        || !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
+                    <li
+                      class="option"
+                      v-bk-tooltips="{
+                        content: $t('启动进程后才能进行扩缩容'),
+                        disabled: process.available_instance_count || process.desired_replicas
+                      }">
+                      <bk-button
+                        text
+                        size="small"
+                        @click="showProcessConfigDialog(process, index)"
+                        :disabled="!process.available_instance_count || !process.desired_replicas">
+                        {{ $t('扩缩容') }}
+                      </bk-button>
+                    </li>
+                    <li class="option">
+                      <bk-button
+                        text
+                        size="small"
+                        @click="showRestartPopup('process', process)">
+                        {{ $t('重启进程') }}
+                      </bk-button>
+                    </li>
                   </ul>
                 </bk-dropdown-menu>
               </div>
@@ -225,14 +232,19 @@
                         > {{ $t('查看日志') }} </a>
                         <a
                           href="javascript:void(0);"
-                          class="blue ml5"
+                          class="blue ml8"
                           @click="showInstanceConsole(instance, process)"
                         > {{ $t('访问控制台') }} </a>
                         <a
                           href="javascript:void(0);"
-                          class="blue ml5"
+                          class="blue ml8"
                           @click="showInstanceEvents(instance, process)"
                         > {{ $t('查看事件') }} </a>
+                        <a
+                          href="javascript:void(0);"
+                          class="blue ml8"
+                          @click="showRestartPopup('instance', instance)"
+                        > {{ $t('重启实例') }} </a>
                       </td>
                     </tr>
                   </template>
@@ -254,91 +266,6 @@
           </div>
         </div>
       </div>
-
-      <bk-sideslider
-        :width="computedWidth"
-        :is-show.sync="processSlider.isShow"
-        :title="processSlider.title"
-        :quick-close="true"
-      >
-        <div
-          id="log-container"
-          slot="content"
-          class="p0 instance-log-wrapper paas-log-box"
-        >
-          <div class="action-box">
-            <bk-button
-              :key="isLogsLoading"
-              class="fr p0 f12 refresh-btn"
-              style="width: 32px; min-width: 32px;"
-              :disabled="isLogsLoading"
-              @click="loadInstanceLog"
-            >
-              <span class="bk-icon icon-refresh f18" />
-            </bk-button>
-
-            <bk-form
-              form-type="inline"
-              class="fr mr5"
-            >
-              <bk-form-item :label="$t('时间段：')">
-                <bk-select
-                  v-model="curLogTimeRange"
-                  style="width: 250px;"
-                  :clearable="false"
-                  :disabled="isLogsLoading"
-                >
-                  <bk-option
-                    v-for="(option, index) in chartRangeList"
-                    :id="option.id"
-                    :key="index"
-                    :name="option.name"
-                  />
-                </bk-select>
-              </bk-form-item>
-            </bk-form>
-          </div>
-          <div class="instance-textarea">
-            <div
-              class="textarea"
-              style="height: 100%;"
-            >
-              <template v-if="!isLogsLoading && instanceLogs.length">
-                <ul>
-                  <li
-                    v-for="(log, index) of instanceLogs"
-                    :key="index"
-                    class="stream-log"
-                  >
-                    <span
-                      class="mr10"
-                      style="min-width: 140px;"
-                    >{{ log.timestamp }}</span>
-                    <span class="pod-name">{{ log.podShortName }}</span>
-                    <pre
-                      class="message"
-                      v-html="log.message || '--'"
-                    />
-                  </li>
-                </ul>
-              </template>
-              <template v-else-if="isLogsLoading">
-                <div class="log-loading-container">
-                  <div class="log-loading">
-                    {{ $t('日志获取中...') }}
-                  </div>
-                </div>
-              </template>
-              <template v-else>
-                <p>
-                  {{ $t('暂时没有日志记录') }}
-                </p>
-              </template>
-            </div>
-          </div>
-        </div>
-      </bk-sideslider>
-
       <bk-sideslider
         :width="750"
         :is-show.sync="chartSlider.isShow"
@@ -648,10 +575,22 @@
       </div>
     </bk-dialog>
     <!-- 无法使用控制台 end -->
+
+    <!-- 日志弹窗 -->
+    <process-log
+      v-model="logConfig.visiable"
+      :title="logConfig.title"
+      :logs="logConfig.logs"
+      :loading="logConfig.isLoading"
+      :time-selection="chartRangeList"
+      :params="logConfig.params"
+      @refresh="refreshLogs">
+    </process-log>
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>
+import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
@@ -662,6 +601,7 @@ import $ from 'jquery';
 import i18n from '@/language/i18n.js';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
+import processLog from '@/components/process-log-dialog/log.vue';
 
 let maxReplicasNum = 0;
 
@@ -683,6 +623,7 @@ export default {
     tooltipConfirm,
     chart: ECharts,
     eventDetail,
+    processLog,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -794,14 +735,12 @@ export default {
       curInstance: {
         name: '',
       },
-      instanceLogs: [],
       // 进程操作相关变量
       loading: true,
       isAppOfflined: false,
       deploymentReady: false,
       pendingProcessList: [],
       processInterval: undefined,
-      isLogsLoading: false,
       timer: 0,
       processPlan: {
         processType: 'unkonwn',
@@ -841,10 +780,6 @@ export default {
       logInterval: undefined,
       filterKeys: '',
       logIds: {},
-      processSlider: {
-        isShow: false,
-        title: '',
-      },
       chartSlider: {
         isShow: false,
         title: '',
@@ -933,6 +868,12 @@ export default {
         processName: '',
         instanceName: '',
       },
+      logConfig: {
+        visiable: false,
+        isLoading: false,
+        title: '',
+        logs: [],
+      },
     };
   },
   computed: {
@@ -962,9 +903,6 @@ export default {
     },
   },
   watch: {
-    curLogTimeRange() {
-      this.loadInstanceLog();
-    },
     '$route'() {
       this.init();
       this.getAutoScalFlag();  // 切换路由也需要获取featureflag
@@ -1171,11 +1109,17 @@ export default {
              */
     showInstanceLog(instance, process) {
       this.curInstance = instance;
-      this.instanceLogs = [];
-      this.processSlider.isShow = true;
-      this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
+      this.logConfig.visiable = true;
+      this.logConfig.isLoading = true;
+      this.logConfig.params = {
+        appCode: this.appCode,
+        moduleId: this.curModuleId,
+        env: this.environment,
+        processType: process.name,
+        instanceName: instance.name,
+      };
+      this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
       this.loadInstanceLog();
-      this.initSidebarFormData(this.curLogTimeRange);
     },
 
     getParams() {
@@ -1188,8 +1132,8 @@ export default {
     },
 
     /**
-             * 构建过滤参数
-             */
+     * 构建过滤参数
+     */
     getFilterParams() {
       const params = {
         query: {
@@ -1204,14 +1148,9 @@ export default {
     },
 
     /**
-             * 加载实例日志
-             */
+     * 加载实例日志
+     */
     async loadInstanceLog() {
-      if (this.isLogsLoading) {
-        return false;
-      }
-
-      this.isLogsLoading = true;
       try {
         const { appCode } = this;
         const moduleId = this.curModuleId;
@@ -1228,29 +1167,21 @@ export default {
         data.forEach((item) => {
           item.podShortName = item.pod_name.split('-').reverse()[0];
         });
-        this.instanceLogs = data;
-        // 滚动到底部
-        setTimeout(() => {
-          const container = document.getElementById('log-container');
-          container.scrollTo({
-            top: container?.scrollHeight || 0,
-            behavior: 'smooth',
-          });
-        }, 500);
+        this.logConfig.logs = data;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
-        this.isLogsLoading = false;
+        this.logConfig.isLoading = false;
       }
     },
 
     /**
-             * 显示进程实例列表
-             * @param {Object} data 进程
-             */
+     * 显示进程实例列表
+     * @param {Object} data 进程
+     */
     showProcessDetail(data) {
       // 当前项折叠
       if (data.name === this.curProcessKey) {
@@ -1613,7 +1544,7 @@ export default {
       const instances = processesData.instances.items;
 
       processesData.processes.items.forEach((processItem) => {
-        const { type } = processItem;
+        const { type, name: processName } = processItem;
         const extraInfo = extraInfos.find(item => item.type === type);
         const packageInfo = packages.find(item => item.name === type);
 
@@ -1661,6 +1592,7 @@ export default {
           clusterLink: processInfo.cluster_link,
           scalingConfig: processInfo.scaling_config,
           autoscaling: processInfo.autoscaling,
+          processName,
         };
 
         this.updateProcessStatus(process);
@@ -2236,6 +2168,90 @@ export default {
       this.instanceEventConfig.processName = process.name;
       this.instanceEventConfig.instanceName = instance.name;
     },
+
+    preOperation() {
+      this.logConfig.isLoading = true;
+      this.logConfig.logs = [];
+    },
+
+    // 刷新日志
+    refreshLogs(data) {
+      this.preOperation();
+      if (data.type === 'realtime') {
+        this.curLogTimeRange = data.time;
+        this.loadInstanceLog();
+      } else {
+        this.getPreviousLogs();
+      }
+    },
+
+    // 重启日志
+    async getPreviousLogs() {
+      try {
+        const logs = await this.$store.dispatch('log/getPreviousLogs', this.logConfig.params);
+        this.logConfig.logs = logs;
+      } catch (e) {
+        if (e.status === 404) {
+          this.logConfig.logs = [];
+          return;
+        }
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.logConfig.isLoading = false;
+      }
+    },
+
+    // 重启进程、实例弹窗
+    showRestartPopup(type, row) {
+      const restartInstance = type === 'instance';
+      this.$bkInfo({
+        title: restartInstance ? this.$t('确认重启当前实例？') : this.$t('确认滚动重启当前进程下所有实例？'),
+        confirmFn: () => {
+          if (restartInstance) {
+            this.handleRestartInstance(row);
+          } else {
+            this.handleRestartProcess(row);
+          }
+        },
+      });
+    },
+
+    // 重启进程
+    async handleRestartProcess(row) {
+      try {
+        await this.$store.dispatch('processes/restartProcess', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          processName: row.processName,
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 重启实例
+    async handleRestartInstance(instance) {
+      try {
+        await this.$store.dispatch('processes/restartInstance', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          instanceName: instance.name,
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
@@ -2438,7 +2454,7 @@ export default {
             }
 
             .operate-container {
-                width: 165px;
+                width: 280px;
 
                 .ps-icon-btn {
                     float: none;
@@ -2847,15 +2863,6 @@ export default {
         filter: blur(1px);
     }
 
-    .instance-log-wrapper {
-        height: 100%;
-        overflow: auto;
-
-        .instance-textarea {
-            border: none;
-        }
-    }
-
     .chart-wrapper {
         height: 100%;
         overflow: auto;
@@ -2913,13 +2920,6 @@ export default {
         padding: 10px;
         border-top: 1px solid #ddd;
         overflow: hidden;
-    }
-
-    .refresh-btn {
-        font-size: 12px;
-        /deep/ .bk-icon {
-            font-size: 16px;
-        }
     }
 
     .radio-cls{
@@ -3047,7 +3047,16 @@ export default {
       }
     }
     .bk-dropdown-list{
-      width: 70px;
       text-align: center;
+      .option {
+        height: 32px;
+        line-height: 32px;
+        white-space: nowrap;
+        padding: 0 4px;
+        &:hover {
+          background-color: #eaf3ff;
+          color: #3a84ff;
+        }
+      }
     }
 </style>

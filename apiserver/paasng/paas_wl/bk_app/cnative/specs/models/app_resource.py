@@ -245,7 +245,7 @@ def update_app_resource(app: Application, module: Module, payload: Dict):
         # force replace metadata.name with app_code to avoid user modify
         payload["metadata"]["name"] = generate_bkapp_name(module)
     except KeyError as e:
-        raise ValidationError(f"Missing field: {e}")
+        raise ValidationError(f"Missing field in manifest: {e}")
 
     try:
         obj = BkAppResource(**payload)

@@ -127,7 +127,7 @@ class ArchiveResultHandler(CallbackHandler):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.OFFLINE,
             target=OperationTarget.APP,
-            module_name=offline_op.app_environmenv.module.name,
+            module_name=offline_op.app_environment.module.name,
             environment=offline_op.app_environment.environment,
             result_code=result_code,
         )

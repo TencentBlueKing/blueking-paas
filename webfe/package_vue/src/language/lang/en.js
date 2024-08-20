@@ -2725,4 +2725,7 @@ export default {
   最近一次重启日志: 'Last Restart Logs',
   暂不支持下载实时日志: 'Downloading real-time logs is not currently supported',
   下载完整日志: 'Download Complete Logs',
+  重启实例: 'Restart Instance',
+  '确认重启当前实例？': 'Confirm restart of the current instance?',
+  '确认滚动重启当前进程下所有实例？': 'Confirm rolling restart of all instances under the current process?',
 };

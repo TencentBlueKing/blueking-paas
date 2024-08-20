@@ -49,6 +49,9 @@ class DataType(str, StructuredEnum):
     CLOUD_API_RECORD = EnumField(
         "cloud_api_record", label="云 API 权限申请记录 ID, 需要通过 ID 查询具体的申请单据详情展示"
     )
+    ESB_API_RECORD = EnumField(
+        "esb_api_record", label="组件 API 权限申请记录 ID, 需要通过 ID 查询具体的申请单据详情展示"
+    )
 
 
 class OperationTarget(str, StructuredEnum):

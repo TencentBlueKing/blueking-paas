@@ -17,7 +17,7 @@
 
 import pytest
 
-from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.bkapp_model.entities import SvcDiscEntryBkSaaS
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSAddrDiscoverer
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -26,8 +26,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestBkSaaSEnvVariableFactoryExtendWithClusterApp:
     def test_missing_app(self):
         items = [
-            BkSaaSItem(bk_app_code="foo-app"),
-            BkSaaSItem(bk_app_code="foo-app", module_name="bar-module"),
+            SvcDiscEntryBkSaaS(bk_app_code="foo-app"),
+            SvcDiscEntryBkSaaS(bk_app_code="foo-app", module_name="bar-module"),
         ]
         # clusters 类型为 Dict，这里直接判断是否为空
         cluster_states = [bool(clusters) for _, clusters in BkSaaSAddrDiscoverer.extend_with_clusters(items)]
@@ -37,9 +37,9 @@ class TestBkSaaSEnvVariableFactoryExtendWithClusterApp:
 
     def test_existed_app(self, bk_app, bk_module):
         items = [
-            BkSaaSItem(bk_app_code=bk_app.code),
-            BkSaaSItem(bk_app_code=bk_app.code, module_name=bk_module.name),
-            BkSaaSItem(bk_app_code=bk_app.code, module_name="wrong-name"),
+            SvcDiscEntryBkSaaS(bk_app_code=bk_app.code),
+            SvcDiscEntryBkSaaS(bk_app_code=bk_app.code, module_name=bk_module.name),
+            SvcDiscEntryBkSaaS(bk_app_code=bk_app.code, module_name="wrong-name"),
         ]
         cluster_states = [bool(clusters) for _, clusters in BkSaaSAddrDiscoverer.extend_with_clusters(items)]
         # Item which did not specify module_name and specified a right module name

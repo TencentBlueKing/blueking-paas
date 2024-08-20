@@ -27,7 +27,7 @@ from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KConfigMap
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.bkapp_model.entities import SvcDiscEntryBkSaaS
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSAddrDiscoverer
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def apply_configmap(env: ModuleEnvironment, bk_app_res: BkAppResource):
         return
 
     # Transform the items to get addresses
-    items = [BkSaaSItem(bk_app_code=obj.bkAppCode, module_name=obj.moduleName) for obj in svc_disc.bkSaaS]
+    items = [SvcDiscEntryBkSaaS(bk_app_code=obj.bkAppCode, module_name=obj.moduleName) for obj in svc_disc.bkSaaS]
     addrs = BkSaaSAddrDiscoverer().get(items)
 
     # Write the ConfigMap resource for current BkApp

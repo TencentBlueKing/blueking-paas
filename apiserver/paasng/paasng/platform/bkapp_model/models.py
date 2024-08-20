@@ -16,20 +16,17 @@
 # to the current version of the project delivered to anyone in the future.
 
 import shlex
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.bk_app.cnative.specs.crd.bk_app import HostAlias, SvcDiscEntryBkSaaS
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.declarative.deployment.resources import BkSaaSItem
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, HostAlias, ProbeSet, SvcDiscEntryBkSaaS
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models.deployment import AutoscalingConfig, ProbeSet
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import Module
 from paasng.utils.models import make_json_field
@@ -53,8 +50,6 @@ def env_overlay_getter_factory(field_name: str):
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
 
 ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
-cattr.register_structure_hook(Union[int, str], lambda items, cl: items)  # type: ignore
-cattr.register_unstructure_hook(Union[int, str], lambda value: value)  # type: ignore
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -270,5 +265,5 @@ def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     if not svc_disc.bk_saas:
         return {}
     return BkSaaSEnvVariableFactory(
-        [BkSaaSItem(bk_app_code=item.bkAppCode, module_name=item.moduleName) for item in svc_disc.bk_saas]
+        [SvcDiscEntryBkSaaS(bk_app_code=item.bk_app_code, module_name=item.module_name) for item in svc_disc.bk_saas]
     ).make()

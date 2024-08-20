@@ -365,6 +365,10 @@ export default {
       return this.urlHasConfig && this.appStatus !== 'reg' && this.appStatus !== 'deploy' && this.appStatus !== 'offlined';
     },
     isDisabled() {
+      // 在发布状态开启的情况下可以关闭
+      if(this.appMarketConfig.enabled && !this.confirmRequiredWhenPublish && !this.isSureRisk) {
+        return false;
+      }
       return !this.appPreparations.all_conditions_matched
       || (this.confirmRequiredWhenPublish && !this.isSureRisk && !this.appMarketConfig.enabled);
     },
@@ -616,7 +620,8 @@ export default {
      * 处理开启或关闭市场
      */
     async handlerSwitch() {
-      if (!this.appPreparations.all_conditions_matched) return;
+      // 关闭状态下未满足条件不允许开启，开启状态下可以关闭
+      if (!this.appPreparations.all_conditions_matched && this.appMarketConfig.enabled) return;
 
       const status = this.appMarketConfig.enabled;
       try {

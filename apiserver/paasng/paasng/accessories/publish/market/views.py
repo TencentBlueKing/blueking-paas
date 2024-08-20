@@ -173,8 +173,10 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def switch(self, request, code):
         """[API] 应用市场服务开关"""
         application = self.get_application()
-        if not AppPublishPreparer(application).all_matched:
-            raise error_codes.RELEASED_MARKET_CONDITION_NOT_MET
+        # 如果是要关闭发布状态，则不检测是否满足条件
+        if request.data["enabled"]:  # noqa: SIM102
+            if not AppPublishPreparer(application).all_matched:
+                raise error_codes.RELEASED_MARKET_CONDITION_NOT_MET
         # 更新该应用的市场配置的 `enabled` 状态
         MarketConfig.objects.update_enabled(application, request.data["enabled"])
 

@@ -12,16 +12,16 @@
 {% block nav_list %}
 <script>
     var navList = [
-                    {
-                        name: '后台管理审计',
-                        icon: 'icon-tree-module-shape',
-                        url:  "{% url 'admin.audit.index' %}"
-                    },
-                    {
-                        name: '应用操作审计',
-                        icon: 'icon-tree-module-shape',
-                        url:  "{% url 'admin.audit.app' %}"
-                    },
-                    ]
+        {
+            name: '后台管理审计',
+            icon: 'icon-tree-module-shape',
+            url:  "{% url 'admin.audit.index' %}"
+        },
+        {
+            name: '应用操作审计',
+            icon: 'icon-tree-module-shape',
+            url:  "{% url 'admin.audit.app' %}"
+        },
+    ]
 </script>
 {% endblock %}

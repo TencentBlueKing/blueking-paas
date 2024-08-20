@@ -111,6 +111,7 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
 
     def destroy(self, request, pk):
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
+        config_var.delete()
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.DELETE,
@@ -120,5 +121,4 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
                 data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
             ),
         )
-        config_var.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

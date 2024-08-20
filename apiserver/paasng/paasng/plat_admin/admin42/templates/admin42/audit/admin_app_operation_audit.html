@@ -73,8 +73,8 @@
     </bk-dialog>
 
     <!--  搜索框  -->
-    <div class="toolbar">
-        <div class="paas-search">
+    <div class="toolbar" style="justify-content: space-between; display: flex; align-items:center;">
+        <div class="paas-search" style="width: 400px;">
             <bk-input
                 placeholder="输入应用 ID，按 Enter 搜索"
                 :clearable="true"
@@ -86,7 +86,7 @@
     </div>
 
     <!--  操作审计 Table  -->
-    <bk-table style="margin-top: 15px;" :data="app_audit_list">
+    <bk-table class="mt15" :data="app_audit_records">
         <bk-table-column label="操作类型">
             <template slot-scope="props">
                 <span>$[ getOperationType(props.row.operation) ]</span>
@@ -94,7 +94,7 @@
         </bk-table-column>
         <bk-table-column label="应用 ID">
             <template slot-scope="props">
-                <span>$[ props.row.app_code   ]</span>
+                <span>$[ props.row.app_code ]</span>
             </template>
         </bk-table-column>
         <bk-table-column label="模块">
@@ -144,41 +144,38 @@
         detail: decodeURI("{% url 'admin.audit.app.detail' '${id}' %}"),
     }
 
-    const result_type = {{ result_type | to_json }}
+    const result_types = {{ result_types | to_json }}
 
-    const access_type = {{ access_type | to_json }}
+    const access_types = {{ access_types | to_json }}
 
-    const operation_type = {{ operation_type | to_json }}
+    const operation_types = {{ operation_types | to_json }}
 
-    const app_audit_list = {{ app_audit_list | to_json }}
+    const app_audit_records = {{ app_audit_records | to_json }}
 
     const pagination = {{ pagination | to_json }}
 
     const getResultType = function (value) {
-        for(key of Object.keys(result_type)){
+        for(key of Object.keys(result_types)){
             if(key === String(value)){
-                return result_type[key]
+                return result_types[key]
             }
         }
-        return undefined
     }
 
     const getAccessType = function (value) {
-        for(key of Object.keys(access_type)){
+        for(key of Object.keys(access_types)){
             if(key === String(value)){
-                return access_type[key]
+                return access_types[key]
             }
         }
-        return undefined
     }
 
     const getOperationType = function (value) {
-        for(key of Object.keys(operation_type)){
+        for(key of Object.keys(operation_types)){
             if(key === String(value)){
-                return operation_type[key]
+                return operation_types[key]
             }
         }
-        return undefined
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -191,7 +188,7 @@
                     loaded: false,
                     detailVisible: false,
                     filterKey: '',
-                    app_audit_list: app_audit_list,
+                    app_audit_records: app_audit_records,
                     detailData: {
                         operation: '',
                         result_type: '',
@@ -203,8 +200,8 @@
                         data_after: '',
                         environment: '',
                     },
-                    result_type,
-                    access_type,
+                    result_types,
+                    access_types,
                     pagination: pagination,
                 }
             },
@@ -237,8 +234,6 @@
                             if (res.data_after) {
                                 this.detailData.data_after = JSON.stringify(res.data_after.data, null, 4);
                             }
-                            console.log(this.detailData);
-                            console.log(res);
                         });
                     } catch (e) {
                         this.$bkMessage({
@@ -258,15 +253,6 @@
     })
 </script>
 <style>
-    .toolbar{
-        justify-content: space-between;
-        display: flex;
-        align-items:center;
-    }
-    .paas-search {
-        width: 400px;
-    }
-
     .bk-grid-row + .bk-grid-row {
         margin-top: 20px;
     }

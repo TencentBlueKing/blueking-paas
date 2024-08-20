@@ -34,6 +34,8 @@ from paasng.platform.engine.constants import AppEnvName
 
 
 class AdminOperationAuditManageView(GenericTemplateView):
+    """后台管理审计页面"""
+
     name = "后台管理审计"
     queryset = AdminOperationRecord.objects.filter(app_code=None).order_by("-start_time")
     serializer_class = AuditOperationListOutputSLZ
@@ -42,28 +44,26 @@ class AdminOperationAuditManageView(GenericTemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["audit_list"] = self.list(self.request, *self.args, **self.kwargs)
+        context["audit_records"] = self.list(self.request, *self.args, **self.kwargs)
         context["pagination"] = self.get_pagination_context(self.request)
-        context["result_type"] = dict(ResultCode.get_choices())
-        context["access_type"] = dict(AccessType.get_choices())
-        context["target_type"] = dict(OperationTarget.get_choices())
-        context["operation_type"] = dict(OperationEnum.get_choices())
+        context["result_types"] = dict(ResultCode.get_choices())
+        context["access_types"] = dict(AccessType.get_choices())
+        context["target_types"] = dict(OperationTarget.get_choices())
+        context["operation_types"] = dict(OperationEnum.get_choices())
         return context
-
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
 
 
 class AdminOperationAuditViewSet(generics.RetrieveAPIView):
+    """获取单个 AdminOperationRecord 信息，该记录不是 app 操作"""
+
     serializer_class = AuditOperationRetrieveOutputSLZ
     queryset = AdminOperationRecord.objects.all()
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
 
 class AdminAppOperationAuditManageView(GenericTemplateView):
+    """应用操作审计页面"""
+
     name = "应用操作审计"
     queryset = AdminOperationRecord.objects.exclude(app_code=None).order_by("-start_time")
     serializer_class = AppAuditOperationListOutputSLZ
@@ -72,30 +72,25 @@ class AdminAppOperationAuditManageView(GenericTemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["app_audit_list"] = self.list(self.request, *self.args, **self.kwargs)
+        context["app_audit_records"] = self.list(self.request, *self.args, **self.kwargs)
         context["pagination"] = self.get_pagination_context(self.request)
-        context["result_type"] = dict(ResultCode.get_choices())
-        context["access_type"] = dict(AccessType.get_choices())
-        context["operation_type"] = dict(OperationEnum.get_choices())
-        context["env_type"] = dict(AppEnvName.get_choices())
+        context["result_types"] = dict(ResultCode.get_choices())
+        context["access_types"] = dict(AccessType.get_choices())
+        context["operation_types"] = dict(OperationEnum.get_choices())
+        context["env_types"] = dict(AppEnvName.get_choices())
         return context
-
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
 
     def filter_queryset(self, queryset):
         slz = AppAuditOperationListInputSLZ(data=self.request.query_params)
         slz.is_valid(raise_exception=True)
-        filter_key = slz.validated_data["filter_key"]
-        if filter_key:
+        if filter_key := slz.validated_data["filter_key"]:
             queryset = queryset.filter(app_code__icontains=filter_key)
         return queryset
 
 
 class AdminAppOperationAuditViewSet(generics.RetrieveAPIView):
+    """获取单个 AdminOperationRecord 信息，该记录是 app 操作"""
+
     serializer_class = AppAuditOperationRetrieveOutputSLZ
     queryset = AdminOperationRecord.objects.all()
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)

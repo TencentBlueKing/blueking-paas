@@ -124,7 +124,7 @@ class TestCnativeAppDescriptionHandler:
                     exposed_type={"name": "bk/http"},
                     port=80,
                 ),
-                ProcService(name="backend", target_port=8001, protocol="TCP", exposed_type=None, port=8001),
+                ProcService(name="backend", target_port=8001, protocol="TCP"),
             ]
 
             assert not update_bkmonitor.called

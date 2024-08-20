@@ -62,6 +62,7 @@ CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
 # PROC_SERVICES_ENABLED_ANNOTATION_KEY 注解表示是否启用 process services 特性, 可选值为 "true" 或 "false".
 # true 表示 operator 将根据 process services 的配置来创建和关联 k8s service.
 # 该注解实际为了向后兼容 spec_version: 2 而设计, 当版本 <= spec_version: 2 时, 设置值为 "false", 否则设置为 "true".
+# 说明: 未设置该注解值的 BkApp 均是线上存量资源, 为了兼容, operator 会继续按照旧逻辑调和.
 PROC_SERVICES_ENABLED_ANNOTATION_KEY = "bkapp.paas.bk.tencent.com/proc-services-feature-enabled"
 
 

@@ -385,7 +385,7 @@ class BkAppResource(BaseModel):
     def set_proc_services_annotation(self, enabled: str):
         """set proc services feature annotation
 
-        :param enabled: "true" or "false". true 表示启用, false 表示不启用
+        :param enabled: "true" or "false". "true" 表示启用, "false" 表示不启用
         """
         self.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = enabled
 

@@ -44,7 +44,7 @@ Before calling the interface, please get your access_token first. For specific g
         "source_type": "bare_git",
         "type": "branch",
         "name": "master",
-        "url": "https://gitee.com/Tencent-BlueKing_admin/example.git",
+        "url": "https://gitee.com/example.git",
         "revision": "f0904787f2df1f55b96aed52f2896c0ce8f97c29",
         "comment": ""
     }

@@ -41,11 +41,11 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
                 "funcName": "execute",
                 "levelname": "ERROR",
                 "region": "ieod",
-                "app_code": "bkchat-sops",
+                "app_code": "example",
                 "module_name": "default",
                 "environment": "prod",
                 "process_id": "web",
-                "pod_name": "bkapp-bkchat-sops-prod--web-865dddfdcc-fxg8p",
+                "pod_name": "bkapp-example-prod--web-865dddfdcc-fxg8p",
                 "stream": null,
                 "ts": "2024-08-20 19:22:10",
                 "json.levelname": "ERROR",
@@ -66,18 +66,18 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
                 "funcName": "execute",
                 "levelname": "ERROR",
                 "region": "ieod",
-                "app_code": "bkchat-sops",
+                "app_code": "example",
                 "module_name": "default",
                 "environment": "prod",
                 "process_id": "web",
-                "pod_name": "bkapp-bkchat-sops-prod--web-865dddfdcc-fxg8p",
+                "pod_name": "bkapp-example-prod--web-865dddfdcc-fxg8p",
                 "stream": null,
                 "ts": "2024-08-20 19:22:10",
                 "json.levelname": "ERROR",
                 "json.funcName": "execute",
                 "json.message": "[execute] plugin execute failed"
             },
-            "plugin_code": "bkchat-sops",
+            "plugin_code": "example",
             "environment": "prod",
             "process_id": "web",
             "stream": "<object object at 0x7f144e63a540>",
@@ -91,7 +91,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
 ```
 
 #### 异常返回
-```
+```json
 {
     "code": "VALIDATION_ERROR",
     "detail": "trace_id: 该字段是必填项。",

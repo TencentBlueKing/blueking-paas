@@ -49,6 +49,8 @@ def callback_to_third_party(
     resp = utils.make_client(api_endpoint).call(
         data=data, path_params={"plugin_id": instance.id, "version_id": version.id}
     )
+    # TODO 测试环境无法查看日志，只能将所有信息打印到 Sentry 中
+    logger.exception(f"Callback to {api_endpoint.apiName}, data: {data}")
     if not (result := resp.get("result", True)):
         logger.exception(f"Callback to {api_endpoint.apiName} failed: {resp}")
     return result

@@ -79,7 +79,7 @@ class ProcServiceSLZ(serializers.Serializer):
     protocol = serializers.ChoiceField(
         help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value
     )
-    exposed_type = ExposedTypeSLZ(help_text="暴露类型", required=False)
+    exposed_type = ExposedTypeSLZ(help_text="暴露类型", required=False, allow_null=True)
     port = serializers.IntegerField(help_text="服务端口", min_value=1, max_value=65535, required=False)
 
 

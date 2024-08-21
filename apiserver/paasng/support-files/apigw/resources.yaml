@@ -244,8 +244,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: false
-        allowApplyPermission: false
+        isPublic: true
+        allowApplyPermission: true
         matchSubpath: false
         backend:
           type: HTTP
@@ -794,7 +794,7 @@ paths:
         backend:
           type: HTTP
           method: post
-          path: /backend/api/bkapps/applications/{code}/modules/{module}/source_package/link/
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/source_package/link/
           matchSubpath: false
           timeout: 0
           upstreams: {}
@@ -1525,7 +1525,7 @@ paths:
         disabledStages: []
         descriptionEn:
     post:
-      operationId: list_bk_plugin_logs_with_post
+      operationId: list_bk_plugin_logs_clone
       description: 查询单个蓝鲸插件的日志
       tags:
       - 蓝鲸应用插件

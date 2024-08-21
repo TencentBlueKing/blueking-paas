@@ -33,6 +33,21 @@ curl -X DELETE -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secre
 }
 ```
 
+
+#### Exception Response
+```
+{
+    "bk_error_msg": {
+        "light_app_code": [
+            "该字段是必填项。"
+        ]
+    },
+    "bk_error_code": "1301100",
+    "data": null,
+    "result": false
+}
+```
+
 ### Response Result Parameter Description
 
 | Field  | Type | Description      |

@@ -6,8 +6,8 @@
 #### 1、路径参数：
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
-| -------- | -------- | ---- | -------- |
-| code     | string   | 是   | 应用 ID  |
+| -------- | -------- | --- | -------- |
+| app_code    | string | 是 | 应用 ID  |
 | module_name | string | 是 | 模块名称 |
 
 #### 2、接口参数：
@@ -20,7 +20,7 @@
 
 ### 请求示例
 ```bash
-curl -X POST -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' -d '{ "package_url": "https://example.com/generic/example.tar.gz", "version": "0.0.5" }' --insecure https://paas.example.apigw.o.woav3..com/stag/bkapps/applications/app_code/modules/default/source_package/link/
+curl -X POST -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' -d '{ "package_url": "https://example.com/generic/example.tar.gz", "version": "0.0.5" }' --insecure http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/app_code/modules/default/source_package/link/
 ```
 
 #### 获取你的 access_token

@@ -126,8 +126,6 @@ class PluginCallBackApiViewSet(GenericViewSet):
         release.status = self._convert_canary_status(ticket_status, approve_result, latest_release_strategy.strategy)
         release.save(update_fields=["status", "updated"])
 
-        # TODO 添加日志
-        logger.exception("itsm_canary_callback")
         # 审批结束后，将插件状态和版本信息（包含灰度策略）同步给第三方
         if ticket_status in ItsmTicketStatus.completed_status():
             release_api.update_release(pd=plugin.pd, instance=plugin, version=release, operator=operator)

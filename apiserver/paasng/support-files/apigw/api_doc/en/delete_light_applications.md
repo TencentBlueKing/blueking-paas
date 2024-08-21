@@ -1,6 +1,8 @@
 ### Description
 
-Delete lightweight applications, for management-side APP use only.
+Delete lightweight applications.
+
+Note: By default, only Standard Operation (app ID: bk_sops) is allowed to call the APIs related to light apps, if you need to call them, please contact the platform administrator to add permissions.
 
 ### Request Parameters
 
@@ -11,7 +13,7 @@ None.
 
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |
-| app_code       | string         | Yes      | Lightweight APP Code  |
+| light_app_code | string         | Yes      | Lightweight APP Code  |
 
 ### Request Example
 ```

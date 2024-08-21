@@ -64,5 +64,5 @@ Status: OK
 
 **ListProcessesOKBodyProcessesMetadata**
 | Field | Type | Required | Description |
-|------|------|:--------:|-------------|---------|
+|------|------|----------|---------|
 | resource_version | string| Yes | The local resource version number, which can be used in the rv_proc parameter of a watch request. |

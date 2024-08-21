@@ -20,6 +20,8 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 ```
 
 ### 返回结果示例
+#### 正常返回
+如果已配置规格
 ```
 {
     "results": {
@@ -29,10 +31,18 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 }
 ```
 
+如果未配置规格
+```
+{
+    "results": {
+    }
+}
+```
+
 ### 返回结果参数说明
 
-| 字段        | 类型   | 是否必填 | 描述             |
-| ----------- | ------ | -------- | ---------------- |
-| results     | dict   | 是       | 返回数据         |
-| results.version | string | 是   | 版本信息         |
-| results.app_zone | string | 是   | 应用区域         |
+| 字段        | 类型   | 描述       |
+| ----------- | ------ | --------- |
+| results     | dict   |  返回数据  |
+| results.version | string | 版本信息  |
+| results.app_zone | string | 应用区域 |

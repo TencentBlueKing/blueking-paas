@@ -27,16 +27,52 @@ Before calling the interface, please get your access_token first. For specific g
 ### Response Result Example
 ```json
 {
-    "status": "str",
-    "error_detail": "str",
-    "logs": "str"
+    "id": "4e69986f-00e8-41ad-bef9-8ac82201ae07",
+    "status": "successful",
+    "operator": {
+        "id": "0336c3a7948c4299b7",
+        "username": "bk-apigw",
+        "provider_type": 3,
+        "avatar": ""
+    },
+    "created": "2024-08-19 11:30:26",
+    "log": "offline succeeded.",
+    "err_detail": null,
+    "offline_operation_id": "4e69986f-00e8-41ad-bef9-8ac82201ae07",
+    "environment": "stag",
+    "repo": {
+        "source_type": "bare_git",
+        "type": "branch",
+        "name": "master",
+        "url": "https://gitee.com/Tencent-BlueKing_admin/cloudapps.git",
+        "revision": "f0904787f2df1f55b96aed52f2896c0ce8f97c29",
+        "comment": ""
+    }
 }
 ```
 
 ### Response Result Parameter Description
 
-| Field |   Type |  Required | Description |
-| ------ | ------ | ------ | ------ |
-| status | string | Yes | Offline task status (successful, pending, or failed) |
-| error_detail | string | Yes | Error information |
-| logs | string | Yes | Offline log |
+### Response Result Parameter Description
+
+| Field |   Type | Description |
+| ------ | ------ | ------ | 
+| id | string | UUID |
+| status | string | Offline status, optional values: successful, failed, pending |
+| operator | object | Operator |
+| created | string | Created |
+| log | string | Offline log |
+| err_detail | string | Offline exception reason |
+| offline_operation_id | string | Offline operation ID |
+| environment | string | Environment name |
+| repo | object | Repository information |
+
+repo
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| source_type | string | Source type |
+| type | string | Type |
+| name | string | Name |
+| url | string | URL |
+| revision | string | Revision |
+| comment | string | Comment |

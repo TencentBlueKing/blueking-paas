@@ -16,7 +16,7 @@
 
 ### 请求示例
 ```bash
-curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/appid1/logs/?trace_id=1111'
+curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/appid1/logs/?trace_id=1111'
 ```
 
 ### 返回结果示例
@@ -106,22 +106,22 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
 ### 返回结果参数说明
 |   参数名称   |  参数类型  |           参数说明             |
 | ------------ | ---------- | ------------------------------ |
-  scroll_id    | str        | 翻页标识字段，获取下一页时传入该值 |
-| logs         | list[objects] | 日志对象列表，按创建时间从新到旧排序 |
-| total        | int        | 日志总数 |
-| dsl          | string     | DSL查询语句 |
+|  scroll_id    | str | 翻页标识字段，获取下一页时传入该值 |
+|  logs         | list[objects] | 日志对象列表，按创建时间从新到旧排序 |
+|  total        | int | 日志总数 |
+| dsl           | string         | DSL查询语句 |
 
 `logs` 内对象字段说明：
 
 |   参数名称   |  参数类型  |           参数说明             |
 | ------------ | ---------- | ------------------------------ |
-| plugin_code | str       | 插件标识符 |
-| environment | str       | 产生日志的部署环境，`stag` -> 预发布环境，`prod` -> 生产环境 |
-| message     | str       | 日志信息 |
-| raw         | object    | 原生log  |
-| detail      | object    | 结构化日志详情 |
-| process_id  | string    | 进程唯一类型  |
-| stream      | string    | 流对象 |
-| ts          | string    | 时间戳 |
+|  plugin_code | str | 插件标识符 |
+|  environment | str | 产生日志的部署环境，`stag` -> 预发布环境，`prod` -> 生产环境 |
+|  message       | str | 日志信息 |
+| raw            | object         | 原生log  |
+|  detail        | object         | 结构化日志详情 |
+| process_id     | string         | 进程唯一类型  |
+| stream         | string         | 流对象 |
+| ts             | string         | 时间戳 |
 
 **注意**：`detail.json.trace_id` 字段里，有用来标示字段高亮的 `[bk-mark]...[/bk-mark]` 标记字符，如需用于前端展示，请妥善处理。

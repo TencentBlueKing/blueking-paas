@@ -25,7 +25,7 @@ Query standard output logs
 
 ### Request Example
 ```bash
-curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/applications/{code}/modules/{module}/log/structured/list/?time_range=1h'
+curl -X -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/applications/{code}/modules/{module}/log/structured/list/?time_range=1h'
 ```
 
 ### Response Result Example

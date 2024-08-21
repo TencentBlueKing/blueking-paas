@@ -22,7 +22,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 ### Response
 #### Success Response
 If the specifications are configured
-```
+```json
 {
     "results": {
         "version": "5.7",
@@ -32,7 +32,7 @@ If the specifications are configured
 ```
 
 If the specifications are not configured
-```
+```json
 {
     "results": {
     }

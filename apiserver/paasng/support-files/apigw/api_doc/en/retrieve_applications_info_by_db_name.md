@@ -18,7 +18,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 ```
 
 ### Response Example
-```
+```json
 {
     "id": "d53450b6-fd5b-49b6-883f-e64030377a52",
     "code": "bk_app_codexxxx",

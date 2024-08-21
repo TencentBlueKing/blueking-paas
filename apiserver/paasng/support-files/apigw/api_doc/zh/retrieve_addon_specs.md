@@ -22,7 +22,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 ### 返回结果示例
 #### 正常返回
 如果已配置规格
-```
+```json
 {
     "results": {
         "version": "5.7",
@@ -32,7 +32,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 ```
 
 如果未配置规格
-```
+```json
 {
     "results": {
     }

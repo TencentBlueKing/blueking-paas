@@ -17,8 +17,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -167,8 +167,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -244,8 +244,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -391,8 +391,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -415,8 +415,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -439,8 +439,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -794,7 +794,7 @@ paths:
         backend:
           type: HTTP
           method: post
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/source_package/link/
+          path: /backend/api/bkapps/applications/{code}/modules/{module}/source_package/link/
           matchSubpath: false
           timeout: 0
           upstreams: {}
@@ -813,8 +813,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -838,8 +838,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
@@ -1525,7 +1525,7 @@ paths:
         disabledStages: []
         descriptionEn:
     post:
-      operationId: list_bk_plugin_logs_cloned
+      operationId: list_bk_plugin_logs_with_post
       description: 查询单个蓝鲸插件的日志
       tags:
       - 蓝鲸应用插件

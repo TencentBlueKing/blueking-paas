@@ -64,5 +64,5 @@ Status: OK
 
 **ListProcessesOKBodyProcessesMetadata**
 | 字段 | 类型 | 必选 | 描述 |
-|------|------|:--------:|-------------|---------|
+|------|------|---------|---------|
 | resource_version | string| 是 | 本地资源版本号，可用于 watch 请求的 rv_proc 参数 |

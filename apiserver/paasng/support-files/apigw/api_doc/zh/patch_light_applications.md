@@ -1,5 +1,7 @@
 ### 功能描述
-修改轻应用信息，仅供管理侧 APP 使用。
+修改轻应用信息。
+
+说明：轻应用相关 API 默认只允许标准运维（应用ID：bk_sops）调用，如需调用请联系平台管理员添加权限。
 
 ### 请求参数
 
@@ -10,7 +12,7 @@
 
 | 参数名称     | 参数类型 | 是否必填 | 参数说明                                                     |
 | ------------ | -------- | -------- | ------------------------------------------------------------ |
-| app_code     | string   | 是       | 轻应用的 APP Code                                            |
+| light_app_code     | string   | 是       | 轻应用的 APP Code                                            |
 | app_name     | string   | 是       | 轻应用名称                                                   |
 | app_url      | string   | 是       | 应用链接                                                     |
 | developers   | array    | 是       | 应用开发者用户名列表                                         |
@@ -22,7 +24,13 @@
 
 ### 请求示例
 ```bash
-curl -X PUT -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret": "***"}' -d '{ "parent_app_code": "bksops", "app_url": "http://example.com", "developers": "admin", "creator: "admin" }' --insecure http://bkapi.example.com/api/bkpaas3/prod/system/light-applications
+curl -X PATCH -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret": "***"}' -d '{
+    "light_app_code":"code",
+    "app_name":"name",
+    "app_url":"http://example.com",
+    "developers":["admin"],
+    "app_tag": "tag"
+}' --insecure http://bkapi.example.com/api/bkpaas3/prod/system/light-applications
 ```
 
 ### 返回结果示例
@@ -31,15 +39,16 @@ curl -X PUT -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret":
   "bk_error_msg": "",
   "bk_error_code": 0,
   "data": {
-    "app_code": "demo-0727-001_ps",
-    "app_name": "demo-0727-001_ps",
-    "app_url": "http://app.demo.com",
-    "introduction": "测试应用",
-    "creator": "admin",
-    "logo": "http://demo.com/app-logo/o_demo-0727-001_ps.png",
-    "developers": [
-      "admin"
-    ]
+        "light_app_code": "demo_code",
+        "app_name": "name",
+        "app_url": "http://example.com",
+        "introduction": "-",
+        "creator": "admin",
+        "logo": "",
+        "developers": [
+            "admin"
+        ],
+        "state": 4
   },
   "result": true
 }
@@ -49,7 +58,7 @@ curl -X PUT -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret":
 
 | 名称         | 类型   | 说明              |
 | ------------ | ------ | ----------------- |
-| app_code     | string | 轻应用的 APP Code |
+| light_app_code | string | 轻应用的 APP Code |
 | app_name     | string | 轻应用的名称      |
 | app_url      | string | 应用链接          |
 | introduction | string | 应用介绍          |

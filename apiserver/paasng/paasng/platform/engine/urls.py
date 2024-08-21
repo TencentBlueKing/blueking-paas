@@ -102,6 +102,11 @@ urlpatterns = [
         name="api.deploy.result",
     ),
     re_path(
+        make_app_pattern(r"/deployments/%s/result/export/$" % PVAR_UUID, include_envs=False),
+        views.DeploymentViewSet.as_view({"get": "export_deployment_log"}),
+        name="api.deploy.export_log",
+    ),
+    re_path(
         make_app_pattern(r"/deployments/{}/interruptions/$".format(PVAR_UUID), include_envs=False),
         views.DeploymentViewSet.as_view({"post": "user_interrupt"}),
         name="api.deploy.release_interruptions",

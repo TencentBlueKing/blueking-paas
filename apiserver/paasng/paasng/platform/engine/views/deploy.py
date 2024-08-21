@@ -24,7 +24,7 @@ from bkpaas_auth.models import User
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -225,6 +225,17 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             "error_tips": asdict(hint),
         }
         return JsonResponse(result)
+
+    def export_deployment_log(self, request, code, module_name, uuid):
+        """导出部署日志"""
+        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        logs = get_all_logs(deployment)
+        filename = f"{code}-{module_name}-{uuid}.log"
+
+        response = HttpResponse(logs, content_type="text/plain")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        return response
 
     @swagger_auto_schema(response_serializer=DeploymentSLZ(many=True), query_serializer=QueryDeploymentsSLZ)
     def list(self, request, code, module_name):

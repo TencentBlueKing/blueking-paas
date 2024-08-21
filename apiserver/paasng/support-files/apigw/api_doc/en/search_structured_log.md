@@ -65,20 +65,20 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 
 #### Exception Response
 example 1
-```
+```json
 {
     "code": "QUERY_LOG_FAILED",
-    "detail": "查询日志失败: 日志平台接口返回异常<采集项space_84_bklog_test__default__json采集链路data_name重复（3631113）>, 请稍后重试"
+    "detail": "Query log failed: ..."
 }
 ```
 example 2
-```
+```json
 {
     "code": "VALIDATION_ERROR",
-    "detail": "time_range: 该字段是必填项。",
+    "detail": "...",
     "fields_detail": {
         "time_range": [
-            "该字段是必填项。"
+            "this field can't be empty。"
         ]
     }
 }

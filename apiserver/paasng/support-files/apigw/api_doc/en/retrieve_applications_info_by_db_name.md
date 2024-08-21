@@ -13,7 +13,7 @@ Query the basic information of the application to which the MySQL Enhanced Servi
 None.
 
 ### Request Example
-```
+```bash
 curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/services/mysql/{db_name}/related_applications_info/
 ```
 

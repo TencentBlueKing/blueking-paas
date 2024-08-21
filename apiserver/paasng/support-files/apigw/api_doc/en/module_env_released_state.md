@@ -51,17 +51,17 @@ Before calling the interface, please get your access_token first. For specific g
             "source_type": null,
             "type": "tag",
             "name": "1.5.5",
-            "url": "docker.example.com/bkpaas/docker/bk_notice/default:1.5.5",
+            "url": "docker.example.com/bkpaas/docker/example/default:1.5.5",
             "revision": "1.5.5",
             "comment": ""
         }
     },
     "offline": null,
     "exposed_link": {
-        "url": "http://apps.example.com/bk--notice/"
+        "url": "http://apps.example.com/"
     },
     "default_access_entrance": {
-        "url": "http://apps.example.com/bk--notice/"
+        "url": "http://apps.example.com/"
     }
 }
 ```

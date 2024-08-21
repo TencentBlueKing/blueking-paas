@@ -15,7 +15,7 @@ Retrieve the specification combinations of enhanced services
 None.
 
 ### Request Example
-```
+```bash
 curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/applications/appid1/modules/default/services/946ee404-df67-4013-a92f-9cc116ff50dc/specs/
 ```
 

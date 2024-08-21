@@ -216,7 +216,7 @@ class ItsmStage(BaseStageController):
         }
 
 
-class CanaryWithItsm(BaseStageController):
+class CanaryWithItsmStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM
 
     def execute(self, operator: str):

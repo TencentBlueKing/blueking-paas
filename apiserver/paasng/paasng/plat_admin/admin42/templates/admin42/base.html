@@ -235,6 +235,7 @@
                 {% endif %}
                 {% if perm.manage_platform %}
                 <li><a href="{% url 'admin.accountmgr.index' %}">用户管理</a></li>
+                <li><a href="{% url 'admin.audit.index' %}">操作审计</a></li>
                 {% endif %}
             </ul>
             <p class="navbar-text">{{ request.user.username }}</p>

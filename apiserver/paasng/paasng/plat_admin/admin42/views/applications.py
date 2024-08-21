@@ -38,6 +38,8 @@ from paasng.infras.iam.helpers import (
     fetch_role_members,
     remove_user_all_roles,
 )
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.application import (
     ApplicationDetailSLZ,
     ApplicationSLZ,
@@ -411,5 +413,18 @@ class ApplicationFeatureFlagsViewset(viewsets.GenericViewSet):
 
     def update(self, request, code):
         application = get_object_or_404(Application, code=code)
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
+        )
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY_FEATURE_FLAG,
+            target=constants.OperationTarget.APP,
+            app_code=application.code,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
+            ),
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

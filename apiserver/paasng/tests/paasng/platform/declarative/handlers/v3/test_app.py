@@ -55,7 +55,9 @@ class TestCNativeAppDescriptionHandler:
         - name: default
           isDefault: true
           language: python
-          spec: {{}}
+          spec:
+            processes:
+            - name: web
         """
         )
 
@@ -82,7 +84,9 @@ class TestCNativeAppDescriptionHandler:
         - name: default
           isDefault: true
           language: python
-          spec: {{}}
+          spec:
+            processes:
+            - name: web
         """
         )
 
@@ -117,7 +121,9 @@ def test_app_data_to_desc(random_name):
     - name: default
       isDefault: true
       language: python
-      spec: {{}}
+      spec:
+        processes:
+        - name: web
     """
     )
 

@@ -22,6 +22,7 @@ import yaml
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.fields import SerializerMethodField
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.bk_app.applications.models import Build, BuildProcess
@@ -30,14 +31,8 @@ from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
 from paasng.misc.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import (
-    ConfigVarEnvName,
-    DeployConditions,
-    ImagePullPolicy,
-    JobStatus,
-    MetricsType,
-    RuntimeType,
-)
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.engine.constants import ConfigVarEnvName, DeployConditions, JobStatus, MetricsType, RuntimeType
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.deployment import Deployment
@@ -462,10 +457,23 @@ class OperationSLZ(serializers.ModelSerializer):
     operator = UserField(read_only=True)
     offline_operation = OfflineOperationSLZ(source="get_offline_obj")
     deployment = DeploymentSLZ(source="get_deployment_obj")
+    module_name = SerializerMethodField()
 
     class Meta:
         model = ModuleEnvironmentOperations
-        fields = ["id", "status", "operator", "created", "operation_type", "offline_operation", "deployment"]
+        fields = [
+            "id",
+            "status",
+            "operator",
+            "created",
+            "operation_type",
+            "offline_operation",
+            "deployment",
+            "module_name",
+        ]
+
+    def get_module_name(self, obj: ModuleEnvironmentOperations) -> str:
+        return obj.app_environment.module.name
 
 
 #####################

@@ -66,7 +66,7 @@
                 <div class="text-ellipsis" v-bk-overflow-tips>{{ instance.display_name }}</div>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div v-else class="instance-item-cls-empty cell-container pl30">--</div>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
@@ -101,7 +101,8 @@
         <bk-table-column
           :label="$t('重启次数')"
           class-name="table-colum-instance-cls"
-          width="80">
+          width="80"
+          :render-header="$renderHeader">
           <template slot-scope="{ row }">
             <div v-if="row.instances.length">
               <div
@@ -110,7 +111,15 @@
                 v-for="instance in row.instances"
                 :key="instance.process_name"
               >
-                {{ instance.restart_count }}
+                <span
+                  v-bk-tooltips="{
+                    content: instance.terminated_info?.reason,
+                    placement: 'bottom', offset: '0, -10',
+                    disabled: !instance.terminated_info?.reason
+                  }"
+                  :class="{ tip: instance.terminated_info?.reason }">
+                  {{ instance.restart_count }}
+                </span>
               </div>
             </div>
             <div v-else class="instance-item-cls-empty cell-container">--</div>
@@ -162,10 +171,17 @@
                 {{$t('查看日志')}}
               </bk-button>
               <bk-button
+                class="mr10"
                 :text="true"
                 title="primary"
                 @click="showInstanceConsole(instance, row)">
                 {{$t('访问控制台')}}
+              </bk-button>
+              <bk-button
+                :text="true"
+                title="primary"
+                @click="showRestartPopup('instance', instance)">
+                {{$t('重启实例')}}
               </bk-button>
             </div>
           </template>
@@ -175,7 +191,7 @@
           :width="195"
           class-name="table-colum-operation-cls default-background"
         >
-          <template slot-scope="{ row }">
+          <template slot-scope="{ row, $index }">
             <div class="operation">
               <div
                 v-if="!row.autoscaling
@@ -228,10 +244,13 @@
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom"
-                :tippy-options="{ 'hideOnClick': false }">
+                :tippy-options="{ 'hideOnClick': false }"
+                :ref="`moreRef${$index}`">
                 <i class="paasng-icon paasng-ellipsis more"></i>
-                <div slot="content" style="white-space: normal;">
-                  <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
+                <div slot="content" class="more-content" style="white-space: normal;">
+                  <div class="option" @click="handleExpansionAndContraction(row, $index)">{{$t('扩缩容')}}</div>
+                  <!-- 重启进程 -->
+                  <div class="option" @click="showRestartPopup('process', row, $index)">{{$t('滚动重启')}}</div>
                 </div>
               </bk-popover>
             </div>
@@ -618,7 +637,7 @@ export default {
       }, 0);
     },
     columWidth() {
-      return this.localLanguage === 'en' ? 220 : 200;
+      return this.localLanguage === 'en' ? 330 : 260;
     },
     // 滑框的宽度
     computedWidth() {
@@ -674,10 +693,11 @@ export default {
     handleUpdateProcess() {
       this.updateProcess();
     },
-    handleExpansionAndContraction(row) {
+    handleExpansionAndContraction(row, i) {
       this.curUpdateProcess = row;    // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
       this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
+      this.$refs[`moreRef${i}`].instance?.hide();
     },
     // 处理进程与实例的关系
     // handleDeployInstanceData() {
@@ -727,7 +747,7 @@ export default {
         });
       }
       processesData.processes.forEach((processItem) => {
-        const { type } = processItem;
+        const { type, name } = processItem;
         const packageInfo = packages.find(item => item.name === type);
 
         const processInfo = {
@@ -765,6 +785,7 @@ export default {
           autoscaling: processInfo.autoscaling,
           type,
           scalingConfig: processInfo.scaling_config,
+          processName: name,
         };
         this.updateProcessStatus(process);
 
@@ -1487,6 +1508,57 @@ export default {
         this.logConfig.isLoading = false;
       }
     },
+
+    // 重启进程、实例弹窗
+    showRestartPopup(type, row, i) {
+      const restartInstance = type === 'instance';
+      this.$bkInfo({
+        title: restartInstance ? this.$t('确认重启当前实例？') : this.$t('确认滚动重启当前进程下所有实例？'),
+        confirmFn: () => {
+          if (restartInstance) {
+            this.handleRestartInstance(row);
+          } else {
+            this.handleRestartProcess(row);
+          }
+        },
+      });
+      // 关闭popover
+      this.$refs[`moreRef${i}`].instance?.hide();
+    },
+
+    // 重启进程
+    async handleRestartProcess(row) {
+      try {
+        await this.$store.dispatch('processes/restartProcess', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          processName: row.processName,
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 重启实例
+    async handleRestartInstance(instance) {
+      try {
+        await this.$store.dispatch('processes/restartInstance', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          instanceName: instance.name,
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
@@ -1620,6 +1692,18 @@ export default {
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
+          }
+
+          span.tip {
+            position: relative;
+            &::before {
+              content: '';
+              position: absolute;
+              width: 100%;
+              height: 1px;
+              bottom: 15px;
+              border-bottom: 1px dashed;
+            }
           }
 
           &:last-child {
@@ -1859,10 +1943,24 @@ export default {
 </style>
 
 <style lang="scss">
-.more-operations .tippy-tooltip .tippy-content {
-  cursor: pointer;
-  &:hover {
-    color: #3a84ff;
+.more-operations {
+  .tippy-tooltip {
+    padding: 0;
+    .tippy-content {
+      cursor: pointer;
+      .more-content {
+        padding: 6px 0;
+        .option {
+          padding: 0 16px;
+          height: 32px;
+          line-height: 32px;
+          &:hover {
+            background-color: #eaf3ff;
+            color: #3a84ff;
+          }
+        }
+      }
+    }
   }
 }
 </style>
